@@ -21,6 +21,7 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRSceneCache.h"
+#include "MRViewer/MRUISaveChangesPopup.h"
 #include <array>
 
 namespace
@@ -97,85 +98,15 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-    if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
-    {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( "New Scene" ).x;
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "New Scene" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        // do not suggest saving empty scene
-        const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
-        if ( showSave )
-        {
-            const char* text = "Save your changes?";
-            ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
-            ImGui::Text( "%s", text );
-        }
-
-        const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
-
-        const float p = ImGui::GetStyle().ItemSpacing.x;
-        const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
-
-        if ( showSave )
-        {
-            if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
-            {
-                auto savePath = SceneRoot::getScenePath();
-                if ( savePath.empty() )
-                    savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
-
-                ImGui::CloseCurrentPopup();
-                if ( !savePath.empty() )
-                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
-                    {
-                        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
-
-                        return[this, savePath, res]()
-                        {
-                            if ( res )
-                            {
-                                getViewerInstance().onSceneSaved( savePath );
-                                resetScene_();
-                            }
-                            else
-                                showError( "Error saving scene: " + res.error() );
-                        };
-                    } );
-            }
-            UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
-            ImGui::SameLine();
-        }
-
-        if ( UI::buttonCommonSize( showSave ? "Don't Save" : "New", btnSize, ImGuiKey_N ) )
-        {
-            ImGui::CloseCurrentPopup();
-            resetScene_();
-        }
-        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
-        ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
-            ImGui::CloseCurrentPopup();
-
-        UI::setTooltipIfHovered( "Do not remove any objects, return back", scaling );
-
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-            ImGui::CloseCurrentPopup();
-        ImGui::PopStyleVar();
-        ImGui::EndPopup();
-    }
-    ImGui::PopStyleVar( 2 );
+    UI::SaveChangesPopupSettings settings;
+    settings.scaling = scaling;
+    settings.header = "New Scene";
+    settings.shortCloseText = "New";
+    settings.saveTooltip = "Save current scene and then remove all objects";
+    settings.dontSaveTooltip = "Remove all objects without saving and ability to restore them";
+    settings.cancelTooltip = "Do not remove any objects, return back";
+    settings.onOk =  [this] () { resetScene_(); };
+    UI::saveChangesPopup( "New scene##new scene", settings );
 }
 
 void ResetSceneMenuItem::resetScene_()

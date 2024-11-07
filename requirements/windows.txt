@@ -9,6 +9,7 @@ boost-range
 boost-serialization
 boost-signals2
 boost-stacktrace
+boost-url
 libjpeg-turbo
 cpr
 eigen3
@@ -26,7 +27,7 @@ python3
 spdlog
 tiff
 tinygltf
+tinyxml2
 tl-expected
 glad
 glfw3
-tinyxml2

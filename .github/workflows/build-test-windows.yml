@@ -24,7 +24,7 @@ env:
 
 jobs:
   windows-build-test:
-    timeout-minutes: 50
+    timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

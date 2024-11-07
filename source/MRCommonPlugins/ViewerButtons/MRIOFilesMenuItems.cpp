@@ -601,8 +601,10 @@ bool SaveObjectMenuItem::action()
             }
             return [savePaths = std::move( savePaths )]
             {
+                auto & viewer = getViewerInstance();
                 for ( const auto & sp : savePaths )
-                    getViewerInstance().recentFilesStore().storeFile( sp );
+                    viewer.recentFilesStore().storeFile( sp );
+                viewer.exportedSignal( savePaths );
             };
         } );
     }, {
@@ -671,7 +673,11 @@ bool SaveSelectedMenuItem::action()
             return[savePath, res]()
             {
                 if ( res )
-                    getViewerInstance().recentFilesStore().storeFile(savePath);
+                {
+                    auto & viewer = getViewerInstance();
+                    viewer.recentFilesStore().storeFile( savePath );
+                    viewer.exportedSignal( { savePath } );
+                }
                 else
                     showError( "Error saving selected: " + res.error() );
             };
@@ -690,7 +696,11 @@ bool SaveSelectedMenuItem::action()
             return[savePath, res] ()
             {
                 if ( res.has_value() )
-                    getViewerInstance().recentFilesStore().storeFile( savePath );
+                {
+                    auto & viewer = getViewerInstance();
+                    viewer.recentFilesStore().storeFile( savePath );
+                    viewer.exportedSignal( { savePath } );
+                }
                 else
                     showError( "Error saving selected: " + res.error() );
             };

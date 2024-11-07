@@ -520,10 +520,12 @@ public:
     RenderSignal postDrawSignal; // signal is called after scene draw
     // Scene events
     using DragDropSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
+    using ExportSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
     using PostResizeSignal = boost::signals2::signal<void( int x, int y )>;
     using PostRescaleSignal = boost::signals2::signal<void( float xscale, float yscale )>;
     using InterruptCloseSignal = boost::signals2::signal<bool(), SignalStopHandler>;
     DragDropSignal dragDropSignal; // signal is called on drag and drop file
+    ExportSignal exportedSignal; // signal is called after some files have been exported
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale
     InterruptCloseSignal interruptCloseSignal; // signal is called before close window (return true will prevent closing)

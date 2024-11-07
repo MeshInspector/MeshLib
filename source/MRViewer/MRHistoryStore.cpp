@@ -33,22 +33,9 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
     stack_[firstRedoIndex_] = action;
     ++firstRedoIndex_;
 
-    size_t currentStackSize = 0;
-    for ( const auto& act : stack_ )
-        currentStackSize += act->heapBytes();
-
-    size_t numActionsToDelete = 0;
-    while ( currentStackSize > storageLimit_ )
-        currentStackSize -= stack_[numActionsToDelete++]->heapBytes();
-    
-    if ( numActionsToDelete > 0 )
-    {
-        stack_.erase( stack_.begin(), stack_.begin() + numActionsToDelete );
-        firstRedoIndex_ -= numActionsToDelete;
-        savedSceneIndex_ -= numActionsToDelete;
-    }
-
     changedSignal( *this, ChangeType::AppendAction );
+
+    filterByMemoryLimit_();
 }
 
 void HistoryStore::clear()
@@ -129,6 +116,25 @@ std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
     if ( action )
         res = action->name();
     return res;
+}
+
+void HistoryStore::filterByMemoryLimit_()
+{
+    size_t currentStackSize = 0;
+    for ( int i = 0; i < firstRedoIndex_; ++i )
+        currentStackSize += stack_[i]->heapBytes();
+
+    size_t numActionsToDelete = 0;
+    while ( currentStackSize > storageLimit_ && numActionsToDelete <= firstRedoIndex_ )
+        currentStackSize -= stack_[numActionsToDelete++]->heapBytes();
+
+    for ( int i = 0; i < numActionsToDelete; ++i )
+    {
+        stack_.erase( stack_.begin() );
+        --firstRedoIndex_;
+        --savedSceneIndex_;
+        changedSignal( *this, ChangeType::PopAction );
+    }
 }
 
 }

@@ -17,13 +17,17 @@ verts = np.stack((x.flatten(), y.flatten(), z.flatten()), axis=-1).reshape(-1, 3
 # Create MeshLib PointCloud from np ndarray
 pc = mn.pointCloudFromPoints(verts)
 # Remove duplicate points
-pc.validPoints = mm.pointUniformSampling(pc, 1e-3)
+sampling_settings = mm.UniformSamplingSettings()
+sampling_settings.distance = 1e-3
+pc.validPoints = mm.pointUniformSampling(pc, sampling_settings)
 pc.invalidateCaches()
 
 # Triangulate it
 triangulated_pc = mm.triangulatePointCloud(pc)
 
 # Fix possible issues
-triangulated_pc = mm.offsetMesh(triangulated_pc, 0.0)
+params = mm.OffsetParameters()
+params.voxelSize = pc.computeBoundingBox().diagonal() * 5e-2
+triangulated_pc = mm.offsetMesh(triangulated_pc, 0.1, params=params)
 
 ## \endcode

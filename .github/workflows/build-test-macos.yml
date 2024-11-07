@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2024-sep-06"
+        default: "s3://data-autotest/test_data_2024-nov-07"
         required: false
         type: string
       UPLOAD_ARTIFACTS:

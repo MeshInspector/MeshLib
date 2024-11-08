@@ -13,7 +13,9 @@
   <ItemGroup>
     <ClCompile Include="MRBitSet.c" />
     <ClCompile Include="MRMeshBoolean.c" />
+    <ClCompile Include="MRMeshBuilder.c" />
     <ClCompile Include="MRMeshCollidePrecise.c" />
+    <ClCompile Include="MRMeshComponents.c" />
     <ClCompile Include="MRMeshDecimate.c" />
     <ClCompile Include="MRMeshFillHole.c" />
     <ClCompile Include="MRMeshNormals.c" />
@@ -27,7 +29,9 @@
   <ItemGroup>
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRMeshBoolean.h" />
+    <ClInclude Include="MRMeshBuilder.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />

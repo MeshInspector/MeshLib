@@ -288,7 +288,7 @@ private:
             error = std::abs( error );
 
         PC = beta;
-        rsqr = pVec.dot( precomputedMu_ ) + beta.dot( beta );
+        rsqr = std::max( T(0), pVec.dot( precomputedMu_ ) + beta.dot( beta ) ); // the value can slightly below zero due to rounding-errors
 
         return error;
     }

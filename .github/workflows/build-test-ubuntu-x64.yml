@@ -203,8 +203,9 @@ jobs:
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv BINDS_V
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

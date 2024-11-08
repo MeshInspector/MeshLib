@@ -186,7 +186,7 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: |
           . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv BINDS_V
+          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv -bv ${{env.BINDS_V}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

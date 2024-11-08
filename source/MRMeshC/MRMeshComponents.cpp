@@ -12,9 +12,11 @@
 
 using namespace MR;
 
+MR_VECTOR_LIKE_IMPL( Face2RegionMap, RegionId )
+
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( FaceBitSet )
-REGISTER_VECTOR( Face2RegionMap )
+REGISTER_VECTOR_LIKE( MRFace2RegionMap, RegionId )
 
 namespace
 {
@@ -77,10 +79,7 @@ MRMeshComponentsMap mrMeshComponentsGetAllComponentsMap( const MRMeshPart* mp, M
     auto result = MeshComponents::getAllComponentsMap( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ) );
     MRMeshComponentsMap ret;
     ret.numComponents = result.second;
-    ret.faceMap = new MRFace2RegionMap();
-    ret.faceMap->size = result.first.size();
-    ret.faceMap->data = new MRRegionId[ret.faceMap->size];
-    std::copy( result.first.vec_.begin(), result.first.vec_.end(), (RegionId*)ret.faceMap->data );
+    ret.faceMap = auto_cast( NEW_VECTOR(std::move(result.first.vec_ )));
     return ret;
 }
 
@@ -97,8 +96,6 @@ void mrMeshComponentsAllComponentsMapFree( const MRMeshComponentsMap* map )
 {
     if ( map->faceMap->data != NULL )
     {
-        delete[] map->faceMap->data;
-        map->faceMap->data = nullptr;
-        map->faceMap->size = 0;
+       mrFace2RegionMapFree( map->faceMap );
     }
 }

@@ -24,7 +24,8 @@ typedef struct MR_VECTOR_CONCAT( MR, ClassName ) \
     void* reserved1;                             \
 } MR_VECTOR_CONCAT( MR, ClassName );             \
 MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), Invalidate )( MR_VECTOR_CONCAT( MR, ClassName )* ); \
-MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), Free )( MR_VECTOR_CONCAT( MR, ClassName )* );
+MRMESHC_API void MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), Free )( MR_VECTOR_CONCAT( MR, ClassName )* ); \
+MRMESHC_API MR_VECTOR_CONCAT( MR, ClassName )* MR_VECTOR_CONCAT( MR_VECTOR_CONCAT( mr, ClassName ), New )(void);
 
 #define MR_VECTOR_DECL( Type ) MR_VECTOR_LIKE_DECL( MR_VECTOR_CONCAT( Vector, Type ), Type )
 

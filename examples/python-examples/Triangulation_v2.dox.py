@@ -15,11 +15,10 @@ z = np.cos(v)
 # Prepare for MeshLib PointCloud
 verts = np.stack((x.flatten(), y.flatten(), z.flatten()), axis=-1).reshape(-1, 3)
 # Create MeshLib PointCloud from np ndarray
+# Create MeshLib PointCloud from np ndarray
 pc = mn.pointCloudFromPoints(verts)
 # Remove duplicate points
-sampling_settings = mm.UniformSamplingSettings()
-sampling_settings.distance = 1e-3
-pc.validPoints = mm.pointUniformSampling(pc, sampling_settings)
+pc.validPoints = mm.pointUniformSampling(pc, 1e-3)
 pc.invalidateCaches()
 
 # Triangulate it

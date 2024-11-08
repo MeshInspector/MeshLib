@@ -910,16 +910,13 @@ void Viewer::launchEventLoop()
 
 void Viewer::launchShut()
 {
-    spdlog::info( "Viewer::launchShut() #1" );
     if ( !isLaunched_ )
     {
         spdlog::error( "Viewer is not launched!" );
         return;
     }
-    spdlog::info( "Viewer::launchShut() #2" );
     if ( window )
         glfwHideWindow( window );
-    spdlog::info( "Viewer::launchShut() #3" );
 
     if ( settingsMng_ )
     {
@@ -927,17 +924,13 @@ void Viewer::launchShut()
         settingsMng_->saveSettings( *this );
     }
 
-    spdlog::info( "Viewer::launchShut() #4" );
     for ( auto& viewport : viewport_list )
         viewport.shut();
-    spdlog::info( "Viewer::launchShut() #5" );
     shutdownPlugins_();
-    spdlog::info( "Viewer::launchShut() #6" );
 
     // Clear plugins
     plugins.clear();
     menuPlugin_.reset();
-    spdlog::info( "Viewer::launchShut() #7" );
 
     // Clear objects
     SceneRoot::get().removeAllChildren();
@@ -946,13 +939,11 @@ void Viewer::launchShut()
     clippingPlaneObject.reset();
     globalBasisAxes.reset();
     globalHistoryStore_.reset();
-    spdlog::info( "Viewer::launchShut() #8" );
 
     GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
     sceneTexture_.reset();
-    spdlog::info( "Viewer::launchShut() #9" );
 
     if ( touchpadController_ )
         touchpadController_->reset();
@@ -962,11 +953,9 @@ void Viewer::launchShut()
     glInitialized_ = false;
     isLaunched_ = false;
     spaceMouseHandler_.reset();
-    spdlog::info( "Viewer::launchShut() #10" );
 
     /// removes references on all cached objects before shared libraries with plugins are unloaded
     SceneCache::invalidateAll();
-    spdlog::info( "Viewer::launchShut() #11" );
 
     /// disconnect all slots before shared libraries with plugins are unloaded
     mouseDownSignal = {};
@@ -1008,7 +997,6 @@ void Viewer::launchShut()
     touchpadZoomGestureUpdateSignal = {};
     touchpadZoomGestureEndSignal = {};
     postFocusSignal = {};
-    spdlog::info( "Viewer::launchShut() #12" );
 }
 
 void Viewer::init_()
@@ -1043,16 +1031,16 @@ void Viewer::shutdownPlugins_()
     for ( unsigned int i = 0; i < plugins.size(); ++i )
     {
         auto & pl = *plugins[i];
-        spdlog::info( "Shutting down plugin: {} named {}", typeid( pl ).name(), pl.plugin_name );
+        spdlog::debug( "Shutting down plugin: {}", typeid( pl ).name() );
         pl.shutdown();
     }
-    spdlog::info( "All plugins shut down" );
+    spdlog::debug( "All plugins shut down" );
     if ( menuPlugin_ )
     {
         auto & pl = *menuPlugin_;
-        spdlog::info( "Shutting down menu plugin: {} named {}", typeid( pl ).name(), pl.plugin_name );
+        spdlog::debug( "Shutting down menu plugin: {}", typeid( pl ).name() );
         pl.shutdown();
-        spdlog::info( "Menu plugin shut down" );
+        spdlog::debug( "Menu plugin shut down" );
     }
 }
 

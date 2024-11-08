@@ -114,6 +114,7 @@ public:
     // check if search mask satisfies for this plugin
     MRVIEWER_API bool checkStringMask( const std::string& mask ) const;
 
+    std::string plugin_name;
 
 protected:
     // begin plugin with given parameters

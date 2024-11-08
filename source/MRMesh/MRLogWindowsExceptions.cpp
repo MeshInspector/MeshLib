@@ -1,4 +1,4 @@
-#if defined _WIN32
+#if defined _WIN32 && defined NDEBUG
 
 #include "MRStringConvert.h"
 #include "MRSystem.h"
@@ -25,10 +25,10 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
         return EXCEPTION_CONTINUE_SEARCH;
     PEXCEPTION_RECORD pExceptionRecord = pExInfo->ExceptionRecord;
 
-    if ( /*pExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT ||
+    if ( pExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT ||
          pExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP ||
          pExceptionRecord->ExceptionCode == RPC_UNAVAILABLE ||
-         pExceptionRecord->ExceptionCode == EXCEPTION_CXX ||*/
+         pExceptionRecord->ExceptionCode == EXCEPTION_CXX ||
          pExceptionRecord->ExceptionCode == MS_VC_EXCEPTION )
         return EXCEPTION_CONTINUE_SEARCH; //normal situation, handled otherwise
 
@@ -113,4 +113,4 @@ WindowsExceptionsLogger::~WindowsExceptionsLogger()
 
 } //namespace MR
 
-#endif // defined _WIN32
+#endif // defined _WIN32 && defined NDEBUG

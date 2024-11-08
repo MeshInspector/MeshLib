@@ -148,19 +148,14 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
 void RibbonMenu::shutdown()
 {
-    spdlog::info( "RibbonMenu::shutdown() #1" );
     for ( auto& item : RibbonSchemaHolder::schema().items )
     {
         if ( item.second.item && item.second.item->isActive() )
             item.second.item->action();
     }
-    spdlog::info( "RibbonMenu::shutdown() #2" );
     fontManager_.initFontManagerInstance( nullptr );
-    spdlog::info( "RibbonMenu::shutdown() #3" );
     ImGuiMenu::shutdown();
-    spdlog::info( "RibbonMenu::shutdown() #4" );
     RibbonIcons::free();
-    spdlog::info( "RibbonMenu::shutdown() #5" );
 }
 
 void RibbonMenu::openToolbarCustomize()

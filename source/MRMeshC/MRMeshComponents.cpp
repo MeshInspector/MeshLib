@@ -1,4 +1,5 @@
 #include "MRMeshComponents.h"
+#include "MRBitSet.h"
 #include "detail/TypeCast.h"
 #include "detail/Vector.h"
 
@@ -27,6 +28,49 @@ MeshPart cast( MRMeshPart mp )
 }
 
 } // namespace
+
+MRFaceBitSet* mrMeshComponentsGetComponent( const MRMeshPart* mp, MRFaceId id, MRFaceIncidence incidence, bool( *isCompBd_ )( MRUndirectedEdgeId ) )
+{
+    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
+        return isCompBd_( MRUndirectedEdgeId { e.get() } );
+    };
+    FaceBitSet result;
+    if ( isCompBd_ )
+        result = MeshComponents::getComponent( cast( *mp ), FaceId(id.id), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd );
+    else
+        result = MeshComponents::getComponent( cast( *mp ), FaceId( id.id ), ( MeshComponents::FaceIncidence( incidence ) ), nullptr );
+
+    return mrFaceBitSetCopy( ( const MRFaceBitSet* )&result );
+}
+
+MRFaceBitSet* mrMeshComponentsGetLargestComponent( const MRMeshPart* mp, MRFaceIncidence incidence, bool( *isCompBd_ )( MRUndirectedEdgeId ), float minArea, int* numSmallerComponents )
+{
+    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
+        return isCompBd_( MRUndirectedEdgeId { e.get() } );
+    };
+    FaceBitSet result;
+    if ( isCompBd_ )
+        result = MeshComponents::getLargestComponent( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd, minArea, numSmallerComponents );
+    else
+        result = MeshComponents::getLargestComponent( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ), nullptr, minArea, numSmallerComponents );
+
+    return mrFaceBitSetCopy( ( const MRFaceBitSet* )&result );
+}
+
+MRFaceBitSet* mrMeshComponentsGetLargeByAreaComponents( const MRMeshPart* mp, float minArea, bool( *isCompBd_ )( MRUndirectedEdgeId ) )
+{
+    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
+        return isCompBd_( MRUndirectedEdgeId { e.get() } );
+    };
+    
+    FaceBitSet result;
+    if ( isCompBd_ )
+        result = MeshComponents::getLargeByAreaComponents( cast( *mp ), minArea, isCompBd );
+    else
+        result = MeshComponents::getLargeByAreaComponents( cast( *mp ), minArea, nullptr );
+
+    return mrFaceBitSetCopy( (const MRFaceBitSet* ) & result);
+}
 
 MRMeshComponentsMap mrMeshComponentsGetAllComponentsMap( const MRMeshPart* mp, MRFaceIncidence incidence )
 {

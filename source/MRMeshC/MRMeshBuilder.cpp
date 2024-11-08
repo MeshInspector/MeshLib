@@ -13,13 +13,18 @@ REGISTER_VECTOR( VertMap )
 int mrMeshBuilderUniteCloseVertices( MRMesh* mesh_, float closeDist, bool uniteOnlyBd, MRVertMap* optionalVertOldToNew )
 {
     ARG( mesh );
-    VertMap vertOldToNew;
-    auto res = MeshBuilder::uniteCloseVertices( mesh, closeDist, uniteOnlyBd, optionalVertOldToNew ? &vertOldToNew : nullptr );
+    vector_wrapper<VertId>* wrapper = ( vector_wrapper<VertId>* )( optionalVertOldToNew );
+    VertMap* vmap = nullptr;
+    if ( wrapper )
+    {
+        vmap = ( VertMap* )( &( std::vector<VertId>&)(* wrapper ));
+    }
+
+    auto res =  MeshBuilder::uniteCloseVertices( mesh, closeDist, uniteOnlyBd, vmap );
     if ( optionalVertOldToNew )
     {
-        optionalVertOldToNew->size = vertOldToNew.size();
-        optionalVertOldToNew->data = new MRVertId[optionalVertOldToNew->size];
-        std::copy( vertOldToNew.vec_.begin(), vertOldToNew.vec_.end(), (VertId*)optionalVertOldToNew->data );
+        mrVertMapInvalidate( optionalVertOldToNew );
     }
     return res;
+        
 }

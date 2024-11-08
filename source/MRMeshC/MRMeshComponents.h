@@ -31,6 +31,11 @@ typedef enum MRFaceIncidence
     MRFaceIncidencePerVertex ///< face can have neighbor via vertex
 } MRFaceIncidence;
 
+MRMESHC_API MRFaceBitSet* mrMeshComponentsGetComponent( const MRMeshPart* mp, MRFaceId id, MRFaceIncidence incidence, bool( *isCompBd )( MRUndirectedEdgeId ) );
+
+MRMESHC_API MRFaceBitSet* mrMeshComponentsGetLargestComponent( const MRMeshPart* mp, MRFaceIncidence incidence, bool( *isCompBd )( MRUndirectedEdgeId ), float minArea, int* numSmallerComponents );
+
+MRMESHC_API MRFaceBitSet* mrMeshComponentsGetLargeByAreaComponents( const MRMeshPart* mp, float minArea, bool( *isCompBd )( MRUndirectedEdgeId ) );
 /// gets all connected components of mesh part as
 /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
 /// 2. the total number of components

@@ -20,4 +20,7 @@ int main( void )
     testComponentsMap();
     testLargeRegions();
     testUniteCloseVertices();
+    testLargeComponents();
+    testLargestComponent();
+    testGetComponent();
 }

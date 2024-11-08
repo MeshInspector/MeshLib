@@ -3,7 +3,6 @@
 ## Simple triangulation
 ##
 ## \code
-from Demos.mmapfile_demo import offset
 from meshlib import mrmeshpy as mm
 from meshlib import mrmeshnumpy as mn
 import numpy as np

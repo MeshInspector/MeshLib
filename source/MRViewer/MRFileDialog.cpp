@@ -590,7 +590,7 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
         {
             if ( !paths[0].empty() )
-                FileDialogSignals::instance().onSaveFile( results[0] );
+                FileDialogSignals::instance().onSaveFile( paths[0] );
             callback( paths[0] );
         }
     };

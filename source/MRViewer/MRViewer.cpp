@@ -1030,10 +1030,18 @@ void Viewer::shutdownPlugins_()
 {
     for ( unsigned int i = 0; i < plugins.size(); ++i )
     {
-        plugins[i]->shutdown();
+        auto & pl = *plugins[i];
+        spdlog::debug( "Shutting down plugin: {}", typeid( pl ).name() );
+        pl.shutdown();
     }
+    spdlog::debug( "All plugins shut down" );
     if ( menuPlugin_ )
-        menuPlugin_->shutdown();
+    {
+        auto & pl = *menuPlugin_;
+        spdlog::debug( "Shutting down menu plugin: {}", typeid( pl ).name() );
+        pl.shutdown();
+        spdlog::debug( "Menu plugin shut down" );
+    }
 }
 
 void Viewer::postEmptyEvent()

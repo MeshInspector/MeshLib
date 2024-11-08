@@ -26,11 +26,6 @@ namespace MR
 class ViewerPlugin
 {
 public:
-    ViewerPlugin()
-    {
-        plugin_name = "dummy";
-    }
-
     virtual ~ViewerPlugin()
     {
     }
@@ -46,7 +41,6 @@ public:
     {
     }
 
-    std::string plugin_name;
 protected:
     // Pointer to the main Viewer class
     Viewer *viewer = &getViewerInstance();

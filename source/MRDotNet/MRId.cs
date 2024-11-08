@@ -28,4 +28,12 @@ namespace MR.DotNet
         public EdgeId(int id = -1) { Id = id; }
         public bool Valid() => Id >= 0;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RegionId
+    {
+        public int Id;
+        public RegionId(int id = -1) { Id = id; }
+        public bool Valid() => Id >= 0;
+    }
 }

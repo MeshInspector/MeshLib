@@ -8,7 +8,6 @@ Following code presents example of loading and saving mesh file
 - <b class="tab-title">Cpp</b>
 \include MeshLoadSave.dox.cpp
 Further examples won't check return values for sake of clarity
-
 \sa \ref MR::MeshLoad
 \sa \ref MR::MeshSave
 

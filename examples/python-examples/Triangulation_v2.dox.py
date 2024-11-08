@@ -26,7 +26,7 @@ triangulated_pc = mm.triangulatePointCloud(pc)
 
 # Fix possible issues
 params = mm.OffsetParameters()
-params.voxelSize = pc.computeBoundingBox().diagonal() * 5e-2
+params.voxelSize = 0.2
 triangulated_pc = mm.offsetMesh(triangulated_pc, 0.1, params=params)
 
 ## \endcode

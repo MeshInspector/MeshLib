@@ -1,11 +1,45 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRIOFilters.h"
+#include "MRMesh/MRSignal.h"
 #include <filesystem>
 #include <functional>
 
 namespace MR
 {
+
+/// This structure contains global signals for file dialogs, that are called on valid selection of file or folder
+struct FileDialogSignals
+{
+public:
+    using SelectFileSignal = Signal<void( const std::filesystem::path& path )>;
+    using SelectFilesSignal = Signal<void( const std::vector<std::filesystem::path>& )>;
+    using SelectFolderSignal = SelectFileSignal;
+    using SelectFoldersSignal = SelectFilesSignal;
+
+    static MRVIEWER_API SelectFileSignal& onOpenFile(); ///< called when one file is selected for opening (`openFileDialog` and `openFileDialogAsync`)
+    static MRVIEWER_API SelectFilesSignal& onOpenFiles(); ///< called when several files are selected for opening (`openFilesDialog` and `openFilesDialogAsync`)
+
+    static MRVIEWER_API SelectFileSignal& onSaveFile(); ///< called when file name is selected for saving (`saveFileDialog` and `saveFileDialogAsync`)
+
+    static MRVIEWER_API SelectFolderSignal& onSelectFolder(); ///< called when one folder is selected (we do not now differ reason)(`openFolderDialog` and `openFolderDialogAsync`)
+    static MRVIEWER_API SelectFoldersSignal& onSelectFolders();///< called when several folders are selected (we do not now differ reason)(`openFoldersDialog`)
+
+private:
+    FileDialogSignals() = default;
+    ~FileDialogSignals() = default;
+
+    static FileDialogSignals& instance_();
+
+    SelectFileSignal openFileSignal_;
+    SelectFilesSignal openFilesSignal_;
+
+    SelectFileSignal saveFileSignal_;
+
+    SelectFolderSignal selectFolderSignal_;
+    SelectFoldersSignal selectFoldersSignal_;
+};
+
 
 struct FileParameters
 {

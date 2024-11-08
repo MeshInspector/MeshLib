@@ -25,12 +25,12 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
         return EXCEPTION_CONTINUE_SEARCH;
     PEXCEPTION_RECORD pExceptionRecord = pExInfo->ExceptionRecord;
 
-    if ( pExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT ||
+/*    if ( pExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT ||
          pExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP ||
          pExceptionRecord->ExceptionCode == RPC_UNAVAILABLE ||
          pExceptionRecord->ExceptionCode == EXCEPTION_CXX ||
          pExceptionRecord->ExceptionCode == MS_VC_EXCEPTION )
-        return EXCEPTION_CONTINUE_SEARCH; //normal situation, handled otherwise
+        return EXCEPTION_CONTINUE_SEARCH; //normal situation, handled otherwise*/
 
     logging = true;
     if ( pExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && pExceptionRecord->NumberParameters >= 2 )

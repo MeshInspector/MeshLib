@@ -1,4 +1,4 @@
-#if defined _WIN32 && defined NDEBUG
+#if defined _WIN32
 
 #include "MRStringConvert.h"
 #include "MRSystem.h"
@@ -113,4 +113,4 @@ WindowsExceptionsLogger::~WindowsExceptionsLogger()
 
 } //namespace MR
 
-#endif // defined _WIN32 && defined NDEBUG
+#endif // defined _WIN32

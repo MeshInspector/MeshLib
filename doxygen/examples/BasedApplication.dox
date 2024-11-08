@@ -1,0 +1,24 @@
+/**
+ \page BasedApplication Basing your application on MeshLib
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Cpp</b>
+First of all you should make `main` function like this
+\include MRBasedMainFunc.dox.cpp
+Then you should make your plugins, to find how have a look at \ref StatePluginsHelp page
+
+- <b class="tab-title">Python</b>
+\note Python version 3 and later
+\include Viewer.dox.py
+
+Viewer with scene tree
+\image html Viewer_with_scene_tree.png
+
+Viewer without scene tree
+\image html Viewer_without_scene_tree.png
+\note Unfortunately viewer now does not work on macOS
+
+</div>
+
+ */

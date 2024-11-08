@@ -1,0 +1,14 @@
+/**
+ \page ExampleLaplacian Laplacian deformation Example
+
+Example of using Laplacian deformer
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\note Python version 3 and later
+\include LaplacianExample.dox.py
+
+</div>
+
+ */

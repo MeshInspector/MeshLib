@@ -415,7 +415,7 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     if ( results.size() == 1 )
     {
         if ( !results[0].empty() )
-            FileDialogSignals::onOpenFile()( results[0] );
+            FileDialogSignals::instance().onOpenFile( results[0] );
         return results[0];
     }
     return {};
@@ -432,7 +432,7 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
         {
             if ( !paths[0].empty() )
-                FileDialogSignals::onOpenFile()( paths[0] );
+                FileDialogSignals::instance().onOpenFile( paths[0] );
             callback( paths[0] );
         }
     };
@@ -460,7 +460,7 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     results = gtkDialog( parameters );
 #endif
     if ( !results.empty() )
-        FileDialogSignals::onOpenFiles()( results );
+        FileDialogSignals::instance().onOpenFiles( results );
     return results;
 }
 
@@ -473,7 +473,7 @@ void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem
     sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
         if ( !paths.empty() )
-            FileDialogSignals::onOpenFiles()( paths );
+            FileDialogSignals::instance().onOpenFiles( paths );
         callback( paths );
     };
     std::string accumFilter = webAccumFilter( params.filters );
@@ -504,7 +504,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     if ( results.size() == 1 )
     {
         if ( !results[0].empty() )
-            FileDialogSignals::onSelectFolder()( results[0] );
+            FileDialogSignals::instance().onSelectFolder( results[0] );
         return results[0];
     }
     return {};
@@ -521,7 +521,7 @@ void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )>
         if ( !paths.empty() )
         {
             if ( !paths[0].empty() )
-                FileDialogSignals::onSelectFolder()( paths[0] );
+                FileDialogSignals::instance().onSelectFolder( paths[0] );
             callback( paths[0] );
         }
     };
@@ -551,7 +551,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     results = gtkDialog( parameters );
 #endif
     if ( !results.empty() )
-        FileDialogSignals::onSelectFolders()( results );
+        FileDialogSignals::instance().onSelectFolders( results );
     return results;
 }
 
@@ -573,7 +573,7 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     if ( results.size() == 1 )
     {
         if ( !results[0].empty() )
-            FileDialogSignals::onSaveFile()( results[0] );
+            FileDialogSignals::instance().onSaveFile( results[0] );
         return results[0];
     }
     return {};
@@ -590,7 +590,7 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
         {
             if ( !paths[0].empty() )
-                FileDialogSignals::onSaveFile()( results[0] );
+                FileDialogSignals::instance().onSaveFile( results[0] );
             callback( paths[0] );
         }
     };
@@ -607,35 +607,10 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #endif
 }
 
-FileDialogSignals& FileDialogSignals::instance_()
+FileDialogSignals& FileDialogSignals::instance()
 {
     static FileDialogSignals inst;
     return inst;
-}
-
-FileDialogSignals::SelectFileSignal& FileDialogSignals::onOpenFile()
-{
-    return instance_().openFileSignal_;
-}
-
-FileDialogSignals::SelectFilesSignal& FileDialogSignals::onOpenFiles()
-{
-    return instance_().openFilesSignal_;
-}
-
-FileDialogSignals::SelectFileSignal& FileDialogSignals::onSaveFile()
-{
-    return instance_().saveFileSignal_;
-}
-
-FileDialogSignals::SelectFolderSignal& FileDialogSignals::onSelectFolder()
-{
-    return instance_().selectFolderSignal_;
-}
-
-FileDialogSignals::SelectFoldersSignal& FileDialogSignals::onSelectFolders()
-{
-    return instance_().selectFoldersSignal_;
 }
 
 }

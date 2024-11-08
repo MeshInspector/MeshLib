@@ -9,7 +9,7 @@ namespace MR
 {
 
 /// This structure contains global signals for file dialogs, that are called on valid selection of file or folder
-struct FileDialogSignals
+struct MRVIEWER_CLASS FileDialogSignals
 {
 public:
     using SelectFileSignal = Signal<void( const std::filesystem::path& path )>;
@@ -17,27 +17,20 @@ public:
     using SelectFolderSignal = SelectFileSignal;
     using SelectFoldersSignal = SelectFilesSignal;
 
-    static MRVIEWER_API SelectFileSignal& onOpenFile(); ///< called when one file is selected for opening (`openFileDialog` and `openFileDialogAsync`)
-    static MRVIEWER_API SelectFilesSignal& onOpenFiles(); ///< called when several files are selected for opening (`openFilesDialog` and `openFilesDialogAsync`)
+    /// returns instance of this holder
+    MRVIEWER_API static FileDialogSignals& instance();
 
-    static MRVIEWER_API SelectFileSignal& onSaveFile(); ///< called when file name is selected for saving (`saveFileDialog` and `saveFileDialogAsync`)
+    SelectFileSignal onOpenFile; ///< called when one file is selected for opening (`openFileDialog` and `openFileDialogAsync`)
+    SelectFilesSignal onOpenFiles; ///< called when several files are selected for opening (`openFilesDialog` and `openFilesDialogAsync`)
 
-    static MRVIEWER_API SelectFolderSignal& onSelectFolder(); ///< called when one folder is selected (we do not now differ reason)(`openFolderDialog` and `openFolderDialogAsync`)
-    static MRVIEWER_API SelectFoldersSignal& onSelectFolders();///< called when several folders are selected (we do not now differ reason)(`openFoldersDialog`)
+    SelectFileSignal onSaveFile; ///< called when file name is selected for saving (`saveFileDialog` and `saveFileDialogAsync`)
+
+    SelectFolderSignal onSelectFolder; ///< called when one folder is selected (we do not now differ reason)(`openFolderDialog` and `openFolderDialogAsync`)
+    SelectFoldersSignal onSelectFolders;///< called when several folders are selected (we do not now differ reason)(`openFoldersDialog`)
 
 private:
     FileDialogSignals() = default;
     ~FileDialogSignals() = default;
-
-    static FileDialogSignals& instance_();
-
-    SelectFileSignal openFileSignal_;
-    SelectFilesSignal openFilesSignal_;
-
-    SelectFileSignal saveFileSignal_;
-
-    SelectFolderSignal selectFolderSignal_;
-    SelectFoldersSignal selectFoldersSignal_;
 };
 
 

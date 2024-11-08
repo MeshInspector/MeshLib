@@ -20,11 +20,11 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2024.07.12'
+  VCPKG-VERSION: '2024.10.21'
 
 jobs:
   windows-build-test:
-    timeout-minutes: 50
+    timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

@@ -413,7 +413,11 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
+    {
+        if ( !results[0].empty() )
+            FileDialogSignals::instance().onOpenFile( results[0] );
         return results[0];
+    }
     return {};
 }
 
@@ -426,7 +430,11 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
         if ( !paths.empty() )
+        {
+            if ( !paths[0].empty() )
+                FileDialogSignals::instance().onOpenFile( paths[0] );
             callback( paths[0] );
+        }
     };
     std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
@@ -451,6 +459,8 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
+    if ( !results.empty() )
+        FileDialogSignals::instance().onOpenFiles( results );
     return results;
 }
 
@@ -460,7 +470,12 @@ void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem
 #ifndef __EMSCRIPTEN__
     callback( openFilesDialog( params ) );
 #else
-    sDialogFilesCallback = callback;
+    sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
+    {
+        if ( !paths.empty() )
+            FileDialogSignals::instance().onOpenFiles( paths );
+        callback( paths );
+    };
     std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
@@ -487,7 +502,11 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
+    {
+        if ( !results[0].empty() )
+            FileDialogSignals::instance().onSelectFolder( results[0] );
         return results[0];
+    }
     return {};
 }
     
@@ -500,7 +519,11 @@ void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )>
     sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
         if ( !paths.empty() )
+        {
+            if ( !paths[0].empty() )
+                FileDialogSignals::instance().onSelectFolder( paths[0] );
             callback( paths[0] );
+        }
     };
     (void)baseFolder;
 #pragma clang diagnostic push
@@ -527,6 +550,8 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
+    if ( !results.empty() )
+        FileDialogSignals::instance().onSelectFolders( results );
     return results;
 }
 
@@ -546,7 +571,11 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
+    {
+        if ( !results[0].empty() )
+            FileDialogSignals::instance().onSaveFile( results[0] );
         return results[0];
+    }
     return {};
 }
 
@@ -559,7 +588,11 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
         if ( !paths.empty() )
+        {
+            if ( !paths[0].empty() )
+                FileDialogSignals::instance().onSaveFile( paths[0] );
             callback( paths[0] );
+        }
     };
     auto filters = params.filters;
     filters.erase( std::remove_if( filters.begin(), filters.end(), [] ( const auto& filter )
@@ -572,6 +605,12 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 )), params.fileName.c_str(), accumFilter.c_str() );
 #pragma clang diagnostic pop
 #endif
+}
+
+FileDialogSignals& FileDialogSignals::instance()
+{
+    static FileDialogSignals inst;
+    return inst;
 }
 
 }

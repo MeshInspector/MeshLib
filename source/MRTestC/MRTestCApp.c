@@ -4,6 +4,8 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshNormals.h"
+#include "MRMeshComponents.h"
+#include "MRMeshBuilder.h"
 
 int main( void )
 {
@@ -15,4 +17,10 @@ int main( void )
     testMeshDecimate();
     testMeshFillHole();
     testMeshNormals();
+    testComponentsMap();
+    testLargeRegions();
+    testUniteCloseVertices();
+    testLargeComponents();
+    testLargestComponent();
+    testGetComponent();
 }

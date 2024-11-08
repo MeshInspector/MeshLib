@@ -43,7 +43,7 @@ jobs:
       - name: Run Doxygen
         working-directory: MeshInspector.github.io
         run: |
-          scripts/pre.sh ${{ inputs.full_config_build }}
+          scripts/pre.sh ${{ inputs.output_folder }}
           doxygen Doxyfile
           scripts/post.sh
 

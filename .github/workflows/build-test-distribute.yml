@@ -18,7 +18,7 @@ on:
 
 
 env:
-  VCPKG-VERSION: '2024.07.12'
+  VCPKG-VERSION: '2024.10.21'
 
 jobs:
   prepare-image:
@@ -145,10 +145,18 @@ jobs:
       - name: Make Install Folder .NET
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
-      - name: Distribute
-        run: py -3.10 scripts\zip_distribution.py install MeshLibDist.zip
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
 
-      - name: Distribute .NET
+      - name: Archive Distribution
+        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
+
+      - name: Test Example Plugin # call it after archive not to pack build results
+        run: |
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+
+      - name: Archive .NET Distribution
         run: py -3.10 scripts\zip_distribution.py install_dotnet MeshLibDotNetDist.zip
 
       - name: Upload Windows Distribution
@@ -270,6 +278,7 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15

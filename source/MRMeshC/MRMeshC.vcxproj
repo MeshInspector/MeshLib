@@ -27,7 +27,9 @@
     <ClInclude Include="MRMakeSphereMesh.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMeshBoolean.h" />
+    <ClInclude Include="MRMeshBuilder.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMesh.h" />
@@ -79,7 +81,9 @@
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
+    <ClCompile Include="MRMeshBuilder.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />

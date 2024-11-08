@@ -62,6 +62,15 @@ struct LaunchParams
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };
 
+struct FileLoadOptions
+{
+    /// first part of undo name
+    const char * undoPrefix = "Open ";
+
+    // true here will replace existing scene even if more than one file is open
+    bool forceReplaceScene = false;
+};
+
 // GLFW-based mesh viewer
 class MRVIEWER_CLASS Viewer
 {
@@ -110,9 +119,11 @@ public:
     // Mesh IO
     // Check the supported file format
     MRVIEWER_API bool isSupportedFormat( const std::filesystem::path& file_name );
+
     // Load objects / scenes from files
     // Note! load files with progress bar in next frame if it possible, otherwise load directly inside this function
-    MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList );
+    MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList, const FileLoadOptions & options = {} );
+
     // Save first selected objects to file
     MRVIEWER_API bool saveToFile( const std::filesystem::path & mesh_file_name );
 

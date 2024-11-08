@@ -18,7 +18,7 @@ pushd .
 if not exist %MSYS2_DIR% (
     echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to build it.
 ) else (
-    echo Fount MSYS2 at `%MSYS2_DIR%`.
+    echo Found MSYS2 at `%MSYS2_DIR%`.
 
 
     rem --- Ensure the MRBind source exists. Pull the latest version if already exists.

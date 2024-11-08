@@ -138,7 +138,6 @@ struct DecimateSettings
     ProgressCallback progressCallback;
 
     /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
-    /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
     /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
 

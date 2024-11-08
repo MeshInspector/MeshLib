@@ -12,7 +12,8 @@
 #include <fstream>
 
 #ifdef _WIN32
-#include "psapi.h"
+#include <psapi.h>
+#include <shellapi.h>
 
 #ifndef _MSC_VER
 #include <cpuid.h>

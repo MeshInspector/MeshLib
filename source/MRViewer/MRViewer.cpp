@@ -1042,14 +1042,16 @@ void Viewer::shutdownPlugins_()
 {
     for ( unsigned int i = 0; i < plugins.size(); ++i )
     {
-        spdlog::info( "Shutting down plugin: {} named {}", typeid( *plugins[i] ).name(), plugins[i]->plugin_name );
-        plugins[i]->shutdown();
+        auto & pl = *plugins[i];
+        spdlog::info( "Shutting down plugin: {} named {}", typeid( pl ).name(), pl.plugin_name );
+        pl.shutdown();
     }
     spdlog::info( "All plugins shut down" );
     if ( menuPlugin_ )
     {
-        spdlog::info( "Shutting down menu plugin: {} named {}", typeid( *menuPlugin_ ).name(), menuPlugin_->plugin_name );
-        menuPlugin_->shutdown();
+        auto & pl = *menuPlugin_;
+        spdlog::info( "Shutting down menu plugin: {} named {}", typeid( pl ).name(), pl.plugin_name );
+        pl.shutdown();
         spdlog::info( "Menu plugin shut down" );
     }
 }

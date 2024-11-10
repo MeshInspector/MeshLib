@@ -25,4 +25,12 @@ MRMESHC_API MRMatrix3f mrMatrix3fRotationVector( const MRVector3f* from, const M
 /// multiplies two matrices
 MRMESHC_API MRMatrix3f mrMatrix3fMul( const MRMatrix3f* a, const MRMatrix3f* b );
 
+MRMESHC_API MRMatrix3f mrMatrix3fAdd( const MRMatrix3f* a, const MRMatrix3f* b );
+
+MRMESHC_API MRMatrix3f mrMatrix3fSub( const MRMatrix3f* a, const MRMatrix3f* b );
+
+MRMESHC_API MRVector3f mrMatrix3fMulVector( const MRMatrix3f* a, const MRVector3f* b );
+
+MRMESHC_API bool mrMatrix3fEqual( const MRMatrix3f* a, const MRMatrix3f* b );
+
 MR_EXTERN_C_END

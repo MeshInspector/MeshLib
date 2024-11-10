@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.07.12'
+  VCPKG-VERSION: '2024.10.21'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -133,7 +133,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         run: |
-          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed CXX_FOR_ABI=${{matrix.compiler}}
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed CXX_FOR_ABI=${{matrix.compiler}}
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -306,7 +306,7 @@ jobs:
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          call ./scripts/mrbind/generate_win.bat -B --trace PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -347,9 +347,11 @@ jobs:
             # On 12.0 x86 `brew` doesn't have binary packages for Clang.
             plat-name: macosx_13_0_x86_64
             instance: macos-13
+            brewpath: /usr/local
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
+            brewpath: /opt/homebrew
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -422,13 +424,12 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          # Add updated Make from homebrew to PATH. Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
-          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
         run: build/Release/bin/MRTest

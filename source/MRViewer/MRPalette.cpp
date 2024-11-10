@@ -1,5 +1,4 @@
 #include "MRPalette.h"
-#include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
@@ -362,9 +361,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     }
 
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = getViewerInstance();
-    const auto menu = viewer.getMenuPlugin();
-    const auto& windowSize = viewer.viewport().getViewportRect();
+    const auto menu = ImGuiMenu::instance();
+    const auto& windowSize = Viewport::get().getViewportRect();
 
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
@@ -375,7 +373,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     if ( paletteWindow )
     {
-        const auto currentPos = paletteWindow->Pos;
+        auto currentPos = paletteWindow->Pos;
         auto currentSize = paletteWindow->Size;
         constexpr float cornerSize = 50.0f;
         const auto ctx = ImGui::GetCurrentContext();
@@ -396,6 +394,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         {
             currentSize.x += ( maxTextSize - prevMaxLabelWidth_ );
             ImGui::SetNextWindowSize( currentSize, ImGuiCond_Always );
+            currentPos.x -= ( maxTextSize - prevMaxLabelWidth_ );
+            ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always );
             prevMaxLabelWidth_ = maxTextSize;
         }
     }
@@ -505,17 +505,22 @@ Color Palette::getColor( float val )
 
 float Palette::getRelativePos( float val ) const
 {
-    if ( val <= parameters_.ranges[0] )
-        return 0.f;
-    if ( val >= parameters_.ranges.back() )
-        return 1.f;
-
     if ( parameters_.ranges.size() == 2 )
-        return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] );
+    {
+        const float range = parameters_.ranges[1] - parameters_.ranges[0];
+        if ( range != 0.f )
+            return ( val - parameters_.ranges[0] ) / range;
+        else if ( val < parameters_.ranges[0] )
+            return 0.f;
+        else if ( val > parameters_.ranges[1] )
+            return 1.f;
+        else
+            return 0.5f;
+    }
     else if ( parameters_.ranges.size() == 4 )
     {
-        float centralZoneAbsRange = parameters_.ranges[2] - parameters_.ranges[1];
-        bool isInCentralZone = val >= parameters_.ranges[1] && val <= parameters_.ranges[2];
+        const float centralZoneAbsRange = parameters_.ranges[2] - parameters_.ranges[1];
+        const bool isInCentralZone = val >= parameters_.ranges[1] && val <= parameters_.ranges[2];
         if ( isInCentralZone && ( texture_.filter == FilterType::Linear || centralZoneAbsRange <= 0.0f ) )
                 return 0.5f;
 
@@ -536,9 +541,26 @@ float Palette::getRelativePos( float val ) const
         }
 
         if ( val < parameters_.ranges[1] )
-            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * outerZoneRelativeRange;
-        else
-            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * outerZoneRelativeRange + centerZoneRelativeMax;
+        {
+            const float lowerZoneAbsRange = parameters_.ranges[1] - parameters_.ranges[0];
+            if ( lowerZoneAbsRange != 0 )
+                return ( val - parameters_.ranges[0] ) / lowerZoneAbsRange * outerZoneRelativeRange;
+            else if ( val < parameters_.ranges[0] )
+                return 0.f;
+            else
+                return outerZoneRelativeRange / 2.f;
+
+        }
+        else //  val > parameters_.ranges[2]
+        {
+            const float upperZoneAbsRange = parameters_.ranges[3] - parameters_.ranges[2];
+            if ( upperZoneAbsRange != 0 )
+                return ( val - parameters_.ranges[2] ) / upperZoneAbsRange * outerZoneRelativeRange + centerZoneRelativeMax;
+            else if ( val >= parameters_.ranges[3] )
+                return 1.f;
+            else
+                return outerZoneRelativeRange / 2.f + centerZoneRelativeMax;
+        }
     }
     return 0.5f;
 }

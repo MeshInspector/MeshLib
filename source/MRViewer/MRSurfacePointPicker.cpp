@@ -1,5 +1,6 @@
 #include "MRSurfacePointPicker.h"
 #include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRMesh.h"

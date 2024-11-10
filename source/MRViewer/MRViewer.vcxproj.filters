@@ -436,6 +436,12 @@
     <ClCompile Include="MRSceneOperations.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRShowModal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUISaveChangesPopup.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -849,6 +855,15 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneOperations.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShowModal.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMakeSlot.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUISaveChangesPopup.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

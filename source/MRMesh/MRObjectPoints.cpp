@@ -5,6 +5,7 @@
 #include "MRRegionBoundary.h"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 
@@ -212,6 +213,62 @@ std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoint
     newObj->copyColors( *objPoints, vertMap );
     newObj->setName( objPoints->name() + "_part" );
     return newObj;
+}
+
+std::shared_ptr<ObjectPoints> pack( const ObjectPoints& pts, Reorder reorder, VertBitSet* newValidVerts, const ProgressCallback & cb )
+{
+    MR_TIMER
+    if ( !pts.pointCloud() )
+    {
+        assert( false );
+        return {};
+    }
+
+    std::shared_ptr<ObjectPoints> res = std::make_shared<ObjectPoints>();
+    if ( !reportProgress( cb, 0.0f ) )
+        return {};
+
+    res->setPointCloud( std::make_shared<PointCloud>( *pts.pointCloud() ) );
+    if ( newValidVerts )
+        res->varPointCloud()->validPoints = std::move( *newValidVerts );
+    if ( !reportProgress( cb, 0.05f ) )
+        return {};
+
+    const auto map = res->varPointCloud()->pack( reorder );
+    if ( !reportProgress( cb, 0.8f ) )
+        return {};
+
+    if ( !pts.getVertsColorMap().empty() )
+    {
+        VertColors newColors;
+        newColors.resizeNoInit( map.tsize );
+        const auto & oldColors = pts.getVertsColorMap();
+        ParallelFor( 0_v, map.b.endId(), [&] ( VertId oldv )
+        {
+            auto newv = map.b[oldv];
+            if ( !newv )
+                return;
+            newColors[newv] = oldColors[oldv];
+        } );
+        res->setVertsColorMap( std::move( newColors ) );
+        if ( !reportProgress( cb, 0.9f ) )
+            return {};
+    }
+
+    // update points in the selection
+    const auto & oldSel = pts.getSelectedPoints();
+    if ( oldSel.any() )
+    {
+        VertBitSet newSel( map.tsize );
+        for ( auto oldv : oldSel )
+            if ( auto newv = map.b[ oldv ] )
+                newSel.set( newv );
+        res->selectPoints( std::move( newSel ) );
+    }
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return {};
+    return res;
 }
 
 } //namespace MR

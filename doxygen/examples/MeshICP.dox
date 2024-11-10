@@ -1,0 +1,15 @@
+/**
+ \page ExampleMeshICP Mesh ICP
+
+Example of mesh ICP (finding transformation to match objects)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Cpp</b>
+\include MeshICP.dox.cpp
+- <b class="tab-title">Python</b>
+\include MeshICP.dox.py
+
+</div>
+
+ */

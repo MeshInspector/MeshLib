@@ -8,6 +8,8 @@
 --ignore MR::RegisterRenderObjectConstructor
 --ignore MR::Config
 --ignore '/.*operator<=>.*/'
+--ignore '/MR::(Vector|Matrix|SymMatrix)[234]<boost::multiprecision::.*/'
+--ignore '/MR::AffineXf<MR::Vector[234]<boost::multiprecision::.*/'
 --skip-base std::integral_constant
 --skip-base boost::dynamic_bitset
 --skip-base /openvdb::v[0-9][0-9_a-zA-Z]*::Grid/

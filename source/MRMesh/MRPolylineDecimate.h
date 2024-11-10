@@ -94,7 +94,7 @@ MRMESH_API DecimatePolylineResult decimatePolyline( Polyline3& polyline, const D
 /**
  * \brief Collapse edges in the contour according to the settings
  * \ingroup DecimateGroup
- */ 
+ */
 MRMESH_API DecimatePolylineResult decimateContour( Contour2f& contour, const DecimatePolylineSettings2& settings = {} );
 MRMESH_API DecimatePolylineResult decimateContour( Contour3f& contour, const DecimatePolylineSettings3& settings = {} );
 

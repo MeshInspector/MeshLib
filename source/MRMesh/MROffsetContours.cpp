@@ -327,14 +327,17 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
 
     CornerParameters cParams;
     int lastIndex = int( cont.size() ) - 2;
-    cParams.lc = isClosed ? cont[lastIndex] + offset( lastIndex ) * contNorm( lastIndex ) : res.back();
+    cParams.rc = isClosed ? cont[lastIndex] + offset( lastIndex ) * contNorm( lastIndex ) : res.back();
+    cParams.rn = res.back();
     for ( int i = 0; i + 1 < cont.size(); ++i )
     {
-        auto norm = contNorm( i );
-
-        cParams.org = cont[i];
+        auto norm = contNorm( i );        
         auto iOffset = offset( i );
         auto iNextOffset = offset( i + 1 );
+
+        cParams.org = cont[i];
+        cParams.lp = cParams.rc;
+        cParams.lc = cParams.rn;
         cParams.rc = cParams.org + norm * iOffset;
         cParams.rn = cont[i + 1] + norm * iNextOffset;
 
@@ -342,8 +345,6 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
             shiftMap[i] += shiftMap[i - 1];
 
         // interpolation
-        cParams.lp = cParams.lc;
-        cParams.lc = res.back();
         cParams.lrAng = findAngle( cParams.lc, cParams.org, cParams.rc );
         bool sameAsPrev = std::abs( cParams.lrAng ) < PI_F / 360.0f;
         if ( !sameAsPrev )
@@ -366,11 +367,11 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
                 if ( shiftMap )
                     ++shiftMap[i];
             }
-            res.emplace_back( std::move( cParams.rc ) );
+            res.emplace_back( cParams.rc );
             if ( shiftMap )
                 ++shiftMap[i];
         }
-        res.emplace_back( std::move( cParams.rn ) );
+        res.emplace_back( cParams.rn );
         if ( shiftMap )
             ++shiftMap[i + 1];
     }

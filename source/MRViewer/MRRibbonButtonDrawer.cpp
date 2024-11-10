@@ -371,7 +371,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     ImGui::EndGroup();
 
     if ( pressed )
-        onPressAction_( item.item, requirements.empty() );
+        onPressAction_( item.item, requirements );
 
     if ( ImGui::IsItemHovered() )
         drawTooltip_( item, requirements );
@@ -601,7 +601,7 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         {
             auto pressed = ImGui::MenuItem( ( caption + "##dropItem" ).c_str(), nullptr, dropItem->isActive(), requirements.empty() );
             if ( pressed )
-                onPressAction_( dropItem, requirements.empty() );
+                onPressAction_( dropItem, requirements );
         }
         else
         {

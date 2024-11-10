@@ -1,0 +1,23 @@
+{
+	"Order": 999,
+	"LibName": "example_plugin",
+	"Tabs": [
+		{
+			"Name": "MyPlugin",
+			"Priority": 20,
+			"Groups": [
+				{
+					"Name": "Primal",
+					"List": [
+						{
+							"Name": "My Tool"
+						},
+						{
+							"Name": "My State Tool"
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -54,11 +54,11 @@ bool operator == ( const BitSet & a, const BitSet & b )
     auto bBlocksNum = b.num_blocks();
     auto minBlocksNum = std::min( aBlocksNum, bBlocksNum );
     for ( size_t i = 0; i < std::min( aBlocksNum, bBlocksNum ); ++i )
-        if ( a.m_bits[i] != b.m_bits[i] )
+        if ( a.bits()[i] != b.bits()[i] )
             return false;
     const auto& maxBitSet = aBlocksNum > bBlocksNum ? a : b;
     for ( size_t i = minBlocksNum; i < maxBitSet.num_blocks(); ++i )
-        if ( maxBitSet.m_bits[i] != 0 )
+        if ( maxBitSet.bits()[i] != 0 )
             return false;
     return true;
 }

@@ -40,7 +40,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
         def_readwrite( "packMesh", &MR::DecimateSettings::packMesh, "whether to pack mesh at the end" ).
         def_readwrite( "subdivideParts", &MR::DecimateSettings::subdivideParts, 
             "If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);\n"
-            "unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;\n"
             "IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad" );
 
     pybind11::class_<MR::DecimateResult>( m, "DecimateResult", "Results of decimateMesh" ).

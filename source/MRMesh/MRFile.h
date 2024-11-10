@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <filesystem>
 #include <cstdio>
 
@@ -8,10 +9,10 @@ namespace MR
 {
 
 /// this version of fopen unlike std::fopen supports unicode file names on Windows
-MRMESH_API FILE * fopen( const std::filesystem::path & filename, const char * mode );
+MR_BIND_IGNORE MRMESH_API FILE * fopen( const std::filesystem::path & filename, const char * mode );
 
 /// the class to open C FILE handle and automatically close it in the destructor
-class File
+class MR_BIND_IGNORE File
 {
 public:
     File() = default;

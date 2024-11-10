@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <memory>
 #include <string>
 
@@ -22,7 +23,7 @@ using ObjectMakerFunc = std::shared_ptr<Object>();
 class ObjectFactoryBase
 {
 public:
-    MRMESH_API ObjectFactoryBase( std::string className, ObjectMakerFunc * creator );
+    MR_BIND_IGNORE MRMESH_API ObjectFactoryBase( std::string className, ObjectMakerFunc * creator );
     MRMESH_API ~ObjectFactoryBase();
 
 private:
@@ -35,9 +36,9 @@ class ObjectFactory : public ObjectFactoryBase
 public:
     static_assert( std::is_base_of_v<Object, T>, "MR::Object is not base of T" );
 
-    ObjectFactory( std::string className ) 
-        : ObjectFactoryBase( std::move( className ), 
-            []() { return std::static_pointer_cast<Object>( std::make_shared<T>() ); } ) 
+    ObjectFactory( std::string className )
+        : ObjectFactoryBase( std::move( className ),
+            []() { return std::static_pointer_cast<Object>( std::make_shared<T>() ); } )
     { }
 };
 

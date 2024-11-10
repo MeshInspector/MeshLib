@@ -9,14 +9,14 @@ namespace MR.DotNet.Test
         public void TestDefaultConstructor()
         {
             var a = new MR.DotNet.BitSet();
-            Assert.That( a.Size() == 0 );
+            Assert.That( a.Size(), Is.EqualTo(0) );
         }
 
         [Test]
         public void TestConstructor()
         {
-            var a = new MR.DotNet.BitSet( 10 );
-            Assert.That( a.Size() == 10 );
+            var a = new MR.DotNet.BitSet( 20 );
+            Assert.That(a.Size(), Is.EqualTo(20));
         }
 
         [Test]
@@ -33,7 +33,7 @@ namespace MR.DotNet.Test
         {
             var a = new MR.DotNet.BitSet( 10 );
             a.Set( 5 );
-            Assert.That( a.FindLast() == 5 );
+            Assert.That( a.FindLast(), Is.EqualTo(5) );
         }
 
         [Test]

@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRBuffer.h"
+#include "MRPch/MRBindingMacros.h"
 #include <istream>
 
 namespace MR
@@ -17,7 +18,7 @@ MRMESH_API std::streamoff getStreamSize( std::istream& in );
 MRMESH_API Expected<std::string> readString( std::istream& in );
 
 // reads input stream to monolith char block
-MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
+MR_BIND_IGNORE MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
 
 // read coordinates to `v` separated by space
 template<typename T>

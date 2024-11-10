@@ -78,6 +78,12 @@ MRVertId mrPointCloudAddPoint( MRPointCloud* pc_, const MRVector3f* point_ )
     RETURN( pc.addPoint( point ) );
 }
 
+MRVertId mrPointCloudAddPointWithNormal( MRPointCloud* pc_, const MRVector3f* point_, const MRVector3f* normal_ )
+{
+    ARG( pc ); ARG( point ); ARG( normal );
+    RETURN( pc.addPoint( point, normal ) );
+}
+
 void mrPointCloudFree( MRPointCloud* pc_ )
 {
     ARG_PTR( pc );

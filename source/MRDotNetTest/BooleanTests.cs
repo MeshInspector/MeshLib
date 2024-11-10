@@ -58,22 +58,39 @@ namespace MR.DotNet.Test
             var parameters = new BooleanParameters();
             parameters.mapper = new BooleanResultMapper();
             var booleanResult = MeshBoolean.Boolean(meshA, meshB, BooleanOperation.Union, parameters );
-            var vMapA = parameters.mapper.VertMap(meshA.ValidPoints as BitSet, MapObject.A);
-            var vMapB = parameters.mapper.VertMap(meshB.ValidPoints as BitSet, MapObject.B);
-            Assert.That(vMapA.Size(), Is.EqualTo(64) );
+            var validPointsA = meshA.ValidPoints as BitSet;
+            var validPointsB = meshB.ValidPoints as BitSet;
+            var validFacesA = meshA.ValidFaces as BitSet;
+            var validFacesB = meshB.ValidFaces as BitSet;
+
+            Assert.That(validPointsA is not null);
+            Assert.That(validPointsB is not null);
+            Assert.That(validFacesA is not null);
+            Assert.That(validFacesB is not null);
+
+            if (validPointsA is null || validPointsB is null || validFacesA is null || validFacesB is null)
+                return;
+
+            var old2NewVerts = parameters.mapper.GetMaps(MapObject.A).Old2NewVerts;
+            var vMapA = parameters.mapper.VertMap(validPointsA, MapObject.A);
+            var vMapB = parameters.mapper.VertMap(validPointsB, MapObject.B);
+
+            Assert.That(vMapA.Size(), Is.EqualTo(60) );
             Assert.That(vMapA.Count(), Is.EqualTo(60));
-            Assert.That(vMapB.Size(), Is.EqualTo(256) );
+            Assert.That(vMapB.Size(), Is.EqualTo(204) );
             Assert.That(vMapB.Count(), Is.EqualTo(48));
 
-            var fMapA = parameters.mapper.FaceMap(meshA.ValidFaces as BitSet, MapObject.A);
-            var fMapB = parameters.mapper.FaceMap(meshB.ValidFaces as BitSet, MapObject.B);
-            Assert.That(fMapA.Size(), Is.EqualTo(256) );
+
+            var fMapA = parameters.mapper.FaceMap(validFacesA, MapObject.A);
+            var fMapB = parameters.mapper.FaceMap(validFacesB, MapObject.B);
+
+            Assert.That(fMapA.Size(), Is.EqualTo(224) );
             Assert.That(fMapA.Count(), Is.EqualTo(224));
-            Assert.That(fMapB.Size(), Is.EqualTo(448) );
+            Assert.That(fMapB.Size(), Is.EqualTo(416) );
             Assert.That(fMapB.Count(), Is.EqualTo(192));
 
             var newFaces = parameters.mapper.NewFaces();
-            Assert.That(newFaces.Size(), Is.EqualTo(448) );
+            Assert.That(newFaces.Size(), Is.EqualTo(416) );
             Assert.That(newFaces.Count(), Is.EqualTo(252));
 
             var mapsA = parameters.mapper.GetMaps( MapObject.A );
@@ -87,12 +104,6 @@ namespace MR.DotNet.Test
             Assert.That( mapsB.Old2NewVerts.Count, Is.EqualTo(160) );
             Assert.That( mapsB.Cut2NewFaces.Count, Is.EqualTo(384) );
             Assert.That( mapsB.Cut2Origin.Count, Is.EqualTo(384) );
-        }
-
-        [Test]
-        public void TestNullArgs()
-        {
-            Assert.Throws<ArgumentNullException>( () => MeshBoolean.Boolean( null, null, BooleanOperation.Union ) );
         }
     }
 }

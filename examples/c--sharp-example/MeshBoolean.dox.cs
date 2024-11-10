@@ -1,4 +1,4 @@
-﻿/// \page ExampleCSharpMeshBoolean Mesh boolean
+/// \page ExampleCSharpMeshBoolean Mesh boolean
 ///
 /// Example of Boolean operation
 ///

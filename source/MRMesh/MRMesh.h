@@ -410,6 +410,7 @@ struct [[nodiscard]] Mesh
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
+    MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
     /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces ant not in \param keepFaces
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );

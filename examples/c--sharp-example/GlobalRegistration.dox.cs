@@ -1,4 +1,4 @@
-﻿/// \page ExampleCSharpGlobalRegistration Global Registration
+/// \page ExampleCSharpGlobalRegistration Global Registration
 ///
 /// Example of Global Registration
 ///

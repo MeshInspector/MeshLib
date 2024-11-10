@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRViewer.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRObjectMeshHolder.h"
@@ -88,7 +87,7 @@ private:
     PerObjectHolesPolylines holeLines_;
     PerObjectMeshChangedSignals  onMeshChangedSignals_;
 
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     // create an ancillaryLines object (polyline) for given mesh hole, for visually preview it 

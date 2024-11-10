@@ -1,0 +1,13 @@
+/**
+ \page ExampleMeshResolveDegenerations Resolving Mesh Degeneration
+
+Example of resolving degenerated faces
+
+<div class="tabbed">
+
+- <b class="tab-title">C</b>
+\include MeshResolveDegenerations.dox.c
+
+</div>
+
+ */

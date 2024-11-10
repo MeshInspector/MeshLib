@@ -30,6 +30,6 @@ dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://meshlib.io/"
-Documentation = "https://doc.meshinspector.com/"
+Documentation = "https://meshlib.io/documentation/"
 Source = "https://github.com/MeshInspector/MeshLib"
 "Bug Reports" = "https://github.com/MeshInspector/MeshLib/issues"

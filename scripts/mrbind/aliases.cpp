@@ -5,6 +5,7 @@ static const char MRBIND_UNIQUE_VAR = []
     #define MR_ALIAS(alias, target) MRBind::pb11::RegisterCustomAlias(#alias, #target)
 
     MR_ALIAS( BooleanResMapObj,                     BooleanResultMapper.MapObject                       );
+    MR_ALIAS( buildUnitedLocalTriangulations,       TriangulationHelpers.buildUnitedLocalTriangulations );
     MR_ALIAS( copyMesh,                             Mesh                                                );
     MR_ALIAS( FaceMap.vec,                          FaceMap.vec_                                        );
     MR_ALIAS( FaceNormals.vec,                      FaceNormals.vec_                                    );
@@ -33,6 +34,7 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( objectSave,                           ObjectSave.toAnySupportedFormat                     );
     MR_ALIAS( ObjectVoxels.extractVoxels,           ObjectVoxels.vdbVolume                              );
     MR_ALIAS( saveAllSlicesToImage,                 VoxelsSave.saveAllSlicesToImage                     );
+    MR_ALIAS( saveLines,                            LinesSave.toAnySupportedFormat                      );
     MR_ALIAS( saveMesh,                             MeshSave.toAnySupportedFormat                       );
     MR_ALIAS( savePoints,                           PointsSave.toAnySupportedFormat                     );
     MR_ALIAS( saveSliceToImage,                     VoxelsSave.saveSliceToImage                         );
@@ -42,14 +44,13 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( topologyFromTriangles,                MeshBuilder.fromTriangles                           );
     MR_ALIAS( triangulateContours,                  PlanarTriangulation.triangulateContours             );
     MR_ALIAS( Triangulation.vec,                    Triangulation.vec_                                  );
+    MR_ALIAS( TriangulationHelpersSettings,         TriangulationHelpers.Settings                       );
     MR_ALIAS( uniteCloseVertices,                   MeshBuilder.uniteCloseVertices                      );
     MR_ALIAS( vectorConstMeshPtr,                   std_vector_const_Mesh                               );
     MR_ALIAS( vectorEdges,                          EdgeLoop                                            );
     MR_ALIAS( VertCoords.vec,                       VertCoords.vec_                                     );
     MR_ALIAS( VertScalars.vec,                      VertScalars.vec_                                    );
     MR_ALIAS( VoxelsSaveSavingSettings,             VoxelsSave.SavingSettings                           );
-    MR_ALIAS( TriangulationHelpersSettings,         TriangulationHelpers.Settings                       );
-    MR_ALIAS( buildUnitedLocalTriangulations,       TriangulationHelpers.buildUnitedLocalTriangulations );
 
     return char{};
 }();

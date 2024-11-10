@@ -51,10 +51,10 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
     spdlog::info( "Deleting temporary folder: {}", utf8string( folder_ ) );
     std::error_code ec;
     if ( !std::filesystem::remove_all( folder_, ec ) )
-    {
-        spdlog::error( "Failed to remove folder: {}", systemToUtf8( ec.message() ) );
-        return;
-    }
+        // result may be zero if folder_ did not exist to begin with, see https://en.cppreference.com/w/cpp/filesystem/remove
+        spdlog::error( "Folder {} did not exist", utf8string( folder_ ) );
+    else if ( ec )
+        spdlog::error( "Deleting folder {} failed: {}", utf8string( folder_ ), systemToUtf8( ec.message() ) );
 }
 
 } // namespace MR

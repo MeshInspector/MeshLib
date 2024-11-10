@@ -42,6 +42,9 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
     };
 
 public:
+    // returns RibonMenu from ViewerInstance()
+    MRVIEWER_API static std::shared_ptr<RibbonMenu> instance();
+
     // adds a custom checkBox to the context menu
     // it is applied to the selected objects
     MRVIEWER_API void setCustomContextCheckbox(
@@ -164,10 +167,9 @@ protected:
     MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName,
                                                DrawGroupConfig config );
     // ribbon menu item pressed
-    MRVIEWER_API virtual void itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available );
-    // this function is called when ribbon item is activated
-    // this implementation only updates `searcher_`
-    MRVIEWER_API virtual void onItemActivated_( const std::shared_ptr<RibbonMenuItem>& item );
+    // requiremetnsHint - text that is showed if tool is unavailable (if empty then tool is available)
+    // returns true if item was actually activated or deactivated with press action
+    MRVIEWER_API virtual bool itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, const std::string& requiremetnsHint = {} );
 
     MRVIEWER_API virtual void drawActiveBlockingDialog_();
     MRVIEWER_API virtual void drawActiveNonBlockingDialogs_();

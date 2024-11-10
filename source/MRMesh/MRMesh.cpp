@@ -1043,6 +1043,13 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
 
 PackMapping Mesh::packOptimally( bool preserveAABBTree )
 {
+    auto exp = packOptimally( preserveAABBTree, {} );
+    assert( exp.has_value() );
+    return std::move( *exp );
+}
+
+Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallback cb )
+{
     MR_TIMER
 
     PackMapping map;
@@ -1065,9 +1072,20 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
         AABBTreeOwner_.reset();
         map.f = getOptimalFaceOrdering( *this );
     }
+    if ( !reportProgress( cb, 0.3f ) )
+        return unexpectedOperationCanceled();
+
     map.v = getVertexOrdering( map.f, topology );
+    if ( !reportProgress( cb, 0.5f ) )
+        return unexpectedOperationCanceled();
+
     map.e = getEdgeOrdering( map.f, topology );
+    if ( !reportProgress( cb, 0.7f ) )
+        return unexpectedOperationCanceled();
+
     topology.pack( map );
+    if ( !reportProgress( cb, 0.9f ) )
+        return unexpectedOperationCanceled();
 
     VertCoords newPoints( map.v.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_v, VertId{ map.v.b.size() } ),
@@ -1082,6 +1100,9 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
         }
     } );
     points = std::move( newPoints );
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
     return map;
 }
 

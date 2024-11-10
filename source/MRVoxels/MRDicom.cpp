@@ -3,6 +3,8 @@
 #include "MRObjectVoxels.h"
 #include "MRScanHelpers.h"
 #include "MRVDBConversions.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
+#include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxelsLoad.h"
 #include "MRVoxelsSave.h"
 
@@ -292,17 +294,24 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         spdlog::error( "PhotometricInterpretation: {}", (int)gimage.GetPhotometricInterpretation() );
         return res;
     }
-    auto min = gimage.GetPixelFormat().GetMin();
-    auto max = gimage.GetPixelFormat().GetMax();
+
     auto pixelSize = gimage.GetPixelFormat().GetPixelSize();
-    auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
-    auto caster = getTypeConverter( scalarType, max - min, min );
-    if ( !caster )
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_c.8.15.3.10.html
+    auto rescaleType = ir.GetFile().GetDataSet().GetDataElement( gdcm::Tag{ 0x0028, 0x1054 } );
+    if ( !rescaleType.IsEmpty() )
     {
-        spdlog::error( "loadSingle: cannot make type converter, file: {}", utf8string( path ) );
-        spdlog::error( "Type: {}", (int)gimage.GetPixelFormat() );
-        return res;
+        std::stringstream ss;
+        rescaleType.GetValue().Print( ss );
+        if ( ss.view() != "HU" && ss.view() != "HU_MOD" )
+            spdlog::warn( "DICOM is in unknown units: {}", ss.view() );
     }
+    auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
+    auto k = gimage.GetSlope();
+    auto b = gimage.GetIntercept();
+    auto caster = [k, b, scalarType] ( const char* c ) {
+        return visitScalarType( [k, b] ( auto val ) -> float { return k * val + b; }, scalarType, c );
+    };
+
     std::vector<char> cacheBuffer( gimage.GetBufferLength() );
     if ( !gimage.GetBuffer( cacheBuffer.data() ) )
     {
@@ -727,15 +736,16 @@ namespace VoxelsSave
 
 Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
 {
-    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, { MinMaxf{ 0.f, 1.f } }, subprogress( cb, 0.f, 0.5f ) );
+    MinMaxf sourceScale{ vdbVolume.min, vdbVolume.max };
+    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, { sourceScale }, subprogress( cb, 0.f, 0.5f ) );
     if ( simpleVolume )
-        return toDCM( *simpleVolume, path, subprogress( cb, 0.5f, 1.f ) );
+        return toDCM( *simpleVolume, path, sourceScale, subprogress( cb, 0.5f, 1.f ) );
     else
         return unexpected( simpleVolume.error() );
 }
 
 template <typename T>
-Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb )
+Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, std::optional<MinMaxf> sourceScale, ProgressCallback cb )
 {
     if ( !reportProgress( cb, 0.0f ) )
         return unexpected( "Loading canceled" );
@@ -753,6 +763,26 @@ Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::fil
     image.SetSpacing( 0, volume.voxelSize.x * 1000.f );
     image.SetSpacing( 1, volume.voxelSize.y * 1000.f );
     image.SetSpacing( 2, volume.voxelSize.z * 1000.f );
+    if ( sourceScale )
+    {
+        const double invK = ( sourceScale->max - sourceScale->min ) / ( std::numeric_limits<T>::max() - std::numeric_limits<T>::min() );
+        const double b = sourceScale->min + invK * std::numeric_limits<T>::min();
+        image.SetSlope( invK );
+        image.SetIntercept( b );
+
+        gdcm::MediaStorage ms( gdcm::MediaStorage::EnhancedCTImageStorage );
+        const char* msstr = ms.GetString();
+        gdcm::DataElement de( gdcm::Tag( 0x0002,0x0002 ) );  // MediaStorageSOPClassUID
+        de.SetByteValue( msstr, strlen( msstr ) );
+        de.SetVR( gdcm::VR::UI );
+        iw.GetFile().GetHeader().Replace( de );
+
+        // Also set the SOP Class UID in the DataSet (0008,0016)
+        gdcm::DataElement sopde( gdcm::Tag( 0x0008,0x0016 ) );
+        sopde.SetByteValue( msstr, strlen( msstr ) );
+        sopde.SetVR( gdcm::VR::UI );
+        iw.GetFile().GetDataSet().Replace(sopde);
+    }
 
     gdcm::DataElement data( gdcmTag );
     // copies full volume
@@ -771,7 +801,7 @@ Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::fil
     return {};
 }
 
-template Expected<void> toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
+template Expected<void> toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, std::optional<MinMaxf> sourceScale, ProgressCallback cb );
 
 MR_ON_INIT
 {

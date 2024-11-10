@@ -8,6 +8,7 @@
 #include "MRMesh/MRMatrix3.h"
 
 #include <filesystem>
+#include <optional>
 
 namespace MR
 {
@@ -65,7 +66,7 @@ namespace VoxelsSave
 /// Save voxels objet to a single 3d DICOM file
 MRVOXELS_API Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
 template <typename T>
-MRVOXELS_API Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb = {} );
+MRVOXELS_API Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, std::optional<MinMaxf> sourceScale = {}, ProgressCallback cb = {} );
 
 } // namespace VoxelsSave
 

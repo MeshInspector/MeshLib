@@ -29,4 +29,44 @@ enum class ScalarType
 /// \param min - (for integer types only) the minimal value
 MRVOXELS_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, uint64_t range, int64_t min );
 
+
+/// More general template to pass a single value of specified format \p scalarType to a generic function \p f
+auto visitScalarType( auto&& f, ScalarType scalarType, const char* c ) -> decltype( f( 0 ) )
+{
+#define M(T) return f( *( const T* )( c ) );
+
+    switch ( scalarType )
+    {
+        case ScalarType::UInt8:
+            M( uint8_t )
+        case ScalarType::UInt16:
+            M( uint16_t )
+        case ScalarType::Int8:
+            M( int8_t )
+        case ScalarType::Int16:
+            M( int16_t )
+        case ScalarType::Int32:
+            M( int32_t )
+        case ScalarType::UInt32:
+            M( uint32_t )
+        case ScalarType::UInt64:
+            M( uint64_t )
+        case ScalarType::Int64:
+            M( int64_t )
+        case ScalarType::Float32:
+            M( float )
+        case ScalarType::Float64:
+            M( double )
+        case ScalarType::Float32_4:
+            return f( *((const float*)c + 3 ) );
+        case ScalarType::Unknown:
+            return {};
+        case ScalarType::Count:
+            MR_UNREACHABLE
+    }
+    MR_UNREACHABLE
+#undef M
+}
+
+
 } // namespace MR

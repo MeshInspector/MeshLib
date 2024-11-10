@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshICP Mesh ICP
-///
-/// Example of mesh ICP (finding transformation to match objects)
-///
-/// \code
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRICP.h>
 #include <MRMesh/MRMesh.h>
@@ -43,4 +38,3 @@ int main()
     // Save result
     MR::MeshSave::toAnySupportedFormat( meshFloating, "meshA_icp.stl" );
 }
-/// \endcode

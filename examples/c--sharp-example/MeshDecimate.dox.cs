@@ -1,8 +1,3 @@
-/// \page ExampleCSharpMeshDecimate Mesh Decimation
-///
-/// Example of mesh decimation
-///
-/// \code
 using MR.DotNet;
 using System;
 using System.Reflection;
@@ -39,4 +34,3 @@ class Program
         }
     }
 }
-/// \endcode

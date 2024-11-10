@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshBoolean Mesh boolean
-///
-/// Example of Boolean operation
-///
-/// \code
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshSave.h>
@@ -31,4 +26,3 @@ int main()
 
     return 0;
 }
-/// \endcode

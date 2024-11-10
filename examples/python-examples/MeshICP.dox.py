@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshICP Mesh ICP
-##
-## Example of mesh ICP
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load meshes
@@ -31,5 +26,3 @@ print(icp.getLastICPInfo())
 
 # Save result
 mrmeshpy.saveMesh(meshFloating, "meshA_icp.stl")
-
-## \endcode

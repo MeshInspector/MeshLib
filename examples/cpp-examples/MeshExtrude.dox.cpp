@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshExtrude Mesh extrude
-///
-/// Example of extrude faces on mesh
-///
-/// \code
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 #include <MRMesh/MRId.h>
@@ -40,4 +35,3 @@ int main()
     // Save mesh
     MR::MeshSave::toAnySupportedFormat( mesh, "extrudedMesh.stl" );
 }
-/// \endcode

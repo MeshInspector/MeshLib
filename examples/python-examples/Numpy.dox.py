@@ -1,8 +1,3 @@
-## \page ExamplePythonNumpy Numpy support
-##
-## Using numpy to create mesh and get back its primitives
-##
-## \code
 import meshlib.mrmeshnumpy as mrmeshnumpy
 import numpy as np
 
@@ -40,4 +35,3 @@ mesh = mrmeshnumpy.meshFromFacesVerts(faces, verts)
 
 out_verts = mrmeshnumpy.getNumpyVerts(mesh)
 out_faces = mrmeshnumpy.getNumpyFaces(mesh.topology)
-## \endcode

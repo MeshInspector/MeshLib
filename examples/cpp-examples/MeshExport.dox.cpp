@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshExport Mesh export
-///
-/// Export example of points and triangles from mesh (e.g. for rendering)
-///
-/// \code
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 
@@ -21,4 +16,3 @@ int main()
 
     return 0;
 }
-/// \endcode

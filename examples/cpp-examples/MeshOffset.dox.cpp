@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshOffset Mesh offset
-///
-/// Example of mesh offset
-///
-/// \code
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -35,4 +30,3 @@ int main()
 
     return 0;
 }
-/// \endcode

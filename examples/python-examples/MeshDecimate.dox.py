@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshDecimate Mesh decimate
-##
-## Example of mesh decimate
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
@@ -27,5 +22,3 @@ mrmeshpy.decimateMesh(mesh, settings)
 
 # Save result
 mrmeshpy.saveMesh(mesh, "decimatedMesh.stl")
-
-## \endcode

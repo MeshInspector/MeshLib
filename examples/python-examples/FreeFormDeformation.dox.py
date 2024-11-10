@@ -1,8 +1,3 @@
-## \page ExamplePythonFreeForm Free Form Deformation Example
-##
-## Example of using Free Form deformation of the mesh
-##
-## \code
 from meshlib import mrmeshpy as mm
 
 # Load mesh
@@ -33,5 +28,3 @@ mesh.invalidateCaches()
 
 # Save deformed mesh
 mm.saveMesh(mesh,"deformed_mesh.stl")
-
-## \endcode

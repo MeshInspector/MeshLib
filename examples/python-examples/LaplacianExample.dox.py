@@ -1,8 +1,3 @@
-## \page ExamplePythonLaplacian Laplacian deformation Example
-##
-## Example of using Laplacian deformer
-##
-## \code
 from meshlib import mrmeshpy as mm
  
 # Load mesh
@@ -38,5 +33,3 @@ mesh.invalidateCaches()
  
 # Save deformed mesh
 mm.saveMesh(mesh,"deformed_mesh.stl")
-
-## \endcode

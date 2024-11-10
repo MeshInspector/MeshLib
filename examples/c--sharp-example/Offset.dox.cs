@@ -1,8 +1,3 @@
-/// \page ExampleCSharpOffset Offset
-///
-/// Example of Offset
-///
-/// \code
 using MR.DotNet;
 using System;
 using System.Globalization;
@@ -43,4 +38,3 @@ class Program
         }
     }
 }
-/// \endcode

@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshLoadSave Loading and saving mesh files
-##
-## Load and save example:
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 try:
@@ -11,4 +6,3 @@ except ValueError as e:
     print(e)
 
 mrmeshpy.saveMesh(mesh, "mesh.ply")
-## \endcode

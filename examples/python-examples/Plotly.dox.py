@@ -1,8 +1,3 @@
-## \page ExamplePythonPlotly Plotly visualization
-##
-## Using plotly to visualize mesh
-##
-## \code
 from meshlib import mrmeshpy as mm
 from meshlib import mrmeshnumpy as mn
 import numpy as np
@@ -31,5 +26,3 @@ fig = go.Figure(data=[
 ])
 
 fig.show()
-## \endcode
-## \image html plotly_visualization.png "Plotly visualization" width = 300cm

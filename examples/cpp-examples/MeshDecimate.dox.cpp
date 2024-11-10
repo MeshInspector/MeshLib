@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshDecimate Mesh decimation
-/// 
-/// Example of mesh decimate
-///
-/// \code
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
@@ -37,4 +32,3 @@ int main()
     // Save result
     MR::MeshSave::toAnySupportedFormat( mesh, "decimatedMesh.stl" );
 }
-/// \endcode

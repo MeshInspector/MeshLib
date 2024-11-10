@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshOffset Mesh offset
-##
-## Example of mesh offset
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
@@ -20,5 +15,3 @@ result_mesh = mrmeshpy.offsetMesh(mesh, offset, params)
 
 # Save result
 mrmeshpy.saveMesh(result_mesh, "offsetMesh.stl")
-
-## \endcode

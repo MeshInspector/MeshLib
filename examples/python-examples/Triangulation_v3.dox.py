@@ -1,8 +1,3 @@
-## \page ExamplePythonTriangulationV3 Simple triangulation V3
-##
-## Simple triangulation
-##
-## \code
 from meshlib import mrmeshpy as mm
 from meshlib import mrmeshnumpy as mn
 import numpy as np
@@ -27,5 +22,3 @@ triangulated_pc = mm.triangulatePointCloud(pc)
 
 # Fix possible issues
 triangulated_pc = mm.offsetMesh(triangulated_pc, 0.0)
-
-## \endcode

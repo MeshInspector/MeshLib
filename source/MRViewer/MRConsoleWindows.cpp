@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <shellapi.h>
 #include <MRMesh/MRStringConvert.h>
 #include <iostream>
 

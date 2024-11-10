@@ -57,10 +57,12 @@ public:
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
     /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction
     /// \param minmax optional data about known min and max values
+    /// set a new background for the VdbVolume, if normalPlusGrad = true, use the maximum value, otherwise the minimum value
     MRVOXELS_API void construct( const SimpleVolume& simpleVolume, const std::optional<Vector2f> & minmax = {}, ProgressCallback cb = {}, bool normalPlusGrad = false );
 
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
     /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction
+    /// set a new background for the VdbVolume, if normalPlusGrad = true, use the maximum value, otherwise the minimum value
     MRVOXELS_API void construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb = {}, bool normalPlusGrad = false );
 
     /// Clears all internal data and then remembers grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)

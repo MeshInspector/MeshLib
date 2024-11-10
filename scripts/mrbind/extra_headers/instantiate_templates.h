@@ -1,5 +1,8 @@
 #pragma once
 
+#include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 
@@ -8,6 +11,9 @@
 #define INST_IF(cond) INST_CAT(INST_IF_, cond)
 #define INST_IF_0(...)
 #define INST_IF_1(...) __VA_ARGS__
+
+namespace MR
+{
 
 #define VEC3(T, isFloatingPoint) \
     template struct Vector3<T>; \
@@ -49,9 +55,6 @@
     template Vector2<T> operator *( const Vector2<T> & b, T a ); \
     template Vector2<T> operator /( Vector2<T> b, T a ); \
 
-namespace MR
-{
-
 VEC3(float, 1)
 VEC3(double, 1)
 VEC3(int, 0)
@@ -60,5 +63,17 @@ VEC2(float)
 VEC2(double)
 VEC2(int)
 
-}
 #undef VEC3
+#undef VEC2
+
+// Those are needed for mrviewerpy:
+
+#define FORCE_INSTANTIATE_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
+FORCE_INSTANTIATE_TYPE( std::vector<MR::DistanceMap> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::Mesh> );
+FORCE_INSTANTIATE_TYPE( std::vector<std::shared_ptr<MR::Object>> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::PointCloud> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::Polyline3> );
+#undef FORCE_INSTANTIATE_TYPE
+
+}

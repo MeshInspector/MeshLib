@@ -25,6 +25,7 @@
 #include "MRMesh/MRTimer.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
+#include "MRShowModal.h"
 #include "MRMesh/MRChangeNameAction.h"
 #include "MRMesh/MRChangeSceneAction.h"
 ////////////////////////////////////////////////////////////////////////////////
@@ -1157,14 +1158,9 @@ float ImGuiMenu::drawSelectionInformation_()
     std::optional<Vector3f> voxelSize = Vector3f{};
     std::optional<Box3i> voxelActiveBox = Box3i{};
 
-    MR_SUPPRESS_WARNING_PUSH
-    #if __GNUC__ >= 12 && __GNUC__ <= 14 // False positive in GCC
-    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-    #endif
     std::optional<float> voxelMinValue = FLT_MAX;
     std::optional<float> voxelIsoValue = FLT_MAX;
     std::optional<float> voxelMaxValue = FLT_MAX;
-    MR_SUPPRESS_WARNING_POP
 
     // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
     auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
@@ -1427,19 +1423,23 @@ float ImGuiMenu::drawSelectionInformation_()
     {
         if ( totalVolume )
         {
-            MR_SUPPRESS_WARNING_PUSH
-            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
-            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-            #endif
             drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
-            MR_SUPPRESS_WARNING_POP
         }
 
         if ( selectedObjs.size() == 1 )
         {
-            // TODO: show selected area
-            (void)totalSelectedArea;
-            drawUnitInfo( "Area", totalArea, AreaUnit{} );
+            ImGui::SetNextItemWidth( itemWidth );
+            if ( totalSelectedArea > 0 )
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
+                    { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
+                UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+            }
+            else
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
+                UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
+            }
 
             drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 
@@ -1468,12 +1468,7 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
         {
-            MR_SUPPRESS_WARNING_PUSH
-            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `voxelMaxValue` may be used uninitialized. False positive in GCC
-            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-            #endif
             drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
-            MR_SUPPRESS_WARNING_POP
         }
     }
 #endif
@@ -1554,7 +1549,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                 // Temporarily roll back the xf to write to the history.
                 auto newXf = object->xf();
                 object->setXf( editedFeatureObjectOldXf_ );
-                AppendHistory<ChangeXfAction>( object->name() + " change feature prop", object );
+                AppendHistory<ChangeXfAction>( "Change Feature Transform", object );
                 object->setXf( newXf );
             }
 
@@ -1744,7 +1739,7 @@ bool ImGuiMenu::drawRemoveButton( const std::vector<std::shared_ptr<Object>>& se
         someChanges |= true;
         if ( allowRemoval_ )
         {
-            SCOPED_HISTORY( "Remove objects" );
+            SCOPED_HISTORY( "Remove Objects (context)" );
             for ( int i = ( int )selectedObjs.size() - 1; i >= 0; --i )
                 if ( selectedObjs[i] )
                 {
@@ -1788,9 +1783,9 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Edges", MeshVisualizePropertyType::Edges, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", MeshVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Edges", MeshVisualizePropertyType::SelectedEdges, viewportid );
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Faces", MeshVisualizePropertyType::SelectedFaces, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Tri-s", MeshVisualizePropertyType::SelectedFaces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Faces", MeshVisualizePropertyType::Faces, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Triangles", MeshVisualizePropertyType::Faces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Transparency", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
         bool allHaveTexture = true;
         for ( const auto& visObj : selectedVisualObjs )
@@ -1941,7 +1936,7 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
     {
         data->setFrontColor( Color( color ), false, selectedViewport_ );
     } );
-    make_color_selector<VisualObject>( selectedVisualObjs, "Back Faces color", [&] ( const VisualObject* data )
+    make_color_selector<VisualObject>( selectedVisualObjs, "Back Triangles color", [&] ( const VisualObject* data )
     {
         return Vector4f( data->getBackColor( selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
@@ -1978,7 +1973,7 @@ MR_SUPPRESS_WARNING_POP
         {
             data->setPointsColor( Color( color ), selectedViewport_ );
         } );
-        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
+        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Tri-s color", [&] ( const ObjectMeshHolder* data )
         {
             return Vector4f( data->getSelectedFacesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
@@ -2193,7 +2188,7 @@ float ImGuiMenu::drawTransform_()
 
             if ( xf != data.xf() && !xfHistUpdated_ )
             {
-                AppendHistory<ChangeXfAction>( "Change XF", selected[0] );
+                AppendHistory<ChangeXfAction>( "Manual Change Transform", selected[0] );
                 xfHistUpdated_ = true;
             }
             data.setXf( xf );
@@ -3158,21 +3153,6 @@ bool ImGuiMenu::UiRenderManagerImpl::canConsumeEvent( BasicUiRenderTask::Interac
     return
         !bool( consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover ) ||
         bool( consumedInteractions & event );
-}
-
-void showModal( const std::string& msg, NotificationType type )
-{
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->showModalMessage( msg, type );
-    else
-    {
-        if ( type == NotificationType::Error )
-            spdlog::error( "Show Error: {}", msg );
-        else if ( type == NotificationType::Warning )
-            spdlog::warn( "Show Warning: {}", msg );
-        else //if ( type == MessageType::Info )
-            spdlog::info( "Show Info: {}", msg );
-    }
 }
 
 } // end namespace

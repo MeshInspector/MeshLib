@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMesh/MRFlagOperators.h"
+#include "MRPch/MRBindingMacros.h"
 #include "MRRenderModelParameters.h"
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
@@ -186,10 +187,10 @@ public:
     void renderUi( const UiRenderParams& params ) override { ( Bases::renderUi( params ), ... ); }
 };
 
-MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );
+MR_BIND_IGNORE MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );
 
 template<typename ObjectType>
-std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj )
+MR_BIND_IGNORE std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj )
 {
     static_assert( std::is_base_of_v<VisualObject, std::remove_reference_t<ObjectType>>, "MR::VisualObject is not base of ObjectType" );
     return createRenderObject( visObj, typeid( ObjectType ) );
@@ -198,7 +199,7 @@ std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj )
 using IRenderObjectConstructorLambda = std::function<std::unique_ptr<IRenderObject>( const VisualObject& )>;
 
 template<typename RenderObjType>
-IRenderObjectConstructorLambda makeRenderObjectConstructor()
+MR_BIND_IGNORE IRenderObjectConstructorLambda makeRenderObjectConstructor()
 {
     return [] ( const VisualObject& visObj ) { return std::make_unique<RenderObjType>( visObj ); };
 }

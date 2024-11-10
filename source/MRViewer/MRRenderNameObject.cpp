@@ -1,14 +1,13 @@
 #include "MRRenderNameObject.h"
+#include "MRColorTheme.h"
+#include "MRImGuiVectorOperators.h"
+#include "MRRibbonMenu.h"
+#include "MRViewport.h"
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRVisualObject.h"
-#include "MRViewer/MRColorTheme.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
-#include "MRViewer/MRRibbonMenu.h"
-#include "MRViewer/MRViewer.h"
-#include "MRViewer/MRViewport.h"
 
 #include <imgui.h>
 
@@ -35,7 +34,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
 
                 if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
                 {
-                    getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
+                    RibbonMenu::instance()->simulateNameTagClick(
                         // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
                         // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
                         *const_cast<VisualObject*>( object ),
@@ -158,7 +157,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     task_.text = getObjectNameString( *task_.object, params.viewportId );
     task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
 
-    Viewport& viewportRef = getViewerInstance().viewport( params.viewportId );
+    Viewport& viewportRef = Viewport::get( params.viewportId );
 
     ImVec2 viewportCornerA( float( params.viewport.x ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y - params.viewport.w ) );
     ImVec2 viewportCornerB( float( params.viewport.x + params.viewport.z ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y ) );

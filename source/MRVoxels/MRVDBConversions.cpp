@@ -256,30 +256,47 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
     return res;
 }
 
-FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
-                                   ProgressCallback cb )
+void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
 {
     MR_TIMER
     if ( cb )
         cb( 0.0f );
-    openvdb::math::Coord minCoord( 0, 0, 0 );
     openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
-    openvdb::math::CoordBBox denseBBox( minCoord, minCoord + dimsCoord.offsetBy( -1 ) );
+    openvdb::math::CoordBBox denseBBox( toVdb( minCoord ), toVdb( minCoord ) + dimsCoord.offsetBy( -1 ) );
     openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolume.data.data() ) );
     if ( cb )
         cb( 0.5f );
-    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
-    openvdb::tools::copyFromDense( dense, *grid, denseVolumeToGridTolerance );
-    openvdb::tools::changeBackground( grid->tree(), 0.f );
+    openvdb::tools::copyFromDense( dense, grid, denseVolumeToGridTolerance );
     if ( cb )
-        cb( 1.0f );
+        cb( 1.f );
+}
+
+void putSimpleVolumeInDenseGrid(
+        FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    putSimpleVolumeInDenseGrid( *grid, minCoord, simpleVolume, cb );
+}
+
+FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
+                                   float background,
+                                   ProgressCallback cb )
+{
+    MR_TIMER
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    putSimpleVolumeInDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
+    openvdb::tools::changeBackground( grid->tree(), background );
     return MakeFloatGrid( std::move( grid ) );
 }
 
 VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb /*= {} */ )
 {
     VdbVolume res;
-    res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
+    res.data = simpleVolumeToDenseGrid( simpleVolume, simpleVolume.min, cb );
     res.dims = simpleVolume.dims;
     res.voxelSize = simpleVolume.voxelSize;
     res.min = simpleVolume.min;

@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshExtrude Mesh extrude
-##
-## Example of extrude faces on mesh
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
@@ -30,5 +25,3 @@ mesh.invalidateCaches()
 
 # Save mesh
 mrmeshpy.saveMesh(mesh, "extrudedMesh.stl")
-
-## \endcode

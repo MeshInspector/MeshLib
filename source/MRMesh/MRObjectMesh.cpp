@@ -73,7 +73,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         if( mesh_->topology.vertSize() < mesh_->topology.vertCapacity() )
             res.back() += " / " + std::to_string( mesh_->topology.vertCapacity() ) + " capacity";
 
-        res.push_back( "faces: " + std::to_string( mesh_->topology.numValidFaces() ) );
+        res.push_back( "triangles: " + std::to_string( mesh_->topology.numValidFaces() ) );
         const auto nFacesSelected = numSelectedFaces();
         if( nFacesSelected )
             res.back() += " / " + std::to_string( nFacesSelected ) + " selected";

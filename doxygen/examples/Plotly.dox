@@ -1,0 +1,13 @@
+/**
+ \page ExamplePlotly Plotly visualization
+
+Using plotly to visualize mesh
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\include Plotly.dox.py
+
+</div>
+
+ */

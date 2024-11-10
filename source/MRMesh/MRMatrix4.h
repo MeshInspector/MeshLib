@@ -34,7 +34,9 @@ struct Matrix4
         w = Vector4<T>( 0, 0, 0, 1 );
     }
 
-    constexpr Matrix4( const AffineXf3<T>& xf ) : Matrix4( xf.A, xf.b ) {}
+    // Currently `AffineXf3<long long>` doesn't seem to compile, so we disable this constructor for `Matrix4<long long>`, because otherwise
+    // mrbind instantiates the entire `AffineXf3<long long>` and chokes on it.
+    constexpr Matrix4( const AffineXf3<T>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
 
     template <typename U>
     constexpr explicit Matrix4( const Matrix4<U> & m ) : x( m.x ), y( m.y ), z( m.z ), w( m.w ) { }
@@ -92,7 +94,7 @@ struct Matrix4
             return *this *= ( 1 / b );
     }
 
-    operator AffineXf3<T>() const MR_REQUIRES_IF_SUPPORTED( std::is_arithmetic_v<T> && !std::is_same_v<T, bool> )
+    operator AffineXf3<T>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         assert( std::abs( w.x )     < std::numeric_limits<T>::epsilon() * 1000 );
         assert( std::abs( w.y )     < std::numeric_limits<T>::epsilon() * 1000 );

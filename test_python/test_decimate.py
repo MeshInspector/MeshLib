@@ -11,6 +11,7 @@ def is_equal_vector_3(a, b):
 def decimate_1(size, pos1, pos2, pos3):
     mesh = mrmesh.makeCube(size, pos1)
     settings = mrmesh.DecimateSettings()
+    settings.maxError = 0.001
 
     result = mrmesh.decimateMesh(mesh, settings)
 
@@ -34,7 +35,7 @@ def decimate_2(size, pos1, pos2, pos3):
 
     mesh = bResult.mesh
     settings = mrmesh.DecimateSettings()
-
+    settings.maxError = 0.001
     result = mrmesh.decimateMesh(mesh, settings)
 
     assert is_equal_vector_3(

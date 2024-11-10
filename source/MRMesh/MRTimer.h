@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <chrono>
 #include <string>
 
@@ -12,7 +13,7 @@ namespace MR
 
 struct TimeRecord;
 
-class Timer
+class MR_BIND_IGNORE Timer
 {
 public:
     Timer( std::string name ) { start( std::move( name ) ); }

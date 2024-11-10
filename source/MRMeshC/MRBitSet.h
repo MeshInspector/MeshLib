@@ -4,6 +4,9 @@
 
 MR_EXTERN_C_BEGIN
 
+/// creates a copy of a BitSet object
+MRMESHC_API MRBitSet* mrBitSetCopy( const MRBitSet* bs );
+
 /// creates bitset of given size filled with given value
 MRMESHC_API MRBitSet* mrBitSetNew( size_t numBits, bool fillValue );
 

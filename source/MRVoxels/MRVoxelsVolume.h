@@ -3,6 +3,7 @@
 #include "MRVoxelsFwd.h"
 
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRHeapBytes.h"
 #include "MRMesh/MRExpected.h"
 #include <limits>
@@ -48,16 +49,13 @@ struct VoxelsVolume
 /// represents a box in 3D space subdivided on voxels stored in T;
 /// and stores minimum and maximum values among all valid voxels
 template <typename T>
-struct VoxelsVolumeMinMax : VoxelsVolume<T>
+struct VoxelsVolumeMinMax : VoxelsVolume<T>, MinMax<typename VoxelsVolume<T>::ValueType>
 {
     using typename VoxelsVolume<T>::ValueType;
     using VoxelsVolume<T>::data;
     using VoxelsVolume<T>::dims;
     using VoxelsVolume<T>::voxelSize;
     using VoxelsVolume<T>::heapBytes;
-
-    ValueType min = std::numeric_limits<ValueType>::max();
-    ValueType max = std::numeric_limits<ValueType>::lowest();
 };
 
 

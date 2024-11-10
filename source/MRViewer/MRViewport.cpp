@@ -63,6 +63,11 @@ void getPickerDataVector( Object& obj, ViewportMask id, const Viewport::PickRend
 namespace MR
 {
 
+Viewport& Viewport::get( ViewportId viewportId )
+{
+    return getViewerInstance().viewport( viewportId );
+}
+
 Viewport::Viewport()
 {
     cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
@@ -650,36 +655,19 @@ void Viewport::draw_clipping_plane() const
 
 void Viewport::draw_global_basis() const
 {
-    if ( !Viewer::instance()->globalBasisAxes->isVisible( id ) )
+    auto& viewer = getViewerInstance();
+    if ( !viewer.globalBasisAxes->isVisible( id ) )
         return;
 
-    draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
-    for ( const auto& child : getViewerInstance().globalBasisAxes->children() )
+    if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
+        viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) ), id );
+    auto xf = viewer.globalBasisAxes->xf( id );
+    draw( *viewer.globalBasisAxes, xf );
+    for ( const auto& child : viewer.globalBasisAxes->children() )
     {
         if ( auto visualChild = child->asType<VisualObject>() )
-            draw( *visualChild, params_.globalBasisAxesXf() );
+            draw( *visualChild, xf );
     }
-}
-
-bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
-{
-    return
-        backgroundColor == other.backgroundColor &&
-        lightPosition == other.lightPosition &&
-        cameraTrackballAngle == other.cameraTrackballAngle &&
-        cameraTranslation == other.cameraTranslation &&
-        cameraZoom == other.cameraZoom &&
-        cameraViewAngle == other.cameraViewAngle &&
-        cameraDnear == other.cameraDnear &&
-        cameraDfar == other.cameraDfar &&
-        depthTest == other.depthTest &&
-        orthographic == other.orthographic &&
-        objectScale == objectScale &&
-        borderColor == other.borderColor &&
-        label == other.label &&
-        clippingPlane == other.clippingPlane &&
-        rotationMode == other.rotationMode &&
-        selectable == other.selectable;
 }
 
 }

@@ -12,10 +12,9 @@ namespace MR.DotNet.Test
         [Test]
         public void TestOffsets()
         {
-            var mp = new MeshPart();
-            mp.mesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
+            var mp = new MeshPart(Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f)));
 
-            var parameters = new GeneralOffsetParameters();
+            var parameters = new OffsetParameters();
             parameters.voxelSize = Offset.SuggestVoxelSize(mp, 8000);
             
             var offset = Offset.OffsetMesh(mp, 0.5f, parameters);
@@ -27,22 +26,24 @@ namespace MR.DotNet.Test
             offset = Offset.DoubleOffsetMesh(mp, 0.5f, -0.5f, parameters);
             Assert.That( offset.Points.Count == 2408 );
 
-            offset = Offset.SharpOffsetMesh(mp, 0.5f, parameters);
+            var generalParameters = new GeneralOffsetParameters();
+
+            offset = Offset.SharpOffsetMesh(mp, 0.5f, parameters, generalParameters);
             Assert.That( offset.Points.Count == 8790 );
 
-            offset = Offset.GeneralOffsetMesh(mp, 0.5f, parameters);
+            offset = Offset.GeneralOffsetMesh(mp, 0.5f, parameters, generalParameters);
             Assert.That( offset.Points.Count == 8790 );
         }
 
         [Test]
         public void TestThickenMesh()
         {
-            var mp = new MeshPart();
-            mp.mesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
+            var mp = new MeshPart(Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f)));            ;
 
-            var parameters = new GeneralOffsetParameters();
+            var parameters = new OffsetParameters();
             parameters.voxelSize = Offset.SuggestVoxelSize(mp, 8000);
-            var offset = Offset.ThickenMesh(mp.mesh, 0.5f, parameters);
+
+            var offset = Offset.ThickenMesh(mp.mesh, 0.5f, parameters, new GeneralOffsetParameters());
 
             Assert.That( offset.Points.Count == 8798 );
         }

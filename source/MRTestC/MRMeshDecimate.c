@@ -26,6 +26,7 @@ void testMeshDecimate( void )
 
     // setup and run decimator
     MRDecimateSettings decimateSettings = mrDecimateSettingsNew();
+    decimateSettings.maxError = 0.001f;
     decimateSettings.region = regionForDecimation;
     decimateSettings.maxTriangleAspectRatio = 80.0f;
 

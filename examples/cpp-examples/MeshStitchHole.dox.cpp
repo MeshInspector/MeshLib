@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshStitchHole Stitching holes
-///
-/// Example of stitching holes (connect two holes with a cylinder)
-///
-/// \code
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -33,4 +28,3 @@ int main()
 
     return 0;
 }
-/// \endcode

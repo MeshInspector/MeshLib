@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <MRPch/MREigenCore.h>
 
 #include <cstddef>
@@ -30,7 +31,9 @@ template <typename T, size_t degree>
 struct Polynomial
 {
     static constexpr size_t n = degree + 1;
-    Eigen::Vector<T, n> a;
+
+    // We're not binding Eigen at the moment, so this has to be hidden.
+    MR_BIND_IGNORE Eigen::Vector<T, n> a;
 
     template <typename NewT>
     Polynomial<NewT, degree> cast() const

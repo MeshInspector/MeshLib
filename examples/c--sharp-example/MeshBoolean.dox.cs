@@ -1,8 +1,3 @@
-﻿/// \page ExampleCSharpMeshBoolean Mesh boolean
-///
-/// Example of Boolean operation
-///
-/// \code
 using MR.DotNet;
 using System;
 using System.Reflection;
@@ -41,4 +36,3 @@ class Program
         }
     }
 }
-/// \endcode

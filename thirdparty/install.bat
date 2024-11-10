@@ -1,4 +1,7 @@
 @echo off
+REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
+REM use "aws s3 ls s3://vcpkg-export/" to ls all available tags
+set VCPKG_TAG=2024.10.21
 set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 
 setlocal enabledelayedexpansion
@@ -17,10 +20,10 @@ if errorlevel 1 (
 
     REM Set VCPKG_BINARY_SOURCES based on the option
     if !write_s3_option! equ true (
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2024.07.12/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
         echo "using aws auth"
     ) else (
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/2024.07.12/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
         echo "using no auth"
     )
 )

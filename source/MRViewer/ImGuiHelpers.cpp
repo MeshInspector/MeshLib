@@ -1,27 +1,26 @@
 #include "ImGuiHelpers.h"
-#include "MRViewer/MRUIRectAllocator.h"
-#include "MRViewer/MRUITestEngine.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRUIRectAllocator.h"
+#include "MRUITestEngine.h"
+#include "MRImGuiVectorOperators.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"
 #include "MRViewerInstance.h"
-#include "MRViewer.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
-#include "MRViewer/MRRibbonFontManager.h"
-#include "MRViewer/MRPlaneWidget.h"
-#include "MRViewer/MRViewer.h"
+#include "MRShowModal.h"
+#include "MRRibbonFontManager.h"
+#include "MRPlaneWidget.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRUIStyle.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace ImGui
 {
@@ -36,7 +35,7 @@ void drawCursorArrow()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::getViewerInstance().getMenuPlugin();
+    const auto menuPlugin = ImGuiMenu::instance();
     const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
 
     const float spaceX = 10 * scale;
@@ -529,8 +528,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     if ( !window )
     {
         float yPos = 0.0f;
-        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-        if ( menu )
+        if ( auto menu = RibbonMenu::instance() )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
         SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
@@ -564,7 +562,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
 
     ImGuiWindow* window = FindWindowByName( label );
-    auto menu = MR::getViewerInstance().getMenuPlugin();
+    auto menu = ImGuiMenu::instance();
     ImVec2 initialWindowPos;
     bool haveSavedWindowPos = false;
     bool windowIsInactive = window && !window->WasActive;
@@ -581,9 +579,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
 
-        const std::string configKey = std::string( label ) + std::string( "_position" );
         auto& config = MR::Config::instance();
-
         if ( menu->isSavedDialogPositionsEnabled() && config.hasJsonValue( "DialogPositions" ) )
         {
             auto json = config.getJsonValue( "DialogPositions" )[label];
@@ -603,7 +599,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
     }
 
-    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, params.pivot );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )
     {
@@ -869,6 +865,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         UI::TestEngine::pushTree( strippedLabel );
     }
 
+    if ( window )
+    {
+        auto& config = Config::instance();
+        auto dpJson = config.getJsonValue( "DialogPositions" );
+        serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[label] );
+        config.setJsonValue( "DialogPositions", dpJson );
+    }
+
     return true;
 }
 
@@ -951,7 +955,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     const auto backupPos = ImGui::GetCursorPos();
 
     float menuScaling = 1.0f;
-    if ( auto menu = MR::getViewerInstance().getMenuPlugin() )
+    if ( auto menu = ImGuiMenu::instance() )
         menuScaling = menu->menu_scaling();
 
     ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
@@ -1182,6 +1186,8 @@ PaletteChanges Palette(
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
             changes |= PaletteChanges::Texture;
+            if ( params.ranges.size() == 4 )
+                changes |= PaletteChanges::Ranges;
             presetName.clear();
         }
         UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
@@ -1198,7 +1204,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::Texture;
+        changes |= PaletteChanges::All;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1224,7 +1230,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max );
+            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.f, max );
             ImGui::PopStyleVar();
             ranges[0] = -ranges[3];
         }
@@ -1570,7 +1576,7 @@ void Spinner( float radius, float scaling )
 
     SetCursorPosY( GetCursorPosY() + radius );
     ImGui::Dummy( ImVec2( 0, 0 ) );
-    MR::getViewerInstance().incrementForceRedrawFrames();
+    incrementForceRedrawFrames();
 }
 
 bool ModalBigTitle( const char* title, float scaling )

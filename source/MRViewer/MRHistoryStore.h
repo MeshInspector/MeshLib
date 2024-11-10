@@ -65,6 +65,7 @@ public:
         Undo,
         Redo,
         Clear,
+        PopAction, ///< called after removing action that exceeds memory limit
         Filter
     };
     using HistoryStoreChangedSignal = boost::signals2::signal<void( const HistoryStore& store, ChangeType )>;
@@ -82,6 +83,9 @@ private:
     size_t savedSceneIndex_{ 0 };
     /// memory limit (bytes) to this HistoryStore if stack_ exceed it, old actions are removed
     size_t storageLimit_{ size_t( ~0 ) };
+
+    /// removes all undo actions from the beginning of the stack that exceed memory limit
+    void filterByMemoryLimit_();
 };
 
 /// \}

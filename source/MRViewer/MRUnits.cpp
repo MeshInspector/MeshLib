@@ -314,6 +314,24 @@ void setDefaultUnitParams( const UnitToStringParams<E>& newParams )
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
+std::string_view toString( DegreesMode mode )
+{
+    switch ( mode )
+    {
+    case DegreesMode::degrees:
+        return "Degrees";
+    case DegreesMode::degreesMinutes:
+        return "Degrees, minutes";
+    case DegreesMode::degreesMinutesSeconds:
+        return "Degrees, minutes, seconds";
+    case DegreesMode::_count:
+        break; // Nothing.
+    }
+
+    assert( false && "Unknown `DegreesMode` value." );
+    return "??";
+}
+
 template <UnitEnum E, typename T>
 static std::string valueToStringImpl( T value, const UnitToStringParams<E>& params )
 {

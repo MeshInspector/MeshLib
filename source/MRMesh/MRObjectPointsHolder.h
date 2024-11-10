@@ -39,8 +39,14 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
+    /// gets current selected points
     const VertBitSet& getSelectedPoints() const { return selectedPoints_; }
-    MRMESH_API virtual void selectPoints( VertBitSet newSelection );
+
+    /// sets current selected points
+    void selectPoints( VertBitSet newSelection ) { updateSelectedPoints( newSelection ); }
+
+    /// swaps current selected points with the argument
+    MRMESH_API virtual void updateSelectedPoints( VertBitSet& selection );
 
     /// returns selected points if any, otherwise returns all valid points
     MRMESH_API const VertBitSet& getSelectedPointsOrAll() const;

@@ -49,7 +49,7 @@ struct SymMatrix3
     /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
     /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
     /// M*V^T = V^T*L; M = V^T*L*V
-    Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
+    Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
     Vector3<T> eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
@@ -58,7 +58,7 @@ struct SymMatrix3
     /// \param tol relative epsilon-tolerance for too small number detection
     /// \param rank optional output for this matrix rank according to given tolerance
     /// \param space rank=1: unit direction of solution line, rank=2: unit normal to solution plane, rank=3: zero vector
-    SymMatrix3<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
+    SymMatrix3<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 };
 
 /// \related SymMatrix3
@@ -179,7 +179,7 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
 }
 
 template <typename T>
-Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
+Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
     const auto q = trace() / 3;
@@ -263,7 +263,7 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPO
 }
 
 template <typename T>
-SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
+SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     SymMatrix3<T> res;
     Matrix3<T> eigenvectors;

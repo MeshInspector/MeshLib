@@ -1,31 +1,32 @@
 #include "MRViewerSettingsPlugin.h"
-#include "MRViewer/MRRibbonMenu.h"
-#include "MRViewer/ImGuiHelpers.h"
-#include "MRViewer/MRColorTheme.h"
-#include "MRViewer/ImGuiHelpers.h"
-#include "MRViewer/MRMouseController.h"
-#include "MRViewer/MRViewport.h"
+#include "MRRibbonMenu.h"
+#include "ImGuiHelpers.h"
+#include "MRColorTheme.h"
+#include "ImGuiHelpers.h"
+#include "MRMouseController.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRViewer/MRCommandLoop.h"
-#include "MRViewer/MRViewerSettingsManager.h"
-#include "MRViewer/MRGLMacro.h"
-#include "MRViewer/MRGladGlfw.h"
-#include "MRViewer/MRRibbonConstants.h"
-#include "MRViewer/MRViewer.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRCommandLoop.h"
+#include "MRViewerSettingsManager.h"
+#include "MRGLMacro.h"
+#include "MRGladGlfw.h"
+#include "MRRibbonConstants.h"
+#include "MRViewer.h"
+#include "MRImGuiVectorOperators.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer/MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRLog.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/MRUIStyle.h"
+#include "MRUIStyle.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
-#include <MRViewer/MRFileDialog.h>
+#include "MRFileDialog.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
-#include "MRViewer/MRUnitSettings.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRUnitSettings.h"
+#include "MRShowModal.h"
 
 namespace
 {
@@ -65,7 +66,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     {
         auto& viewer = getViewerInstance();
         int samples = 0;
-        if ( auto& settingsManager = viewer.getViewportSettingsManager() )
+        if ( auto& settingsManager = viewer.getViewerSettingsManager() )
             samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
         if ( viewer.isGLInitialized() && loadGL() )
         {
@@ -425,13 +426,14 @@ void ViewerSettingsPlugin::drawControlTab_( float menuWidth, float menuScaling )
 
 void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling )
 {
-    const auto& viewportParameters = viewer->viewport().getParameters();
+    auto& viewport = viewer->viewport();
+    const auto& viewportParameters = viewport.getParameters();
     const auto& style = ImGui::GetStyle();
 
     drawSeparator_( "Viewport", menuScaling );
 
     if ( viewer->viewport_list.size() > 1 )
-        ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
+        ImGui::Text( "Current viewport: %d", viewport.id.value() );
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     auto rotMode = viewportParameters.rotationMode;
@@ -440,24 +442,49 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
-    viewer->viewport().rotationCenterMode( rotMode );
+    viewport.rotationCenterMode( rotMode );
     ImGui::PopStyleVar();
 
     ImGui::PushItemWidth( 80 * menuScaling );
 
-    bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );
+    bool showAxes = viewer->basisAxes->isVisible( viewport.id );
     UI::checkbox( "Show Axes", &showAxes );
-    viewer->viewport().showAxes( showAxes );
+    viewport.showAxes( showAxes );
     ImGui::SameLine();
 
     ImGui::SetCursorPosX( 155.0f * menuScaling );
-    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
+    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewport.id );
     UI::checkbox( "Show Global Basis", &showGlobalBasis );
-    viewer->viewport().showGlobalBasis( showGlobalBasis );
+    viewport.showGlobalBasis( showGlobalBasis );
 
-    bool showRotCenter = viewer->rotationSphere->isVisible( viewer->viewport().id );
+    ImGui::PushItemWidth( 170 * menuScaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+    bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
+    if ( isAutoGlobalBasisSize )
+    {
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
+    }
+    else
+    {
+        auto size = viewer->globalBasisAxes->xf( viewport.id ).A.x.x;
+        UI::drag<LengthUnit>( "Global Basis Scale", size, viewportParameters.objectScale * 0.01f, 1e-9f );
+        viewer->globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ), viewport.id );
+    }
+    ImGui::PopStyleVar();
+    ImGui::SameLine();
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
+    if ( UI::checkbox( "Auto", &isAutoGlobalBasisSize ) )
+    {
+        auto paramsCpy = viewportParameters;
+        paramsCpy.globalBasisScaleMode = isAutoGlobalBasisSize ?
+            Viewport::Parameters::GlobalBasisScaleMode::Auto :
+            Viewport::Parameters::GlobalBasisScaleMode::Fixed;
+        viewport.setParameters( paramsCpy );
+    }
+
+    bool showRotCenter = viewer->rotationSphere->isVisible( viewport.id );
     UI::checkbox( "Show Rotation Center", &showRotCenter );
-    viewer->viewport().showRotationCenter( showRotCenter );
+    viewport.showRotationCenter( showRotCenter );
 
     ImGui::PopItemWidth();
     ImGui::PopStyleVar();
@@ -486,7 +513,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     if ( showClippingPlane )
     {
         auto plane = viewportParameters.clippingPlane;
-        auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );
+        auto showPlane = viewer->clippingPlaneObject->isVisible( viewport.id );
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
@@ -498,8 +525,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         ImGui::PopStyleVar();
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
         UI::checkbox( "Show##ClippingPlane", &showPlane );
-        viewer->viewport().setClippingPlane( plane );
-        viewer->viewport().showClippingPlane( showPlane );
+        viewport.setClippingPlane( plane );
+        viewport.showClippingPlane( showPlane );
     }
 
     drawSeparator_( "Options", menuScaling );
@@ -543,36 +570,31 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Thousands separator
 
-        auto thousandsSeparator = [&]( bool frac )
+        ImGui::PushItemWidth( 170.0f * menuScaling );
+        MR_FINALLY{ ImGui::PopItemWidth(); };
+
+        char thouSep[2] = { UnitSettings::getThousandsSeparator(), '\0' };
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
+        MR_FINALLY{ ImGui::PopStyleVar(); };
+
+        if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
+            UnitSettings::setThousandsSeparator( thouSep[0] );
+
+        // If the separator is empty or a space, display a string explaining that on top of the textbox.
+        if ( !ImGui::IsItemActive() )
         {
-            ImGui::PushItemWidth( 170.0f * menuScaling );
-            MR_FINALLY{ ImGui::PopItemWidth(); };
+            const char* label = nullptr;
+            if ( thouSep[0] == 0 )
+                label = "None";
+            else if ( thouSep[0] == ' ' )
+                label = "Space";
 
-            char thouSep[2] = { UnitSettings::getThousandsSeparator( frac ), '\0' };
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
-            MR_FINALLY{ ImGui::PopStyleVar(); };
-
-            if ( UI::inputTextIntoArray( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
-                UnitSettings::setThousandsSeparator( thouSep[0], frac );
-
-            // If the separator is empty or a space, display a string explaining that on top of the textbox.
-            if ( !ImGui::IsItemActive() )
+            if ( label )
             {
-                const char* label = nullptr;
-                if ( thouSep[0] == 0 )
-                    label = "None";
-                else if ( thouSep[0] == ' ' )
-                    label = "Space";
-
-                if ( label )
-                {
-                    ImVec2 textSize = ImGui::CalcTextSize( label );
-                    ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
-                }
+                ImVec2 textSize = ImGui::CalcTextSize( label );
+                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
             }
-        };
-        thousandsSeparator( false ); // Integral part.
-        // thousandsSeparator( true ); // Fractional part. // I was told this doesn't deserve a setting.
+        }
     }
 
 
@@ -589,8 +611,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             std::vector<std::string> ret;
             ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
             for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
-                ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
-            ret.push_back( "No units" );
+                ret.emplace_back( getUnitInfo( LengthUnit( i ) ).prettyName );
+            ret.emplace_back( "No units" );
             return ret;
         }();
 
@@ -600,9 +622,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
             if ( option == int( LengthUnit::_count ) )
-                UnitSettings::setUiLengthUnit( {} );
+                UnitSettings::setUiLengthUnit( {}, true );
             else
-                UnitSettings::setUiLengthUnit( LengthUnit( option ) );
+                UnitSettings::setUiLengthUnit( LengthUnit( option ), true );
         }
 
         // --- Precision
@@ -618,10 +640,13 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PushItemWidth( 170.0f * menuScaling );
         drawSeparator_( "Angular", menuScaling );
 
-        static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
-        static_assert( int( DegreesMode::degrees ) == 0 );
-        static_assert( int( DegreesMode::degreesMinutes ) == 1 );
-        static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
+        static const std::vector<std::string> flavorOptions = []{
+            std::vector<std::string> ret;
+            ret.reserve( std::size_t( DegreesMode::_count ) );
+            for ( std::size_t i = 0; i < std::size_t( DegreesMode::_count ); i++ )
+                ret.emplace_back( toString( DegreesMode( i ) ) );
+            return ret;
+        }();
 
         int flavorOption = int( UnitSettings::getDegreesMode() );
 
@@ -629,7 +654,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
-            UnitSettings::setDegreesMode( DegreesMode( flavorOption ) );
+            UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
 
         // Degree-mode-specific options.
 
@@ -645,6 +670,13 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
     }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if ( UI::button( "Reset Unit Settings" ) )
+        UnitSettings::resetToDefaults();
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
@@ -722,7 +754,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
             }
             if ( backUpSamples != storedSamples_ )
             {
-                if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+                if ( auto& settingsManager = viewer->getViewerSettingsManager() )
                     settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
 
                 needReset_ = storedSamples_ != curSamples_;
@@ -1179,7 +1211,7 @@ void ViewerSettingsPlugin::updateDialog_()
 
 void ViewerSettingsPlugin::resetSettings_()
 {
-    viewer->getViewportSettingsManager()->resetSettings( *viewer );
+    viewer->getViewerSettingsManager()->resetSettings( *viewer );
 
     for ( size_t tabType = size_t( 0 ); tabType < size_t( TabType::Count ); tabType++ )
         for ( auto& settings : comboSettings_[ tabType ] )
@@ -1191,7 +1223,7 @@ void ViewerSettingsPlugin::resetSettings_()
     } );
 
     storedSamples_ = 8;
-    if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+    if ( auto& settingsManager = viewer->getViewerSettingsManager() )
         settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
     needReset_ = storedSamples_ != curSamples_;
 

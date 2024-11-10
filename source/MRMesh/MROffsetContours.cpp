@@ -327,14 +327,17 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
 
     CornerParameters cParams;
     int lastIndex = int( cont.size() ) - 2;
-    cParams.lc = isClosed ? cont[lastIndex] + offset( lastIndex ) * contNorm( lastIndex ) : res.back();
+    cParams.rc = isClosed ? cont[lastIndex] + offset( lastIndex ) * contNorm( lastIndex ) : res.back();
+    cParams.rn = res.back();
     for ( int i = 0; i + 1 < cont.size(); ++i )
     {
-        auto norm = contNorm( i );
-
-        cParams.org = cont[i];
+        auto norm = contNorm( i );        
         auto iOffset = offset( i );
         auto iNextOffset = offset( i + 1 );
+
+        cParams.org = cont[i];
+        cParams.lp = cParams.rc;
+        cParams.lc = cParams.rn;
         cParams.rc = cParams.org + norm * iOffset;
         cParams.rn = cont[i + 1] + norm * iNextOffset;
 
@@ -342,8 +345,6 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
             shiftMap[i] += shiftMap[i - 1];
 
         // interpolation
-        cParams.lp = cParams.lc;
-        cParams.lc = res.back();
         cParams.lrAng = findAngle( cParams.lc, cParams.org, cParams.rc );
         bool sameAsPrev = std::abs( cParams.lrAng ) < PI_F / 360.0f;
         if ( !sameAsPrev )
@@ -366,11 +367,11 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
                 if ( shiftMap )
                     ++shiftMap[i];
             }
-            res.emplace_back( std::move( cParams.rc ) );
+            res.emplace_back( cParams.rc );
             if ( shiftMap )
                 ++shiftMap[i];
         }
-        res.emplace_back( std::move( cParams.rn ) );
+        res.emplace_back( cParams.rn );
         if ( shiftMap )
             ++shiftMap[i + 1];
     }
@@ -379,13 +380,13 @@ Contour2f offsetOneDirectionContour( const Contour2f& cont, SingleOffset offset,
     return res;
 }
 
-Expected<Contours2f> offsetContours( const Contours2f& contours, float offset, 
+Contours2f offsetContours( const Contours2f& contours, float offset, 
     const OffsetContoursParams& params /*= {} */ )
 {
     return offsetContours( contours, [offset] ( int, int ) { return offset; }, params );
 }
 
-Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariableOffset offsetFn, const OffsetContoursParams& params /*= {} */ )
+Contours2f offsetContours( const Contours2f& contours, ContoursVariableOffset offsetFn, const OffsetContoursParams& params /*= {} */ )
 {
     MR_TIMER;
 
@@ -496,7 +497,7 @@ Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariabl
         fillIntermediateIndicesMap( contours, intermediateRes, shiftsMap, params.type, intermediateMap );
 
     PlanarTriangulation::ContoursIdMap outlineMap;
-    auto res = PlanarTriangulation::getOutline( intermediateRes, params.indicesMap ? &outlineMap : nullptr );
+    auto res = PlanarTriangulation::getOutline( intermediateRes, { .indicesMap = params.indicesMap ? &outlineMap : nullptr } );
 
     if ( params.indicesMap )
         fillResultIndicesMap( intermediateRes, intermediateMap, outlineMap, *params.indicesMap );
@@ -504,7 +505,7 @@ Expected<Contours2f> offsetContours( const Contours2f& contours, ContoursVariabl
     return res;
 }
 
-Expected<Contours3f> offsetContours( const Contours3f& contours, float offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */)
+Contours3f offsetContours( const Contours3f& contours, float offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */)
 {
     return offsetContours( contours, [offset] ( int, int )
     {
@@ -512,7 +513,7 @@ Expected<Contours3f> offsetContours( const Contours3f& contours, float offset, c
     }, params, zParmas );
 }
 
-Expected<Contours3f> offsetContours( const Contours3f& contours, ContoursVariableOffset offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */ )
+Contours3f offsetContours( const Contours3f& contours, ContoursVariableOffset offset, const OffsetContoursParams& params /*= {} */, const OffsetContoursRestoreZParams& zParmas /*= {} */ )
 {
     MR_TIMER;
 
@@ -537,16 +538,14 @@ Expected<Contours3f> offsetContours( const Contours3f& contours, ContoursVariabl
     if ( !paramsCpy.indicesMap )
         paramsCpy.indicesMap = &tempMap;
     // create 2d offset
-    auto offset2dRes = offsetContours( conts2d, offset, paramsCpy );
-    if ( !offset2dRes.has_value() )
-        return unexpected( std::move( offset2dRes.error() ) );
+    auto offset2d = offsetContours( conts2d, offset, paramsCpy );
 
     const auto& map = *paramsCpy.indicesMap;
-    Contours3f result( offset2dRes->size() );
+    Contours3f result( offset2d.size() );
     for ( int i = 0; i < result.size(); ++i )
     {
         auto& res3I = result[i];
-        const auto& res2I = ( *offset2dRes )[i];
+        const auto& res2I = offset2d[i];
         res3I.resize( res2I.size() );
         ParallelFor( 0, int( res3I.size() ), [&] ( int j )
         {
@@ -554,7 +553,7 @@ Expected<Contours3f> offsetContours( const Contours3f& contours, ContoursVariabl
             const auto& mapVal = map[i][j];
             if ( zParmas.zCallback )
             {
-                res3I[j].z = zParmas.zCallback( *offset2dRes, { .contourId = i,.vertId = j }, mapVal );
+                res3I[j].z = zParmas.zCallback( offset2d, { .contourId = i,.vertId = j }, mapVal );
             }
             else
             {

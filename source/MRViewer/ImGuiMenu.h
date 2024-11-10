@@ -7,15 +7,16 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "MRMesh/MRFlagOperators.h"
 #include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
-#include <unordered_map>
+#include "MRSignalCombiners.h"
+#include "MRShowModal.h"
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
+#include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRBox.h"
-#include "MRViewer/MRSignalCombiners.h"
+#include <unordered_map>
 
 // Forward declarations
 struct ImGuiContext;
@@ -212,7 +213,7 @@ public:
   ImGuiWindow* getLastFocusedPlugin() const { return prevFrameFocusPlugin_; };
 
   // opens Error / Warning / Info modal window with message text
-  MRVIEWER_API void showModalMessage( const std::string& msg, NotificationType msgType );
+  MRVIEWER_API virtual void showModalMessage( const std::string& msg, NotificationType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
 
@@ -397,13 +398,6 @@ protected:
     std::shared_ptr<SceneObjectsListDrawer> sceneObjectsList_;
 };
 
-
-// Check if menu is available and if it is, shows modal window
-MRVIEWER_API void showModal( const std::string& error, NotificationType type );
-inline void showError( const std::string& error )
-{
-    showModal( error, NotificationType::Error );
-}
 
 // call if you want ImGui to take event if this key is pressed (to prevent scene reaction on key press)
 MRVIEWER_API void reserveKeyEvent( ImGuiKey key );

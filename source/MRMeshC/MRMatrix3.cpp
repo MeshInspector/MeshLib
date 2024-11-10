@@ -34,3 +34,29 @@ MRMatrix3f mrMatrix3fMul( const MRMatrix3f* a_, const MRMatrix3f* b_ )
     ARG( a ); ARG( b );
     RETURN( a * b );
 }
+
+MRMatrix3f mrMatrix3fAdd( const MRMatrix3f* a_, const MRMatrix3f* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN( a + b );
+}
+
+MRMatrix3f mrMatrix3fSub( const MRMatrix3f* a_, const MRMatrix3f* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN( a - b );
+}
+
+MRVector3f mrMatrix3fMulVector( const MRMatrix3f* a_, const MRVector3f* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN( a * b );
+}
+
+bool mrMatrix3fEqual( const MRMatrix3f* a_, const MRMatrix3f* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN( a == b );
+}
+
+

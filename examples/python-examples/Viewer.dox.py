@@ -1,8 +1,3 @@
-## \page ExamplePythonViewer Viewer Example
-##
-## Example of using Viewer
-##
-## \code
 import os
 from meshlib import mrmeshpy as mm
 from meshlib import mrviewerpy as mv
@@ -44,13 +39,3 @@ os.system("pause")
 # close viewer window nicely
 mv.Viewer().shutdown()
 os.system("pause")
-
-## \endcode
-## 
-## \n
-## Viewer with scene tree
-## \image html Viewer_with_scene_tree.png
-## \n
-## Viewer without scene tree
-## \image html Viewer_without_scene_tree.png
-## \note Unfortunately viewer now does not work on macOS

@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshFillHole Filling holes
-##
-## Example of filling holes
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
@@ -20,5 +15,3 @@ for e in hole_edges:
 
 # Save result
 mrmeshpy.saveMesh(mesh, "filledMesh.stl")
-
-## \endcode

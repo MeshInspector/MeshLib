@@ -1,6 +1,7 @@
 #pragma once
 #include "MRBox.h"
 #include "MRIntersectionPrecomputes.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -21,7 +22,7 @@ struct RayOrigin
 template<>
 struct RayOrigin<float>
 {
-    __m128 p;
+    MR_BIND_IGNORE __m128 p;
     RayOrigin( const Vector3f & ro ) { p = _mm_set_ps( ro.x, ro.y, ro.z, 0 ); }
 };
 

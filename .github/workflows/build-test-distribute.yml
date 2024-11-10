@@ -18,7 +18,7 @@ on:
 
 
 env:
-  VCPKG-VERSION: '2024.07.12'
+  VCPKG-VERSION: '2024.10.21'
 
 jobs:
   prepare-image:
@@ -50,7 +50,7 @@ jobs:
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: false # Currently fails tests on Ubuntu Arm 20.04.
+      mrbind: true
     secrets: inherit
 
   ubuntu-x64-build-test:
@@ -100,6 +100,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
@@ -143,10 +145,18 @@ jobs:
       - name: Make Install Folder .NET
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
-      - name: Distribute
-        run: py -3.10 scripts\zip_distribution.py install MeshLibDist.zip
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
 
-      - name: Distribute .NET
+      - name: Archive Distribution
+        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
+
+      - name: Test Example Plugin # call it after archive not to pack build results
+        run: |
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+
+      - name: Archive .NET Distribution
         run: py -3.10 scripts\zip_distribution.py install_dotnet MeshLibDotNetDist.zip
 
       - name: Upload Windows Distribution
@@ -257,9 +267,6 @@ jobs:
 
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    runs-on: ubuntu-latest
-    container:
-      image: alpine:3.20
     needs:
       - versioning-and-release-url
       - windows-build-test
@@ -268,45 +275,10 @@ jobs:
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-    steps:
-      - name: Install Git
-        run: |
-          apk update
-          apk add git
-
-      - name: Checkout MeshLib
-        uses: actions/checkout@v4
-        with:
-          path: 'MeshLib/'
-
-      - name: Checkout documentation site
-        uses: actions/checkout@v4
-        with:
-          repository: 'MeshInspector/MeshInspector.github.io'
-          path: 'MeshInspector.github.io/'
-          token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
-
-      - name: Install Doxygen
-        run: apk add doxygen
-
-      - name: Run Doxygen
-        working-directory: MeshInspector.github.io
-        run: |
-          scripts/pre.sh
-          (
-            cat Doxyfile
-            echo "OUTPUT_DIRECTORY=MeshLib/dev"
-          ) | doxygen -
-          scripts/post.sh
-
-      - name: Commit and push changes
-        working-directory: MeshInspector.github.io
-        run: |
-          git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
-          git config user.name "meshinspector-bot"
-          git add -A
-          git commit --allow-empty -m "Auto update docs" -a
-          git push
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib/dev
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15

@@ -1,9 +1,3 @@
-## \page ExamplePythonMeshModification Mesh modification
-##
-## Mesh modification examples
-##
-## \code
-
 import math
 
 import meshlib.mrmeshpy as mrmeshpy
@@ -22,5 +16,3 @@ plus_z = mrmeshpy.Vector3f()
 plus_z.z = 1.0
 rotation_xf = mrmeshpy.AffineXf3f.linear(mrmeshpy.Matrix3f.rotation(plus_z, math.pi * 0.5))
 mesh.transform(rotation_xf)
-
-## \endcode

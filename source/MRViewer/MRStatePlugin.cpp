@@ -2,7 +2,6 @@
 #include "MRMesh/MRString.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer.h"
 #include "MRCommandLoop.h"
 #include "MRMesh/MRConfig.h"
 #include "imgui/imgui.h"
@@ -68,14 +67,6 @@ bool StateBasePlugin::enable( bool on )
     {
         if ( onDisable_() )
         {
-            if ( auto window = ImGui::FindWindowByName( uiName().c_str()) )
-            {
-                auto& config = Config::instance();
-                auto dpJson = config.getJsonValue( "DialogPositions" );
-                serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[uiName()]);
-                config.setJsonValue( "DialogPositions", dpJson );
-            }
-
             isEnabled_ = false;
             dialogIsOpen_ = false;
             onPluginDisable_(); // virtual call from IPluginCloseCheck
@@ -84,8 +75,7 @@ bool StateBasePlugin::enable( bool on )
     }
     if ( res )
     {
-        auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        if ( ribbonMenu )
+        if ( auto ribbonMenu = RibbonMenu::instance() )
             ribbonMenu->updateItemStatus( name() );
     }
     return res;

@@ -1,0 +1,13 @@
+/**
+ \page ExampleNumpyTriangulation Triangulation of a regular Numpy grid
+
+Triangulation of regular numpy grid
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\include NumpyTriangulation.dox.py
+
+</div>
+
+ */

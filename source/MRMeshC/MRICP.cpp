@@ -14,6 +14,7 @@ REGISTER_AUTO_CAST( ICPPairData )
 REGISTER_AUTO_CAST( IPointPairs )
 REGISTER_AUTO_CAST( MeshOrPointsXf )
 REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST2( std::string, MRString )
 
 static_assert( sizeof( MRICPPairData ) == sizeof( MR::ICPPairData ) );
@@ -26,6 +27,12 @@ const MRICPPairData* mrIPointPairsGet( const MRIPointPairs* pp_, size_t idx )
 {
     ARG( pp );
     RETURN( &pp[idx] );
+}
+
+size_t mrIPointPairsSize( const MRIPointPairs* pp_ )
+{
+    ARG( pp );
+    RETURN( pp.size() );
 }
 
 MRICPPairData* mrIPointPairsGetRef( MRIPointPairs* pp_, size_t idx )
@@ -58,6 +65,13 @@ MRICP* mrICPNew( const MRMeshOrPointsXf* flt_, const MRMeshOrPointsXf* ref_, flo
     ARG( flt ); ARG( ref );
     RETURN_NEW( ICP( flt, ref, samplingVoxelSize ) );
 }
+
+MRICP* mrICPNewFromSamples( const MRMeshOrPointsXf* flt_, const MRMeshOrPointsXf* ref_, const MRVertBitSet* fltSamples_, const MRVertBitSet* refSamples_ )
+{
+    ARG( flt ); ARG( ref ); ARG_PTR( fltSamples ); ARG_PTR( refSamples );
+    RETURN_NEW( ICP( flt, ref, *fltSamples, *refSamples ) );
+}
+
 
 void mrICPSetParams( MRICP* icp_, const MRICPProperties* prop_ )
 {

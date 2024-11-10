@@ -45,13 +45,16 @@ override var = $(eval override $(subst $,$$$$,$1))
 # --- Configuration variables start here:
 
 
-# Are we on Windows?
+# What OS?
 ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
 IS_MACOS := 0
-else ifeq ($(shell uname -s),Darwin)
+else
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
 IS_WINDOWS := 0
 IS_MACOS := 1
+endif
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 override IS_MACOS := $(filter-out 0,$(IS_MACOS))
@@ -64,7 +67,21 @@ $(error Must run this in Visual Studio developer command prompt, or at least cop
 endif
 endif
 
-# Windows-only vars: [
+# Set to 1 if you're planning to make a wheel from this module.
+FOR_WHEEL := 0
+override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
+
+# Set to 1 if MeshLib was built in debug mode. Ignore this on Windows. By default we're trying to guess this based on the CMake cache.
+# Currently this isn't needed for anything, hence commented out.
+# MESHLIB_IS_DEBUG :=
+# ifeq ($(IS_WINDOWS),)
+# MESHLIB_IS_DEBUG := $(if $(filter Debug,$(shell cmake -L $(MESHLIB_SHLIB_DIR)/.. 2>/dev/null | grep -Po '(?<=CMAKE_BUILD_TYPE:STRING=).*')),1)
+# $(info MeshLib built in debug mode? $(if $(filter-out 0,$(MESHLIB_IS_DEBUG)),YES,NO))
+# endif
+# override MESHLIB_IS_DEBUG := $(filter-out 0,$(MESHLIB_IS_DEBUG))
+
+
+# ---- Windows-only vars: [
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
@@ -83,9 +100,9 @@ endif
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
-# ]
+# ] ----
 
-# MacOS-only vars: [
+# ---- MacOS-only vars: [
 ifneq ($(IS_MACOS),)
 HOMEBREW_DIR := /opt/homebrew
 ifeq ($(wildcard $(HOMEBREW_DIR)),)
@@ -97,7 +114,7 @@ endif
 
 # Min version. Not setting this seems to cause warnings when linking against MeshLib built with Apple Clang, which seems to have different defaults.
 MACOS_MIN_VER :=
-# ]
+# ] ----
 
 
 # Where to find MeshLib.
@@ -274,9 +291,13 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
 GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp
+
+# Those files are parsed and baked into the final bindings.
+EXTRA_INPUT_SOURCES := $(makefile_dir)helpers.cpp
+# Those files compiled as is and baked into the final bindings.
+EXTRA_GENERATED_SOURCES := $(makefile_dir)aliases.cpp
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -307,6 +328,8 @@ endif
 else # Linux or MacOS:
 COMPILER += -fvisibility=hidden
 COMPILER_FLAGS += -fPIC
+# Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
+COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
@@ -398,6 +421,16 @@ $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
 endef
 # Linking the primary module.
 $(foreach s,$(EXTRA_INPUT_SOURCES),$(eval $(call extra_file_snippet,$s)))
+# Compile extra files that don't need generating.
+override define extra_pregen_file_snippet =
+$(call var,_object := $(TEMP_OUTPUT_DIR)/$(notdir $(1:.cpp=.o)))
+$(call var,object_files += $(_object))
+$(_object): $1 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Compiling] $1)
+	@$(COMPILER) $(call quote,$1) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+endef
+$(foreach s,$(EXTRA_GENERATED_SOURCES),$(eval $(call extra_pregen_file_snippet,$s)))
+# Linking the primary module.
 $(LINKER_OUTPUT): $(object_files) | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Linking] $@)
 	@$(LINKER) $^ -o $(call quote,$@) $(LINKER_FLAGS)
@@ -427,6 +460,9 @@ $(INIT_SCRIPT): $(makefile_dir)/__init__.py
 	@cp $< $@
 ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part.
 	@gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
+endif
+ifeq ($(FOR_WHEEL),) # If not on building a wheel, strip the wheel-only part.
+	@gawk -i inplace '/### wheel-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
 endif
 
 ALL_OUTPUTS := $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)

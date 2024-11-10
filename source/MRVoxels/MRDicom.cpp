@@ -307,9 +307,9 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
             spdlog::warn( "DICOM is in unknown units: {}", rescaleType );
     }
     auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
-    const float k = gimage.GetSlope();
-    const float b = gimage.GetIntercept();
-    auto caster = [k, b, scalarType] ( const char* c ) {
+    auto caster = [k = static_cast<float>( gimage.GetSlope() ),
+                   b = static_cast<float>( gimage.GetIntercept() ),
+                   scalarType] ( const char* c ) {
         return visitScalarType( [k, b] ( auto val ) -> float { return k * static_cast<float>( val ) + b; }, scalarType, c );
     };
 
@@ -774,13 +774,13 @@ Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::fil
         gdcm::MediaStorage ms( gdcm::MediaStorage::EnhancedCTImageStorage );
         const char* msstr = ms.GetString();
         gdcm::DataElement de( gdcm::Tag( 0x0002,0x0002 ) );  // MediaStorageSOPClassUID
-        de.SetByteValue( msstr, static_cast<gdcm::VL>( strlen( msstr ) ) );
+        de.SetByteValue( msstr, static_cast<uint32_t>( strlen( msstr ) ) );
         de.SetVR( gdcm::VR::UI );
         iw.GetFile().GetHeader().Replace( de );
 
         // Also set the SOP Class UID in the DataSet (0008,0016)
         gdcm::DataElement sopde( gdcm::Tag( 0x0008,0x0016 ) );
-        sopde.SetByteValue( msstr, static_cast<gdcm::VL>( strlen( msstr ) ) );
+        sopde.SetByteValue( msstr, static_cast<uint32_t>( strlen( msstr ) ) );
         sopde.SetVR( gdcm::VR::UI );
         iw.GetFile().GetDataSet().Replace(sopde);
     }

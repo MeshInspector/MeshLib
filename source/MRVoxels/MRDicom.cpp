@@ -297,13 +297,14 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
 
     auto pixelSize = gimage.GetPixelFormat().GetPixelSize();
     // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_c.8.15.3.10.html
-    auto rescaleType = ir.GetFile().GetDataSet().GetDataElement( gdcm::Tag{ 0x0028, 0x1054 } );
-    if ( !rescaleType.IsEmpty() )
+    auto rescaleTypeEl = ir.GetFile().GetDataSet().GetDataElement( gdcm::Tag{ 0x0028, 0x1054 } );
+    if ( !rescaleTypeEl.IsEmpty() )
     {
         std::stringstream ss;
-        rescaleType.GetValue().Print( ss );
-        if ( ss.view() != "HU" && ss.view() != "HU_MOD" )
-            spdlog::warn( "DICOM is in unknown units: {}", ss.view() );
+        rescaleTypeEl.GetValue().Print( ss );
+        auto rescaleType = ss.str();
+        if ( rescaleType != "HU" && rescaleType != "HU_MOD" )
+            spdlog::warn( "DICOM is in unknown units: {}", rescaleType );
     }
     auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
     auto k = gimage.GetSlope();

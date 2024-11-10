@@ -31,7 +31,8 @@ MRVOXELS_API std::function<float ( const char* )> getTypeConverter( ScalarType s
 
 
 /// More general template to pass a single value of specified format \p scalarType to a generic function \p f
-auto visitScalarType( auto&& f, ScalarType scalarType, const char* c ) -> decltype( f( 0 ) )
+template <typename F>
+std::invoke_result_t<F, int> visitScalarType( F f, ScalarType scalarType, const char* c )
 {
 #define M(T) return f( *( const T* )( c ) );
 

@@ -326,10 +326,12 @@ namespace MR.DotNet.Test
         public void TestUniteCloseVertices()
         {
             var mesh = Mesh.MakeSphere(1.0f, 3000);
+            Assert.That(mesh.ValidPoints.Count() == 3000);
             var old2new = new List<VertId>();
-            var unitedCount = MeshBuilder.UniteCloseVertices(mesh, 0.1f, false, old2new);
+            var unitedCount = MeshBuilder.UniteCloseVertices(ref mesh, 0.1f, false, old2new);
             Assert.That(unitedCount, Is.EqualTo(2230));
             Assert.That(old2new[1000].Id, Is.EqualTo(42));
+            Assert.That(mesh.ValidPoints.Count() < 3000);
             mesh.Dispose();
         }
     }

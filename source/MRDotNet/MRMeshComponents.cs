@@ -86,10 +86,7 @@ namespace MR.DotNet
         {
             public MRFace2RegionMap* faceMap = null;
             public int numComponents = 0;
-            public MRMeshComponentsMap() 
-            { 
-                Console.WriteLine("MRMeshComponentsMap()");
-            }
+            public MRMeshComponentsMap() {}
         };
 
         [StructLayout(LayoutKind.Sequential)]

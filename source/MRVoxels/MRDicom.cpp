@@ -297,7 +297,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
 
     auto pixelSize = gimage.GetPixelFormat().GetPixelSize();
     // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_c.8.15.3.10.html
-    auto rescaleTypeEl = ir.GetFile().GetDataSet().GetDataElement( gdcm::Tag{ 0x0028, 0x1054 } );
+    auto rescaleTypeEl = ir.GetFile().GetDataSet().GetDataElement( gdcm::Keywords::RescaleType::GetTag() );
     if ( !rescaleTypeEl.IsEmpty() )
     {
         std::stringstream ss;

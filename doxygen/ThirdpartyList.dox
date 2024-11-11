@@ -1,6 +1,6 @@
 namespace MR {
 
-/** \page ThirdParty Thirdparty list
+/** \page ThirdParty Thirdparty List
 
 \b Emscripten - a complete compiler toolchain to WebAssembly [Find more...](https://emscripten.org) \n
 \b Boost \b C++ \b Libraries - provides free peer-reviewed portable C++ source libraries [Find more...](https://www.boost.org) \n

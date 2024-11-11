@@ -21,4 +21,6 @@ pc.invalidateCaches()
 triangulated_pc = mm.triangulatePointCloud(pc)
 
 # Fix possible issues
+offsetParams = mm.OffsetParameters()
+offsetParams.voxelSize = mm.suggestVoxelSize( triangulated_pc, 5e6 )
 triangulated_pc = mm.offsetMesh(triangulated_pc, 0.0)

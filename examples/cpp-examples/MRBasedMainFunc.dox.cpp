@@ -1,8 +1,3 @@
-/// \page MRBasedMainFunc Basing your application on MeshLib
-///
-/// First of all you should make `main` function like this
-///
-/// \code
 #include <MRMesh/MRLog.h>
 #include <MRMesh/MRSystem.h>
 #include <MRViewer/MRSetupViewer.h>
@@ -27,6 +22,3 @@ int main( int argc, char** argv )
 
     return MR::launchDefaultViewer( launchParams, viewerSetup );
 }
-/// \endcode
-///
-/// Then you should make your plugins, to find how have a look at \ref StatePluginsHelp page

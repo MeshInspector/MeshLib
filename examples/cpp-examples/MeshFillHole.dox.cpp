@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshFillHole Filling holes
-///
-/// Example of filling holes
-///
-/// \code
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -28,4 +23,3 @@ int main()
     // Save result
     auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "filledMesh.stl" );
 }
-/// \endcode

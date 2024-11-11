@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshStitchHole Stitching holes
-##
-## Example of stitch holes
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load meshes
@@ -22,5 +17,3 @@ mrmeshpy.buildCylinderBetweenTwoHoles(mesh, edges[0], edges[1], params)
 
 # Save result
 mrmeshpy.saveMesh(mesh, "stitchedMesh.stl")
-
-## \endcode

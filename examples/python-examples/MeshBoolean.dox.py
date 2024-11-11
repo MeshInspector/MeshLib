@@ -1,8 +1,3 @@
-## \page ExamplePythonMeshBoolean Mesh boolean
-##
-## Example of Boolean operation
-##
-## \code
 import meshlib.mrmeshpy as mrmeshpy
 
 # create first sphere with radius of 1 unit
@@ -21,5 +16,3 @@ if not result.valid():
 
 # save result to STL file
 mrmeshpy.saveMesh(result_mesh, "out_boolean.stl")
-
-## \endcode

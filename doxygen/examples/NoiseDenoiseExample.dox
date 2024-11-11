@@ -1,0 +1,15 @@
+/**
+ \page ExampleNoiseDenoise Adding and removing noise Example 
+
+
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\note Python version 3 and later
+\include NoiseDenoiseExample.dox.py
+\image html plotly_visualization.png "Plotly visualization" width = 300cm
+
+</div>
+
+ */

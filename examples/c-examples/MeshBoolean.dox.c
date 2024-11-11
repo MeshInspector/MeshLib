@@ -1,8 +1,3 @@
-/// \page ExampleCMeshBoolean Mesh boolean
-///
-/// Example of Boolean operation
-///
-/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshBoolean.h"
 #include "MRMeshC/MRMeshLoad.h"
@@ -99,4 +94,3 @@ out_mesh1:
 out:
     return rc;
 }
-/// \endcode

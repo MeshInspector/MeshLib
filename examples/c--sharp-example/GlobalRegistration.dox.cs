@@ -1,8 +1,3 @@
-/// \page ExampleCSharpGlobalRegistration Global Registration
-///
-/// Example of Global Registration
-///
-/// \code
 using System;
 using System.Reflection;
 using System.Collections.Generic;
@@ -81,4 +76,3 @@ namespace MR.DotNet.Sample
         }
     }
 }
-/// \endcode

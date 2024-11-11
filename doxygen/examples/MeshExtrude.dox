@@ -1,0 +1,15 @@
+/**
+ \page ExampleMeshExtrude Mesh extrude
+
+Example of extrude faces on mesh
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Cpp</b>
+\include MeshExtrude.dox.cpp
+- <b class="tab-title">Python</b>
+\include MeshExtrude.dox.py
+
+</div>
+
+ */

@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshLoadSave Loading and saving mesh files
-///
-/// Following code presents example of loading and saving mesh file
-///
-/// \code
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
@@ -24,9 +19,3 @@ int main()
         std::cerr << loadRes.error() << std::endl;
     return 0;
 }
-/// \endcode
-///
-/// Further examples won't check return values for sake of clarity
-///
-/// \sa \ref MR::MeshLoad
-/// \sa \ref MR::MeshSave

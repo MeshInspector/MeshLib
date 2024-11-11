@@ -1,6 +1,3 @@
-## \page ExamplePythonNoiseDenoise Adding and removing noise Example 
-##
-## \code
 from meshlib import mrmeshpy as mm
  
 # Load mesh
@@ -22,5 +19,3 @@ mm.meshDenoiseViaNormals( mesh )
 
 # Save denoised mesh
 mm.saveMesh(mesh,"denoised_mesh.stl")
-
-## \endcode

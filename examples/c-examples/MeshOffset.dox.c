@@ -1,8 +1,3 @@
-/// \page ExampleCMeshOffset Mesh offset
-///
-/// Example of mesh offset
-///
-/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshLoad.h"
 #include "MRMeshC/MRMeshSave.h"
@@ -95,4 +90,3 @@ out_inputMesh:
 out:
     return rc;
 }
-/// \endcode

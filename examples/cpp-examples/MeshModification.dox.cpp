@@ -1,8 +1,3 @@
-/// \page ExampleCppMeshModification Mesh modification
-///
-/// Some examples of mesh modification are presented here
-///
-/// \code
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshRelax.h>
@@ -27,4 +22,3 @@ int main()
 
     return 0;
 }
-/// \endcode

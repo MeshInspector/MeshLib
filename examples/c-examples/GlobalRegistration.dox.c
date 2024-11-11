@@ -1,8 +1,3 @@
-/// \page ExampleCGlobalRegistration Global registration
-///
-/// Example of global registration usage:
-///
-/// \code
 #include <MRMeshC/MRBox.h>
 #include <MRMeshC/MRMultiwayICP.h>
 #include <MRMeshC/MRPointCloud.h>
@@ -150,4 +145,3 @@ out_inputs:
 out:
     return rc;
 }
-/// \endcode

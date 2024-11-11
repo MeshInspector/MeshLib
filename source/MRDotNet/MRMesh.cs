@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using static MR.DotNet.Vector3f;
+
+[assembly: InternalsVisibleToAttribute("MRDotNetTest")]
 
 namespace MR.DotNet
 {
@@ -251,6 +254,9 @@ namespace MR.DotNet
         /// Z is symmetry axis of this torus
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrMakeTorus(ref MRMakeTorusParameters parameters);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMakeTorusWithSelfIntersections(ref MRMakeTorusParameters parameters);
 
         /// initializes a default instance <summary>
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -601,6 +607,17 @@ namespace MR.DotNet
             mrMakeTorusParameters.primaryResolution = primaryResolution;
             mrMakeTorusParameters.secondaryResolution = secondaryResolution;
             return new Mesh(mrMakeTorus(ref mrMakeTorusParameters));
+        }
+
+        /// creates a torus with self-intersections
+        internal static Mesh MakeTorusWithSelfIntersections(float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution)
+        {
+            MRMakeTorusParameters mrMakeTorusParameters = new MRMakeTorusParameters();
+            mrMakeTorusParameters.primaryRadius = primaryRadius;
+            mrMakeTorusParameters.secondaryRadius = secondaryRadius;
+            mrMakeTorusParameters.primaryResolution = primaryResolution;
+            mrMakeTorusParameters.secondaryResolution = secondaryResolution;
+            return new Mesh(mrMakeTorusWithSelfIntersections(ref mrMakeTorusParameters));
         }
 
         #endregion

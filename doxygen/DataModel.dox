@@ -1,6 +1,6 @@
 namespace MR {
 
-/** \page DataModel Data model class hierarchy
+/** \page DataModel Data Model Class Hierarchy
 
 All data in MeshLib are stored in objects. Each object can have it own type derived from Object:
 

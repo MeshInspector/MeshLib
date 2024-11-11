@@ -1,0 +1,16 @@
+/**
+\page Tutorials MeshLib SDK Tutorials
+
+Welcome to the MeshLib SDK Tutorials! Here you'll find guides, examples, and step-by-step instructions to help you get started with MeshLib and explore its features.
+
+## Available Tutorials
+
+### How to Create a First Plugin Using MeshLib C++ on Windows
+In just a few minutes, you'll learn how to set up your development environment, write your first plugin, and get it running with MeshLib. 
+This tutorial will help you establish a solid foundation for more advanced plugin development.
+
+
+\ref FirstPluginTutorial "Start Tutorial"
+
+\note A video tutorial on creating advanced plugins is coming soon. Stay tuned!
+*/

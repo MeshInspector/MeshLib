@@ -1,10 +1,10 @@
 /**
 
-\page HowToBasic Examples
+\page Examples Examples
 
 This page contains some examples of using MeshLib
 
-\subsection GeneralExamples General examples
+\subsection GeneralExamples General Samples
 
 \subpage BasedApplication
 
@@ -40,7 +40,7 @@ This page contains some examples of using MeshLib
 
 \subpage ExampleTriangulation
 
-\subsection PythonSpecificExamples Python specific examples
+\subsection PythonSpecificExamples Python Specific Samples
 
 \subpage ExamplePlotly
 

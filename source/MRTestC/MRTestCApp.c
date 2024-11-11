@@ -6,6 +6,7 @@
 #include "MRMeshNormals.h"
 #include "MRMeshComponents.h"
 #include "MRMeshBuilder.h"
+#include "MRFixSelfIntersections.h"
 
 int main( void )
 {
@@ -23,4 +24,5 @@ int main( void )
     testLargeComponents();
     testLargestComponent();
     testGetComponent();
+    testFixSelfIntersections();
 }

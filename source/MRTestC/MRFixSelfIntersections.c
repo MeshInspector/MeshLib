@@ -1,0 +1,40 @@
+#include "TestMacros.h"
+#include "MRFixSelfIntersections.h"
+
+#include "MRMeshC/MRFixSelfIntersections.h"
+#include "MRMeshC/MRMesh.h"
+#include "MRMeshC/MRMeshTopology.h"
+#include "MRMeshC/MRBitSet.h"
+#include "MRMeshC/MRTorus.h"
+
+void testFixSelfIntersections( void )
+{
+    MRMakeTorusParameters params;
+    params.primaryRadius = 1.0f;
+    params.secondaryRadius = 0.2f;
+    params.primaryResolution = 32;
+    params.secondaryResolution = 16;
+
+    MRMesh* mesh = mrMakeTorusWithSelfIntersections( &params );
+    size_t validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
+    TEST_ASSERT( validFacesCount == 1024 );
+
+    MRFaceBitSet* intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, NULL );
+    size_t intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
+    TEST_ASSERT( intersectionsCount == 128 );
+    mrFaceBitSetFree( intersections );
+
+    MRFixSelfIntersectionsSettings settings = mrFixSelfIntersectionsSettingsNew();
+    settings.method = MRFixSelfIntersectionsMethodCutAndFill;
+    mrFixSelfIntersectionsFix( mesh, &settings, NULL );
+
+    validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
+    TEST_ASSERT( validFacesCount == 1194 );
+
+    intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, NULL );
+    intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
+    TEST_ASSERT( intersectionsCount == 0 );
+    mrFaceBitSetFree( intersections );
+
+    mrMeshFree( mesh );
+}

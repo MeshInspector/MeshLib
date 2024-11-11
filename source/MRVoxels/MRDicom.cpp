@@ -773,16 +773,16 @@ Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::fil
 
         gdcm::MediaStorage ms( gdcm::MediaStorage::EnhancedCTImageStorage );
         const char* msstr = ms.GetString();
-        gdcm::DataElement de( gdcm::Tag( 0x0002,0x0002 ) );  // MediaStorageSOPClassUID
+        gdcm::DataElement de( gdcm::Keywords::MediaStorageSOPClassUID::GetTag() );  // MediaStorageSOPClassUID
         de.SetByteValue( msstr, static_cast<uint32_t>( strlen( msstr ) ) );
         de.SetVR( gdcm::VR::UI );
         iw.GetFile().GetHeader().Replace( de );
 
         // Also set the SOP Class UID in the DataSet (0008,0016)
-        gdcm::DataElement sopde( gdcm::Tag( 0x0008,0x0016 ) );
+        gdcm::DataElement sopde( gdcm::Keywords::SOPClassUID::GetTag() );
         sopde.SetByteValue( msstr, static_cast<uint32_t>( strlen( msstr ) ) );
         sopde.SetVR( gdcm::VR::UI );
-        iw.GetFile().GetDataSet().Replace(sopde);
+        iw.GetFile().GetDataSet().Replace( sopde );
     }
 
     gdcm::DataElement data( gdcmTag );

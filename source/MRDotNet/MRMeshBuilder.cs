@@ -18,6 +18,11 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         unsafe private static extern int mrMeshBuilderUniteCloseVertices(IntPtr mesh, float closeDist, bool uniteOnlyBd, MRVertMap* optionalVertOldToNew);
 
+        /// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;
+        /// then the mesh is rebuilt from the remaining triangles
+        /// \param optionalVertOldToNew is the mapping of vertices: before -> after
+        /// \param uniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
+        /// \return the number of vertices united, 0 means no change in the mesh
         unsafe public static int UniteCloseVertices( Mesh mesh, float closeDist, bool uniteOnlyBd, List<VertId>? optionalVertOld2New = null )
         {            
             if ( optionalVertOld2New == null )

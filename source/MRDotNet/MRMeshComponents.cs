@@ -100,36 +100,36 @@ namespace MR.DotNet
             public MRMeshRegions() { }
         };
 
-        /// not effective to call more than once, if several components are needed use getAllComponents
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrMeshComponentsGetComponent(ref MRMeshPart mp, FaceId id, FaceIncidence incidence, IntPtr cb);
 
-        /// returns the largest by surface area component or empty set if its area is smaller than \param minArea
+        
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         unsafe private static extern IntPtr mrMeshComponentsGetLargestComponent(ref MRMeshPart mp, FaceIncidence incidence, IntPtr cb, float minArea, int* numSmallerComponents);
-        /// returns the union of connected components, each having at least given area
+        
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrMeshComponentsGetLargeByAreaComponents(ref MRMeshPart mp, float minArea, IntPtr cb);
+
+        
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern MRMeshComponentsMap mrMeshComponentsGetAllComponentsMap(ref MRMeshPart mp, FaceIncidence incidence);
+
+        
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        unsafe private static extern MRMeshRegions mrMeshComponentsGetLargeByAreaRegions( ref MRMeshPart mp, MRFace2RegionMap* face2RegionMap, int numRegions, float minArea );
 
         /// gets all connected components of mesh part as
         /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
         /// 2. the total number of components
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern MRMeshComponentsMap mrMeshComponentsGetAllComponentsMap(ref MRMeshPart mp, FaceIncidence incidence);
-
-        /// returns
-        /// 1. the union of all regions with area >= minArea
-        /// 2. the number of such regions
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        unsafe private static extern MRMeshRegions mrMeshComponentsGetLargeByAreaRegions( ref MRMeshPart mp, MRFace2RegionMap* face2RegionMap, int numRegions, float minArea );
-
         unsafe static public MeshComponentsMap GetAllComponentsMap(MeshPart mp, FaceIncidence incidence)
         {
             var mrMap = mrMeshComponentsGetAllComponentsMap(ref mp.mrMeshPart, incidence);
             var res = new MeshComponentsMap(mrMap);
             return res;
         }
-
+        /// returns
+        /// 1. the union of all regions with area >= minArea
+        /// 2. the number of such regions
         unsafe static public MeshRegions GetLargeByAreaRegions(MeshPart mp, MeshComponentsMap map, int numRegions, float minArea)
         {
             var mrRegions = mrMeshComponentsGetLargeByAreaRegions(ref mp.mrMeshPart, map.mrMap_.faceMap, numRegions, minArea);
@@ -139,19 +139,19 @@ namespace MR.DotNet
                 numRegions = mrRegions.numRegions
             };
         }
-
+        /// returns the union of connected components, each having at least given area
         static public BitSet GetLargeByAreaComponents( MeshPart mp, float minArea )
         {
             var components = mrMeshComponentsGetLargeByAreaComponents(ref mp.mrMeshPart, minArea, IntPtr.Zero);
             return new BitSet(components);
         }
-
+        /// returns the largest by surface area component or empty set if its area is smaller than \param minArea        
         unsafe static public BitSet GetLargestComponent( MeshPart mp, FaceIncidence incidence, float minArea, out int numSmallerComponents )
         {
             fixed (int* p = &numSmallerComponents) 
                 return new BitSet( mrMeshComponentsGetLargestComponent(ref mp.mrMeshPart, incidence, IntPtr.Zero, minArea, p) );
         }
-
+        /// not effective to call more than once, if several components are needed use GetAllComponentsMap
         static public BitSet GetComponent( MeshPart mp, FaceId id, FaceIncidence incidence )
         {
             return new BitSet( mrMeshComponentsGetComponent(ref mp.mrMeshPart, id, incidence, IntPtr.Zero) );

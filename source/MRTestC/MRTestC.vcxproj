@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRBitSet.c" />
+    <ClCompile Include="MRFixSelfIntersections.c" />
     <ClCompile Include="MRMeshBoolean.c" />
     <ClCompile Include="MRMeshBuilder.c" />
     <ClCompile Include="MRMeshCollidePrecise.c" />
@@ -28,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBitSet.h" />
+    <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshBuilder.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />

@@ -30,3 +30,14 @@ MRMesh* mrMakeTorus( const MRMakeTorusParameters* params )
         // TODO: points
     ) );
 }
+
+MRMesh* mrMakeTorusWithSelfIntersections( const MRMakeTorusParameters* params )
+{
+    RETURN_NEW( makeTorusWithSelfIntersections(
+        params->primaryRadius,
+        params->secondaryRadius,
+        params->primaryResolution,
+        params->secondaryResolution
+        // TODO: points
+    ) );
+}

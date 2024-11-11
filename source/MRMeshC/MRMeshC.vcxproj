@@ -19,6 +19,7 @@
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
     <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRGridSampling.h" />
     <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRId.h" />
@@ -73,6 +74,7 @@
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRId.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />

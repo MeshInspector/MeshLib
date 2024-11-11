@@ -8,6 +8,8 @@ parser = argparse.ArgumentParser(description="Python Test Script")
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
 parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
+parser.add_argument("-bv", dest="bindings_vers", type=str,
+                    help='Version of bindings to run tests, "2" or "3"', default='3')
 
 args = parser.parse_args()
 print(args)
@@ -65,10 +67,23 @@ else:
 os.environ["MeshLibPyModulesPath"] = os.getcwd()
 os.chdir(directory)
 
+# remove meshlib package if installed to not shadow dynamically attached
 os.system(python_cmd + "-m pip uninstall -y meshlib")
+
+#command line to start test
 pytest_cmd = "-m pytest -s -v --basetemp=../pytest_temp --durations 30"
+if args.bindings_vers == '2':
+    pytest_cmd += ' -m "not bindingsV3'
+elif args.bindings_vers == '3':
+    pytest_cmd += ' -m "not bindingsV2'
+else:
+    print("Error: Unknown version of bindings")
+    exit(5)
 if args.smoke == "true":
-    pytest_cmd += f' -m "smoke"'
+    pytest_cmd += f' and smoke"'
+else:
+    pytest_cmd += f'"'
+
 res = os.system(python_cmd + pytest_cmd)
 
 if res != 0:

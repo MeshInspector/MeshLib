@@ -139,5 +139,22 @@ namespace MR.DotNet
                 numRegions = mrRegions.numRegions
             };
         }
+
+        static public BitSet GetLargeByAreaComponents( MeshPart mp, float minArea )
+        {
+            var components = mrMeshComponentsGetLargeByAreaComponents(ref mp.mrMeshPart, minArea, IntPtr.Zero);
+            return new BitSet(components);
+        }
+
+        unsafe static public BitSet GetLargestComponent( MeshPart mp, FaceIncidence incidence, float minArea, out int numSmallerComponents )
+        {
+            fixed (int* p = &numSmallerComponents) 
+                return new BitSet( mrMeshComponentsGetLargestComponent(ref mp.mrMeshPart, incidence, IntPtr.Zero, minArea, p) );
+        }
+
+        static public BitSet GetComponent( MeshPart mp, FaceId id, FaceIncidence incidence )
+        {
+            return new BitSet( mrMeshComponentsGetComponent(ref mp.mrMeshPart, id, incidence, IntPtr.Zero) );
+        }
     }
 }

@@ -39,7 +39,9 @@ MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh_, MRProgressCal
 
     if ( errorString )
     {
-        *errorString = auto_cast( new_from( std::move( resOrErr.error() ) ) );
+        std::string error = resOrErr ? "" : resOrErr.error();
+        if ( !error.empty() )
+            *errorString = auto_cast( new_from( std::move( error ) ) );
     }
 
     return res;
@@ -57,6 +59,8 @@ void mrFixSelfIntersectionsFix( MRMesh* mesh_, const MRFixSelfIntersectionsSetti
 
     if ( errorString )
     {
-        *errorString = auto_cast( new_from( std::move( resOrErr.error() ) ) );
+        std::string error = resOrErr ? "" : resOrErr.error();
+        if ( !error.empty() )
+            *errorString = auto_cast( new_from( std::move( error ) ) );
     }
 }

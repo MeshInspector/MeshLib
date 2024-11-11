@@ -15,11 +15,13 @@ void testFixSelfIntersections( void )
     params.primaryResolution = 32;
     params.secondaryResolution = 16;
 
+    MRString* error = NULL;
     MRMesh* mesh = mrMakeTorusWithSelfIntersections( &params );
     size_t validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
     TEST_ASSERT( validFacesCount == 1024 );
 
-    MRFaceBitSet* intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, NULL );
+    MRFaceBitSet* intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, &error );
+    TEST_ASSERT( !error );
     size_t intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
     TEST_ASSERT( intersectionsCount == 128 );
     mrFaceBitSetFree( intersections );
@@ -31,7 +33,8 @@ void testFixSelfIntersections( void )
     validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
     TEST_ASSERT( validFacesCount == 1194 );
 
-    intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, NULL );
+    intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, &error );
+    TEST_ASSERT( !error );
     intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
     TEST_ASSERT( intersectionsCount == 0 );
     mrFaceBitSetFree( intersections );

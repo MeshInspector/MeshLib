@@ -202,6 +202,19 @@ public:
             clonePoints_ = m->points;
     }
 
+    /// use this constructor to remember object's mesh points and immediate set new value
+    ChangeMeshPointsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, VertCoords && newCoords ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            clonePoints_ = std::move( newCoords );
+            if ( auto m = objMesh_->varMesh() )
+                std::swap( m->points, clonePoints_ );
+        }
+    }
+
     virtual std::string name() const override
     {
         return name_;

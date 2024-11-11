@@ -276,6 +276,12 @@ private:
         Eigen::Matrix<T, 3, 3> hatA = -( S * A * S );
         Eigen::Matrix<T, 3, 3> hatAA = hatA * A;
         T trace = hatAA.trace();
+        if ( trace == 0 )
+        {
+            // cannot divide on zero, return maximum error
+            PC.setZero();
+            return std::numeric_limits<T>::max();
+        }
         Eigen::Matrix<T, 3, 3> Q = hatA / trace;
         Eigen::Vector<T, 6> pVec{ P( 0, 0 ), P( 0, 1 ), P( 0, 2 ), P( 1, 1 ), P( 1, 2 ), P( 2, 2 ) };
         Eigen::Vector<T, 3> alpha = precomputedF1_ * pVec;

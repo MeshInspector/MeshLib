@@ -8,14 +8,11 @@
 #include "MRRibbonConstants.h"
 #include "MRColorTheme.h"
 #include "ImGuiMenu.h"
-#include "MRAppendHistory.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRChangeSceneAction.h"
-#include "MRMesh/MRChangeXfAction.h"
 #include "MRPch/MRSpdlog.h"
 #include "imgui_internal.h"
 #include "imgui.h"
@@ -570,114 +567,14 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     if ( !allowSceneReorder_ )
         return;
 
-    const bool filledReorderCommand = !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to;
-    const bool sourceNotTarget = std::all_of( sceneReorderCommand_.who.begin(), sceneReorderCommand_.who.end(), [target = sceneReorderCommand_.to] ( auto it )
+    if ( !sceneReorderWithUndo( sceneReorderCommand_ ) )
     {
-        return it != target;
-    } );
-    const bool trueTarget = !sceneReorderCommand_.before || sceneReorderCommand_.to->parent();
-    const bool trueSource = std::all_of( sceneReorderCommand_.who.begin(), sceneReorderCommand_.who.end(), [] ( auto it )
-    {
-        return bool( it->parent() );
-    } );
-    if ( !( filledReorderCommand && sourceNotTarget && trueSource && trueTarget ) )
-    {
-        sceneReorderCommand_ = {};
-        return;
-    }
-
-    bool dragOrDropFailed = false;
-    std::shared_ptr<Object> childTo = nullptr;
-    if ( sceneReorderCommand_.before )
-    {
-        for ( auto childToItem : sceneReorderCommand_.to->parent()->children() )
-            if ( childToItem.get() == sceneReorderCommand_.to )
-            {
-                childTo = childToItem;
-                break;
-            }
-        assert( childTo );
-    }
-
-    struct MoveAction
-    {
-        std::shared_ptr<ChangeSceneAction> detachAction;
-        std::shared_ptr<ChangeSceneAction> attachAction;
-        std::shared_ptr<ChangeXfAction> xfAction;
-    };
-    std::vector<MoveAction> actionList;
-    for ( const auto& source : sceneReorderCommand_.who )
-    {
-        Object * fromParent = source->parent();
-        assert( fromParent );
-        std::shared_ptr<Object> sourcePtr = source->getSharedPtr();
-        assert( sourcePtr );
-        const auto worldXf = source->worldXf();
-
-        auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
-        bool detachSuccess = sourcePtr->detachFromParent();
-        if ( !detachSuccess )
-        {
-            //showModalMessage( "Cannot perform such reorder", NotificationType::Error );
+        if ( !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to )
             showModal( "Cannot perform such reorder", NotificationType::Error );
-            dragOrDropFailed = true;
-            break;
-        }
-
-        auto attachAction = std::make_shared<ChangeSceneAction>( "Attach object", sourcePtr, ChangeSceneAction::Type::AddObject );
-        bool attachSucess{ false };
-        Object * toParent;
-        if ( !sceneReorderCommand_.before )
-        {
-            toParent = sceneReorderCommand_.to;
-            attachSucess = toParent->addChild( sourcePtr );
-        }
         else
         {
-            toParent = sceneReorderCommand_.to->parent();
-            attachSucess = toParent->addChildBefore( sourcePtr, childTo );
-        }
-        if ( !attachSucess )
-        {
-            detachAction->action( HistoryAction::Type::Undo );
-            //showModalMessage( "Cannot perform such reorder", NotificationType::Error );
-            showModal( "Cannot perform such reorder", NotificationType::Error );
-            dragOrDropFailed = true;
-            break;
-        }
-
-        // change xf to preserve world location of the object
-        std::shared_ptr<ChangeXfAction> xfAction;
-        const auto fromParentXf = fromParent->worldXf();
-        const auto toParentXf = toParent->worldXf();
-        if ( fromParentXf != toParentXf )
-        {
-            xfAction = std::make_shared<ChangeXfAction>( "Xf", sourcePtr );
-            source->setWorldXf( worldXf );
-        }
-
-        actionList.push_back( { detachAction, attachAction, xfAction } );
-    }
-
-    if ( dragOrDropFailed )
-    {
-        for ( int i = int( actionList.size() ) - 1; i >= 0; --i )
-        {
-            actionList[i].attachAction->action( HistoryAction::Type::Undo );
-            actionList[i].detachAction->action( HistoryAction::Type::Undo );
-            if ( actionList[i].xfAction )
-                actionList[i].xfAction->action( HistoryAction::Type::Undo );
-        }
-    }
-    else
-    {
-        SCOPED_HISTORY( "Reorder scene" );
-        for ( const auto& moveAction : actionList )
-        {
-            AppendHistory( moveAction.detachAction );
-            AppendHistory( moveAction.attachAction );
-            if ( moveAction.xfAction )
-                AppendHistory( moveAction.xfAction );
+            sceneReorderCommand_ = {};
+            return;
         }
     }
     sceneReorderCommand_ = {};

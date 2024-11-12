@@ -5,16 +5,7 @@ using System.Runtime.InteropServices;
 using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
-{
-
-
-    /** \struct MRFillHoleParams
-      * \brief Parameters structure for mrFillHole\n
-      * Structure has some options to control mrFillHole
-      *
-      * \sa \ref mrFillHole
-      * \sa \ref MRFillHoleMetric
-      */
+{   
     public enum MultipleEdgesResolveMode
     {
         None = 0,
@@ -22,24 +13,25 @@ namespace MR.DotNet
         Strong
     };
 
+    /** \struct MRFillHoleParams
+     * \brief Parameters structure for FillHole\n
+     * Structure has some options to control FillHole
+     */
     public struct FillHoleParams
     {       
         /** Specifies triangulation metric\n
-          * default for mrFillHole: mrGetCircumscribedFillMetric\n
-          * \sa \ref MRFillHoleMetric
+          * default for FillHole: GetCircumscribedFillMetric\n
           */
         public FillHoleMetric Metric = new FillHoleMetric();
 
-        /// If not nullptr accumulate new faces
+        /// If not null accumulate new faces
         public BitSet? OutNewFaces = null;
 
-        /** If Strong makes additional efforts to avoid creating multiple edges,
-          * in some rare cases it is not possible (cases with extremely bad topology),
-          * if you faced one try to use \ref MR::duplicateMultiHoleVertices before \ref MR::fillHole
+        /** If Strong makes additional efforts to avoid creating multiple edges
           *
-          * If Simple avoid creating edges that already exist in topology (default)
+          * If Simple avoids creating edges that already exist in topology (default)
           *
-          * If None do not avoid multiple edges
+          * If None does not avoid multiple edges
           */
         public MultipleEdgesResolveMode MultipleEdgesResolveMode = MultipleEdgesResolveMode.Simple;
 
@@ -107,7 +99,7 @@ namespace MR.DotNet
             mrParam.maxPolygonSubdivisions = parameters.MaxPolygonSubdivisions;
             
             byte stopBeforeBadTriangulation = 0;
-            mrParam.stopBeforeBadTriangulation = parameters.StopBeforeBadTriangulation.HasValue ? new IntPtr( &stopBeforeBadTriangulation ): IntPtr.Zero;
+            mrParam.stopBeforeBadTriangulation = parameters.StopBeforeBadTriangulation.HasValue ? new IntPtr( &parameters.StopBeforeBadTriangulation ): IntPtr.Zero;
 
             mrFillHole(mesh.varMesh(), a, ref mrParam);
 

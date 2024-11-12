@@ -68,6 +68,8 @@
 #include <clip/clip.h>
 #endif
 
+#include <unordered_set>
+
 namespace
 {
 
@@ -589,10 +591,25 @@ bool SaveObjectMenuItem::action()
             const auto ext = utf8string( savePath0.extension() );
 
             std::vector<std::filesystem::path> savePaths;
+            std::unordered_set<std::string> usedNames;
             for ( int i = 0; i < objs.size(); ++i )
             {
-                std::filesystem::path path = ( objs.size() == 1 ) ? savePath0
-                    : ( folder / asU8String( prefix + objs[i]->name() + ext ) );
+                std::filesystem::path path = savePath0;
+                if ( objs.size() > 1 )
+                {
+                    auto name = objs[i]->name();
+                    if ( !usedNames.insert( name ).second )
+                    {
+                        // make name unique by adding numeric suffix to it
+                        for ( int attempt = 1; attempt < 1000; ++attempt )
+                        {
+                            name = objs[i]->name() + std::to_string( attempt );
+                            if ( usedNames.insert( name ).second )
+                                break;
+                        }
+                    }
+                    path = folder / asU8String( prefix + name + ext );
+                }
                 const auto sp = subprogress( ProgressBar::callBackSetProgress, float( i ) / objs.size(), float( i + 1 ) / objs.size() );
                 auto res = saveObjectToFile( *objs[i], path, { .backupOriginalFile = true, .callback = sp } );
                 if ( !res )

@@ -308,6 +308,15 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrStringFree(IntPtr str);
 
+        /// computes the area of given face-region (or whole mesh if region is null)
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern double mrMeshArea( IntPtr mesh, IntPtr region );
+
+        /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrMeshDeleteFaces(IntPtr mesh, IntPtr fs, IntPtr keepEdges );
+
+
         #endregion
         #region Constructors
 
@@ -514,6 +523,17 @@ namespace MR.DotNet
         public double Volume(BitSet region)
         {
             return mrMeshVolume(mesh_, region.bs_);
+        }
+        /// computes the area of given face-region (or whole mesh if region is null)
+        public double Area( BitSet? region = null )
+        {
+            return mrMeshArea( mesh_, region is null ? (IntPtr)null : region.bs_ );
+        }
+        /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param edgesToKeep
+        public void DeleteFaces( BitSet faces, BitSet? edgesToKeep = null )
+        {
+            mrMeshDeleteFaces(mesh_, faces.bs_, edgesToKeep is null ? (IntPtr)null : edgesToKeep.bs_);
+            clearManagedResources();
         }
         /// creates a deep copy of the mesh
         public Mesh Clone()

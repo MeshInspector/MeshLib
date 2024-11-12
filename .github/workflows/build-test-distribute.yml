@@ -216,7 +216,7 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
-          for PKG_FILE in MeshLibDist.zip ; do
+          for PKG_FILE in MeshLibDist*.zip ; do
             mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
           for PKG_FILE in MeshLib*.nupkg ; do

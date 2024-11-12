@@ -8,9 +8,9 @@ namespace MR.DotNet
 {   
     public enum MultipleEdgesResolveMode
     {
-        None = 0,
-        Simple,
-        Strong
+        None = 0, //does not avoid multiple edges
+        Simple, //avoids creating edges that already exist in topology
+        Strong //makes additional efforts to avoid creating multiple edges
     };
 
     /** \struct MRFillHoleParams

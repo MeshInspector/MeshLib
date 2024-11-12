@@ -130,7 +130,9 @@ public:
     {
         // updates radius and width with given box
         MRVIEWER_API void update( const Box3f& box );
+        // negative radius value means that controls are not setup
         float radius{ -1.0f };
+        // negative width value means that controls are not setup
         float width{ -1.0f };
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
@@ -155,7 +157,7 @@ public:
     MRVIEWER_API virtual void update() override;
 
     virtual float getRadius() const override { return params_.radius; }
-    // get current width of widget controls
+    // get current radius of widget controls
     // negative value means that controls are not setup
     MRVIEWER_API void setRadius( float radius );
     // get current width of widget controls

@@ -246,12 +246,6 @@ jobs:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - versioning-and-release-url
-      - windows-build-test
-      - ubuntu-x64-build-test
-      - ubuntu-arm64-build-test
-      - fedora-build-test
-      - emscripten-build-test
-      - macos-build-test
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev

@@ -171,16 +171,6 @@ jobs:
      - name: Checkout
        uses: actions/checkout@v4
 
-     #- name: Download .NET Binaries Archive
-     #  uses: actions/download-artifact@v4
-     #  with:
-     #    pattern: DotNetArchive*
-     #    merge-multiple: true
-
-     #- name: Extract Windows Binaries
-     #  run: |
-     #    tar -xvzf MREDist_DotNet.zip
-
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.versioning-and-release-url.outputs.app_version }}

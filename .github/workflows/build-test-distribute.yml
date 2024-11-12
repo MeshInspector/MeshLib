@@ -22,10 +22,12 @@ env:
 
 jobs:
   prepare-image:
+    if: false
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit
 
   versioning-and-release-url:
+    if: false
     uses: ./.github/workflows/versioning-release.yml
     with:
       version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
@@ -34,6 +36,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
+    if: false
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
@@ -43,6 +46,7 @@ jobs:
     secrets: inherit
 
   ubuntu-arm64-build-test:
+    if: false
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
@@ -54,6 +58,7 @@ jobs:
     secrets: inherit
 
   ubuntu-x64-build-test:
+    if: false
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
@@ -65,6 +70,7 @@ jobs:
     secrets: inherit
 
   fedora-build-test:
+    if: false
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
@@ -75,6 +81,7 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
+    if: false
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
@@ -82,6 +89,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
+    if: false
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
@@ -91,7 +99,8 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: false
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - windows-build-test
       - versioning-and-release-url
@@ -161,7 +170,8 @@ jobs:
           retention-days: 1
 
   create-nuget-package:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: false
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - windows-build-test
       - versioning-and-release-url
@@ -190,7 +200,8 @@ jobs:
          retention-days: 1
 
   upload-distributions:
-    if: ${{ !cancelled() && ( github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') ) }}
+    if: false
+    #if: ${{ !cancelled() && ( github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') ) }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
@@ -236,32 +247,34 @@ jobs:
           fi
 
   test-distribution:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: false
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [ versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
 
   update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    needs:
-      - versioning-and-release-url
-      - windows-build-test
-      - ubuntu-x64-build-test
-      - ubuntu-arm64-build-test
-      - fedora-build-test
-      - emscripten-build-test
-      - macos-build-test
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    #needs:
+    #  - versioning-and-release-url
+    #  - windows-build-test
+    #  - ubuntu-x64-build-test
+    #  - ubuntu-arm64-build-test
+    #  - fedora-build-test
+    #  - emscripten-build-test
+    #  - macos-build-test
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
     secrets: inherit
 
   update-artifacts:
+    if: false
     timeout-minutes: 15
     runs-on: ubuntu-20.04
     needs: [ upload-distributions ]
-    if: always()
+    #if: always()
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact

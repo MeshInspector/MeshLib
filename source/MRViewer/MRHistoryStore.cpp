@@ -114,12 +114,7 @@ std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
     else if ( type == HistoryAction::Type::Redo && firstRedoIndex_ < stack_.size() )
         action = stack_[firstRedoIndex_];
     if ( action )
-    {
         res = action->name();
-        // Trim `##` and everything after it. That part is only for the telemetry.
-        if (auto sep = res.find("##"); sep != std::string::npos)
-            res.resize(sep);
-    }
     return res;
 }
 

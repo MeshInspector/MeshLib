@@ -22,6 +22,7 @@ REGISTER_AUTO_CAST( ThreeVertIds )
 REGISTER_AUTO_CAST( Triangle3f )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_VECTOR( EdgePath )
 
 MRMesh* mrMeshCopy( const MRMesh* mesh_ )
@@ -137,6 +138,18 @@ MRVector3f mrMeshHoleDirArea( const MRMesh* mesh_, MREdgeId e_ )
 {
     ARG( mesh ); ARG_VAL( e );
     RETURN( (Vector3f)mesh.holeDirArea( e ) );
+}
+
+double mrMeshArea( const MRMesh* mesh_, const MRFaceBitSet* region_ )
+{
+    ARG( mesh ); ARG( region );
+    return mesh.area( region );
+}
+
+void mrMeshDeleteFaces( MRMesh* mesh_, const MRFaceBitSet* fs_, const MRUndirectedEdgeBitSet* keepEdges_ )
+{
+    ARG( mesh ); ARG( fs ); ARG_PTR( keepEdges );
+    mesh.deleteFaces( fs, keepEdges );
 }
 
 void mrMeshPack( MRMesh* mesh_, bool rearrangeTriangles )

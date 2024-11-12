@@ -1,4 +1,5 @@
 #include "MRBitSet.h"
+#include "MRMesh.h"
 #include "MRMeshBoolean.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRMeshDecimate.h"
@@ -10,6 +11,7 @@
 
 int main( void )
 {
+    testArea();
     testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();

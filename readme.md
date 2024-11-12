@@ -164,6 +164,8 @@ dotnet add package MeshLib
 ## Installation of downloaded .nupkg file
 - Open [NuGet website](https://www.nuget.org/packages/MeshLib/)
 - Click on *Download package*
+You can download  containing dynamic lybraries (.dll) of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
+- Alternative: download [a NuGet package from GitHub](https://github.com/MeshInspector/MeshLib/releases)
 - In Visual Studio go to Tools -> NuGet Package Manager -> Package Manager Settings
 - Proceed to the *Package Sources* tab
 - Look which directory is used for Microsoft Visual Studio Offline Packages
@@ -322,26 +324,3 @@ Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to
 > **_NOTE:_** MeshLib distribution has x64 build only.
 
 > **_NOTE:_** Distribution is built with `_ITERATOR_DEBUG_LEVEL=0` macro defined in Debug configuration so you will need to setup this for your projects.
-
-### Distribution for .NET
-You can download [zip-archive MeshLibDotNetDist.zip](https://github.com/MeshInspector/MeshLib/releases) containing dynamic lybraries (.dll) of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
-
-1. Create a new C# project in Visual Studio.
-2. Double-click on the project in Solution Explorer. You will see content of the `.csproj` file
-3. Add the following lines before the `</Project>` closing tag
-```
- <PropertyGroup>
-   <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-   <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
- </PropertyGroup>
- 
- <ItemGroup>
-   <Reference Include="MRDotNet">
-     <HintPath>path\to\distribution\$(Configuration)\MRDotNet.dll</HintPath>
-   </Reference>
- </ItemGroup>
- ```
- 4. Extract content of `MeshLibDotNetDist.zip` to `project\bin` directory
- 
- You could find examples of usage in this repo in `examples\c-sharp-example` directory 
- > **_NOTE:_** MeshLib distribution has x64 build only.

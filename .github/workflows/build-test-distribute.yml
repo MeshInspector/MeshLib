@@ -239,7 +239,7 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
-          for PKG_FILE in MeshLib*Dist.zip ; do
+          for PKG_FILE in MeshLibDist.zip ; do
             mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
@@ -252,7 +252,7 @@ jobs:
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLib*Dist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
+          PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.versioning-and-release-url.outputs.tag }} $PKG_FILES --clobber

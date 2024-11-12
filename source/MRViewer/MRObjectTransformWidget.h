@@ -157,6 +157,9 @@ public:
     virtual float getRadius() const override { return params_.radius; }
     // get current width of widget controls
     // negative value means that controls are not setup
+    MRVIEWER_API void setRadius( float radius );
+    // get current width of widget controls
+    // negative value means that controls are not setup
     float getWidth() const { return params_.width; }
     // set width for this widget
     MRVIEWER_API void setWidth( float width );

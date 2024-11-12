@@ -25,7 +25,7 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 
 std::string SurfaceContoursWidget::AddPointActionPickerPoint::name() const
 {
-    return "Add point" + widget_.params.historyNameSuffix;
+    return "Pick point" + widget_.params.historyNameSuffix;
 }
 
 void SurfaceContoursWidget::AddPointActionPickerPoint::action( Type actionType )
@@ -303,7 +303,7 @@ bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& ob
     auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
     if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
     {
-        SCOPED_HISTORY( "Add point" + params.historyNameSuffix );
+        SCOPED_HISTORY( "Pick point" + params.historyNameSuffix );
         onAddPointAction();
     }
     else

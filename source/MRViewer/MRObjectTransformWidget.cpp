@@ -647,6 +647,14 @@ void TransformControls::update()
         init( {} );
 }
 
+void TransformControls::setRadius( float radius )
+{
+    if ( params_.radius == radius )
+        return;
+    params_.radius = radius;
+    update();
+}
+
 void TransformControls::setWidth( float width )
 {
     if ( params_.width == width )
@@ -924,8 +932,11 @@ void ITransformControls::updateVisualTransformMode( ControlBit showMask, Viewpor
 
 void TransformControls::VisualParams::update( const Box3f& box )
 {
-    radius = box.diagonal() * 0.5f;
-    width = radius / 40.0f;
+    if( radius < 0 )
+        radius = box.diagonal() * 0.5f;
+
+    if ( width < 0 )
+        width = radius / 40.0f;
 }
 
 }

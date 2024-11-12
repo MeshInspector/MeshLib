@@ -51,9 +51,8 @@ vcpkg integrate install
  
  1. **Clone the MeshLib Repository**:
 \code{.cmd}
-git clone https://github.com/MeshInspector/MeshLib.git
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
-git submodule update --init --recursive
 \endcode
  2. \b (Optional) **Speed Up with AWS CLI**
   - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
@@ -61,7 +60,7 @@ git submodule update --init --recursive
   - Execute the following commands to run the MeshLib third-party installation script:
 \code{.cmd}
 cd vcpkg
-../MeshLib/thirdparty/install.bat
+..\MeshLib\thirdparty\install.bat
 \endcode
   - This script automates the installation of necessary third-party dependencies.
  4. **Build and Run**:

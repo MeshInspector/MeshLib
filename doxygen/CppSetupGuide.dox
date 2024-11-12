@@ -1,5 +1,320 @@
 /**
 \page MeshLibCppSetupGuide MeshLib C++ Setup Guide
 
-TODO: add content
+\tableofcontents
+
+This guide provides detailed instructions for setting up MeshLib for C++ development across Windows, Linux, and macOS. 
+It covers all prerequisites as well as specific setup steps for each platform. 
+
+# Windows
+## Prerequisites
+ 1. **Git**
+  - [Install Git](https://git-scm.com/) to manage repositories and submodules, which is also required to install `vcpkg`.
+ 2. **Visual Studio 2019 or 2022**
+  - [Download and install either Visual Studio 2019 or 2022](https://visualstudio.microsoft.com/). During installation, make sure to:
+   - Select the "Desktop development with C++" workload.
+   - Include support for the C++ programming language.
+   - Ensure the English language pack is installed (required for `vcpkg`).
+ 3. **CUDA Toolkit**
+  - For **Visual Studio 2019**: Install [CUDA v11.4](https://developer.nvidia.com/cuda-11-4-0-download-archive)
+  - For **Visual Studio 2022**: Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive)
+ \n Choose the appropriate version based on your Visual Studio installation.
+ 4. **vcpkg**
+  - To install `vcpkg`, follow these steps:
+   1. **Open a command prompt (CMD) or PowerShell window**.
+   2. **Navigate to a directory where you want to install** `vcpkg`:
+\code{.cmd}
+cd C:\path\to\your\desired\directory
+\endcode
+   3. **Clone the** `vcpkg` **repository**:
+\code{.cmd}
+git clone https://github.com/microsoft/vcpkg.git
+\endcode
+   4. **Navigate to the** `vcpkg` **directory**:
+\code{.cmd}
+cd vcpkg
+git checkout 2024.10.21
+\endcode
+   5. **Run the bootstrap script to build the** `vcpkg` **executable**:
+\code{.cmd}
+bootstrap-vcpkg.bat
+\endcode
+   6. **Integrate ** `vcpkg` **with Visual Studio (requires Administrator access)**:
+\code{.cmd}
+vcpkg integrate install
+\endcode
+
+[Learn more about](https://github.com/Microsoft/vcpkg) `vcpkg`
+
+## Installing the local build
+\note The following steps will require approximately 40 GB of disk space.
+ 
+ 1. **Clone the MeshLib Repository**:
+\code{.cmd}
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+\endcode
+ 2. \b (Optional) **Speed Up with AWS CLI**
+  - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
+ 3. **Install MeshLib Third-Party Dependencies**
+  - Execute the following commands to run the MeshLib third-party installation script:
+\code{.cmd}
+cd vcpkg
+..\MeshLib\thirdparty\install.bat
+\endcode
+  - This script automates the installation of necessary third-party dependencies.
+ 4. **Build and Run**:
+  - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
+  - Build the solution and run the application.
+
+## Installing the release build
+ 1. **Download and Extract the Built Version**
+  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
+  - Download the latest **Windows built version archive** (E.g. MeshLibDist_v3.0.0.40.zip).
+  - Extract it to a directory, e.g., `C:\meshlib-built\`.
+  \n **Directory Structure After Extraction**
+\code{.cmd}
+install/
+  ├── include/       # Header files
+  ├── lib/           # Static and shared libraries
+  ├── bin/           # Executables
+example_plugin/      # example solution for creating plugins
+\endcode
+ 2. **Configure and integrate with Visual Studio**
+  - **C/C++ → General → Additional Include Directories**:
+  \n Add: `C:\meshlib-built\install\include`
+  - **Linker → General → Additional Library Directories**:
+  \n Add: `C:\meshlib-built\install\app\$(Configuration)`
+  - **Linker → Input → Additional Dependencies**:
+  \n Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`
+  - **Debug Configuration: C/C++ → Preprocessor → Preprocessor Definitions**:
+  \n Add: `_ITERATOR_DEBUG_LEVEL=0`
+  - **Copy DLLs**:
+  \n Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
+\code{.pws}
+xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
+\endcode
+
+# Linux (Ubuntu/Fedora)
+## Prerequisites
+ 1. **Git**
+  - [Install Git](https://git-scm.com/) to manage repositories and submodules.
+ 2. **CMake**
+  - Ensure [CMake](https://cmake.org/download/#latest) is installed for managing the build process.
+ 3. **CUDA Toolkit**
+  - Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
+
+## Installing the local build
+ 1. **Clone the MeshLib Repository**:
+\code{.sh}
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+cd MeshLib
+\endcode
+ 2. **Install/Build Dependencies and Compile**:
+\code{.sh}
+./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
+./scripts/build_source.sh      # Do not select emscripten in the corresponding question
+\endcode
+ 3. **Create and Install Package**:
+ \n This step will create distribution package and install it to the system
+ \n **For Ubuntu**:
+\code{.sh}
+./scripts/distribution.sh
+sudo apt install ./distr/meshlib-dev.deb
+\endcode
+**For Fedora**:
+\code{.sh}
+./scripts/distribution_rpm.sh
+sudo rpm -i ./distr/meshlib-dev.rpm
+\endcode
+ 4. **Open MeshViewer**
+ \n To verify that everything is fine you can run MeshViewer application:
+  - if you previously have installed `meshlib` to your system:
+\code{.sh}
+MeshViewer
+\endcode
+  - or run locally built binary
+\code{.sh}
+MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
+\endcode
+ 5. **Integrate Using CMake**
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+
+## Installing the release build
+ 1. **Download and Extract the Built Version**
+  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
+  - Download the latest Linux built version
+ 2. Install Linux Build
+  - **For Ubuntu**:
+\code{.sh}
+sudo apt install ./meshlib-build-version-example.deb
+\endcode
+  - **For Fedora**:
+\code{.sh}
+sudo rpm -i ./meshlib-build-version-example.rpm
+\endcode
+ 3. **Open MeshViewer**
+ \n To verify that everything is fine you can run MeshViewer application:
+\code{.sh}
+MeshViewer
+\endcode
+ 4. **Integrate Using CMake**
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+
+# macOS
+## Prerequisites
+ 1. **Install Homebrew**
+  - Run the following command in your terminal to install Homebrew:
+\code{.sh}
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+\endcode
+  - [Install Homebrew](https://brew.sh/)
+ 2. **Update Homebrew**
+  - Make sure Homebrew is up to date:
+\code{.sh}
+brew update
+\endcode
+ 3. **Install Git Using Homebrew**
+  - Once Homebrew is installed and added to your PATH, you can proceed to install Git:
+\code{.sh}
+brew install git
+\endcode
+  - [Learn more about Git](https://git-scm.com/)
+
+## Installing the local build
+ 1. **Clone the MeshLib Repository**:
+\code{.sh}
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+cd MeshLib
+\endcode
+ 2. **Install/Build Dependencies and Compile**:
+\code{.sh}
+./scripts/build_thirdparty.sh
+./scripts/build_source.sh
+\endcode
+ 3. **Open MeshViewer**
+\code{.sh}
+MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
+\endcode
+The new window with a viewer must appear.
+ 4. **Integrate Using CMake**
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+
+## Installing the release build
+ 1. **Download the Built Version**
+ \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest macOS built version.
+ 2. **Install Using macOS Installer**
+  - Double-click the `.pkg` file included in the downloaded package, and follow the instructions to complete the installation.
+  - **Install Dependencies via Homebrew**
+  \n Open Terminal and run the following command:
+\code{.sh}
+xargs brew install < /opt/meshlib/requirements/macos.txt
+\endcode
+ 3. **Integrate Using CMake**
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+
+# Building WebAssembly with MeshLib Using Emscripten
+
+This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
+
+## Install Emscripten
+
+Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below. 
+For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
+ - Clone the Emscripten SDK Repository
+ \n Run the following command on **all platforms**:
+\code{.sh}
+git clone https://github.com/emscripten-core/emsdk.git
+\endcode
+ - Navigate to the Emscripten SDK Directory
+\code{.sh}
+cd emsdk
+\endcode
+ - Update the SDK (Optional)
+ \n This step ensures you have the latest updates:
+\code{.sh}
+git pull origin
+\endcode
+ - Install a Specific Version of Emscripten
+\code{.sh}
+./emsdk install 3.1.48
+\endcode
+ - Activate the Installed Version
+\code{.sh}
+./emsdk activate 3.1.48
+\endcode
+ - Set Up Environment Variables
+  - **macOS and Linux**:
+\code{.sh}
+source ./emsdk_env.sh
+\endcode
+
+\note **Additional Notes for Windows Users:**
+\n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
+
+## Building MeshLib
+
+Now that Emscripten is set up, you can proceed to build MeshLib for WebAssembly.
+ - Navigate to the MeshLib directory:
+\code{.sh}
+cd ~/MeshLib
+\endcode
+ - Run the script to build third-party dependencies. When prompted, select \b Emscripten as the build target:
+  - Choose `y` for multithreaded, `s` for single-threaded, or `n` for a standard Linux build.
+\code{.sh}
+./scripts/build_thirdparty.sh
+\endcode
+ - Build the MeshLib source code. Make sure to select the same Emscripten option you used in the `build_thirdparty.sh` script:
+\code{.sh}
+./scripts/build_source.sh
+\endcode
+
+\note **Note for Windows Users:**
+\n You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
+
+## Running the WebAssembly Build
+
+After building MeshLib for WebAssembly, follow these steps to run it:
+ - Setting Up a Local HTTP Server
+ - Navigate to the build directory:
+\code{.sh}
+cd ~/MeshLib/build
+\endcode
+ - Start a local server:
+  - \b Windows
+\code{.sh}
+python -m http.server
+\endcode
+  - **macOS/Linux:**
+\code{.sh}
+python3 -m http.server
+\endcode
+ - Configuring COEP and COOP for Multithreading
+ \n If using multithreading, set these headers:
+  - **Cross-Origin Embedder Policy** (COEP): `require-corp`
+  - **Cross-Origin Opener Policy** (COOP): `same-origin`
+  
+  For Python servers, you can use this custom script (`server.py`):
+\code{.py}
+#!/usr/bin/env python
+from http import server
+
+
+class MyHTTPRequestHandler(server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_my_headers()
+
+        server.SimpleHTTPRequestHandler.end_headers(self)
+
+    def send_my_headers(self):
+        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+
+
+if __name__ == '__main__':
+    server.test(HandlerClass=MyHTTPRequestHandler)
+\endcode
+ - Access and Test
+  - Open your browser and go to: `http://127.0.0.1:8000`
+  - Ensure headers are set correctly for multithreading. Check the browser console for errors if needed.
+
 */

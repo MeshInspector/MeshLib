@@ -546,7 +546,12 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     if ( params.writeHistory && writeHistory )
         AppendHistory<SurfaceContoursWidgetClearAction>( "Clear points" + params.historyNameSuffix, *this );
 
-    pickedPoints_.clear();
+    while ( !pickedPoints_.empty() )
+    {
+        auto obj = pickedPoints_.begin()->first;
+        pickedPoints_.erase( pickedPoints_.begin() );
+        onPointRemove_( obj );
+    }
     surfacePointWidgetCache_.clear();
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;

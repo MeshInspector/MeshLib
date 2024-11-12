@@ -456,10 +456,10 @@ namespace MR.DotNet
                     int sizeOfEdgeId = Marshal.SizeOf(typeof(EdgeId));
 
                     var edgesPtr = mrEdges.data;
-                    for (int i = 0; i < holeRepresentiveEdges_.Count; i++)
+                    for (int i = 0; i < (int)mrEdges.size; i++)
                     {
                         IntPtr currentEdgePtr = IntPtr.Add(edgesPtr, i * sizeOfEdgeId);
-                        holeRepresentiveEdges_[i] = Marshal.PtrToStructure<EdgeId>(currentEdgePtr);
+                        holeRepresentiveEdges_.Add( Marshal.PtrToStructure<EdgeId>(currentEdgePtr) );
                     }
                 }
 
@@ -671,6 +671,11 @@ namespace MR.DotNet
             boundingBox_ = null;
         }
 
+        internal IntPtr varMesh()
+        {
+            clearManagedResources();
+            return mesh_;
+        }
 
         internal IntPtr mesh_;
         internal IntPtr meshTopology_;

@@ -27,10 +27,11 @@ namespace MR.DotNet
         unsafe public static int UniteCloseVertices( ref Mesh mesh, float closeDist, bool uniteOnlyBd, List<VertId>? optionalVertOld2New = null )
         {            
             if ( optionalVertOld2New == null )
-                return mrMeshBuilderUniteCloseVertices(mesh.mesh_, closeDist, uniteOnlyBd, null);
+                return mrMeshBuilderUniteCloseVertices(mesh.varMesh(), closeDist, uniteOnlyBd, null);
 
             MRVertMap* vertMap = mrVertMapNew();
-            var res = mrMeshBuilderUniteCloseVertices(mesh.mesh_, closeDist, uniteOnlyBd, vertMap);
+            var res = mrMeshBuilderUniteCloseVertices(mesh.varMesh(), closeDist, uniteOnlyBd, vertMap);
+
             optionalVertOld2New.Clear();
 
             for (int i = 0; i < (int)vertMap->size; i++)

@@ -1,6 +1,7 @@
 #pragma once
+
 #include "exports.h"
-#include <vector>
+#include "SceneReorder.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -131,12 +132,7 @@ private:
     MoveAndScrollData downLastSelected_;
     MoveAndScrollData nextVisible_;
 
-    struct SceneReorder
-    {
-        std::vector<Object*> who; // object that will be moved
-        Object* to{ nullptr }; // address object
-        bool before{ false }; // if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
-    } sceneReorderCommand_;
+    SceneReorder sceneReorderCommand_;
     // Drag objects servant data
     // struct to handle changed scene window size scroll
     struct ScrollPositionPreservation

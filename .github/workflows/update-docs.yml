@@ -16,20 +16,18 @@ on:
 jobs:
   update-documentation:
     runs-on: ubuntu-latest
-    container:
-      image: alpine:3.20
     steps:
-      - name: Install Git
-        run: |
-          apk update
-          apk add git
+      - name: Install Doxygen
+        uses: ssciwr/doxygen-install@v1
+        with:
+          version: "1.11.0"
 
       - name: Checkout MeshLib
         uses: actions/checkout@v4
         with:
           path: 'MeshLib/'
 
-      - name: Checkout doxygen data
+      - name: Checkout Doxygen Data
         uses: actions/checkout@v4
         with:
           repository: 'MeshInspector/MeshInspector.github.io'
@@ -37,13 +35,10 @@ jobs:
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
 
-      - name: Install Doxygen
-        run: apk add doxygen
-
       - name: Run Doxygen
         working-directory: MeshInspector.github.io
         run: |
-          scripts/pre.sh ${{ inputs.output_folder }}
+          scripts/update_doc.sh ${{ inputs.output_folder }}
           doxygen Doxyfile
           scripts/post.sh ${{ inputs.output_folder }} 
 

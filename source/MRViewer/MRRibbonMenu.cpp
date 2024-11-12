@@ -886,7 +886,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         group->setAncillary( false );
         group->setName( "Group" );
 
-        SCOPED_HISTORY( "Group objects" );
+        SCOPED_HISTORY( "Group" );
         AppendHistory<ChangeSceneAction>( "Add object", group, ChangeSceneAction::Type::AddObject );
         parentObj->addChild( group );
         group->select( true );
@@ -914,29 +914,35 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
             }
         }
     }
-        canUngroup = !selected[0]->children().empty();
+    canUngroup = std::all_of( selected.begin(), selected.end(),
+        []( const std::shared_ptr<Object>& selObj ) { return !selObj->children().empty(); } );
     if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
-        auto children = selected[0]->children();
-        SCOPED_HISTORY( "Ungroup objects" );
-        selected[0]->select( false );
-        for ( int i = 0; i < children.size(); ++i )
+        SCOPED_HISTORY( "Ungroup" );
+        for ( const auto& selObj : selected )
         {
-            if ( children[i]->isAncillary() )
-                continue;
-            // for now do it by one object
-            AppendHistory<ChangeSceneAction>( "Remove object", children[i], ChangeSceneAction::Type::RemoveObject );
-            children[i]->detachFromParent();
-            AppendHistory<ChangeSceneAction>( "Add object", children[i], ChangeSceneAction::Type::AddObject );
-            parentObj->addChild( children[i] );
-            children[i]->select( true );
-        }
-        auto ptr = std::dynamic_pointer_cast< VisualObject >( selected[0] );
-        if ( !ptr && selected[0]->children().empty() )
-        {
-            AppendHistory<ChangeSceneAction>( "Remove object", selected[0], ChangeSceneAction::Type::RemoveObject );
-            selected[0]->detachFromParent();
+            selObj->select( false );
+            SceneReorder task
+            {
+                .to = parentObj
+            };
+            for ( const auto& child : selObj->children() )
+            {
+                if ( child->isAncillary() )
+                    continue;
+                task.who.push_back( child.get() );
+                child->select( true );
+            }
+            [[maybe_unused]] bool reorderDone = sceneReorderWithUndo( task );
+            assert( reorderDone );
+            // remove group folder (now empty)
+            auto ptr = std::dynamic_pointer_cast< VisualObject >( selObj );
+            if ( !ptr && selObj->children().empty() )
+            {
+                AppendHistory<ChangeSceneAction>( "Remove object", selObj, ChangeSceneAction::Type::RemoveObject );
+                selObj->detachFromParent();
+            }
         }
     }
 
@@ -1109,7 +1115,7 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
         return false;
 
-    SCOPED_HISTORY( "Merge Objects" );
+    SCOPED_HISTORY( "Merge" );
     for ( auto& subtree : subtrees )
         mergeSubtree( std::move( subtree ) );
 

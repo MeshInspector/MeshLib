@@ -34,6 +34,7 @@
         <tab type="user" url="@ref ExampleTriangulation" title="Triangulation"/>
       </tab>
       <tab type="usergroup" title="Python Specific Samples">
+        <tab type="user" url="@ref ExampleViewer" title="Viewer"/>
         <tab type="user" url="@ref ExamplePlotly" title="Plotly Visualization"/>
         <tab type="user" url="@ref ExampleNumpy" title="Using Numpy"/>
         <tab type="user" url="@ref ExampleNumpyTriangulation" title="Numpy Triangulation"/>

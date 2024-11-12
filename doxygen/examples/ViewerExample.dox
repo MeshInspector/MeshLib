@@ -1,0 +1,20 @@
+/**
+ \page ExampleViewer Viewer Example
+
+Example of using Viewer
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Python</b>
+\note Python version 3 and later
+
+\include Viewer.dox.py
+Viewer with scene tree
+\image html Viewer_with_scene_tree.png
+Viewer without scene tree
+\image html Viewer_without_scene_tree.png
+\note Unfortunately viewer now does not work on macOS
+
+</div>
+
+ */

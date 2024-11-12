@@ -42,6 +42,8 @@ This page contains some examples of using MeshLib
 
 \subsection PythonSpecificExamples Python Specific Samples
 
+\subpage ExampleViewer
+
 \subpage ExamplePlotly
 
 \subpage ExampleNumpy

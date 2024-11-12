@@ -1,5 +1,56 @@
 /**
 \page FirstPluginTutorial How to create a first plugin using MeshLib C++ on Windows
 
-TODO: add content
+In just a few minutes, you'll have a fully functional plugin, setting the stage for advanced plugin development.
+
+\htmlonly
+<div class="image">
+<iframe width="100%" style="aspect-ratio: 16 / 9;" src="https://www.youtube.com/embed/3FI9HM7b2ZA" title="Creating the First Plugin using MeshLib C++ on Windows" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+\endhtmlonly
+
+This documentation guides you through the process of creating your first MeshLib C++ plugin on Windows. 
+[Ensure](\ref MeshLibCppSetupGuide) that you have correctly installed MeshLib before proceeding with these steps.
+
+To begin, open Visual Studio and navigate to the directory containing MeshLib. Within the MeshLib folder, locate the 'Source' directory and open the 'MeshLib.sln' solution file.
+
+\image html first_plugin/FirstPlugin_0.png
+
+Upon opening the MeshLib solution, set the 'MRViewerApp' application as the Startup project. 
+This ensures that when the solution is executed, the MRViewerApp launches by default.
+
+\image html first_plugin/FirstPlugin_1.png
+
+Before proceeding further, it's recommended to build the MeshLib solution to verify that all dependencies are properly installed and configured. Note that this step may take approximately 5 to 10 minutes.
+
+Once the solution is built, compile a build to confirm that it functions as expected.
+
+\image html first_plugin/FirstPlugin_2.png
+
+In the MeshLib files, you'll find a preconfigured sample project located in the 'Source' directory. Open it to explore its structure and content.
+
+\image html first_plugin/FirstPlugin_3.png
+
+Upon opening the sample project, you'll notice both project and JSON files. The items and UI JSON files are responsible for visualizing the plugin in the menu. You may rename these files if needed. If you rename the project, ensure to update the project name in the UI JSON file as well.
+
+\image html first_plugin/FirstPlugin_4.png
+
+Next, navigate to the 'Hello World' plugin project and briefly review its content. The plugin includes minimal parameters such as the name, dialog box parameters, and a create function. A more detailed explanation of these parameters will be provided in our upcoming tutorial, 'Writing Advanced Plugins using the MeshLib SDK.
+
+\image html first_plugin/FirstPlugin_5.png
+
+If you intend to rename the plugin, ensure to update the name in the corresponding JSON files as well.
+
+Now, proceed to build the project to observe its functionality in action.
+
+\image html first_plugin/FirstPlugin_6.png
+
+Excellent! The project has been successfully built and launched, with the plugin functioning as expected.
+
+Congratulations! You've created your first 'Hello World' plugin.
+
+In our next tutorial, 'Writing Advanced Plugins using the MeshLib SDK,' we'll delve deeper into plugin development.
+
+Stay tuned for more insightful tutorials!
+
 */

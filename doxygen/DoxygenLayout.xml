@@ -11,7 +11,7 @@
     </tab>
     <tab type="user" url="@ref License" title="License" />
     <tab type="usergroup" url="@ref Tutorials" title="Tutorials">
-      <tab type="user" url="@ref FirstPluginTutorial" title="How to make your first plugin C++ Windows"/>
+      <tab type="user" url="@ref FirstPluginTutorial" title="First plugin C++ Windows"/>
     </tab>
     <tab type="usergroup" url="@ref Examples" title="Examples">
       <tab type="usergroup" title="General Samples">

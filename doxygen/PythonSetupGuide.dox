@@ -1,5 +1,45 @@
 /**
 \page MeshLibPythonSetupGuide Installing MeshLib SDK for Python
 
-TODO: add content
+\tableofcontents
+
+\htmlonly
+<div class="image">
+<iframe width="100%" style="aspect-ratio: 16 / 9;" src="https://www.youtube.com/embed/86VB51F64TY" title="Writing a Python script using MeshLib SDK | 3D Mesh Processing Library" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+\endhtmlonly
+
+The first part of this video shows MeshLib Python Installation process on Windows
+
+## Prerequisites
+Before installing MeshLib SDK for Python, ensure you have the following:
+
+### Python
+ - On \b Windows: MeshLib supports Python versions 3.8 to 3.12.
+ - On \b macOS: MeshLib supports Python versions 3.8 to 3.12. Except of Python 3.8 for macOS x64.
+ - On \b Linux: MeshLib supports Python versions 3.8 to 3.12 for distributions supporting manylinux_2_31+ (e.g., Ubuntu 20+, Fedora 32+).
+
+For installation via `pip`, MeshLib supports Python versions 3.8 to 3.12 across all platforms.
+
+[Download the supported version of Python](https://www.python.org/downloads/).
+
+### Code Editor
+You can use any Python-compatible editor, such as Visual Studio Code, PyCharm, or any IDE you prefer.
+
+[Download Visual Studio Code](https://code.visualstudio.com/download)
+
+## Installation Process
+MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux. Install it with:
+\code{.sh}
+pip install meshlib
+\endcode
+
+## How to use MeshLib Python Modules
+### Predefined Functions and Example Scripts
+MeshLib provides a set of example scripts available on here. 
+These examples are helpful for both developers and testers. 
+Additionally, the Python library allows you to explore all the available functions in `mrmeshpy` using the standard `help(meshlib.mrmeshpy)` command.
+
+### Example: Using the Viewer with MeshLib
+Now that you have installed MeshLib, you can start exploring its features. [Here's](\ref ExampleViewer) an example of how to open and manipulate a 3D mesh using the MeshLib Viewer in Python. 
 */

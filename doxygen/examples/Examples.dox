@@ -6,48 +6,29 @@ This page contains some examples of using MeshLib
 
 \subsection GeneralExamples General Samples
 
-\subpage BasedApplication
-
-\subpage ExampleMeshLoadSave
-
-\subpage ExampleMeshExport
-
-\subpage ExampleMeshModification
-
-\subpage ExampleMeshBoolean
-
-\subpage ExampleMeshDecimate
-
-\subpage ExampleMeshOffset
-
-\subpage ExampleMeshFillHole
-
-\subpage ExampleMeshStitchHole
-
-\subpage ExampleMeshResolveDegenerations
-
-\subpage ExampleGlobalRegistration
-
-\subpage ExampleMeshICP
-
-\subpage ExampleMeshExtrude
-
-\subpage ExampleFreeForm
-
-\subpage ExampleLaplacian
-
-\subpage ExampleNoiseDenoise
-
-\subpage ExampleTriangulation
+ - \subpage BasedApplication
+ - \subpage ExampleMeshLoadSave
+ - \subpage ExampleMeshExport
+ - \subpage ExampleMeshModification
+ - \subpage ExampleMeshBoolean
+ - \subpage ExampleMeshDecimate
+ - \subpage ExampleMeshOffset
+ - \subpage ExampleMeshFillHole
+ - \subpage ExampleMeshStitchHole
+ - \subpage ExampleMeshResolveDegenerations
+ - \subpage ExampleGlobalRegistration
+ - \subpage ExampleMeshICP
+ - \subpage ExampleMeshExtrude
+ - \subpage ExampleFreeForm
+ - \subpage ExampleLaplacian
+ - \subpage ExampleNoiseDenoise
+ - \subpage ExampleTriangulation
 
 \subsection PythonSpecificExamples Python Specific Samples
 
-\subpage ExampleViewer
-
-\subpage ExamplePlotly
-
-\subpage ExampleNumpy
-
-\subpage ExampleNumpyTriangulation
+ - \subpage ExampleViewer
+ - \subpage ExamplePlotly
+ - \subpage ExampleNumpy
+ - \subpage ExampleNumpyTriangulation
 
 */

@@ -50,7 +50,7 @@ MRMESHC_API void mrMeshTransform( MRMesh* mesh, const MRAffineXf3f* xf, const MR
 /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
 MRMESHC_API MRVector3f mrMeshHoleDirArea( const MRMesh* mesh, MREdgeId e );
 
-/// computes the area of given face-region (or whole mesh)
+/// computes the area of given face-region (or whole mesh if region is null)
 MRMESHC_API double mrMeshArea( const MRMesh* mesh, const MRFaceBitSet* region );
 
 /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges

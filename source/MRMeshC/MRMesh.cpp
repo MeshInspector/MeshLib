@@ -142,7 +142,7 @@ MRVector3f mrMeshHoleDirArea( const MRMesh* mesh_, MREdgeId e_ )
 
 double mrMeshArea( const MRMesh* mesh_, const MRFaceBitSet* region_ )
 {
-    ARG( mesh ); ARG( region );
+    ARG( mesh ); ARG_PTR( region );
     return mesh.area( region );
 }
 

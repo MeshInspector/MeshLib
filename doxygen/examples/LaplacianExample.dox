@@ -7,6 +7,7 @@ Example of using Laplacian deformer
 
 - <b class="tab-title">Python</b>
 \note Python version 3 and later
+
 \include LaplacianExample.dox.py
 
 </div>

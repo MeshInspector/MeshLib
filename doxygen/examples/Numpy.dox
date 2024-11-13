@@ -6,6 +6,8 @@ Using numpy to create mesh and get back its primitives
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>
+\note Python API prior to version 3
+
 \include Numpy.dox.py
 
 </div>

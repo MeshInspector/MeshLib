@@ -5,9 +5,11 @@ Some examples of mesh modification are presented here
 
 <div class="tabbed">
  
-- <b class="tab-title">Cpp</b>
+- <b class="tab-title">C++</b>
 \include MeshModification.dox.cpp
 - <b class="tab-title">Python</b>
+\note Python API prior to version 3
+
 \include MeshModification.dox.py
 
 </div>

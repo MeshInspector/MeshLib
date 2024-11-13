@@ -6,6 +6,8 @@ Using plotly to visualize mesh
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>
+\note Python API prior to version 3
+
 \include Plotly.dox.py
 \image html plotly_visualization.png "Plotly visualization" width = 300cm
 

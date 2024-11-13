@@ -5,10 +5,12 @@ Simple triangulation
 
 <div class="tabbed">
 
-- <b class="tab-title">Python v2</b>
+- <b class="tab-title">Python API v2</b>
+\note Python API prior to version 3
+
 \include Triangulation_v2.dox.py
-- <b class="tab-title">Python v3</b>
-\note Python version 3 and later
+- <b class="tab-title">Python API v3</b>
+\note Python API version 3 and later
 
 \include Triangulation_v3.dox.py
 

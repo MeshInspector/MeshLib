@@ -5,7 +5,7 @@ Export example of points and triangles from mesh (e.g. for rendering)
 
 <div class="tabbed">
  
-- <b class="tab-title">Cpp</b>
+- <b class="tab-title">C++</b>
 \include MeshExport.dox.cpp
 
 </div>

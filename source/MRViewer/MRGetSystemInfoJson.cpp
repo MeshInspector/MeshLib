@@ -12,10 +12,6 @@
 #include <shlobj.h>
 #include <windows.h>
 #include <psapi.h>
-#else
-#ifndef __APPLE__
-#include <sys/sysinfo.h>
-#endif
 #endif
 
 namespace MR
@@ -120,49 +116,20 @@ Json::Value GetSystemInfoJson()
     pm["Peak physical memory"] = bytesString( procMem.maxPhysical );
     pm["Current physical memory"] = bytesString( procMem.currPhysical );
 #else
-    const auto physMem = getPhysicalMemoryTotal();
-    if ( physMem > 0 )
-    {
-    }
-#ifndef __EMSCRIPTEN__
-    // if linux
-#ifndef __APPLE__
-    struct sysinfo sysInfo;
-    if ( sysinfo( &sysInfo ) == 0 )
+    const auto sysMem = getSystemMemory();
+    if ( sysMem.physicalTotal > 0 )
     {
         auto& memoryInfo = root["Memory Info"];
-        memoryInfo["Physical memory total"] = bytesString( sysInfo.totalram * sysInfo.mem_unit );
-        memoryInfo["Physical memory available"] = bytesString( sysInfo.freeram * sysInfo.mem_unit );
-        memoryInfo["Physical memory total MB"] = std::to_string( sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 );
+        memoryInfo["Physical memory total"] = bytesString( sysMem.physicalTotal  );
+        memoryInfo["Physical memory total MB"] = std::to_string( sysMem.physicalTotal / 1024 / 1024 );
     }
-#else // if apple
-    char buf[1024];
-    unsigned buflen = 0;
-    char line[256];
-    FILE* sw_vers = popen( "sysctl hw.memsize", "r" );
-    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
+    if ( sysMem.physicalAvailable > 0 )
     {
-        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
-        buflen += l;
-        assert( buflen < sizeof( buf ) );
+        auto& memoryInfo = root["Memory Info"];
+        memoryInfo["Physical memory available"] = bytesString( sysMem.physicalAvailable );
     }
-    pclose( sw_vers );
-    auto aplStr = std::string( buf );
-    auto memPos = aplStr.find( ": " );
-    if ( memPos != std::string::npos )
-    {
-        auto aplMem = std::atoll( aplStr.c_str() + memPos + 2 );
-        if ( aplMem != 0 )
-        {
-            auto& memoryInfo = root["Memory Info"];
-            memoryInfo["Physical memory total"] = bytesString( aplMem );
-            memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
-        }
-    }
-#endif
-#endif
 #endif
     return root;
 }
 
-}
+} //namespace MR

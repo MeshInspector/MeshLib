@@ -66,7 +66,7 @@ namespace MR.DotNet
             return new BitSet(mrFaces);
         }
         /// Finds and fixes self-intersections per component:
-        static public void Fix( Mesh mesh, Settings settings )
+        static public void Fix( ref Mesh mesh, Settings settings )
         {
             IntPtr errorStr = IntPtr.Zero;
             

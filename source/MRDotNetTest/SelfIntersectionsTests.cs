@@ -17,7 +17,7 @@ namespace MR.DotNet.Test
             FixSelfIntersections.Settings settings = new FixSelfIntersections.Settings();
             settings.method = FixSelfIntersections.Method.CutAndFill;
 
-            Assert.DoesNotThrow(() => FixSelfIntersections.Fix(mesh, settings) );
+            Assert.DoesNotThrow(() => FixSelfIntersections.Fix(ref mesh, settings) );
             Assert.That(mesh.ValidFaces.Count(), Is.EqualTo(1194));
             
             intersections = FixSelfIntersections.GetFaces(mesh);

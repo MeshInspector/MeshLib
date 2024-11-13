@@ -515,21 +515,12 @@ size_t getPhysicalMemoryTotal()
     if ( GlobalMemoryStatusEx( &memInfo ) )
         return memInfo.ullTotalPhys;
 #elif defined __APPLE__
-    char buf[1024];
-    unsigned buflen = 0;
-    char line[256];
-    FILE* sw_vers = popen( "sysctl hw.memsize", "r" );
-    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
-    {
-        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
-        buflen += l;
-        assert( buflen < sizeof( buf ) );
-    }
-    pclose( sw_vers );
-    auto aplStr = std::string( buf );
-    auto memPos = aplStr.find( ": " );
-    if ( memPos != std::string::npos )
-        return std::atoll( aplStr.c_str() + memPos + 2 );
+    // https://stackoverflow.com/a/8782978/7325599
+    int mib [] = { CTL_HW, HW_MEMSIZE };
+    int64_t value = 0;
+    size_t length = sizeof(value);
+    if( -1 != sysctl(mib, 2, &value, &length, NULL, 0) )
+        return size_t( value );
 #else // Linux
     struct sysinfo sysInfo;
     if ( sysinfo( &sysInfo ) == 0 )

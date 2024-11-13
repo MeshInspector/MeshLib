@@ -33,6 +33,7 @@
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
+  #include <sys/sysinfo.h>
   #ifndef __ARM_CPU__
     #include <cpuid.h>
   #endif

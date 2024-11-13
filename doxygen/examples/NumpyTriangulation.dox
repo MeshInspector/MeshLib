@@ -6,8 +6,6 @@ Triangulation of regular numpy grid
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>
-\note Python API prior to version 3
-
 \include NumpyTriangulation.dox.py
 
 </div>

@@ -10,6 +10,7 @@
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #if _WIN32
@@ -61,21 +62,24 @@ void resetSettings( Viewer * viewer )
 
     viewer->mouseController().setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
     MouseController::MouseControlKey rotKey = { MouseButton::Middle,0 };
-    size_t memLimit = size_t( 2 ) * 1024 * 1024 * 1024;
 #ifdef __APPLE__
     rotKey = { MouseButton::Left,0 };
 #endif
 #ifdef __EMSCRIPTEN__
-    memLimit = size_t( 1024 ) * 1024 * 1024;
+    const size_t memLimit = size_t( 1024 ) * 1024 * 1024;
     viewer->scrollForce = 0.7f;
     bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
     bool isMac = bool( EM_ASM_INT( return is_mac() ) );
     if ( !hasMouse || isMac )
         rotKey = { MouseButton::Left,0 };
+#else
+    // History store can occupy from 2Gb to half of system physical memory
+    const size_t memLimit = std::max( size_t( 2 ) * 1024 * 1024 * 1024, getSystemMemory().physicalTotal / 2 );
 #endif
     viewer->mouseController().setMouseControl( rotKey, MouseMode::Rotation );
     rotKey.mod = GLFW_MOD_CONTROL;
     viewer->mouseController().setMouseControl( rotKey, MouseMode::Roll );
+    spdlog::info( "History memory limit: {}", bytesString( memLimit ) );
     viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );
 }
 

@@ -118,12 +118,17 @@ std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
     return res;
 }
 
-void HistoryStore::filterByMemoryLimit_()
+size_t HistoryStore::calcUsedMemory() const
 {
     size_t currentStackSize = 0;
     for ( int i = 0; i < firstRedoIndex_; ++i )
         currentStackSize += stack_[i]->heapBytes();
+    return currentStackSize;
+}
 
+void HistoryStore::filterByMemoryLimit_()
+{
+    size_t currentStackSize = calcUsedMemory();
     size_t numActionsToDelete = 0;
     while ( currentStackSize > storageLimit_ && numActionsToDelete <= firstRedoIndex_ )
         currentStackSize -= stack_[numActionsToDelete++]->heapBytes();

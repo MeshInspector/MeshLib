@@ -1,5 +1,7 @@
 /**
-\page MeshLibCSharpSetupGuide Using MeshLib with C# 
+\page MeshLibCSharpSetupGuide Integrating MeshLib with C#
+
+# Using MeshLib with C#
 
 \tableofcontents
 
@@ -9,10 +11,10 @@ This instruction will guide you through integrating MeshLib into your C# project
 While .NET and NuGet offer support for macOS and Linux, the MeshLib package lacks native libraries for these platforms. 
 As of now, MeshLib operates exclusively on Windows when used with C#.
 
-# Prerequisites
+## Prerequisites
 Before installing MeshLib, ensure you have the following tools installed:
 
-## .NET SDK
+### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website. 
  MeshLib is compatible with .NET Framework 4.7 and higher, as well as .NET 5.0, 6.0, 7.0, 8.0, and additional versions outlined below.
  - Verify your installation by running:
@@ -20,14 +22,14 @@ Before installing MeshLib, ensure you have the following tools installed:
 dotnet --version
 \endcode
 
-## Visual Studio
+### Visual Studio
 For a more integrated development experience, you can use Visual Studio 2019 or later. 
 Make sure to install the **.NET desktop development** workload.
 
-# Installation via NuGet
+## Installation via NuGet
 Depending on your development environment and workflow preferences, you can choose from the following installation methods
 
-## Using Visual Studio on Windows
+### Using Visual Studio on Windows
 To install MeshLib via Visual Studio, follow these steps:
  1. **Open Your Project in Visual Studio**:
   - If you don’t have a project yet, create a new C# Console App (.NET Core) or another suitable project type.
@@ -43,7 +45,7 @@ To install MeshLib via Visual Studio, follow these steps:
  5. **Start Using MeshLib**:
   - Add `using MR.DotNet;` at the top of your C# files to start using MeshLib features.
 
-# Installation from a Downloaded NuGet Package
+## Installation from a Downloaded NuGet Package
 If you prefer to download the MeshLib package directly from the NuGet website, follow these steps:
 
  1. **Download the MeshLib Package**:
@@ -72,7 +74,7 @@ dotnet build
 dotnet run
 \endcode
 
-# Installation via .NET Command-Line Interface
+## Installation via .NET Command-Line Interface
 To install MeshLib via the .NET CLI, follow these steps:
  1. **Open a Terminal or Command Prompt**:
   - **On Windows**, use Command Prompt, PowerShell, or the Windows Terminal.

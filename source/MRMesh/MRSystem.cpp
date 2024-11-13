@@ -33,6 +33,7 @@
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
+  #include <sys/sysinfo.h>
   #ifndef __ARM_CPU__
     #include <cpuid.h>
   #endif
@@ -504,6 +505,43 @@ std::string getCurrentStacktrace()
     return getCurrentStacktraceInline();
 }
 #endif
+
+SystemMemory getSystemMemory()
+{
+    SystemMemory res;
+#ifdef __EMSCRIPTEN__
+    // not implemented
+#elif defined _WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof( MEMORYSTATUSEX );
+    if ( GlobalMemoryStatusEx( &memInfo ) )
+    {
+        res.physicalTotal = memInfo.ullTotalPhys;
+        res.physicalAvailable = memInfo.ullAvailPhys;
+    }
+    else
+        assert( false );
+#elif defined __APPLE__
+    // https://stackoverflow.com/a/8782978/7325599
+    int mib [] = { CTL_HW, HW_MEMSIZE };
+    int64_t value = 0;
+    size_t length = sizeof(value);
+    if( -1 != sysctl(mib, 2, &value, &length, NULL, 0) )
+        res.physicalTotal = size_t( value );
+    else
+        assert( false );
+#else // Linux
+    struct sysinfo sysInfo;
+    if ( sysinfo( &sysInfo ) == 0 )
+    {
+        res.physicalTotal = size_t( sysInfo.totalram ) * sysInfo.mem_unit;
+        res.physicalAvailable = size_t( sysInfo.freeram ) * sysInfo.mem_unit;
+    }
+    else
+        assert( false );
+#endif
+    return res;
+}
 
 #ifdef _WIN32
 ProccessMemoryInfo getProccessMemoryInfo()

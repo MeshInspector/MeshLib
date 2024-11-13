@@ -16,7 +16,7 @@ class HistoryStore
 {
 public:
     /// returns the instance (if any) of HistoryStore from the viewer
-    MRVIEWER_API static const std::shared_ptr<HistoryStore>& getViewerInstance();
+    [[nodiscard]] MRVIEWER_API static const std::shared_ptr<HistoryStore>& getViewerInstance();
 
     MRVIEWER_API virtual ~HistoryStore();
 
@@ -25,12 +25,14 @@ public:
     MRVIEWER_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );
 
     /// Returns current scope ptr
-    HistoryActionsVector* getScopeBlockPtr() const { return scopedBlock_; }
+    [[nodiscard]] HistoryActionsVector* getScopeBlockPtr() const { return scopedBlock_; }
+
     /// Sets pointer to current scope block
     void setScopeBlockPtr( HistoryActionsVector* scopedBlock ) { scopedBlock_ = scopedBlock; }
 
     /// Returns true if the current scene state does not match the saved state
-    bool isSceneModified() const { return firstRedoIndex_ != savedSceneIndex_; }
+    [[nodiscard]] bool isSceneModified() const { return firstRedoIndex_ != savedSceneIndex_; }
+
     /// Consider the current scene state as saved
     void setSavedState() { savedSceneIndex_ = firstRedoIndex_; }
 
@@ -39,13 +41,18 @@ public:
 
     /// Set memory limit for this store, if history stack exceed it - old actions are removed 
     void setMemoryLimit( size_t limit ) { storageLimit_ = limit; }
+
     /// Returns current memory limit for this store (by default uint64 max)
-    size_t getMemoryLimit() const { return storageLimit_; }
+    [[nodiscard]] size_t getMemoryLimit() const { return storageLimit_; }
+
+    /// Compute amount of memory occupied by all actions in this store
+    [[nodiscard]] MRVIEWER_API size_t calcUsedMemory() const;
 
     /// Returns full history stack
-    const HistoryActionsVector& getHistoryStack() const { return stack_; }
+    [[nodiscard]] const HistoryActionsVector& getHistoryStack() const { return stack_; }
+
     /// Returns index of first redo action in stack
-    size_t getStackPointer() const { return firstRedoIndex_; }
+    [[nodiscard]] size_t getStackPointer() const { return firstRedoIndex_; }
 
     /// remove some actions according to condition
     MRVIEWER_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
@@ -54,9 +61,10 @@ public:
     MRVIEWER_API virtual bool redo();
 
     /// Returns names of last N undo actions or first N redo actions
-    MRVIEWER_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type )const;
+    [[nodiscard]] MRVIEWER_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type ) const;
+
     /// Returns the name of last undo or redo action (or empty string if there is no such action)
-    MRVIEWER_API std::string getLastActionName( HistoryAction::Type type ) const;
+    [[nodiscard]] MRVIEWER_API std::string getLastActionName( HistoryAction::Type type ) const;
 
     /// Signal is called after this store changed
     enum class ChangeType

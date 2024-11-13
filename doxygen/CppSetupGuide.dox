@@ -1,13 +1,15 @@
 /**
 \page MeshLibCppSetupGuide MeshLib C++ Setup Guide
 
+# Setting Up MeshLib for C++ Development
+
 \tableofcontents
 
 This guide provides detailed instructions for setting up MeshLib for C++ development across Windows, Linux, and macOS. 
 It covers all prerequisites as well as specific setup steps for each platform. 
 
-# Windows
-## Prerequisites
+## Windows
+### Prerequisites
  1. **Git**
   - [Install Git](https://git-scm.com/) to manage repositories and submodules, which is also required to install `vcpkg`.
  2. **Visual Studio 2019 or 2022**
@@ -46,7 +48,7 @@ vcpkg integrate install
 
 [Learn more about](https://github.com/Microsoft/vcpkg) `vcpkg`
 
-## Installing the local build
+### Installing the local build
 \note The following steps will require approximately 40 GB of disk space.
  
  1. **Clone the MeshLib Repository**:
@@ -66,7 +68,7 @@ cd vcpkg
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
 
-## Installing the release build
+### Installing the release build
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
   - Download the latest **Windows built version archive** (E.g. MeshLibDist_v3.0.0.40.zip).
@@ -94,8 +96,8 @@ example_plugin/      # example solution for creating plugins
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
 
-# Linux (Ubuntu/Fedora)
-## Prerequisites
+## Linux (Ubuntu/Fedora)
+### Prerequisites
  1. **Git**
   - [Install Git](https://git-scm.com/) to manage repositories and submodules.
  2. **CMake**
@@ -103,7 +105,7 @@ xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
  3. **CUDA Toolkit**
   - Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
 
-## Installing the local build
+### Installing the local build
  1. **Clone the MeshLib Repository**:
 \code{.sh}
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
@@ -139,7 +141,7 @@ MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
  5. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-## Installing the release build
+### Installing the release build
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
   - Download the latest Linux built version
@@ -160,8 +162,8 @@ MeshViewer
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-# macOS
-## Prerequisites
+## macOS
+### Prerequisites
  1. **Install Homebrew**
   - Run the following command in your terminal to install Homebrew:
 \code{.sh}
@@ -180,7 +182,7 @@ brew install git
 \endcode
   - [Learn more about Git](https://git-scm.com/)
 
-## Installing the local build
+### Installing the local build
  1. **Clone the MeshLib Repository**:
 \code{.sh}
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
@@ -199,7 +201,7 @@ The new window with a viewer must appear.
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-## Installing the release build
+### Installing the release build
  1. **Download the Built Version**
  \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest macOS built version.
  2. **Install Using macOS Installer**
@@ -212,11 +214,11 @@ xargs brew install < /opt/meshlib/requirements/macos.txt
  3. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-# Building WebAssembly with MeshLib Using Emscripten
+## Building WebAssembly with MeshLib Using Emscripten
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
-## Install Emscripten
+### Install Emscripten
 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below. 
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
@@ -251,7 +253,7 @@ source ./emsdk_env.sh
 \note **For Windows Users:**
 \n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
-## Building MeshLib
+### Building MeshLib
 
 Now that Emscripten is set up, you can proceed to build MeshLib for WebAssembly.
  - Navigate to the MeshLib directory:
@@ -271,7 +273,7 @@ cd ~/MeshLib
 \note **For Windows Users:**
 \n You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
 
-## Running the WebAssembly Build
+### Running the WebAssembly Build
 
 After building MeshLib for WebAssembly, follow these steps to run it:
  - Setting Up a Local HTTP Server

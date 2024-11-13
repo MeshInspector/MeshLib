@@ -2,7 +2,7 @@ namespace MR {
 
 /** \page StatePluginsHelp State Plugins Overview
 
-\section BaseFunctions Base Functions
+## BaseFunctions Base Functions
 
 \b State \b plugins is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref RibbonMenuItem
 
@@ -31,7 +31,7 @@ It has base functions:
     MRVIEWER_API virtual void drawDialog( float menuScaling, ImGuiContext* ctx );
 \endcode
 
-\section PluginCreation How to make your first plugin
+## PluginCreation How to make your first plugin
 To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)\n
 Example:
 \code

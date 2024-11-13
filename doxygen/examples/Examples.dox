@@ -1,10 +1,12 @@
 /**
 
-\page Examples Examples
+\page Examples MeshLib Code Samples
+
+# Code Samples for MeshLib
 
 This page contains some examples of using MeshLib
 
-\subsection GeneralExamples General Samples
+## GeneralExamples General Samples
 
  - \subpage BasedApplication
  - \subpage ExampleMeshLoadSave
@@ -24,7 +26,7 @@ This page contains some examples of using MeshLib
  - \subpage ExampleNoiseDenoise
  - \subpage ExampleTriangulation
 
-\subsection PythonSpecificExamples Python Specific Samples
+## PythonSpecificExamples Python Specific Samples
 
  - \subpage ExampleViewer
  - \subpage ExamplePlotly

@@ -38,9 +38,9 @@ jobs:
       - name: Run Doxygen
         working-directory: MeshInspector.github.io
         run: |
-          scripts/update_doc.sh ${{ inputs.output_folder }}
+          bash scripts/pre.sh ${{ inputs.output_folder }}
           doxygen Doxyfile
-          scripts/post.sh ${{ inputs.output_folder }} 
+          bash scripts/post.sh ${{ inputs.output_folder }} 
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

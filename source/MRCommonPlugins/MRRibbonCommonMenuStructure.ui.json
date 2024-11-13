@@ -22,12 +22,6 @@
 						},
 						{
 							"Name": "Open directory"
-						},
-						{
-							"Name": "Open DICOMs"
-						},
-						{
-							"Name": "Open RAW Voxels"
 						}
 					]
 				},
@@ -62,26 +56,16 @@
 			"Name": "View",
 			"Priority": 1,
 			"Groups": [
-				{
-					"Name": "Basic",
-					"List": [
-						{
-							"Name": "Fit data"
-						},
-						{
-							"Name": "Capture screenshot"
-						},
-						{
-							"Name": "Add custom theme"
-						},
-						{
-							"Name": "Show_Hide Global Basis"
-						}
-					]
-				},
+				
 				{
 					"Name": "Camera",
 					"List": [
+						{
+							"Name": "Show_Hide Global Basis"
+						},
+						{
+							"Name": "Fit data"
+						},
 						{
 							"Name": "Front View"
 						},
@@ -127,6 +111,12 @@
 					"List": [
 						{
 							"Name": "Rotator"
+						},
+						{
+							"Name": "Capture screenshot"
+						},
+						{
+							"Name": "Add custom theme"
 						}
 					]
 				}
@@ -146,36 +136,10 @@
 				}
 			]
 		},
+		
+		
 		{
-			"Name": "Transform",
-			"Priority": 3,
-			"Groups": [
-				{
-					"Name": "Transform",
-					"List": [
-						{
-							"Name": "Move object"
-						}
-					]
-				}
-			]
-		},
-		{
-			"Name": "Inspect",
-			"Priority": 3,
-			"Groups": [
-				{
-					"Name": "Info",
-					"List": [
-						{
-							"Name": "Object Info"
-						}
-					]
-				}
-			]
-		},
-		{
-			"Name": "Voxels",
+			"Name": "CT",
 			"Priority": 3,
 			"Groups": [
 				{

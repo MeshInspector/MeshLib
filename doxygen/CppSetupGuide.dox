@@ -248,7 +248,7 @@ git pull origin
 source ./emsdk_env.sh
 \endcode
 
-\note **Additional Notes for Windows Users:**
+\note **For Windows Users:**
 \n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
 ## Building MeshLib
@@ -268,7 +268,7 @@ cd ~/MeshLib
 ./scripts/build_source.sh
 \endcode
 
-\note **Note for Windows Users:**
+\note **For Windows Users:**
 \n You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
 
 ## Running the WebAssembly Build

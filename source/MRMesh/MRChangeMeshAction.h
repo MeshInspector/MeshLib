@@ -207,12 +207,8 @@ public:
         objMesh_{ obj },
         name_{ std::move( name ) }
     {
-        if ( obj )
-        {
-            clonePoints_ = std::move( newCoords );
-            if ( auto m = objMesh_->varMesh() )
-                std::swap( m->points, clonePoints_ );
-        }
+        clonePoints_ = std::move( newCoords );
+        action( HistoryAction::Type::Redo );
     }
 
     virtual std::string name() const override
@@ -265,6 +261,15 @@ public:
             return;
         if ( auto m = objMesh_->mesh() )
             cloneTopology_ = m->topology;
+    }
+
+    /// use this constructor to remember object's mesh topology and immediate set new value
+    ChangeMeshTopologyAction( std::string name, const std::shared_ptr<ObjectMesh>& obj, MeshTopology && newTopology ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        cloneTopology_ = std::move( newTopology );
+        action( HistoryAction::Type::Redo );
     }
 
     virtual std::string name() const override

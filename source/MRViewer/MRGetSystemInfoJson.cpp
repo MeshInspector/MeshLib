@@ -120,8 +120,12 @@ Json::Value GetSystemInfoJson()
     pm["Peak physical memory"] = bytesString( procMem.maxPhysical );
     pm["Current physical memory"] = bytesString( procMem.currPhysical );
 #else
+    const auto physMem = getPhysicalMemoryTotal();
+    if ( physMem > 0 )
+    {
+    }
 #ifndef __EMSCRIPTEN__
-    // if lunix
+    // if linux
 #ifndef __APPLE__
     struct sysinfo sysInfo;
     if ( sysinfo( &sysInfo ) == 0 )

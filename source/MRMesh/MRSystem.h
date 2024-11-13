@@ -79,6 +79,9 @@ using FileNamesStack = std::vector<std::filesystem::path>;
 [[nodiscard]] MRMESH_API std::string getCurrentStacktrace();
 #endif
 
+/// return the total amount of physical memory in bytes, available in the system
+[[nodiscard]] MRMESH_API size_t getPhysicalMemoryTotal();
+
 #ifdef _WIN32
 struct ProccessMemoryInfo
 {

@@ -505,6 +505,40 @@ std::string getCurrentStacktrace()
 }
 #endif
 
+size_t getPhysicalMemoryTotal()
+{
+#ifdef __EMSCRIPTEN__
+    return 0; //no info
+#elif defined _WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof( MEMORYSTATUSEX );
+    if ( GlobalMemoryStatusEx( &memInfo ) )
+        return memInfo.ullTotalPhys;
+#elif defined __APPLE__
+    char buf[1024];
+    unsigned buflen = 0;
+    char line[256];
+    FILE* sw_vers = popen( "sysctl hw.memsize", "r" );
+    while ( fgets( line, sizeof( line ), sw_vers ) != NULL )
+    {
+        int l = snprintf( buf + buflen, sizeof( buf ) - buflen, "%s", line );
+        buflen += l;
+        assert( buflen < sizeof( buf ) );
+    }
+    pclose( sw_vers );
+    auto aplStr = std::string( buf );
+    auto memPos = aplStr.find( ": " );
+    if ( memPos != std::string::npos )
+        return std::atoll( aplStr.c_str() + memPos + 2 );
+#else // Linux
+    struct sysinfo sysInfo;
+    if ( sysinfo( &sysInfo ) == 0 )
+        return size_t( sysInfo.totalram ) * sysInfo.mem_unit;
+#endif
+    assert( false );
+    return 0;
+}
+
 #ifdef _WIN32
 ProccessMemoryInfo getProccessMemoryInfo()
 {

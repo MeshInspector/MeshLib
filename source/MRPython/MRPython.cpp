@@ -22,7 +22,16 @@ void PythonStreamRedirector<T>::write( const std::string& text )
 }
 
 template<StreamType T>
-int PythonStreamRedirector<T>::getNumWritten() 
+void PythonStreamRedirector<T>::flush()
+{
+    if constexpr ( T == Stdout )
+        std::cout.flush();
+    else
+        std::cerr.flush();
+}
+
+template<StreamType T>
+int PythonStreamRedirector<T>::getNumWritten()
 {
     return NumWritten<T>::counter;
 }
@@ -37,14 +46,14 @@ PYBIND11_MODULE( redirector, m )
         .def( pybind11::init<>(), "initialize the redirector." )
         .def( pybind11::init( [] () { return std::make_unique<StdoutPyRedirector>(); } ), "initialize the redirector." )
         .def( "write", &StdoutPyRedirector::write, "write sys.stdout redirection." )
-        .def( "flush", &StdoutPyRedirector::flush, "empty func" );
+        .def( "flush", &StdoutPyRedirector::flush, "flush the stream" );
 
     pybind11::class_<StderrPyRedirector>( m, "stderr",
                               "This class redirects python's error output to the console." )
         .def( pybind11::init<>(), "initialize the redirector." )
         .def( pybind11::init( [] () { return std::make_unique<StderrPyRedirector>(); } ), "initialize the redirector." )
         .def( "write", &StderrPyRedirector::write, "write sys.stderr redirection." )
-        .def( "flush", &StderrPyRedirector::flush, "empty func" );
+        .def( "flush", &StderrPyRedirector::flush, "flush the stream" );
 }
 static MR::PythonFunctionAdder redirector_init_( "redirector", &PyInit_redirector );
 

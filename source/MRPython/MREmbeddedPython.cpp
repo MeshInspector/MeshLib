@@ -14,123 +14,39 @@
 namespace MR
 {
 
-bool EmbeddedPython::init( const Config& config_ )
-{
-    if ( !instance_().available_ || isInitialized() )
-        return true;
-
-    PyConfig config;
-    PyConfig_InitPythonConfig( &config );
-    MR_FINALLY { PyConfig_Clear( &config ); };
-
-    config.parse_argv = 0;
-    config.install_signal_handlers = 0;
-    config.site_import = config_.siteImport ? 1 : 0;
-
-    if ( !config_.home.empty() )
-    {
-        const auto homeW = utf8ToWide( config_.home.c_str() );
-        PyConfig_SetString( &config, &config.home, homeW.c_str() );
-    }
-
-    for ( const auto& mod : PythonExport::instance().modules() )
-        PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
-
-    auto status = PyConfig_SetBytesArgv( &config, 0, NULL );
-    if ( PyStatus_Exception( status ) )
-    {
-        spdlog::error( status.err_msg );
-        return false;
-    }
-
-    status = Py_InitializeFromConfig( &config );
-    if ( PyStatus_Exception( status ) )
-    {
-        spdlog::error( status.err_msg );
-        return false;
-    }
-
-    return true;
-}
+EmbeddedPython::Config EmbeddedPython::pythonConfig{};
 
 bool EmbeddedPython::isAvailable()
 {
     return instance_().available_;
 }
 
-bool EmbeddedPython::isInitialized()
+bool EmbeddedPython::runString( std::string pythonString, std::function<void( bool success )> onDoneAsync )
 {
-    if ( !instance_().available_ )
+    EmbeddedPython &self = instance_();
+    if ( !self.available_ )
         return false;
-    return (bool)Py_IsInitialized();
-}
 
-void EmbeddedPython::finalize()
-{
-    if ( !instance_().available_ )
-        return;
-    pybind11::finalize_interpreter();
-}
+    self.ensureInterpreterThreadIsRunning_();
 
-bool EmbeddedPython::setupArgv( int argc, char** argv )
-{
-    if ( !instance_().available_ )
-        return false;
-    PyStatus status;
-
-    PyConfig config;
-    PyConfig_InitPythonConfig( &config );
-    MR_FINALLY { PyConfig_Clear( &config ); };
-
-    config.isolated = 1;
-
-    // Implicitly preinitialize Python (in isolated mode)
-    status = PyConfig_SetBytesArgv( &config, argc, argv );
-    if ( PyStatus_Exception( status ) )
+    // Negotiate with the interpreter thread.
+    std::unique_lock guard( self.cvMutex_ );
+    self.cv_.wait( guard, [&]{ return self.state_ == State::idle; } );
+    self.queuedSource_ = std::move( pythonString );
+    self.state_ = State::starting;
+    self.onDoneAsync_ = std::move( onDoneAsync );
+    self.cv_.notify_all();
+    if ( self.onDoneAsync_ )
     {
-        spdlog::error( status.err_msg );
-        return false;
+        return true;
     }
-
-    status = Py_InitializeFromConfig( &config );
-    if ( PyStatus_Exception( status ) )
+    else
     {
-        spdlog::error( status.err_msg );
-        return false;
+        self.cv_.wait( guard, [&]{ return self.state_ == State::finishing; } );
+        self.state_ = State::idle;
+        self.cv_.notify_all();
+        return self.lastRunSuccessful_;
     }
-
-    return true;
-}
-
-bool EmbeddedPython::runString( const std::string& pythonString )
-{
-    if ( !instance_().available_ )
-        return false;
-    namespace python = pybind11;
-    bool success = true;
-    try
-    {
-        auto libDir = SystemPath::getPythonModulesDirectory();
-        auto libDirStr = utf8string( libDir );
-        MR::replaceInplace( libDirStr, "\\", "\\\\" ); // double protect first for C++ second for Python
-        // Create an empty dictionary that will function as a namespace.
-        std::string redirectScript =
-            "import sys\n"
-            "import redirector\n"
-            "sys.stdout = redirector.stdout()\n"
-            "sys.stderr = redirector.stderr()\n"
-            "sys.path.insert(1,\"" + libDirStr + "\")\n";
-        python::exec( redirectScript.c_str() );
-
-        // Execute code
-        python::exec( pythonString.c_str() );
-    }
-    catch ( std::exception& e )
-    {
-        success = false;
-        spdlog::error( e.what() );
-    }
-    return success;
 }
 
 bool EmbeddedPython::runScript( const std::filesystem::path& path )
@@ -160,13 +76,147 @@ bool EmbeddedPython::isPythonScript( const std::filesystem::path& path )
 
     if ( ext != ".py" )
         return false;
-    
+
     return true;
 }
 
 EmbeddedPython::EmbeddedPython()
 {
     available_ = !Py_IsInitialized();
+}
+
+bool EmbeddedPython::init_()
+{
+    EmbeddedPython &self = instance_();
+    if ( !self.available_ )
+        return true;
+
+    PyConfig config;
+    PyConfig_InitPythonConfig( &config );
+    MR_FINALLY { PyConfig_Clear( &config ); };
+
+    config.parse_argv = 0;
+    config.install_signal_handlers = 0;
+    config.site_import = pythonConfig.siteImport ? 1 : 0;
+
+    if ( !pythonConfig.home.empty() )
+    {
+        const auto homeW = utf8ToWide( pythonConfig.home.c_str() );
+        PyConfig_SetString( &config, &config.home, homeW.c_str() );
+    }
+
+    for ( const auto& mod : PythonExport::instance().modules() )
+        PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
+
+    PyStatus status{};
+    if ( pythonConfig.argv.empty() )
+    {
+        status = PyConfig_SetBytesArgv( &config, 0, NULL );
+    }
+    else
+    {
+        std::vector<char *> argv;
+        for ( auto& str : pythonConfig.argv )
+            argv.push_back( str.data() );
+        argv.push_back( nullptr ); // Unsure if needed, just in case.
+        status = PyConfig_SetBytesArgv( &config, argv.size(), argv.data() );
+    }
+
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
+        return false;
+    }
+
+    status = Py_InitializeFromConfig( &config );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
+        return false;
+    }
+
+    return true;
+}
+
+void EmbeddedPython::ensureInterpreterThreadIsRunning_()
+{
+    [[maybe_unused]] static const auto once = [&]{
+        // Start the interpreter thread.
+        interpreterThread_ = std::thread( [this]
+        {
+            std::unique_lock guard( cvMutex_ );
+
+            while ( true )
+            {
+                { // Wait for source code.
+                    cv_.wait( guard, [&]{ return state_ == State::starting; } );
+                    state_ = State::running; // Nobody waits for this, so don't notify?
+                }
+
+                lastRunSuccessful_ = false;
+
+                namespace python = pybind11;
+
+                static bool initOk = init_();
+                if ( !initOk )
+                {
+                    spdlog::error( "Failied to initialize Python." );
+                }
+                else
+                {
+                    try
+                    {
+                        auto libDir = SystemPath::getPythonModulesDirectory();
+                        auto libDirStr = utf8string( libDir );
+                        MR::replaceInplace( libDirStr, "\\", "\\\\" ); // double protect first for C++ second for Python
+                        // Create an empty dictionary that will function as a namespace.
+                        std::string redirectScript =
+                            "import sys\n"
+                            "import redirector\n"
+                            "sys.stdout = redirector.stdout()\n"
+                            "sys.stderr = redirector.stderr()\n"
+                            "sys.path.insert(1,\"" + libDirStr + "\")\n";
+                        python::exec( redirectScript.c_str() );
+
+                        // Execute code
+                        python::exec( queuedSource_.c_str() );
+
+                        python::exec( "sys.stdout.flush()\nsys.stderr.flush()" );
+
+                        // We used to reset globals using `pybind11::finalize_interpreter()`, but that beaks some modules (including ours at one point,
+                        //   and apparently numpy too (https://stackoverflow.com/q/7676314/2752075), so it's not necessarily our bug).
+                        pybind11::globals().clear();
+
+                        lastRunSuccessful_ = true;
+                    }
+                    catch ( std::exception& e )
+                    {
+                        spdlog::error( e.what() );
+                    }
+                    catch ( ... )
+                    {
+                        spdlog::error( "Unknown exception while executing a Python script." );
+                    }
+                }
+
+                { // Signal that we're done.
+                    if ( onDoneAsync_ )
+                    {
+                        onDoneAsync_( lastRunSuccessful_ );
+                        onDoneAsync_ = nullptr;
+                        state_ = State::idle;
+                    }
+                    else
+                    {
+                        state_ = State::finishing;
+                    }
+                    cv_.notify_all();
+                }
+            }
+        } );
+
+        return nullptr;
+    }();
 }
 
 EmbeddedPython& EmbeddedPython::instance_()

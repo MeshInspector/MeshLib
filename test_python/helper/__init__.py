@@ -15,9 +15,9 @@ if (
 import meshlib.mrmeshpy as mrmesh
 import meshlib.mrmeshnumpy as mrmeshnumpy
 
-# Check if we're using the new parsed bindings.
-is_new_binding = True
+# Check if we're using the bindings of meshlib v3.*
+is_bindings_v3 = True
 try:
     mrmesh.UniformSamplingSettings
 except AttributeError:
-    is_new_binding = False
+    is_bindings_v3 = False

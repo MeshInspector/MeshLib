@@ -8,29 +8,29 @@ This page contains some examples of using MeshLib
 
 \subsection GeneralExamples General Samples
 
- - \subpage BasedApplication
- - \subpage ExampleMeshLoadSave
- - \subpage ExampleMeshExport
- - \subpage ExampleMeshModification
- - \subpage ExampleMeshBoolean
- - \subpage ExampleMeshDecimate
- - \subpage ExampleMeshOffset
- - \subpage ExampleMeshFillHole
- - \subpage ExampleMeshStitchHole
- - \subpage ExampleMeshResolveDegenerations
- - \subpage ExampleGlobalRegistration
- - \subpage ExampleMeshICP
- - \subpage ExampleMeshExtrude
- - \subpage ExampleFreeForm
- - \subpage ExampleLaplacian
- - \subpage ExampleNoiseDenoise
- - \subpage ExampleTriangulation
+ - \ref BasedApplication
+ - \ref ExampleMeshLoadSave
+ - \ref ExampleMeshExport
+ - \ref ExampleMeshModification
+ - \ref ExampleMeshBoolean
+ - \ref ExampleMeshDecimate
+ - \ref ExampleMeshOffset
+ - \ref ExampleMeshFillHole
+ - \ref ExampleMeshStitchHole
+ - \ref ExampleMeshResolveDegenerations
+ - \ref ExampleGlobalRegistration
+ - \ref ExampleMeshICP
+ - \ref ExampleMeshExtrude
+ - \ref ExampleFreeForm
+ - \ref ExampleLaplacian
+ - \ref ExampleNoiseDenoise
+ - \ref ExampleTriangulation
 
 \subsection PythonSpecificExamples Python Specific Samples
 
- - \subpage ExampleViewer
- - \subpage ExamplePlotly
- - \subpage ExampleNumpy
- - \subpage ExampleNumpyTriangulation
+ - \ref ExampleViewer
+ - \ref ExamplePlotly
+ - \ref ExampleNumpy
+ - \ref ExampleNumpyTriangulation
 
 */

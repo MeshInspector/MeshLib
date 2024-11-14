@@ -7,7 +7,7 @@
 
 using namespace MR;
 
-REGISTER_AUTO_CAST( EdgeLoops );
+REGISTER_AUTO_CAST( EdgeLoops )
 REGISTER_AUTO_CAST( EdgeId )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( MeshTopology )

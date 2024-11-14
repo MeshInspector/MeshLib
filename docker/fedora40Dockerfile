@@ -39,7 +39,7 @@ RUN dnf -y update && \
     dnf -y install git time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel ninja-build && \
     ./scripts/install_dnf_requirements.sh && \
     dnf -y install 'dnf-command(config-manager)' && \
-    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo && \
+    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
     dnf -y install gh && \
     dnf clean all
 
@@ -52,7 +52,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     unzip awscliv2.zip && \
     sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
-RUN sudo dnf config-manager addrepo --from-repofile=https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
+RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
   && sudo dnf clean all \
   && sudo dnf -y install cuda
 

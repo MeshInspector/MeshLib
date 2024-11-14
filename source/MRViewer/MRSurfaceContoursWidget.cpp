@@ -1,4 +1,5 @@
 #include "MRSurfaceContoursWidget.h"
+#include "MRMesh/MRScopedValue.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRAppendHistory.h"
@@ -32,6 +33,7 @@ void SurfaceContoursWidget::AddPointActionPickerPoint::action( Type actionType )
 {
     if ( !widget_.isPickerActive_ )
         return;
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     auto& contour = widget_.pickedPoints_[obj_];
     if ( actionType == Type::Undo )
@@ -72,6 +74,8 @@ void SurfaceContoursWidget::RemovePointActionPickerPoint::action( Type actionTyp
 {
     if ( !widget_.isPickerActive_ )
         return;
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
+
     auto& contour = widget_.pickedPoints_[obj_];
     if ( actionType == Type::Undo )
     {
@@ -111,6 +115,7 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
 {
     if ( !widget_.isPickerActive_ )
         return;
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
     widget_.activeIndex_ = index_;
@@ -596,6 +601,7 @@ void SurfaceContoursWidget::SurfaceContoursWidgetClearAction::action( Type type 
 {
     if ( !widget_.isPickerActive_ )
         return;
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     const auto prevWriteHistory = widget_.params.writeHistory;
     widget_.params.writeHistory = false;

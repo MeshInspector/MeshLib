@@ -1,9 +1,9 @@
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRMeshLoad.h"
-#include "MRMesh/MRMeshSave.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRMeshDecimate.h"
-#include "MRMesh/MRBuffer.h"
+#include <MRMesh/MRMeshFwd.h>
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshDecimate.h>
+#include <MRMesh/MRBuffer.h>
 
 int main()
 {

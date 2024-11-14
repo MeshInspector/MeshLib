@@ -1,8 +1,8 @@
-#include "MRMeshC/MRMesh.h"
-#include "MRMeshC/MRMeshLoad.h"
-#include "MRMeshC/MRMeshSave.h"
-#include "MRMeshC/MROffset.h"
-#include "MRMeshC/MRString.h"
+#include <MRMeshC/MRMesh.h>
+#include <MRMeshC/MRMeshLoad.h>
+#include <MRMeshC/MRMeshSave.h>
+#include <MRMeshC/MROffset.h>
+#include <MRMeshC/MRString.h>
 
 #include <math.h>
 #include <stdio.h>

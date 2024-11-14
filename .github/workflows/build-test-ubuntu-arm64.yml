@@ -42,17 +42,17 @@ jobs:
             docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
-            use-cpp-23: "OFF"
+            cxx-standard: 20
           - os: ubuntu22
             docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
-            use-cpp-23: "OFF"
+            cxx-standard: 20
           - os: ubuntu24
             docker-image: meshlib/meshlib-ubuntu24-arm64:${{inputs.docker_image_tag}}
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
-            use-cpp-23: "ON"
+            cxx-standard: 23
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -122,7 +122,7 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
+            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
 

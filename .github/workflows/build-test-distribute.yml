@@ -248,7 +248,7 @@ jobs:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
 
   update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'update-doc') }}
     needs:
       - versioning-and-release-url
     uses: ./.github/workflows/update-docs.yml

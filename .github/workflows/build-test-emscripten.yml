@@ -54,7 +54,7 @@ jobs:
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_USE_CPP_23=OFF
+            -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 

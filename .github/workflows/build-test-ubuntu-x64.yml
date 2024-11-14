@@ -58,37 +58,37 @@ jobs:
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
-            use-cpp-23: "OFF"
+            cxx-standard: 20
             build_mrcuda: "ON"
           - os: ubuntu20
             compiler: GCC
             cxx-compiler: /usr/bin/g++-10
             c-compiler: /usr/bin/gcc-10
-            use-cpp-23: "OFF"
+            cxx-standard: 20
             build_mrcuda: "ON"
           - os: ubuntu22
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
-            use-cpp-23: "OFF"
+            cxx-standard: 20
             build_mrcuda: "ON"
           - os: ubuntu22
             compiler: GCC
             cxx-compiler: /usr/bin/g++-12
             c-compiler: /usr/bin/gcc-12
-            use-cpp-23: "ON"
+            cxx-standard: 23
             build_mrcuda: "ON"
           - os: ubuntu24
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
-            use-cpp-23: "ON"
+            cxx-standard: 23
             build_mrcuda: "ON"
           # - os: ubuntu24
             # compiler: GCC
             # cxx-compiler: /usr/bin/g++-13
             # c-compiler: /usr/bin/gcc-13
-            # use-cpp-23: "ON"
+            # cxx-standard: 23
             # build_mrcuda: "OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -144,7 +144,7 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
+            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}

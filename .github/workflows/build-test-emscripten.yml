@@ -1,0 +1,66 @@
+name: Build and test Emscripten
+
+on:
+  workflow_call:
+    inputs:
+      docker_image_tag:
+        required: true
+        type: string
+      UPLOAD_ARTIFACTS:
+        required: true
+        type: boolean
+
+jobs:
+  emscripten-build:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
+      options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Singlethreaded, Multithreaded]
+        include:
+          - config: Singlethreaded
+            aws-dir: RMISingle
+          - config: Multithreaded
+            aws-dir: RMI
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
+
+      - name: Install thirdparty libs
+        env:
+          MESHLIB_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
+        run: |
+          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/lib ./lib
+          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/include ./include
+
+      - name: Build
+        env:
+          MR_EMSCRIPTEN: "ON"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+          MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_USE_CPP_23=OFF
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+        run: ./scripts/build_source.sh
+
+      - name: Test
+        timeout-minutes: 5
+        run: |
+          Xvfb -ac :99 -screen 0 1280x1024x16 > /dev/null 2>&1 &
+          export DISPLAY=:99
+          emrun ./build/Release/bin/MRTest.html

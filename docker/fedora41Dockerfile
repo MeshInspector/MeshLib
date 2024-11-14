@@ -39,8 +39,7 @@ RUN dnf -y update && \
     dnf -y install git time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel ninja-build && \
     ./scripts/install_dnf_requirements.sh && \
     dnf -y install 'dnf-command(config-manager)' && \
-    dnf config-manager --help && \
-    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+    dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo && \
     dnf -y install gh && \
     dnf clean all
 

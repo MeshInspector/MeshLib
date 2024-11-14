@@ -6,7 +6,7 @@
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>
-\note Python version 3 and later
+\note Python API version 3 and later
 
 \include NoiseDenoiseExample.dox.py
 

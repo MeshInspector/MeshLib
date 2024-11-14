@@ -32,23 +32,23 @@ jobs:
       fail-fast: false
       matrix:
         config: [Debug, Release]
-        compiler: [Clang 17, GCC 13]
+        compiler: [Clang 19, GCC 14]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
-          # Do not run Release Clang 17 build on every commit (but only once a day)
+          # Do not run Release Clang 19 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 17
+            compiler: Clang 19
             config: Release
-          # Do not run Debug GCC 13 build on every commit (but only once a day)
+          # Do not run Debug GCC 14 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 13
+            compiler: GCC 14
             config: Debug
         include:
-          - compiler: Clang 17
-            cxx-compiler: /usr/bin/clang++-17
-            c-compiler: /usr/bin/clang-17
-          - compiler: GCC 13
+          - compiler: Clang 19
+            cxx-compiler: /usr/bin/clang++-19
+            c-compiler: /usr/bin/clang-19
+          - compiler: GCC 14
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
     permissions:
@@ -150,14 +150,14 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/fedora/${{matrix.os}}/${{matrix.config}}' --recursive
 
       - name: Create RPM
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 14'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 14'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_fedora41-x86

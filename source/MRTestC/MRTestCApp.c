@@ -28,4 +28,5 @@ int main( void )
     testGetComponent();
     testFixSelfIntersections();
     testRightBoundary();
+    testFindHoleComplicatingFaces();
 }

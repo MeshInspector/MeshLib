@@ -7,6 +7,7 @@
 #include <MRMeshC/MRMeshFillHole.h>
 #include <MRMeshC/MRRegionBoundary.h>
 #include <MRMeshC/MRMeshTopology.h>
+#include <MRMeshC/MRMeshFixer.h>
 
 MRMesh* createMeshWithHoles( void )
 {
@@ -56,14 +57,24 @@ void testRightBoundary( void )
 {
     MRMesh* mesh = createMeshWithHoles();
     MREdgeLoops* loops = mrFindRightBoundary( mrMeshTopology( mesh ), NULL );
-    
+
     TEST_ASSERT( mrEdgeLoopsSize( loops ) == 2 );
-    MREdgeLoop loop = mrEdgeLoopsGet(loops, 0);
+    MREdgeLoop loop = mrEdgeLoopsGet( loops, 0 );
     TEST_ASSERT( loop.size == 3 );
 
     loop = mrEdgeLoopsGet( loops, 1 );
     TEST_ASSERT( loop.size == 4 );
 
     mrEdgeLoopsFree( loops );
+    mrMeshFree( mesh );
+}
+
+void testFindHoleComplicatingFaces( void )
+{
+    MRMesh* mesh = createMeshWithHoles();
+    MRFaceBitSet* faces = mrFindHoleComplicatingFaces( mesh );
+    const size_t facesCount = mrBitSetCount( (MRBitSet*)faces );
+    TEST_ASSERT( facesCount == 0 );
+    mrFaceBitSetFree( faces );
     mrMeshFree( mesh );
 }

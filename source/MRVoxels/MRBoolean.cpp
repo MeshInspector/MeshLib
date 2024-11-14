@@ -1,11 +1,12 @@
 #include "MRBoolean.h"
 
+#include "MRMesh/MRGTest.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRFloatGrid.h"
-#include "MRMesh/MRTimer.h"
-#include "MROpenVDB.h"
+#include "MRMesh/MRTorus.h"
+
 #include "MRPch/MRSpdlog.h"
+
 #include <filesystem>
 
 namespace MR
@@ -30,6 +31,16 @@ Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
         return {};
     }
     return *res;
+}
+
+TEST( MRVoxels, MeshVoxelsConverterSelfIntersections )
+{
+    auto torus = makeTorusWithSelfIntersections( 2.f, 1.f, 10, 10 );
+    MeshVoxelsConverter converter;
+    converter.voxelSize = 0.1f;
+    auto grid = converter( torus );
+    torus = converter( grid );
+    ASSERT_GT( torus.volume(), 0.f );
 }
 
 } //namespace MR

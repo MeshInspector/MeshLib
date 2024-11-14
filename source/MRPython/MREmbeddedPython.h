@@ -2,8 +2,14 @@
 
 #include "exports.h"
 
-#include <string>
+#include <atomic>
+#include <condition_variable>
 #include <filesystem>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace MR
 {

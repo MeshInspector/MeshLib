@@ -32,6 +32,7 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshFixer.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshC.h" />
@@ -88,6 +89,7 @@
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
+    <ClCompile Include="MRMeshFixer.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRMeshLoadObj.cpp" />
     <ClCompile Include="MRMeshMetrics.cpp" />

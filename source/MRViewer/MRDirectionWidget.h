@@ -36,6 +36,25 @@ public:
         Vector3f dir_;
     };
 
+    class ChangeBaseAction : public ChangeXfAction
+    {
+    public:
+        ChangeBaseAction( DirectionWidget& widget ) :
+            ChangeXfAction( "Change Base", static_pointer_cast< Object >( widget.directionObj_ ) ),
+            widget_{ widget },
+            base_{ widget.base_ }
+        {}
+        virtual void action( Type type ) override
+        {
+            ChangeXfAction::action( type );
+            std::swap( base_, widget_.base_ );
+
+        }
+    private:
+        DirectionWidget& widget_;
+        Vector3f base_;
+    };
+
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
     VisualObject* parent_;

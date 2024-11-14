@@ -16,4 +16,10 @@ Example of boolean operation
 
 </div>
 
+Source meshes
+\image html boolean_before.png
+
+Boolean intersection
+\image html boolean_after.png
+
  */

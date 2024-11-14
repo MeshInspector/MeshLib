@@ -16,4 +16,10 @@ Example of mesh decimation
 
 </div>
 
+Source mesh
+\image html decimate_before.png
+
+After decimate
+\image html decimate_after.png
+
  */

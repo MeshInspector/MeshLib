@@ -1,4 +1,4 @@
-FROM fedora:41 AS build
+FROM fedora:40 AS build
 
 RUN dnf -y update && \
     dnf -y install git ninja-build && \
@@ -20,7 +20,7 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM fedora:41 AS production
+FROM fedora:40 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
@@ -52,12 +52,11 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     unzip awscliv2.zip && \
     sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
-# no CUDA for Fedora41 yet: https://developer.download.nvidia.com/compute/cuda/repos
-# RUN sudo dnf config-manager addrepo --from-repofile=https://developer.download.nvidia.com/compute/cuda/repos/fedora41/x86_64/cuda-fedora41.repo \
-#   && sudo dnf clean all \
-#   && sudo dnf -y install cuda
+RUN sudo dnf config-manager addrepo --from-repofile=https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
+  && sudo dnf clean all \
+  && sudo dnf -y install cuda
 
-# Set environment variables for CUDA
-# ENV CUDA_HOME=/usr/local/cuda-12.1
-# ENV PATH=$CUDA_HOME/bin:$PATH
-# ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+Set environment variables for CUDA
+ENV CUDA_HOME=/usr/local/cuda-12.1
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH

@@ -1,4 +1,4 @@
-name: Build and test Fedora 41
+name: Build and test Fedora 40
 
 on:
   workflow_call:
@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-fedora41:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-fedora40:${{inputs.docker_image_tag}}
       options: --user root
     strategy:
       fail-fast: false
@@ -48,11 +48,11 @@ jobs:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
-            build_mrcuda: "OFF"
+            build_mrcuda: "ON"
           - compiler: GCC 14
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
-            build_mrcuda: "OFF"
+            build_mrcuda: "ON"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -100,7 +100,7 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=ON
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh fedora41 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh fedora40 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -163,6 +163,6 @@ jobs:
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 14'}}
         uses: actions/upload-artifact@v4
         with:
-          name: Distributives_fedora41-x86
+          name: Distributives_fedora40-x86
           path: meshlib-dev.rpm
           retention-days: 1

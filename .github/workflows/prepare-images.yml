@@ -106,7 +106,7 @@ jobs:
           echo ${{github.repository}}
           MATRIX=" \
           {\"include\":[ \
-          {\"dockerfile\":\"fedora41Dockerfile\",   \"image\":\"fedora41\",       \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"fedora40Dockerfile\",   \"image\":\"fedora40\",       \"os\":\"ubuntu-latest\"}, \
           ]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
           echo "$MATRIX"

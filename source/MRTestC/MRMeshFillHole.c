@@ -12,12 +12,12 @@
 MRMesh* createMeshWithHoles( void )
 {
     const MRVector3f points[] = {
-       { 0.f, 0.f, 0.f },
-       { 1.f, 0.f, 0.f },
-       { 0.f, 1.f, 0.f },
-       { 0.f, 0.f, 1.f },
-       { 1.f, 0.f, 1.f },
-       { 0.f, 1.f, 1.f },
+        { 0.f, 0.f, 0.f },
+        { 1.f, 0.f, 0.f },
+        { 0.f, 1.f, 0.f },
+        { 0.f, 0.f, 1.f },
+        { 1.f, 0.f, 1.f },
+        { 0.f, 1.f, 1.f },
     };
     const int t[] = {
         0, 2, 1,

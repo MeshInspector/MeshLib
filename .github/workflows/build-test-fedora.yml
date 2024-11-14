@@ -32,22 +32,22 @@ jobs:
       fail-fast: false
       matrix:
         config: [Debug, Release]
-        compiler: [Clang 19, GCC 14]
+        compiler: [Clang 18, GCC 14]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
-          # Do not run Release Clang 19 build on every commit (but only once a day)
+          # Do not run Release Clang 18 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 19
+            compiler: Clang 18
             config: Release
           # Do not run Debug GCC 14 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 14
             config: Debug
         include:
-          - compiler: Clang 19
-            cxx-compiler: /usr/bin/clang++-19
-            c-compiler: /usr/bin/clang-19
+          - compiler: Clang 18
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
             build_mrcuda: "ON"
           - compiler: GCC 14
             cxx-compiler: /usr/bin/g++

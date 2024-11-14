@@ -54,7 +54,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
   && sudo dnf clean all \
-  && sudo dnf -y install cuda
+  && sudo dnf -y install cuda-fedora40-x86_64
 
 # Set environment variables for CUDA
 ENV CUDA_HOME=/usr/local/cuda-12.1

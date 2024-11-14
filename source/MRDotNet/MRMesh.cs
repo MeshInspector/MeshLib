@@ -319,7 +319,6 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern float mrMeshEdgeLength( IntPtr mesh, UndirectedEdgeId e );
 
-        /// returns squared Euclidean length of the edge (faster to compute than length)
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern float mrMeshEdgeLengthSq( IntPtr mesh, UndirectedEdgeId e );
 
@@ -536,13 +535,14 @@ namespace MR.DotNet
         {
             return mrMeshArea( mesh_, region is null ? (IntPtr)null : region.bs_ );
         }
-
+        /// returns Euclidean length of the edge
         public float EdgeLength(UndirectedEdgeId ue)
         {
             UndirectedEdgeId mrEdgeId = new UndirectedEdgeId();
             mrEdgeId.Id = ue.Id;
             return mrMeshEdgeLength(mesh_, mrEdgeId);
         }
+        /// returns squared Euclidean length of the edge (faster to compute than length)
         public float EdgeLengthSq(UndirectedEdgeId ue)
         {
             UndirectedEdgeId mrEdgeId = new UndirectedEdgeId();

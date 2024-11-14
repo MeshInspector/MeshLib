@@ -114,22 +114,21 @@ namespace MR.DotNet
 
     public class RegionBoundary
     {
-        /// returns all region boundary loops;
-        /// every loop has region faces on the right, and not-region faces or holes on the left
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFindRightBoundary( IntPtr topology, IntPtr region );
 
-        /// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);
-        /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         unsafe private static extern MREdgeLoop* mrTrackRightBoundaryLoop(IntPtr topology, EdgeId e0, IntPtr region);
-
+        
+        /// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);
+        /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
         unsafe public static EdgeLoop TrackRightBoundaryLoop( Mesh mesh, EdgeId e0, BitSet? region = null )
         {
             var mrLoop = mrTrackRightBoundaryLoop(mesh.meshTopology_, e0, region is null ? (IntPtr)null : region.bs_);
             return new EdgeLoop(mrLoop);
         }
-
+        /// returns all region boundary loops;
+        /// every loop has region faces on the right, and not-region faces or holes on the left
         public static EdgeLoops FindRightBoundary( Mesh mesh, BitSet? region = null )
         {
             var mrLoops = mrFindRightBoundary(mesh.meshTopology_, region is null ? (IntPtr)null : region.bs_);

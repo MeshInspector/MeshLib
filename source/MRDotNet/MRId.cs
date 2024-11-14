@@ -29,6 +29,15 @@ namespace MR.DotNet
         public bool Valid() => Id >= 0;
     }
 
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct UndirectedEdgeId
+    {
+        public int Id;
+        public UndirectedEdgeId(int id = -1) { Id = id; }
+        public bool Valid() => Id >= 0;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RegionId
     {

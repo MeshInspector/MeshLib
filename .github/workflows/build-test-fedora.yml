@@ -95,6 +95,7 @@ jobs:
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_USE_CPP_23=ON
+            -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=ON
 

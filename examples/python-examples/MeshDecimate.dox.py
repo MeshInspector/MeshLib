@@ -1,7 +1,7 @@
 import meshlib.mrmeshpy as mrmeshpy
 
-# Load mesh
-mesh = mrmeshpy.loadMesh("mesh.stl")
+# Create mesh
+mesh = mrmeshpy.makeUVSphere(1.0, 32, 32)
 
 # Repack mesh optimally.
 # It's not necessary but highly recommended to achieve the best performance in parallel processing
@@ -9,6 +9,7 @@ mesh.packOptimally()
 
 # Setup decimate parameters
 settings = mrmeshpy.DecimateSettings()
+
 # Decimation stop thresholds, you may specify one or both
 settings.maxDeletedFaces = 1000 # Number of faces to be deleted
 settings.maxError = 0.05 # Maximum error when decimation stops
@@ -21,4 +22,4 @@ settings.subdivideParts = 64
 mrmeshpy.decimateMesh(mesh, settings)
 
 # Save result
-mrmeshpy.saveMesh(mesh, "decimatedMesh.stl")
+mrmeshpy.saveMesh(mesh, "decimated_mesh.stl")

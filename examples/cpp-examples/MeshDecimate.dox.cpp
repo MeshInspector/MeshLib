@@ -1,5 +1,5 @@
 #include <MRMesh/MRMeshFwd.h>
-#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRUVSphere.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshDecimate.h>
@@ -7,13 +7,12 @@
 
 int main()
 {
-    // Load mesh
-    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
-
+    // Create mesh
+    MR::Mesh mesh = MR::makeUVSphere( 1.0f, 32, 32 );
+    
     // Repack mesh optimally.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing
     mesh.packOptimally();
-
 
     // Setup decimate parameters
     MR::DecimateSettings settings;
@@ -30,5 +29,7 @@ int main()
     MR::decimateMesh( mesh, settings );
 
     // Save result
-    MR::MeshSave::toAnySupportedFormat( mesh, "decimatedMesh.stl" );
+    MR::MeshSave::toAnySupportedFormat( mesh, "decimated_mesh.stl" );
+
+    return 0;
 }

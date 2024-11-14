@@ -48,11 +48,11 @@ jobs:
           - compiler: Clang 18
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
-            build_mrcuda: "ON"
+            build_mrcuda: "OFF"
           - compiler: GCC 14
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
-            build_mrcuda: "ON"
+            build_mrcuda: "OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

@@ -53,6 +53,11 @@ MRMESHC_API MRVector3f mrMeshHoleDirArea( const MRMesh* mesh, MREdgeId e );
 /// computes the area of given face-region (or whole mesh if region is null)
 MRMESHC_API double mrMeshArea( const MRMesh* mesh, const MRFaceBitSet* region );
 
+/// returns Euclidean length of the edge
+MRMESHC_API float mrMeshEdgeLength( const MRMesh* mesh, MRUndirectedEdgeId e );
+/// returns squared Euclidean length of the edge (faster to compute than length)
+MRMESHC_API float mrMeshEdgeLengthSq( const MRMesh* mesh, MRUndirectedEdgeId e );
+
 /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
 MRMESHC_API void mrMeshDeleteFaces( MRMesh* mesh, const MRFaceBitSet* fs, const MRUndirectedEdgeBitSet* keepEdges );
 

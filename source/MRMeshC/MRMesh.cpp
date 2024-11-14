@@ -15,6 +15,7 @@ using namespace MR;
 REGISTER_AUTO_CAST( AffineXf3f )
 REGISTER_AUTO_CAST( Box3f )
 REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( UndirectedEdgeId )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( MeshTopology )
@@ -144,6 +145,18 @@ double mrMeshArea( const MRMesh* mesh_, const MRFaceBitSet* region_ )
 {
     ARG( mesh ); ARG_PTR( region );
     return mesh.area( region );
+}
+
+float mrMeshEdgeLength( const MRMesh* mesh_, MRUndirectedEdgeId e_ )
+{
+    ARG( mesh ); ARG_VAL( e );
+    return mesh.edgeLength( e );
+}
+
+float mrMeshEdgeLengthSq( const MRMesh* mesh_, MRUndirectedEdgeId e_ )
+{
+    ARG( mesh ); ARG_VAL( e );
+    return mesh.edgeLengthSq( e );
 }
 
 void mrMeshDeleteFaces( MRMesh* mesh_, const MRFaceBitSet* fs_, const MRUndirectedEdgeBitSet* keepEdges_ )

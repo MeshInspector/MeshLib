@@ -144,6 +144,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )      \
 } )
 
 // python output duplicated to this stream
+// needed to be able to separate python output from all other logs
 class MRPYTHON_CLASS UnifiedPythonStream
 {
 public:

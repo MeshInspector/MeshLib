@@ -11,7 +11,7 @@ def test_numpy_voxels():
     voxelSize = 0.01
     box = sphere.computeBoundingBox()
     expansion = mrmesh.Vector3f.diagonal(3 * voxelSize)
-    if is_new_binding:
+    if is_bindings_v3:
         params.vol.origin = box.min - expansion
         params.vol.voxelSize = mrmesh.Vector3f.diagonal(0.01)
         dimensionsF = (box.max + expansion - params.vol.origin) / voxelSize

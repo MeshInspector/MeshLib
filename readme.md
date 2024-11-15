@@ -3,11 +3,11 @@
 [![Python](https://img.shields.io/pypi/pyversions/meshlib.svg?style=plastic)](https://badge.fury.io/py/meshlib)
 [![Downloads](https://pepy.tech/badge/meshlib/month?style=flat-square)](https://pepy.tech/project/meshlib)
 
-<p align="center">
+<p align="left">
 <picture>
   <source media="(prefers-color-scheme: dark)"  srcset="https://github.com/user-attachments/assets/37d3a562-581d-421b-8209-ef6b224e96a8">
   <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf">
-  <img alt="Shows a black logo in light color mode and a white one in dark color mode." src="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf">
+  <img alt="Shows a black logo in light color mode and a white one in dark color mode." src="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf" width="60%">
 </picture>
 </p>
 

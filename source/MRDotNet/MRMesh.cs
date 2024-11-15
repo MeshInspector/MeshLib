@@ -316,6 +316,12 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshDeleteFaces(IntPtr mesh, IntPtr fs, IntPtr keepEdges );
 
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern float mrMeshEdgeLength( IntPtr mesh, UndirectedEdgeId e );
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern float mrMeshEdgeLengthSq( IntPtr mesh, UndirectedEdgeId e );
+
 
         #endregion
         #region Constructors
@@ -529,6 +535,21 @@ namespace MR.DotNet
         {
             return mrMeshArea( mesh_, region is null ? (IntPtr)null : region.bs_ );
         }
+        /// returns Euclidean length of the edge
+        public float EdgeLength(UndirectedEdgeId ue)
+        {
+            UndirectedEdgeId mrEdgeId = new UndirectedEdgeId();
+            mrEdgeId.Id = ue.Id;
+            return mrMeshEdgeLength(mesh_, mrEdgeId);
+        }
+        /// returns squared Euclidean length of the edge (faster to compute than length)
+        public float EdgeLengthSq(UndirectedEdgeId ue)
+        {
+            UndirectedEdgeId mrEdgeId = new UndirectedEdgeId();
+            mrEdgeId.Id = ue.Id;
+            return mrMeshEdgeLengthSq(mesh_, mrEdgeId);
+        }
+
         /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param edgesToKeep
         public void DeleteFaces( BitSet faces, BitSet? edgesToKeep = null )
         {

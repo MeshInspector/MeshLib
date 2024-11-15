@@ -8,10 +8,6 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBox.h"
-#include "MRMesh/MRGTest.h"
-
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -142,12 +138,6 @@ FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
     MR_TIMER
     openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
     return a;
-}
-
-TEST( MRVoxels, About )
-{
-    spdlog::info( "TBB version: {}.{}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR, TBB_VERSION_PATCH );
-    spdlog::info( "OpenVDB version: {}", OPENVDB_LIBRARY_VERSION_STRING );
 }
 
 } //namespace MR

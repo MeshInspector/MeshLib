@@ -53,7 +53,6 @@ private:
     enum class State
     {
         idle, // Waiting for a script to run.
-        starting, // Submitted a script, waiting for the interpreter thread to pick it up.
         running, // Interpreter is running.
         finishing, // Interpreter is done, waiting for the submitter thread to read the result.
     };

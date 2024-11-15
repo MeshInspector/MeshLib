@@ -33,7 +33,7 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
     std::unique_lock guard( self.cvMutex_ );
     self.cv_.wait( guard, [&]{ return self.state_ == State::idle; } );
     self.queuedSource_ = std::move( pythonString );
-    self.state_ = State::starting;
+    self.state_ = State::running;
     self.onDoneAsync_ = std::move( onDoneAsync );
     self.cv_.notify_all();
     if ( self.onDoneAsync_ )
@@ -162,10 +162,19 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
             while ( true )
             {
                 { // Wait for source code.
-                    cv_.wait( guard, [&]{ return state_ == State::starting || stopInterpreterThread_; } );
-                    if ( stopInterpreterThread_ )
+                    bool stop = false;
+                    cv_.wait( guard, [&]
+                    {
+                        if ( stopInterpreterThread_ )
+                        {
+                            stop = true;
+                            return true;
+                        }
+
+                        return state_ == State::running;
+                    } );
+                    if ( stop )
                         break;
-                    state_ = State::running; // Nobody waits for this, so don't notify?
                 }
 
                 lastRunSuccessful_ = false;

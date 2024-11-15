@@ -6,6 +6,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRUnifiedPythonStream.h"
 
 #include <pybind11/embed.h>
 

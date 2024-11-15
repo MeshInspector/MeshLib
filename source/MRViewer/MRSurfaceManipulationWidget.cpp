@@ -206,8 +206,8 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
                 name += "Smooth";
 
             historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
-            changeSurface_();
         }
+        changeSurface_();
     }
 
     return true;

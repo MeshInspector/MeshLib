@@ -24,7 +24,7 @@ openvdb-devel
 pkg-config
 python3
 spdlog-devel
-tbb-devel
+tbb2020.3-devel
 time
 tinyxml2-devel
 turbojpeg-devel

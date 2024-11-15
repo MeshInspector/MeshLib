@@ -5,8 +5,6 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRFillHoleNicely.h"
 
-#include <span>
-
 using namespace MR;
 
 REGISTER_AUTO_CAST( EdgeId )

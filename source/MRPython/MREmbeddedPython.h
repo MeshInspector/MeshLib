@@ -48,7 +48,7 @@ private:
     bool init_();
     void ensureInterpreterThreadIsRunning_();
 
-    static EmbeddedPython& instance_();
+    MRPYTHON_API static EmbeddedPython& instance_();
     bool available_{ false };
 
     enum class State

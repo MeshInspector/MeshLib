@@ -19,6 +19,7 @@ int main( void )
     testMeshCollidePrecise();
     testMeshDecimate();
     testMeshFillHole();
+    testMeshFillHoleNicely();
     testMeshNormals();
     testComponentsMap();
     testLargeRegions();

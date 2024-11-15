@@ -56,7 +56,6 @@ private:
         starting, // Submitted a script, waiting for the interpreter thread to pick it up.
         running, // Interpreter is running.
         finishing, // Interpreter is done, waiting for the submitter thread to read the result.
-        stopThread, // Tell the interpreter thread to stop. This happens once during destruction.
     };
 
     std::atomic<State> state_ = State::idle; // Making this atomic allows `nowRunning()` to read this without locking the mutex.
@@ -73,6 +72,8 @@ private:
     // some modules can break if you recreate the interpeter: https://docs.python.org/3/c-api/init.html#c.Py_FinalizeEx).
 
     std::thread interpreterThread_;
+
+    std::atomic_bool stopInterpreterThread_ = false;
 };
 
 } //namespace MR

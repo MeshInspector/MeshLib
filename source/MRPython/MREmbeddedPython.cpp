@@ -31,13 +31,7 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
 
     // Negotiate with the interpreter thread.
     std::unique_lock guard( self.cvMutex_ );
-    State s{};
-    self.cv_.wait( guard, [&]{
-        s = self.state_.load();
-        return s == State::idle || s == State::stopThread;
-    } );
-    if ( s == State::stopThread )
-        return false;
+    self.cv_.wait( guard, [&]{ return self.state_ == State::idle; } );
     self.queuedSource_ = std::move( pythonString );
     self.state_ = State::starting;
     self.onDoneAsync_ = std::move( onDoneAsync );
@@ -48,12 +42,7 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
     }
     else
     {
-        self.cv_.wait( guard, [&]{
-            s = self.state_.load();
-            return s == State::finishing || s == State::stopThread;
-        } );
-        if ( s == State::stopThread )
-            return false;
+        self.cv_.wait( guard, [&]{ return self.state_ == State::finishing; } );
         self.state_ = State::idle;
         self.cv_.notify_all();
         return self.lastRunSuccessful_;
@@ -102,8 +91,7 @@ EmbeddedPython::~EmbeddedPython()
         return; // Nothing to do.
 
     { // Tell the thread to stop.
-        std::lock_guard guard( cvMutex_ );
-        state_ = State::stopThread;
+        stopInterpreterThread_ = true;
         cv_.notify_all();
     }
 
@@ -174,12 +162,8 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
             while ( true )
             {
                 { // Wait for source code.
-                    State s{};
-                    cv_.wait( guard, [&]{
-                        s = state_.load();
-                        return s == State::starting || s == State::stopThread;
-                    } );
-                    if ( s == State::stopThread )
+                    cv_.wait( guard, [&]{ return state_ == State::starting || stopInterpreterThread_; } );
+                    if ( stopInterpreterThread_ )
                         break;
                     state_ = State::running; // Nobody waits for this, so don't notify?
                 }

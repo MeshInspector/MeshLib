@@ -91,7 +91,11 @@ void CommandLoop::removeCommands( bool closeLoop )
     std::unique_lock<std::mutex> lock( inst.mutex_ );
     inst.queueClosed_ = closeLoop;
     while ( !inst.commands_.empty() )
+    {
+        auto cmd = std::move( inst.commands_.front() );
         inst.commands_.pop();
+        cmd->callerThreadCV.notify_one();
+    }
     spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
 }
 

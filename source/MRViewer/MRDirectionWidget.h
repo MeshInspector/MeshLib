@@ -36,6 +36,7 @@ public:
         Vector3f dir_;
     };
 
+    /// history action for changing the base. It should be added to the history stack by user code
     class ChangeBaseAction : public ChangeXfAction
     {
     public:

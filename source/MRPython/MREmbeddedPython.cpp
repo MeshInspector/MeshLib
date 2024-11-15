@@ -108,8 +108,6 @@ bool EmbeddedPython::init_()
     PyConfig_InitPythonConfig( &config );
     MR_FINALLY { PyConfig_Clear( &config ); };
 
-    config.parse_argv = 0;
-    config.install_signal_handlers = 0;
     config.site_import = pythonConfig.siteImport ? 1 : 0;
 
     if ( !pythonConfig.home.empty() )
@@ -124,15 +122,18 @@ bool EmbeddedPython::init_()
     PyStatus status{};
     if ( pythonConfig.argv.empty() )
     {
+        config.parse_argv = 0;
+        config.install_signal_handlers = 0;
         status = PyConfig_SetBytesArgv( &config, 0, NULL );
     }
     else
     {
+        config.isolated = 1;
         std::vector<char *> argv;
         for ( auto& str : pythonConfig.argv )
             argv.push_back( str.data() );
         argv.push_back( nullptr ); // Unsure if needed, just in case.
-        status = PyConfig_SetBytesArgv( &config, argv.size(), argv.data() );
+        status = PyConfig_SetBytesArgv( &config, argv.size() - 1, argv.data() );
     }
 
     if ( PyStatus_Exception( status ) )

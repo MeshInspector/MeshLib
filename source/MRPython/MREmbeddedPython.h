@@ -23,7 +23,7 @@ public:
         std::string home;
         std::vector<std::string> argv;
     };
-    static Config pythonConfig; // Set this once before running anything.
+    MRPYTHON_API static Config pythonConfig; // Set this once before running anything.
 
     static MRPYTHON_API bool isAvailable();
 

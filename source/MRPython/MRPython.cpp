@@ -5,6 +5,12 @@
 #include <iostream>
 #include <sstream>
 
+std::stringstream& UnifiedPythonStream::get()
+{
+    static UnifiedPythonStream self;
+    return self.ss_;
+}
+
 template<StreamType T>
 struct NumWritten
 {
@@ -15,6 +21,7 @@ template<StreamType T>
 void PythonStreamRedirector<T>::write( const std::string& text )
 {
     ++NumWritten<T>::counter;
+    UnifiedPythonStream::get() << text;
     if constexpr ( T == Stdout )
         std::cout << text;
     else

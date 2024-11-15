@@ -53,11 +53,11 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
 # No CUDA available for Fedora 40 yet
-# RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
-#   && sudo dnf clean all \
-#   && sudo dnf -y install cuda
+#RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
+#  && sudo dnf clean all \
+#  && sudo dnf -y install cuda
 
 # Set environment variables for CUDA
-# ENV CUDA_HOME=/usr/local/cuda-12.1
-# ENV PATH=$CUDA_HOME/bin:$PATH
-# ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+#ENV CUDA_HOME=/usr/local/cuda-12.1
+#ENV PATH=$CUDA_HOME/bin:$PATH
+#ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH

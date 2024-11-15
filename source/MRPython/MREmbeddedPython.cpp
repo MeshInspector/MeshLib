@@ -212,10 +212,6 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
 
                         pybind11::exec( "sys.stdout.flush()\nsys.stderr.flush()" );
 
-                        // We used to reset globals using `pybind11::finalize_interpreter()`, but that beaks some modules (including ours at one point,
-                        //   and apparently numpy too (https://stackoverflow.com/q/7676314/2752075), so it's not necessarily our bug).
-                        pybind11::globals().clear();
-
                         lastRunSuccessful_ = true;
                     }
                     catch ( std::exception& e )
@@ -225,6 +221,17 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                     catch ( ... )
                     {
                         spdlog::error( "Unknown exception while executing a Python script." );
+                    }
+
+                    try
+                    {
+                        // We used to reset globals using `pybind11::finalize_interpreter()`, but that beaks some modules (including ours at one point,
+                        //   and apparently numpy too (https://stackoverflow.com/q/7676314/2752075), so it's not necessarily our bug).
+                        pybind11::globals().clear();
+                    }
+                    catch ( ... )
+                    {
+                        spdlog::error( "Unable to reset the global variables after the script because of an exception." );
                     }
                 }
 

@@ -16,14 +16,15 @@ REGISTER_AUTO_CAST( Mesh )
 MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void )
 {
     MRFillHoleNicelyParams params;
+    FillHoleNicelySettings defaultParams;
     params.triangulateParams = mrFillHoleParamsNew();
-    params.triangulateOnly = false;
-    params.maxEdgeLen = 0.0f;
-    params.maxEdgeSplits = 1000;
-    params.maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
-    params.smoothCurvature = true;
-    params.naturalSmooth = false;
-    params.edgeWeights = MREdgeWeightsCotan;
+    params.triangulateOnly = defaultParams.triangulateOnly;    
+    params.maxEdgeLen = defaultParams.maxEdgeLen;
+    params.maxEdgeSplits = defaultParams.maxEdgeSplits;
+    params.maxAngleChangeAfterFlip = defaultParams.maxAngleChangeAfterFlip;
+    params.smoothCurvature = defaultParams.smoothCurvature;
+    params.naturalSmooth = defaultParams.naturalSmooth;
+    params.edgeWeights = (MREdgeWeights)defaultParams.edgeWeights;
 
     return params;
 }

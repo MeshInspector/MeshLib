@@ -13,6 +13,7 @@ namespace MR.DotNet
         Strong //makes additional efforts to avoid creating multiple edges
     };
 
+    //TODO: when Laplacian is implemented, move this enum there
     public enum EdgeWeights
     {
         /// all edges have same weight=1

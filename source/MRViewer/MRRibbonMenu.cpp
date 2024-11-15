@@ -1439,7 +1439,6 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
                 .text = "That tool was closed due to other tool start.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
             }
-            return true;
         }
     }
     if ( !wasActive && !available )

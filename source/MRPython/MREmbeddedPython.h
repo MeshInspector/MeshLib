@@ -57,6 +57,12 @@ private:
     std::mutex cvMutex_;
     std::condition_variable cv_; // It's could (?) be more efficient to have more CVs here, but one is simpler.
 
+    // We maintain ONE persistent thread that runs all python scripts, and persists while the program runs.
+    // This seems to be the safest option, I had issues otherwise. We need everything Python-related to happen in the same thread,
+    // and we also need to not finalize-and-recreate the interpreter while the program runs because that breaks our generated bindings
+    // (which may or may not be possible to fix in the bindings, but it's easier not to, and the manual even advises that
+    // some modules can break if you recreate the interpeter: https://docs.python.org/3/c-api/init.html#c.Py_FinalizeEx).
+
     std::thread interpreterThread_;
 };
 

@@ -31,7 +31,13 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
 
     // Negotiate with the interpreter thread.
     std::unique_lock guard( self.cvMutex_ );
-    self.cv_.wait( guard, [&]{ return self.state_ == State::idle; } );
+    State s{};
+    self.cv_.wait( guard, [&]{
+        s = self.state_.load();
+        return s == State::idle || s == State::stopThread;
+    } );
+    if ( s == State::stopThread )
+        return false;
     self.queuedSource_ = std::move( pythonString );
     self.state_ = State::starting;
     self.onDoneAsync_ = std::move( onDoneAsync );
@@ -42,7 +48,12 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
     }
     else
     {
-        self.cv_.wait( guard, [&]{ return self.state_ == State::finishing; } );
+        self.cv_.wait( guard, [&]{
+            s = self.state_.load();
+            return s == State::finishing || s == State::stopThread;
+        } );
+        if ( s == State::stopThread )
+            return false;
         self.state_ = State::idle;
         self.cv_.notify_all();
         return self.lastRunSuccessful_;
@@ -83,6 +94,20 @@ bool EmbeddedPython::isPythonScript( const std::filesystem::path& path )
 EmbeddedPython::EmbeddedPython()
 {
     available_ = !Py_IsInitialized();
+}
+
+EmbeddedPython::~EmbeddedPython()
+{
+    if ( !interpreterThread_.joinable() )
+        return; // Nothing to do.
+
+    { // Tell the thread to stop.
+        std::lock_guard guard( cvMutex_ );
+        state_ = State::stopThread;
+        cv_.notify_all();
+    }
+
+    interpreterThread_.join();
 }
 
 bool EmbeddedPython::init_()
@@ -149,13 +174,17 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
             while ( true )
             {
                 { // Wait for source code.
-                    cv_.wait( guard, [&]{ return state_ == State::starting; } );
+                    State s{};
+                    cv_.wait( guard, [&]{
+                        s = state_.load();
+                        return s == State::starting || s == State::stopThread;
+                    } );
+                    if ( s == State::stopThread )
+                        break;
                     state_ = State::running; // Nobody waits for this, so don't notify?
                 }
 
                 lastRunSuccessful_ = false;
-
-                namespace python = pybind11;
 
                 static bool initOk = init_();
                 if ( !initOk )
@@ -176,12 +205,12 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                             "sys.stdout = redirector.stdout()\n"
                             "sys.stderr = redirector.stderr()\n"
                             "sys.path.insert(1,\"" + libDirStr + "\")\n";
-                        python::exec( redirectScript.c_str() );
+                        pybind11::exec( redirectScript.c_str() );
 
                         // Execute code
-                        python::exec( queuedSource_.c_str() );
+                        pybind11::exec( queuedSource_.c_str() );
 
-                        python::exec( "sys.stdout.flush()\nsys.stderr.flush()" );
+                        pybind11::exec( "sys.stdout.flush()\nsys.stderr.flush()" );
 
                         // We used to reset globals using `pybind11::finalize_interpreter()`, but that beaks some modules (including ours at one point,
                         //   and apparently numpy too (https://stackoverflow.com/q/7676314/2752075), so it's not necessarily our bug).
@@ -213,6 +242,8 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                     cv_.notify_all();
                 }
             }
+
+            pybind11::finalize_interpreter();
         } );
 
         return nullptr;

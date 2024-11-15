@@ -40,7 +40,9 @@ public:
     static MRPYTHON_API bool isPythonScript( const std::filesystem::path& path );
 private:
     EmbeddedPython();
-    ~EmbeddedPython() = default;
+    EmbeddedPython( const EmbeddedPython& ) = delete;
+    EmbeddedPython& operator=( const EmbeddedPython& ) = delete;
+    ~EmbeddedPython();
 
     bool init_();
     void ensureInterpreterThreadIsRunning_();
@@ -48,9 +50,16 @@ private:
     static EmbeddedPython& instance_();
     bool available_{ false };
 
-    enum class State { idle, starting, running, finishing };
+    enum class State
+    {
+        idle, // Waiting for a script to run.
+        starting, // Submitted a script, waiting for the interpreter thread to pick it up.
+        running, // Interpreter is running.
+        finishing, // Interpreter is done, waiting for the submitter thread to read the result.
+        stopThread, // Tell the interpreter thread to stop. This happens once during destruction.
+    };
 
-    std::atomic<State> state_ = State::idle; // Could be non-atomic, but this makes things easier.
+    std::atomic<State> state_ = State::idle; // Making this atomic allows `nowRunning()` to read this without locking the mutex.
     std::string queuedSource_;
     bool lastRunSuccessful_ = false;
     std::function<void( bool success )> onDoneAsync_;

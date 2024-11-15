@@ -154,7 +154,7 @@ class PythonStreamRedirector
 {
 public:
     MRPYTHON_API void write( const std::string& text );
-    void flush() {}
+    MRPYTHON_API void flush();
     MRPYTHON_API static int getNumWritten();
 };
 

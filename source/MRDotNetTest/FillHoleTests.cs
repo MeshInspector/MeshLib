@@ -5,8 +5,7 @@ namespace MR.DotNet.Test
     [TestFixture]
     internal class FillHoleTests
     {
-        [Test]
-        public void TestFillHole()
+        private static Mesh CreateMeshWithHoles()
         {
             List<Vector3f> points = new List<Vector3f>();
             points.Add(new Vector3f(0, 0, 0));
@@ -23,7 +22,12 @@ namespace MR.DotNet.Test
             triangles.Add(new ThreeVertIds(2, 5, 4));
             triangles.Add(new ThreeVertIds(2, 3, 5));
 
-            var mesh = Mesh.FromTriangles(points, triangles);
+            return Mesh.FromTriangles(points, triangles);
+        }
+        [Test]
+        public void TestFillHole()
+        {
+            var mesh = CreateMeshWithHoles();
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2) );
 
             var param = new FillHoleParams();
@@ -31,6 +35,24 @@ namespace MR.DotNet.Test
 
             MeshFillHole.FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestRightBoundary()
+        {
+            var mesh = CreateMeshWithHoles();
+            var loops = RegionBoundary.FindRightBoundary(mesh);
+            Assert.That(loops.Count, Is.EqualTo(2));
+            Assert.That(loops[0].Count, Is.EqualTo(3));
+            Assert.That(loops[1].Count, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestFindHoleComplicatedFaces()
+        {
+            var mesh = CreateMeshWithHoles();
+            var complicatedFaces = MeshFixer.FindHoleComplicatingFaces(mesh);
+            Assert.That(complicatedFaces.Count(), Is.EqualTo(0));
         }
     }
 }

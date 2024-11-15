@@ -97,6 +97,7 @@ struct AllLocalTriangulations;
 
 using EdgePath = std::vector<EdgeId>;
 using EdgeLoop = std::vector<EdgeId>;
+using EdgeLoops = std::vector<EdgeLoop>;
 
 class MRMESH_CLASS BitSet;
 

@@ -2,8 +2,8 @@
 
 \page PackageOverview Package Overview
 
- - \subpage DataModel
- - \subpage SpacesHelp
- - \subpage StatePluginsHelp
+ - \ref DataModel
+ - \ref SpacesHelp
+ - \ref StatePluginsHelp
 
 */

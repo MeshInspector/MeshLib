@@ -27,4 +27,6 @@ int main( void )
     testLargestComponent();
     testGetComponent();
     testFixSelfIntersections();
+    testRightBoundary();
+    testFindHoleComplicatingFaces();
 }

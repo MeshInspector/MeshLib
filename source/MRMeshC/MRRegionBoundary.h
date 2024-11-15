@@ -10,4 +10,16 @@ MR_EXTERN_C_BEGIN
 /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
 MRMESHC_API MREdgeLoop* mrTrackRightBoundaryLoop( const MRMeshTopology* topology, MREdgeId e0, const MRFaceBitSet* region );
 
+typedef struct MREdgeLoops MREdgeLoops;
+
+MRMESHC_API const MREdgeLoop mrEdgeLoopsGet( const MREdgeLoops* loops, size_t index );
+
+MRMESHC_API size_t mrEdgeLoopsSize( const MREdgeLoops* loops );
+
+MRMESHC_API void mrEdgeLoopsFree( MREdgeLoops* loops );
+
+/// returns all region boundary loops;
+/// every loop has region faces on the right, and not-region faces or holes on the left
+MRMESHC_API MREdgeLoops* mrFindRightBoundary( const MRMeshTopology* topology, const MRFaceBitSet* region );
+
 MR_EXTERN_C_END

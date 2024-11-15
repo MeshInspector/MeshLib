@@ -5,9 +5,11 @@
 #include <MRMeshC/MRBitSet.h>
 #include <MRMeshC/MRMesh.h>
 #include <MRMeshC/MRMeshFillHole.h>
+#include <MRMeshC/MRRegionBoundary.h>
 #include <MRMeshC/MRMeshTopology.h>
+#include <MRMeshC/MRMeshFixer.h>
 
-void testMeshFillHole( void )
+MRMesh* createMeshWithHoles( void )
 {
     const MRVector3f points[] = {
         { 0.f, 0.f, 0.f },
@@ -24,7 +26,13 @@ void testMeshFillHole( void )
         2, 5, 4,
         2, 3, 5,
     };
-    MRMesh* mesh = mrMeshFromTriangles( points, 6, (const MRThreeVertIds*)t, 5 );
+
+    return mrMeshFromTriangles( points, 6, ( const MRThreeVertIds* ) t, 5 );
+}
+
+void testMeshFillHole( void )
+{
+    MRMesh* mesh = createMeshWithHoles();
 
     MREdgePath* oldBdEdges = mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
     TEST_ASSERT( oldBdEdges->size == 2 );
@@ -42,5 +50,31 @@ void testMeshFillHole( void )
     mrEdgePathFree( newBdEdges );
     mrFaceBitSetFree( newFaces );
     mrEdgePathFree( oldBdEdges );
+    mrMeshFree( mesh );
+}
+
+void testRightBoundary( void )
+{
+    MRMesh* mesh = createMeshWithHoles();
+    MREdgeLoops* loops = mrFindRightBoundary( mrMeshTopology( mesh ), NULL );
+
+    TEST_ASSERT( mrEdgeLoopsSize( loops ) == 2 );
+    MREdgeLoop loop = mrEdgeLoopsGet( loops, 0 );
+    TEST_ASSERT( loop.size == 3 );
+
+    loop = mrEdgeLoopsGet( loops, 1 );
+    TEST_ASSERT( loop.size == 4 );
+
+    mrEdgeLoopsFree( loops );
+    mrMeshFree( mesh );
+}
+
+void testFindHoleComplicatingFaces( void )
+{
+    MRMesh* mesh = createMeshWithHoles();
+    MRFaceBitSet* faces = mrFindHoleComplicatingFaces( mesh );
+    const size_t facesCount = mrBitSetCount( (MRBitSet*)faces );
+    TEST_ASSERT( facesCount == 0 );
+    mrFaceBitSetFree( faces );
     mrMeshFree( mesh );
 }

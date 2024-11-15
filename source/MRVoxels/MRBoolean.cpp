@@ -6,7 +6,8 @@
 #include "MRMesh/MRTorus.h"
 
 #include "MRPch/MRSpdlog.h"
-
+#include "MRPch/MRTBB.h"
+#include <openvdb/version.h>
 #include <filesystem>
 
 namespace MR
@@ -31,6 +32,16 @@ Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
         return {};
     }
     return *res;
+}
+
+TEST( MRVoxels, About )
+{
+#if defined TBB_VERSION_PATCH
+    spdlog::info( "TBB version: {}.{}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR, TBB_VERSION_PATCH );
+#else
+    spdlog::info( "TBB version: {}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR );
+#endif
+    spdlog::info( "OpenVDB version: {}", OPENVDB_LIBRARY_VERSION_STRING );
 }
 
 TEST( MRVoxels, MeshVoxelsConverterSelfIntersections )

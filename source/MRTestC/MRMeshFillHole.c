@@ -5,6 +5,7 @@
 #include <MRMeshC/MRBitSet.h>
 #include <MRMeshC/MRMesh.h>
 #include <MRMeshC/MRMeshFillHole.h>
+#include <MRMeshC/MRFillHoleNicely.h>
 #include <MRMeshC/MRRegionBoundary.h>
 #include <MRMeshC/MRMeshTopology.h>
 #include <MRMeshC/MRMeshFixer.h>
@@ -50,6 +51,27 @@ void testMeshFillHole( void )
     mrEdgePathFree( newBdEdges );
     mrFaceBitSetFree( newFaces );
     mrEdgePathFree( oldBdEdges );
+    mrMeshFree( mesh );
+}
+
+void testMeshFillHoleNicely( void )
+{
+    MRMesh* mesh = createMeshWithHoles();
+    MREdgePath* oldBdEdges = mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
+    TEST_ASSERT( oldBdEdges->size == 2 );
+
+    MRFillHoleNicelyParams params = mrFillHoleNicelyParamsNew();
+
+    MRFaceBitSet* patch = mrFillHoleNicely( mesh, oldBdEdges->data[0], &params );
+    size_t patchCount = mrBitSetCount( (MRBitSet*)patch );
+    TEST_ASSERT( patchCount == 1887 );
+
+    MREdgePath* newBdEdges = mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
+    TEST_ASSERT( newBdEdges->size == 1 );
+
+    mrFaceBitSetFree( patch );
+    mrEdgePathFree( oldBdEdges );
+    mrEdgePathFree( newBdEdges );
     mrMeshFree( mesh );
 }
 

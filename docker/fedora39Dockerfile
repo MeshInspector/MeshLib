@@ -61,3 +61,22 @@ RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/com
 ENV CUDA_HOME=/usr/local/cuda-12.1
 ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+# Build newer Clang from source
+ENV CLANG_VER=18.1.8
+RUN git clone https://github.com/llvm/llvm-project --depth 1 -b llvmorg-$CLANG_VER source-clang
+RUN mkdir -p /usr/local/opt/custom-clang
+RUN cmake -S source-clang/llvm -B build-clang -GNinja -Wno-dev \
+    -DCMAKE_INSTALL_PREFIX=/usr/local/opt/custom-clang \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_PARALLEL_LINK_JOBS=2 \
+    -DLLVM_ENABLE_PROJECTS='clang;compiler-rt' \
+    -DCLANG_DEFAULT_PIE_ON_LINUX=ON \
+    -DCLANG_LINK_CLANG_DYLIB=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-redhat-linux-gnu \
+    -DCLANG_DEFAULT_CXX_STDLIB=libstdc++
+RUN cmake --build build-clang -j8
+RUN cmake --install build-clang
+RUN rm -rf source-clang build-clang
+ENV PATH=/usr/local/opt/custom-clang/bin:$PATH

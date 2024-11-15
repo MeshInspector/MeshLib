@@ -65,7 +65,7 @@ def test_unite_close_vertices():
 	tris = mrmesh.Triangulation()
 	tris.vec.resize(12)
 	for i in range(12):
-		if is_new_binding:
+		if is_bindings_v3:
 			tris.vec[i] = mrmesh.ThreeVertIds([mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2)])
 		else:
 			tris.vec[i] = mrmesh.ThreeVertIds(mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2))

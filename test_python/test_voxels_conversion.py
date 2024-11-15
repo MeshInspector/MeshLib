@@ -36,7 +36,7 @@ def test_voxels_conversion():
 
     # Test mesh build functions
     radius = 8 * mul
-    if is_new_binding:
+    if is_bindings_v3:
         settings1 = mrmesh.GridToMeshSettings()
         settings1.isoValue = max_value - radius * radius
         settings1.voxelSize = vdb_volume.voxelSize

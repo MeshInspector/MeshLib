@@ -32,7 +32,8 @@ public:
     [[nodiscard]] static bool nowRunning() { return instance_().state_.load() != State::idle; }
 
     // Returns false on failure.
-    // If `onDoneAsync` is set, doesn't wait for the script to finish. Will call `onDoneAsync` asynchronously when done.
+    // If `onDoneAsync` is set, doesn't wait for the script to finish.
+    // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread).
     static MRPYTHON_API bool runString( std::string pythonString, std::function<void( bool success )> onDoneAsync = nullptr );
 
     static MRPYTHON_API bool runScript( const std::filesystem::path& path );

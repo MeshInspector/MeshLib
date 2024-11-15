@@ -38,6 +38,20 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestFillHoleNicely()
+        {
+            var mesh = CreateMeshWithHoles();
+            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2));
+
+            var param = new FillHoleNicelyParams();
+
+            var patch = MeshFillHole.FillHoleNicely(ref mesh, mesh.HoleRepresentiveEdges[0], param);
+
+            Assert.That( patch.Count, Is.EqualTo(1887) );
+            Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void TestRightBoundary()
         {
             var mesh = CreateMeshWithHoles();

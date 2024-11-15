@@ -143,6 +143,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )      \
         } );\
 } )
 
+// python output duplicated to this stream
+class MRPYTHON_CLASS UnifiedPythonStream
+{
+public:
+    MRPYTHON_API static std::stringstream& get();
+private:
+    UnifiedPythonStream() = default;
+    ~UnifiedPythonStream() = default;
+
+    std::stringstream ss_;
+};
+
 enum StreamType
 {
     Stdout,

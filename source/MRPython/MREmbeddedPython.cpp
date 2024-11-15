@@ -139,6 +139,7 @@ bool EmbeddedPython::init_()
     if ( PyStatus_Exception( status ) )
     {
         spdlog::error( status.err_msg );
+        UnifiedPythonStream::get() << status.err_msg;
         return false;
     }
 
@@ -146,6 +147,7 @@ bool EmbeddedPython::init_()
     if ( PyStatus_Exception( status ) )
     {
         spdlog::error( status.err_msg );
+        UnifiedPythonStream::get() << status.err_msg;
         return false;
     }
 
@@ -211,6 +213,7 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                     catch ( std::exception& e )
                     {
                         spdlog::error( e.what() );
+                        UnifiedPythonStream::get() << e.what();
                     }
                     catch ( ... )
                     {

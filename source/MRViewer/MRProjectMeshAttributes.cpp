@@ -31,22 +31,22 @@ std::optional<MeshAttributes> projectMeshAttributes(
     if ( !oldUVCoords.empty() )
     {
         newAttribute.uvCoords = oldUVCoords;
-        newAttribute.uvCoords.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
+        newAttribute.uvCoords.vec_.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
     }
     if ( !oldVertColors.empty() )
     {
         newAttribute.colorMap = oldVertColors;
-        newAttribute.colorMap.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
+        newAttribute.colorMap.vec_.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
     }
     if ( !oldFaceColorMap.empty() )
     {
         newAttribute.faceColors = oldFaceColorMap;
-        newAttribute.faceColors.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
+        newAttribute.faceColors.vec_.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
     }
     if ( !oldTexturePerFace.empty() )
     {
         newAttribute.texturePerFace = oldTexturePerFace;
-        newAttribute.texturePerFace.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
+        newAttribute.texturePerFace.vec_.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
     }
 
     const bool hasFaceAttribs = !oldFaceColorMap.empty() || !oldTexturePerFace.empty();

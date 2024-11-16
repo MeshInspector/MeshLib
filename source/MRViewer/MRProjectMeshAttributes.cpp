@@ -52,14 +52,6 @@ std::optional<MeshAttributes> projectMeshAttributes(
     const bool hasFaceAttribs = !oldFaceColorMap.empty() || !oldTexturePerFace.empty();
     const bool hasVertAttribs = !oldVertColors.empty() || !oldUVCoords.empty();
 
-    auto vertFunc = [&] ( VertId id, const MeshProjectionResult& res, VertId v1, VertId v2, VertId v3 )
-    {
-        if ( !oldVertColors.empty() )
-            newAttribute.colorMap[id] = res.mtp.bary.interpolate( oldVertColors[v1], oldVertColors[v2], oldVertColors[v3] );
-        if ( !oldUVCoords.empty() )
-            newAttribute.uvCoords[id] = res.mtp.bary.interpolate( oldUVCoords[v1], oldUVCoords[v2], oldUVCoords[v3] );
-    };
-
     auto faceFunc = [&] ( FaceId id, const MeshProjectionResult& res )
     {
         if ( !oldFaceColorMap.empty() )
@@ -68,16 +60,28 @@ std::optional<MeshAttributes> projectMeshAttributes(
             newAttribute.texturePerFace[id] = oldTexturePerFace[res.proj.face];
     };
 
-    VertBitSet vertRegion;
-    MeshVertPart mvp( newMesh );
-    if ( mp.region )
+    if ( hasVertAttribs )
     {
-        vertRegion = getIncidentVerts( newMesh.topology, *mp.region );
-        mvp.region = &vertRegion;
-    }
+        auto vertFunc = [&] ( VertId id, const MeshProjectionResult& res, VertId v1, VertId v2, VertId v3 )
+        {
+            if ( !oldVertColors.empty() )
+                newAttribute.colorMap[id] = res.mtp.bary.interpolate( oldVertColors[v1], oldVertColors[v2], oldVertColors[v3] );
+            if ( !oldUVCoords.empty() )
+                newAttribute.uvCoords[id] = res.mtp.bary.interpolate( oldUVCoords[v1], oldUVCoords[v2], oldUVCoords[v3] );
+        };
 
-    if ( hasVertAttribs && !projectVertAttribute( mvp, *objectMesh.mesh(), vertFunc, subprogress(cb, 0.0f, hasVertAttribs ? 0.5f : 1.0f)) )
-        return {};
+        VertBitSet vertRegion;
+        MeshVertPart mvp( newMesh );
+        if ( mp.region )
+        {
+            vertRegion = getIncidentVerts( newMesh.topology, *mp.region );
+            mvp.region = &vertRegion;
+        }
+
+        if ( !projectVertAttribute( mvp, *objectMesh.mesh(), vertFunc, subprogress( cb, 0.0f, hasVertAttribs ? 0.5f : 1.0f ) ) )
+            return {};
+
+    }
 
     if ( hasFaceAttribs && !projectFaceAttribute( mp, *objectMesh.mesh(), faceFunc, subprogress( cb, hasVertAttribs ? 0.0f : 0.5f, 1.0f ) ) )
         return {};

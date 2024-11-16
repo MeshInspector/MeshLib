@@ -23,8 +23,8 @@ struct MeshRegion
         if ( this != &other )
         {
             // In modern C++ the result doesn't need to be `std::launder`ed, right?
-            this->~MeshPart();
-            ::new( ( void* )this ) MeshPart( other );
+            this->~MeshRegion();
+            ::new( ( void* )this ) MeshRegion( other );
         }
         return *this;
     }

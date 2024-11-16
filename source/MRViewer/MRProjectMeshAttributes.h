@@ -17,14 +17,14 @@ struct MeshAttributes
     FaceColors faceColors;
 };
 
-// projecting the attributes of the old mesh onto the new
-// returns nullopt if canceled by progress bar
+/// finds attributes of new mesh part by projecting region's faces/vertices on old mesh
+/// returns nullopt if canceled by progress bar
 [[nodiscard]] MRVIEWER_API std::optional<MeshAttributes> projectMeshAttributes(
-    const ObjectMesh& oldMesh,
-    const MeshPart& mp,
+    const ObjectMesh& oldMeshObj,
+    const MeshPart& newMeshPart,
     ProgressCallback cb = {} );
 
-// set new mesh attributes and saving the history of changing mesh attributes
+/// set new mesh attributes and saving the history of changing mesh attributes
 MRVIEWER_API void emplaceMeshAttributes(
     std::shared_ptr<ObjectMesh> objectMesh,
     MeshAttributes&& newAttribute );

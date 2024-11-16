@@ -11,20 +11,20 @@ namespace MR
 // projecting the vertex attributes of the old onto the new one
 // returns false if canceled by progress bar
 template<typename F>
-bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
+bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 // projecting the face attributes of the old onto the new one
 // returns false if canceled by progress bar
 template<typename F>
-bool projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
+bool projectFaceAttribute( const MeshPart& mp, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 
 template<typename F>
-bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
+bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
-    return BitSetParallelFor( newMesh.topology.getValidVerts(), [&] ( VertId id )
+    return BitSetParallelFor( mp.mesh.topology.getVertIds( mp.region ), [&] ( VertId id )
         {
-            auto projectionResult = findProjection( newMesh.points[id], oldMesh );
+            auto projectionResult = findProjection( mp.mesh.points[id], oldMesh );
             auto res = projectionResult.mtp;
             VertId v1 = oldMesh.topology.org( res.e );
             VertId v2 = oldMesh.topology.dest( res.e );
@@ -35,11 +35,11 @@ bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, P
 }
 
 template<typename F>
-bool projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
+bool projectFaceAttribute( const MeshPart& mp, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
-    return BitSetParallelFor( newMesh.topology.getValidFaces(), [&] ( FaceId newFaceId )
+    return BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId newFaceId )
     {
-        auto projectionResult = findProjection( newMesh.triCenter( newFaceId ), oldMesh );
+        auto projectionResult = findProjection( mp.mesh.triCenter( newFaceId ), oldMesh );
         func( newFaceId, projectionResult );
     },
     progressCb );

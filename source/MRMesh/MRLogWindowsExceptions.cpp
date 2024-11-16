@@ -2,6 +2,7 @@
 
 #include "MRStringConvert.h"
 #include "MRSystem.h"
+#include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include <windows.h>
 
@@ -72,6 +73,7 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
         spdlog::critical( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
     spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
+    printCurrentTimerBranch();
     logging = false;
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -94,6 +96,7 @@ WindowsExceptionsLogger::WindowsExceptionsLogger()
     {
         spdlog::critical( "Pure virtual function call" );
         spdlog::info( "Pure virtual function call stacktrace:\n{}", getCurrentStacktrace() );
+        printCurrentTimerBranch();
         std::exit( 0 );
     } );
     // The system does not display the critical-error-handler message box

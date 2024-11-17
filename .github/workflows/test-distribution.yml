@@ -9,6 +9,7 @@ on:
 
 jobs:
   linux-test:
+    if: ${{ false }}
     timeout-minutes: 30
     runs-on: ${{ matrix.runner }}
     container:

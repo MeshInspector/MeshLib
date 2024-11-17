@@ -1,3 +1,9 @@
+// these includes to workaround MSVC's error C7500: 'resize': no function satisfied its constraints
+// https://stackoverflow.com/q/79196791/7325599
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRColor.h>
+#include <MRMesh/MRId.h>
+
 #include "MRProjectMeshAttributes.h"
 
 #include <MRMesh/MRMesh.h>
@@ -10,8 +16,6 @@
 #include <MRViewer/MRAppendHistory.h>
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRVector.h"
-#include "MRMesh/MRColor.h"
-#include "MRMesh/MRId.h"
 
 namespace MR
 {
@@ -31,22 +35,22 @@ std::optional<MeshAttributes> projectMeshAttributes(
     if ( !oldUVCoords.empty() )
     {
         newAttribute.uvCoords = oldUVCoords;
-        newAttribute.uvCoords.vec_.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
+        newAttribute.uvCoords.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
     }
     if ( !oldVertColors.empty() )
     {
         newAttribute.colorMap = oldVertColors;
-        newAttribute.colorMap.vec_.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
+        newAttribute.colorMap.resize( size_t( newMesh.topology.lastValidVert() + 1 ) );
     }
     if ( !oldFaceColorMap.empty() )
     {
         newAttribute.faceColors = oldFaceColorMap;
-        newAttribute.faceColors.vec_.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
+        newAttribute.faceColors.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
     }
     if ( !oldTexturePerFace.empty() )
     {
         newAttribute.texturePerFace = oldTexturePerFace;
-        newAttribute.texturePerFace.vec_.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
+        newAttribute.texturePerFace.resize( size_t( newMesh.topology.lastValidFace() + 1 ) );
     }
 
     const bool hasFaceAttribs = !oldFaceColorMap.empty() || !oldTexturePerFace.empty();

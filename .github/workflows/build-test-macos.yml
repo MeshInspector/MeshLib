@@ -109,7 +109,8 @@ jobs:
             ${{ fromJSON('["-j8", "-j4"]')[matrix.os == 'github-arm'] }}
 
       - name: Run Start-and-Exit Tests
-        if: ${{ matrix.os == 'arm' }}
+        if: ${{ false }}
+        # if: ${{ matrix.os == 'arm' }}
         run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests

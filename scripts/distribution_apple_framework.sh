@@ -19,7 +19,6 @@ create_framework_dir() {
   mkdir -p "${MR_PREFIX}/libs/"
 
   cp -rL ./include "${MR_PREFIX}/include"
-
   cp ./macos/Info.plist ./macos/Resources
   cp ./LICENSE ./macos/Resources
 

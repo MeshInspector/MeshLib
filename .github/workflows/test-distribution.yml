@@ -132,6 +132,7 @@ jobs:
       - name: Ubuntu python test
         if: ${{ always() && matrix.os != 'fedora:39' }}
         env:
+          OLD_MESHLIB_BINDINGS: 1
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
         run: python3 -m pytest -s -v
@@ -139,6 +140,7 @@ jobs:
       - name: Fedora python test
         if: ${{ always() && matrix.os == 'fedora:39' }}
         env:
+          OLD_MESHLIB_BINDINGS: 1
           PYTHONPATH: /usr/local/lib64/MeshLib/
         working-directory: test_python
         run: python3 -m pytest -s -v

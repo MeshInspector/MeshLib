@@ -79,7 +79,6 @@ fi
 
 echo "Verifying package signature"
 if [ "$SKIP_SIGN" = false ]; then
-    spctl -a -t install -vvv --context context:primary-signature MeshLib.pkg || true
     mv MeshLib_signed.pkg meshlib.pkg
 else
     echo "Skipping signature verification because the package was not signed."

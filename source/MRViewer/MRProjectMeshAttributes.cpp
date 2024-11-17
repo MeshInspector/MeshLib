@@ -1,4 +1,5 @@
 // these includes to workaround MSVC's error C7500: 'resize': no function satisfied its constraints
+// https://stackoverflow.com/q/79196791/7325599
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRId.h>

@@ -94,8 +94,7 @@ jobs:
           MR_CMAKE_OPTIONS: -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }} -DMR_CXX_STANDARD=23
 
       - name: Generate and build MRBind bindings
-        if: ${{ false }}
-        # if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind}}
         env:
           PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # Using 4 threads on github runners, because they have only 8G of RAM.
@@ -109,8 +108,7 @@ jobs:
             ${{ fromJSON('["-j8", "-j4"]')[matrix.os == 'github-arm'] }}
 
       - name: Run Start-and-Exit Tests
-        if: ${{ false }}
-        # if: ${{ matrix.os == 'arm' }}
+        if: ${{ matrix.os == 'arm' }}
         run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests

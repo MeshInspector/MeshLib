@@ -74,6 +74,7 @@ VEC2(int)
     template std::shared_ptr<__VA_ARGS__> getDepthFirstObject( Object* root, const ObjectSelectivityType& type );
 
 OBJTYPE(Object)
+OBJTYPE(VisualObject)
 OBJTYPE(ObjectPoints)
 OBJTYPE(ObjectPointsHolder)
 OBJTYPE(ObjectLines)

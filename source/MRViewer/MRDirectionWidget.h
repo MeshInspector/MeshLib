@@ -87,7 +87,7 @@ public:
         {
             auto oldVisible = widget_.directionObj_->visibilityMask();
             widget_.directionObj_->setVisibilityMask( visible_ );
-            std::swap( visible_, oldVisible );
+            visible_ = oldVisible;
         }
         virtual std::string name() const override
         {

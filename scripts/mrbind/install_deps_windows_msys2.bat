@@ -7,7 +7,10 @@ rem We create a separate copy of MSYS2 at C:\msys64_meshlib_mrbind for simplicit
 rem If you don't like that, you can manually install all dependencies into
 rem some other MSYS2 copy.
 
+setlocal
+
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
+if "%CLANG_VER%" == "" set /p CLANG_VER=<%~dp0\clang_version_msys2.txt
 
 rem ------ Ensure MSYS2 is installed
 
@@ -43,5 +46,13 @@ rem It's not entirely optimal to run the command twice even if the first one fin
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 
+rem ------ Install some MSYS (non-mingw-w64-...) packages needed for the `msys2_install_clang_ver.sh` script called below.
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed gawk"
+
+rem ------ Install a specific version of Clang
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "'%~dp0'/msys2_install_clang_ver.sh %CLANG_VER%"
+
 rem ------ Install needed packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra,cmake}"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-cmake"
+
+endlocal

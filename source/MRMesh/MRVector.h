@@ -1,7 +1,8 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
-#include <MRPch/MRBindingMacros.h>
+#include "MRPch/MRBindingMacros.h"
 #include <cassert>
 #include <vector>
 
@@ -25,26 +26,26 @@ public:
     using const_iterator = typename std::vector<T>::const_iterator;
 
     Vector() = default;
-    explicit Vector( size_t size ) : vec_( size ) { }
+    explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec_( size ) { }
     explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
     Vector( std::initializer_list<T> init ) : vec_( init ) { }
 
-    [[nodiscard]] bool operator == ( const Vector & b ) const { return vec_ == b.vec_; }
-    [[nodiscard]] bool operator != ( const Vector & b ) const { return vec_ != b.vec_; }
+    [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ == b.vec_; }
+    [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ != b.vec_; }
 
     void clear() { vec_.clear(); }
     [[nodiscard]] bool empty() const { return vec_.empty(); }
 
     [[nodiscard]] std::size_t size() const { return vec_.size(); }
 
-    void resize( size_t newSize ) { vec_.resize( newSize ); }
-    void resize( size_t newSize, const T & t ) { vec_.resize( newSize, t ); }
+    void resize( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::default_initializable<T> ) { vec_.resize( newSize ); }
+    void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec_.resize( newSize, t ); }
 
     // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
-    void resizeNoInit( size_t targetSize )
+    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> )
     {
         // allocate enough memory
         reserve( targetSize );
@@ -100,7 +101,7 @@ public:
     void autoResizeSet( I i, T val ) { autoResizeSet( i, 1, val ); }
 
     /// this accessor automatically adjusts the size of the vector
-    [[nodiscard]] reference autoResizeAt( I i )
+    [[nodiscard]] reference autoResizeAt( I i ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
         if ( i + 1 > size() )
             resizeWithReserve( i + 1 );

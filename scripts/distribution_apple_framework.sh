@@ -73,12 +73,9 @@ pack_dylibs() {
 
   bin_dir="${MR_PREFIX}/bin/"
   lib_dir="${MR_PREFIX}/lib/"
-  thirdparty_lib_dir="${MR_PREFIX}/lib/thirdparty_lib"
-  dest_dir="${thirdparty_lib_dir}"
-  install_dir="lib/thirdparty_lib"
+  dest_dir="${lib_dir}"
+  install_dir="lib"
   search_paths=("${lib_dir}" "${dest_dir}" "./lib/" "./dist/python")
-
-  mkdir -p $thirdparty_lib_dir
 
   for binary in "$bin_dir"*; do
       if [[ -x "$binary" && -f "$binary" ]]; then

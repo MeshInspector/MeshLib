@@ -21,7 +21,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 IF(APPLE)
-  set(CMAKE_INSTALL_RPATH "@loader_path/../lib;@loader_path;@loader_path/../lib/thirdparty_lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
+  set(CMAKE_INSTALL_RPATH "@loader_path/../lib;@loader_path;@loader_path/..;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
   set(CMAKE_MACOSX_RPATH TRUE) # Ensure RPATH is properly set for macOS
 ENDIF()

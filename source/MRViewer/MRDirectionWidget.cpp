@@ -71,20 +71,14 @@ namespace MR
             return;
 
         length_ = length;
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, Vector3f::plusZ() * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
         directionObj_->setMesh( mesh );
     }
 
     void DirectionWidget::updateArrow( const Vector3f& base, float length )
     {
         updateBase( base );
-
-        if ( !directionObj_ )
-            return;
-
-        length_ = length;
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
-        directionObj_->setMesh( mesh );
+        updateLength( length );
     }
 
     void DirectionWidget::setVisible( bool visible )

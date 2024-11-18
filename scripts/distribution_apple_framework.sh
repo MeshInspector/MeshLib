@@ -18,7 +18,7 @@ create_framework_dir() {
 
   mkdir -p "${MR_PREFIX}/libs/"
 
-  cp -rL ./include "${MR_PREFIX}/include"
+  cp -rL ./include "${MR_PREFIX}/include/thirdparty_include"
   cp ./macos/Info.plist ./macos/Resources
   cp ./LICENSE ./macos/Resources
 
@@ -72,25 +72,29 @@ pack_dylibs() {
   echo "Fixing MeshLib executable @rpath" -x ${MR_PREFIX}/bin/meshconv
 
   bin_dir="${MR_PREFIX}/bin/"
-  lib_dir="${MR_PREFIX}/libs/"
-  dest_dir="${lib_dir}"
+  lib_dir="${MR_PREFIX}/lib/"
+  thirdparty_lib_dir="${MR_PREFIX}/lib/thirdparty_lib"
+  dest_dir="${thirdparty_lib_dir}"
+  install_dir="lib/thirdparty_lib"
   search_paths=("${dest_dir}" "./lib/" "./dist/python")
+
+  mkdir -p $thirdparty_lib_dir
 
   for binary in "$bin_dir"*; do
       if [[ -x "$binary" && -f "$binary" ]]; then
-          bundle_dylib "$binary" "$dest_dir" "${search_paths[@]}"
+          bundle_dylib "$binary" "$dest_dir" "$install_dir" "${search_paths[@]}"
       fi
   done
 
   for lib in "$lib_dir"*; do
       if [[ -x "$lib" && -f "$lib" ]]; then
-          bundle_dylib "$lib" "$dest_dir" "${search_paths[@]}"
+          bundle_dylib "$lib" "$dest_dir" "$install_dir" "${search_paths[@]}"
       fi
   done
 
   for lib in "$lib_dir"/meshlib/*; do
       if [[ -x "$lib" && -f "$lib" ]]; then
-          bundle_dylib "$lib" "$dest_dir" "${search_paths[@]}"
+          bundle_dylib "$lib" "$dest_dir" "$install_dir" "${search_paths[@]}"
       fi
   done
 }
@@ -98,11 +102,12 @@ pack_dylibs() {
 bundle_dylib() {
   local fix_file="$1"
   local dest_dir="$2"
+  local install_dir="$3"
   shift 2  # Shift the first two arguments to capture the rest as search paths
   local search_paths=("$@") # can be multiple
 
-  if [[ -z "$fix_file" ]] || [[ -z "$dest_dir" ]]; then
-    echo "Error: fix_file and dest_dir are required for bundle_dylib."
+  if [[ -z "$fix_file" ]] || [[ -z "$dest_dir" ]] || [[ -z "$install_dir" ]]; then
+    echo "Error: fix_file, dest_dir and install_dir are required for bundle_dylib."
     return 1
   fi
   if [[ -z "$dest_dir" ]]; then
@@ -124,7 +129,7 @@ bundle_dylib() {
         --fix-file "${fix_file}" \
         --dest-dir "${dest_dir}" \
         ${search_paths_args} \
-        --install-path @executable_path/../libs
+        --install-path @executable_path/../"${install_dir}"
 }
 
 echo "Installing required brew pkgs"

@@ -172,6 +172,9 @@ private:
     PickerPointCallBack onPointRemove_;
     PickerPointObjectChecker isObjectValidToPick_;
 
+    // undo/redo flag; used by the history action classes to force disable internal checks
+    bool undoRedoMode_{ false };
+
     // History classes:
     class AddPointActionPickerPoint : public WidgetHistoryAction
     {

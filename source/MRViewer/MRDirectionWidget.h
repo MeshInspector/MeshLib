@@ -6,6 +6,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRObjectMesh.h"
 
 namespace MR
 {
@@ -49,11 +50,52 @@ public:
         {
             ChangeXfAction::action( type );
             std::swap( base_, widget_.base_ );
-
         }
     private:
         DirectionWidget& widget_;
         Vector3f base_;
+    };
+
+    class ChangeLengthAction : public ChangeXfAction
+    {
+    public:
+        ChangeLengthAction( DirectionWidget& widget ) :
+            ChangeXfAction( "Change Length", static_pointer_cast< Object >( widget.directionObj_ ) ),
+            widget_{ widget },
+            length_{ widget.length_ }
+        {}
+        virtual void action( Type ) override
+        {
+            widget_.updateLength( length_ );
+        }
+    private:
+        DirectionWidget& widget_;
+        float length_;
+    };
+
+    class ChangeVisibleAction : public HistoryAction
+    {
+    public:
+        ChangeVisibleAction( DirectionWidget& widget ) :
+            widget_{ widget },
+            visible_{ widget.directionObj_->visibilityMask() }
+        {}
+        virtual void action( Type ) override
+        {
+            widget_.directionObj_->setVisibilityMask( visible_ );
+        }
+        virtual std::string name() const override
+        {
+            return name_;
+        }
+        [[nodiscard]] virtual size_t heapBytes() const override
+        {
+            return name_.capacity();
+        }
+    private:
+        DirectionWidget& widget_;
+        ViewportMask visible_;
+        std::string name_ = "Change Visible";
     };
 
 private:

@@ -56,6 +56,7 @@ public:
         Vector3f base_;
     };
 
+    /// history action for changing the length. It should be added to the history stack by user code
     class ChangeLengthAction : public ChangeXfAction
     {
     public:
@@ -73,6 +74,7 @@ public:
         float length_;
     };
 
+    /// history action for changing the visible. It should be added to the history stack by user code
     class ChangeVisibleAction : public HistoryAction
     {
     public:

@@ -26,16 +26,12 @@ public:
             widget_{ widget },
             dir_{ widget.dir_ }
         {}
-        ChangeDirAction( DirectionWidget& widget, Vector3f dir ) :
-            ChangeXfAction( "Change Direction", static_pointer_cast< Object >( widget.directionObj_ ) ),
-            widget_{ widget },
-            dir_{ dir }
-        {}
         virtual void action( Type type ) override
         {
-            ChangeXfAction::action( type );
+            ChangeXfAction::action( type ); 
+            auto tempDir = widget_.dir_;
             widget_.updateDirection( dir_ );
-
+            dir_ = tempDir;
         }
     private:
         DirectionWidget& widget_;

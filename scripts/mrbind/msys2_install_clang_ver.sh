@@ -13,13 +13,13 @@ set -euo pipefail
 
 # Abort if already installed.
 if [[ $(LANG= pacman -Qi $MINGW_PACKAGE_PREFIX-clang 2>/dev/null | grep '^Version ' | awk '{print $3}') == $1 ]]; then
-    echo "Clang $1" is already installed, nothing to do.
+    echo "Clang $1 is already installed, nothing to do."
     exit 0
 fi
 
 DOWNLOAD_DIR="$(realpath ~/clang_downloads)"
 
-# This list should match what you'd see by installing `clang clang-tools-extra` and then looking at the list of packages (in `pacman -Q`).
+# This list should match what you'd see by installing `$MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra}` and then looking at the list of packages (in `pacman -Q`).
 # But I could've included some unnecessary parts.
 PACKAGES="$(echo $MINGW_PACKAGE_PREFIX-{clang,clang-libs,clang-tools-extra,compiler-rt,libc++,libunwind,lld,llvm,llvm-libs})"
 

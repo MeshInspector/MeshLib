@@ -136,6 +136,10 @@ public:
 
     /// the user can directly manipulate the vector, anyway she cannot break anything
     std::vector<T> vec_;
+
+#if defined( MR_PARSING_FOR_PB11_BINDINGS ) || defined( MR_COMPILING_PB11_BINDINGS )
+    static_assert( sizeof(T) > 0 );
+#endif
 };
 
 template <typename T, typename I>

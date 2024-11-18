@@ -76,7 +76,7 @@ pack_dylibs() {
   thirdparty_lib_dir="${MR_PREFIX}/lib/thirdparty_lib"
   dest_dir="${thirdparty_lib_dir}"
   install_dir="lib/thirdparty_lib"
-  search_paths=("${dest_dir}" "./lib/" "./dist/python")
+  search_paths=("${lib_dir}" "${dest_dir}" "./lib/" "./dist/python")
 
   mkdir -p $thirdparty_lib_dir
 

@@ -156,7 +156,7 @@ jobs:
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
           # Install additional packages. Must do it here, since the script above would uninstall them.
-          pacman -S $MINGW_PACKAGE_PREFIX-cmake
+          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}

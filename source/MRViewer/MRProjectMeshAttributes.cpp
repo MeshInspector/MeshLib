@@ -1,11 +1,6 @@
-// these includes to workaround MSVC's error C7500: 'resize': no function satisfied its constraints
-// https://stackoverflow.com/q/79196791/7325599
-#include <MRMesh/MRVector2.h>
-#include <MRMesh/MRColor.h>
-#include <MRMesh/MRId.h>
-
 #include "MRProjectMeshAttributes.h"
 
+#include <MRViewer/MRAppendHistory.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRMeshAttributesToUpdate.h>
@@ -13,9 +8,11 @@
 #include <MRMesh/MRChangeMeshAction.h>
 #include <MRMesh/MRChangeVertsColorMapAction.h>
 #include <MRMesh/MRChangeColoringActions.h>
-#include <MRViewer/MRAppendHistory.h>
-#include "MRMesh/MRRegionBoundary.h"
-#include "MRMesh/MRVector.h"
+#include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRVector.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRColor.h>
+#include <MRMesh/MRId.h>
 
 namespace MR
 {

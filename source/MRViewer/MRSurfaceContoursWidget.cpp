@@ -335,7 +335,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
         }
         surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
         contour.erase( contour.begin() + pickedIndex );
-        assert( contour.size() > pickedIndex );
+        assert( contour.size() >= pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
         highlightLastPoint( obj );
@@ -557,12 +557,19 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     if ( params.writeHistory && writeHistory )
         AppendHistory<SurfaceContoursWidgetClearAction>( "Clear points" + params.historyNameSuffix, *this );
 
-    while ( !pickedPoints_.empty() )
+    for ( auto& [obj, contour] : pickedPoints_ )
     {
-        auto obj = pickedPoints_.begin()->first;
-        pickedPoints_.erase( pickedPoints_.begin() );
-        onPointRemove_( obj );
+        for ( int pickedIndex = int( contour.size() ) - 1; pickedIndex >= 0; --pickedIndex )
+        {
+            surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
+            contour.erase( contour.begin() + pickedIndex );
+            assert( contour.size() >= pickedIndex );
+            activeIndex_ = pickedIndex;
+            activeObject_ = obj;
+            onPointRemove_( obj );
+        }
     }
+    pickedPoints_.clear();
     surfacePointWidgetCache_.clear();
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;

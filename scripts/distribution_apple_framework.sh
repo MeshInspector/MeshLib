@@ -26,8 +26,8 @@ create_framework_dir() {
   cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
   cp ./requirements/distribution_python.txt "${MR_PREFIX}"/requirements/python.txt
 
-  mkdir -p "${MR_PREFIX}"/share/
-  cp -r "$(brew --prefix)"/share/glib-2.0 "${MR_PREFIX}"/share
+  # mkdir -p "${MR_PREFIX}"/share/
+  # cp -r "$(brew --prefix)"/share/glib-2.0 "${MR_PREFIX}"/share
 
   cd ./Library/Frameworks/MeshLib.framework/Versions/
   ln -s "${MR_VERSION}" ./Current

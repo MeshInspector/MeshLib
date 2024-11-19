@@ -20,7 +20,7 @@ on:
 
 jobs:
   macos-build-test:
-    timeout-minutes: 70
+    timeout-minutes: 90
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

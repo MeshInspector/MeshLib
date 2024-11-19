@@ -7,9 +7,9 @@ MR_EXTERN_C_BEGIN
 /// hole is complicated if it passes via one vertex more than once;
 /// deleting such faces simplifies the holes and makes them easier to fill
 MRMESHC_API MRFaceBitSet* mrFindHoleComplicatingFaces( MRMesh* mesh );
-
+/// finds faces having aspect ratio >= criticalAspectRatio
 MRMESHC_API MRFaceBitSet* mrFindDegenerateFaces( const MRMeshPart* mp, float criticalAspectRatio, MRProgressCallback cb, MRString** errorString );
-
+/// finds edges having length <= criticalLength
 MRMESHC_API MRUndirectedEdgeBitSet* mrFindShortEdges( const MRMeshPart* mp, float criticalLength, MRProgressCallback cb, MRString** errorString );
 
 MR_EXTERN_C_END

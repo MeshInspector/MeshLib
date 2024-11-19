@@ -48,16 +48,6 @@ namespace
         return ret;
     }
 
-    // Like `expected.value()`, but on failure throws `std::runtime_error` instead of whatever `tl::expected` throws.
-    // Otherwise Python doesn't print the error string.
-    auto &&derefExpected(auto &&e)
-    {
-        if ( e )
-            return decltype( e )( e ).value();
-        else
-            throw std::runtime_error( e.error() );
-    }
-
     const TestEngine::GroupEntry& findGroup( std::span<const std::string> path )
     {
         const TestEngine::GroupEntry* cur = &TestEngine::getRootEntry();
@@ -66,7 +56,7 @@ namespace
             auto iter = cur->elems.find( segment );
             if ( iter == cur->elems.end() )
                 throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", segment, listKeys( *cur ) ) );
-            cur = derefExpected( iter->second.getAs<TestEngine::GroupEntry>( segment ) );
+            cur = MR::expectedValueOrThrow( iter->second.getAs<TestEngine::GroupEntry>( segment ) );
         }
         return *cur;
     }
@@ -115,7 +105,7 @@ namespace
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
                 throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
-            derefExpected( iter->second.getAs<TestEngine::ButtonEntry>( path.back() ) )->simulateClick = true;
+            MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ButtonEntry>( path.back() ) )->simulateClick = true;
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
             MR::CommandLoop::runCommandFromGUIThread( [] {} ); // wait frame
@@ -154,7 +144,7 @@ namespace
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
                 throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
-            const auto& entry = *derefExpected( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
+            const auto& entry = *MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
 
             if constexpr ( std::is_same_v<T, std::string> )
             {
@@ -228,7 +218,7 @@ namespace
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
                 throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
-            const auto& entry = *derefExpected( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
+            const auto& entry = *MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
 
             T simulatedValue{};
 

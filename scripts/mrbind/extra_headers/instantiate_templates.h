@@ -5,6 +5,8 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRVoxels/MRObjectVoxels.h"
 
 #define INST_CAT(x, y) INST_CAT_(x, y)
 #define INST_CAT_(x, y) x##y
@@ -65,6 +67,23 @@ VEC2(int)
 
 #undef VEC3
 #undef VEC2
+
+#define OBJTYPE(...) \
+    template std::vector<std::shared_ptr<__VA_ARGS__>> getAllObjectsInTree( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable ); \
+    template std::vector<std::shared_ptr<__VA_ARGS__>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable ); \
+    template std::shared_ptr<__VA_ARGS__> getDepthFirstObject( Object* root, const ObjectSelectivityType& type );
+
+OBJTYPE(Object)
+OBJTYPE(VisualObject)
+OBJTYPE(ObjectPoints)
+OBJTYPE(ObjectPointsHolder)
+OBJTYPE(ObjectLines)
+OBJTYPE(ObjectLinesHolder)
+OBJTYPE(ObjectMesh)
+OBJTYPE(ObjectMeshHolder)
+OBJTYPE(ObjectDistanceMap)
+OBJTYPE(ObjectVoxels)
+#undef OBJTYPE
 
 // Those are needed for mrviewerpy:
 

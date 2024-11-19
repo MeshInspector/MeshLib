@@ -33,6 +33,8 @@ void SurfaceContoursWidget::AddPointActionPickerPoint::action( Type actionType )
 {
     if ( !widget_.isPickerActive_ )
         return;
+
+    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     auto& contour = widget_.pickedPoints_[obj_];
@@ -74,6 +76,8 @@ void SurfaceContoursWidget::RemovePointActionPickerPoint::action( Type actionTyp
 {
     if ( !widget_.isPickerActive_ )
         return;
+
+    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     auto& contour = widget_.pickedPoints_[obj_];
@@ -115,6 +119,8 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
 {
     if ( !widget_.isPickerActive_ )
         return;
+
+    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
@@ -284,8 +290,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::getActiveSurfacePoint
 
 bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
-
-    if ( !isObjectValidToPick_( obj ) )
+    if ( !undoRedoMode_ && !isObjectValidToPick_( obj ) )
         return false;
 
     auto onAddPointAction = [this, &obj, &triPoint] ()
@@ -330,6 +335,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
         }
         surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
         contour.erase( contour.begin() + pickedIndex );
+        assert( contour.size() >= pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
         highlightLastPoint( obj );
@@ -551,12 +557,19 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     if ( params.writeHistory && writeHistory )
         AppendHistory<SurfaceContoursWidgetClearAction>( "Clear points" + params.historyNameSuffix, *this );
 
-    while ( !pickedPoints_.empty() )
+    for ( auto& [obj, contour] : pickedPoints_ )
     {
-        auto obj = pickedPoints_.begin()->first;
-        pickedPoints_.erase( pickedPoints_.begin() );
-        onPointRemove_( obj );
+        for ( int pickedIndex = int( contour.size() ) - 1; pickedIndex >= 0; --pickedIndex )
+        {
+            surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
+            contour.erase( contour.begin() + pickedIndex );
+            assert( contour.size() >= pickedIndex );
+            activeIndex_ = pickedIndex;
+            activeObject_ = obj;
+            onPointRemove_( obj );
+        }
     }
+    pickedPoints_.clear();
     surfacePointWidgetCache_.clear();
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
@@ -593,21 +606,22 @@ SurfaceContoursWidget::SurfaceContoursWidgetClearAction::SurfaceContoursWidgetCl
         states_.emplace_back( std::move( state ) );
     }
 
-    activeObject_ = widget_.activeObject_;
-    activeIndex_ = widget_.activeIndex_;
+    if ( widget_.activeObject_ )
+    {
+        assert( widget_.pickedPoints_.contains( widget_.activeObject_ ) );
+        assert( widget_.activeIndex_ < widget_.pickedPoints_.at( widget_.activeObject_ ).size() );
+        activeObject_ = widget_.activeObject_;
+        activeIndex_ = widget_.activeIndex_;
+    }
 }
 
 void SurfaceContoursWidget::SurfaceContoursWidgetClearAction::action( Type type )
 {
     if ( !widget_.isPickerActive_ )
         return;
-    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
-    const auto prevWriteHistory = widget_.params.writeHistory;
-    widget_.params.writeHistory = false;
-    MR_FINALLY {
-        widget_.params.writeHistory = prevWriteHistory;
-    };
+    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     switch ( type )
     {

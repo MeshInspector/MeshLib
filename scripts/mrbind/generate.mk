@@ -134,14 +134,13 @@ MRBIND_SOURCE := $(makefile_dir)../../mrbind
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 
 # The C++ compiler.
-# Note that on Windows we don't have control over the Clang version, and ignore `preferred_clang_version.txt`.
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))/bin/clang++
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)/clang_version.txt))/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
-CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
+CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)/clang_version.txt))
 endif
 
 # Which C++ compiler we should try to match for ABI.

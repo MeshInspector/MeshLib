@@ -1,5 +1,5 @@
 #include <MRMesh/MRMeshFwd.h>
-#include <MRMesh/MRUVSphere.h>
+#include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshDecimate.h>
@@ -7,8 +7,8 @@
 
 int main()
 {
-    // Create mesh
-    MR::Mesh mesh = MR::makeUVSphere( 1.0f, 32, 32 );
+    // Load mesh
+    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
     
     // Repack mesh optimally.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing

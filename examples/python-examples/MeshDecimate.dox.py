@@ -1,7 +1,7 @@
 import meshlib.mrmeshpy as mrmeshpy
 
-# Create mesh
-mesh = mrmeshpy.makeUVSphere(1.0, 32, 32)
+# Load mesh
+mesh = mrmeshpy.loadMesh("mesh.stl")
 
 # Repack mesh optimally.
 # It's not necessary but highly recommended to achieve the best performance in parallel processing

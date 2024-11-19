@@ -1,6 +1,6 @@
 #include <MRMeshC/MRMesh.h>
 #include <MRMeshC/MRMeshDecimate.h>
-#include <MRMeshC/MRMakeSphereMesh.h>
+#include <MRMeshC/MRMeshLoad.h>
 #include <MRMeshC/MRMeshSave.h>
 #include <MRMeshC/MRString.h>
 
@@ -14,12 +14,14 @@ int main( int argc, char* argv[] )
     // error messages will be stored here
     MRString* errorString = NULL;
 
-    // Create mesh
-    MRMakeUVSphereParameters makeParams = mrMakeUvSphereParametersNew();
-    makeParams.radius = 1.f;
-    makeParams.horizontalResolution = 32;
-    makeParams.verticalResolution = 32;
-    MRMesh* mesh = mrMakeUVSphere( &makeParams );
+    // Load mesh
+    MRMesh* mesh = mrMeshLoadFromAnySupportedFormat( "mesh.stl", &errorString );
+    if ( errorString )
+    {
+        fprintf( stderr, "Failed to load mesh: %s", mrStringData( errorString ) );
+        mrStringFree( errorString );
+        goto out;
+    }
 
     // Setup decimate parameters
     MRDecimateSettings params = mrDecimateSettingsNew();

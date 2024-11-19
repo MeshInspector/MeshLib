@@ -1,5 +1,6 @@
 #pragma once
 #include "MRObject.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -23,21 +24,21 @@ std::shared_ptr<ObjectT> asSelectivityType( std::shared_ptr<Object> obj, const O
 template<typename ObjectT = Object>
 std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable );
 template<typename ObjectT = Object>
-inline std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
+MR_BIND_IGNORE inline std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
     { return getAllObjectsInTree<ObjectT>( &root, type ); }
 
 /// Returns all topmost visible objects of given type (if an object is returned, its children are not) excluding root
 template<typename ObjectT = Object>
 std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable );
 template<typename ObjectT = Object>
-inline std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
+MR_BIND_IGNORE inline std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
     { return getTopmostVisibleObjects<ObjectT>( &root, type ); }
 
 /// return first object of given type in depth-first traverse order excluding root
 template<typename ObjectT = Object>
 std::shared_ptr<ObjectT> getDepthFirstObject( Object* root, const ObjectSelectivityType& type );
 template<typename ObjectT = Object>
-inline std::shared_ptr<ObjectT> getDepthFirstObject( Object& root, const ObjectSelectivityType& type )
+MR_BIND_IGNORE inline std::shared_ptr<ObjectT> getDepthFirstObject( Object& root, const ObjectSelectivityType& type )
     { return getDepthFirstObject<ObjectT>( &root, type ); }
 
 /// \}

@@ -71,7 +71,14 @@ public:
     }
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
-    void resizeWithReserve( size_t newSize, const T & value = T() )
+    void resizeWithReserve( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
+    {
+        // This separate overload is needed as opposed to a `value = T{}` default argument, because if T isn't default-constructible, the parsed chokes on that.
+        resizeWithReserve( newSize, T{} );
+    }
+
+    /// doubles reserved memory until resize(newSize) can be done without reallocation
+    void resizeWithReserve( size_t newSize, const T & value )
     {
         auto reserved = vec_.capacity();
         if ( reserved > 0 && newSize > reserved )

@@ -126,7 +126,7 @@ bundle_dylib() {
         --fix-file "${fix_file}" \
         --dest-dir "${dest_dir}" \
         ${search_paths_args} \
-        --install-path @executable_path/../"${install_dir}"
+        --install-path @loader_path/../"${install_dir}"
 }
 
 echo "Installing required brew pkgs"

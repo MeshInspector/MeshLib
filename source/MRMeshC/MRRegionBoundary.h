@@ -22,4 +22,8 @@ MRMESHC_API void mrEdgeLoopsFree( MREdgeLoops* loops );
 /// every loop has region faces on the right, and not-region faces or holes on the left
 MRMESHC_API MREdgeLoops* mrFindRightBoundary( const MRMeshTopology* topology, const MRFaceBitSet* region );
 
+MRMESHC_API MRFaceBitSet* mrGetIncidentFacesFromVerts( const MRMeshTopology* topology, const MRVertBitSet* region );
+
+MRMESHC_API MRFaceBitSet* mrGetIncidentFacesFromEdges( const MRMeshTopology* topology, const MRUndirectedEdgeBitSet* region );
+
 MR_EXTERN_C_END

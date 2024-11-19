@@ -4,12 +4,15 @@
 #include "detail/Vector.h"
 
 #include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRBitSet.h"
 
 using namespace MR;
 
 REGISTER_AUTO_CAST( EdgeLoops )
 REGISTER_AUTO_CAST( EdgeId )
 REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_AUTO_CAST( MeshTopology )
 REGISTER_VECTOR( EdgeLoop )
 
@@ -41,4 +44,16 @@ MREdgeLoops* mrFindRightBoundary( const MRMeshTopology* topology_, const MRFaceB
 {
     ARG( topology ); ARG_PTR( region );
     RETURN_NEW( findRightBoundary( topology, region ) );
+}
+
+MRFaceBitSet* mrGetIncidentFacesFromVerts( const MRMeshTopology* topology_, const MRVertBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getIncidentFaces( topology, region ) );
+}
+
+MRFaceBitSet* mrGetIncidentFacesFromEdges( const MRMeshTopology* topology_, const MRUndirectedEdgeBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getIncidentFaces( topology, region ) );
 }

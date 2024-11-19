@@ -13,6 +13,7 @@ set(EXAMPLES
   MeshExport
   MeshExtrude
   MeshFillHole
+  MeshFromText
   MeshICP
   MeshLoadSave
   MeshModification
@@ -26,6 +27,8 @@ foreach(TARGET ${EXAMPLES})
   target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
   target_link_directories(${TARGET} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 endforeach()
+# MeshFromText additionally depends on MRSymbolMesh
+target_link_libraries(MeshFromText PRIVATE MeshLib::MRSymbolMesh)
 # MeshOffset additionally depends on MRVoxels
 target_link_libraries(MeshOffset PRIVATE MeshLib::MRVoxels)
 # MeshLoadSave additionally depends on MRIOExtras

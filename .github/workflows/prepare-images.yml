@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.10.21'
+  VCPKG-VERSION: '2024.11.16'
 
 jobs:
   image-select:

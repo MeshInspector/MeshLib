@@ -28,9 +28,10 @@ public:
         {}
         virtual void action( Type type ) override
         {
-            ChangeXfAction::action( type );
-            std::swap( dir_, widget_.dir_ );
-
+            ChangeXfAction::action( type ); 
+            auto tempDir = widget_.dir_;
+            widget_.updateDirection( dir_ );
+            dir_ = tempDir;
         }
     private:
         DirectionWidget& widget_;
@@ -84,7 +85,9 @@ public:
         {}
         virtual void action( Type ) override
         {
+            auto oldVisible = widget_.directionObj_->visibilityMask();
             widget_.directionObj_->setVisibilityMask( visible_ );
+            visible_ = oldVisible;
         }
         virtual std::string name() const override
         {

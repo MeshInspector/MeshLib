@@ -44,6 +44,12 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_BUILD_MESHCONV OFF)
 ENDIF()
 
+option(MESHLIB_KEEP_CTEST_TARGETS "Keep default CTest targets (Continuous*, Experimental*, Nightly*, etc.)" OFF)
+IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
+  set_property(GLOBAL PROPERTY
+    CTEST_TARGETS_ADDED 1
+  )
+ENDIF()
 include(CTest)
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")

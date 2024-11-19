@@ -1,0 +1,14 @@
+/**
+ \page ExampleMeshFromText Convert text to mesh
+
+Following code presents example of converting text to mesh
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include MeshFromText.dox.cpp
+\sa \ref MR::createSymbolsMesh
+
+</div>
+
+ */

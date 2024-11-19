@@ -1,6 +1,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
+#include <MRIOExtras/MRCtm.h>
 
 #include <iostream>
 
@@ -12,6 +13,11 @@ int main()
     {
         std::filesystem::path outFilePath = "mesh.ply";
         auto saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
+        if ( !saveRes.has_value() )
+            std::cerr << saveRes.error() << std::endl;
+
+        std::filesystem::path outCtmFilePath = "mesh.ctm";
+        saveRes = MR::MeshSave::toCtm( loadRes.value(), outCtmFilePath );
         if ( !saveRes.has_value() )
             std::cerr << saveRes.error() << std::endl;
     }

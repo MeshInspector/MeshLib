@@ -140,13 +140,6 @@ jobs:
         with:
           projects: 'source/**/*.csproj'
 
-      - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
-
-      - name: Build .NET
-        if:   matrix.runner == 'windows-2022'
-        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
-
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
@@ -154,9 +147,23 @@ jobs:
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
-          install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
-          # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
+          install: make gawk
           location: C:\msys64_meshlib_mrbind
+
+      - name: Install Clang in MSYS2
+        if: ${{inputs.mrbind}}
+        shell: msys2 {0}
+        run: |
+          ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
+          # Install additional packages. Must do it here, since the script above would uninstall them.
+          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
+
+      - name: Build
+        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+
+      - name: Build .NET
+        if:   matrix.runner == 'windows-2022'
+        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}

@@ -32,6 +32,7 @@
         <tab type="user" url="@ref ExampleLaplacian" title="Mesh Laplacian Deformation"/>
         <tab type="user" url="@ref ExampleNoiseDenoise" title="Mesh Denoise"/>
         <tab type="user" url="@ref ExampleTriangulation" title="Triangulation"/>
+        <tab type="user" url="@ref ExampleMeshFromText" title="Text to Mesh"/>
       </tab>
       <tab type="usergroup" url="@ref PythonSpecificExamples" title="Python Specific Samples">
         <tab type="user" url="@ref ExampleViewer" title="Viewer"/>

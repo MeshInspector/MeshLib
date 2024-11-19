@@ -6,6 +6,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRObjectMesh.h"
 
 namespace MR
 {
@@ -27,13 +28,79 @@ public:
         {}
         virtual void action( Type type ) override
         {
-            ChangeXfAction::action( type );
-            std::swap( dir_, widget_.dir_ );
-
+            ChangeXfAction::action( type ); 
+            auto tempDir = widget_.dir_;
+            widget_.updateDirection( dir_ );
+            dir_ = tempDir;
         }
     private:
         DirectionWidget& widget_;
         Vector3f dir_;
+    };
+
+    /// history action for changing the base. It should be added to the history stack by user code
+    class ChangeBaseAction : public ChangeXfAction
+    {
+    public:
+        ChangeBaseAction( DirectionWidget& widget ) :
+            ChangeXfAction( "Change Base", static_pointer_cast< Object >( widget.directionObj_ ) ),
+            widget_{ widget },
+            base_{ widget.base_ }
+        {}
+        virtual void action( Type type ) override
+        {
+            ChangeXfAction::action( type );
+            std::swap( base_, widget_.base_ );
+        }
+    private:
+        DirectionWidget& widget_;
+        Vector3f base_;
+    };
+
+    /// history action for changing the length. It should be added to the history stack by user code
+    class ChangeLengthAction : public ChangeXfAction
+    {
+    public:
+        ChangeLengthAction( DirectionWidget& widget ) :
+            ChangeXfAction( "Change Length", static_pointer_cast< Object >( widget.directionObj_ ) ),
+            widget_{ widget },
+            length_{ widget.length_ }
+        {}
+        virtual void action( Type ) override
+        {
+            widget_.updateLength( length_ );
+        }
+    private:
+        DirectionWidget& widget_;
+        float length_;
+    };
+
+    /// history action for changing the visible. It should be added to the history stack by user code
+    class ChangeVisibleAction : public HistoryAction
+    {
+    public:
+        ChangeVisibleAction( DirectionWidget& widget ) :
+            widget_{ widget },
+            visible_{ widget.directionObj_->visibilityMask() }
+        {}
+        virtual void action( Type ) override
+        {
+            auto oldVisible = widget_.directionObj_->visibilityMask();
+            widget_.directionObj_->setVisibilityMask( visible_ );
+            visible_ = oldVisible;
+        }
+        virtual std::string name() const override
+        {
+            return name_;
+        }
+        [[nodiscard]] virtual size_t heapBytes() const override
+        {
+            return name_.capacity();
+        }
+    private:
+        DirectionWidget& widget_;
+        ViewportMask visible_;
+        std::string name_ = "Change Visible";
     };
 
 private:

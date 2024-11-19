@@ -33,7 +33,7 @@ WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
-COPY scripts/mrbind/preferred_clang_version.txt scripts/mrbind/preferred_clang_version.txt
+COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY scripts/patches scripts/patches
 COPY requirements requirements

@@ -28,6 +28,8 @@ foreach(TARGET ${EXAMPLES})
 endforeach()
 # MeshOffset additionally depends on MRVoxels
 target_link_libraries(MeshOffset PRIVATE MeshLib::MRVoxels)
+# MeshLoadSave additionally depends on MRIOExtras
+target_link_libraries(MeshLoadSave PRIVATE MeshLib::MRIOExtras)
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)

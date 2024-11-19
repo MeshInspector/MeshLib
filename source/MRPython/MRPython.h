@@ -223,10 +223,10 @@ struct PythonFunctionAdder
 
 // overload `toString` functoion to throw exception from custom `Expected::error` type
 template<typename E>
-void throwExceptionFromExpected(const E& err)
+[[noreturn]] void throwExceptionFromExpected(const E& err)
 {
     if constexpr (std::is_nothrow_convertible<E, std::string>::value)
-         throw std::runtime_error(err);
+        throw std::runtime_error(err);
     else
         throw std::runtime_error(toString(err));
 }

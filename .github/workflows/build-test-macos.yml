@@ -142,17 +142,15 @@ jobs:
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
-        if: ${{ false }}
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-        # if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
 
       - name: Copy test artifacts to S3
-        if: ${{ false }}
-        # if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
       - name: Create MeshLib.framework

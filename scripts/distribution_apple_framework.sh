@@ -16,8 +16,6 @@ create_framework_dir() {
   echo "version: ${MR_VERSION}"
   echo "prefix: ${MR_PREFIX}"
 
-  mkdir -p "${MR_PREFIX}/libs/"
-
   cp -rL ./include "${MR_PREFIX}/include/thirdparty_include"
   cp ./macos/Info.plist ./macos/Resources
   cp ./LICENSE ./macos/Resources

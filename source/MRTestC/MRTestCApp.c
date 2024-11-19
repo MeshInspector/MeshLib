@@ -8,6 +8,7 @@
 #include "MRMeshComponents.h"
 #include "MRMeshBuilder.h"
 #include "MRFixSelfIntersections.h"
+#include "MRExpandShrink.h"
 
 int main( void )
 {
@@ -30,4 +31,9 @@ int main( void )
     testFixSelfIntersections();
     testRightBoundary();
     testFindHoleComplicatingFaces();
+    testExpandShrink();
+    testExpandShrinkVerts();
+    testShortEdges();
+    testIncidentFacesFromVerts();
+    testIncidentFacesFromEdges();
 }

@@ -46,3 +46,16 @@ MRUndirectedEdgeBitSet* mrFindShortEdges( const MRMeshPart* mp_, float criticalL
 
     return nullptr;
 }
+
+void fixMultipleEdges( MRMesh* mesh_, const MRMultipleEdge* multipleEdges, size_t multipleEdgesNum )
+{
+    ARG( mesh );
+    std::vector<MultipleEdge> multipleEdgesVec( (MultipleEdge*)multipleEdges, ( MultipleEdge* )multipleEdges + multipleEdgesNum );
+    fixMultipleEdges( mesh, multipleEdgesVec );
+}
+
+void findAndFixMultipleEdges( MRMesh* mesh_ )
+{
+    ARG( mesh );
+    fixMultipleEdges( mesh );
+}

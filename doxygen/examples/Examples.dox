@@ -25,6 +25,7 @@ This page contains some examples of using MeshLib
  - \ref ExampleLaplacian
  - \ref ExampleNoiseDenoise
  - \ref ExampleTriangulation
+ - \ref ExampleMeshFromText
 
 \subsection PythonSpecificExamples Python Specific Samples
 

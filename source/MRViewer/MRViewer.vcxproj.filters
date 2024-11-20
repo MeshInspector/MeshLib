@@ -445,6 +445,9 @@
     <ClCompile Include="SceneReorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRProjectMeshAttributes.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -871,6 +874,9 @@
     </ClInclude>
     <ClInclude Include="SceneReorder.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProjectMeshAttributes.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

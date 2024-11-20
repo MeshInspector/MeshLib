@@ -473,7 +473,6 @@ template <typename T, typename I, typename P> class Heap;
 
 class MRMESH_CLASS MeshTopology;
 struct MRMESH_CLASS Mesh;
-struct MRMESH_CLASS MeshPart;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
@@ -485,6 +484,11 @@ struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
 struct TriMesh;
+
+MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
+    ( MeshPart, MeshRegion<FaceTag> )
+    ( MeshVertPart, MeshRegion<VertTag> )
+)
 
 template<typename T> class UniqueThreadSafeOwner;
 

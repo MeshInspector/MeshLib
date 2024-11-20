@@ -5,7 +5,7 @@ from helper import *
 def test_fix_tunnels():
     torus = mrmesh.makeTorus(2, 1, 10, 10, None)
 
-    if is_new_binding:
+    if is_bindings_v3:
         settings = mrmesh.DetectTunnelSettings()
         settings.maxTunnelLength = 100500
         tunnelFaces = mrmesh.detectTunnelFaces(torus, settings)

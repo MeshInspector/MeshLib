@@ -9,7 +9,7 @@ int main()
     // Load mesh
     std::filesystem::path inFilePath = "mesh.stl";
     auto loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
-    if ( !loadRes.has_value() )
+    if ( loadRes.has_value() )
     {
         std::cerr << loadRes.error() << std::endl;
         return 1;
@@ -23,6 +23,14 @@ int main()
         std::cerr << saveRes.error() << std::endl;
         return 1;
     }
-
+    
+    std::filesystem::path outCtmFilePath = "mesh.ctm";
+    saveRes = MR::MeshSave::toCtm( loadRes.value(), outCtmFilePath );
+    if ( !saveRes.has_value() )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
+    
     return 0;
 }

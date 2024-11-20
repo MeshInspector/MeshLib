@@ -187,11 +187,17 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 {
     MR_TIMER
 
-    bool hasVertColorMap = false;
-    bool hasFaceColorMap = false;
-    bool needSaveTexture = true;
-    Vector2i resolution( -1, -1 );
-    size_t numTexture = 0;
+        bool hasVertColorMap = false; // save if at least one has
+    bool hasFaceColorMap = false;     // save if at least one has
+    bool needSaveUVCoords = true;     // save if all have
+
+    bool needSaveTextures = true;     // save if all have textures of same size
+    bool exactSameTextures = true;     // true if all object has identical textures
+
+    const Vector<MeshTexture, TextureId>* prevObjTextures = nullptr;
+
+
+    size_t numTextures = 0;
     size_t totalVerts = 0;
     size_t totalFaces = 0;
     size_t numObject = 0;
@@ -205,26 +211,46 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 hasVertColorMap = true;
             if ( !obj->getFacesColorMap().empty() )
                 hasFaceColorMap = true;
+            if ( obj->getUVCoords().empty() )
+                needSaveUVCoords = false;
+
+            if ( !needSaveTextures )
+                continue;
 
             const auto& textures = obj->getTextures();
-            if ( needSaveTexture )
+            numTextures += textures.size();
+            if ( textures.empty() )
             {
-                if ( textures.empty() )
+                needSaveTextures = false;
+                continue;
+            }
+            if ( !prevObjTextures )
+            {
+                prevObjTextures = &textures;
+                continue;
+            }
+            assert( prevObjTextures );
+            if ( prevObjTextures->size() != textures.size() )
+                exactSameTextures = false;
+            if ( prevObjTextures->front().resolution != textures.front().resolution )
+            {
+                needSaveTextures = false;
+                continue;
+            }
+            if ( !exactSameTextures )
+                continue;
+            for ( int i = 0; i < prevObjTextures->size(); ++i )
+            {
+                if ( ( *prevObjTextures )[TextureId( i )].pixels != textures[TextureId( i )].pixels )
                 {
-                    needSaveTexture = false;
-                    continue;
+                    exactSameTextures = false;
+                    break;
                 }
-
-                numTexture += textures.size();
-                numObject++;
-                
-                if ( resolution.x == -1 )
-                    resolution = textures.back().resolution;
-                else if ( resolution != textures.back().resolution )
-                    needSaveTexture = false;
             }
         }
     }
+    bool needTexturePerFace = needSaveTextures && ( !exactSameTextures || ( prevObjTextures && prevObjTextures->size() > 1 ) );
+
     auto mesh = std::make_shared<Mesh>();
     auto& points = mesh->points;
     mesh->topology.vertReserve( totalVerts );
@@ -239,14 +265,16 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
         faceColors.resizeNoInit( totalFaces );
 
     VertUVCoords uvCoords;
-    Vector<TextureId, FaceId> texturePerFace;
-    Vector<MeshTexture, TextureId> textures;
-    if ( needSaveTexture )
-    {
-        texturePerFace.resizeNoInit( totalFaces );
+    if ( needSaveUVCoords )
         uvCoords.resizeNoInit( totalVerts );
-        textures.reserve( numTexture );
-    }
+
+    TexturePerFace texturePerFace;
+    if ( needTexturePerFace )
+        texturePerFace.resizeNoInit( totalFaces );
+
+    Vector<MeshTexture, TextureId> mergedTextures;
+    if ( needSaveTextures && !exactSameTextures )
+        mergedTextures.reserve( numTextures );
 
     numObject = 0;
     TextureId previousNumTexture(-1);
@@ -258,7 +286,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
         VertMap vertMap;
         FaceMap faceMap;
-        mesh->addPart( *obj->mesh(), hasFaceColorMap || needSaveTexture ? &faceMap : nullptr, &vertMap );
+        mesh->addPart( *obj->mesh(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = obj->worldXf();
         for ( const auto& vInd : vertMap )
@@ -285,7 +313,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                     faceColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
             }
         }
-        if ( needSaveTexture )
+        if ( needSaveUVCoords )
         {
             const auto& curUvCoords = obj->getUVCoords();
             for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
@@ -293,26 +321,45 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 if ( auto mergeId = vertMap[thisId] )
                     uvCoords[mergeId] = curUvCoords[thisId];
             }
-            const auto curTextures = obj->getTextures();
-            textures.vec_.insert( textures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
-            
-            if ( numObject == 0 )
-                curNumTexture = TextureId( 0 );
-            else
-                curNumTexture += previousNumTexture;
+        }
 
-            previousNumTexture = TextureId( curTextures.size() );
-
-            const auto& curTexturePerFace = obj->getTexturePerFace();
-            const bool emptyTexturePerFace = curTexturePerFace.empty();
-            for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+        if ( needSaveTextures )
+        {
+            if ( exactSameTextures )
             {
-                if ( auto mergeId = faceMap[thisId] )
+                if ( needTexturePerFace )
                 {
-                    if ( emptyTexturePerFace )
-                        texturePerFace[mergeId] = curNumTexture;
-                    else
-                        texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
+                    const auto& curTextPerFace = obj->getTexturePerFace();
+                    for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+                    {
+                        if ( auto mergeId = faceMap[thisId] )
+                            texturePerFace[mergeId] = curTextPerFace[thisId];
+                    }
+                }
+            }
+            else
+            {
+                const auto& curTextures = obj->getTextures();
+                mergedTextures.vec_.insert( mergedTextures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
+
+                if ( numObject == 0 )
+                    curNumTexture = TextureId( 0 );
+                else
+                    curNumTexture += previousNumTexture;
+
+                previousNumTexture = TextureId( curTextures.size() );
+
+                const auto& curTexturePerFace = obj->getTexturePerFace();
+                const bool emptyTexturePerFace = curTexturePerFace.empty();
+                for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+                {
+                    if ( auto mergeId = faceMap[thisId] )
+                    {
+                        if ( emptyTexturePerFace )
+                            texturePerFace[mergeId] = curNumTexture;
+                        else
+                            texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
+                    }
                 }
             }
         }
@@ -327,7 +374,13 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     objectMesh->setFacesColorMap( std::move( faceColors ) );
     objectMesh->setMesh( std::move( mesh ) );
     objectMesh->setTexturePerFace( std::move( texturePerFace ) );
-    objectMesh->setTextures( std::move( textures ) );
+    if ( needSaveTextures )
+    {
+        if ( exactSameTextures && prevObjTextures )
+            objectMesh->setTextures( *prevObjTextures );
+        else
+            objectMesh->setTextures( std::move( mergedTextures ) );
+    }
     objectMesh->setUVCoords( std::move( uvCoords ) );
     if( hasVertColorMap )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
@@ -336,11 +389,13 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
     ViewportMask flat = ViewportMask::all();
     ViewportMask smooth = ViewportMask::all();
+    ViewportMask textures = ViewportMask::all();
     for ( const auto& obj : objsMesh )
     {
         ViewportMask shading = obj->getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
         flat &= shading;
         smooth &= ( ~shading );
+        textures &= obj->getVisualizePropertyMask( MeshVisualizePropertyType::Texture );
     }
 
     if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat )
@@ -349,7 +404,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
         objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, flat );
 
     if ( !objectMesh->getTextures().empty() )
-        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::Texture, ViewportMask::all() );
+        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::Texture, textures );
 
     return objectMesh;
 }

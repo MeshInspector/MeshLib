@@ -14,7 +14,7 @@ def createTestMesh() -> mrmesh.Mesh:
     for v in triangulation.vec[0]:
         assert v.get() == i
         i = i + 1
-    if is_new_binding:
+    if is_bindings_v3:
         triangulation.vec[1] = mrmesh.ThreeVertIds([mrmesh.VertId(0), mrmesh.VertId(2), mrmesh.VertId(3)])
     else:
         triangulation.vec[1] = mrmesh.ThreeVertIds(mrmesh.VertId(0), mrmesh.VertId(2), mrmesh.VertId(3))

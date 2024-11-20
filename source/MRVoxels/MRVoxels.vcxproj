@@ -48,6 +48,7 @@
     <ClCompile Include="MRVoxelsSave.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRVoxelsApplyTransform.cpp" />
+    <ClCompile Include="MRVoxelFilter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
@@ -90,6 +91,7 @@
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
     <ClInclude Include="MRVoxelsApplyTransform.h" />
     <ClInclude Include="MRVoxelsVolumeCachingAccessor.h" />
+    <ClInclude Include="MRVoxelFilter.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

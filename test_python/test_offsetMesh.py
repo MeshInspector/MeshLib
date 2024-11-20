@@ -37,7 +37,7 @@ def test_thicken_mesh():
     cube.topology.deleteFaces(removeFaces)
     cube.invalidateCaches()
 
-    if is_new_binding:
+    if is_bindings_v3:
         params = mrmesh.GeneralOffsetParameters()
     else:
         params = mrmesh.OffsetParameters()

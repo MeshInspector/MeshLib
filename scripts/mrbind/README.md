@@ -28,7 +28,7 @@ Among other things, the scripts can do following:
 
     We use [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment. Consult `install_deps_windows_msys2.bat` for the list of packages we install in it.
 
-    Notably on Windows we don't have control over the Clang version, since MSYS2 only supports installing the latest one.
+    We don't use the latest Clang version, instead we download and install the version specified in `clang_version_msys2.txt`.
 
 * **Building MRBind:**
 
@@ -45,7 +45,7 @@ Among other things, the scripts can do following:
 
 * **Installing dependencies:**
 
-    We want a certain version of Clang (see `preferred_clang_version.txt`), and since older versions of Ubuntu don't have it, we add Clang's repository: https://apt.llvm.org
+    We want a certain version of Clang (see `clang_version.txt`), and since older versions of Ubuntu don't have it, we add Clang's repository: https://apt.llvm.org
 
     And obviously we install some packages, see `install_deps_ubuntu.sh` for the list.
 
@@ -55,7 +55,7 @@ Among other things, the scripts can do following:
 
     We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
-    You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
+    You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
 
     Use `CC=clang-VERSION CXX=clang++-VERSION cmake ....` to build using Clang. Other compilers might work, but that's not guaranteed.
 
@@ -67,14 +67,14 @@ Among other things, the scripts can do following:
 
     Homebrew must already be installed.
 
-    We install a certain version of Clang and libclang from it (see `preferred_clang_version.txt`), and also GNU Make and Gawk. MacOS has its own Make, but it's outdated. It seems to have Gawk, but we install our own just in case.
+    We install a certain version of Clang and libclang from it (see `clang_version.txt`), and also GNU Make and Gawk. MacOS has its own Make, but it's outdated. It seems to have Gawk, but we install our own just in case.
 
     What we install from Brew is the regular Clang, not Apple Clang (Apple's fork for Clang), because that is based on an outdated branch of Clang.
 
     You must run following to add the installed things to your PATH. On Arm Macs:
     ```sh
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
-    export PATH="/opt/homebrew/opt/llvm/bin@VERSION:$PATH" # See the correct VERSION in `preferred_clang_version.txt`.
+    export PATH="/opt/homebrew/opt/llvm/bin@VERSION:$PATH" # See the correct VERSION in `clang_version.txt`.
     ```
     And on x86 Macs the installation directory seems to be `/usr/local/...` instead of `/opt/homebrew/...`.
 
@@ -123,7 +123,7 @@ Then generate the bindings:
 
 ### Selecting the compiler:
 
-For simplicity, we compile the bindings with the same Clang that we use for parsing the code. (Consult `preferred_clang_version.txt` for the current version.) But you can override this using `CXX_FOR_BINDINGS`.
+For simplicity, we compile the bindings with the same Clang that we use for parsing the code. (Consult `clang_version.txt` for the current version.) But you can override this using `CXX_FOR_BINDINGS`.
 
 **ABI compatibility:** Since MeshLib is compiled using a different compiler, we must ensure the two use the same ABI. `CXX_FOR_ABI` should be set to the compiler the ABI of which we're trying to match. (Defaults to `CXX` environment variable, or `g++` if not set.) At the moment, if `CXX_FOR_ABI` is GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), we pass `-fclang-abi-compat=17` to our Clang 18 or newer. This flag *disables* mangling `requires` constraints into function names. If we guess incorrectly, you'll get undefined references to functions with `requires` constraints on them.
 

@@ -23,6 +23,7 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRProjectMeshAttributes.h"
 
 namespace MR
 {
@@ -206,8 +207,8 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
                 name += "Smooth";
 
             historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
-            changeSurface_();
         }
+        changeSurface_();
     }
 
     return true;
@@ -226,16 +227,17 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     pointsShift_.clear();
     pointsShift_.resize( numV, 0.f );
 
-    auto & mesh = *obj_->varMesh();
+    const auto & oldMesh = *obj_->varMesh();
     if ( settings_.workMode == WorkMode::Patch )
     {
-        auto faces = getIncidentFaces( mesh.topology, generalEditingRegion_ );
+        auto faces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( faces.any() )
         {
+            SCOPED_HISTORY( "Brush: Patch" );
             ownMeshChangedSignal_ = true;
-            AppendHistory<ChangeMeshAction>( "Brush: Patch", obj_ );
-            auto bds = delRegionKeepBd( mesh, faces );
-            VertBitSet stableVerts = mesh.topology.getValidVerts();
+            std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
+            auto bds = delRegionKeepBd( *newMesh, faces );
+            VertBitSet stableVerts = newMesh->topology.getValidVerts();
             stableVerts -= generalEditingRegion_;
             for ( const auto & bd : bds )
             {
@@ -243,26 +245,34 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                     continue;
                 // assert( isHoleBd( mesh.topology, bd ) ) can probably fail due to different construction of loops,
                 // so we check every edge of every loop below
-                const auto len = calcPathLength( bd, mesh );
+                const auto len = calcPathLength( bd, *newMesh );
                 const auto avgLen = len / bd.size();
                 FillHoleNicelySettings settings
                 {
                     .triangulateParams =
                     {
-                        .metric = getUniversalMetric( mesh ),
+                        .metric = getUniversalMetric( *newMesh ),
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
                     .edgeWeights = settings_.edgeWeights
                 };
                 for ( auto e : bd )
-                    if ( !mesh.topology.left( e ) )
-                        fillHoleNicely( mesh, e, settings );
+                    if ( !newMesh->topology.left( e ) )
+                        fillHoleNicely( *newMesh, e, settings );
             }
 
-            VertBitSet newVerts = mesh.topology.getValidVerts();
+            VertBitSet newVerts = newMesh->topology.getValidVerts();
             newVerts -= stableVerts;
-            reallocData_( mesh.topology.lastValidVert() + 1 );
+
+            FaceBitSet newFaces = getInnerFaces( newMesh->topology, newVerts );
+            auto meshAttribs = projectMeshAttributes( *obj_, MeshPart( *newMesh, &newFaces ) );
+
+            Historian<ChangeMeshAction>( "mesh", obj_, newMesh );
+            if ( meshAttribs )
+                emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
+
+            reallocData_( obj_->mesh()->topology.lastValidVert() + 1);
             updateValueChangesByDistance_( newVerts );
             obj_->setDirtyFlags( DIRTY_ALL );
 
@@ -279,7 +289,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         params.region = &generalEditingRegion_;
         params.force = settings_.relaxForceAfterEdit;
         params.iterations = 5;
-        relax( mesh, params );
+        relax( *obj_->varMesh(), params );
         updateValueChangesByDistance_( generalEditingRegion_ );
         obj_->setDirtyFlags( DIRTY_POSITION );
     }

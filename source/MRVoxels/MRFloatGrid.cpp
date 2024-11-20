@@ -1,12 +1,12 @@
 #include "MRFloatGrid.h"
-
 #include "MRVDBFloatGrid.h"
+#include "MRVDBConversions.h"
+#include "MRVDBProgressInterrupter.h"
+
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
-#include "MRVDBConversions.h"
-#include "MRVDBProgressInterrupter.h"
 #include "MRMesh/MRBox.h"
 
 namespace MR
@@ -140,4 +140,4 @@ FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
     return a;
 }
 
-}
+} //namespace MR

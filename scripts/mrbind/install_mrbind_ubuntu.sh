@@ -9,8 +9,8 @@ SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 [[ -v MRBIND_DIR ]] || MRBIND_DIR="$(realpath "$SCRIPT_DIR/../../mrbind")"
 [[ -v MRBIND_COMMIT ]] || MRBIND_COMMIT="$(cat "$SCRIPT_DIR/mrbind_commit.txt" | xargs)"
 
-# Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
-CLANG_VER="$(cat "$SCRIPT_DIR/preferred_clang_version.txt" | xargs)"
+# Read the Clang version from `clang_version.txt`. `xargs` trims the whitespace.
+CLANG_VER="$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 # Clone mrbind source.

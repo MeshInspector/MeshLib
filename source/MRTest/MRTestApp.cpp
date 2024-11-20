@@ -83,7 +83,6 @@ int main( int argc, char** argv )
 
         //Test python mrmeshpy
         {
-            MR::EmbeddedPython::init( {} );
             auto str = "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"

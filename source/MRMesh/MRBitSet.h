@@ -162,6 +162,12 @@ public:
     TaggedBitSet & operator |= ( const TaggedBitSet & b ) { base::operator |= ( b ); return * this; }
     TaggedBitSet & operator ^= ( const TaggedBitSet & b ) { base::operator ^= ( b ); return * this; }
     TaggedBitSet & operator -= ( const TaggedBitSet & b ) { base::operator -= ( b ); return * this; }
+
+    [[nodiscard]] friend TaggedBitSet operator & ( const TaggedBitSet & a, const TaggedBitSet & b ) { auto res{ a }; res &= b; return res; }
+    [[nodiscard]] friend TaggedBitSet operator | ( const TaggedBitSet & a, const TaggedBitSet & b ) { auto res{ a }; res |= b; return res; }
+    [[nodiscard]] friend TaggedBitSet operator ^ ( const TaggedBitSet & a, const TaggedBitSet & b ) { auto res{ a }; res ^= b; return res; }
+    [[nodiscard]] friend TaggedBitSet operator - ( const TaggedBitSet & a, const TaggedBitSet & b ) { auto res{ a }; res -= b; return res; }
+
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     TaggedBitSet & subtract( const TaggedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
@@ -340,11 +346,6 @@ template <typename M>
 [[nodiscard]] inline BitSet operator | ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res |= b; return res; }
 [[nodiscard]] inline BitSet operator ^ ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res ^= b; return res; }
 [[nodiscard]] inline BitSet operator - ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res -= b; return res; }
-
-template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator & ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res &= b; return res; }
-template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator | ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res |= b; return res; }
-template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator ^ ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res ^= b; return res; }
-template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator - ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res -= b; return res; }
 
 /// \}
 

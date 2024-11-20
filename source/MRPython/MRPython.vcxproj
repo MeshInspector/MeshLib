@@ -31,10 +31,12 @@
     <ClInclude Include="MREmbeddedPython.h" />
     <ClInclude Include="MRPybind11.h" />
     <ClInclude Include="MRPython.h" />
+    <ClInclude Include="MRUnifiedPythonStream.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRPython.cpp" />
+    <ClCompile Include="MRUnifiedPythonStream.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

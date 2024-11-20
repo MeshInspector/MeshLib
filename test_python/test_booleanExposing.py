@@ -80,7 +80,7 @@ def test_intersection_contours():
     meshB = mrmesh.makeCube(size, pos2)
 
     conv = mrmesh.getVectorConverters(meshA,meshB)
-    if is_new_binding:
+    if is_bindings_v3:
         intersections = mrmesh.findCollidingEdgeTrisPrecise(meshA,meshB,conv.toInt)
     else:
         intersections = mrmesh.findCollidingEdgeTrisPrecise(meshA,meshB,conv)

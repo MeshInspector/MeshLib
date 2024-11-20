@@ -39,6 +39,7 @@
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
+    <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
@@ -171,6 +172,7 @@
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MRPointsShader.h" />
+    <ClInclude Include="MRProjectMeshAttributes.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />

@@ -498,7 +498,8 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
             return false;
 
         auto vinfo = builder.growOneEdge();
-        if ( vinfo.v )
+        // vinfo.penalty can be larger than builder.doneDistance() above if some candidates are skipped in builder.growOneEdge()
+        if ( vinfo.v && vinfo.penalty <= dilation )
             region.autoResizeSet( vinfo.v );
     }
 

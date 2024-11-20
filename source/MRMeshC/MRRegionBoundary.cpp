@@ -57,3 +57,57 @@ MRFaceBitSet* mrGetIncidentFacesFromEdges( const MRMeshTopology* topology_, cons
     ARG( topology ); ARG( region );
     RETURN_NEW( getIncidentFaces( topology, region ) );
 }
+
+MRVertBitSet* mrGetIncidentVertsFromFaces( const MRMeshTopology* topology_, const MRFaceBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getIncidentVerts( topology, region ) );
+}
+
+MRVertBitSet* mrGetIncidentVertsFromEdges( const MRMeshTopology* topology_, const MRUndirectedEdgeBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getIncidentVerts( topology, region ) );
+}
+
+MRVertBitSet* mrGetInnerVertsFromFaces( const MRMeshTopology* topology_, const MRFaceBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getInnerVerts( topology, region ) );
+}
+
+MRVertBitSet* mrGetInnerVertsFromEdges( const MRMeshTopology* topology_, const MRUndirectedEdgeBitSet* region_ )
+{
+    ARG( topology ); ARG( region );
+    RETURN_NEW( getInnerVerts( topology, region ) );
+}
+
+MRFaceBitSet* mrGetInnerFacesFromVerts( const MRMeshTopology* topology_, const MRVertBitSet* verts_ )
+{
+    ARG( topology ); ARG( verts );
+    RETURN_NEW( getInnerFaces( topology, verts ) );
+}
+
+MRUndirectedEdgeBitSet* mrGetIncidentEdgesFromFaces( const MRMeshTopology* topology_, const MRFaceBitSet* faces_ )
+{
+    ARG( topology ); ARG( faces );
+    RETURN_NEW( getIncidentEdges( topology, faces ) );
+}
+
+MRUndirectedEdgeBitSet* mrGetIncidentEdgesFromEdges( const MRMeshTopology* topology_, const MRUndirectedEdgeBitSet* edges_ )
+{
+    ARG( topology ); ARG( edges );
+    RETURN_NEW( getIncidentEdges( topology, edges ) );
+}
+
+MRUndirectedEdgeBitSet* mrGetInnerEdgesFromVerts( const MRMeshTopology* topology_, const MRVertBitSet* verts_ )
+{
+    ARG( topology ); ARG( verts );
+    RETURN_NEW( getInnerEdges( topology, verts ) );
+}
+
+MRUndirectedEdgeBitSet* mrGetInnerEdgesFromFaces( const MRMeshTopology* topology_, const MRFaceBitSet* faces_ )
+{
+    ARG( topology ); ARG( faces );
+    RETURN_NEW( getInnerEdges( topology, faces ) );
+}

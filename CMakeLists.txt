@@ -153,8 +153,6 @@ ELSE()
   # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html
   set(MR_ROOT "./Library/Frameworks/MeshLib.framework/Versions/${MESHLIB_VERSION}")
   set(MR_BIN_DIR "${MR_ROOT}/bin")
-  set(MR_INCLUDE_DIR "${MR_ROOT}")
-  set(MR_MAIN_LIB_DIR "${MR_ROOT}")
   set(MR_INCLUDE_DIR "${MR_ROOT}/include")
   set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib")
   set(MR_PY_LIB_DIR "${MR_MAIN_LIB_DIR}/meshlib")

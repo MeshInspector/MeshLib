@@ -22,4 +22,4 @@ settings.subdivideParts = 64
 mrmeshpy.decimateMesh(mesh, settings)
 
 # Save result
-mrmeshpy.saveMesh(mesh, "decimated_mesh.stl")
+mrmeshpy.saveMesh(mesh, "decimatedMesh.stl")

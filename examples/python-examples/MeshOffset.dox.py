@@ -20,4 +20,4 @@ except ValueError as e:
 
 
 # Save result
-mrmeshpy.saveMesh(result_mesh, "mesh_offset.stl")
+mrmeshpy.saveMesh(result_mesh, "offsetMesh.stl")

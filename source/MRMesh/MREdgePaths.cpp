@@ -498,6 +498,7 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
         if ( !vinfo.v || vinfo.penalty > dilation )
             break;
 
+        region.autoResizeSet( vinfo.v );
         builder.addOrgRingSteps( vinfo );
 
         if ( !reportProgress( callback, [&]{ return vinfo.penalty / dilation; }, i, 1024 ) )

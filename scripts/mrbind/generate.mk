@@ -246,7 +246,8 @@ override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
 # If this isn't empty, those are passed when compiling the PCH, and then the PCH is compiled to an object file and linked into the final result.
 PCH_CODEGEN_FLAGS :=
-# Those don't work at the moment. The `-fpch-instantiate-templates` flag is optional.
+# Those don't work at the moment (undefined references, d).
+# The `-fpch-instantiate-templates` flag is optional, while the other two are necessary (at least the first one), and are usually used together.
 # PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
 
 # How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.

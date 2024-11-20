@@ -42,6 +42,9 @@
 #if __GNUC__ == 12 || __GNUC__ == 13
 #pragma GCC diagnostic ignored "-Wmissing-template-keyword"
 #endif
+#if __clang_major__ >= 19
+#pragma clang diagnostic ignored "-Wmissing-template-arg-list-after-template-kw"
+#endif
 #endif
 
 #ifdef __EMSCRIPTEN__

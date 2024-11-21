@@ -446,7 +446,7 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
     return res;
 }
 
-Expected<DicomResult> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
+Expected<DicomVolume> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER
@@ -548,7 +548,7 @@ Expected<DicomResult> loadSingleDicomFolder( std::vector<std::filesystem::path>&
         data.max = std::max( sliceRes.max, data.max );
     }
 
-    DicomResult res;
+    DicomVolume res;
     res.vol = std::move( data );
     if ( firstRes.seriesDescription.empty() )
          res.name = utf8string( files.front().parent_path().stem() );
@@ -594,7 +594,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
     return seriesMap;
 }
 
-std::vector<Expected<DicomResult>> loadDicomsFolder( const std::filesystem::path& path,
+std::vector<Expected<DicomVolume>> loadDicomsFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
@@ -603,7 +603,7 @@ std::vector<Expected<DicomResult>> loadDicomsFolder( const std::filesystem::path
 
     int seriesCounter = 0;
     auto seriesNum = seriesMap->size();
-    std::vector<Expected<DicomResult>> res;
+    std::vector<Expected<DicomVolume>> res;
     for ( auto& [uid, series] : *seriesMap )
     {
         res.push_back( loadSingleDicomFolder( series, maxNumThreads,
@@ -618,7 +618,7 @@ std::vector<Expected<DicomResult>> loadDicomsFolder( const std::filesystem::path
     return res;
 }
 
-Expected<MR::VoxelsLoad::DicomResult> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+Expected<MR::VoxelsLoad::DicomVolume> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
     if ( !seriesMap.has_value() )
@@ -627,11 +627,11 @@ Expected<MR::VoxelsLoad::DicomResult> loadDicomFolder( const std::filesystem::pa
     return loadSingleDicomFolder( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
 }
 
-std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
+std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto dicomRes = loadDicomsFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
-    std::vector<Expected<DicomAsVdbResult>> res( dicomRes.size() );
+    std::vector<Expected<DicomVolumeAsVdb>> res( dicomRes.size() );
     for ( int i = 0; i < dicomRes.size(); ++i )
     {
         if ( !dicomRes[i].has_value() )
@@ -639,7 +639,7 @@ std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdb( const std::filesy
             res[i] = unexpected( std::move( dicomRes[i].error() ) );
             continue;
         }
-        res[i] = DicomAsVdbResult();
+        res[i] = DicomVolumeAsVdb();
         res[i]->vdbVolume = simpleVolumeToVdbVolume( std::move( dicomRes[i]->vol ),
             subprogress( cb,
                 0.5f + float( i ) / float( dicomRes.size() ) * 0.5f,
@@ -653,22 +653,22 @@ std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdb( const std::filesy
     return { res };
 }
 
-Expected<MR::VoxelsLoad::DicomAsVdbResult> loadDicomFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+Expected<MR::VoxelsLoad::DicomVolumeAsVdb> loadDicomFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
 {
     auto loadRes = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0.0f, 0.5f ) );
     if ( !loadRes.has_value() )
         return unexpected( loadRes.error() );
-    DicomAsVdbResult res;
+    DicomVolumeAsVdb res;
     res.vdbVolume = simpleVolumeToVdbVolume( std::move( loadRes->vol ), subprogress( cb, 0.5f, 1.0f ) );
     res.name = std::move( loadRes->name );
     res.xf = std::move( loadRes->xf );
     return res;
 }
 
-std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdbTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdbTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
-    std::vector<Expected<DicomAsVdbResult>> res;
+    std::vector<Expected<DicomVolumeAsVdb>> res;
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
         auto loadRes = loadDicomsFolderAsVdb( dir, maxNumThreads, cb );
@@ -691,7 +691,7 @@ std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdbTree( const std::fi
     return res;
 }
 
-Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomAsVdbResult & dcm, const ProgressCallback & cb )
+Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsVdb & dcm, const ProgressCallback & cb )
 {
     MR_TIMER
     std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
@@ -709,7 +709,7 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomAsVdbResu
     return obj;
 }
 
-Expected<DicomResult> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
@@ -724,18 +724,18 @@ Expected<DicomResult> loadDicomFile( const std::filesystem::path& path, const Pr
     simpleVolume.max = fileRes.max;
     simpleVolume.min = fileRes.min;
 
-    DicomResult res;
+    DicomVolume res;
     res.vol = std::move( simpleVolume );
     res.name = utf8string( path.stem() );
     return res;
 }
 
-Expected<DicomAsVdbResult> loadDicomFileAsVdb( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolumeAsVdb> loadDicomFileAsVdb( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     return loadDicomFile( path, subprogress( cb, 0.f, 0.5f ) )
-        .transform( [&]( DicomResult&& v )
+        .transform( [&]( DicomVolume&& v )
         {
-            DicomAsVdbResult ret;
+            DicomVolumeAsVdb ret;
             ret.vdbVolume = simpleVolumeToVdbVolume( std::move( v.vol ), subprogress( cb, 0.5f, 1.f ) );
             ret.name = std::move( v.name );
             ret.xf = v.xf;
@@ -829,7 +829,7 @@ MR_ON_INIT
         []( const std::filesystem::path& path, const ProgressCallback& cb )
         {
             return loadDicomFileAsVdb( path, cb ).transform(
-                []( DicomAsVdbResult&& r )
+                []( DicomVolumeAsVdb&& r )
                 {
                     std::vector<VdbVolume> ret;
                     ret.push_back( std::move( r.vdbVolume ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.

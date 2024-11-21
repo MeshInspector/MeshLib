@@ -348,16 +348,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 } )
 
 #ifndef MRVOXELS_NO_DICOM
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, DicomAsVdbResult, MR::VoxelsLoad::DicomAsVdbResult )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DicomAsVdbResult, [] ( pybind11::module_& )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, DicomVolumeAsVdb, MR::VoxelsLoad::DicomVolumeAsVdb )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DicomVolumeAsVdb, [] ( pybind11::module_& )
 {
-    MR_PYTHON_CUSTOM_CLASS( DicomAsVdbResult ).
-        def_readwrite( "vdbVolume", &MR::VoxelsLoad::DicomAsVdbResult::vdbVolume ).
-        def_readwrite( "name", &MR::VoxelsLoad::DicomAsVdbResult::name ).
-        def_readwrite( "xf", &MR::VoxelsLoad::DicomAsVdbResult::xf );
+    MR_PYTHON_CUSTOM_CLASS( DicomVolumeAsVdb ).
+        def_readwrite( "vdbVolume", &MR::VoxelsLoad::DicomVolumeAsVdb::vdbVolume ).
+        def_readwrite( "name", &MR::VoxelsLoad::DicomVolumeAsVdb::name ).
+        def_readwrite( "xf", &MR::VoxelsLoad::DicomVolumeAsVdb::xf );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::DicomAsVdbResult )
+MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::DicomVolumeAsVdb )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxelsDicom, [] ( pybind11::module_& m )
 {
@@ -369,7 +369,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxelsDicom, [] ( pybind11::module_& m )
         [] ( const std::filesystem::path& p, unsigned maxNumThreads, const ProgressCallback& cb)
     {
         auto res = MR::VoxelsLoad::loadDicomsFolderAsVdb( p, maxNumThreads, cb );
-        std::vector<MR::VoxelsLoad::DicomAsVdbResult> resVec;
+        std::vector<MR::VoxelsLoad::DicomVolumeAsVdb> resVec;
         std::string accumError;
         for ( auto& r : res )
         {

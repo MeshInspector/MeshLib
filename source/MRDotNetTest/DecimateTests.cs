@@ -17,7 +17,10 @@ namespace MR.DotNet.Test
             BitSetReadOnly savedRegion = sphere.ValidFaces.Clone();
 
             var parameters = new DecimateParameters();
-            parameters.region = sphere.ValidFaces.Clone() as BitSet;
+            FaceBitSet? region = sphere.ValidFaces as FaceBitSet;
+            if ( region is not null )
+                parameters.region = region.Clone() as FaceBitSet;
+
             parameters.maxTriangleAspectRatio = 80;
 
             var decimateResult = MeshDecimate.Decimate(sphere, parameters);

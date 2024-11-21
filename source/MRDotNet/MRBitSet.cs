@@ -192,4 +192,74 @@ namespace MR.DotNet
 
         bool needDispose = false;
     }
+    /// container of bits representing vert indices
+    public class VertBitSet : BitSet 
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal VertBitSet(IntPtr bs) : base(bs) { }
+        public VertBitSet( int size ) : base( size ) { }
+        public VertBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+        /// returns a deep copy of the bitset
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new VertBitSet(bsCopy);
+        }
+    }
+    /// container of bits representing face indices
+    public class FaceBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal FaceBitSet(IntPtr bs) : base(bs) { }
+        /// creates bitset with given size
+        public FaceBitSet( int size ) : base( size ) { }
+        /// creates bitset with given size and fill value
+        public FaceBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+        /// returns a deep copy of the bitset
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new FaceBitSet(bsCopy);
+        }
+    }
+    /// container of bits representing edge indices
+    public class EdgeBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal EdgeBitSet(IntPtr bs) : base(bs) { }
+        /// creates bitset with given size
+        public EdgeBitSet( int size ) : base( size ) { }
+        /// creates bitset with given size and fill value
+        public EdgeBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+        /// returns a deep copy of the bitset
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new EdgeBitSet(bsCopy);
+        }
+    }
+    /// container of bits representing undirected edge indices
+    public class UndirectedEdgeBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal UndirectedEdgeBitSet(IntPtr bs) : base(bs) { }
+        /// creates bitset with given size
+        public UndirectedEdgeBitSet( int size ) : base( size ) { }
+        /// creates bitset with given size and fill value
+        public UndirectedEdgeBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+        /// returns a deep copy of the bitset
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new UndirectedEdgeBitSet(bsCopy);
+        }
+    }
 }

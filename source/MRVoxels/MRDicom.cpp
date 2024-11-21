@@ -730,6 +730,19 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
     return res;
 }
 
+Expected<LoadDCMResult> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb )
+{
+    return loadDicomFile( path, subprogress( cb, 0.f, 0.5f ) )
+        .transform( [&]( DicomVolume&& v )
+        {
+            LoadDCMResult ret;
+            ret.vdbVolume = simpleVolumeToVdbVolume( std::move( v.vol ), subprogress( cb, 0.5f, 1.f ) );
+            ret.name = std::move( v.name );
+            ret.xf = v.xf;
+            return ret;
+        } );
+}
+
 } // namespace VoxelsLoad
 
 namespace VoxelsSave
@@ -810,6 +823,22 @@ MR_ON_INIT
     MR::VoxelsSave::setVoxelsSaver( filter, MR::VoxelsSave::toDCM );
     /* additionally register the general saver as an object saver for this format */
     MR::ObjectSave::setObjectSaver( filter, MR::saveObjectVoxelsToFile );
+
+    MR::VoxelsLoad::setVoxelsLoader(
+        filter,
+        []( const std::filesystem::path& path, const ProgressCallback& cb )
+        {
+            return loadDCMFile( path, cb ).transform(
+                []( LoadDCMResult&& r )
+                {
+                    std::vector<VdbVolume> ret;
+                    ret.push_back( std::move( r.vdbVolume ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.
+                    return ret;
+                }
+            );
+        }
+    );
+    MR::ObjectLoad::setObjectLoader( filter, MR::makeObjectFromVoxelsFile );
 };
 
 } // namespace VoxelsSave

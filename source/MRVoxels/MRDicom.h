@@ -57,6 +57,7 @@ MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const L
 
 /// Loads 3D volumetric data from a single DICOM file
 MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<LoadDCMResult> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
 } // namespace VoxelsLoad
 

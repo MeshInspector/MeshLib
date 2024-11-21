@@ -192,4 +192,65 @@ namespace MR.DotNet
 
         bool needDispose = false;
     }
+
+    public class VertBitSet : BitSet 
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal VertBitSet(IntPtr bs) : base(bs) { }
+        public VertBitSet( int size ) : base( size ) { }
+        public VertBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new VertBitSet(bsCopy);
+        }
+    }
+    public class FaceBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal FaceBitSet(IntPtr bs) : base(bs) { }
+        public FaceBitSet( int size ) : base( size ) { }
+        public FaceBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new FaceBitSet(bsCopy);
+        }
+    }
+    public class EdgeBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal EdgeBitSet(IntPtr bs) : base(bs) { }
+        public EdgeBitSet( int size ) : base( size ) { }
+        public EdgeBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new EdgeBitSet(bsCopy);
+        }
+    }
+    public class UndirectedEdgeBitSet : BitSet
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+        internal UndirectedEdgeBitSet(IntPtr bs) : base(bs) { }
+        public UndirectedEdgeBitSet( int size ) : base( size ) { }
+        public UndirectedEdgeBitSet( int size, bool fillValue ) : base( size, fillValue ) { }
+
+        public override BitSetReadOnly Clone()
+        {
+            IntPtr bsCopy = mrBitSetCopy(bs_);
+            return new UndirectedEdgeBitSet(bsCopy);
+        }
+    }
 }

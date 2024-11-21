@@ -47,7 +47,7 @@ namespace MR.DotNet
         /// Limit on the number of deleted faces
         public int maxDeletedFaces = int.MaxValue;
         /// Region on mesh to be decimated, it is updated during the operation. If null then whole mesh is decimated
-        public BitSet? region = null;
+        public FaceBitSet? region = null;
         /// Whether to allow collapse of edges incident to notFlippable edges,
         /// which can move vertices of notFlippable edges unless they are fixed
         public bool collapseNearNotFlippable = false;

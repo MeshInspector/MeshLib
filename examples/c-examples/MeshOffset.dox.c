@@ -28,7 +28,7 @@ int main( int argc, char* argv[] )
     // offset functions can also be applied to separate mesh components rather than to the whole mesh
     // this is not our case, so the region is set to NULL
     MRMeshPart inputMeshPart = (MRMeshPart){
-        .mesh = inputMesh,
+        .mesh = mesh,
         .region = NULL,
     };
 

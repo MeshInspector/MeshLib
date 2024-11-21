@@ -350,6 +350,26 @@ namespace MR.DotNet.Test
             cubeMesh.DeleteFaces(faces);
             Assert.That(cubeMesh.Area(), Is.EqualTo(3.0).Within(0.001));
         }
-    }
+
+        [Test]
+        public void TestIncidentFacesFromVerts()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var verts = new VertBitSet(8, false);
+            verts.Set(0, true);
+            var faces = RegionBoundary.GetIncidentFaces(cubeMesh, verts);
+            Assert.That(faces.Count, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void TestIncidentFacesFromEdges()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var edges = new UndirectedEdgeBitSet(12, false);
+            edges.Set(0, true);
+            var faces = RegionBoundary.GetIncidentFaces(cubeMesh, edges);
+            Assert.That(faces.Count, Is.EqualTo(8));
+        }
+    }    
 }
 

@@ -49,7 +49,7 @@ MRVOXELS_API Expected<DicomVolume> loadDicomFolder( const std::filesystem::path&
                                                     unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
-MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdbTree( const std::filesystem::path& path,
+MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path,
                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// converts DicomVolumeAsVdb in ObjectVoxels

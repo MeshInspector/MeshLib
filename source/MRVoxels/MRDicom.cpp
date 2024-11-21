@@ -665,7 +665,7 @@ Expected<MR::VoxelsLoad::DicomVolumeAsVdb> loadDicomFolderAsVdb( const std::file
     return res;
 }
 
-std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdbTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
     std::vector<Expected<DicomVolumeAsVdb>> res;

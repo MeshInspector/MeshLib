@@ -7,7 +7,7 @@ from helpers.file_helpers import compare_file_with_multiple_references, get_refe
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("test_points_name", ["bicao"])
-@pytest.mark.parametrize("ext", ["asc", "ctm"])
+@pytest.mark.parametrize("ext", ["asc", "ctm", "xyz", "xyzn"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])
 def test_conversion_from_ply(test_points_name, ext, use_fileHandler, tmp_path):
     """
@@ -43,7 +43,7 @@ def test_conversion_from_ply(test_points_name, ext, use_fileHandler, tmp_path):
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("test_points_name", ["bicao"])
-@pytest.mark.parametrize("ext", ["asc", "ctm", "xyz"])
+@pytest.mark.parametrize("ext", ["asc", "ctm", "xyz", "xyzn"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])
 def test_conversion_to_ply(test_points_name, ext, use_fileHandler, tmp_path):
     """

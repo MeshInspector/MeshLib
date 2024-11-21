@@ -370,6 +370,14 @@ namespace MR.DotNet.Test
             var faces = RegionBoundary.GetIncidentFaces(cubeMesh, edges);
             Assert.That(faces.Count, Is.EqualTo(8));
         }
+
+        [Test]
+        public void TestShortEdges()
+        {
+            var mesh = Mesh.MakeTorus(1.0f, 0.05f, 16, 16);
+            var shortEdges = MeshFixer.FindShortEdges(new MeshPart( mesh ), 0.1f);
+            Assert.That(shortEdges.Count(), Is.EqualTo(256));
+        }
     }    
 }
 

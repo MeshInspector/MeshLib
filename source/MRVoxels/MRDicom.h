@@ -20,14 +20,14 @@ namespace VoxelsLoad
 /// \param seriesUid - if set, the extracted series instance UID is copied to the variable
 MRVOXELS_API bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
 
-struct DicomVolume
+struct DicomResult
 {
     SimpleVolumeMinMax vol;
     std::string name;
     AffineXf3f xf;
 };
 
-struct LoadDCMResult
+struct DicomAsVdbResult
 {
     VdbVolume vdbVolume;
     std::string name;
@@ -35,29 +35,29 @@ struct LoadDCMResult
 };
 
 /// Loads 3D all volumetric data from DICOM files in a folder
-MRVOXELS_API std::vector<Expected<LoadDCMResult>> loadDCMsFolder( const std::filesystem::path& path,
+MRVOXELS_API std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
                                                                   unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 /// Loads 3D first volumetric data from DICOM files in a folder
-MRVOXELS_API Expected<LoadDCMResult> loadDCMFolder( const std::filesystem::path& path,
+MRVOXELS_API Expected<DicomAsVdbResult> loadDicomFolderAsVdb( const std::filesystem::path& path,
                                                     unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads 3D all volumetric data from DICOM files in a folder
-MRVOXELS_API std::vector<Expected<DicomVolume>> loadDicomsFolder( const std::filesystem::path& path,
+MRVOXELS_API std::vector<Expected<DicomResult>> loadDicomsFolder( const std::filesystem::path& path,
                                                                   unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 /// Loads 3D first volumetric data from DICOM files in a folder
-MRVOXELS_API Expected<DicomVolume> loadDicomFolder( const std::filesystem::path& path,
+MRVOXELS_API Expected<DicomResult> loadDicomFolder( const std::filesystem::path& path,
                                                     unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
-MRVOXELS_API std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::path& path,
+MRVOXELS_API std::vector<Expected<DicomAsVdbResult>> loadDicomsFolderAsVdbTree( const std::filesystem::path& path,
                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
-/// converts LoadDCMResult in ObjectVoxels
-MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const LoadDCMResult & dcm, const ProgressCallback & cb = {} );
+/// converts DicomAsVdbResult in ObjectVoxels
+MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomAsVdbResult & dcm, const ProgressCallback & cb = {} );
 
 /// Loads 3D volumetric data from a single DICOM file
-MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
-MRVOXELS_API Expected<LoadDCMResult> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<DicomResult> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<DicomAsVdbResult> loadDicomFileAsVdb( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
 } // namespace VoxelsLoad
 
@@ -65,11 +65,11 @@ namespace VoxelsSave
 {
 
 /// Save voxels objet to a single 3d DICOM file
-MRVOXELS_API Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
+MRVOXELS_API Expected<void> toDicom( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
 /// Saves object to a single 3d DICOM file. \p sourceScale specifies the true scale of the voxel data
 /// which will be saved with "slope" and "intercept" parameters of the output dicom.
 template <typename T>
-MRVOXELS_API Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
 
 } // namespace VoxelsSave
 

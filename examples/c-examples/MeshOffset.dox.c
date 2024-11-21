@@ -23,7 +23,7 @@ int main( int argc, char* argv[] )
     // Create mesh
     MRVector3f size = mrVector3fDiagonal( 1.f );
     MRVector3f base = mrVector3fDiagonal( -0.5f );
-    MRMesh* mesh = mrMakeCube( &size, &base )
+    MRMesh* mesh = mrMakeCube( &size, &base );
 
     // offset functions can also be applied to separate mesh components rather than to the whole mesh
     // this is not our case, so the region is set to NULL

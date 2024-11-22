@@ -191,7 +191,7 @@ jobs:
 
       - name: Install MeshLib requirements
         run: |
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt || true
 
       - name: Build C++ examples
         if: always()

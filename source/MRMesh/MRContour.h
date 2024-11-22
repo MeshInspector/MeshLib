@@ -56,7 +56,7 @@ Vector3<R> calcOrientedArea( const Contour3<T> & contour )
 
 /// returns sum length of the given contour
 /// \tparam R is the type for the accumulation and for result
-template<typename V, typename R = V::ValueType>
+template<typename V, typename R = typename V::ValueType>
 R calcLength( const Contour<V>& contour )
 {
     R l = R( 0 );

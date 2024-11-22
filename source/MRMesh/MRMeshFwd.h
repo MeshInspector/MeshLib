@@ -29,6 +29,21 @@
     #endif
 #endif
 
+// Check C++ version.
+#ifdef _MSC_VER
+#define MR_CPP_STANDARD_DATE _MSVC_LANG
+#else
+#define MR_CPP_STANDARD_DATE __cplusplus
+#endif
+#if MR_CPP_STANDARD_DATE < 202000
+#error Must enable C++20 or newer!
+#endif
+// Reject old MSVC preprocessor. It's not hard to change our macros to support it, but it's easier not to.
+#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
+#error MSVC users must enable the new standard-conformant preprocessor using `/Zc:preprocessor`!
+#endif
+
+
 #include <array>
 #include <vector>
 #include <string>

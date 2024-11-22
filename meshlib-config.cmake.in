@@ -1,8 +1,8 @@
 @PACKAGE_INIT@
 
 set(MESHLIB_INCLUDE_DIR "@PACKAGE_MR_INCLUDE_DIR@")
-set(MESHLIB_THIRDPARTY_INCLUDE_DIR "@PACKAGE_MR_INCLUDE_DIR@/thirdparty_include;@PACKAGE_MR_INCLUDE_DIR@/thirdparty_include/imgui")
-set(MESHLIB_THIRDPARTY_LIB_DIR "@PACKAGE_MR_MAIN_LIB_DIR@")
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "@PACKAGE_MR_INCLUDE_DIR@/include;@PACKAGE_MR_INCLUDE_DIR@/include/imgui")
+set(MESHLIB_THIRDPARTY_LIB_DIR "@PACKAGE_MR_MAIN_LIB_DIR@/lib")
 
 get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
@@ -35,5 +35,7 @@ if(MESHLIB_BUILD_EXTRA_IO_FORMATS)
 endif(MESHLIB_BUILD_EXTRA_IO_FORMATS)
 
 if(APPLE)
+    set(MESHLIB_THIRDPARTY_LIB_DIR "@PACKAGE_MR_MAIN_LIB_DIR@")
+
     message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")
 endif(APPLE)

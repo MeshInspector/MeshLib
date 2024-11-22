@@ -16,7 +16,7 @@ create_framework_dir() {
   echo "version: ${MR_VERSION}"
   echo "prefix: ${MR_PREFIX}"
 
-  cp -rL ./include "${MR_PREFIX}/include/thirdparty_include"
+  cp -rL ./include "${MR_PREFIX}/include/include"
   cp ./macos/Info.plist ./macos/Resources
   cp ./LICENSE ./macos/Resources
 

@@ -169,9 +169,7 @@ jobs:
           fileName: "*${{matrix.os}}.pkg"
 
       - name: Install Pkg
-        run: |
-          sudo installer -pkg meshlib_*${{matrix.os}}.pkg  -target /
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+        run: sudo installer -pkg meshlib_*${{matrix.os}}.pkg  -target /
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer

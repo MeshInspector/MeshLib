@@ -250,12 +250,48 @@ PCH_CODEGEN_FLAGS :=
 # The `-fpch-instantiate-templates` flag is optional, while the other two are necessary (at least the first one), and are usually used together.
 # PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
 
+
+# Guess the amount of RAM we have (in gigabytes), to select an appropriate build profile.
+ifneq ($(IS_MACOS),)
+ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
+else
+# `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
+ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | gawk 'NR==2{print $$2}')
+endif
+
+ifneq ($(ASSUME_RAM),)
+ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
+override ram_string := >= 64G
 # How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
 # When changing this, update the default value for `-j` above.
+NUM_FRAGMENTS := 8
+# The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.
+JOBS := 8
+else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 32))),1)
+override ram_string := ~32G
+NUM_FRAGMENTS := 16
+JOBS := 8
+else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 16))),1)
+override ram_string := ~16G
 NUM_FRAGMENTS := 64
+JOBS := 8
+else
+override ram_string := ~8G (oof)
+NUM_FRAGMENTS := 64
+JOBS := 4
+endif
+else
+override ram_string := unknown, assuming ~16G
+NUM_FRAGMENTS := 64
+JOBS := 8
+endif
+MAKEFLAGS += -j$(JOBS)
+ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
+$(info RAM $(ram_string), defaulting to NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))
+else
+$(info RAM $(ram_string), NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))
+endif
 
-# The default number of jobs. Override with `-jN`.
-MAKEFLAGS += -j8
 
 # --- End of configuration variables.
 

@@ -5,6 +5,8 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRVoxels/MROffset.h>
 
+#include <iostream>
+
 int main()
 {
     // Create mesh
@@ -22,7 +24,7 @@ int main()
     auto meshRes = MR::generalOffsetMesh( mesh, offset, params );
     if ( !meshRes.has_value() )
     {
-        std::cerr << loadRes.error() << std::endl;
+        std::cerr << meshRes.error() << std::endl;
         return 1;
     }
 

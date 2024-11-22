@@ -223,7 +223,9 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 
 inline Expected<std::vector<VdbVolume>> toSingleElementVector( VdbVolume&& v )
 {
-    return std::vector<VdbVolume>{ std::move( v ) };
+    std::vector<VdbVolume> ret;
+    ret.push_back( std::move( v ) ); // Not using `return std::vector{ std::move( v ) }` because that would always copy `v`.
+    return ret;
 }
 
 Expected<std::vector<VdbVolume>> vecFromRaw(  const std::filesystem::path& path, const ProgressCallback& cb )
@@ -394,7 +396,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return unexpected( "Loading was cancelled" );
     }
-    
+
     if ( settings.cb && !settings.cb( 1.0f ) )
         return unexpected( "Loading was cancelled" );
 
@@ -421,7 +423,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
         res.data->denseFill( openvdb::CoordBBox( 0, res.dims.y, 0, res.dims.x, res.dims.y, res.dims.z ), res.max, false );
         res.data->denseFill( openvdb::CoordBBox( res.dims.x, 0, 0, res.dims.x, res.dims.y, res.dims.z ), res.max, false );
     }
-    
+
     return res;
 }
 #endif // MRVOXELS_NO_TIFF

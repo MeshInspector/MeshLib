@@ -29,7 +29,7 @@ int main( int argc, char* argv[] )
     MRVector3f xfTranslation = mrVector3fDiagonal( 0.f );
     xfTranslation.x = 0.7f;
     MRAffineXf3f xf = mrAffineXf3fTranslation( &xfTranslation );
-    mrMeshTransform( &sphere2, &xf );
+    mrMeshTransform( &sphere2, &xf, NULL );
 
     // perform the boolean operation
     MRBooleanParameters params = mrBooleanParametersNew();

@@ -1,6 +1,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
+#include <MRIOExtras/MRCtm.h>
 
 #include <iostream>
 

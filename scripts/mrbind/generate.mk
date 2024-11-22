@@ -246,7 +246,8 @@ override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
 # If this isn't empty, those are passed when compiling the PCH, and then the PCH is compiled to an object file and linked into the final result.
 PCH_CODEGEN_FLAGS :=
-# Those don't work at the moment. The `-fpch-instantiate-templates` flag is optional.
+# Those don't work at the moment (undefined references, d).
+# The `-fpch-instantiate-templates` flag is optional, while the other two are necessary (at least the first one), and are usually used together.
 # PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
 
 # How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
@@ -371,6 +372,7 @@ $(COMPILED_PCH_FILE): $(COMBINED_HEADER_OUTPUT)
 	@echo $(call quote,[Compiling PCH] $@)
 	@$(COMPILER) -o $@ -xc++-header $< $(COMPILER_FLAGS) $(PCH_CODEGEN_FLAGS)
 # PCH object file, if enabled.
+# We strip the include directories from the flags here, because Clang warns that those are unused.
 ifneq ($(PCH_CODEGEN_FLAGS),)
 PCH_OBJECT := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.o
 $(PCH_OBJECT): $(COMPILED_PCH_FILE)
@@ -391,8 +393,14 @@ $(MODULE_OUTPUT_DIR):
 # The single header including all target headers.
 override input_files := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$(INPUT_DIRS),$(INPUT_GLOBS))))
 $(COMBINED_HEADER_OUTPUT): $(input_files) | $(TEMP_OUTPUT_DIR)
-	$(file >$@,)
+	$(file >$@,#pragma once$(lf))
 	$(foreach f,$(input_files),$(file >>$@,#include "$f"$(lf)))
+ifneq ($(ENABLE_PCH),) # Additional headers to bake into the PCH. The condition is to speed up parsing a bit.
+	$(file >>$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#include <pybind11/pybind11.h>$(lf)#endif)
+endif
+# This version bakes the whole our `core.h` (which includes `<pybind11/pybind11.h>), but for some reason my measurements show it to be a tiny bit slower. Weird.
+# $(file >>$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf)) # Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.
+
 # The generated binding source.
 # Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
 .PHONY: only-generate

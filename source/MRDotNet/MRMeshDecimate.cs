@@ -47,7 +47,7 @@ namespace MR.DotNet
         /// Limit on the number of deleted faces
         public int maxDeletedFaces = int.MaxValue;
         /// Region on mesh to be decimated, it is updated during the operation. If null then whole mesh is decimated
-        public BitSet? region = null;
+        public FaceBitSet? region = null;
         /// Whether to allow collapse of edges incident to notFlippable edges,
         /// which can move vertices of notFlippable edges unless they are fixed
         public bool collapseNearNotFlippable = false;
@@ -120,12 +120,11 @@ namespace MR.DotNet
 
     public class MeshDecimate
     {
-
-        /// Collapse edges in mesh region according to the settings
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern DecimateResult mrDecimateMesh( IntPtr mesh, ref MRDecimateParameters settings );
 
-        public static DecimateResult Decimate( Mesh mesh, DecimateParameters settings )
+        /// Collapse edges in mesh region according to the settings
+        public static DecimateResult Decimate( ref Mesh mesh, DecimateParameters settings )
         {
             MRDecimateParameters mrParameters = new MRDecimateParameters();
             mrParameters.strategy = settings.strategy;

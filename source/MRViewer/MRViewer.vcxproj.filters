@@ -235,7 +235,7 @@
     <ClCompile Include="MRObjectMeshHistory.cpp">
       <Filter>History</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewerIO.cpp">
+    <ClCompile Include="MRSaveObjects.cpp">
       <Filter>IO</Filter>
     </ClCompile>
     <ClCompile Include="MRRenderGLHelpers.cpp">
@@ -629,7 +629,7 @@
     <ClInclude Include="MRObjectMeshHistory.h">
       <Filter>History</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewerIO.h">
+    <ClInclude Include="MRSaveObjects.h">
       <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPlaneWidget.h">

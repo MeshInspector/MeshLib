@@ -63,7 +63,7 @@
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 #include "MRProgressBar.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"

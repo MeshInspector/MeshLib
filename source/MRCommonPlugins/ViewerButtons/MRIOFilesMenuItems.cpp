@@ -32,9 +32,8 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRMesh/MRMeshSaveObj.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRShowModal.h"
-#include "MRViewer/MRViewerIO.h"
+#include "MRViewer/MRSaveObjects.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
@@ -42,7 +41,6 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRLambdaRibbonItem.h"
-#include "MRPch/MRWasm.h"
 #include "MRIOExtras/MRPng.h"
 
 #ifndef MESHLIB_NO_VOXELS
@@ -53,6 +51,9 @@
 #include "MRVoxels/MRDicom.h"
 #endif
 #endif
+
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>

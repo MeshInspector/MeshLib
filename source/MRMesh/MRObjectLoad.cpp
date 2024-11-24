@@ -488,20 +488,17 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
         std::vector<FilePathNode> files;
     };
 
-    FilePathNode filesTree;
-    filesTree.path = folder;
-
-    std::function<void( FilePathNode& )> fillFilesTree = {};
-    fillFilesTree = [&fillFilesTree, filters = getAllFilters()] ( FilePathNode& node )
+    std::function<FilePathNode( const std::filesystem::path& )> getFilePathNode;
+    getFilePathNode = [&getFilePathNode, filters = getAllFilters()] ( const std::filesystem::path& folder )
     {
+        FilePathNode node{ .path = folder };
         std::error_code ec;
-        for ( auto entry : Directory{ node.path, ec } )
+        for ( auto entry : Directory{ folder, ec } )
         {
             auto path = entry.path();
             if ( entry.is_directory( ec ) )
             {
-                node.subfolders.push_back( { .path = path } );
-                fillFilesTree( node.subfolders[node.subfolders.size() - 1] );
+                node.subfolders.push_back( getFilePathNode( path ) );
             }
             else if ( entry.is_regular_file( ec ) )
             {
@@ -516,8 +513,9 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
                     node.files.push_back( { .path = path } );
             }
         }
+        return node;
     };
-    fillFilesTree( filesTree );
+    FilePathNode filesTree = getFilePathNode( folder );
 
     // clear empty folders
     std::function<void( FilePathNode& )> clearEmptySubfolders = {};
@@ -556,7 +554,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
         for ( const FilePathNode& folder : node.subfolders )
         {
             auto pObj = std::make_shared<Object>();
-            pObj->setName( utf8string( folder.path.stem() ) );
+            pObj->setName( utf8string( folder.path.filename() ) ); // not path.stem() to preserve "extensions" in folder names
             objPtr->addChild( pObj );
             createFolderObj( folder, pObj.get() );
         }

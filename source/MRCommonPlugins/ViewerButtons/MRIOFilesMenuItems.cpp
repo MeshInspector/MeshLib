@@ -413,19 +413,10 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 
 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
     // check if the directory can be opened as a DICOM archive
-    std::error_code ec;
-    for ( const auto& entry : Directory { directory, ec } )
+    if ( VoxelsLoad::isDicomFolder( directory ) )
     {
-        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
-        {
-            const auto& path = entry.path();
-            const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
-            {
-                sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
-                return;
-            }
-        }
+        sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
+        return;
     }
 #endif
 

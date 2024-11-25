@@ -562,6 +562,8 @@ class SphereObject;
 class CylinderObject;
 class ConeObject;
 
+struct LoadedObjects;
+
 struct Image;
 class AnyVisualizeMaskEnum;
 

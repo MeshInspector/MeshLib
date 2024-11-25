@@ -35,7 +35,12 @@
 #else
 #define MR_CPP_STANDARD_DATE __cplusplus
 #endif
-#if MR_CPP_STANDARD_DATE < 202000
+// Note `201709`. C++20 usually sets `202002`, while C++17 sets `201703`.
+//   This `201709` is what GCC 10 sets on `-std=c++20` (presumably to indicate incomplete implementation?).
+//   Other compilers we use don't have this issue.
+// Also note `__CUDACC__` - currently our Cuda code is compiled as C++17 (compiler doesn't support C++20?),
+//   and we carefully avoid headers incomaptible with C++17.
+#if MR_CPP_STANDARD_DATE < 201709 && !defined(__CUDACC__)
 #error Must enable C++20 or newer!
 #endif
 // Reject old MSVC preprocessor. It's not hard to change our macros to support it, but it's easier not to.

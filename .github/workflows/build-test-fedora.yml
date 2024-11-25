@@ -157,7 +157,7 @@ jobs:
 
       - name: Extract RPM
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
-        run: rpm2cpio meshlib-dev.rpm | cpio --extract --make-directories --preserve-modification-time --directory=./meshlib_install/
+        run: rpm2cpio meshlib-dev.rpm | cpio --extract --make-directories --preserve-modification-time --directory=$(pwd)/meshlib_install/
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
@@ -165,7 +165,7 @@ jobs:
           cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
-            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
             -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
           cmake \
             --build cpp-examples-build \
@@ -177,7 +177,7 @@ jobs:
           cmake \
             -S examples/c-examples \
             -B c-examples-build \
-            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
             -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
           cmake \
             --build c-examples-build \

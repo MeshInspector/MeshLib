@@ -215,7 +215,7 @@ jobs:
 
       - name: Extract Deb
         if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
-        run: dpkg --extract meshlib_${{matrix.os}}-dev.deb ./meshlib_install/
+        run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
         if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
@@ -223,7 +223,7 @@ jobs:
           cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
-            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
             -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
           cmake \
             --build cpp-examples-build \
@@ -235,7 +235,7 @@ jobs:
           cmake \
             -S examples/c-examples \
             -B c-examples-build \
-            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
             -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
           cmake \
             --build c-examples-build \

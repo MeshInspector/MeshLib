@@ -48,6 +48,7 @@
     <ClInclude Include="MRMeshProject.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
+    <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="MRMeshTriPoint.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMultiwayICP.h" />
@@ -103,6 +104,7 @@
     <ClCompile Include="MRMeshProject.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
+    <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMultiwayICP.cpp" />

@@ -325,6 +325,9 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern float mrMeshEdgeLengthSq( IntPtr mesh, UndirectedEdgeId e );
 
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMeshToPointCloud( IntPtr mesh, byte saveNormals, IntPtr verts );
+
 
         #endregion
         #region Constructors
@@ -564,6 +567,11 @@ namespace MR.DotNet
         {
             IntPtr clonedMesh = mrMeshCopy(mesh_);
             return new Mesh(clonedMesh);
+        }
+        ///  Mesh to PointCloud
+        public PointCloud ToPointCloud(bool saveNormals = true, VertBitSet? region = null)
+        {
+            return new PointCloud( mrMeshToPointCloud(mesh_, saveNormals ? (byte)1 : (byte)0, region is null ? (IntPtr)null : region.bs_) );
         }
 
         #endregion

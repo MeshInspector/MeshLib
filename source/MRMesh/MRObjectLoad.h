@@ -53,9 +53,6 @@ MRMESH_API Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromFile( co
 // check if there are any supported files folder and subfolders
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
-/// loads meshes from given folder in new container object
-MRMESH_API Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path& folder, std::string* loadWarn = nullptr, ProgressCallback callback = {} );
-
 //tries to load scene from every format listed in SceneFormatFilters
 MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 
     std::string* loadWarn = nullptr, ProgressCallback callback = {} );
@@ -83,6 +80,10 @@ MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::f
  */
 MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
                                                                               ProgressCallback progressCb = {} );
+
+
+/// returns filters for all supported file formats for all types of objects
+MRMESH_API IOFilters getAllFilters();
 
 /// \}
 

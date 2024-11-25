@@ -51,7 +51,8 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
 void RibbonMenuSearch::drawWindow_( const Parameters& params )
 {
-    const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
+    // copy `recentItems_` because it can be rotated in THIS frame which is not good
+    const auto& resultsList = searchLine_.empty() ? std::vector<RibbonSchemaHolder::SearchResult>( recentItems_ ) : searchResult_;
     if ( !isSmallUI_ && resultsList.empty() )
         return;
 

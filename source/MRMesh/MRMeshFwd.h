@@ -44,7 +44,8 @@
 #error Must enable C++20 or newer!
 #endif
 // Reject old MSVC preprocessor. It's not hard to change our macros to support it, but it's easier not to.
-#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
+// Note that we exclude Cuda here. Not 100% sure if it has a good preprocessor, or we just avoid including the headers sensitive to it in Cuda.
+#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1) && !defined(__CUDACC__)
 #error MSVC users must enable the new standard-conformant preprocessor using `/Zc:preprocessor`!
 #endif
 

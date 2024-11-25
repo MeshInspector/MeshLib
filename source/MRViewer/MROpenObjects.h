@@ -2,6 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include <MRMesh/MRExpected.h>
+#include <filesystem>
 
 namespace MR
 {

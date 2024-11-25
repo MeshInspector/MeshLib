@@ -33,8 +33,6 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
     \n Set: `Yes (/Zc:preprocessor)`
     - **C/C++ → All Options → Additional Options**:
     \n Add: `/bigobj /utf8`
-    - **Linker → General → Additional Library Directories**:
-    \n Add: `C:\meshlib-built\install\app\$(Configuration)`
     - **Linker → Input → Additional Dependencies**:
     \n Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`
     - **Copy DLLs**:

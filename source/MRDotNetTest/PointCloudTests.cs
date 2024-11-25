@@ -94,7 +94,7 @@ namespace MR.DotNet.Test
         public void TestTriangulation()
         {
             var mesh = Mesh.MakeTorus(2.0f, 1.0f, 32, 32);
-            var pc = mesh.ToPointCloud();
+            var pc = Mesh.MeshToPointCloud(mesh);
             var restored = PointCloudTriangulation.TriangulatePointCloud(pc, new TriangulationParameters());
             Assert.That(restored is not null);
             if (restored is not null)

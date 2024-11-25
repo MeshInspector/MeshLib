@@ -292,12 +292,10 @@ MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver, priori
 
 } // namespace ImageSave
 
-using ObjectPtr = std::shared_ptr<Object>;
-
 namespace ObjectLoad
 {
 
-using ObjectLoader = Expected<std::vector<ObjectPtr>>( * )( const std::filesystem::path&, std::string*, ProgressCallback );
+using ObjectLoader = Expected<LoadedObjects>( * )( const std::filesystem::path&, const ProgressCallback& );
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
@@ -321,8 +319,8 @@ MR_ON_INIT { using namespace MR::ObjectSave; setObjectSaver( filter, saver ); };
 namespace AsyncObjectLoad
 {
 
-using PostLoadCallback = std::function<void ( Expected<std::vector<ObjectPtr>> )>;
-using ObjectLoader = void( * )( const std::filesystem::path&, std::string*, PostLoadCallback, ProgressCallback );
+using PostLoadCallback = std::function<void ( Expected<LoadedObjects> )>;
+using ObjectLoader = void( * )( const std::filesystem::path&, PostLoadCallback, ProgressCallback );
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 

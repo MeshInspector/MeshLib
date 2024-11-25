@@ -277,20 +277,20 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
     return res;
 }
 
-std::vector<std::shared_ptr<Object>> toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
+LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 {
-    std::vector<std::shared_ptr<Object>> results;
-    results.reserve( voxels.size() );
+    LoadedObjects res;
+    res.objs.reserve( voxels.size() );
     for ( auto&& objVoxels : voxels )
     {
         objVoxels->select( true );
-        results.emplace_back( std::move( objVoxels ) );
+        res.objs.emplace_back( std::move( objVoxels ) );
     }
-    return results;
+    return res;
 }
 
 template <VoxelsLoader voxelsLoader>
-Expected<std::vector<std::shared_ptr<Object>>> toObjectLoader( const std::filesystem::path& path, std::string*, ProgressCallback cb )
+Expected<LoadedObjects> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     return voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return toObjectVoxels( volumes, path, subprogress( cb, 1.f / 3.f, 1.f ) ); } )
@@ -584,7 +584,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
         .and_then( [&] ( auto&& volumes ) { return VoxelsLoad::toObjectVoxels( volumes, file, subprogress( callback, 1.f / 3.f, 1.f ) ); } );
 }
 
-Expected<std::vector<std::shared_ptr<Object>>> makeObjectFromVoxelsFile( const std::filesystem::path& file, std::string*, ProgressCallback callback )
+Expected<LoadedObjects> makeObjectFromVoxelsFile( const std::filesystem::path& file, const ProgressCallback& callback )
 {
     return makeObjectVoxelsFromFile( file, std::move( callback ) )
         .transform( VoxelsLoad::toObjects );

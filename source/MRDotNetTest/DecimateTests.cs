@@ -28,5 +28,16 @@ namespace MR.DotNet.Test
             Assert.That(decimateResult.facesDeleted > 0);
             Assert.That(decimateResult.vertsDeleted > 0);
         }
+
+        [Test]
+        public void TestRemesh()
+        {
+            var sphere = Mesh.MakeSphere( 0.5f, 300 );
+            Assert.That(sphere.ValidFaces.Count(), Is.EqualTo(596));
+            var parameters = new RemeshParameters();
+            parameters.targetEdgeLen = 0.1f;
+            var remeshResult = MeshDecimate.Remesh(ref sphere, parameters);
+            Assert.That(sphere.ValidFaces.Count(), Is.EqualTo(716));
+        }
     }
 }

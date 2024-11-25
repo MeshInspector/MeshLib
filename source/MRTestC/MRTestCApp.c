@@ -9,6 +9,7 @@
 #include "MRMeshBuilder.h"
 #include "MRFixSelfIntersections.h"
 #include "MRExpandShrink.h"
+#include "MRPointCloud.h"
 
 int main( void )
 {
@@ -36,4 +37,5 @@ int main( void )
     testShortEdges();
     testIncidentFacesFromVerts();
     testIncidentFacesFromEdges();
+    testTriangulation();
 }

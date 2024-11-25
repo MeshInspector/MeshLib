@@ -7,6 +7,8 @@
 #include <MRMesh/MRZip.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRVoxels/MRDicom.h>
+#include <MRPch/MRSpdlog.h>
+#include <fstream>
 
 namespace MR
 {

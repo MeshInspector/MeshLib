@@ -6,6 +6,7 @@
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
 #include "MRUniqueTemporaryFolder.h"
+#include "MRLoadedObjects.h"
 
 #include <filesystem>
 

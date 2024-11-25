@@ -9,6 +9,7 @@
 #include <MRMesh/MRExpected.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointsLoadSettings.h>
+#include <MRMesh/MRLoadedObjects.h>
 
 #include <filesystem>
 #include <string>

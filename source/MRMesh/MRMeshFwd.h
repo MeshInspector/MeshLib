@@ -51,7 +51,6 @@
 
 
 #include <array>
-#include <memory>
 #include <vector>
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
@@ -563,14 +562,7 @@ class SphereObject;
 class CylinderObject;
 class ConeObject;
 
-using ObjectPtr = std::shared_ptr<Object>;
-
-/// results of loading from a file
-struct LoadedObjects
-{
-    std::vector<ObjectPtr> objs;
-    std::string warnings;
-};
+struct LoadedObjects;
 
 struct Image;
 class AnyVisualizeMaskEnum;

@@ -6,6 +6,7 @@
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
 #include "MRAffineXf3.h"
+#include "MRLoadedObjects.h"
 #include <filesystem>
 #include <istream>
 #include <string>

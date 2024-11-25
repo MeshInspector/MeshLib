@@ -7,6 +7,7 @@
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
 #include "MRSaveSettings.h"
+#include "MRLoadedObjects.h"
 
 #include <filesystem>
 #include <map>

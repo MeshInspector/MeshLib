@@ -5,6 +5,7 @@
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObject.h"
+#include <MRMesh/MRLoadedObjects.h>
 
 #include <filesystem>
 

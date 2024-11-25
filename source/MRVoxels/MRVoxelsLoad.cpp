@@ -586,8 +586,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
 
 Expected<LoadedObjects> makeObjectFromVoxelsFile( const std::filesystem::path& file, const ProgressCallback& callback )
 {
-    return makeObjectVoxelsFromFile( file, std::move( callback ) )
-        .transform( VoxelsLoad::toObjects );
+    return makeObjectVoxelsFromFile( file, callback ).transform( VoxelsLoad::toObjects );
 }
 
 } // namespace MR

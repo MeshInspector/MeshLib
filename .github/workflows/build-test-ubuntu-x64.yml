@@ -205,13 +205,41 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
+
+      - name: Extract Deb
+        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        run: dpkg --extract meshlib_${{matrix.os}}-dev.deb ./meshlib_install/
+
+      - name: Build C++ examples
+        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+
+      - name: Build C examples
+        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
+          cmake \
+            --build c-examples-build \
+            --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}

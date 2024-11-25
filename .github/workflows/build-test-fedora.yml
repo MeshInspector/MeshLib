@@ -150,13 +150,41 @@ jobs:
 
       - name: Create RPM
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
-        run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
+        run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
+
+      - name: Extract RPM
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        run: rpm2cpio meshlib-dev.rpm | cpio --extract --make-directories --preserve-modification-time --directory=./meshlib_install/
+
+      - name: Build C++ examples
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+
+      - name: Build C examples
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=./meshlib_install/ \
+            -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
+          cmake \
+            --build c-examples-build \
+            --parallel $(nproc)
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_fedora39-x86

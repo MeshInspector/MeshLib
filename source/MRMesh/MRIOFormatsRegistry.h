@@ -321,7 +321,7 @@ namespace AsyncObjectLoad
 {
 
 using PostLoadCallback = std::function<void ( Expected<LoadedObjects> )>;
-using ObjectLoader = void( * )( const std::filesystem::path&, PostLoadCallback, ProgressCallback );
+using ObjectLoader = void( * )( const std::filesystem::path&, PostLoadCallback, const ProgressCallback& );
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 

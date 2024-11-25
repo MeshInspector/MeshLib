@@ -960,26 +960,24 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
             totalDuplicatedVertexCount += result.duplicatedVertexCount;
         }
 
-        const auto makeWarningString = [] ( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
+        if ( totalSkippedFaceCount )
         {
-            std::string res;
-            if ( skippedFaceCount )
-                res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
-            if ( duplicatedVertexCount )
-            {
-                if ( !res.empty() )
-                    res += '\n';
-                res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
-            }
-            if ( holesCount )
-            {
-                if ( !res.empty() )
-                    res += '\n';
-                res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
-            }
-            return res;
-        };
-        res.warnings = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
+            if ( !res.warnings.empty() )
+                res.warnings += '\n';
+            res.warnings = fmt::format( "{} triangles were skipped as inconsistent with others.", totalSkippedFaceCount );
+        }
+        if ( totalDuplicatedVertexCount )
+        {
+            if ( !res.warnings.empty() )
+                res.warnings += '\n';
+            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.", totalDuplicatedVertexCount );
+        }
+        if ( holesCount )
+        {
+            if ( !res.warnings.empty() )
+                res.warnings += '\n';
+            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.", holesCount );
+        }
         return res;
     } );
 }

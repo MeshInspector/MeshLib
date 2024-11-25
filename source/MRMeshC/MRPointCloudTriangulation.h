@@ -3,6 +3,9 @@
 
 MR_EXTERN_C_BEGIN
 
+/**
+ * \brief Parameters of point cloud triangulation
+ */
 typedef struct MRTriangulationParameters
 {
     /**
@@ -39,6 +42,10 @@ typedef struct MRTriangulationParameters
 
 MRMESHC_API MRTriangulationParameters mrTriangulationParametersNew( void );
 
+/**
+ * \brief Creates mesh from given point cloud according params
+ * Returns empty optional if was interrupted by progress bar
+ */
 MRMESHC_API MRMesh* mrTriangulatePointCloud( const MRPointCloud* pointCloud, const MRTriangulationParameters* params );
 
 MR_EXTERN_C_END

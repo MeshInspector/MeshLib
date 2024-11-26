@@ -97,7 +97,7 @@ def test_python_doc_samples(tmp_path, doc_case):
     if 'args' in doc_case:
         run_code_sample(tmp_path / py_file, doc_case['args'])
     else:
-        exec(open(tmp_path / py_file).read())
+        run_code_sample(tmp_path / py_file, [])
 
     for out_mesh in doc_case['output_meshes']:
         shutil.copy(out_mesh, tmp_path / out_mesh)

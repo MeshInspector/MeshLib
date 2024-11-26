@@ -30,5 +30,6 @@ source/MRDotNetTest/obj/*
 /doc/
 /pytest_temp
 /lib
+/lib64
 /include
 /mrbind

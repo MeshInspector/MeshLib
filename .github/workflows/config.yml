@@ -22,7 +22,7 @@ on:
       # automatically computed or tag-based values
       full-config-build:
         description:
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci }}
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       docker-image-tag:
         description:
         value: ${{ jobs.prepare-config.outputs.docker-image-tag }}
@@ -34,16 +34,16 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
       need-windows-rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg }}
+        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
       upload-artifacts:
         description:
-        value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci }}
+        value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       upload-test-artifacts:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts }}
+        value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
       version-namespace:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-full-ci && github.event_name != 'push' && 'pr-test' || '' }}
+        value: ${{ jobs.prepare-config.outputs.tag-full-ci == 'true' && github.event_name != 'push' && 'pr-test' || '' }}
 
 jobs:
   prepare-config:

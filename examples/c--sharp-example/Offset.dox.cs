@@ -1,14 +1,14 @@
-using MR.DotNet;
 using System;
 using System.Globalization;
 using System.Reflection;
+using static MR.DotNet;
 
 class Program
 {
     static void Main(string[] args)
     {
         if (args.Length != 2 && args.Length != 3)
-        {           
+        {
             Console.WriteLine("Usage: {0} OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
             return;
         }
@@ -20,8 +20,7 @@ class Program
                       CultureInfo.InvariantCulture);
 
             // Load mesh
-            MeshPart mp = new MeshPart();
-            mp.mesh = Mesh.FromAnySupportedFormat( "mesh.stl" );
+            MeshPart mp = new MeshPart(MeshLoad.FromAnySupportedFormat("mesh.stl"));
 
             // Setup parameters
             OffsetParameters op = new OffsetParameters();
@@ -31,7 +30,7 @@ class Program
             var result = Offset.OffsetMesh(mp, offsetValue, op);
 
             // Save result
-            Mesh.ToAnySupportedFormat(result, "mesh_offset.stl");
+            MeshSave.ToAnySupportedFormat(result, "mesh_offset.stl");
         }
         catch (Exception e)
         {

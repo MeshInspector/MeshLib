@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Print config
-        run: echo "${{ toJSON( needs.config.outputs ) }}" | jq
+        run: echo '${{ toJSON( needs.config.outputs ) }}' | jq
 
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml

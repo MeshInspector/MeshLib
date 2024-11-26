@@ -14,14 +14,6 @@ on:
 
 
 jobs:
-  check-python-stubs:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
-    needs: manylinux-pip-build
-    steps:
-      - name: Empty step
-        run: echo "Check python stubs"
-
   setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
@@ -33,9 +25,8 @@ jobs:
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-        
+
   create-python-stubs:
-    if: ${{ github.event_name == 'workflow_call' }}
     needs: setup
     timeout-minutes: 80
     runs-on: ubuntu-latest
@@ -129,7 +120,7 @@ jobs:
           retention-days: 1
 
   update-documentation:
-    needs: [ check-python-stubs, create-python-stubs ]
+    needs: create-python-stubs
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen

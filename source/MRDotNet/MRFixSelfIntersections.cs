@@ -8,7 +8,7 @@ namespace MR
 
     public partial class DotNet
     {
-        public class FixSelfIntersections
+        public class SelfIntersections
         {
             public enum Method
             {

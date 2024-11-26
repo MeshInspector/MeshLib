@@ -22,6 +22,11 @@ struct MarkedContour3f
 /// \param in input marked contour
 /// \param maxStep maximum distance from not-marked point of returned contour to a neighbor point
 /// \return contour with same marked points and not-marked points located on input contour with given maximum distance along it
-[[nodiscard]] MRMESH_API MarkedContour3f resampled( const MarkedContour3f & in, float maxStep );
+[[nodiscard]] MRMESH_API MarkedContour3f resample( const MarkedContour3f & in, float maxStep );
+
+/// \param in input marked contour
+/// \param markStability a positive value, the more the value the closer marked points will be to their original positions
+/// \return contour with same number of points and same marked, where each return point tries to be on a smooth curve
+[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability = 0.001f );
 
 } //namespace MR

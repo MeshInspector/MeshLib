@@ -2,6 +2,20 @@
 #include "MRTimer.h"
 #include "MRGTest.h"
 
+#pragma warning(push)
+#pragma warning(disable: 4068) // unknown pragmas
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
+#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+#pragma clang diagnostic ignored "-Wunknown-warning-option" // for next one
+#pragma clang diagnostic ignored "-Wunused-but-set-variable" // for newer clang
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
+#pragma clang diagnostic pop
+#pragma warning(pop)
+
 namespace MR
 {
 
@@ -21,7 +35,7 @@ namespace
 
 } // anonymous namespace
 
-MarkedContour3f resampled( const MarkedContour3f & in, float maxStep )
+MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
 {
     MR_TIMER
     MarkedContour3f res;
@@ -76,15 +90,93 @@ MarkedContour3f resampled( const MarkedContour3f & in, float maxStep )
     return res;
 }
 
+MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability )
+{
+    MR_TIMER
+    assert( markStability > 0 );
+    MarkedContour3f res;
+    if ( in.contour.empty() )
+        return res;
+    assert( firstLastMarked( in ) );
+
+    const auto sz = in.contour.size();
+    const auto mz = in.marks.count();
+
+    std::vector<Eigen::Triplet<double>> mTriplets;
+    mTriplets.reserve( 3 * ( sz - 2 ) + 2 + mz );
+
+    Eigen::VectorXd r[3];
+    for ( int i = 0; i < 3; ++i )
+        r[i].resize( sz + mz );
+
+    // Smoothness
+    for ( int i = 0; i < sz; ++i )
+        r[0][i] = r[1][i] = r[2][i] = 0;
+
+    // first point of open contour
+    mTriplets.emplace_back( 0, 0, 1.0 );
+    // middle points
+    for ( int i = 1; i + 1 < sz; ++i )
+    {
+        mTriplets.emplace_back( i, i - 1, -0.5 );
+        mTriplets.emplace_back( i, i    ,  1.0 );
+        mTriplets.emplace_back( i, i + 1, -0.5 );
+    }
+    // last point of open contour
+    mTriplets.emplace_back( (int)sz - 1, (int)sz - 1, 1.0 );
+
+    // Stabilization in marked points
+    int nextRow = int( sz );
+    for ( auto i : in.marks )
+    {
+        mTriplets.emplace_back( nextRow, int( i ), markStability );
+
+        const auto & p = in.contour[i];
+        r[0][nextRow] = markStability * p.x;
+        r[1][nextRow] = markStability * p.y;
+        r[2][nextRow] = markStability * p.z;
+
+        ++nextRow;
+    }
+
+    Eigen::SparseMatrix<double,Eigen::RowMajor> C;
+    C.resize( sz + mz, sz );
+    assert( mTriplets.size() == 3 * ( sz - 2 ) + 2 + mz );
+    C.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+
+    // minimum squares solution:
+    // C^T * C * x = C^T * rhs
+    Eigen::SparseMatrix<double,Eigen::RowMajor> A = C.adjoint() * C;
+    Eigen::VectorXd b[3];
+    for ( int i = 0; i < 3; ++i )
+        b[i] = C.adjoint() * r[i];
+
+    Eigen::SimplicialLDLT< Eigen::SparseMatrix<double,Eigen::ColMajor> > chol;
+    chol.compute( A );
+    Eigen::VectorXd x[3];
+    x[0] = chol.solve( b[0] );
+    x[1] = chol.solve( b[1] );
+    x[2] = chol.solve( b[2] );
+
+    // produce output
+    res.marks = in.marks;
+    res.contour.reserve( sz );
+    for ( int i = 0; i < sz; ++i )
+        res.contour.push_back( Vector3f( (float)x[0][i], (float)x[1][i], (float)x[2][i] ) );
+    return res;
+}
+
 TEST(MRMesh, MarkedContour)
 {
     auto mc = markedContour( Contour3f{ Vector3f{ 0, 0, 0 }, Vector3f{ 1, 0, 0 } } );
-    auto rc = resampled( mc, 2 );
+    auto rc = resample( mc, 2 );
     EXPECT_EQ( mc.contour, rc.contour );
     EXPECT_EQ( mc.marks, rc.marks );
 
-    rc = resampled( mc, 0.4f );
+    rc = resample( mc, 0.4f );
     EXPECT_EQ( rc.contour.size(), 4 );
+
+    auto spline = makeSpline( rc );
 }
 
 } //namespace MR

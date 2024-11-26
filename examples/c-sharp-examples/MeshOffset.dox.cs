@@ -1,21 +1,20 @@
-using System;
 using System.Globalization;
 using System.Reflection;
 using static MR.DotNet;
 
-class Program
+public class MeshOffsetExample
 {
-    static void Main(string[] args)
+    public static void Run(string[] args)
     {
-        if (args.Length != 2 && args.Length != 3)
+        if (args.Length != 2)
         {
-            Console.WriteLine("Usage: {0} OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
+            Console.WriteLine("Usage: {0} MeshOffsetExample OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
             return;
         }
 
         try
         {
-            float offsetValue = float.Parse(args[0],
+            float offsetValue = float.Parse(args[1],
                       System.Globalization.NumberStyles.AllowThousands,
                       CultureInfo.InvariantCulture);
 

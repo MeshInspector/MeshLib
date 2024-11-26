@@ -8,7 +8,7 @@ namespace MR
 namespace
 {
 
-bool firstLastMarked( const MarkedContour3f & in )
+[[maybe_unused]] bool firstLastMarked( const MarkedContour3f & in )
 {
     if ( !in.marks.test( 0 ) )
         return false;

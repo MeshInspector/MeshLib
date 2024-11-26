@@ -1,18 +1,19 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using static MR.DotNet;
 
-namespace MR.DotNet.Sample
+namespace MR.Sample
 {
     internal class Program
     {
-        static void PrintStats( MultiwayICP icp )
+        static void PrintStats(MultiwayICP icp)
         {
             int numActivePairs = icp.GetNumActivePairs();
             Console.WriteLine($"Number of samples: {icp.GetNumSamples()}");
             Console.WriteLine($"Number of active pairs: {numActivePairs}");
 
-            if ( numActivePairs > 0 )
+            if (numActivePairs > 0)
             {
                 double p2ptMetric = icp.GetMeanSqDistToPoint();
                 double p2ptInaccuracy = icp.GetMeanSqDistToPoint(p2ptMetric);
@@ -38,21 +39,19 @@ namespace MR.DotNet.Sample
                 Box3f maxBBox = new Box3f();
                 for (int i = 0; i < inputNum; ++i)
                 {
-                    MeshOrPointsXf obj = new MeshOrPointsXf();
-                    obj.obj = PointCloud.FromAnySupportedFormat(args[i]);
-                    obj.xf = new AffineXf3f();
+                    MeshOrPointsXf obj = new MeshOrPointsXf(PointCloud.FromAnySupportedFormat(args[i]), new AffineXf3f());
                     inputs.Add(obj);
                     Box3f bbox = obj.obj.BoundingBox;
-                    if ( !maxBBox.Valid() || bbox.Volume() > maxBBox.Volume() )
+                    if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
                         maxBBox = bbox;
                 }
 
                 MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
                 samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
-                
-                MultiwayICP icp = new MultiwayICP(inputs, samplingParams );
+
+                MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
                 ICPProperties iCPProperties = new ICPProperties();
-                icp.SetParams( iCPProperties );
+                icp.SetParams(iCPProperties);
                 icp.UpdateAllPointPairs();
                 PrintStats(icp);
 
@@ -64,10 +63,10 @@ namespace MR.DotNet.Sample
                 {
                     var xf = xfs[i];
                     for (int j = 0; j < inputs[i].obj.Points.Count; j++)
-                        output.AddPoint( xf.Apply( inputs[i].obj.Points[j]) );
+                        output.AddPoint(xf.Apply(inputs[i].obj.Points[j]));
                 }
 
-                PointCloud.ToAnySupportedFormat( output , args[args.Length - 1] );
+                PointCloud.ToAnySupportedFormat(output, args[args.Length - 1]);
             }
             catch (Exception e)
             {

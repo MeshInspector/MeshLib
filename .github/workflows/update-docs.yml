@@ -85,7 +85,7 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          MESHLIB_PYTHON_VERSION: 3.10
+          MESHLIB_PYTHON_VERSION: "3.10"
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,

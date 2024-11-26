@@ -35,6 +35,9 @@ on:
       need-windows-rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
+      update-doc:
+        description:
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
       upload-artifacts:
         description:
         value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}

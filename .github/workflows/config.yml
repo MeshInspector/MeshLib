@@ -18,7 +18,7 @@ on:
         value: "11.4"
       vcpkg-version:
         description: vcpkg version
-        value: "2024.10.21" # VCPKG-AUTO-UPDATE
+        value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       full-config-build:
         description:

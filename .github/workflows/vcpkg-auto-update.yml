@@ -18,6 +18,7 @@ jobs:
       - name: Search for Tag in build-test-windows.yml
         id: extract-tag
         run: |
+          # TODO: use `yq` to retrieve vcpkg version
           current_vcpkg_tag=$(awk -F": '" '/VCPKG-VERSION/ {print $2}' .github/workflows/build-test-windows.yml | tr -d "'")
           echo "current_vcpkg_tag=${current_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "current vcpkg tag: ${current_vcpkg_tag}"

@@ -33,7 +33,7 @@ namespace MR.DotNet
 
         public ThreeVertIds(int v0_, int v1_, int v2_)
         {
-            v0 = new VertId( v0_ ); 
+            v0 = new VertId(v0_);
             v1 = new VertId(v1_);
             v2 = new VertId(v2_);
         }
@@ -163,10 +163,10 @@ namespace MR.DotNet
         public AffineXf3f xf;
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrMeshOrPointsXfFromMesh(IntPtr mesh, ref MRAffineXf3f xf );
+        private static extern IntPtr mrMeshOrPointsXfFromMesh(IntPtr mesh, ref MRAffineXf3f xf);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrMeshOrPointsXfFromPointCloud(IntPtr pc, ref MRAffineXf3f xf );
+        private static extern IntPtr mrMeshOrPointsXfFromPointCloud(IntPtr pc, ref MRAffineXf3f xf);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshOrPointsXfFree(IntPtr mp);
@@ -177,11 +177,11 @@ namespace MR.DotNet
             this.xf = xf;
 
             var mesh = obj as Mesh;
-            if ( mesh != null) 
+            if (mesh != null)
                 mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh(mesh.mesh_, ref xf.xf_);
 
             var pc = obj as PointCloud;
-            if ( pc != null )
+            if (pc != null)
                 mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud(pc.pc_, ref xf.xf_);
         }
 
@@ -287,10 +287,10 @@ namespace MR.DotNet
         private static extern IntPtr mrMeshTopology(IntPtr mesh);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrMeshCopy( IntPtr mesh );
+        private static extern IntPtr mrMeshCopy(IntPtr mesh);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrMeshFree(IntPtr mesh);       
+        private static extern void mrMeshFree(IntPtr mesh);
 
         /// creates a default instance
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -313,17 +313,20 @@ namespace MR.DotNet
 
         /// computes the area of given face-region (or whole mesh if region is null)
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern double mrMeshArea( IntPtr mesh, IntPtr region );
+        private static extern double mrMeshArea(IntPtr mesh, IntPtr region);
 
         /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrMeshDeleteFaces(IntPtr mesh, IntPtr fs, IntPtr keepEdges );
+        private static extern void mrMeshDeleteFaces(IntPtr mesh, IntPtr fs, IntPtr keepEdges);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern float mrMeshEdgeLength( IntPtr mesh, UndirectedEdgeId e );
+        private static extern float mrMeshEdgeLength(IntPtr mesh, UndirectedEdgeId e);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern float mrMeshEdgeLengthSq( IntPtr mesh, UndirectedEdgeId e );
+        private static extern float mrMeshEdgeLengthSq(IntPtr mesh, UndirectedEdgeId e);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMeshToPointCloud(IntPtr mesh, byte saveNormals, IntPtr verts);
 
 
         #endregion
@@ -352,7 +355,7 @@ namespace MR.DotNet
             {
                 if (disposing)
                 {
-                    if ( validFaces_ is not null )
+                    if (validFaces_ is not null)
                     {
                         validFaces_.Dispose();
                         validFaces_ = null;
@@ -477,7 +480,7 @@ namespace MR.DotNet
                     for (int i = 0; i < (int)mrEdges.size; i++)
                     {
                         IntPtr currentEdgePtr = IntPtr.Add(edgesPtr, i * sizeOfEdgeId);
-                        holeRepresentiveEdges_.Add( Marshal.PtrToStructure<EdgeId>(currentEdgePtr) );
+                        holeRepresentiveEdges_.Add(Marshal.PtrToStructure<EdgeId>(currentEdgePtr));
                     }
                 }
 
@@ -534,9 +537,9 @@ namespace MR.DotNet
             return mrMeshVolume(mesh_, region.bs_);
         }
         /// computes the area of given face-region (or whole mesh if region is null)
-        public double Area( FaceBitSet? region = null )
+        public double Area(FaceBitSet? region = null)
         {
-            return mrMeshArea( mesh_, region is null ? (IntPtr)null : region.bs_ );
+            return mrMeshArea(mesh_, region is null ? (IntPtr)null : region.bs_);
         }
         /// returns Euclidean length of the edge
         public float EdgeLength(UndirectedEdgeId ue)
@@ -554,7 +557,7 @@ namespace MR.DotNet
         }
 
         /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param edgesToKeep
-        public void DeleteFaces( FaceBitSet faces, UndirectedEdgeBitSet? edgesToKeep = null )
+        public void DeleteFaces(FaceBitSet faces, UndirectedEdgeBitSet? edgesToKeep = null)
         {
             mrMeshDeleteFaces(mesh_, faces.bs_, edgesToKeep is null ? (IntPtr)null : edgesToKeep.bs_);
             clearManagedResources();
@@ -564,6 +567,11 @@ namespace MR.DotNet
         {
             IntPtr clonedMesh = mrMeshCopy(mesh_);
             return new Mesh(clonedMesh);
+        }
+        ///  Mesh to PointCloud
+        static public PointCloud MeshToPointCloud(Mesh mesh, bool saveNormals = true, VertBitSet? region = null)
+        {
+            return new PointCloud(mrMeshToPointCloud(mesh.mesh_, saveNormals ? (byte)1 : (byte)0, region is null ? (IntPtr)null : region.bs_));
         }
 
         #endregion
@@ -626,9 +634,9 @@ namespace MR.DotNet
                 Marshal.FreeHGlobal(nativePoints);
                 Marshal.FreeHGlobal(nativeTriangles);
             }
-        }        
-       
-       
+        }
+
+
         /// creates a parallelepiped with given sizes and base
         public static Mesh MakeCube(Vector3f size, Vector3f baseCoords)
         {
@@ -696,7 +704,7 @@ namespace MR.DotNet
         #region Private fields
 
         void clearManagedResources()
-        {            
+        {
             if (validFaces_ is not null)
             {
                 validFaces_.Dispose();

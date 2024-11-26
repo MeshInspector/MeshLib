@@ -17,6 +17,9 @@ jobs:
   check-python-stubs:
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     needs: manylinux-pip-build
+    steps:
+      - name: Empty step
+        run: echo "Check python stubs"
 
   create-python-stubs:
     if: ${{ github.event_name == 'workflow_call' }}

@@ -22,6 +22,18 @@ jobs:
       - name: Empty step
         run: echo "Check python stubs"
 
+  setup:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+        
   create-python-stubs:
     if: ${{ github.event_name == 'workflow_call' }}
     needs: setup

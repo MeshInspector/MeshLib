@@ -2,8 +2,9 @@
 using System.IO;
 using System.Collections.Generic;
 using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class PoitCloudTests
@@ -88,6 +89,21 @@ namespace MR.DotNet.Test
             file.Close();
             Assert.Throws<SystemException>(() => PointCloud.FromAnySupportedFormat(path));
             File.Delete(path);
+        }
+
+        [Test]
+        public void TestTriangulation()
+        {
+            var mesh = Mesh.MakeTorus(2.0f, 1.0f, 32, 32);
+            var pc = Mesh.MeshToPointCloud(mesh);
+            var restored = PointCloudTriangulation.TriangulatePointCloud(pc, new TriangulationParameters());
+            Assert.That(restored is not null);
+            if (restored is not null)
+            {
+                Assert.That(restored.Points.Count, Is.EqualTo(1024));
+                Assert.That(restored.ValidPoints.Count(), Is.EqualTo(1024));
+                Assert.That(restored.HoleRepresentiveEdges.Count == 0);
+            }
         }
     }
 }

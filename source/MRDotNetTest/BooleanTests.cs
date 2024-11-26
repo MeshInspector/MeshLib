@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class BooleanTests
@@ -40,8 +41,8 @@ namespace MR.DotNet.Test
                             BooleanParameters parameters = new BooleanParameters();
                             parameters.rigidB2A = new AffineXf3f(shiftVec) * new AffineXf3f(rotation);
 
-                            Assert.DoesNotThrow(() => MeshBoolean.Boolean(meshA, meshB, BooleanOperation.Union, parameters));
-                            Assert.DoesNotThrow(() => MeshBoolean.Boolean(meshA, meshB, BooleanOperation.Intersection, parameters));
+                            Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Union, parameters));
+                            Assert.DoesNotThrow(() => Boolean(meshA, meshB, BooleanOperation.Intersection, parameters));
                         }
                     }
                 }
@@ -57,7 +58,7 @@ namespace MR.DotNet.Test
 
             var parameters = new BooleanParameters();
             parameters.mapper = new BooleanResultMapper();
-            var booleanResult = MeshBoolean.Boolean(meshA, meshB, BooleanOperation.Union, parameters );
+            var booleanResult = Boolean(meshA, meshB, BooleanOperation.Union, parameters );
             var validPointsA = meshA.ValidPoints as VertBitSet;
             var validPointsB = meshB.ValidPoints as VertBitSet;
             var validFacesA = meshA.ValidFaces as FaceBitSet;

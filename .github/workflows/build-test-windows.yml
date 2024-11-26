@@ -164,6 +164,10 @@ jobs:
       - name: Build .NET
         if:   matrix.runner == 'windows-2022'
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
+        
+      - name: Build .NET examples
+        if: matrix.runner == 'windows-2022'
+        run: msbuild -m source\examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}

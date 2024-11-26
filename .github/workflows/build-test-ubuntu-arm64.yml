@@ -186,13 +186,37 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu_arm64//${{matrix.os}}' --recursive
 
       - name: Create Deb
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-arm64-dev.deb
+
+      - name: Extract Deb
+        run: dpkg --extract meshlib_${{matrix.os}}-arm64-dev.deb $(pwd)/meshlib_install/
+
+      - name: Build C++ examples
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+
+      - name: Build C examples
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
+          cmake \
+            --build c-examples-build \
+            --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}

@@ -1,3 +1,5 @@
+import os
+
 import meshlib.mrmeshpy as mrmeshpy
 import sys
 
@@ -27,7 +29,7 @@ def main(argv):
     inputs = []
     max_bbox = None
     for i in range(input_clouds_num):
-        points = mrmeshpy.loadPoints(file_args[i + 1])
+        points = mrmeshpy.loadPoints(file_args[i])
         transform = mrmeshpy.AffineXf3f()
         points_with_transform = mrmeshpy.MeshOrPointsXf(points, transform)
         inputs.append(points_with_transform)
@@ -62,5 +64,4 @@ def main(argv):
 
     mrmeshpy.PointsSave.toAnySupportedFormat(output, file_args[-1])
 
-if __name__ == "__main__":
-    main(sys.argv)
+main(sys.argv)

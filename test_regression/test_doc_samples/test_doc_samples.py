@@ -12,7 +12,7 @@ import runpy
 SAMPLES_FOLDER = Path("../examples/python-examples")
 
 
-def run_code_sample(code_path: str, args: list[str]):
+def run_code_sample(code_path: str, args: list):
     """
     Function to run code sample with CLI args
     :param code_path: path to code sample

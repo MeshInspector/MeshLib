@@ -1,5 +1,3 @@
-from random import sample
-
 import pytest
 from module_helper import *
 
@@ -9,8 +7,24 @@ from helpers.meshlib_helpers import compare_mesh
 from pytest_check import check
 
 import shutil
+import runpy
 
 SAMPLES_FOLDER = Path("../examples/python-examples")
+
+
+def run_code_sample(code_path, args):
+    # Preserving original args
+    print(args)
+    print(code_path)
+    original_sys_argv = sys.argv.copy()
+    # setting new args for code to execute
+    sys.argv = [str(code_path)] + args
+    print(sys.argv)
+    try:
+        runpy.run_path(code_path)
+    finally:
+        # restoring original args
+        sys.argv = original_sys_argv
 
 @pytest.mark.parametrize("doc_case",
                          [
@@ -56,6 +70,13 @@ SAMPLES_FOLDER = Path("../examples/python-examples")
                                  {'sample': "Triangulation_v3.dox.py", 'input_meshes': [], 'output_meshes': []},
                                  id="Triangulation_v3.dox.py",
                                  marks=pytest.mark.bindingsV3),
+                             pytest.param(
+                                 {'sample': "GlobalRegistration.dox.py",
+                                  'input_meshes': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
+                                  'output_meshes': ["out.ply"],
+                                  'args': ["cloud0.ply", "cloud1.ply", "cloud2.ply", "out.ply"]},
+                                 id="GlobalRegistration.dox.py",
+                                 marks=pytest.mark.bindingsV3),
                          ])
 @pytest.mark.smoke
 def test_python_doc_samples(tmp_path, doc_case):
@@ -71,7 +92,10 @@ def test_python_doc_samples(tmp_path, doc_case):
         shutil.copy(Path(test_files_path) / "doc_samples" / py_file / mesh, mesh)
 
     # Execute file in tmp_path
-    exec(open(tmp_path / py_file).read())
+    if 'args' in doc_case:
+        run_code_sample(tmp_path / py_file, doc_case['args'])
+    else:
+        exec(open(tmp_path / py_file).read())
 
     for out_mesh in doc_case['output_meshes']:
         shutil.copy(out_mesh, tmp_path / out_mesh)

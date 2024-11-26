@@ -1,4 +1,4 @@
-import meshlib.mrmeshpy as mr
+import meshlib.mrmeshpy as mrmeshpy
 import sys
 
 
@@ -16,52 +16,51 @@ def print_stats(icp):
         p2pl_inaccuracy = icp.getMeanSqDistToPlane(p2pt_metric)
         print(f"RMS point-to-plane distance: {p2pl_metric} ± {p2pl_inaccuracy}")
 
-def main():
-    # if len(argv) < 4:
-    #     print(f"Usage: {argv[0]} INPUT1 INPUT2 [INPUTS...] OUTPUT")
-    #     return
-    inp_files = ['']
-    inp_files.append("cloud0.ply")
-    inp_files.append("cloud1.ply")
-    inp_files.append("cloud2.ply")
-    inp_files.append("out.ply")
+def main(argv):
+    if len(argv) < 4:
+        print(f"Usage for script: {argv[0]} INPUT1 INPUT2 [INPUTS...] OUTPUT")
+        return
+    file_args = argv[1:]
 
-    input_num = len(inp_files) - 2
+    # Loading inputs and finding max bounding box
+    input_clouds_num = len(file_args) - 1
     inputs = []
     max_bbox = None
-
-    for i in range(input_num):
-        points = mr.loadPoints(inp_files[i + 1])
-        xf = mr.AffineXf3f()
-        obj = mr.MeshOrPointsXf(points, xf)
-        inputs.append(obj)
+    for i in range(input_clouds_num):
+        points = mrmeshpy.loadPoints(file_args[i + 1])
+        transform = mrmeshpy.AffineXf3f()
+        points_with_transform = mrmeshpy.MeshOrPointsXf(points, transform)
+        inputs.append(points_with_transform)
 
         bbox = points.getBoundingBox()
         if not max_bbox or bbox.volume() > max_bbox.volume():
             max_bbox = bbox
 
-    sampling_params = mr.MultiwayICPSamplingParameters()
+    # ICP initialization
+    sampling_params = mrmeshpy.MultiwayICPSamplingParameters()
     sampling_params.samplingVoxelSize = max_bbox.diagonal() * 0.03
 
-    inputs_obj = mr.Vector_MeshOrPointsXf_ObjId(inputs)
+    inputs_obj = mrmeshpy.Vector_MeshOrPointsXf_ObjId(inputs)
 
-    icp = mr.MultiwayICP(inputs_obj, sampling_params)
-    icp_properties = mr.ICPProperties()
+    icp = mrmeshpy.MultiwayICP(inputs_obj, sampling_params)
+    icp_properties = mrmeshpy.ICPProperties()
     icp.setParams(icp_properties)
 
-    icp.updateAllPointPairs() # crash here
+    icp.updateAllPointPairs()
 
     print("Calculating transformations...")
     xfs = icp.calculateTransformations()
     print_stats(icp)
 
-    output = mr.PointCloud()
-    for i in range(input_num):
-        xf = xfs.vec_[i]
+    # Saving result
+    output = mrmeshpy.PointCloud()
+    for i in range(input_clouds_num):
+        transform = xfs.vec_[i]
         for point in inputs[i].obj.points():
-            transformed_point = xf(point)
+            transformed_point = transform(point)
             output.addPoint(transformed_point)
 
-    mr.PointsSave.toAnySupportedFormat(output, inp_files[-1])
+    mrmeshpy.PointsSave.toAnySupportedFormat(output, file_args[-1])
 
-main()
+if __name__ == "__main__":
+    main(sys.argv)

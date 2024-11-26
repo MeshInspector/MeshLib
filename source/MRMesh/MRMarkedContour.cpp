@@ -90,17 +90,16 @@ MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
     return res;
 }
 
-MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability )
+MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
 {
     MR_TIMER
     assert( markStability > 0 );
-    MarkedContour3f res;
-    if ( in.contour.empty() )
-        return res;
-    assert( firstLastMarked( in ) );
+    if ( mc.contour.empty() )
+        return mc;
+    assert( firstLastMarked( mc ) );
 
-    const auto sz = in.contour.size();
-    const auto mz = in.marks.count();
+    const auto sz = mc.contour.size();
+    const auto mz = mc.marks.count();
 
     std::vector<Eigen::Triplet<double>> mTriplets;
     mTriplets.reserve( 3 * ( sz - 2 ) + mz );
@@ -126,12 +125,12 @@ MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability )
         mTriplets.emplace_back( i, i + 2, -0.5 );
     }
 
-    // Stabilization in marked points
+    // Stabilization mc marked points
     int nextRow = int( sz - 2 );
-    for ( auto i : in.marks )
+    for ( auto i : mc.marks )
     {
         mTriplets.emplace_back( nextRow, int( i ), markStability );
-        setR( nextRow, markStability * in.contour[i] );
+        setR( nextRow, markStability * mc.contour[i] );
         ++nextRow;
     }
 
@@ -155,11 +154,14 @@ MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability )
     x[2] = chol.solve( b[2] );
 
     // produce output
-    res.marks = in.marks;
-    res.contour.reserve( sz );
     for ( int i = 0; i < sz; ++i )
-        res.contour.push_back( Vector3f( (float)x[0][i], (float)x[1][i], (float)x[2][i] ) );
-    return res;
+        mc.contour[i] = Vector3f( (float)x[0][i], (float)x[1][i], (float)x[2][i] );
+    return mc;
+}
+
+MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSettings & settings )
+{
+    return makeSpline( resample( markedContour( controlPoints ), settings.samplingStep ), settings.controlStability );
 }
 
 TEST(MRMesh, MarkedContour)

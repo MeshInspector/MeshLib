@@ -204,6 +204,9 @@ jobs:
 
      - name: Build NuGet package
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
+       
+     - name: Build .NET examples
+       run: msbuild -m source\examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }}
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4

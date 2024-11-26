@@ -7,10 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
+    <RestoreAdditionalProjectSources>
+      $(MSBuildThisFileDirectory)/../../
+    </RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MeshLib" Version="3.0.1.251-beta" />
+    <PackageReference Include="MeshLib" Version="*-*" />
   </ItemGroup>
 
 </Project>

@@ -15,6 +15,7 @@ on:
 
 jobs:
   check-python-stubs:
+    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     needs: manylinux-pip-build
     steps:
@@ -25,7 +26,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_call' }}
     needs: setup
     timeout-minutes: 80
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     container:
       image: ${{ matrix.docker-image }}
       options: ${{ matrix.container-options }}

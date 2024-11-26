@@ -1,0 +1,113 @@
+name: Configuration
+
+env:
+  # please list the required tags here
+  tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
+  tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+  tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
+  tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
+  tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
+
+on:
+  workflow_call:
+    outputs:
+      # manually defined values
+      autotest-data-s3-url:
+        description:
+        value: "s3://data-autotest/test_data_2024-nov-07"
+      aws-creds-role:
+        description:
+        value: "arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole"
+      aws-region:
+        description:
+        value: "us-east-1"
+      pip-cuda-version:
+        description:
+        value: "11.4"
+      vcpkg-version:
+        description: vcpkg version
+        value: "2024.10.21" # VCPKG-AUTO-UPDATE
+      # automatically computed or tag-based values
+      full-config-build:
+        description:
+        value: ${{ github.event_name == 'schedule' || env.tag-full-ci }}
+      docker-image-tag:
+        description:
+        value: ${{ jobs.prepare-config.outputs.docker-image-tag }}
+      internal-build:
+        description:
+        value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      need-linux-rebuild:
+        description:
+        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
+      need-windows-rebuild:
+        description:
+        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || env.tag-bump-vcpkg }}
+      upload-artifacts:
+        description:
+        value: ${{ github.event_name == 'push' || env.tag-full-ci }}
+      upload-test-artifacts:
+        description:
+        value: ${{ env.tag-upload-test-artifacts }}
+      version-namespace:
+        description:
+        value: ${{ env.tag-full-ci && github.event_name != 'push' && 'pr-test' || '' }}
+
+jobs:
+  prepare-config:
+    outputs:
+      docker-image-tag: ${{ steps.select-docker-image-tag.outputs.image_tag }}
+      linux-changes: ${{ steps.linux-changes.outputs.src }}
+      windows-changes: ${{ steps.windows-changes.outputs.src }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Filter Linux paths
+        uses: dorny/paths-filter@v3
+        id: linux-changes
+        with:
+          filters: |
+            src:
+              - 'docker/ubuntu**'
+              - 'docker/fedora**'
+              - 'docker/emscripten**'
+              - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
+              - 'scripts/build_thirdparty.sh'
+              - 'scripts/install_apt_requirements.sh'
+              - 'scripts/install_dnf_requirements.sh'
+              - 'scripts/mrbind/install_deps_ubuntu.sh'
+              - 'thirdparty/!(install.bat|vcpkg/**)'
+
+      - name: Filter Windows paths
+        uses: dorny/paths-filter@v3
+        id: windows-changes
+        with:
+          filters: |
+            src:
+              - 'requirements/windows.txt'
+              - 'thirdparty/vcpkg/**'
+              - 'thirdparty/install.bat'
+
+      - name: Get current branch name
+        if: ${{ steps.linux-changes.outputs.src == 'true' }}
+        id: branch-name
+        uses: tj-actions/branch-names@v8.0.1
+
+      # if nothing to rebuild: "latest"
+      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
+      # example: fix/mesh -> fix-mesh
+      - name: Select Docker image tag
+        id: select-docker-image-tag
+        run: |
+          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+            IMAGE_TAG=$(echo "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          else
+            IMAGE_TAG="latest"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT

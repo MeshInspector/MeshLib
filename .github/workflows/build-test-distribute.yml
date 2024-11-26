@@ -21,6 +21,17 @@ env:
   VCPKG-VERSION: '2024.10.21'
 
 jobs:
+  config:
+    uses: ./.github/workflows/config.yml
+    secrets: inherit
+
+  debug-config:
+    needs: [ config ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print config
+        run: echo "${{ toJSON( needs.config.outputs ) }}" | jq
+
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit

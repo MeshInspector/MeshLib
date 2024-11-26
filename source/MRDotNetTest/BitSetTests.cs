@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class BitSetTests
@@ -8,21 +9,21 @@ namespace MR.DotNet.Test
         [Test]
         public void TestDefaultConstructor()
         {
-            var a = new MR.DotNet.BitSet();
+            var a = new BitSet();
             Assert.That( a.Size(), Is.EqualTo(0) );
         }
 
         [Test]
         public void TestConstructor()
         {
-            var a = new MR.DotNet.BitSet( 20 );
+            var a = new BitSet( 20 );
             Assert.That(a.Size(), Is.EqualTo(20));
         }
 
         [Test]
         public void TestSet()
         {
-            var a = new MR.DotNet.BitSet( 10 );
+            var a = new BitSet( 10 );
             a.Set( 5 );
             Assert.That( a.Test( 5 ) );
             Assert.That( !a.Test( 4 ) );
@@ -31,7 +32,7 @@ namespace MR.DotNet.Test
         [Test]
         public void TestFindLast()
         {
-            var a = new MR.DotNet.BitSet( 10 );
+            var a = new BitSet( 10 );
             a.Set( 5 );
             Assert.That( a.FindLast(), Is.EqualTo(5) );
         }
@@ -39,7 +40,7 @@ namespace MR.DotNet.Test
         [Test]
         public void TestAutoResize()
         {
-            var a = new MR.DotNet.BitSet();
+            var a = new BitSet();
             a.AutoResizeSet(6);
             Assert.That( a.Size() == 7 );
         }
@@ -47,10 +48,10 @@ namespace MR.DotNet.Test
         [Test]
         public void TestSubtraction()
         {
-            var a = new MR.DotNet.BitSet( 10 );
+            var a = new BitSet( 10 );
             a.Set( 5 );
             a.Set(6);
-            var b = new MR.DotNet.BitSet( 10 );
+            var b = new BitSet( 10 );
             b.Set( 6 );
             var c = a - b;
             Assert.That( c.Test( 5 ) );
@@ -60,9 +61,9 @@ namespace MR.DotNet.Test
         [Test]
         public void TestUnion()
         {
-            var a = new MR.DotNet.BitSet( 10 );
+            var a = new BitSet( 10 );
             a.Set( 5 );            
-            var b = new MR.DotNet.BitSet( 10 );
+            var b = new BitSet( 10 );
             b.Set( 6 );
             var c = a | b;
             Assert.That( c.Test( 5 ) );

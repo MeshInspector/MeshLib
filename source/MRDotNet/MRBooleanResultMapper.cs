@@ -2,14 +2,18 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
+using static MR.DotNet;
 
-namespace MR.DotNet
+namespace MR
 {
     using VertMap = List<VertId>;
     using VertMapReadOnly = ReadOnlyCollection<VertId>;
 
     using FaceMap = List<FaceId>;
     using FaceMapReadOnly = ReadOnlyCollection<FaceId>;
+
+    public partial class DotNet
+    {    
 
     public enum MapObject
     {
@@ -24,7 +28,7 @@ namespace MR.DotNet
         public IntPtr data = IntPtr.Zero;
         public ulong size = 0;
         public IntPtr reserved = IntPtr.Zero;
-        public MRFaceMap(){}
+        public MRFaceMap() { }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -44,7 +48,7 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRFaceMap mrBooleanResultMapperMapsCut2newFaces(IntPtr maps);
 
-        
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRVertMap mrBooleanResultMapperMapsOld2NewVerts(IntPtr maps);
 
@@ -63,12 +67,12 @@ namespace MR.DotNet
         {
             get
             {
-                if ( cut2origin_ is null )
+                if (cut2origin_ is null)
                 {
                     var mrMap = mrBooleanResultMapperMapsCut2origin(maps_);
-                    cut2origin_ = new List<FaceId>( (int)mrMap.size );
-                    int sizeOfFaceId= Marshal.SizeOf(typeof(FaceId));
-                    for ( int i = 0; i < (int)mrMap.size; i++ )
+                    cut2origin_ = new List<FaceId>((int)mrMap.size);
+                    int sizeOfFaceId = Marshal.SizeOf(typeof(FaceId));
+                    for (int i = 0; i < (int)mrMap.size; i++)
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
                         var face = Marshal.PtrToStructure<FaceId>(currentFacePtr);
@@ -85,12 +89,12 @@ namespace MR.DotNet
         {
             get
             {
-                if ( cut2newFaces_ is null )
+                if (cut2newFaces_ is null)
                 {
                     var mrMap = mrBooleanResultMapperMapsCut2newFaces(maps_);
-                    cut2newFaces_ = new List<FaceId>( (int)mrMap.size );
-                    int sizeOfFaceId= Marshal.SizeOf(typeof(FaceId));
-                    for ( int i = 0; i < (int)mrMap.size; i++ )
+                    cut2newFaces_ = new List<FaceId>((int)mrMap.size);
+                    int sizeOfFaceId = Marshal.SizeOf(typeof(FaceId));
+                    for (int i = 0; i < (int)mrMap.size; i++)
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
                         var face = Marshal.PtrToStructure<FaceId>(currentFacePtr);
@@ -107,12 +111,12 @@ namespace MR.DotNet
         {
             get
             {
-                if ( old2newVerts_ is null )
+                if (old2newVerts_ is null)
                 {
                     var mrMap = mrBooleanResultMapperMapsOld2NewVerts(maps_);
-                    old2newVerts_ = new List<VertId>( (int)mrMap.size );
-                    int sizeOfVertId= Marshal.SizeOf(typeof(VertId));
-                    for ( int i = 0; i < (int)mrMap.size; i++ )
+                    old2newVerts_ = new List<VertId>((int)mrMap.size);
+                    int sizeOfVertId = Marshal.SizeOf(typeof(VertId));
+                    for (int i = 0; i < (int)mrMap.size; i++)
                     {
                         IntPtr currentVertPtr = IntPtr.Add(mrMap.data, i * sizeOfVertId);
                         var vert = Marshal.PtrToStructure<VertId>(currentVertPtr);
@@ -198,20 +202,20 @@ namespace MR.DotNet
         #region properties
 
         /// returns faces bitset of result mesh corresponding input one
-        public FaceBitSet FaceMap( FaceBitSet oldBS, MapObject obj)
+        public FaceBitSet FaceMap(FaceBitSet oldBS, MapObject obj)
         {
-            if ( maps_ is null )
+            if (maps_ is null)
                 maps_ = new BooleanMaps?[2];
 
-            if ( maps_[(int)obj] is null )
+            if (maps_[(int)obj] is null)
             {
-                maps_[(int)obj] = new BooleanMaps( mrBooleanResultMapperGetMaps(mapper_, obj) );
+                maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
             }
 
             return new FaceBitSet(mrBooleanResultMapperMapFaces(mapper_, oldBS.bs_, obj));
         }
         /// Returns vertices bitset of result mesh corresponding input one
-        public VertBitSet VertMap( VertBitSet oldBS, MapObject obj)
+        public VertBitSet VertMap(VertBitSet oldBS, MapObject obj)
         {
             if (maps_ is null)
                 maps_ = new BooleanMaps?[2];
@@ -229,7 +233,7 @@ namespace MR.DotNet
             return new FaceBitSet(mrBooleanResultMapperNewFaces(mapper_));
         }
 
-        public BooleanMaps GetMaps( MapObject obj)
+        public BooleanMaps GetMaps(MapObject obj)
         {
             if (maps_ is null)
                 maps_ = new BooleanMaps?[2];
@@ -243,7 +247,7 @@ namespace MR.DotNet
             return res;
         }
         /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
-        public FaceBitSet FilteredOldFaceBitSet( FaceBitSet oldBS, MapObject obj)
+        public FaceBitSet FilteredOldFaceBitSet(FaceBitSet oldBS, MapObject obj)
         {
             if (maps_ is null)
                 maps_ = new BooleanMaps?[2];
@@ -264,4 +268,5 @@ namespace MR.DotNet
         BooleanMaps?[]? maps_;
         #endregion
     }
+}
 }

@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
-using static MR.DotNet.AffineXf3f;
+using static MR.DotNet;
 using static MR.DotNet.Box3f;
 using static MR.DotNet.Vector3f;
 
-namespace MR.DotNet
+namespace MR
 {
     using VertBitSetReadOnly = BitSetReadOnly;
     using VertCoordsReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<Vector3f>;
     using VertCoords = System.Collections.Generic.List<Vector3f>;
+
+    public partial class DotNet
+    {
+    
 
     public class PointCloud : MeshOrPoints, IDisposable
     {
@@ -242,4 +246,5 @@ namespace MR.DotNet
         private VertBitSet? validPoints_;
         private Box3f? boundingBox_;
     }
+}
 }

@@ -31,8 +31,8 @@ jobs:
     timeout-minutes: 80
     runs-on: ubuntu-latest
     container:
-      image: ${{ matrix.docker-image }}
-      options: ${{ matrix.container-options }}
+      image: "meshlib/meshlib-ubuntu20:latest"
+      options: "--user root"
     strategy:
       fail-fast: false
     steps:

@@ -1,9 +1,8 @@
-using System;
 using static MR.DotNet;
 
-class Program
+public class MeshDecimateExample
 {
-    static void Main(string[] args)
+    public static void Run(string[] args)
     {
         try
         {

@@ -1,13 +1,15 @@
-using System;
 using System.Reflection;
 using static MR.DotNet;
 
-class Program
+public class MeshBooleanExample
 {
-    static void Main(string[] args)
+    public static void Run(string[] args)
     {
-        if (args.Length != 2)
-            Console.WriteLine("Usage: {0} INPUT1 INPUT2", Assembly.GetExecutingAssembly().GetName().Name);
+        if (args.Length != 3)
+        {
+            Console.WriteLine("Usage: {0} MeshBooleanExample INPUT1 INPUT2", Assembly.GetExecutingAssembly().GetName().Name);
+            return;
+        }
 
         try
         {

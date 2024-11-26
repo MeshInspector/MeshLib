@@ -1,13 +1,5 @@
 name: Configuration
 
-env:
-  # please list the required tags here
-  tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
-  tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-  tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
-  tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
-  tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
-
 on:
   workflow_call:
     outputs:
@@ -30,7 +22,7 @@ on:
       # automatically computed or tag-based values
       full-config-build:
         description:
-        value: ${{ github.event_name == 'schedule' || env.tag-full-ci }}
+        value: ${{ github.event_name == 'schedule' || jobs.tags.outputs.full-ci }}
       docker-image-tag:
         description:
         value: ${{ jobs.prepare-config.outputs.docker-image-tag }}
@@ -42,18 +34,29 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
       need-windows-rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || env.tag-bump-vcpkg }}
+        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.tags.outputs.bump-vcpkg }}
       upload-artifacts:
         description:
-        value: ${{ github.event_name == 'push' || env.tag-full-ci }}
+        value: ${{ github.event_name == 'push' || jobs.tags.outputs.full-ci }}
       upload-test-artifacts:
         description:
-        value: ${{ env.tag-upload-test-artifacts }}
+        value: ${{ jobs.tags.outputs.upload-test-artifacts }}
       version-namespace:
         description:
-        value: ${{ env.tag-full-ci && github.event_name != 'push' && 'pr-test' || '' }}
+        value: ${{ jobs.tags.outputs.full-ci && github.event_name != 'push' && 'pr-test' || '' }}
 
 jobs:
+  tags:
+    outputs:
+      # please list the required tags here
+      bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
+      full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+      skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
+      update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
+      upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
+
+    runs-on: ubuntu-latest
+
   prepare-config:
     outputs:
       docker-image-tag: ${{ steps.select-docker-image-tag.outputs.image_tag }}

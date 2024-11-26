@@ -12,14 +12,16 @@ import runpy
 SAMPLES_FOLDER = Path("../examples/python-examples")
 
 
-def run_code_sample(code_path, args):
+def run_code_sample(code_path: str, args: list[str]):
+    """
+    Function to run code sample with CLI args
+    :param code_path: path to code sample
+    :param args: arguments to pass to code sample
+    """
     # Preserving original args
-    print(args)
-    print(code_path)
     original_sys_argv = sys.argv.copy()
     # setting new args for code to execute
-    sys.argv = [str(code_path)] + args
-    print(sys.argv)
+    sys.argv = [code_path] + args
     try:
         runpy.run_path(code_path)
     finally:

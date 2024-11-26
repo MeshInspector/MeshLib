@@ -21,6 +21,8 @@ env:
   VCPKG-VERSION: '2024.10.21'
 
 jobs:
+  # NOTE: all output values are strings
+  # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
   config:
     uses: ./.github/workflows/config.yml
     secrets: inherit

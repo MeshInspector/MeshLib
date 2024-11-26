@@ -103,45 +103,41 @@ MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability )
     const auto mz = in.marks.count();
 
     std::vector<Eigen::Triplet<double>> mTriplets;
-    mTriplets.reserve( 3 * ( sz - 2 ) + 2 + mz );
+    mTriplets.reserve( 3 * ( sz - 2 ) + mz );
 
     Eigen::VectorXd r[3];
     for ( int i = 0; i < 3; ++i )
-        r[i].resize( sz + mz );
+        r[i].resize( sz - 2 + mz );
+    auto setR = [&r]( int row, Vector3f p )
+    {
+        r[0][row] = p.x;
+        r[1][row] = p.y;
+        r[2][row] = p.z;
+    };
 
-    // Smoothness
-    for ( int i = 0; i < sz; ++i )
+    // Smoothness at middle points
+    for ( int i = 0; i + 2 < sz; ++i )
         r[0][i] = r[1][i] = r[2][i] = 0;
 
-    // first point of open contour
-    mTriplets.emplace_back( 0, 0, 1.0 );
-    // middle points
-    for ( int i = 1; i + 1 < sz; ++i )
+    for ( int i = 0; i + 2 < sz; ++i )
     {
-        mTriplets.emplace_back( i, i - 1, -0.5 );
-        mTriplets.emplace_back( i, i    ,  1.0 );
-        mTriplets.emplace_back( i, i + 1, -0.5 );
+        mTriplets.emplace_back( i, i    , -0.5 );
+        mTriplets.emplace_back( i, i + 1,  1.0 );
+        mTriplets.emplace_back( i, i + 2, -0.5 );
     }
-    // last point of open contour
-    mTriplets.emplace_back( (int)sz - 1, (int)sz - 1, 1.0 );
 
     // Stabilization in marked points
-    int nextRow = int( sz );
+    int nextRow = int( sz - 2 );
     for ( auto i : in.marks )
     {
         mTriplets.emplace_back( nextRow, int( i ), markStability );
-
-        const auto & p = in.contour[i];
-        r[0][nextRow] = markStability * p.x;
-        r[1][nextRow] = markStability * p.y;
-        r[2][nextRow] = markStability * p.z;
-
+        setR( nextRow, markStability * in.contour[i] );
         ++nextRow;
     }
 
     Eigen::SparseMatrix<double,Eigen::RowMajor> C;
-    C.resize( sz + mz, sz );
-    assert( mTriplets.size() == 3 * ( sz - 2 ) + 2 + mz );
+    C.resize( sz - 2 + mz, sz );
+    assert( mTriplets.size() == 3 * ( sz - 2 ) + mz );
     C.setFromTriplets( mTriplets.begin(), mTriplets.end() );
 
     // minimum squares solution:

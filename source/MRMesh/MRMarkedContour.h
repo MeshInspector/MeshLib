@@ -27,6 +27,6 @@ struct MarkedContour3f
 /// \param in input marked contour
 /// \param markStability a positive value, the more the value the closer marked points will be to their original positions
 /// \return contour with same number of points and same marked, where each return point tries to be on a smooth curve
-[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability = 0.001f );
+[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( const MarkedContour3f & in, float markStability = 1 );
 
 } //namespace MR

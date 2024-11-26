@@ -57,7 +57,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - run: yes
+      - run: echo
 
   prepare-config:
     outputs:

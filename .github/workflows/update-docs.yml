@@ -147,13 +147,13 @@ jobs:
 
       - name: Unzip Whl Package
         run: |
-        echo "---------------------"
-        pwd
-        ls -la
-        echo "====================="
-        ls -la ~/
-        echo "+++++++++++++++++++++"
-        unzip MeshLib.whl -d MeshLibWhl
+          echo "---------------------"
+          pwd
+          ls -la
+          echo "====================="
+          ls -la ~/
+          echo "+++++++++++++++++++++"
+          unzip MeshLib.whl -d MeshLibWhl
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io

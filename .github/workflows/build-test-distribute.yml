@@ -50,7 +50,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
@@ -63,10 +63,10 @@ jobs:
     secrets: inherit
 
   ubuntu-arm64-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      docker_image_tag: ${{needs.config.outputs.docker_image_tag}}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -74,10 +74,10 @@ jobs:
     secrets: inherit
 
   ubuntu-x64-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
-      docker_image_tag: ${{needs.config.outputs.docker_image_tag}}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -85,20 +85,20 @@ jobs:
     secrets: inherit
 
   fedora-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      docker_image_tag: ${{needs.config.outputs.docker_image_tag}}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
       full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 
   emscripten-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{needs.config.outputs.docker_image_tag}}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
@@ -113,6 +113,7 @@ jobs:
   update-win-version:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
     needs:
+      - config
       - windows-build-test
       - versioning-and-release-url
     timeout-minutes: 60
@@ -198,6 +199,7 @@ jobs:
   create-nuget-package:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
     needs:
+      - config
       - windows-build-test
       - versioning-and-release-url
     timeout-minutes: 20
@@ -239,6 +241,7 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
+      - config
       - update-win-version
       - create-nuget-package
       - ubuntu-x64-build-test
@@ -281,7 +284,7 @@ jobs:
 
   test-distribution:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    needs: [ versioning-and-release-url, upload-distributions ]
+    needs: [ config, versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}

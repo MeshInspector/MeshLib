@@ -149,6 +149,8 @@ jobs:
         run: |
           ls -la
           echo "------------------------"
+          ls -la ./MeshLib.whl
+          echo "------------------------"
           unzip ./MeshLib.whl -d ./MeshLibWhl
 
       - name: Build All Documentation

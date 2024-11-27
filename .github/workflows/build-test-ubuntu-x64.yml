@@ -181,7 +181,7 @@ jobs:
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
-        if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
+        if: ${{ inputs.internal_build }}
         id: cache-autotest
         uses: actions/cache@v4
         with:
@@ -189,7 +189,7 @@ jobs:
           key: ${{ inputs.autotest_data_s3_url }}
 
       - name: Copy autotest data from S3 Tests
-        if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
+        if: ${{ inputs.internal_build }}
         run: aws s3 sync ${{ inputs.autotest_data_s3_url }} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests

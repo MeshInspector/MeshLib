@@ -8,7 +8,7 @@ from pytest_check import check
 from constants import test_files_path
 from pathlib import Path
 
-@pytest.mark.smoke
+@pytest.mark.bindingsV3
 def test_issue_2899(tmp_path):
     input_folder = Path(test_files_path) / "issues" / "2899"
 

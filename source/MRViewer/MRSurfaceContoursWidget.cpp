@@ -123,7 +123,7 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
-    widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
+    widget_.pickedPoints_[obj_][index_]->swapCurrentPosition( point_ );
     widget_.activeIndex_ = index_;
     widget_.activeObject_ = obj_;
     widget_.onPointMoveFinish_( obj_ );
@@ -188,7 +188,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             const auto& contour = pickedPoints_[obj];
             if ( curentPoint.lock() == contour[0] )
             {
-                contour.back()->updateCurrentPosition( point );
+                contour.back()->setCurrentPosition( point );
                 moveClosedPoint_ = false;
             }
         }
@@ -211,7 +211,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
                     auto& point = points[i];
                     const auto& pos = point->getCurrentPosition();
                     if ( isPickedPointValid( obj.get(), pos ) )
-                        point->updateCurrentPosition( pos );
+                        point->setCurrentPosition( pos );
                     else
                         removePoint( obj, i );
                 }

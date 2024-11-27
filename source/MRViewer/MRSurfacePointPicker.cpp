@@ -323,15 +323,21 @@ void SurfacePointWidget::preDraw_()
     setPointRadius_();
 }
 
-void SurfacePointWidget::updateCurrentPosition( const PointOnObject& pos )
+void SurfacePointWidget::setCurrentPosition( const PointOnObject& pos )
 {
     currentPos_ = pointOnObjectToPickedPoint( baseObject_.get(), pos );
     updatePositionAndRadius_();
 }
 
-void SurfacePointWidget::updateCurrentPosition( const PickedPoint& pos )
+void SurfacePointWidget::setCurrentPosition( const PickedPoint& pos )
 {
     currentPos_ = pos;
+    updatePositionAndRadius_();
+}
+
+void SurfacePointWidget::swapCurrentPosition( PickedPoint& pos )
+{
+    std::swap( currentPos_, pos );
     updatePositionAndRadius_();
 }
 

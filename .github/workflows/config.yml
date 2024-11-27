@@ -113,6 +113,12 @@ jobs:
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          
+      - name: Checkout full history
+        if: ${{ env.upload_artifacts == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}

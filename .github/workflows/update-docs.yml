@@ -145,14 +145,11 @@ jobs:
       - name: Install Unzip
         run: sudo apt-get install unzip
 
-      - name: Ls dir
-        run: ls -la
-        
       - name: Unzip Whl Package
-        run: unzip ./MeshLib.whl -d ./MeshLibWhl
-
-      - name: Ls dir
-        run: ls -la
+        run: |
+          ls -la
+          echo "------------------------"
+          unzip ./MeshLib.whl -d ./MeshLibWhl
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io

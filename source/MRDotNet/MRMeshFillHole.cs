@@ -40,7 +40,7 @@ namespace MR
             public FillHoleMetric Metric = new FillHoleMetric();
 
             /// If not null accumulate new faces
-            public BitSet? OutNewFaces = null;
+            public FaceBitSet? OutNewFaces = null;
 
             /** If Strong makes additional efforts to avoid creating multiple edges
               *

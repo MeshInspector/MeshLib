@@ -9,7 +9,6 @@
 #include "MRMesh/MRPointOnObject.h"
 
 #include <functional>
-#include <optional>
 
 namespace MR
 {
@@ -97,16 +96,16 @@ public:
         return currentPos_;
     }
 
-    // return current position transformed to Vector3f 
+    /// return current position transformed to Vector3f 
     MRVIEWER_API Vector3f toVector3f() const;
 
-    // returns stored position in MeshTriPointFormat if it is possible
-    std::optional<MeshTriPoint> getCurrentPositionMeshTriPoint() const
+    /// returns stored position as MeshTriPoint, otherwise returns invalid (default) MeshTriPoint
+    MeshTriPoint getCurrentPositionMeshTriPoint() const
     {
         if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &currentPos_ ) )
             return *triPoint;
         else
-            return std::nullopt;
+            return {};
     }
 
     /// sets new position for the widget

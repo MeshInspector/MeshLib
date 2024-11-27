@@ -6,7 +6,7 @@ namespace MR
 
 const IOFilters AllFilter =
 {
-    { "All (*.*)", "*.*" },
+    { "All (.*)", "*.*" },
 };
 
 namespace MeshLoad

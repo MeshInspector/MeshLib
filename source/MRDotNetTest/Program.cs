@@ -1,7 +1,7 @@
 ﻿using NUnitLite;
 using System;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     internal class Program
     {

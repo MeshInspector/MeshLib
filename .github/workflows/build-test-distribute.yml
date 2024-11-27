@@ -66,10 +66,13 @@ jobs:
     needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       mrbind: true
     secrets: inherit
 
@@ -77,10 +80,13 @@ jobs:
     needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       mrbind: true
     secrets: inherit
 
@@ -88,10 +94,13 @@ jobs:
     needs: [ config, prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
     secrets: inherit
 
   emscripten-build-test:
@@ -99,15 +108,18 @@ jobs:
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      mrbind: ${{ needs.config.outputs.full_config_build == 'true' }}
     secrets: inherit
 
   update-win-version:
@@ -141,7 +153,7 @@ jobs:
             C:\vcpkg\*
 
       - name: Configure AWS Credentials
-        if: ${{ env.INTERNAL_BUILD }}
+        if: ${{ needs.config.outputs.internal_build == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -163,10 +175,10 @@ jobs:
           tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.app_version}}
+        run: py -3.10 scripts\make_install_folder.py ${{ needs.versioning-and-release-url.outputs.app_version }}
 
       - name: Make Install Folder .NET
-        run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
+        run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.versioning-and-release-url.outputs.app_version }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -287,7 +299,7 @@ jobs:
     needs: [ config, versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
+      release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
 
   update-dev-documentation:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' }}

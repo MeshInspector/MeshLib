@@ -243,6 +243,7 @@ void ObjectTransformWidget::preDraw_()
     {
         auto showMask = transformModeMask_.get( vpId );
         controls_->updateVisualTransformMode( showMask, vpId, getControlsXf( vpId ) );
+        controls_->updateSizeInPixel();
     }
 }
 
@@ -636,6 +637,44 @@ void TransformControls::setWidth( float width )
         return;
     params_.width = width;
     update();
+}
+
+void TransformControls::setSizeInPixel( int sizeInPixel )
+{
+    if ( params_.sizeInPixel == sizeInPixel )
+        return;
+    params_.sizeInPixel = sizeInPixel;
+}
+
+void TransformControls::updateSizeInPixel()
+{
+    auto& params = Viewer::instanceRef().viewport().getParameters();
+    if ( params_.sizeInPixel < 0 )
+        return;
+
+    AffineXf3f pixelTransform;
+    pixelTransform = AffineXf3f::linear( Matrix3f::scale( params_.sizeInPixel / 100.0f * tan( params.cameraViewAngle / 360.0f * PI_F ) / params.cameraZoom ) );
+
+    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    {
+        translateControls_[i]->setXf( pixelTransform );
+        rotateControls_[i]->setXf( pixelTransform );
+    }
+
+    if( activeLine_ )
+        activeLine_->setXf( pixelTransform );
+}
+
+void TransformControls::resetSizeInPixel()
+{
+    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    {
+        translateControls_[i]->resetXf();
+        rotateControls_[i]->resetXf();
+    }
+
+    if ( activeLine_ )
+        activeLine_->resetXf( );
 }
 
 ControlBit TransformControls::hover_( bool pickThrough )

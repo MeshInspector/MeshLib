@@ -50,6 +50,9 @@ public:
     // should return current radius of the widget
     virtual float getRadius() const { return 1.0f; }
 
+    // should calculates and sets the matrix to set the size in pixels
+    virtual void updateSizeInPixel() {};
+
     // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
     // if not set, full mask is return
     void setTransformModesValidator( TransformModesValidator validator ) { validator_ = validator; }
@@ -134,6 +137,8 @@ public:
         float radius{ -1.0f };
         // negative width value means that controls are not setup
         float width{ -1.0f };
+        // negative sizeInPixel value means that controls are not setup
+        int sizeInPixel{ -1 };
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -165,6 +170,15 @@ public:
     float getWidth() const { return params_.width; }
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
+    // get current sizeInPixel of widget controls
+    // negative value means that controls are not setup
+    int getSizeInPixel() const { return params_.sizeInPixel; }
+    // set width for this widget
+    MRVIEWER_API void setSizeInPixel( int sizeInPixel );
+    // calculates and sets the matrix to set the size in pixels
+    void updateSizeInPixel() override;
+    // forgets specific transform for pixel size (if you need to disable this option)
+    MRVIEWER_API void resetSizeInPixel();
 
     MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
     MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;

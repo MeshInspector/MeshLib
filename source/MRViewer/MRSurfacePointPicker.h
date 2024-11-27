@@ -109,8 +109,14 @@ public:
             return std::nullopt;
     }
 
-    MRVIEWER_API void updateCurrentPosition( const PointOnObject& pos );
-    MRVIEWER_API void updateCurrentPosition( const PickedPoint& pos );
+    /// sets new position for the widget
+    MRVIEWER_API void setCurrentPosition( const PointOnObject& pos );
+
+    /// sets new position for the widget
+    MRVIEWER_API void setCurrentPosition( const PickedPoint& pos );
+
+    /// sets new position for the widget and returns previous position in the argument
+    MRVIEWER_API void swapCurrentPosition( PickedPoint& pos );
 
     // this callback is called when modification starts if it is set
     void setStartMoveCallback( std::function<void( const PickedPoint& )> startMove )

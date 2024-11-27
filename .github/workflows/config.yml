@@ -4,47 +4,47 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      autotest-data-s3-url:
+      autotest_data_s3_url:
         description:
         value: "s3://data-autotest/test_data_2024-nov-07"
-      aws-creds-role:
+      aws_creds_role:
         description:
         value: "arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole"
-      aws-region:
+      aws_region:
         description:
         value: "us-east-1"
-      pip-cuda-version:
+      pip_cuda_version:
         description:
         value: "11.4"
-      vcpkg-version:
+      vcpkg_version:
         description: vcpkg version
         value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
-      full-config-build:
+      full_config_build:
         description:
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
-      docker-image-tag:
+      docker_image_tag:
         description:
         value: ${{ jobs.prepare-config.outputs.docker-image-tag }}
-      internal-build:
+      internal_build:
         description:
         value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-      need-linux-rebuild:
+      need_linux_image_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
-      need-windows-rebuild:
+      need_windows_image_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
-      update-doc:
+      update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
-      upload-artifacts:
+      upload_artifacts:
         description:
         value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
-      upload-test-artifacts:
+      upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
-      version-namespace:
+      version_namespace:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-full-ci == 'true' && github.event_name != 'push' && 'pr-test' || '' }}
 

@@ -45,6 +45,7 @@ jobs:
     uses: ./.github/workflows/versioning-release.yml
     with:
       app_version:       ${{ needs.config.outputs.app_version }}
+      release_tag:       ${{ needs.config.outputs.release_tag }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

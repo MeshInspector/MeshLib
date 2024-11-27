@@ -6,11 +6,11 @@ on:
       BUILD_MACHINE_TOKEN:
         required: false
     inputs:
-      version-namespace:
+      version_namespace:
         required: false
         type: string
         default: ''
-      UPLOAD_ARTIFACTS:
+      upload_artifacts:
         required: true
         type: boolean
     outputs:
@@ -42,13 +42,13 @@ jobs:
       release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - name: Checkout
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Versioning
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts }}
         uses: paulhatch/semantic-version@v5.4.0
         id: version
         with:
@@ -56,7 +56,7 @@ jobs:
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true
-          namespace: ${{inputs.version-namespace}}
+          namespace: ${{ inputs.version_namespace }}
 
       - name: Set version tag
         id: version-tag
@@ -70,7 +70,7 @@ jobs:
           echo "short_version=${short_version}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts }}
         id: create_release
         uses: mikepenz/action-gh-release@v1
         env:

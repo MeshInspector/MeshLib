@@ -13,9 +13,6 @@ on:
       aws_region:
         description:
         value: "us-east-1"
-      pip_cuda_version:
-        description:
-        value: "11.4"
       vcpkg_version:
         description: vcpkg version
         value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
@@ -32,7 +29,7 @@ on:
       need_linux_image_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
-      need_windows_image_rebuild:
+      need_windows_vcpkg_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
       update_doc:

@@ -140,18 +140,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: PythonWhl
-          path: MeshLib.whl
 
       - name: Install Unzip
         run: sudo apt-get install unzip
 
       - name: Unzip Whl Package
-        run: |
-          ls -la
-          echo "------------------------"
-          ls -la ./MeshLib.whl
-          echo "------------------------"
-          unzip ./MeshLib.whl -d ./MeshLibWhl
+        run: unzip ./meshlib-*.whl -d ./MeshLibWhl
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io

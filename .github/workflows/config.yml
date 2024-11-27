@@ -8,9 +8,12 @@ on:
         description:
         value: "s3://data-autotest/test_data_2024-nov-07"
       vcpkg_version:
-        description: vcpkg version
+        description: "vcpkg version"
         value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
+      app_version:
+        description: "Version without namespace: v1.2.3.4"
+        value: ${{ jobs.prepare-config.outputs.app_version }}
       full_config_build:
         description:
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
@@ -26,6 +29,9 @@ on:
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
+      release_tag:
+        description: "Version with namespace (if it exists): v1.2.3.4-namespace"
+        value: ${{ jobs.prepare-config.outputs.release_tag }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
@@ -35,14 +41,13 @@ on:
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
-      version_namespace:
-        description:
-        value: ${{ jobs.prepare-config.outputs.tag-full-ci == 'true' && github.event_name != 'push' && 'pr-test' || '' }}
 
 jobs:
   prepare-config:
     outputs:
+      app_version:      ${{ steps.version-tag.outputs.app_version }}
       docker-image-tag: ${{ steps.select-docker-image-tag.outputs.image_tag }}
+      release_tag:      ${{ steps.version-tag.outputs.release_tag }}
       linux-changes:    ${{ steps.linux-changes.outputs.src }}
       windows-changes:  ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
@@ -53,6 +58,11 @@ jobs:
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
 
     runs-on: ubuntu-latest
+
+    env:
+      # duplicate output values here since they cannot be accessed from steps
+      upload_artifacts: ${{ github.event_name == 'push' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+      version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
 
     steps:
       - name: Checkout
@@ -103,3 +113,21 @@ jobs:
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Versioning
+        if: ${{ env.upload_artifacts }}
+        uses: paulhatch/semantic-version@v5.4.0
+        id: version
+        with:
+          tag_prefix: "v"
+          version_format: "v${major}.${minor}.${patch}.${increment}"
+          bump_each_commit: false
+          search_commit_body: true
+          namespace: ${{ env.version_namespace }}
+
+      - name: Set version tag
+        id: version-tag
+        run: |
+          version=${{ steps.version.outputs.version }}
+          echo "release_tag=${version}" >> $GITHUB_OUTPUT
+          echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT

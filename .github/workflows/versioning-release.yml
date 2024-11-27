@@ -1,4 +1,4 @@
-name: Versioning and relese URL
+name: Create release
 
 on:
   workflow_call:
@@ -6,26 +6,16 @@ on:
       BUILD_MACHINE_TOKEN:
         required: false
     inputs:
-      version_namespace:
-        required: false
+      app_version:
+        required: true
         type: string
-        default: ''
       upload_artifacts:
         required: true
         type: boolean
     outputs:
-      tag:
-        description: "Version with namespace (if it exists): v1.2.3.4-namespace"
-        value: ${{ jobs.versioning-and-release-url.outputs.tag }}
-      app_version:
-        description: "Version without namespace: v1.2.3.4"
-        value: ${{ jobs.versioning-and-release-url.outputs.app_version }}
-      short_version:
-        description: "Version with only three digits: v1.2.3"
-        value: ${{ jobs.versioning-and-release-url.outputs.short_version }}
-      upload_url:
+      release_upload_url:
         description: "URL to draft release"
-        value: ${{ jobs.versioning-and-release-url.outputs.upload_url }}
+        value: ${{ jobs.versioning-and-release-url.outputs.release_upload_url }}
       release_id:
         description: "release id"
         value: ${{ jobs.versioning-and-release-url.outputs.release_id }}
@@ -35,39 +25,15 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-20.04
     outputs:
-      tag: ${{ steps.version-tag.outputs.tag }}
-      app_version: ${{ steps.version-tag.outputs.app_version }}
-      short_version: ${{ steps.version-tag.outputs.short_version }}
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_id: ${{ steps.create_release.outputs.id }}
     steps:
-      - name: Checkout
+      - name: Convert version
         if: ${{ inputs.upload_artifacts }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Versioning
-        if: ${{ inputs.upload_artifacts }}
-        uses: paulhatch/semantic-version@v5.4.0
-        id: version
-        with:
-          tag_prefix: "v"
-          version_format: "v${major}.${minor}.${patch}.${increment}"
-          bump_each_commit: false
-          search_commit_body: true
-          namespace: ${{ inputs.version_namespace }}
-
-      - name: Set version tag
         id: version-tag
         run: |
-          tag=${{steps.version.outputs.version}}
-          echo "tag=${tag}" >> $GITHUB_OUTPUT
-          app_version=${{steps.version.outputs.version}}
-          app_version=${app_version%%-*}
-          echo "app_version=${app_version}" >> $GITHUB_OUTPUT
-          short_version=${app_version%.*}
-          echo "short_version=${short_version}" >> $GITHUB_OUTPUT
+          app_version=${{ inputs.app_version }}
+          echo "short_version=${app_version%.*}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         if: ${{ inputs.upload_artifacts }}

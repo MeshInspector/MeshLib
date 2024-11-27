@@ -44,13 +44,13 @@ jobs:
     needs: config
     uses: ./.github/workflows/versioning-release.yml
     with:
+      app_version:       ${{ needs.config.outputs.app_version }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      version_namespace: ${{ needs.config.outputs.version_namespace }}
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ config, prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
@@ -63,10 +63,10 @@ jobs:
     secrets: inherit
 
   ubuntu-arm64-build-test:
-    needs: [ config, prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      app_version:           ${{ needs.config.outputs.app_version }}
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
@@ -77,10 +77,10 @@ jobs:
     secrets: inherit
 
   ubuntu-x64-build-test:
-    needs: [ config, prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
-      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      app_version:           ${{ needs.config.outputs.app_version }}
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
@@ -91,10 +91,10 @@ jobs:
     secrets: inherit
 
   fedora-build-test:
-    needs: [ config, prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      app_version:           ${{ needs.config.outputs.app_version }}
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
@@ -104,7 +104,7 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
-    needs: [ config, prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
@@ -113,7 +113,7 @@ jobs:
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
-      app_version:           ${{ needs.versioning-and-release-url.outputs.app_version }}
+      app_version:           ${{ needs.config.outputs.app_version }}
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -127,7 +127,6 @@ jobs:
     needs:
       - config
       - windows-build-test
-      - versioning-and-release-url
     timeout-minutes: 60
     runs-on: windows-2019
     env:
@@ -175,10 +174,10 @@ jobs:
           tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+        run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
 
       - name: Make Install Folder .NET
-        run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+        run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -213,7 +212,6 @@ jobs:
     needs:
       - config
       - windows-build-test
-      - versioning-and-release-url
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -232,8 +230,8 @@ jobs:
 
      - name: Generate NuGet specification
        run: |
-        echo ${{ needs.versioning-and-release-url.outputs.app_version }}
-        py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+        echo ${{ needs.config.outputs.app_version }}
+        py -3 scripts\generate_nuget_spec.py ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -254,6 +252,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - config
+      - versioning-and-release-url
       - update-win-version
       - create-nuget-package
       - ubuntu-x64-build-test
@@ -261,7 +260,6 @@ jobs:
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-      - versioning-and-release-url
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -276,13 +274,13 @@ jobs:
         run: |
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
-            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
           for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
-            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
@@ -291,7 +289,7 @@ jobs:
           PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-            gh release upload ${{ needs.versioning-and-release-url.outputs.tag }} $PKG_FILES --clobber
+            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
   test-distribution:

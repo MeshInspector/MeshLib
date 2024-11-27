@@ -32,7 +32,7 @@ namespace MR.Test
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2) );
 
             var param = new FillHoleParams();
-            param.OutNewFaces = new BitSet();
+            param.OutNewFaces = new FaceBitSet();
 
             FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(0));

@@ -17,7 +17,7 @@ STUBS_ROOT_DIR = WHEEL_SCRIPT_DIR / "meshlib"
 STUBS_SRC_DIR = STUBS_ROOT_DIR / "meshlib"
 SOURCE_DIR = (WHEEL_SCRIPT_DIR / ".." / "..").resolve()
 
-LIB_DIR = SOURCE_DIR / "python_bindings" / "meshlib"
+LIB_DIR = SOURCE_DIR / "build" / "Release" / "bin" / "meshlib"
 
 
 def install_packages():

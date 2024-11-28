@@ -394,12 +394,16 @@ bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB
 
 bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
 {
-
     auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
+    return isNonIntersectingInside( a.mesh, aFace, b, rigidB2A );
+}
+
+bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, const AffineXf3f* rigidB2A /*= nullptr */ )
+{
     if ( !aFace )
         return true; //consider empty mesh always inside
 
-    Vector3f aPoint = a.mesh.triCenter( aFace );
+    Vector3f aPoint = a.triCenter( aFace );
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
 

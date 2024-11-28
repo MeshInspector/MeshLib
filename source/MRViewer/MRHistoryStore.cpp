@@ -1,6 +1,7 @@
 #include "MRHistoryStore.h"
 #include "MRViewer.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
+#include "MRMesh/MRFinally.h"
 #include "MRPch/MRSpdlog.h"
 #include <cassert>
 
@@ -58,8 +59,14 @@ void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deep
 
 bool HistoryStore::undo()
 {
+    assert( !undoRedoInProgress_ );
+    if ( undoRedoInProgress_ )
+        return false;
     if ( firstRedoIndex_ == 0 )
         return false;
+
+    undoRedoInProgress_ = true;
+    MR_FINALLY { undoRedoInProgress_ = false; };
     assert( stack_.size() >= firstRedoIndex_ );
     if ( stack_[firstRedoIndex_ - 1] )
     {
@@ -73,8 +80,14 @@ bool HistoryStore::undo()
 
 bool HistoryStore::redo()
 {
+    assert( !undoRedoInProgress_ );
+    if ( undoRedoInProgress_ )
+        return false;
     if ( firstRedoIndex_ >= stack_.size() )
         return false;
+
+    undoRedoInProgress_ = true;
+    MR_FINALLY { undoRedoInProgress_ = false; };
     if ( stack_[firstRedoIndex_] )
     {
         spdlog::info( "History action redo: \"{}\"", stack_[firstRedoIndex_]->name() );

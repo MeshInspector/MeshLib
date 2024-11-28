@@ -12,7 +12,7 @@ namespace MR
 /// \{
 
 /// This class stores history stack for undo/redo
-class HistoryStore
+class MRVIEWER_CLASS HistoryStore
 {
 public:
     /// returns the instance (if any) of HistoryStore from the viewer

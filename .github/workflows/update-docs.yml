@@ -15,7 +15,6 @@ on:
 
 jobs:
   update-documentation:
-    needs: create-python-stubs
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen

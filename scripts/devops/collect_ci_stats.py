@@ -31,7 +31,7 @@ def parse_step(step: dict):
     return {
         'name': step['name'],
         'conclusion': step['conclusion'],
-        'duration_s': (parse_iso8601(step['completed_at']) - parse_iso8601(step['started_at'])).total_seconds() + 1 if step['conclusion'] else None,
+        'duration_s': (parse_iso8601(step['completed_at']) - parse_iso8601(step['started_at'])).total_seconds() if step['conclusion'] else None,
     }
 
 def parse_job_name(name: str):
@@ -48,7 +48,7 @@ def parse_job(job: dict):
         'name': job['name'],
         **parse_job_name(job['name']),
         'conclusion': job['conclusion'],
-        'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).total_seconds() + 1 if job['conclusion'] else None,
+        'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).total_seconds() if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],
         'head_branch': job['head_branch'],
         'head_sha': job['head_sha'],

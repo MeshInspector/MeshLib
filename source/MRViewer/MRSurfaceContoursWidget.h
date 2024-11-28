@@ -72,10 +72,10 @@ public:
     // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
     // All callback takes a shared pointer to an MR::VisualObject as an argument.
     // onPointAdd: This callback is invoked when a point is added.
-    // onPointMove : This callback is triggered when a point is being start  moved or dragge.
+    // onPointMove : This callback is triggered when a point is being start  moved or dragged.
     // onPointMoveFinish : This callback is called when the movement of a point is completed.
     // onPointRemove : This callback is executed when a point is removed.
-    // isObjectValidToPick : Must returh true or false. This callback is used to determine whether an object is valid for picking.
+    // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
     MRVIEWER_API void create(
             PickerPointCallBack onPointAdd,
             PickerPointCallBack onPointMove,
@@ -98,42 +98,41 @@ public:
         return pickedPoints_[obj];
     }
 
-    // return all contours, i.e. per object umap of ordered surface points [vestor].
+    // return all contours, i.e. per object unorderd_map of ordered surface points [vector].
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const
     {
         return pickedPoints_;
     }
 
-    // chech is contour closed for particular object.
-    [[nodiscard]] bool isClosedCountour( const std::shared_ptr<VisualObject>& obj );
+    // check whether the contour is closed for a particular object.
+    [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
     // Correctly selects the last point in the contours.
     // If obj == nullptr then the check will be in all circuits.
-    // If specified, then only in the contour on specyfied object
-    void highlightLastPoint( const std::shared_ptr<VisualObject>& obj );
+    // If specified, then only in the contour on specified object
+    MRVIEWER_API void highlightLastPoint( const std::shared_ptr<VisualObject>& obj );
 
     // shared variables. which need getters and setters.
-    MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint() const;
+    [[nodiscard]] MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint() const;
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
     /// Get the active (the latest picked/moved) surface point widget.
-    MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;
+    [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;
 
     // Add a point to the end of non closed contour connected with obj.
-    // With carefull it is possile to use it in CallBack.
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
 
     // Remove point with pickedIndex index from contour connected with obj.
-    // With carefull it is possile to use it in CallBack.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
 
-    // Add a special transperent point contour to the end of contour connected with objectToCloseCoutour.
-    // A coordinated of this special transperent point will be equal to the firs point in contour,
-    // which will means that contour is closed.
-    MRVIEWER_API bool closeContour( const std::shared_ptr<VisualObject>& objectToCloseCoutour );
+    // if ( makeClosed ), and the contour is open add a special transparent point contour to the end of contour connected with given object.
+    // A coordinated of this special transparent point will be equal to the firs point in contour, which will means that contour is closed.
+    // if ( !makeClosed ), and the contour is closed remove last point of contour connected with given object.
+    MRVIEWER_API bool closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed = true );
 
     // configuration params
     SurfaceContoursWidgetParams params;
+
 private:
 
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
@@ -142,7 +141,7 @@ private:
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
 
-    // SurfaceContoursWidget interlal variables
+    // SurfaceContoursWidget internal variables
     bool moveClosedPoint_ = false;
     bool activeChange_ = false;
     bool isPickerActive_ = false;
@@ -261,4 +260,4 @@ private:
     };
 };
 
-}
+} //namespace MR

@@ -9,6 +9,8 @@ Example of Global Registration
 \include GlobalRegistration.dox.c
 - <b class="tab-title">C#</b>
 \include GlobalRegistration.dox.cs
+- <b class="tab-title">Python</b>
+\include GlobalRegistration.dox.py
 
 </div>
 

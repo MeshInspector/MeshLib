@@ -123,7 +123,7 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
-    widget_.pickedPoints_[obj_][index_]->updateCurrentPosition( point_ );
+    widget_.pickedPoints_[obj_][index_]->swapCurrentPosition( point_ );
     widget_.activeIndex_ = index_;
     widget_.activeObject_ = obj_;
     widget_.onPointMoveFinish_( obj_ );
@@ -188,7 +188,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             const auto& contour = pickedPoints_[obj];
             if ( curentPoint.lock() == contour[0] )
             {
-                contour.back()->updateCurrentPosition( point );
+                contour.back()->setCurrentPosition( point );
                 moveClosedPoint_ = false;
             }
         }
@@ -211,7 +211,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
                     auto& point = points[i];
                     const auto& pos = point->getCurrentPosition();
                     if ( isPickedPointValid( obj.get(), pos ) )
-                        point->updateCurrentPosition( pos );
+                        point->setCurrentPosition( pos );
                     else
                         removePoint( obj, i );
                 }
@@ -229,15 +229,42 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     return newPoint;
 }
 
-bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<VisualObject>& obj )
+bool SurfaceContoursWidget::isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const
 {
     auto pointsIt = pickedPoints_.find( obj );
     if ( pointsIt == pickedPoints_.end() )
         return false;
-    return pointsIt->second.size() > 1 && pointsIt->second[0]->getCurrentPosition() == pointsIt->second.back()->getCurrentPosition();
+    auto & points = pointsIt->second;
+    return points.size() > 1 && points[0]->getCurrentPosition() == points.back()->getCurrentPosition();
 }
 
+bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed )
+{
+    auto pointsIt = pickedPoints_.find( obj );
+    if ( pointsIt == pickedPoints_.end() )
+        return false;
+    auto & points = pointsIt->second;
+    if ( points.size() <= 1 )
+        return false; // not enough to close or open
 
+    if ( makeClosed )
+    {
+        if ( points[0]->getCurrentPosition() == points.back()->getCurrentPosition() )
+            return false; // already closed
+
+        auto triPoint = points[0]->getCurrentPosition();
+        appendPoint( obj, triPoint );
+        activeIndex_ = 0;
+        return true;
+    }
+
+    // make open
+    if ( points[0]->getCurrentPosition() != points.back()->getCurrentPosition() )
+        return false; // already open
+
+    removePoint( obj, int( points.size() - 1 ) );
+    return true;
+}
 
 void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<VisualObject>& obj )
 {
@@ -354,20 +381,6 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
 
     return true;
 }
-
-bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& objectToCloseCoutour )
-{
-    if ( isClosedCountour( objectToCloseCoutour ) )
-        return false;
-
-    assert( objectToCloseCoutour != nullptr );
-    auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
-    appendPoint( objectToCloseCoutour, triPoint );
-    activeIndex_ = 0;
-    return true;
-}
-
-
 
 bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {

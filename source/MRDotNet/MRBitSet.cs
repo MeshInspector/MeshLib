@@ -216,7 +216,7 @@ namespace MR
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal VertBitSet(IntPtr bs) : base(bs) { }
-            public VertBitSet(int size) : base(size) { }
+            public VertBitSet(int size = 0) : base(size) { }
             public VertBitSet(int size, bool fillValue) : base(size, fillValue) { }
 
             /// returns a deep copy of the bitset
@@ -251,7 +251,7 @@ namespace MR
 
             internal FaceBitSet(IntPtr bs) : base(bs) { }
             /// creates bitset with given size
-            public FaceBitSet(int size) : base(size) { }
+            public FaceBitSet(int size = 0) : base(size) { }
             /// creates bitset with given size and fill value
             public FaceBitSet(int size, bool fillValue) : base(size, fillValue) { }
             /// returns a deep copy of the bitset
@@ -286,7 +286,7 @@ namespace MR
 
             internal EdgeBitSet(IntPtr bs) : base(bs) { }
             /// creates bitset with given size
-            public EdgeBitSet(int size) : base(size) { }
+            public EdgeBitSet(int size = 0) : base(size) { }
             /// creates bitset with given size and fill value
             public EdgeBitSet(int size, bool fillValue) : base(size, fillValue) { }
             /// returns a deep copy of the bitset
@@ -322,7 +322,7 @@ namespace MR
 
             internal UndirectedEdgeBitSet(IntPtr bs) : base(bs) { }
             /// creates bitset with given size
-            public UndirectedEdgeBitSet(int size) : base(size) { }
+            public UndirectedEdgeBitSet(int size = 0) : base(size) { }
             /// creates bitset with given size and fill value
             public UndirectedEdgeBitSet(int size, bool fillValue) : base(size, fillValue) { }
             /// returns a deep copy of the bitset

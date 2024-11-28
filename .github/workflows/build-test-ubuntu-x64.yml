@@ -228,12 +228,3 @@ jobs:
           name: Distributives_${{matrix.os}}-x86
           path: meshlib_${{matrix.os}}-dev.deb
           retention-days: 1
-
-  update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'update-doc') }}
-    needs:
-      - versioning-and-release-url
-    uses: ./.github/workflows/update-docs.yml
-    with:
-      output_folder: MeshLib/dev
-    secrets: inherit

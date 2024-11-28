@@ -53,7 +53,7 @@ MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Box3i& box )
 MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Vector3i& dims )
 {
     return openvdb::CoordBBox( toVdb( Vector3i( 0, 0, 0 ) ),
-                               toVdb( Vector3i( dims ) ) );
+                               toVdb( Vector3i( dims ) - Vector3i::diagonal(1) ) );
 }
 
 /// \}

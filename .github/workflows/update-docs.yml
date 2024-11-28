@@ -30,7 +30,6 @@ jobs:
       - name: Update url in DoxygenLayout
         working-directory: MeshLib/doxygen
         run: |
-          pwd
           sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutMain.xml
           sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutCpp.xml
           sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutPy.xml
@@ -48,18 +47,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: PythonBindings
-          path: MeshLib/python_bindings
-
-      - name: TEST
-        run: |
-          pwd
-          ls -la
-          
+          path: MeshLib/python_bindings/meshlib
 
       - name: Create Python Stubs
         working-directory: MeshLib
         run: |
-          pwd
+          ls -la
+          ls -la python_bindings
+          ls -la python_bindings/meshlib
           python3 ./scripts/wheel/create_stubs.py
 
       - name: Build All Documentation

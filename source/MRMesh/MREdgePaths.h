@@ -138,6 +138,10 @@ MRMESH_API bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, flo
 MRMESH_API int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,
     std::vector<MeshEdgePoint> * outIntersections = nullptr );
 
+/// finds all intersection points between given contour and plane, adds them in outIntersections and returns their number
+MRMESH_API int getContourPlaneIntersections( const Contour3f & path, const Plane3f & plane,
+    std::vector<Vector3f> * outIntersections = nullptr );
+
 /// finds all path edges located in given plane with given tolerance, adds them in outInPlaneEdges and returns their number
 MRMESH_API int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f & plane, float tolerance = 0.0f,
     std::vector<EdgeId> * outInPlaneEdges = nullptr );

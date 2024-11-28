@@ -51,7 +51,12 @@ jobs:
 
       - name: Create Python Stubs
         working-directory: MeshLib
-        run: python3 ./scripts/wheel/create_stubs.py
+        run: |
+          pwd
+          la -la build
+          la -la build/Release
+          la -la build/Release/bin
+          python3 ./scripts/wheel/create_stubs.py
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io

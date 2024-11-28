@@ -35,6 +35,7 @@ struct VoxelTraits<openvdb::FloatGrid::Accessor>
     using ValueType = float;
 };
 
+using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
 
 }
 
@@ -510,11 +511,6 @@ struct LoadSlicesResult
 template <typename T>
 LoadSlicesResult loadSlices( const std::vector<std::filesystem::path>& files, T& data, unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb = {} );
 
-
-
-using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
-
-
 template <>
 LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>& files, VdbVolume& data,
                                         unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb )
@@ -563,6 +559,58 @@ LoadSlicesResult loadSlices<SimpleVolumeMinMax>( const std::vector<std::filesyst
 
     return { numLoadedSlices, cancelCalled, slicesRes };
 }
+
+
+class VolumeUpdater
+{
+public:
+    explicit VolumeUpdater( SimpleVolume& vol ):
+        a_( vol.data.data() ),
+        ind_( vol.dims )
+    {}
+
+    explicit VolumeUpdater( VdbVolume& vol ):
+        a_( vol.data->getAccessor() ),
+        ind_( vol.dims )
+    {}
+
+    const float& getValue( const Vector3i& pos ) const
+    {
+        return std::visit( overloaded{
+            [&] ( float* arr ) -> const float& { return arr[ind_.toVoxelId( pos )]; },
+            [&] ( const openvdb::FloatGrid::Accessor& acc ) -> const float& { return acc.getValue( toVdb( pos ) ); }
+        }, a_ );
+    }
+    const float& getValue( int x, int y, int z ) const
+    {
+        return getValue( { x, y, z } );
+    }
+    const float& getValue( VoxelId flatIndex ) const
+    {
+        return getValue( ind_.toPos( flatIndex ) );
+    }
+
+    void setValue( const Vector3i& pos, float val )
+    {
+        std::visit( overloaded{
+            [&] ( float* arr ) { arr[ind_.toVoxelId( pos )] = val; },
+            [&] ( openvdb::FloatGrid::Accessor& acc ) { acc.setValue( toVdb( pos ), val ); }
+        }, a_ );
+    }
+    void setValue( int x, int y, int z, float val )
+    {
+        setValue( { x, y, z }, val );
+    }
+    void setValue( VoxelId flatIndex, float val )
+    {
+        setValue( ind_.toPos( flatIndex ), val );
+    }
+
+private:
+    std::variant<float*, openvdb::FloatGrid::Accessor> a_;
+    VolumeIndexer ind_;
+};
+
 
 }
 
@@ -615,40 +663,44 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
         return unexpected( "Loading canceled" );
 
     // fill missed slices
-//    int missedSlicesNum = int( seriesInfo.missedSlices.count() );
-//    if ( missedSlicesNum != 0 )
-//    {
-//        int passedSlices = 0;
-//        int prevPresentSlice = -1;
-//        for ( auto presentSlice : presentSlices )
-//        {
-//            int numMissed = int( presentSlice ) - prevPresentSlice - 1;
-//            if ( numMissed == 0 )
-//            {
-//                prevPresentSlice = int( presentSlice );
-//                continue;
-//            }
-//
-//            auto sb = subprogress( cb,
-//                0.9f + 0.1f * float( passedSlices ) / float( missedSlicesNum ),
-//                0.9f + 0.1f * float( passedSlices + numMissed ) / float( missedSlicesNum ) );
-//            int firstMissed = prevPresentSlice + 1;
-//            float ratioDenom = 1.0f / float( numMissed + 1 );
-//            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, [&] ( size_t i )
-//            {
-//                auto posZ = int( i / dimXY );
-//                auto zBotDiff = posZ - prevPresentSlice;
-//                auto botValue = data.data[i - dimXY * zBotDiff];
-//                auto topValue = data.data[i + dimXY * ( int( presentSlice ) - posZ )];
-//                float ratio = float( zBotDiff ) * ratioDenom;
-//                data.data[i] = botValue * ( 1.0f - ratio ) + topValue * ratio;
-//            }, sb );
-//            if ( cancelCalled )
-//                break;
-//            prevPresentSlice = int( presentSlice );
-//            passedSlices += numMissed;
-//        }
-//    }
+    int missedSlicesNum = int( seriesInfo.missedSlices.count() );
+    if ( missedSlicesNum != 0 )
+    {
+        const size_t dimXY = data.dims.x * data.dims.y;
+        int passedSlices = 0;
+        int prevPresentSlice = -1;
+        for ( auto presentSlice : presentSlices )
+        {
+            int numMissed = int( presentSlice ) - prevPresentSlice - 1;
+            if ( numMissed == 0 )
+            {
+                prevPresentSlice = int( presentSlice );
+                continue;
+            }
+
+
+            auto sb = subprogress( cb,
+                0.9f + 0.1f * float( passedSlices ) / float( missedSlicesNum ),
+                0.9f + 0.1f * float( passedSlices + numMissed ) / float( missedSlicesNum ) );
+            int firstMissed = prevPresentSlice + 1;
+            float ratioDenom = 1.0f / float( numMissed + 1 );
+            tbb::enumerable_thread_specific<VolumeUpdater> ts( std::ref( data ) );
+            cancelCalled = !ParallelFor( firstMissed * dimXY, presentSlice * dimXY, [&] ( size_t i )
+            {
+                auto& volUpdater = ts.local();
+                auto posZ = int( i / dimXY );
+                auto zBotDiff = posZ - prevPresentSlice;
+                auto botValue = volUpdater.getValue( VoxelId( i - dimXY * zBotDiff ) );
+                auto topValue = volUpdater.getValue( VoxelId( i + dimXY * ( int( presentSlice ) - posZ ) ) );
+                float ratio = float( zBotDiff ) * ratioDenom;
+                volUpdater.setValue( VoxelId( i ), botValue * ( 1.0f - ratio ) + topValue * ratio );
+            }, sb );
+            if ( cancelCalled )
+                break;
+            prevPresentSlice = int( presentSlice );
+            passedSlices += numMissed;
+        }
+    }
 
     if ( cancelCalled )
         return unexpected( "Loading canceled" );

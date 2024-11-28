@@ -33,17 +33,6 @@ jobs:
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
-  collect-stats:
-    runs-on: ubuntu-latest
-    needs: [ prepare-image, versioning-and-release-url ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Collect stats
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/devops/collect_ci_stats.py
-
   windows-build-test:
     if: false
     needs: [ prepare-image, versioning-and-release-url ]
@@ -346,3 +335,14 @@ jobs:
         with:
           name: Timing_Logs*
           failOnError: false
+
+  collect-stats:
+    runs-on: ubuntu-latest
+    needs: [ update-artifacts ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Collect stats
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/devops/collect_ci_stats.py

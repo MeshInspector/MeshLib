@@ -55,6 +55,37 @@
 #endif
 
 #define IMATH_HALF_NO_LOOKUP_TABLE // fix for unresolved external symbol "imath_half_to_float_table"
+
+
+// Forward-declare some classes with default visibility. Otherwise on Mac the `dynamic_cast` to `openvdb::FloatGrid` can return null even if the type is correct.
+// All those types are the components of the `openvdb::FloatGrid` typedef (including the template arguments...).
+#ifdef __APPLE__
+#include <openvdb/version.h> // For `OPENVDB_VERSION_NAME`, `OPENVDB_USE_VERSION_NAMESPACE`.
+#include <openvdb/Types.h> // For `Index`.
+namespace openvdb
+{
+OPENVDB_USE_VERSION_NAMESPACE
+namespace OPENVDB_VERSION_NAME
+{
+    template <typename _TreeType>
+    class __attribute__((__visibility__("default"))) Grid;
+
+    namespace tree
+    {
+        template <typename _RootNodeType>
+        class __attribute__((__visibility__("default"))) Tree;
+        template<typename ChildType>
+        class __attribute__((__visibility__("default"))) RootNode;
+        template<typename _ChildNodeType, Index Log2Dim>
+        class __attribute__((__visibility__("default"))) InternalNode;
+        template<typename T, Index Log2Dim>
+        class __attribute__((__visibility__("default"))) LeafNode;
+    } // namespace tree
+} // namespace OPENVDB_VERSION_NAME
+} // namespace openvdb
+#endif
+
+
 #include <openvdb/openvdb.h>
 #include <openvdb/io/Stream.h>
 #include <openvdb/tools/Composite.h>

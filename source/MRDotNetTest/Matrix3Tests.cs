@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class Matrix3Tests
@@ -8,7 +9,7 @@ namespace MR.DotNet.Test
         [Test]
         public void TestDefaultConstructor()
         {
-            var a = new MR.DotNet.Matrix3f();
+            var a = new Matrix3f();
 
             Assert.That(1 == a.X.X);
             Assert.That(0 == a.X.Y);
@@ -24,7 +25,7 @@ namespace MR.DotNet.Test
         [Test]
         public void TestConstructor()
         {
-            var a = new MR.DotNet.Matrix3f( new Vector3f(1, 2, 3), new Vector3f(4, 5, 6), new Vector3f(7, 8, 9) );
+            var a = new Matrix3f( new Vector3f(1, 2, 3), new Vector3f(4, 5, 6), new Vector3f(7, 8, 9) );
 
             Assert.That(1 == a.X.X);
             Assert.That(2 == a.X.Y);

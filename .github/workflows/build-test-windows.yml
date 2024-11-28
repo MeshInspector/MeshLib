@@ -147,7 +147,7 @@ jobs:
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
-          install: make gawk
+          install: make gawk procps-ng
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
@@ -164,6 +164,10 @@ jobs:
       - name: Build .NET
         if:   matrix.runner == 'windows-2022'
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
+        
+      - name: Build .NET examples
+        if: matrix.runner == 'windows-2022'
+        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}

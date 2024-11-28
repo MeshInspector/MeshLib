@@ -310,6 +310,10 @@ public:
             Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
         } rotationMode{ RotationCenterMode::Dynamic };
 
+        // if it is true, while rotation is enabled camera can be moved along forward axis
+        // in order to keep constant distance to scene center
+        bool compensateRotation{ true };
+
         // this flag allows viewport to be selected by user
         bool selectable{true};
 

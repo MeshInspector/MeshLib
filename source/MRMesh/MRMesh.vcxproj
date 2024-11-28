@@ -44,8 +44,10 @@
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRIterativeSampling.h" />
     <ClInclude Include="MRLevelOfDetails.h" />
+    <ClInclude Include="MRLoadedObjects.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
+    <ClInclude Include="MRMarkedContour.h" />
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
@@ -483,6 +485,7 @@
     <ClCompile Include="MRLineObject.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
+    <ClCompile Include="MRMarkedContour.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />

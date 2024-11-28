@@ -4,92 +4,92 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static MR.DotNet.Vector3f;
 
-namespace MR.DotNet
-{   
-    public enum MultipleEdgesResolveMode
+namespace MR
+{
+    public partial class DotNet
     {
-        None = 0, //does not avoid multiple edges
-        Simple, //avoids creating edges that already exist in topology
-        Strong //makes additional efforts to avoid creating multiple edges
-    };
+        public enum MultipleEdgesResolveMode
+        {
+            None = 0, //does not avoid multiple edges
+            Simple, //avoids creating edges that already exist in topology
+            Strong //makes additional efforts to avoid creating multiple edges
+        };
 
-    //TODO: when Laplacian is implemented, move this enum there
-    public enum EdgeWeights
-    {
-        /// all edges have same weight=1
-        Unit,
-        /// edge weight depends on local geometry and uses cotangent values
-        Cotan,
-        /// [deprecated] edge weight is equal to edge length times cotangent weight
-        CotanTimesLength,
-        /// cotangent edge weights and equation weights inversely proportional to square root of local area
-        CotanWithAreaEqWeight
-    }
+        //TODO: when Laplacian is implemented, move this enum there
+        public enum EdgeWeights
+        {
+            /// all edges have same weight=1
+            Unit,
+            /// edge weight depends on local geometry and uses cotangent values
+            Cotan,
+            /// [deprecated] edge weight is equal to edge length times cotangent weight
+            CotanTimesLength,
+            /// cotangent edge weights and equation weights inversely proportional to square root of local area
+            CotanWithAreaEqWeight
+        }
 
-    /** \struct MRFillHoleParams
-     * \brief Parameters structure for FillHole\n
-     * Structure has some options to control FillHole
-     */
-    public struct FillHoleParams
-    {       
-        /** Specifies triangulation metric\n
-          * default for FillHole: GetCircumscribedFillMetric\n
-          */
-        public FillHoleMetric Metric = new FillHoleMetric();
+        /** \struct MRFillHoleParams
+         * \brief Parameters structure for FillHole\n
+         * Structure has some options to control FillHole
+         */
+        public struct FillHoleParams
+        {
+            /** Specifies triangulation metric\n
+              * default for FillHole: GetCircumscribedFillMetric\n
+              */
+            public FillHoleMetric Metric = new FillHoleMetric();
 
-        /// If not null accumulate new faces
-        public BitSet? OutNewFaces = null;
+            /// If not null accumulate new faces
+            public FaceBitSet? OutNewFaces = null;
 
-        /** If Strong makes additional efforts to avoid creating multiple edges
-          *
-          * If Simple avoids creating edges that already exist in topology (default)
-          *
-          * If None does not avoid multiple edges
-          */
-        public MultipleEdgesResolveMode MultipleEdgesResolveMode = MultipleEdgesResolveMode.Simple;
+            /** If Strong makes additional efforts to avoid creating multiple edges
+              *
+              * If Simple avoids creating edges that already exist in topology (default)
+              *
+              * If None does not avoid multiple edges
+              */
+            public MultipleEdgesResolveMode MultipleEdgesResolveMode = MultipleEdgesResolveMode.Simple;
 
-        /** If true creates degenerate faces band around hole to have sharp angle visualization
-          * \warning This flag bad for result topology, most likely you do not need it
-          */
-        public bool MakeDegenerateBand = false;
+            /** If true creates degenerate faces band around hole to have sharp angle visualization
+              * \warning This flag bad for result topology, most likely you do not need it
+              */
+            public bool MakeDegenerateBand = false;
 
-        /** The maximum number of polygon subdivisions on a triangle and two smaller polygons,
-          * must be 2 or larger
-          */
-        public int MaxPolygonSubdivisions = 20;
+            /** The maximum number of polygon subdivisions on a triangle and two smaller polygons,
+              * must be 2 or larger
+              */
+            public int MaxPolygonSubdivisions = 20;
 
-        /** Input/output value, if it is present:
-          * returns true if triangulation was bad and do not actually fill hole,
-          * if triangulation is ok returns false;
-          * if it is not present fill hole trivially in case of bad triangulation, (or leaves bad triangulation, depending on metric)
-          */
-        public bool? StopBeforeBadTriangulation = null;
+            /** Input/output value, if it is present:
+              * returns true if triangulation was bad and do not actually fill hole,
+              * if triangulation is ok returns false;
+              * if it is not present fill hole trivially in case of bad triangulation, (or leaves bad triangulation, depending on metric)
+              */
+            public bool? StopBeforeBadTriangulation = null;
 
-        public FillHoleParams() {}
-    };
+            public FillHoleParams() { }
+        };
 
-    public struct FillHoleNicelyParams
-    {
-        public FillHoleParams triangulationParams = new FillHoleParams();
-        /// If false then additional vertices are created inside the patch for best mesh quality
-        public bool TriangulateOnly = false;
-        ///Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
-        public float MaxEdgeLen = 0;
-        ///Maximum number of edge splits allowed during subdivision
-        public int MaxEdgeSplits = 1000;
-        ///Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value (in radians)
-        public float MaxAngleChangeAfterFlip = 30.0f * (float)Math.PI / 180.0f;
-        /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
-        public bool SmoothCurvature = true;
-        /// Additionally smooth 3 layers of vertices near hole boundary both inside and outside of the hole
-        public bool NaturalSmooth = false;
-        /// Edge weighting scheme for smoothCurvature mode
-        public EdgeWeights EdgeWeights;
-        public FillHoleNicelyParams() {}
-    }
+        public struct FillHoleNicelyParams
+        {
+            public FillHoleParams triangulationParams = new FillHoleParams();
+            /// If false then additional vertices are created inside the patch for best mesh quality
+            public bool TriangulateOnly = false;
+            ///Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
+            public float MaxEdgeLen = 0;
+            ///Maximum number of edge splits allowed during subdivision
+            public int MaxEdgeSplits = 1000;
+            ///Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value (in radians)
+            public float MaxAngleChangeAfterFlip = 30.0f * (float)Math.PI / 180.0f;
+            /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
+            public bool SmoothCurvature = true;
+            /// Additionally smooth 3 layers of vertices near hole boundary both inside and outside of the hole
+            public bool NaturalSmooth = false;
+            /// Edge weighting scheme for smoothCurvature mode
+            public EdgeWeights EdgeWeights;
+            public FillHoleNicelyParams() { }
+        }
 
-    public class MeshFillHole
-    {
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRFillHoleParams
         {
@@ -99,7 +99,7 @@ namespace MR.DotNet
             public byte makeDegenerateBand = 0;
             public int maxPolygonSubdivisions = 20;
             public IntPtr stopBeforeBadTriangulation = IntPtr.Zero;
-            public MRFillHoleParams () {}
+            public MRFillHoleParams() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
@@ -117,13 +117,13 @@ namespace MR.DotNet
         };
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrFillHole(IntPtr mesh, EdgeId a, ref MRFillHoleParams parameters );
+        private static extern void mrFillHole(IntPtr mesh, EdgeId a, ref MRFillHoleParams parameters);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrFillHoles(IntPtr mesh, IntPtr pAs, ulong asNum, ref MRFillHoleParams parameters );
+        private static extern void mrFillHoles(IntPtr mesh, IntPtr pAs, ulong asNum, ref MRFillHoleParams parameters);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrFillHoleNicely(IntPtr mesh, EdgeId holeEdge, ref MRFillHoleNicelyParams parameters );
+        private static extern IntPtr mrFillHoleNicely(IntPtr mesh, EdgeId holeEdge, ref MRFillHoleNicelyParams parameters);
 
         /** \brief Fills hole in mesh\n
           *
@@ -143,16 +143,16 @@ namespace MR.DotNet
             mrParam.multipleEdgesResolveMode = parameters.MultipleEdgesResolveMode;
             mrParam.makeDegenerateBand = parameters.MakeDegenerateBand ? (byte)1 : (byte)0;
             mrParam.maxPolygonSubdivisions = parameters.MaxPolygonSubdivisions;
-            
+
             byte stopBeforeBadTriangulation = 0;
-            mrParam.stopBeforeBadTriangulation = parameters.StopBeforeBadTriangulation.HasValue ? new IntPtr( &stopBeforeBadTriangulation) : IntPtr.Zero;
+            mrParam.stopBeforeBadTriangulation = parameters.StopBeforeBadTriangulation.HasValue ? new IntPtr(&stopBeforeBadTriangulation) : IntPtr.Zero;
 
             mrFillHole(mesh.varMesh(), a, ref mrParam);
 
-            if (parameters.StopBeforeBadTriangulation.HasValue )
+            if (parameters.StopBeforeBadTriangulation.HasValue)
             {
                 parameters.StopBeforeBadTriangulation = stopBeforeBadTriangulation > 0;
-                if ( parameters.StopBeforeBadTriangulation.Value )
+                if (parameters.StopBeforeBadTriangulation.Value)
                     throw new Exception("Bad triangulation");
             }
         }
@@ -169,7 +169,7 @@ namespace MR.DotNet
             mrParam.triangulationParams.multipleEdgesResolveMode = parameters.triangulationParams.MultipleEdgesResolveMode;
             mrParam.triangulationParams.makeDegenerateBand = parameters.triangulationParams.MakeDegenerateBand ? (byte)1 : (byte)0;
             mrParam.triangulationParams.maxPolygonSubdivisions = parameters.triangulationParams.MaxPolygonSubdivisions;
-            
+
             byte stopBeforeBadTriangulation = 0;
             mrParam.triangulationParams.stopBeforeBadTriangulation = parameters.triangulationParams.StopBeforeBadTriangulation.HasValue ? new IntPtr(&stopBeforeBadTriangulation) : IntPtr.Zero;
 
@@ -181,7 +181,7 @@ namespace MR.DotNet
             mrParam.naturalSmooth = parameters.NaturalSmooth ? (byte)1 : (byte)0;
             mrParam.edgeWeights = parameters.EdgeWeights;
 
-            var res = new FaceBitSet( mrFillHoleNicely(mesh.varMesh(), holeEdge, ref mrParam) );
+            var res = new FaceBitSet(mrFillHoleNicely(mesh.varMesh(), holeEdge, ref mrParam));
 
             if (parameters.triangulationParams.StopBeforeBadTriangulation.HasValue)
             {
@@ -194,7 +194,7 @@ namespace MR.DotNet
         }
 
         /// fill all holes given by their representative edges in \param edges
-        unsafe public static void FillHoles( ref Mesh mesh, List<EdgeId> edges, FillHoleParams parameters )
+        unsafe public static void FillHoles(ref Mesh mesh, List<EdgeId> edges, FillHoleParams parameters)
         {
             MRFillHoleParams mrParam;
             mrParam.metric = parameters.Metric.mrMetric_;
@@ -210,8 +210,8 @@ namespace MR.DotNet
             IntPtr nativeEdges = Marshal.AllocHGlobal(edges.Count * sizeOfEdgeId);
 
             try
-            {                
-                for ( int i = 0; i < edges.Count; ++i)
+            {
+                for (int i = 0; i < edges.Count; ++i)
                 {
                     Marshal.StructureToPtr(edges[i], IntPtr.Add(nativeEdges, i * sizeOfEdgeId), false);
                 }
@@ -230,5 +230,6 @@ namespace MR.DotNet
                 Marshal.FreeHGlobal(nativeEdges);
             }
         }
+
     }
 }

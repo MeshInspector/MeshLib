@@ -40,6 +40,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Collect stats
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/devops/collect_ci_stats.py
 
   windows-build-test:

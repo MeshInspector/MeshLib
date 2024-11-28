@@ -1,7 +1,7 @@
 /**
 \page APIPage API
 
- - [C++](https://https//meshinspector.github.io/MeshLib/dev/cpp/html/APICppPage.html)
- - [Python](https://https//meshinspector.github.io/MeshLib/dev/py/html/APIPyPage.html)
+ - [C++](BASE_URL/cpp/html/APICppPage.html)
+ - [Python](BASE_URL/py/html/APIPyPage.html)
 
 */

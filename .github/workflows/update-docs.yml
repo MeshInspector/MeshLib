@@ -1,119 +1,19 @@
 name: Update MeshLib Documentation site
 
 on:
-  release:
-    types: [ published ]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
   workflow_call:
     inputs:
       output_folder:
         required: false
         type: string
         default: "MeshLib"
+      url:
+        required: false
+        type: string
+        default: "https://meshinspector.github.io/MeshLib"
 
 
 jobs:
-  setup:
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: actions-ecosystem/action-get-latest-tag@v1
-        id: get-latest-tag
-
-  create-python-stubs:
-    needs: setup
-    timeout-minutes: 80
-    runs-on: ubuntu-latest
-    container:
-      image: "meshlib/meshlib-ubuntu20:latest"
-      options: "--user root"
-    strategy:
-      fail-fast: false
-    steps:
-      - name: Work-around possible permission issues
-        shell: bash
-        run: |
-          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
-          # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
-            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
-            mkdir ${GITHUB_WORKSPACE}
-          fi
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{needs.setup.outputs.version_tag}}
-
-      - name: Checkout third-party submodules
-        # Some of those safe.directory rules could be redudant.
-        run: |
-          # have to checkout selective submodules by our own
-          # related issue: https://github.com/actions/checkout/issues/1779
-          export HOME=${RUNNER_TEMP}
-          echo ${GITHUB_WORKSPACE}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/imgui
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/parallel-hashmap
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
-
-      - name: Python setup
-        run: |
-          apt -y update && apt -y upgrade && apt -y install software-properties-common
-          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install python3.10-dev python3.10-distutils
-
-      - name: Pip setup
-        run: |
-          curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
-          python3.10 -m pip install --upgrade -r ./requirements/python.txt
-          python3.10 -m pip install pytest
-
-      - name: Install thirdparty libs
-        # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
-        run: |
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-          ./scripts/mrbind/install_mrbind_ubuntu.sh
-          free -h
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHLIB_PYTHON_VERSION: "3.10"
-          MESHLIB_BUILD_RELEASE: "ON"
-          MESHLIB_BUILD_DEBUG: "OFF"
-          # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
-          # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
-          CMAKE_CXX_COMPILER: /usr/bin/clang++-11
-          # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
-          # Disabling CUDA at least because Clang 18 is too new for it on Ubuntu 20.04, and we're using Clang 18 for reasons
-          # explained in `MeshLib/scripts/mrbind/0001-Disable-tests-that-seem-to-expose-an-ABI-incompatibility.patch`.
-          MR_CMAKE_OPTIONS: >
-            -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
-            -DMRVIEWER_NO_GTK=ON
-            -DMESHLIB_BUILD_MRCUDA=OFF
-
-      - name: Generate and build MRBind bindings
-        run: |
-          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME=python-3.10-embed CXX_FOR_ABI=/usr/bin/clang++-11
-
-      - name: Create and fix Wheel
-        run: |
-          python3.10 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
-
-      - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: PythonWhl
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
-          retention-days: 1
-
   update-documentation:
     needs: create-python-stubs
     runs-on: ubuntu-latest
@@ -128,6 +28,14 @@ jobs:
         with:
           path: 'MeshLib/'
 
+      - name: Update url in DoxygenLayout
+        working-directory: MeshLib/doxygen
+        run: |
+          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutMain.xml
+          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutCpp.xml
+          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutPy.xml
+          sed -e "s|BASE_URL|${{ inputs.url }}|" -i APIPage.dox
+
       - name: Checkout Doxygen Data
         uses: actions/checkout@v4
         with:
@@ -136,16 +44,16 @@ jobs:
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
 
-      - name: Download Whl Package
+      - name: Download Python Bindings
         uses: actions/download-artifact@v4
         with:
-          name: PythonWhl
+          name: PythonBindings
+          path: ./MeshLib/python_bindings
 
-      - name: Install Unzip
-        run: sudo apt-get install unzip
-
-      - name: Unzip Whl Package
-        run: unzip ./meshlib-*.whl -d ./MeshLibWhl
+      - name: Create Python Stubs
+        working-directory: MeshLib
+        run: |
+          python3 ./scripts/wheel/create_stubs.py
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io
@@ -169,5 +77,5 @@ jobs:
       - name: Delete Whl Package
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: PythonWhl
+          name: PythonBindings
           failOnError: false

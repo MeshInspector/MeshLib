@@ -268,10 +268,21 @@ jobs:
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'update-doc') }}
     needs:
-      - versioning-and-release-url
+      - ubuntu-x64-build-test
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
+      url: https://meshinspector.github.io/MeshLib/dev
+    secrets: inherit
+
+  update-documentation:
+    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    needs:
+      - ubuntu-x64-build-test
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib
+      url: https://meshinspector.github.io/MeshLib
     secrets: inherit
 
   update-artifacts:

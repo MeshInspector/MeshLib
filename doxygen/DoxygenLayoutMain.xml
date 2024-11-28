@@ -47,8 +47,8 @@
       <tab type="user" url="@ref StatePluginsHelp" title="State Plugins Overview"/>
     </tab>
     <tab type="usergroup" url="@ref APIPage" title="API">
-      <tab type="user" url="https://meshinspector.github.io/MeshLib/dev/cpp/html/APICppPage.html" title="C++"/>
-      <tab type="user" url="https://meshinspector.github.io/MeshLib/dev/py/html/APIPyPage.html" title="Python"/>
+      <tab type="user" url="BASE_URL/cpp/html/APICppPage.html" title="C++"/>
+      <tab type="user" url="BASE_URL/py/html/APIPyPage.html" title="Python"/>
     </tab>
     <tab type="user" url="@ref ThirdParty" title="Thirdparty List"/>
   </navindex>

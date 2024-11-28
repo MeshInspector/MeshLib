@@ -337,8 +337,7 @@ bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& ob
         onPointAdd_( obj );
     };
 
-    auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
-    if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
+    if ( params.writeHistory )
     {
         SCOPED_HISTORY( "Pick point" + params.historyNameSuffix );
         onAddPointAction();
@@ -370,8 +369,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
     };
 
     // for use add points and remove points in callback groups history actions
-    auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
-    if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
+    if ( params.writeHistory )
     {
         SCOPED_HISTORY( "Remove point" + params.historyNameSuffix );
         onRemovePointAction();

@@ -53,9 +53,9 @@ jobs:
         working-directory: MeshLib
         run: |
           pwd
-          la -la build
-          la -la build/Release
-          la -la build/Release/bin
+          ls -la build
+          ls -la build/Release
+          ls -la build/Release/bin
           python3 ./scripts/wheel/create_stubs.py
 
       - name: Build All Documentation

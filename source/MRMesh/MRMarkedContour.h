@@ -19,6 +19,16 @@ struct MarkedContour3f
     return MarkedContour3f{ .contour = std::move( in ), .marks = BitSet( sz, true ) };
 }
 
+/// \return marked contour with only first and last points from (in) marked
+[[nodiscard]] inline MarkedContour3f markedFirstLast( Contour3f in )
+{
+    const auto sz = in.size();
+    MarkedContour3f res{ .contour = std::move( in ), .marks = BitSet( sz, false ) };
+    res.marks.set( 0 );
+    res.marks.set( sz - 1 );
+    return res;
+}
+
 /// \param in input marked contour
 /// \param maxStep maximum distance from not-marked point of returned contour to a neighbor point
 /// \return contour with same marked points and not-marked points located on input contour with given maximum distance along it

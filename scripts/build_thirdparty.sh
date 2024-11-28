@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # This script builds thirdparty
 # Output libraries are stored in `./lib` directory
 

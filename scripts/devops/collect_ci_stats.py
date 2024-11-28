@@ -27,6 +27,8 @@ def parse_job(job: dict):
         'conclusion': job['conclusion'],
         'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).total_seconds() + 1 if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],
+        'runner_name': job['runner_name'],
+        'runner_group_name': job['runner_group_name'],
     }
 
 def fetch_jobs(repo: str, run_id: str):

@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: PythonBindings
-          path: ./MeshLib/python_bindings
+          path: MeshLib/python_bindings
 
       - name: Create Python Stubs
         working-directory: MeshLib

@@ -152,9 +152,13 @@ def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
     if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
         voxels_b = mrmeshpy.loadVoxelsRaw(Path(voxels_b))
     with check:
-        assert voxels_a.voxelSize == voxels_b.voxelSize, (
-                f"{test_report}Voxel sizes are differs, \n"
-                f"voxel_a:{voxels_a.voxelSize}\nvoxel_b:{voxels_b.voxelSize}\n")
+        for dim in ["x", "y", "z"]:
+            val_a = voxels_a.voxelSize.__getattribute__(dim)
+            val_b = voxels_b.voxelSize.__getattribute__(dim)
+            # dcm format sometimes has very small difference in voxel sizes, so we need to check it with threshold
+            assert (val_a - val_b) / val_a < 0.00001, (
+                    f"{test_report}Voxel sizes are differs for dimension {dim}, \n"
+                    f"voxel_a:{val_a}\nvoxel_b:{val_b}\n")
         assert voxels_a.min == voxels_b.min, (
             f"{test_report}voxels.min of voxels are differs, \n"
             f"voxel_a:{voxels_a.min}\nvoxel_b:{voxels_b.min}\n")

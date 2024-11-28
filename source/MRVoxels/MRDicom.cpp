@@ -783,11 +783,6 @@ std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::
     }
     return res;
 }
-template std::vector<Expected<DicomVolumeT<SimpleVolumeMinMax>>>
-    loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template std::vector<Expected<DicomVolumeT<VdbVolume>>>
-    loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-
 
 template <typename T>
 Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
@@ -798,9 +793,6 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
     return loadSingleDicomFolder<T>( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
 }
-template Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template Expected<DicomVolumeT<VdbVolume>> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
@@ -878,8 +870,18 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, cons
     res.name = utf8string( path.stem() );
     return res;
 }
-template Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb );
-template Expected<DicomVolumeAsVdb> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb );
+
+
+template MRVOXELS_API Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+template MRVOXELS_API Expected<DicomVolumeT<VdbVolume>> loadDicomFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+
+template MRVOXELS_API Expected<DicomVolume> loadDicomFile<SimpleVolumeMinMax>( const std::filesystem::path& path, const ProgressCallback& cb );
+template MRVOXELS_API Expected<DicomVolumeAsVdb> loadDicomFile<VdbVolume>( const std::filesystem::path& path, const ProgressCallback& cb );
+
+template MRVOXELS_API std::vector<Expected<DicomVolumeT<SimpleVolumeMinMax>>>
+    loadDicomsFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+template MRVOXELS_API std::vector<Expected<DicomVolumeT<VdbVolume>>>
+    loadDicomsFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
 
 
 } // namespace VoxelsLoad

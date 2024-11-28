@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using static MR.DotNet;
 
 namespace MR
 {
@@ -123,6 +124,29 @@ namespace MR
             public float errorIntroduced = 0;
             public DecimateResult() { }
         };
+
+        /// parameters for ResolveMeshDegenerations
+        public struct ResolveMeshDegenParameters
+        {
+            public int maxIters = 1;
+            /// maximum permitted deviation from the original surface
+            public float maxDeviation = 0;
+            /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+            public float tinyEdgeLength = 0;
+            /// Permit edge flips if it does not change dihedral angle more than on this value
+            public float maxAngleChange = (float)Math.PI / 3;
+            /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
+            /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
+            public float criticalAspectRatio = 10000;
+            /// Small stabilizer is important to achieve good results on completely planar mesh parts,
+            /// if your mesh is not-planer everywhere, then you can set it to zero
+            public float stabilizer = 1e-6f;
+            /// degenerations will be fixed only in given region, which is updated during the processing
+            public FaceBitSet? region = null;
+
+            public ResolveMeshDegenParameters() { }
+        };
+               
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRDecimateParameters
         {
@@ -166,6 +190,19 @@ namespace MR
 
             public MRRemeshParameters() { }
         };
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MRResolveMeshDegenParameters
+        {
+            public int maxIters = 1;
+            public float maxDeviation = 0;
+            public float tinyEdgeLength = 0;
+            public float maxAngleChange = (float)Math.PI / 3;
+            public float criticalAspectRatio = 10000;
+            public float stabilizer = 1e-6f;
+            public IntPtr region = IntPtr.Zero;
+            public MRResolveMeshDegenParameters() { }
+        };
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern DecimateResult mrDecimateMesh(IntPtr mesh, ref MRDecimateParameters settings);
@@ -174,6 +211,10 @@ namespace MR
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
         private static extern bool mrRemesh(IntPtr mesh, ref MRRemeshParameters settings);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        private static extern bool resolveMeshDegenerations(IntPtr mesh, ref MRResolveMeshDegenParameters settings );
 
         /// Collapse edges in mesh region according to the settings
         public static DecimateResult Decimate(ref Mesh mesh, DecimateParameters settings)
@@ -220,6 +261,23 @@ namespace MR
             mrParameters.cb = IntPtr.Zero;
 
             return mrRemesh(mesh.mesh_, ref mrParameters);
+        }
+
+        /// Resolves degenerate triangles in given mesh
+        /// This function performs decimation, so it can affect topology
+        /// \return true if the mesh has been changed
+        public static bool ResolveMeshDegenerations(ref Mesh mesh, ResolveMeshDegenParameters settings)
+        {
+            MRResolveMeshDegenParameters mrParameters = new MRResolveMeshDegenParameters();
+            mrParameters.maxIters = settings.maxIters;
+            mrParameters.maxDeviation = settings.maxDeviation;
+            mrParameters.tinyEdgeLength = settings.tinyEdgeLength;
+            mrParameters.maxAngleChange = settings.maxAngleChange;
+            mrParameters.criticalAspectRatio = settings.criticalAspectRatio;
+            mrParameters.stabilizer = settings.stabilizer;
+            mrParameters.region = settings.region is null ? (IntPtr)null : settings.region.bs_;
+
+            return resolveMeshDegenerations(mesh.mesh_, ref mrParameters);
         }
     }
 }

@@ -32,7 +32,7 @@ def test_issue_2899(tmp_path):
     twin_edges = mr.findTwinUndirectedEdges(twin_pairs)
     twin_map = mr.findTwinUndirectedEdgeHashMap(twin_pairs)
 
-    # Eliminate edges longer than 10
+    # Eliminate edges shorter than 10
     settings = mr.DecimateSettings()
     settings.strategy = mr.DecimateStrategy.ShortestEdgeFirst
     settings.maxError = 10

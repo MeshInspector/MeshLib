@@ -43,20 +43,11 @@ jobs:
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
 
-      - name: Download Python Bindings
+      - name: Download Python Stubs
         uses: actions/download-artifact@v4
         with:
-          name: PythonBindings
-          path: MeshLib/build/Release/bin
-
-      - name: Create Python Stubs
-        working-directory: MeshLib
-        run: |
-          pwd
-          ls -la build
-          ls -la build/Release
-          ls -la build/Release/bin
-          python3 ./scripts/wheel/create_stubs.py
+          name: PythonStubs
+          path: MeshLib/scripts/wheel/meshlib/meshlib
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io
@@ -76,9 +67,8 @@ jobs:
           git commit --allow-empty -m "Auto update docs" -a
           git push
 
-      # Pyhton Whl
-      - name: Delete Whl Package
+      - name: Delete Python Stubs
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: PythonBindings
+          name: PythonStubs
           failOnError: false

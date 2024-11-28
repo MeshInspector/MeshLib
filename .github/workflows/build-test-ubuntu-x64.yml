@@ -150,12 +150,17 @@ jobs:
           CXX: ${{matrix.cxx-compiler}}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
       
-      - name: Upload bindings to generate Pyhton documentation
+      - name: Create Python Stubs
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
+        working-directory: MeshLib
+        run: python3 ./scripts/wheel/create_stubs.py
+
+      - name: Upload Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         uses: actions/upload-artifact@v4
         with:
-          name: PythonBindings
-          path: ./build/Release/bin
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
       - name: Collect Timings

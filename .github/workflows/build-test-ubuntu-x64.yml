@@ -155,7 +155,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PythonBindings
-          path: ./build/Release/bin/meshlib
+          path: ./build/Release/bin
           retention-days: 1
 
       - name: Collect Timings

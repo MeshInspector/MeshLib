@@ -20,6 +20,9 @@ HistoryStore::~HistoryStore()
 
 void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
 {
+    assert( !undoRedoInProgress_ );
+    if ( undoRedoInProgress_ )
+        return;
     if ( !action )
         return;
     if ( scopedBlock_ )
@@ -41,6 +44,9 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
 
 void HistoryStore::clear()
 {
+    assert( !undoRedoInProgress_ );
+    if ( undoRedoInProgress_ )
+        return;
     if ( stack_.empty() )
         return;
     spdlog::info( "History store clear" );
@@ -51,6 +57,9 @@ void HistoryStore::clear()
 
 void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deepFiltering /*= true*/ )
 {
+    assert( !undoRedoInProgress_ );
+    if ( undoRedoInProgress_ )
+        return;
     const auto [needSignal, redoDecrease] = filterHistoryActionsVector( stack_, filteringCondition, firstRedoIndex_, deepFiltering );
     firstRedoIndex_ -= redoDecrease;
     if ( needSignal )
@@ -155,4 +164,4 @@ void HistoryStore::filterByMemoryLimit_()
     }
 }
 
-}
+} //namespace MR

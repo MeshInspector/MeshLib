@@ -50,6 +50,13 @@ namespace MR
  */
 [[nodiscard]] MRMESH_API bool isNonIntersectingInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A = nullptr );
 
+/**
+ * \brief checks that arbitrary mesh A component (hole component is represented by one face `componentFace`) is inside of closed mesh part B
+ * The version of `isInside` without collision check; it is user's responsibility to guarantee that the meshes don't collide
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ */
+[[nodiscard]] MRMESH_API bool isNonIntersectingInside( const Mesh& a, FaceId componentFace, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr );
+
 /// \}
 
 } // namespace MR

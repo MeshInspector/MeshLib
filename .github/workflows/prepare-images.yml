@@ -82,10 +82,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{inputs.docker_image_tag}} . --progress=plain
 
       - name: Push Linux image
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}}
+        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{inputs.docker_image_tag}}
 
       - name: Remove unused Docker data
         if: ${{ matrix.image != 'windows' }}

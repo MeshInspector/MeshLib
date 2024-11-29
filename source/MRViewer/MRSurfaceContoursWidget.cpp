@@ -24,6 +24,24 @@ void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& co
 
 // History classes;
 
+class SurfaceContoursWidget::AddPointActionPickerPoint : public SurfaceContoursWidget::WidgetHistoryAction
+{
+public:
+    AddPointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type actionType ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::VisualObject> obj_;
+    PickedPoint point_;
+};
+
 std::string SurfaceContoursWidget::AddPointActionPickerPoint::name() const
 {
     return "Pick point" + widget_.params.historyNameSuffix;
@@ -58,6 +76,7 @@ void SurfaceContoursWidget::AddPointActionPickerPoint::action( Type actionType )
         widget_.highlightLastPoint( obj_ );
 
         widget_.onPointAdd_( obj_ );
+
     }
 
 }
@@ -67,6 +86,25 @@ size_t SurfaceContoursWidget::AddPointActionPickerPoint::heapBytes() const
 }
 
 
+class SurfaceContoursWidget::RemovePointActionPickerPoint : public SurfaceContoursWidget::WidgetHistoryAction
+{
+public:
+    RemovePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, int index ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type actionType ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::VisualObject> obj_;
+    PickedPoint point_;
+    int index_;
+};
 
 std::string SurfaceContoursWidget::RemovePointActionPickerPoint::name() const
 {
@@ -109,6 +147,26 @@ size_t SurfaceContoursWidget::RemovePointActionPickerPoint::heapBytes() const
 {
     return 0; //this undo action will be deleted in widget disable
 }
+
+class SurfaceContoursWidget::ChangePointActionPickerPoint : public SurfaceContoursWidget::WidgetHistoryAction
+{
+public:
+    ChangePointActionPickerPoint( SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, int index ) :
+        widget_{ widget },
+        obj_{ obj },
+        point_{ point },
+        index_{ index }
+    {};
+
+    virtual std::string name() const override;
+    virtual void action( Type ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override;
+private:
+    SurfaceContoursWidget& widget_;
+    const std::shared_ptr<MR::VisualObject> obj_;
+    PickedPoint point_;
+    int index_;
+};
 
 std::string SurfaceContoursWidget::ChangePointActionPickerPoint::name() const
 {
@@ -602,6 +660,32 @@ void SurfaceContoursWidget::reset()
 
     disconnect();
 }
+
+class SurfaceContoursWidget::SurfaceContoursWidgetClearAction : public SurfaceContoursWidget::WidgetHistoryAction
+{
+public:
+    SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget );
+
+public:
+    [[nodiscard]] std::string name() const override { return name_; }
+
+    void action( Type type ) override;
+
+    [[nodiscard]] size_t heapBytes() const override;
+
+private:
+    std::string name_;
+    SurfaceContoursWidget& widget_;
+
+    struct ObjectState
+    {
+        std::weak_ptr<VisualObject> objPtr;
+        std::vector<PickedPoint> pickedPoints;
+    };
+    std::vector<ObjectState> states_;
+    std::weak_ptr<VisualObject> activeObject_;
+    int activeIndex_;
+};
 
 SurfaceContoursWidget::SurfaceContoursWidgetClearAction::SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget )
     : name_( std::move( name ) )

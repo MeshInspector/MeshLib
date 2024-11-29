@@ -145,8 +145,17 @@ jobs:
 
 
   macos-test:
-    runs-on: macos-13
     timeout-minutes: 30
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ x64, arm]
+        include:
+          - os: x64
+            runner: macos-13 # github hosted
+          - os: arm
+            runner: macos-latest  # github hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,21 +166,30 @@ jobs:
         uses: robinraju/release-downloader@v1.11
         with:
           releaseId: ${{inputs.release_id}}
-          fileName: "*x64.pkg"
+          fileName: "*${{matrix.os}}.pkg"
 
       - name: Install Pkg
-        run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+        run: sudo installer -pkg meshlib_*${{matrix.os}}.pkg  -target /
 
       # [error] NSGL: Failed to find a suitable pixel format
-      #- name: Run MeshViewer
-        #if: always()
-        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+      - name: Run MeshViewer
+        if: always()
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+
+      - name: Build C examples
+        if: always()
+        working-directory: examples/c-examples
+        run: |
+          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
+          cmake --build build
+
+      - name: Install MeshLib requirements
+        run: |
+          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt || true
 
       - name: Build C++ examples
         if: always()
@@ -182,10 +200,3 @@ jobs:
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
           cmake --build . && \
           ./MeshModification
-
-      - name: Build C examples
-        if: always()
-        working-directory: examples/c-examples
-        run: |
-          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
-          cmake --build build

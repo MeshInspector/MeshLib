@@ -24,7 +24,7 @@ IF(MR_PCH)
       tbb
     )
   ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
+    find_package(Boost ${MR_MIN_BOOST_VERSION} COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
     include_directories(${JSONCPP_INCLUDE_DIRS})

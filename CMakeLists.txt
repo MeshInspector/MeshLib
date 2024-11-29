@@ -68,7 +68,7 @@ ENDIF()
 IF(APPLE)
   # need to hardcode some path to fix wheel (no option to pass path)
   # TODO: revise
-  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
+  set(CMAKE_INSTALL_RPATH "@loader_path/../lib;@loader_path;@loader_path/..;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
   IF(BUILD_TESTING)

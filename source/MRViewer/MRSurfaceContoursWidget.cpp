@@ -119,7 +119,7 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::removePoint_()
     assert( index_ >= 0 );
     auto it = contour.begin() + index_;
     point_ = (*it)->getCurrentPosition();
-    widget_.surfacePointWidgetCache_.erase( (*it)->getPickSphere().get() );
+    widget_.myPickWidgets_.erase( (*it)->getPickSphere().get() );
     contour.erase( it );
 
     widget_.activeIndex_ = index_;
@@ -263,7 +263,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         surfaceConnectionHolders_.emplace( obj, std::move( holder ) );
     }
 
-    surfacePointWidgetCache_.emplace( newPoint->getPickSphere().get() );
+    myPickWidgets_.emplace( newPoint->getPickSphere().get() );
 
     return newPoint;
 }
@@ -406,21 +406,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    Viewport::PickRenderObjectPredicate predicate;
-    if ( params.pickPredicate )
-    {
-        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
-        {
-            // always keep the picked points pickable
-            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
-                return true;
-            return params.pickPredicate( visObj, mask );
-        };
-    }
-    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = predicate,
-        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
-    } );
+    auto [obj, pick] = pick_();
     if ( !obj )
         return false;
 
@@ -517,6 +503,25 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     return false;
 }
 
+ObjAndPick SurfaceContoursWidget::pick_() const
+{
+    Viewport::PickRenderObjectPredicate predicate;
+    if ( params.pickPredicate )
+    {
+        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+        {
+            // always keep the picked points pickable
+            if ( myPickWidgets_.find( visObj ) != myPickWidgets_.end() )
+                return true;
+            return params.pickPredicate( visObj, mask );
+        };
+    }
+    return getViewerInstance().viewport().pickRenderObject( {
+        .predicate = predicate,
+        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
+    } );
+}
+
 bool SurfaceContoursWidget::onMouseMove_( int, int )
 {
     if ( !isPickerActive_ )
@@ -525,21 +530,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    Viewport::PickRenderObjectPredicate predicate;
-    if ( params.pickPredicate )
-    {
-        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
-        {
-            // always keep the picked points pickable
-            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
-                return true;
-            return params.pickPredicate( visObj, mask );
-        };
-    }
-    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = predicate,
-        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
-    } );
+    auto [obj, pick] = pick_();
     if ( !obj )
         return false;
 
@@ -590,7 +581,7 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     {
         for ( int pickedIndex = int( contour.size() ) - 1; pickedIndex >= 0; --pickedIndex )
         {
-            surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
+            myPickWidgets_.erase( contour[pickedIndex]->getPickSphere().get() );
             contour.erase( contour.begin() + pickedIndex );
             assert( contour.size() >= pickedIndex );
             activeIndex_ = pickedIndex;
@@ -599,7 +590,7 @@ void SurfaceContoursWidget::clear( bool writeHistory )
         }
     }
     pickedPoints_.clear();
-    surfacePointWidgetCache_.clear();
+    myPickWidgets_.clear();
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;

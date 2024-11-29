@@ -2,14 +2,13 @@
 
 #include "MRViewerEventsListener.h"
 #include "MRViewport.h"
-#include "MRMesh/MRMeshFwd.h"
 #include "MRSurfacePointPicker.h"
-#include "MRMesh/MRObjectMeshHolder.h"
 #include "MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
-
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRObjectMeshHolder.h"
+#include <MRMesh/MRphmap.h>
 #include <unordered_map>
-#include <unordered_set>
 
 namespace MR
 {
@@ -134,9 +133,10 @@ public:
     SurfaceContoursWidgetParams params;
 
 private:
-
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
+
+    ObjAndPick pick_() const;
 
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
@@ -153,8 +153,8 @@ private:
     // data storage
     SurfaceContours pickedPoints_;
 
-    // picked points' cache
-    std::unordered_set<const VisualObject*> surfacePointWidgetCache_;
+    // all objects created in createPickWidget_ to quickly differentiate them from other features
+    HashSet<const VisualObject*> myPickWidgets_;
 
     // connection storage
     struct SurfaceConnectionHolder

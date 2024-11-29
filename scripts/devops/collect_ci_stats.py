@@ -5,6 +5,7 @@ import os
 import pprint
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 
 import requests
@@ -46,8 +47,10 @@ def parse_job_name(name: str):
 def parse_job(job: dict):
     job_id = job['id']
     runner_stats = {}
-    with open(f'RunnerSysStats-{job_id}.json', 'r') as f:
-        runner_stats = json.load(f)
+    stats_filename = Path(f'RunnerSysStats-{job_id}.json')
+    if stats_filename.is_file():
+        with open(stats_filename, 'r') as f:
+            runner_stats = json.load(f)
     return {
         'name': job['name'],
         **parse_job_name(job['name']),

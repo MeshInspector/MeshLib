@@ -44,23 +44,46 @@ bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour&
 namespace MR
 {
 
-struct EdgeTriHash
+struct LinkedVET
 {
-    size_t operator()( const EdgeTri& et ) const
+    VariableEdgeTri vet;
+    int index = -1; // index in initial array (needed to be able to find connections in parallel)
+};
+
+inline bool operator==( const LinkedVET& a, const LinkedVET& b )
+{
+    return a.vet == b.vet;
+}
+
+// store data about connected intersections
+// indexed flat: if edgeAtriB then index = index in edgeAtriB vector
+//                  otherwise      index - (edgeAtriB vector).size() = index in edgeBtriA vector
+struct NeighborLinks
+{
+    int prev{ -1 };
+    int next{ -1 };
+};
+
+using NeighborLinksList = std::vector<NeighborLinks>;
+
+struct LinkedVETHash
+{
+    size_t operator()( const LinkedVET& lvet ) const
     {
-        return 17 * et.edge.undirected() + 23 * et.tri;
+        return ( ( 17 * lvet.vet.edge.undirected() + 23 * lvet.vet.tri ) << 1 ) + size_t( lvet.vet.isEdgeATriB );
     }
 };
 
-using EdgeTriSet = HashSet<EdgeTri, EdgeTriHash>;
+using LinkedVETSet = HashSet<LinkedVET, LinkedVETHash>;
 
 struct AccumulativeSet
 {
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    EdgeTriSet eAtB;
-    EdgeTriSet eBtA;
+    LinkedVETSet hset;
+    NeighborLinksList nListA; // flat list of neighbors filled in parallel
+    NeighborLinksList nListB; // flat list of neighbors filled in parallel
 
     const MeshTopology& topologyByEdge( bool edgesATriB )
     {
@@ -72,46 +95,37 @@ struct AccumulativeSet
         return topologyByEdge( !edgesATriB );
     }
 
-    EdgeTriSet& set( bool edgesATriB )
-    {
-        return edgesATriB ? eAtB : eBtA;
-    }
-    const EdgeTriSet& set( bool edgesATriB ) const
-    {
-        return edgesATriB ? eAtB : eBtA;
-    }
     bool empty() const
     {
-        return eAtB.empty() && eBtA.empty();
+        return hset.empty();
     }
+
     VariableEdgeTri getFirst() const
     {
-        if ( !eAtB.empty() )
-            return {*eAtB.begin(),true};
-        else if ( !eBtA.empty() )
-            return {*eBtA.begin(),false};
+        if ( !hset.empty() )
+            return hset.begin()->vet;
         return {};
     }
 };
 
-EdgeTriSet createSet( const std::vector<EdgeTri>& edgeTris )
+LinkedVETSet createSet( const PreciseCollisionResult& intersections )
 {
-    EdgeTriSet set;
-    set.reserve( edgeTris.size() * 2 ); // 2 here is for mental peace
-    for ( const auto& edgeTri : edgeTris )
-        set.insert( edgeTri );
+    LinkedVETSet set;
+    set.reserve( ( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
+    for ( int i = 0; i < intersections.edgesAtrisB.size(); ++i )
+        set.insert( { .vet = { intersections.edgesAtrisB[i],true },.index = i } );
+    for ( int i = 0; i < intersections.edgesBtrisA.size(); ++i )
+        set.insert( { .vet = { intersections.edgesBtrisA[i],false },.index = i } );
     return set;
 }
 
-bool erase( AccumulativeSet& accumulativeSet, VariableEdgeTri& item )
+const LinkedVET* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
 {
-    auto& itemSet = accumulativeSet.set( item.isEdgeATriB );
-    auto it = itemSet.find( item );
+    auto& itemSet = accumulativeSet.hset;
+    auto it = itemSet.find( { item,-1 } );
     if ( it == itemSet.end() )
-        return false;
-    item = {*it,item.isEdgeATriB};
-    itemSet.erase( it );
-    return true;
+        return nullptr;
+    return &( *it );
 }
 
 VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
@@ -122,18 +136,12 @@ VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
     return res;
 }
 
-VariableEdgeTri sym( const VariableEdgeTri& curr )
+const LinkedVET* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
 {
-    VariableEdgeTri res = curr;
-    res.edge = res.edge.sym();
-    return res;
-}
-
-bool getNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr, VariableEdgeTri& next )
-{
+    auto currB2Aedge = curr.isEdgeATriB ? curr.edge : curr.edge.sym();
     const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB );
     const auto& triTopology = accumulativeSet.topologyByTri( curr.isEdgeATriB );
-    auto leftTri = edgeTopology.left( curr.edge );
+    auto leftTri = edgeTopology.left( currB2Aedge );
     auto leftEdge = triTopology.edgePerFace()[curr.tri];
 
     assert( curr.tri );
@@ -142,8 +150,8 @@ bool getNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr, Var
     {
         VariableEdgeTri variants[5] =
         {
-            {{edgeTopology.next( curr.edge ),curr.tri},curr.isEdgeATriB},
-            {{edgeTopology.prev( curr.edge.sym() ) ,curr.tri},curr.isEdgeATriB},
+            {{edgeTopology.next( currB2Aedge ),curr.tri},curr.isEdgeATriB},
+            {{edgeTopology.prev( currB2Aedge.sym() ) ,curr.tri},curr.isEdgeATriB},
 
             {{leftEdge,leftTri},!curr.isEdgeATriB},
             {{triTopology.next( leftEdge ),leftTri},!curr.isEdgeATriB},
@@ -154,49 +162,114 @@ bool getNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr, Var
         {
             if ( !v.edge.valid() )
                 continue;
-            next = v;
-            if ( erase( accumulativeSet, next ) )
-                return true;
+            if ( auto found = find( accumulativeSet, v ) )
+                return found;
         }
     }
-    return false;
+    return nullptr;
 }
 
-ContinuousContour orderFirstIntersectionContour( AccumulativeSet& accumulativeSet )
+void parallelPrepareLinkedLists( const PreciseCollisionResult& intersections, AccumulativeSet& accumulativeSet )
 {
-    ContinuousContour forwardRes;
-    auto first = accumulativeSet.getFirst();
-    forwardRes.push_back( orientBtoA( first ) );
-    VariableEdgeTri next;
-    while ( getNext( accumulativeSet, forwardRes.back(), next ) )
+    auto aSize = intersections.edgesAtrisB.size();
+    accumulativeSet.nListA.resize( aSize );
+    accumulativeSet.nListB.resize( intersections.edgesBtrisA.size() );
+    ParallelFor( size_t( 0 ), aSize + accumulativeSet.nListB.size(), [&] ( size_t i )
     {
-        forwardRes.push_back( orientBtoA( next ) );
+        bool eAtB = i < aSize;
+        int aInd = int( i );
+        int bInd = int( i - aSize );
+
+        VariableEdgeTri curr = { eAtB ? intersections.edgesAtrisB[aInd] : intersections.edgesBtrisA[bInd] ,  eAtB };
+        auto next = findNext( accumulativeSet, curr );
+        if ( !next )
+            return;
+        auto& currItem = eAtB ? accumulativeSet.nListA[aInd] : accumulativeSet.nListB[bInd];
+        auto& nextItem = next->vet.isEdgeATriB ? accumulativeSet.nListA[next->index] : accumulativeSet.nListB[next->index];
+        currItem.next = int( next->vet.isEdgeATriB ? next->index : next->index + aSize );
+        nextItem.prev = int( i );
+    } );
+}
+
+ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativeSet, const PreciseCollisionResult& intersections )
+{
+    struct CountourInfo
+    {
+        size_t startIndex;
+        size_t size;
+    };
+
+    auto aSize = accumulativeSet.nListA.size();
+    BitSet queuedRecords( aSize + accumulativeSet.nListB.size() );
+    queuedRecords.flip(); // mark all bits
+    std::vector<CountourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
+    while ( queuedRecords.any() )
+    {
+        auto& currInfo = contInfos.emplace_back();
+        
+        currInfo.startIndex = queuedRecords.find_first();
+        ++currInfo.size;
+        bool closed = true;
+        for ( auto nextIndex = currInfo.startIndex;; )
+        {
+            queuedRecords.reset( nextIndex );
+
+            auto next = nextIndex < aSize ? accumulativeSet.nListA[nextIndex].next : accumulativeSet.nListB[nextIndex - aSize].next;
+            if ( next == -1 )
+            {
+                closed = false;
+                break;
+            }
+            ++currInfo.size;
+            nextIndex = next;
+            if ( nextIndex == currInfo.startIndex )
+                break;
+        }
+        
+        if ( !closed )
+        {
+            for ( ;; )
+            {
+                const auto& prev = currInfo.startIndex < aSize ? 
+                    accumulativeSet.nListA[currInfo.startIndex].prev : 
+                    accumulativeSet.nListB[currInfo.startIndex - aSize].prev;
+                if ( prev == -1 )
+                    break;
+                ++currInfo.size;
+                currInfo.startIndex = prev;
+                queuedRecords.reset( currInfo.startIndex );
+            }
+        }
     }
 
-    // if not closed
-    if ( erase( accumulativeSet, first ) )
+    ContinuousContours res( contInfos.size() );
+    for ( int i = 0; i < res.size(); ++i )
     {
-        ContinuousContour backwardRes;
-        backwardRes.push_back( orientBtoA( first ) );
-        while ( getNext( accumulativeSet, sym( backwardRes.back() ), next ) )
-        {
-            backwardRes.push_back( orientBtoA( next ) );
-        }
-        forwardRes.insert( forwardRes.begin(), backwardRes.rbegin(), backwardRes.rend() - 1 );
+        res[i].resize( contInfos[i].size );
     }
-    return forwardRes;
+
+    ParallelFor( res, [&] ( size_t i )
+    {
+        auto& resI = res[i];
+        size_t index = contInfos[i].startIndex;
+        for ( int j = 0; j < resI.size(); ++j )
+        {
+            auto curr = index < aSize ? intersections.edgesAtrisB[index] : intersections.edgesBtrisA[index - aSize];
+            resI[j] = orientBtoA( { curr ,index < aSize } );
+            index = index < aSize ? accumulativeSet.nListA[index].next : accumulativeSet.nListB[index - aSize].next;
+        }
+    } );
+
+    return res;
 }
 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{topologyA,topologyB, createSet( intersections.edgesAtrisB ),createSet( intersections.edgesBtrisA ),};
-    ContinuousContours res;
-    while ( !accumulativeSet.empty() )
-    {
-        res.push_back( orderFirstIntersectionContour( accumulativeSet ) );
-    }
-    return res;
+    AccumulativeSet accumulativeSet{ topologyA,topologyB, createSet( intersections ) };
+    
+    parallelPrepareLinkedLists( intersections, accumulativeSet );
+    return orderIntersectionContours( accumulativeSet, intersections );
 }
 
 Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 

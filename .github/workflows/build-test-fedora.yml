@@ -78,7 +78,7 @@ jobs:
       - name: Upload runner's system stats
         uses: actions/upload-artifact@v4
         with:
-          name: RunnerSysStats-fedora-${{ env.GITHUB_JOB_ID }}
+          name: RunnerSysStats-fedora-${{ matrix.config }}-${{ matrix.compiler }}
           path: RunnerSysStats-*
           retention-days: 1
 

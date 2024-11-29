@@ -69,7 +69,7 @@ jobs:
       - name: Upload runner's system stats
         uses: actions/upload-artifact@v4
         with:
-          name: RunnerSysStats-macos-${{ env.GITHUB_JOB_ID }}
+          name: RunnerSysStats-macos-${{ matrix.os }}
           path: RunnerSysStats-*
           retention-days: 1
 

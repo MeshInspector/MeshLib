@@ -42,7 +42,7 @@ jobs:
       - name: Upload runner's system stats
         uses: actions/upload-artifact@v4
         with:
-          name: RunnerSysStats-emscripten-${{ env.GITHUB_JOB_ID }}
+          name: RunnerSysStats-emscripten-${{ matrix.config }}
           path: RunnerSysStats-*
           retention-days: 1
 

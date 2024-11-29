@@ -73,7 +73,7 @@ jobs:
       - name: Upload runner's system stats
         uses: actions/upload-artifact@v4
         with:
-          name: RunnerSysStats-windows-${{ env.GITHUB_JOB_ID }}
+          name: RunnerSysStats-windows-${{ matrix.runner }}-${{ matrix.config }}
           path: RunnerSysStats-*
           retention-days: 1
 

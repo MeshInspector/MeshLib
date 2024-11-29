@@ -86,7 +86,7 @@ jobs:
       - name: Upload runner's system stats
         uses: actions/upload-artifact@v4
         with:
-          name: RunnerSysStats-ubuntu-arm64-${{ env.GITHUB_JOB_ID }}
+          name: RunnerSysStats-ubuntu-arm64-${{ matrix.os }}
           path: RunnerSysStats-*
           retention-days: 1
 

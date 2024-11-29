@@ -282,7 +282,7 @@ jobs:
       - name: Download runners' system stats
         uses: actions/download-artifact@v4
         with:
-          pattern: RunnerSysStats-*
+          pattern: RunnerSysStats*
           merge-multiple: true
 
       - name: Collect stats
@@ -319,6 +319,12 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Wheelhouse*
+          failOnError: false
+
+      - name: Delete runners' system stats
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: RunnerSysStats*
           failOnError: false
 
       # generate timing logs archive

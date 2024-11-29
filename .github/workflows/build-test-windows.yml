@@ -224,10 +224,10 @@ jobs:
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-          KEY_ARGS: '"--run-c-sharp-samples"'
+          KEY_ARGS: '--run-c-sharp-samples'
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a ${{env.KEY_ARGS}}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a=${{env.KEY_ARGS}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

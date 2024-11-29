@@ -28,6 +28,10 @@ jobs:
       need_windows_rebuild: ${{ steps.need-rebuild.outputs.need_windows_rebuild }}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
+      - name: Get job ID
+        run: |
+          gh run view ${{ github.run_id }}
+
       - name: Checkout
         uses: actions/checkout@v4
         with:

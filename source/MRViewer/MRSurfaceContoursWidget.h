@@ -175,8 +175,7 @@ private:
     bool undoRedoMode_{ false };
 
     // History classes:
-    class AddPointActionPickerPoint;
-    class RemovePointActionPickerPoint;
+    class AddRemovePointHistoryAction;
     class ChangePointActionPickerPoint;
     class SurfaceContoursWidgetClearAction;
 };

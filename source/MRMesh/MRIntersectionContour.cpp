@@ -171,6 +171,7 @@ const LinkedVET* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeT
 
 void parallelPrepareLinkedLists( const PreciseCollisionResult& intersections, AccumulativeSet& accumulativeSet )
 {
+    MR_TIMER
     auto aSize = intersections.edgesAtrisB.size();
     accumulativeSet.nListA.resize( aSize );
     accumulativeSet.nListB.resize( intersections.edgesBtrisA.size() );

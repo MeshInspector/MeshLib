@@ -2,6 +2,7 @@
 #include "MRVoxelsFwd.h"
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MRBox.h"
 
 #include "MROpenVDB.h"
 #include "MRPch/MRBindingMacros.h"
@@ -42,6 +43,17 @@ MR_BIND_IGNORE inline Vector3i fromVdb( const openvdb::Coord & v )
 MR_BIND_IGNORE inline openvdb::Coord toVdb( const Vector3i & v )
 {
     return openvdb::Coord( v.x, v.y, v.z );
+}
+
+MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Box3i& box )
+{
+    return openvdb::CoordBBox( toVdb( box.min ), toVdb( box.max ) );
+}
+
+MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Vector3i& dims )
+{
+    return openvdb::CoordBBox( toVdb( Vector3i( 0, 0, 0 ) ),
+                               toVdb( Vector3i( dims ) - Vector3i::diagonal(1) ) );
 }
 
 /// \}

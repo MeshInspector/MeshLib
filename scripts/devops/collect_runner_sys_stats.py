@@ -1,9 +1,31 @@
 import json
+import math
 import multiprocessing
 import os
 import platform
+import pprint
+import re
 import subprocess
 import urllib.request
+
+def get_ram_amount():
+    system = platform.system()
+    if system == "Darwin":
+        output = subprocess.run(['sysctl', '-n', 'hw.memsize'], capture_output=True, text=True).stdout
+        return int(output)
+    elif system == "Linux":
+        return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+    elif system == "Windows":
+        output = subprocess.run(['wmic', 'ComputerSystem', 'get', 'TotalPhysicalMemory'], capture_output=True, text=True).stdout
+        return int(re.search(r'\d+', output).group())
+    else:
+        raise Exception(f"Unknown system {system}")
+
+def get_system_stats():
+    return {
+        'cpu_count': multiprocessing.cpu_count(),
+        'ram_mb': math.floor(get_ram_amount() / 1024 / 1024),
+    }
 
 GITHUB_HEADERS = {
     'Accept': 'application/vnd.github.v3+json',
@@ -20,7 +42,7 @@ def fetch_jobs(repo: str, run_id: str):
 def filter_job(job, job_name, runner_name):
     return job['status'] == "in_progress" and job['name'].find(job_name) != -1 and job['runner_name'] == runner_name
 
-if __name__ == "__main__":
+def get_job_id():
     job_name = os.environ.get("GITHUB_JOB")
     repo = os.environ.get("GITHUB_REPOSITORY")
     run_id = os.environ.get("GITHUB_RUN_ID")
@@ -37,16 +59,13 @@ if __name__ == "__main__":
     elif len(jobs) > 1:
         raise Exception(f"Multiple jobs found for {job_name}: {jobs}")
     else:
-        print(f"job id: {jobs[0]['id']}")
+        return jobs[0]['id']
 
-    print(f"cpu count: {multiprocessing.cpu_count()}")
+if __name__ == "__main__":
+    stats = get_system_stats()
+    pprint.pprint(stats)
 
-    system = platform.system()
-    if system == "Darwin":
-        print(f"memory amount: {subprocess.run(['sysctl', '-n', 'hw.memsize'], capture_output=True).stdout.decode()}")
-    elif system == "Linux":
-        print(f"memory amount: {os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')}")
-    elif system == "Windows":
-        print(f"memory amount: {subprocess.run(['wmic', 'ComputerSystem', 'get', 'TotalPhysicalMemory'], capture_output=True).stdout.decode()}")
-    else:
-        raise Exception(f"Unknown system {system}")
+    stats_filename = f"RunnerSysStats-{get_job_id()}.json"
+    with open(stats_filename, 'w') as f:
+        json.dump(stats, f)
+    print(f"Report is available at {stats_filename}")

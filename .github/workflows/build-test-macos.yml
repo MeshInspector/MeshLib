@@ -58,11 +58,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Get job ID
+      - name: Collect runner's system stats
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python3 scripts/devops/retrieve_job_id.py
+          python3 scripts/devops/collect_runner_sys_stats.py
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh

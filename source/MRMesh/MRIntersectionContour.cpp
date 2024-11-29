@@ -193,6 +193,7 @@ void parallelPrepareLinkedLists( const PreciseCollisionResult& intersections, Ac
 
 ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativeSet, const PreciseCollisionResult& intersections )
 {
+    MR_TIMER
     struct CountourInfo
     {
         size_t startIndex;
@@ -200,8 +201,7 @@ ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativ
     };
 
     auto aSize = accumulativeSet.nListA.size();
-    BitSet queuedRecords( aSize + accumulativeSet.nListB.size() );
-    queuedRecords.flip(); // mark all bits
+    BitSet queuedRecords( aSize + accumulativeSet.nListB.size(), true );
     std::vector<CountourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
     while ( queuedRecords.any() )
     {
@@ -265,7 +265,7 @@ ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativ
 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
 {
-    MR_TIMER;
+    MR_TIMER
     AccumulativeSet accumulativeSet{ topologyA,topologyB, createSet( intersections ) };
     
     parallelPrepareLinkedLists( intersections, accumulativeSet );

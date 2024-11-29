@@ -58,12 +58,6 @@ jobs:
         with:
           submodules: true
 
-      - name: Get job ID
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh run view ${{ github.run_id }} --json 'attempt,conclusion,createdAt,databaseId,displayTitle,event,headBranch,headSha,jobs,name,number,startedAt,status,updatedAt,url,workflowDatabaseId,workflowName'
-
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 

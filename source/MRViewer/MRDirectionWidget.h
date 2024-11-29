@@ -141,10 +141,13 @@ public:
 
     /// Updates the direction of the arrow
     MRVIEWER_API void updateDirection( const Vector3f& dir );
+
     /// Updates the base of the arrow
     MRVIEWER_API void updateBase( const Vector3f& base );
+
     /// Updates the length of the arrow
     MRVIEWER_API void updateLength( float length );
+
     /// Updates the base and the length of the arrow
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );
     
@@ -153,20 +156,27 @@ public:
 
     /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );
+
     MRVIEWER_API bool isVisible() const;
+
     /// Sets the color of the widget
     MRVIEWER_API void setColor( const Color& color );
+
     /// Returns the color of the widget
     MRVIEWER_API const Color& getColor() const;
+
     /// Returns the base of the widget
     MRVIEWER_API const Vector3f& getBase() const;
+
     /// Returns the direction of the widget
     MRVIEWER_API const Vector3f& getDirection() const;
+
     /// Returns pointer to parent object
     MRVIEWER_API const VisualObject* getParentPtr() const;
 
     /// Block or allow mouse editing (allowed by default)
     bool isMouseBlocked() const { return blockedMouse_; }
+
     void setMouseBlocked( bool blocked ) { blockedMouse_ = blocked; }
 private:
     MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;

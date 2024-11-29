@@ -148,6 +148,9 @@ public:
     /// Updates the base and the length of the arrow
     MRVIEWER_API void updateArrow( const Vector3f& base, float length );
     
+    /// Returns internal data model object of this widget
+    std::shared_ptr<ObjectMesh> obj() const { return directionObj_; }
+
     /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );
     MRVIEWER_API bool isVisible() const;

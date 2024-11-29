@@ -62,6 +62,12 @@ jobs:
         with:
           submodules: true
 
+      - name: Get job ID
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/devops/retrieve_job_id.py
+
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
         run: |

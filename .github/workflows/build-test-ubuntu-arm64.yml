@@ -75,6 +75,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get job ID
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/devops/retrieve_job_id.py
+
       - name: Checkout third-party submodules
         run: |
           # have to checkout selective submodules by our own

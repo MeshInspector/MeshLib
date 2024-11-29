@@ -224,7 +224,7 @@ jobs:
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-          KEY_ARGS: '--'
+          KEY_ARGS: '"--run-c-sharp-samples"'
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -k ${{env.KEY_ARGS}}

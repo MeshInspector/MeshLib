@@ -65,7 +65,10 @@ if __name__ == "__main__":
     stats = get_system_stats()
     pprint.pprint(stats)
 
-    stats_filename = f"RunnerSysStats-{get_job_id()}.json"
+    job_id = get_job_id()
+    os.environ['GITHUB_JOB_ID'] = job_id
+
+    stats_filename = f"RunnerSysStats-{job_id}.json"
     with open(stats_filename, 'w') as f:
         json.dump(stats, f)
     print(f"Report is available at {stats_filename}")

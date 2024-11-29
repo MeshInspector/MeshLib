@@ -64,6 +64,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/devops/collect_runner_sys_stats.py
+          echo "GITHUB_JOB_ID=${GITHUB_JOB_ID}" >> $GITHUB_ENV
+
+      - name: Upload runner's system stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: RunnerSysStats-macos-${{ env.GITHUB_JOB_ID }}
+          path: RunnerSysStats-*
+          retention-days: 1
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh

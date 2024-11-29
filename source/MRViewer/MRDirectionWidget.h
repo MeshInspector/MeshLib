@@ -150,6 +150,7 @@ public:
     
     /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );
+    MRVIEWER_API bool isVisible() const;
     /// Sets the color of the widget
     MRVIEWER_API void setColor( const Color& color );
     /// Returns the color of the widget

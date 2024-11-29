@@ -64,9 +64,6 @@ public:
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
 
-    // enable or disable widget
-    MRVIEWER_API void enable( bool isEnabled );
-
     // create a widget and connect it.
     // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
     // All callback takes a shared pointer to an MR::VisualObject as an argument.
@@ -75,7 +72,7 @@ public:
     // onPointMoveFinish : This callback is called when the movement of a point is completed.
     // onPointRemove : This callback is executed when a point is removed.
     // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
-    MRVIEWER_API void create(
+    MRVIEWER_API SurfaceContoursWidget(
             PickerPointCallBack onPointAdd,
             PickerPointCallBack onPointMove,
             PickerPointCallBack onPointMoveFinish,
@@ -83,13 +80,12 @@ public:
             PickerPointObjectChecker isObjectValidToPick
     );
 
+    // Also remove the undo/redo actions from the history.
+    MRVIEWER_API ~SurfaceContoursWidget();
+
     /// clear temp internal variables.
     /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
     MRVIEWER_API void clear( bool writeHistory = true );
-
-    // Reset widget, clear internal variables and detach from signals.
-    // Also remove the undo/redo actions from the history.
-    MRVIEWER_API void reset();
 
     // return contour for specific object, i.e. ordered vector of surface points
     [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj )
@@ -144,7 +140,6 @@ private:
     // SurfaceContoursWidget internal variables
     bool moveClosedPoint_ = false;
     bool activeChange_ = false;
-    bool isPickerActive_ = false;
 
     // active point
     int activeIndex_{ 0 };

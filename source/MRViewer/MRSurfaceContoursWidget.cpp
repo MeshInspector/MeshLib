@@ -88,9 +88,6 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::action( Type )
 void SurfaceContoursWidget::AddRemovePointHistoryAction::insertPoint_()
 {
     assert( insertOnAction_ );
-    if ( !widget_.isPickerActive_ )
-        return;
-
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
@@ -109,9 +106,6 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::insertPoint_()
 void SurfaceContoursWidget::AddRemovePointHistoryAction::removePoint_()
 {
     assert( !insertOnAction_ );
-    if ( !widget_.isPickerActive_ )
-        return;
-
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
@@ -156,9 +150,6 @@ std::string SurfaceContoursWidget::ChangePointActionPickerPoint::name() const
 
 void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
 {
-    if ( !widget_.isPickerActive_ )
-        return;
-
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
@@ -171,13 +162,6 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
 size_t SurfaceContoursWidget::ChangePointActionPickerPoint::heapBytes() const
 {
     return 0; //this undo action will be deleted in widget disable
-}
-
-void SurfaceContoursWidget::enable( bool isEnabled )
-{
-    isPickerActive_ = isEnabled;
-    if ( !isPickerActive_ )
-        clear( false );
 }
 
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
@@ -400,9 +384,6 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
 
 bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {
-    if ( !isPickerActive_ )
-        return false;
-
     if ( button != Viewer::MouseButton::Left )
         return false;
 
@@ -524,9 +505,6 @@ ObjAndPick SurfaceContoursWidget::pick_() const
 
 bool SurfaceContoursWidget::onMouseMove_( int, int )
 {
-    if ( !isPickerActive_ )
-        return false;
-
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
@@ -552,7 +530,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     return false;
 }
 
-void SurfaceContoursWidget::create(
+SurfaceContoursWidget::SurfaceContoursWidget(
         PickerPointCallBack onPointAdd,
         PickerPointCallBack onPointMove,
         PickerPointCallBack onPointMoveFinish,
@@ -565,8 +543,6 @@ void SurfaceContoursWidget::create(
     onPointMoveFinish_ = std::move( onPointMoveFinish );
     onPointRemove_ = std::move( onPointRemove );
     isObjectValidToPick_ = std::move( isObjectValidToPick );
-
-    clear( false );
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -596,11 +572,8 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     activeObject_ = nullptr;
 }
 
-void SurfaceContoursWidget::reset()
+SurfaceContoursWidget::~SurfaceContoursWidget()
 {
-    clear( false );
-    enable( false );
-
     if ( ( params.writeHistory ) && ( params.filterHistoryonReset ) )
     {
         FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
@@ -663,9 +636,6 @@ SurfaceContoursWidget::SurfaceContoursWidgetClearAction::SurfaceContoursWidgetCl
 
 void SurfaceContoursWidget::SurfaceContoursWidgetClearAction::action( Type type )
 {
-    if ( !widget_.isPickerActive_ )
-        return;
-
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 

@@ -47,12 +47,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get job ID
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          python3 scripts/devops/retrieve_job_id.py
-
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: paulhatch/semantic-version@v5.4.0

@@ -33,6 +33,12 @@ jobs:
         with:
           submodules: true
 
+      - name: Get job ID
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/devops/retrieve_job_id.py
+
       - name: Filter Linux paths
         uses: dorny/paths-filter@v3
         id: linux-changes

@@ -41,17 +41,17 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_id: ${{ steps.create_release.outputs.id }}
     steps:
-      - name: Get job ID
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          python3 scripts/devops/retrieve_job_id.py
-
       - name: Checkout
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Get job ID
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/devops/retrieve_job_id.py
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}

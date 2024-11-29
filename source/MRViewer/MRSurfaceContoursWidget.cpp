@@ -28,10 +28,12 @@ class SurfaceContoursWidget::AddRemovePointHistoryAction : public SurfaceContour
 {
 public:
     /// appends new point at given position, and returns undo action for its removal
-    static std::shared_ptr<AddRemovePointHistoryAction> append( SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point );
+    static std::shared_ptr<AddRemovePointHistoryAction> appendAndGetUndo(
+        SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point );
 
     /// removes point by index, and returns undo action for its addition at the same place
-    static std::shared_ptr<AddRemovePointHistoryAction> remove( SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, int index );
+    static std::shared_ptr<AddRemovePointHistoryAction> removeAndGetUndo(
+        SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, int index );
 
     virtual std::string name() const override { return name_ + widget_.params.historyNameSuffix; }
     virtual void action( Type actionType ) override;
@@ -47,6 +49,9 @@ private:
         insertOnAction_{ insertOnAction }
     {};
 
+    void insertPoint_();
+    void removePoint_();
+
     std::string name_;
     SurfaceContoursWidget& widget_;
     const std::shared_ptr<MR::VisualObject> obj_;
@@ -55,25 +60,34 @@ private:
     bool insertOnAction_ = false;
 };
 
-std::shared_ptr<SurfaceContoursWidget::AddRemovePointHistoryAction> SurfaceContoursWidget::AddRemovePointHistoryAction::append(
+std::shared_ptr<SurfaceContoursWidget::AddRemovePointHistoryAction> SurfaceContoursWidget::AddRemovePointHistoryAction::appendAndGetUndo(
     SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point )
 {
     std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Append Point", widget, obj, point, -1, true ) );
-    res->action( Type::Redo );
+    res->insertPoint_();
     return res;
 }
 
-std::shared_ptr<SurfaceContoursWidget::AddRemovePointHistoryAction> SurfaceContoursWidget::AddRemovePointHistoryAction::remove(
+std::shared_ptr<SurfaceContoursWidget::AddRemovePointHistoryAction> SurfaceContoursWidget::AddRemovePointHistoryAction::removeAndGetUndo(
     SurfaceContoursWidget& widget, const std::shared_ptr<MR::VisualObject>& obj, int index )
 {
     assert( index >= 0 );
     std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Remove Point", widget, obj, PickedPoint{}, index, false ) );
-    res->action( Type::Redo );
+    res->removePoint_();
     return res;
 }
 
 void SurfaceContoursWidget::AddRemovePointHistoryAction::action( Type )
 {
+    if ( insertOnAction_ )
+        insertPoint_();
+    else
+        removePoint_();
+}
+
+void SurfaceContoursWidget::AddRemovePointHistoryAction::insertPoint_()
+{
+    assert( insertOnAction_ );
     if ( !widget_.isPickerActive_ )
         return;
 
@@ -81,31 +95,38 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::action( Type )
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     auto& contour = widget_.pickedPoints_[obj_];
-    if ( insertOnAction_ )
-    {
-        if ( index_ < 0 )
-            index_ = (int)contour.size();
+    if ( index_ < 0 )
+        index_ = (int)contour.size();
 
-        contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
-        widget_.activeIndex_ = index_;
-        widget_.activeObject_ = obj_;
-        widget_.highlightLastPoint( obj_ ); //old code, by why "last" and not just inserted?
-        widget_.onPointAdd_( obj_ );
-    }
-    else
-    {
-        assert( index_ >= 0 );
-        auto it = contour.begin() + index_;
-        point_ = (*it)->getCurrentPosition();
-        widget_.surfacePointWidgetCache_.erase( (*it)->getPickSphere().get() );
-        contour.erase( it );
+    contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
+    widget_.activeIndex_ = index_;
+    widget_.activeObject_ = obj_;
+    widget_.highlightLastPoint( obj_ ); //old code, by why "last" and not just inserted?
+    widget_.onPointAdd_( obj_ );
+    insertOnAction_ = false;
+}
 
-        widget_.activeIndex_ = index_;
-        widget_.activeObject_ = obj_;
-        widget_.highlightLastPoint( obj_ ); //again, why last?
-        widget_.onPointRemove_( obj_ );
-    }
-    insertOnAction_ = !insertOnAction_;
+void SurfaceContoursWidget::AddRemovePointHistoryAction::removePoint_()
+{
+    assert( !insertOnAction_ );
+    if ( !widget_.isPickerActive_ )
+        return;
+
+    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
+
+    auto& contour = widget_.pickedPoints_[obj_];
+    assert( index_ >= 0 );
+    auto it = contour.begin() + index_;
+    point_ = (*it)->getCurrentPosition();
+    widget_.surfacePointWidgetCache_.erase( (*it)->getPickSphere().get() );
+    contour.erase( it );
+
+    widget_.activeIndex_ = index_;
+    widget_.activeObject_ = obj_;
+    widget_.highlightLastPoint( obj_ ); //again, why last?
+    widget_.onPointRemove_( obj_ );
+    insertOnAction_ = true;
 }
 
 class SurfaceContoursWidget::ChangePointActionPickerPoint : public SurfaceContoursWidget::WidgetHistoryAction
@@ -340,7 +361,7 @@ bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& ob
 
     auto onAddPointAction = [this, &obj, &triPoint] ()
     {
-        auto actionPtr = AddRemovePointHistoryAction::append( *this, obj, triPoint );
+        auto actionPtr = AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint );
         if ( params.writeHistory )
             AppendHistory( std::move( actionPtr ) );
     };
@@ -360,7 +381,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
 {
     auto onRemovePointAction = [this, &obj, pickedIndex] ()
     {
-        auto actionPtr = AddRemovePointHistoryAction::remove( *this, obj, pickedIndex );
+        auto actionPtr = AddRemovePointHistoryAction::removeAndGetUndo( *this, obj, pickedIndex );
         if ( params.writeHistory )
             AppendHistory( std::move( actionPtr ) );
     };

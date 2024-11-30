@@ -146,7 +146,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     pickSphere_->setFrontColor( params_.activeColor, false );
     pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( startMove_ )
-        startMove_( currentPos_ );
+        startMove_( *this, currentPos_ );
     return true;
 }
 
@@ -159,7 +159,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
     pickSphere_->setFrontColor( params_.baseColor, false );
     pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( endMove_ )
-        endMove_( currentPos_ );
+        endMove_( *this, currentPos_ );
     return true;
 }
 
@@ -177,7 +177,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
         currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick );
         updatePositionAndRadius_();
         if ( onMove_ )
-            onMove_( currentPos_ );
+            onMove_( *this, currentPos_ );
         return true;
     }
     else

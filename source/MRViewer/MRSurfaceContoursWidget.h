@@ -139,7 +139,9 @@ private:
 
     // SurfaceContoursWidget internal variables
     bool moveClosedPoint_ = false;
-    bool activeChange_ = false;
+
+    // pick sphere currently dragged by mouse
+    const VisualObject * draggedPickSphere_ = nullptr;
 
     // active point
     int activeIndex_{ 0 };
@@ -148,8 +150,8 @@ private:
     // data storage
     SurfaceContours pickedPoints_;
 
-    // all objects created in createPickWidget_ to quickly differentiate them from other features
-    HashSet<const VisualObject*> myPickWidgets_;
+    // all spheres created in createPickWidget_ to quickly differentiate them from other features
+    HashSet<const VisualObject*> myPickSpheres_;
 
     // connection storage
     struct SurfaceConnectionHolder

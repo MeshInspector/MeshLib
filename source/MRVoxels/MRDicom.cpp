@@ -520,6 +520,7 @@ LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>
     tbb::task_arena limitedArena( maxNumThreads );
     std::atomic<int> numLoadedSlices = 0;
     const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
+    makeVdbTopologyDense( data );
 
     limitedArena.execute( [&]
     {

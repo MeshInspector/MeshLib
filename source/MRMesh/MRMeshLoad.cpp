@@ -623,14 +623,14 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
                 tris.resize( numIndices );
                 reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &tris.front() );
             }
-            const auto posCurent = in.tellg();
+            const auto posCurrent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
-            if ( !reportProgress( settings.callback, ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
+            if ( !reportProgress( settings.callback, ( float( posLast ) + ( posCurrent - posLast ) * 0.1f - posStart ) / streamSize ) )
                 return unexpected( std::string( "Loading canceled" ) );
             bool isCanceled = false;
-            ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )
+            ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurrent, posStart, streamSize, &isCanceled] ( float v )
             {
-                const bool res = callback( ( float( posLast ) + ( posCurent - posLast ) * ( 0.1f + v * 0.9f ) - posStart ) / streamSize );
+                const bool res = callback( ( float( posLast ) + ( posCurrent - posLast ) * ( 0.1f + v * 0.9f ) - posStart ) / streamSize );
                 isCanceled |= !res;
                 return res;
             } : settings.callback;
@@ -641,7 +641,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
                 return unexpected( "vertex id is larger than total point coordinates" );
             if ( settings.skippedFaceCount )
                 *settings.skippedFaceCount += mySkippedFaceCount;
-            if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
+            if ( settings.callback && ( !settings.callback( float( posCurrent - posStart ) / streamSize ) || isCanceled ) )
                 return unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
         }

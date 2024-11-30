@@ -535,6 +535,8 @@ LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>
         }, subprogress( cb, 0.4f, 0.9f ), 1 );
     } );
 
+    openvdb::tools::changeBackground( data.data->tree(), data.min );
+
     return { numLoadedSlices, cancelCalled, slicesRes };
 }
 
@@ -653,9 +655,6 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     auto presentSlices = seriesInfo.missedSlices;
     presentSlices.resize( data.dims.z );
     presentSlices.flip();
-
-    if constexpr ( std::convertible_to<T, VdbVolume> )
-        data.data->denseFill( toVdbBox( data.dims ), 0 );
 
     // other slices
     auto [numLoadedSlices, cancelCalled, slicesRes] = loadSlices( files, data, maxNumThreads, presentSlices, cb );

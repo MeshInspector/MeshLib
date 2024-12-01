@@ -70,8 +70,13 @@ public:
     {
         return params_;
     }
+
     // set parameters for this widget
     MRVIEWER_API void setParameters( const Parameters& params );
+
+    // set baseColor parameter for this widget
+    MRVIEWER_API void setBaseColor( const Color& color );
+
     /// Update the widget parameters.
     /// \param visitor - the function that takes the widget parameters and modifies them. Then the parameters are applied by \ref setParameters.
     MRVIEWER_API void updateParameters( const std::function<void ( Parameters& )>& visitor );

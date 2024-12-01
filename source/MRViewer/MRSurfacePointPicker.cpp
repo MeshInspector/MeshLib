@@ -115,6 +115,18 @@ void SurfacePointWidget::setParameters( const Parameters& params )
     params_ = params;
 }
 
+void SurfacePointWidget::setBaseColor( const Color& color )
+{
+    if ( params_.baseColor == color )
+        return;
+    params_.baseColor = color;
+    if ( pickSphere_ )
+    {
+        pickSphere_->setFrontColor( color, false );
+        pickSphere_->setBackColor( color );
+    }
+}
+
 void SurfacePointWidget::updateParameters( const std::function<void( Parameters& )>& visitor )
 {
     auto params = params_;

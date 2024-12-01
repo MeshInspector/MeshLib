@@ -4,6 +4,7 @@ import json
 import os
 import pprint
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -58,8 +59,6 @@ def parse_job(job: dict):
         'conclusion': job['conclusion'],
         'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).total_seconds() if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],
-        'head_branch': job['head_branch'],
-        'head_sha': job['head_sha'],
         'runner_name': job['runner_name'],
         'runner_group_name': job['runner_group_name'],
         **runner_stats,
@@ -87,9 +86,15 @@ if __name__ == "__main__":
     ref = os.environ.get("GITHUB_REF")
     run_id = os.environ.get("GITHUB_RUN_ID")
 
+    branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-type', 'HEAD']).strip()
+    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()
+
     resp = fetch_jobs(repo, run_id)
 
     result = {
+        'timestamp': datetime.datetime.now(datetime.timezone.utc).timestamp(),
+        'git_commit': commit,
+        'git_branch': branch,
         'GITHUB_REF': ref,
         'GITHUB_REPOSITORY': repo,
         'GITHUB_RUN_ID': run_id,

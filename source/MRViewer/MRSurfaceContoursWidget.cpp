@@ -113,7 +113,10 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::removePoint_()
     assert( index_ >= 0 );
     auto it = contour.begin() + index_;
     point_ = (*it)->getCurrentPosition();
-    widget_.myPickWidgets_.erase( (*it)->getPickSphere().get() );
+    const VisualObject * pickSphere = (*it)->getPickSphere().get();
+    widget_.myPickSpheres_.erase( pickSphere );
+    if ( widget_.draggedPickSphere_ == pickSphere )
+        widget_.draggedPickSphere_ = nullptr;
     contour.erase( it );
 
     widget_.activeIndex_ = index_;
@@ -171,15 +174,14 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     newPoint->setParameters( params.surfacePointParams );
     newPoint->create( obj, pt );
 
-    std::weak_ptr<SurfacePointWidget> curentPoint = newPoint;
-    newPoint->setStartMoveCallback( [this, obj, curentPoint] ( const PickedPoint& point )
+    newPoint->setStartMoveCallback( [this, obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
         const bool closedPath = isClosedCountour( obj );
 
         if ( closedPath )
         {
             const auto& contour = pickedPoints_[obj];
-            if ( curentPoint.lock() == contour[0] )
+            if ( &pointWidget == contour[0].get() )
             {
                 if ( params.writeHistory )
                 {
@@ -200,22 +202,23 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
             if ( params.writeHistory )
                 AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, activeIndex_ );
         }
-        activeChange_ = true;
+        draggedPickSphere_ = pointWidget.getPickSphere().get();
         onPointMove_( obj );
 
     } );
-    newPoint->setEndMoveCallback( [this, obj, curentPoint] ( const PickedPoint& point )
+    newPoint->setEndMoveCallback( [this, obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
         if ( moveClosedPoint_ )
         {
             const auto& contour = pickedPoints_[obj];
-            if ( curentPoint.lock() == contour[0] )
+            if ( &pointWidget == contour[0].get() )
             {
                 contour.back()->setCurrentPosition( point );
                 moveClosedPoint_ = false;
             }
         }
-        activeChange_ = false;
+        assert( draggedPickSphere_ == pointWidget.getPickSphere().get() );
+        draggedPickSphere_ = nullptr;
         onPointMoveFinish_( obj );
     } );
 
@@ -247,7 +250,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         surfaceConnectionHolders_.emplace( obj, std::move( holder ) );
     }
 
-    myPickWidgets_.emplace( newPoint->getPickSphere().get() );
+    myPickSpheres_.emplace( newPoint->getPickSphere().get() );
 
     return newPoint;
 }
@@ -492,7 +495,7 @@ ObjAndPick SurfaceContoursWidget::pick_() const
         predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
         {
             // always keep the picked points pickable
-            if ( myPickWidgets_.find( visObj ) != myPickWidgets_.end() )
+            if ( myPickSpheres_.find( visObj ) != myPickSpheres_.end() )
                 return true;
             return params.pickPredicate( visObj, mask );
         };
@@ -505,7 +508,7 @@ ObjAndPick SurfaceContoursWidget::pick_() const
 
 bool SurfaceContoursWidget::onMouseMove_( int, int )
 {
-    if ( pickedPoints_.empty() || activeChange_ )
+    if ( pickedPoints_.empty() || draggedPickSphere_ )
         return false;
 
     auto [obj, pick] = pick_();
@@ -557,7 +560,7 @@ void SurfaceContoursWidget::clear( bool writeHistory )
     {
         for ( int pickedIndex = int( contour.size() ) - 1; pickedIndex >= 0; --pickedIndex )
         {
-            myPickWidgets_.erase( contour[pickedIndex]->getPickSphere().get() );
+            myPickSpheres_.erase( contour[pickedIndex]->getPickSphere().get() );
             contour.erase( contour.begin() + pickedIndex );
             assert( contour.size() >= pickedIndex );
             activeIndex_ = pickedIndex;
@@ -566,7 +569,8 @@ void SurfaceContoursWidget::clear( bool writeHistory )
         }
     }
     pickedPoints_.clear();
-    myPickWidgets_.clear();
+    myPickSpheres_.clear();
+    draggedPickSphere_ = nullptr;
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;

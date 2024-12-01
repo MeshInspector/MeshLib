@@ -61,7 +61,7 @@ public:
     // resets whole widget
     MRVIEWER_API void reset();
     // returns object of control sphere
-    std::shared_ptr<SphereObject> getPickSphere() const
+    const std::shared_ptr<SphereObject>& getPickSphere() const
     {
         return pickSphere_;
     }
@@ -118,17 +118,17 @@ public:
     MRVIEWER_API void swapCurrentPosition( PickedPoint& pos );
 
     // this callback is called when modification starts if it is set
-    void setStartMoveCallback( std::function<void( const PickedPoint& )> startMove )
+    void setStartMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove )
     {
         startMove_ = startMove;
     }
     // this callback is called on modification if it is set
-    void setOnMoveCallback( std::function<void( const PickedPoint& )> onMove )
+    void setOnMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove )
     {
         onMove_ = onMove;
     }
     // this callback is called when modification ends if it is set
-    void setEndMoveCallback( std::function<void( const PickedPoint& )> endMove )
+    void setEndMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove )
     {
         endMove_ = endMove;
     }
@@ -168,9 +168,9 @@ private:
 
     boost::signals2::scoped_connection onBaseObjectWorldXfChanged_;
 
-    std::function<void( const PickedPoint& )> startMove_;
-    std::function<void( const PickedPoint& )> onMove_;
-    std::function<void( const PickedPoint& )> endMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove_;
 
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();

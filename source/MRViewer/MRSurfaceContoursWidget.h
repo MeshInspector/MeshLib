@@ -45,7 +45,7 @@ public:
 
         // Color for the last modified point in the contour
         // Parameters affect to future points only
-        MR::Color lastPoitColor = Color::green();
+        MR::Color lastPointColor = Color::green();
 
         // Color for the special point used to close a contour. Better do not change it.
         // Parameters affect to future points only
@@ -102,13 +102,9 @@ public:
     // check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
-    // Correctly selects the last point in the contours.
-    // If obj == nullptr then the check will be in all circuits.
-    // If specified, then only in the contour on specified object
-    MRVIEWER_API void highlightLastPoint( const std::shared_ptr<VisualObject>& obj );
-
     // shared variables. which need getters and setters.
-    [[nodiscard]] MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint() const;
+    [[nodiscard]] MRVIEWER_API std::pair<const std::shared_ptr<MR::VisualObject> &, int> getActivePoint() const { return { activeObject_, activeIndex_ }; }
+
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
     /// Get the active (the latest picked/moved) surface point widget.
@@ -133,6 +129,10 @@ private:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     ObjAndPick pick_() const;
+
+    /// sets the color of last and pre-last pick spheres for given object;
+    /// the colors are taken from parameters
+    void colorLast2Points_( const std::shared_ptr<VisualObject>& obj );
 
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );

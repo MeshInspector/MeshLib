@@ -1,5 +1,4 @@
 #include "MRSurfaceContoursWidget.h"
-#include "MRMesh/MRScopedValue.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRAppendHistory.h"
@@ -10,19 +9,10 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRPointOnObject.h"
 #include "MRMesh/MRHeapBytes.h"
-#include "MRMesh/MRFinally.h"
+#include "MRMesh/MRScopedValue.h"
 
 namespace MR
 {
-
-void updateBaseColor( std::shared_ptr<SurfacePointWidget> point, const Color& color )
-{
-    auto params = point->getParameters();
-    params.baseColor = color;
-    point->setParameters( params );
-}
-
-// History classes;
 
 class SurfaceContoursWidget::AddRemovePointHistoryAction : public SurfaceContoursWidget::WidgetHistoryAction
 {
@@ -98,7 +88,8 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::insertPoint_()
     contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
     widget_.activeIndex_ = index_;
     widget_.activeObject_ = obj_;
-    widget_.highlightLastPoint( obj_ ); //old code, by why "last" and not just inserted?
+    if ( index_ + 1 == contour.size() ) // last point was added
+        widget_.colorLast2Points_( obj_ );
     widget_.onPointAdd_( obj_ );
     insertOnAction_ = false;
 }
@@ -121,7 +112,8 @@ void SurfaceContoursWidget::AddRemovePointHistoryAction::removePoint_()
 
     widget_.activeIndex_ = index_;
     widget_.activeObject_ = obj_;
-    widget_.highlightLastPoint( obj_ ); //again, why last?
+    if ( index_  == contour.size() ) // last point was deleted
+        widget_.colorLast2Points_( obj_ );
     widget_.onPointRemove_( obj_ );
     insertOnAction_ = true;
 }
@@ -292,26 +284,20 @@ bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& o
     return true;
 }
 
-void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<VisualObject>& obj )
+void SurfaceContoursWidget::colorLast2Points_( const std::shared_ptr<VisualObject>& obj )
 {
     auto& contour = pickedPoints_[obj];
     int lastPointId = static_cast< int > ( contour.size() - 1 );
     if ( lastPointId > 0 )
     {
-        updateBaseColor( contour[lastPointId - 1], params.ordinaryPointColor );
+        contour[lastPointId - 1]->setBaseColor( params.ordinaryPointColor );
         if ( !isClosedCountour( obj ) )
-            updateBaseColor( contour[lastPointId], params.lastPoitColor );
+            contour[lastPointId]->setBaseColor( params.lastPointColor );
         else
-            updateBaseColor( contour[lastPointId], params.closeContourPointColor );
+            contour[lastPointId]->setBaseColor( params.closeContourPointColor );
     }
-    else
-        if ( lastPointId == 0 )
-            updateBaseColor( contour[0], params.lastPoitColor ); // only one point in contour
-}
-
-std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint() const
-{
-    return { activeObject_, activeIndex_ };
+    else if ( lastPointId == 0 )
+        contour[0]->setBaseColor( params.lastPointColor ); // only one point in contour
 }
 
 void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index )

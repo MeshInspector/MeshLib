@@ -58,19 +58,18 @@ public:
     // A common base class for all history actions of this widget.
     struct WidgetHistoryAction : HistoryAction {};
 
-    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> )>;
+    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
     using PickerPointObjectChecker = std::function<bool( std::shared_ptr<MR::VisualObject> )>;
 
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
 
-    // create a widget and connect it.
     // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
     // All callback takes a shared pointer to an MR::VisualObject as an argument.
-    // onPointAdd: This callback is invoked when a point is added.
-    // onPointMove : This callback is triggered when a point is being start  moved or dragged.
-    // onPointMoveFinish : This callback is called when the movement of a point is completed.
-    // onPointRemove : This callback is executed when a point is removed.
+    // onPointAdd: This callback is invoked after a point is added with its index.
+    // onPointMove : This callback is invoked when a point starts being dragged.
+    // onPointMoveFinish : This callback is invoked when point's dragging is completed.
+    // onPointRemove : This callback is invoked when a point is removed with its index before deletion.
     // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
     MRVIEWER_API SurfaceContoursWidget(
             PickerPointCallBack onPointAdd,
@@ -101,11 +100,6 @@ public:
 
     // check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
-
-    // shared variables. which need getters and setters.
-    [[nodiscard]] MRVIEWER_API std::pair<const std::shared_ptr<MR::VisualObject> &, int> getActivePoint() const { return { activeObject_, activeIndex_ }; }
-
-    MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
     /// Get the active (the latest picked/moved) surface point widget.
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;

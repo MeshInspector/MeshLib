@@ -328,7 +328,7 @@
     <ClCompile Include="MRViewportDraw.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRSurfaceContoursWidget.cpp">
+    <ClCompile Include="MRPickPointManager.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="MRRenderFeatureObjects.cpp">
@@ -737,7 +737,7 @@
     <ClInclude Include="MRNotificationType.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRSurfaceContoursWidget.h">
+    <ClInclude Include="MRPickPointManager.h">
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRImGuiVectorOperators.h">

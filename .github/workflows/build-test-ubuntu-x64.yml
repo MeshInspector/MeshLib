@@ -41,18 +41,23 @@ jobs:
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
-          # Do not run Debug Clang build on every commit (but only once a day)
+          # Do not run Clang builds on every commit (but only once a day)
           - full_config_build: false
-            config: Debug
             compiler: Clang
-          # Do not run Release GCC build on every commit (but only once a day)
+          # Do not run Ubuntu24 GCC build on every commit (but only once a day)
+          - full_config_build: false
+            os: ubuntu24
+            compiler: GCC
+          # Do not run Ubuntu22 Release GCC build on every commit (but only once a day)
           - full_config_build: false
             config: Release
+            os: ubuntu22
             compiler: GCC
-          - os: ubuntu24
-            compiler: GCC
-          - os: ubuntu24
+          # Do not run Ubuntu20 Debug GCC build on every commit (but only once a day)
+          - full_config_build: false
             config: Debug
+            os: ubuntu20
+            compiler: GCC
         include:
           - os: ubuntu20
             compiler: Clang

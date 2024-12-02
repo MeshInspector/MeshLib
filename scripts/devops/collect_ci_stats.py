@@ -31,18 +31,64 @@ def parse_iso8601(s):
 
 def parse_step(step: dict):
     return {
+        'number': step['number'],
         'name': step['name'],
         'conclusion': step['conclusion'],
-        'duration_s': (parse_iso8601(step['completed_at']) - parse_iso8601(step['started_at'])).total_seconds() if step['conclusion'] else None,
+        'duration_s': (parse_iso8601(step['completed_at']) - parse_iso8601(step['started_at'])).seconds if step['conclusion'] else None,
     }
 
 def parse_job_name(name: str):
-    match = JOB_NAME_PATTERN.match(name)
-    job_name, job_config = match.groups()
+    job_name, job_config = JOB_NAME_PATTERN.match(name).groups()
     os_config = KNOWN_OS[job_name]
+    matrix_config = dict(zip(os_config.matrix, job_config.split(', ')))
+
+    target_os = None
+    target_arch = None
+    compiler = None
+    build_config = None
+    if os_config.name == "macos":
+        target_os = "macos"
+        if matrix_config['os'] == "x64":
+            target_arch = "x64"
+        else:
+            target_arch = "arm64"
+        compiler = matrix_config['compiler']
+        if matrix_config['os'] == "github-arm":
+            build_config = "Debug"
+        else:
+            build_config = "Release"
+    elif os_config.name in ("ubuntu-arm64", "ubuntu-x64") :
+        target_os = matrix_config['os']
+        if os_config.name == "ubuntu-arm64":
+            target_arch = "arm64"
+        else:
+            target_arch = "x64"
+        compiler = matrix_config['compiler']
+        build_config = matrix_config['config']
+    elif os_config.name == "emscripten":
+        if matrix_config['config'] == "Singlethreaded":
+            target_os = "emscripten-singlethreaded"
+        else:
+            target_os = "emscripten"
+        target_arch = "wasm"
+        compiler = "Clang"
+        build_config = "Release"
+    elif os_config.name == "fedora":
+        target_os = "fedora39"
+        target_arch = "x64"
+        compiler = matrix_config['compiler'].split()[0]
+        build_config = matrix_config['config']
+    elif os_config.name == "windows":
+        target_os = "windows"
+        target_arch = "x64"
+        compiler = matrix_config['runner'].replace("windows", "msvc")
+        build_config = matrix_config['config']
+
     return {
-        'os_type': os_config.name,
-        'config': dict(zip(os_config.matrix, job_config.split(', '))),
+        'target_os': target_os,
+        'target_arch': target_arch,
+        'compiler': compiler,
+        'build_config': build_config,
     }
 
 def parse_job(job: dict):
@@ -52,16 +98,21 @@ def parse_job(job: dict):
     if stats_filename.is_file():
         with open(stats_filename, 'r') as f:
             runner_stats = json.load(f)
+    job_config = parse_job_name(job['name'])
     return {
-        'name': job['name'],
-        **parse_job_name(job['name']),
         'id': job['id'],
+        'name': job['name'],
         'conclusion': job['conclusion'],
-        'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).total_seconds() if job['conclusion'] else None,
+        'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).seconds if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],
+        'target_os': job_config['target_os'],
+        'target_arch': job_config['target_arch'],
+        'compiler': job_config['compiler'],
+        'build_config': job_config['build_config'],
         'runner_name': job['runner_name'],
         'runner_group_name': job['runner_group_name'],
-        **runner_stats,
+        'runner_cpu_count': runner_stats.get('runner_cpu_count', None),
+        'runner_ram_mb': runner_stats.get('runner_ram_mb', None),
     }
 
 def parse_jobs(jobs: List[dict]):
@@ -91,12 +142,12 @@ if __name__ == "__main__":
     resp = fetch_jobs(repo, run_id)
 
     result = {
+        'id': run_id,
         'timestamp': datetime.datetime.now(datetime.timezone.utc).timestamp(),
         'git_commit': commit,
         'git_branch': branch,
-        'GITHUB_REF': ref,
-        'GITHUB_REPOSITORY': repo,
-        'GITHUB_RUN_ID': run_id,
+        'github_ref': ref,
+        'github_repository': repo,
         'jobs': parse_jobs(resp.json()['jobs']),
     }
-    pprint.pp(result, indent=2, width=120)
+    pprint.pp(result, indent=2, width=150)

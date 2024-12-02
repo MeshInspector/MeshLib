@@ -23,8 +23,8 @@ def get_ram_amount():
 
 def get_system_stats():
     return {
-        'cpu_count': multiprocessing.cpu_count(),
-        'ram_mb': math.floor(get_ram_amount() / 1024 / 1024),
+        'runner_cpu_count': multiprocessing.cpu_count(),
+        'runner_ram_mb': math.floor(get_ram_amount() / 1024 / 1024),
     }
 
 GITHUB_HEADERS = {

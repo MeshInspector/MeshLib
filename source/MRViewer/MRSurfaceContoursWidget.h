@@ -101,8 +101,11 @@ public:
     // check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
-    /// Get the active (the latest picked/moved) surface point widget.
-    [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;
+    /// returns point widget by index from given object or nullptr if no such widget exists
+    [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;
+
+    /// returns point widget currently dragged by mouse
+    [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
     // Add a point to the end of non closed contour connected with obj.
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
@@ -134,8 +137,8 @@ private:
     // SurfaceContoursWidget internal variables
     bool moveClosedPoint_ = false;
 
-    // pick sphere currently dragged by mouse
-    const VisualObject * draggedPickSphere_ = nullptr;
+    // point widget currently dragged by mouse
+    SurfacePointWidget* draggedPointWidget_ = nullptr;
 
     // active point
     int activeIndex_{ 0 };

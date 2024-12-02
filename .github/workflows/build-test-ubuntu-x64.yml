@@ -35,9 +35,9 @@ jobs:
         id: set-matrix
         run: |
           if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
-            echo "::set-output name=matrix::$(cat .github/workflows/specs/ubuntu-x64-full-config.json)"
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=matrix::$(cat .github/workflows/specs/ubuntu-x64-minimal-config.json)"
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-confi.json)" >> $GITHUB_OUTPUT
           fi
 
   ubuntu-x64-build-test:

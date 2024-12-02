@@ -144,8 +144,13 @@ void SurfaceContoursWidget::ChangePointActionPickerPoint::action( Type )
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
-    widget_.pickedPoints_[obj_][index_]->swapCurrentPosition( point_ );
-    widget_.onPointMoveFinish_( obj_, index_ );
+    if ( auto w = widget_.getPointWidget( obj_, index_ ) )
+    {
+        w->swapCurrentPosition( point_ );
+        widget_.onPointMoveFinish_( obj_, index_ );
+    }
+    else
+        assert( false );
 }
 
 size_t SurfaceContoursWidget::ChangePointActionPickerPoint::heapBytes() const

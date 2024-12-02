@@ -18,6 +18,7 @@ SAMPLE_EXEC_NAME = "c-sharp-examples.exe"
     "not config.getoption('--run-c-sharp-samples')",
     reason="Only run when --run-c-sharp-samples is given",
 )
+@pytest.mark.smoke
 @pytest.mark.parametrize("case",
                          [
                              pytest.param({'sample': "GlobalRegistrationExample",
@@ -71,6 +72,18 @@ def test_c_sharp_samples(tmp_path, case):
     """
 
     """
+    print(SAMPLE_EXEC_DIR)
+
+    def list_all_files(directory):
+        # Walk through directory and its subdirectories
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                # Create full file path and print it
+                file_path = os.path.join(root, file)
+                print(file_path)
+
+    list_all_files(SAMPLE_EXEC_DIR)
+
     sample = case['sample']
     for mesh in case['input_files']:
         shutil.copy(Path(test_files_path) / "doc_samples" / "c-sharp" / sample /mesh, tmp_path / mesh)

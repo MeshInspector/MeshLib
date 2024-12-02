@@ -40,7 +40,7 @@ jobs:
           if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
           else
-            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-confi.json)" >> $GITHUB_OUTPUT
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
 
   ubuntu-x64-build-test:

@@ -26,7 +26,22 @@ on:
         type: boolean
 
 jobs:
+  set-ubuntu-x64-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix based on full_config_build input
+        id: set-matrix
+        run: |
+          if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
+            echo "::set-output name=matrix::$(cat .github/workflows/specs/ubuntu-x64-full-config.json)"
+          else
+            echo "::set-output name=matrix::$(cat .github/workflows/specs/ubuntu-x64-minimal-config.json)"
+          fi
+
   ubuntu-x64-build-test:
+    needs: [set-ubuntu-x64-matrix]
     timeout-minutes: 40
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
@@ -34,57 +49,7 @@ jobs:
       options: --user root
     strategy:
       fail-fast: false
-      matrix:
-        os:    [ ubuntu20, ubuntu22, ubuntu24 ]
-        config:   [ Debug, Release ]
-        compiler: [ Clang, GCC ]
-        full_config_build:
-          - ${{fromJSON(inputs.full_config_build)}}
-        include:
-          - os: ubuntu20
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-11
-            c-compiler: /usr/bin/clang-11
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu20
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-10
-            c-compiler: /usr/bin/gcc-10
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-12
-            c-compiler: /usr/bin/gcc-12
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          - os: ubuntu24
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          # - os: ubuntu24
-            # compiler: GCC
-            # cxx-compiler: /usr/bin/g++-13
-            # c-compiler: /usr/bin/gcc-13
-            # cxx-standard: 23
-            # build_mrcuda: "OFF"
-        exclude:
-          # Do not run Clang build on every commit (but only once a day)
-          - full_config_build: false
-            compiler: Clang
-          # Do not run Release GCC build on every commit (but only once a day)
-          - full_config_build: false
-            config: Release
-            compiler: GCC
+      matrix: ${{ fromJSON(needs.set-ubuntu-x64-matrix.outputs.matrix) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -94,6 +59,9 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
+      - name: Display job info
+        run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
+
       - name: Checkout
         uses: actions/checkout@v4
 

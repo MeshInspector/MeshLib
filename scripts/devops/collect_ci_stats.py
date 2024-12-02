@@ -102,6 +102,7 @@ def parse_job(job: dict):
     return {
         'id': job['id'],
         'name': job['name'],
+        'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
         'conclusion': job['conclusion'],
         'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).seconds if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],
@@ -143,7 +144,6 @@ if __name__ == "__main__":
 
     result = {
         'id': run_id,
-        'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
         'git_commit': commit,
         'git_branch': branch,
         'github_ref': ref,

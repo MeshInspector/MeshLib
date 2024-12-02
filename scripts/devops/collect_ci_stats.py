@@ -147,7 +147,7 @@ if __name__ == "__main__":
         'git_commit': commit,
         'git_branch': branch,
         'github_ref': ref,
-        'github_repository': repo,
+        'github_repo': repo,
         'jobs': parse_jobs(resp.json()['jobs']),
     }
     pprint.pp(result, indent=2, width=150)

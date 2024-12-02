@@ -31,6 +31,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set matrix based on full_config_build input
         id: set-matrix
         run: |

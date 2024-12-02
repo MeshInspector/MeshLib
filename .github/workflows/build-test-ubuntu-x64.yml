@@ -43,10 +43,12 @@ jobs:
         exclude:
           # Do not run Clang builds on every commit (but only once a day)
           - full_config_build: false
+            config:   [ Debug, Release ]
             compiler: Clang
           # Do not run Ubuntu24 GCC build on every commit (but only once a day)
           - full_config_build: false
             os: ubuntu24
+            config:   [ Debug, Release ]
             compiler: GCC
           # Do not run Ubuntu22 Release GCC build on every commit (but only once a day)
           - full_config_build: false

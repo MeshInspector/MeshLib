@@ -130,13 +130,13 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
-        if:   ${{ env.C_SHARP_SAMPLES }}
+        if:   ${{ env.C_SHARP_SAMPLES == 'true' }}
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore Dependencies
-        if:   ${{ env.C_SHARP_SAMPLES }}
+        if:   ${{ env.C_SHARP_SAMPLES == 'true' }}
         uses: codebeltnet/dotnet-restore@v2
         with:
           projects: 'source/**/*.csproj'
@@ -163,11 +163,11 @@ jobs:
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build .NET
-        if:   ${{ env.C_SHARP_SAMPLES }}
+        if:   ${{ env.C_SHARP_SAMPLES == 'true' }}
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
         
       - name: Build .NET examples
-        if:   ${{ env.C_SHARP_SAMPLES }}
+        if:   ${{ env.C_SHARP_SAMPLES == 'true' }}
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build MRBind
@@ -225,10 +225,10 @@ jobs:
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-          C_SHARP_SAMPLES: ${{ fromJSON('["--run-c-sharp-samples",""]')[ env.C_SHARP_SAMPLES || 0] }}
+          C_SHARP_TEST: ${{ fromJSON('["--run-c-sharp-samples",""]')[ env.C_SHARP_SAMPLES == 'true' || 0] }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a=${{env.C_SHARP_SAMPLES}}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a=${{env.C_SHARP_TEST}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     result = {
         'id': run_id,
-        'timestamp': datetime.datetime.now(datetime.timezone.utc).timestamp(),
+        'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
         'git_commit': commit,
         'git_branch': branch,
         'github_ref': ref,

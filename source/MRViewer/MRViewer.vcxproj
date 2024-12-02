@@ -53,7 +53,7 @@
     <ClCompile Include="MRRibbonMenuSearch.cpp" />
     <ClCompile Include="MRSceneTextureGL.cpp" />
     <ClCompile Include="MRShowModal.cpp" />
-    <ClCompile Include="MRSurfaceContoursWidget.cpp" />
+    <ClCompile Include="MRPickPointManager.cpp" />
     <ClCompile Include="MRToolsLibrary.cpp" />
     <ClCompile Include="MRLinesShader.cpp" />
     <ClCompile Include="MRMeshShader.cpp" />
@@ -187,7 +187,7 @@
     <ClInclude Include="MRSceneTextureGL.h" />
     <ClInclude Include="MRShowModal.h" />
     <ClInclude Include="MRSpaceMouseParameters.h" />
-    <ClInclude Include="MRSurfaceContoursWidget.h" />
+    <ClInclude Include="MRPickPointManager.h" />
     <ClInclude Include="MRToolsLibrary.h" />
     <ClInclude Include="MRLinesShader.h" />
     <ClInclude Include="MRMeshShader.h" />

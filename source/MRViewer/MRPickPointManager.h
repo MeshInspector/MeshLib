@@ -13,12 +13,13 @@
 namespace MR
 {
 
-class MRVIEWER_CLASS SurfaceContoursWidget : public MultiListener<
+/// this object allows the user to pick/move/delete several ordered points on one or more visual objects
+class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
 {
 public:
-    struct SurfaceContoursWidgetParams
+    struct Params
     {
         // Modifier key for closing a contour (ordered vector of points) using the widget
         int widgetContourCloseMod = GLFW_MOD_CONTROL;
@@ -31,9 +32,6 @@ public:
 
         // This is appended to the names of all undo/redo actions.
         std::string historyNameSuffix;
-
-        // Indicates whether to flash history on reset call
-        bool filterHistoryonReset = true;
 
         // Parameters for configuring the surface point widget
         // Parameters affect to future points only
@@ -54,6 +52,7 @@ public:
         // Predicate to additionally filter objects that should be treated as pickable.
         Viewport::PickRenderObjectPredicate pickPredicate;
     };
+    Params params;
 
     // A common base class for all history actions of this widget.
     struct WidgetHistoryAction : HistoryAction {};
@@ -71,7 +70,7 @@ public:
     // onPointMoveFinish : This callback is invoked when point's dragging is completed.
     // onPointRemove : This callback is invoked when a point is removed with its index before deletion.
     // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
-    MRVIEWER_API SurfaceContoursWidget(
+    MRVIEWER_API PickPointManager(
             PickerPointCallBack onPointAdd,
             PickerPointCallBack onPointMove,
             PickerPointCallBack onPointMoveFinish,
@@ -80,13 +79,9 @@ public:
     );
 
     // Also remove the undo/redo actions from the history.
-    MRVIEWER_API ~SurfaceContoursWidget();
+    MRVIEWER_API ~PickPointManager();
 
-    /// clear temp internal variables.
-    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
-    MRVIEWER_API void clear( bool writeHistory = true );
-
-    // return contour for specific object, i.e. ordered vector of surface points
+    // return contour for specific object (creating new one if necessary)
     [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj )
     {
         return pickedPoints_[obj];
@@ -113,13 +108,14 @@ public:
     // Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
 
+    /// remove all points from all objects
+    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
+    MRVIEWER_API void clear( bool writeHistory = true );
+
     // if ( makeClosed ), and the contour is open add a special transparent point contour to the end of contour connected with given object.
     // A coordinated of this special transparent point will be equal to the firs point in contour, which will means that contour is closed.
     // if ( !makeClosed ), and the contour is closed remove last point of contour connected with given object.
     MRVIEWER_API bool closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed = true );
-
-    // configuration params
-    SurfaceContoursWidgetParams params;
 
 private:
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
@@ -134,7 +130,7 @@ private:
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
 
-    // SurfaceContoursWidget internal variables
+    // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;
 
     // point widget currently dragged by mouse
@@ -146,13 +142,13 @@ private:
     // all spheres created in createPickWidget_ to quickly differentiate them from other features
     HashSet<const VisualObject*> myPickSpheres_;
 
-    // connection storage
-    struct SurfaceConnectionHolder
+    // for each object with pick points, holds connections to mesh/point changed event
+    struct ConnectionHolder
     {
         boost::signals2::scoped_connection onMeshChanged;
         boost::signals2::scoped_connection onPointsChanged;
     };
-    std::unordered_map<std::shared_ptr<VisualObject>, SurfaceConnectionHolder> surfaceConnectionHolders_;
+    HashMap<std::shared_ptr<VisualObject>, ConnectionHolder> connectionHolders_;
 
     // CallBack functions
     PickerPointCallBack onPointAdd_;
@@ -167,7 +163,7 @@ private:
     // History classes:
     class AddRemovePointHistoryAction;
     class ChangePointActionPickerPoint;
-    class SurfaceContoursWidgetClearAction;
+    class PickPointManagerClearAction;
 };
 
 } //namespace MR

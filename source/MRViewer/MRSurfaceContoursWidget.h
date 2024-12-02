@@ -140,10 +140,6 @@ private:
     // point widget currently dragged by mouse
     SurfacePointWidget* draggedPointWidget_ = nullptr;
 
-    // active point
-    int activeIndex_{ 0 };
-    std::shared_ptr<MR::VisualObject> activeObject_ = nullptr;
-
     // data storage
     SurfaceContours pickedPoints_;
 

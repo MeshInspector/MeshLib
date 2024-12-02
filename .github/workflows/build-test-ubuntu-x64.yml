@@ -40,6 +40,43 @@ jobs:
         compiler: [ Clang, GCC ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
+        include:
+          - os: ubuntu20
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
+            cxx-standard: 20
+            build_mrcuda: "ON"
+          - os: ubuntu20
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-10
+            c-compiler: /usr/bin/gcc-10
+            cxx-standard: 20
+            build_mrcuda: "ON"
+          - os: ubuntu22
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-14
+            c-compiler: /usr/bin/clang-14
+            cxx-standard: 20
+            build_mrcuda: "ON"
+          - os: ubuntu22
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-12
+            c-compiler: /usr/bin/gcc-12
+            cxx-standard: 23
+            build_mrcuda: "ON"
+          - os: ubuntu24
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
+            cxx-standard: 23
+            build_mrcuda: "ON"
+          # - os: ubuntu24
+            # compiler: GCC
+            # cxx-compiler: /usr/bin/g++-13
+            # c-compiler: /usr/bin/gcc-13
+            # cxx-standard: 23
+            # build_mrcuda: "OFF"
         exclude:
           # Do not run Clang builds on every commit (but only once a day)
           - full_config_build: false
@@ -85,43 +122,6 @@ jobs:
             config: Debug
             os: ubuntu20
             compiler: GCC
-        include:
-          - os: ubuntu20
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-11
-            c-compiler: /usr/bin/clang-11
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu20
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-10
-            c-compiler: /usr/bin/gcc-10
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-12
-            c-compiler: /usr/bin/gcc-12
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          - os: ubuntu24
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          # - os: ubuntu24
-            # compiler: GCC
-            # cxx-compiler: /usr/bin/g++-13
-            # c-compiler: /usr/bin/gcc-13
-            # cxx-standard: 23
-            # build_mrcuda: "OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

@@ -151,3 +151,7 @@ if __name__ == "__main__":
         'jobs': parse_jobs(resp.json()['jobs']),
     }
     pprint.pp(result, indent=2, width=150)
+
+    requests.post("https://api.meshinspector.com/ci-stats/v1/log", json=result, headers={
+        'Authorization': f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}',
+    })

@@ -35,11 +35,8 @@ jobs:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
-            runner: windows-2019
-            config: "Debug"
-          - full_config_build: false
             runner: windows-2022
-            config: "Release"
+            config: "Debug"
         include:
           - runner: windows-2022
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'

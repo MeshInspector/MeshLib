@@ -287,6 +287,8 @@ jobs:
 
       - name: Collect stats
         env:
+          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/devops/collect_ci_stats.py
 

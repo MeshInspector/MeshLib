@@ -82,12 +82,11 @@ def fetch_jobs(repo: str, run_id: str):
     })
 
 if __name__ == "__main__":
+    branch = os.environ.get('GIT_BRANCH')
+    commit = os.environ.get('GIT_COMMIT')
     repo = os.environ.get("GITHUB_REPOSITORY")
     ref = os.environ.get("GITHUB_REF")
     run_id = os.environ.get("GITHUB_RUN_ID")
-
-    branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-type', 'HEAD']).strip()
-    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()
 
     resp = fetch_jobs(repo, run_id)
 

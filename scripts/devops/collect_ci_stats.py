@@ -143,7 +143,7 @@ if __name__ == "__main__":
     resp = fetch_jobs(repo, run_id)
 
     result = {
-        'id': run_id,
+        'id': int(run_id),
         'git_commit': commit,
         'git_branch': branch,
         'github_ref': ref,

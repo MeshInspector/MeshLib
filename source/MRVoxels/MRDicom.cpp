@@ -797,7 +797,7 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
+    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )

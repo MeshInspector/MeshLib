@@ -32,7 +32,7 @@ for x in $PACKAGES; do
     PACKAGE_FILES+=" $DOWNLOAD_DIR/$x-$1-any.pkg.tar.zst"
 done
 
-# Install packages. This will automatically replace newer ones.
+# Install packages. This will automatically replace existing packages, if any.
 pacman -U --noconfirm $PACKAGE_FILES
 
 # Configure Pacman no never update Clang.

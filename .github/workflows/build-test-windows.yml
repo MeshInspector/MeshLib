@@ -163,7 +163,7 @@ jobs:
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
         
       - name: Build .NET examples
-        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore
+        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}

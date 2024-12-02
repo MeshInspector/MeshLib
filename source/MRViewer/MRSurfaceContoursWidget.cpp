@@ -430,22 +430,22 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || draggedPointWidget_ )
         return false;
 
-    auto [obj, pick] = pick_();
-    if ( !obj )
+    auto [pickObj, pick] = pick_();
+    if ( !pickObj )
         return false;
 
-    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
+    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( pickObj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
         return false;
 
-    for ( auto contour : pickedPoints_ )
-        for ( int index = 0; index < contour.second.size(); ++index )
+    for ( const auto & [obj, widgets] : pickedPoints_ )
+        for ( int index = 0; index < widgets.size(); ++index )
         {
-            const auto& point = contour.second[index];
-            bool hovered = obj == point->getPickSphere();
-            point->setHovered( hovered );
+            const auto& widget = widgets[index];
+            bool hovered = pickObj == widget->getPickSphere();
+            widget->setHovered( hovered );
             if ( hovered )
             {
-                point->setStartMoveCallback( [this, obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
+                widget->setStartMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
                     const bool closedPath = isClosedCountour( obj );
 
@@ -477,7 +477,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
                     onPointMove_( obj, index );
 
                 } );
-                point->setEndMoveCallback( [this, obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
+                widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
                     if ( moveClosedPoint_ )
                     {

@@ -32,18 +32,7 @@ for x in $PACKAGES; do
     PACKAGE_FILES+=" $DOWNLOAD_DIR/$x-$1-any.pkg.tar.zst"
 done
 
-# Remove existing packages.
-PACKAGES_TO_REMOVE=
-for x in $PACKAGES; do
-    if pacman -Q $x >/dev/null 2>/dev/null; then
-        PACKAGES_TO_REMOVE+=" $x"
-    fi
-done
-if [[ $PACKAGES_TO_REMOVE != "" ]]; then
-    pacman -Rc --noconfirm $PACKAGES_TO_REMOVE
-fi
-
-# Install packages.
+# Install packages. This will automatically replace newer ones.
 pacman -U --noconfirm $PACKAGE_FILES
 
 # Configure Pacman no never update Clang.

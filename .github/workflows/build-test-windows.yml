@@ -147,7 +147,7 @@ jobs:
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
-          install: make gawk procps-ng
+          install: make gawk procps-ng mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
@@ -155,8 +155,6 @@ jobs:
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
-          # Install additional packages. Must do it here, since the script above would uninstall them.
-          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
@@ -164,7 +162,7 @@ jobs:
       - name: Build .NET
         if:   matrix.runner == 'windows-2022'
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
-        
+
       - name: Build .NET examples
         if: matrix.runner == 'windows-2022'
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore

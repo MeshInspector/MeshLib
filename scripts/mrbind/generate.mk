@@ -85,6 +85,8 @@ override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
+override valid_vs_modes := Debug Release
+$(if $(filter-out $(valid_vs_modes),$(VS_MODE)),$(error Invalid `VS_MODE=$(VS_MODE)`, expected one of: $(valid_vs_modes)))
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)

@@ -45,9 +45,27 @@ jobs:
           - full_config_build: false
             config: Debug
             compiler: Clang
+            os: ubuntu20
           - full_config_build: false
             config: Release
             compiler: Clang
+            os: ubuntu20
+          - full_config_build: false
+            config: Debug
+            compiler: Clang
+            os: ubuntu22
+          - full_config_build: false
+            config: Release
+            compiler: Clang
+            os: ubuntu22
+          - full_config_build: false
+            config: Debug
+            compiler: Clang
+            os: ubuntu24
+          - full_config_build: false
+            config: Release
+            compiler: Clang
+            os: ubuntu24
           # Do not run Ubuntu24 GCC build on every commit (but only once a day)
           - full_config_build: false
             os: ubuntu24

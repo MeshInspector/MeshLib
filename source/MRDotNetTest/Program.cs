@@ -5,10 +5,10 @@ namespace MR.Test
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             Console.WriteLine("Starting tests...");
-            new AutoRun().Execute(args);
+            return new AutoRun().Execute(args);
         }
     }
 }

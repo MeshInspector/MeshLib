@@ -162,8 +162,8 @@ private:
 
     // History classes:
     class AddRemovePointHistoryAction;
-    class ChangePointActionPickerPoint;
-    class PickPointManagerClearAction;
+    class MovePointHistoryAction;
+    class ClearHistoryAction;
 };
 
 } //namespace MR

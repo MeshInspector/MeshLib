@@ -114,10 +114,10 @@ void PickPointManager::AddRemovePointHistoryAction::removePoint_()
     insertOnAction_ = true;
 }
 
-class PickPointManager::ChangePointActionPickerPoint : public PickPointManager::WidgetHistoryAction
+class PickPointManager::MovePointHistoryAction : public PickPointManager::WidgetHistoryAction
 {
 public:
-    ChangePointActionPickerPoint( PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, int index ) :
+    MovePointHistoryAction( PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, int index ) :
         widget_{ widget },
         obj_{ obj },
         point_{ point },
@@ -134,12 +134,12 @@ private:
     int index_;
 };
 
-std::string PickPointManager::ChangePointActionPickerPoint::name() const
+std::string PickPointManager::MovePointHistoryAction::name() const
 {
     return "Move point" + widget_.params.historyNameSuffix;
 }
 
-void PickPointManager::ChangePointActionPickerPoint::action( Type )
+void PickPointManager::MovePointHistoryAction::action( Type )
 {
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
@@ -153,7 +153,7 @@ void PickPointManager::ChangePointActionPickerPoint::action( Type )
         assert( false );
 }
 
-size_t PickPointManager::ChangePointActionPickerPoint::heapBytes() const
+size_t PickPointManager::MovePointHistoryAction::heapBytes() const
 {
     return 0; //this undo action will be deleted in widget disable
 }
@@ -180,9 +180,9 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
                     auto& point = points[i];
                     const auto& pos = point->getCurrentPosition();
                     if ( isPickedPointValid( obj.get(), pos ) )
-                        point->setCurrentPosition( pos );
+                        point->setCurrentPosition( pos ); // updates coordinates even for the same pos
                     else
-                        removePoint( obj, i );
+                        removePoint( obj, i ); // questionable, but how to get here?
                 }
             }
         };
@@ -465,21 +465,21 @@ bool PickPointManager::onMouseMove_( int, int )
                             if ( params.writeHistory )
                             {
                                 SCOPED_HISTORY( "Move point" + params.historyNameSuffix );
-                                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, index );
-                                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, int( contour.size() ) - 1 );
+                                AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
+                                AppendHistory<MovePointHistoryAction>( *this, obj, point, int( contour.size() ) - 1 );
                             }
                             moveClosedPoint_ = true;
                         }
                         else
                         {
                             if ( params.writeHistory )
-                                AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, index );
+                                AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
                         }
                     }
                     else
                     {
                         if ( params.writeHistory )
-                            AppendHistory<ChangePointActionPickerPoint>( *this, obj, point, index );
+                            AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
                     }
                     draggedPointWidget_ = &pointWidget;
                     onPointMove_( obj, index );
@@ -526,7 +526,7 @@ PickPointManager::PickPointManager(
 void PickPointManager::clear( bool writeHistory )
 {
     if ( params.writeHistory && writeHistory )
-        AppendHistory<PickPointManagerClearAction>( "Clear points" + params.historyNameSuffix, *this );
+        AppendHistory<ClearHistoryAction>( "Clear points" + params.historyNameSuffix, *this );
 
     for ( auto& [obj, contour] : pickedPoints_ )
     {
@@ -557,10 +557,10 @@ PickPointManager::~PickPointManager()
     disconnect();
 }
 
-class PickPointManager::PickPointManagerClearAction : public PickPointManager::WidgetHistoryAction
+class PickPointManager::ClearHistoryAction : public PickPointManager::WidgetHistoryAction
 {
 public:
-    PickPointManagerClearAction( std::string name, PickPointManager& widget );
+    ClearHistoryAction( std::string name, PickPointManager& widget );
 
 public:
     [[nodiscard]] std::string name() const override { return name_; }
@@ -581,7 +581,7 @@ private:
     std::vector<ObjectState> states_;
 };
 
-PickPointManager::PickPointManagerClearAction::PickPointManagerClearAction( std::string name, PickPointManager& widget )
+PickPointManager::ClearHistoryAction::ClearHistoryAction( std::string name, PickPointManager& widget )
     : name_( std::move( name ) )
     , widget_( widget )
 {
@@ -596,7 +596,7 @@ PickPointManager::PickPointManagerClearAction::PickPointManagerClearAction( std:
     }
 }
 
-void PickPointManager::PickPointManagerClearAction::action( Type type )
+void PickPointManager::ClearHistoryAction::action( Type type )
 {
     MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
@@ -620,7 +620,7 @@ void PickPointManager::PickPointManagerClearAction::action( Type type )
     }
 }
 
-size_t PickPointManager::PickPointManagerClearAction::heapBytes() const
+size_t PickPointManager::ClearHistoryAction::heapBytes() const
 {
     return 0; // this undo action will be deleted in widget disable
 }

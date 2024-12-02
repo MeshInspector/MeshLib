@@ -288,15 +288,13 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: clang64
-          install: make gawk procps-ng
+          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
-          # Install additional packages. Must do it here, since the script above would uninstall them.
-          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
 
       - name: Build MRBind
         shell: cmd

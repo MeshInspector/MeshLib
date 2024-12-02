@@ -214,7 +214,7 @@ namespace MR
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
-        private static extern bool resolveMeshDegenerations(IntPtr mesh, ref MRResolveMeshDegenParameters settings );
+        private static extern bool mrResolveMeshDegenerations(IntPtr mesh, ref MRResolveMeshDegenParameters settings );
 
         /// Collapse edges in mesh region according to the settings
         public static DecimateResult Decimate(ref Mesh mesh, DecimateParameters settings)
@@ -277,7 +277,7 @@ namespace MR
             mrParameters.stabilizer = settings.stabilizer;
             mrParameters.region = settings.region is null ? (IntPtr)null : settings.region.bs_;
 
-            return resolveMeshDegenerations(mesh.mesh_, ref mrParameters);
+            return mrResolveMeshDegenerations(mesh.mesh_, ref mrParameters);
         }
     }
 }

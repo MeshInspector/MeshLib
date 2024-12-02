@@ -115,6 +115,18 @@ void SurfacePointWidget::setParameters( const Parameters& params )
     params_ = params;
 }
 
+void SurfacePointWidget::setBaseColor( const Color& color )
+{
+    if ( params_.baseColor == color )
+        return;
+    params_.baseColor = color;
+    if ( pickSphere_ )
+    {
+        pickSphere_->setFrontColor( color, false );
+        pickSphere_->setBackColor( color );
+    }
+}
+
 void SurfacePointWidget::updateParameters( const std::function<void( Parameters& )>& visitor )
 {
     auto params = params_;
@@ -146,7 +158,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     pickSphere_->setFrontColor( params_.activeColor, false );
     pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( startMove_ )
-        startMove_( currentPos_ );
+        startMove_( *this, currentPos_ );
     return true;
 }
 
@@ -159,7 +171,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
     pickSphere_->setFrontColor( params_.baseColor, false );
     pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( endMove_ )
-        endMove_( currentPos_ );
+        endMove_( *this, currentPos_ );
     return true;
 }
 
@@ -177,7 +189,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
         currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick );
         updatePositionAndRadius_();
         if ( onMove_ )
-            onMove_( currentPos_ );
+            onMove_( *this, currentPos_ );
         return true;
     }
     else

@@ -78,49 +78,12 @@ jobs:
             # cxx-standard: 23
             # build_mrcuda: "OFF"
         exclude:
-          # Do not run Clang builds on every commit (but only once a day)
+          # Do not run Clang build on every commit (but only once a day)
           - full_config_build: false
-            config: Debug
             compiler: Clang
-            os: ubuntu20
+          # Do not run Release GCC build on every commit (but only once a day)
           - full_config_build: false
             config: Release
-            compiler: Clang
-            os: ubuntu20
-          - full_config_build: false
-            config: Debug
-            compiler: Clang
-            os: ubuntu22
-          - full_config_build: false
-            config: Release
-            compiler: Clang
-            os: ubuntu22
-          - full_config_build: false
-            config: Debug
-            compiler: Clang
-            os: ubuntu24
-          - full_config_build: false
-            config: Release
-            compiler: Clang
-            os: ubuntu24
-          # Do not run Ubuntu24 GCC build on every commit (but only once a day)
-          - full_config_build: false
-            os: ubuntu24
-            config: Debug
-            compiler: GCC
-          - full_config_build: false
-            os: ubuntu24
-            config: Release
-            compiler: GCC
-          # Do not run Ubuntu22 Release GCC build on every commit (but only once a day)
-          - full_config_build: false
-            config: Release
-            os: ubuntu22
-            compiler: GCC
-          # Do not run Ubuntu20 Debug GCC build on every commit (but only once a day)
-          - full_config_build: false
-            config: Debug
-            os: ubuntu20
             compiler: GCC
     permissions:
       id-token: write # This is required for requesting the JWT

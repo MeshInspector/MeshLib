@@ -259,6 +259,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::getPointWidget( const
     if ( it != pickedPoints_.end() )
     {
         const auto& contour = it->second;
+        assert( index < contour.size() );
         if ( index < contour.size() )
             res = contour[index];
     }
@@ -450,6 +451,8 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
             widget->setHovered( hovered );
             if ( hovered )
             {
+                // setting callback is very cheap operation (in comparison to pick_ above),
+                // and we do it here because here we know up-today index of the point
                 widget->setStartMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
                     const bool closedPath = isClosedCountour( obj );

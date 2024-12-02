@@ -19,7 +19,7 @@ namespace MR
         struct MRMeshSaveNamedXfMesh
         {
             public string name = "";
-            public MRAffineXf3f toWorld;
+            public MRAffineXf3f toWorld = new MRAffineXf3f();
             public IntPtr mesh = IntPtr.Zero;
 
             public MRMeshSaveNamedXfMesh() { }

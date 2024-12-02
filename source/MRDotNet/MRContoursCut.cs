@@ -51,7 +51,7 @@ namespace MR
         {
             public int primitiveId = 0;
             public byte primitiveIdIndex = 0;
-            public MRVector3f coordinate;
+            public MRVector3f coordinate = new MRVector3f();
             public MROneMeshIntersection() { }
         };
 
@@ -67,7 +67,7 @@ namespace MR
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshContour
         {
-            public MRVectorOneMeshIntersection intersections;
+            public MRVectorOneMeshIntersection intersections = new MRVectorOneMeshIntersection();
             //size of bool in C is 1, so use byte
             public byte closed = 0;
             public MROneMeshContour() { }

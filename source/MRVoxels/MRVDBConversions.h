@@ -72,6 +72,9 @@ MRVOXELS_API void putSimpleVolumeInDenseGrid(
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
     );
 
+/// Make \p volume dense without setting any values
+MRVOXELS_API void makeVdbTopologyDense( VdbVolume& volume );
+
 // make SimpleVolume from VdbVolume
 // make copy of data
 MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume(

@@ -520,6 +520,7 @@ LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>
     tbb::task_arena limitedArena( maxNumThreads );
     std::atomic<int> numLoadedSlices = 0;
     const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
+    makeVdbTopologyDense( data );
 
     limitedArena.execute( [&]
     {
@@ -534,6 +535,8 @@ LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>
             ++numLoadedSlices;
         }, subprogress( cb, 0.4f, 0.9f ), 1 );
     } );
+
+    openvdb::tools::changeBackground( data.data->tree(), data.min );
 
     return { numLoadedSlices, cancelCalled, slicesRes };
 }
@@ -653,9 +656,6 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     auto presentSlices = seriesInfo.missedSlices;
     presentSlices.resize( data.dims.z );
     presentSlices.flip();
-
-    if constexpr ( std::convertible_to<T, VdbVolume> )
-        data.data->denseFill( toVdbBox( data.dims ), 0 );
 
     // other slices
     auto [numLoadedSlices, cancelCalled, slicesRes] = loadSlices( files, data, maxNumThreads, presentSlices, cb );
@@ -797,7 +797,7 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
+    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )

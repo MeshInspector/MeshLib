@@ -290,7 +290,7 @@ public:
 
         enum class GlobalBasisScaleMode
         {
-            Auto, // uses current scene size 
+            Auto, // uses current scene size
             Fixed // uses global basis object internal size (one can change it with globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ) ) )
         } globalBasisScaleMode{ GlobalBasisScaleMode::Auto };
 
@@ -330,6 +330,7 @@ public:
     MRVIEWER_API float getPixelSize() const;
 
     // Finds the pixel scale at a specific world point. This works in both perspective and orthographic projection.
+    // The UI scale is NOT baked into this. You have to multiply by the scale manually if you need that.
     MRVIEWER_API float getPixelSizeAtPoint( const Vector3f& worldPoint ) const;
 
     // Sets position and size of viewport:

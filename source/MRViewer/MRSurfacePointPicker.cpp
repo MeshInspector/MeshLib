@@ -328,7 +328,10 @@ void SurfacePointWidget::setPointRadius_()
             if ( radius <= 0.f )
                 radius = 10.f;
 
-            radius *= getViewerInstance().getMenuPlugin()->menu_scaling() * cameraScale / baseObjectScale;
+            radius *= cameraScale / baseObjectScale;
+
+            if ( auto menu = getViewerInstance().getMenuPlugin().get() )
+                radius *= menu->menu_scaling();
         }
             break;
     }

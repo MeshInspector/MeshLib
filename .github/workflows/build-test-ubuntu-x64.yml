@@ -171,7 +171,7 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -180,11 +180,11 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Extract Deb
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -196,7 +196,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
         run: |
           cmake \
             -S examples/c-examples \

@@ -2,7 +2,7 @@
   "include": [
     {
       "os": "ubuntu20",
-      "config": "Debug",
+      "config": "Release",
       "compiler": "GCC",
       "cxx-compiler": "/usr/bin/g++-10",
       "c-compiler": "/usr/bin/gcc-10",

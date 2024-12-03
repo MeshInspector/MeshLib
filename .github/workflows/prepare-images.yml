@@ -20,6 +20,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  always-success:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do nothing
+        run: echo
+
   linux-image-build-upload:
     if: ${{ inputs.need_linux_image_rebuild }}
     timeout-minutes: 75

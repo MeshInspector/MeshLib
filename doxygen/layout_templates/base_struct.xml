@@ -47,8 +47,8 @@
       <tab type="user" url="BEGIN_URLStatePluginsHelpEND_URL" title="State Plugins Overview"/>
     </tab>
     <tab type="usergroup" url="BEGIN_URLAPIPageEND_URL" title="API">
-      API_CPP_PAGE
-      API_PY_PAGE
+      <!-- API_CPP_PAGE -->
+      <!-- API_PY_PAGE -->
     </tab>
     <tab type="user" url="BEGIN_URLThirdPartyEND_URL" title="Thirdparty List"/>
   </navindex>

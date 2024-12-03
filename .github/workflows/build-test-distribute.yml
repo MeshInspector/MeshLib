@@ -268,7 +268,7 @@ jobs:
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'update-doc') }}
     needs:
-      - ubuntu-x64-build-test
+      - ubuntu-arm64-build-test
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
@@ -277,7 +277,7 @@ jobs:
   update-documentation:
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     needs:
-      - ubuntu-x64-build-test
+      - ubuntu-arm64-build-test
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib

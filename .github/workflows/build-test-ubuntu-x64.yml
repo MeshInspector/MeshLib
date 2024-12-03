@@ -149,18 +149,6 @@ jobs:
         env:
           CXX: ${{matrix.cxx-compiler}}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
-      
-      - name: Create Python Stubs
-        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
-        run: python3 ./scripts/wheel/create_stubs.py
-
-      - name: Upload Python Stubs
-        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: PythonStubs
-          path: ./scripts/wheel/meshlib/meshlib/*.pyi
-          retention-days: 1
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

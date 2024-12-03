@@ -55,6 +55,7 @@ def setup_workspace():
 def generate_stubs():
     env = dict(os.environ)
     env['PYTHONPATH'] = str(STUBS_ROOT_DIR)
+    env['PATH'] += ":/github/home/.local/bin"
 
     os.chdir(STUBS_ROOT_DIR)
     for module in MODULES:

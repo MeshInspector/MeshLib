@@ -70,6 +70,7 @@ jobs:
           name: RunnerSysStats-macos-${{ matrix.os }}
           path: RunnerSysStats-*
           retention-days: 1
+        continue-on-error: true
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh

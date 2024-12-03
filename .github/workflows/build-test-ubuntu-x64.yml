@@ -80,6 +80,7 @@ jobs:
           name: RunnerSysStats-ubuntu-x64-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.compiler }}
           path: RunnerSysStats-*
           retention-days: 1
+        continue-on-error: true
 
       - name: Checkout third-party submodules
         run: |

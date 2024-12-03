@@ -43,6 +43,7 @@ jobs:
           name: RunnerSysStats-emscripten-${{ matrix.config }}
           path: RunnerSysStats-*
           retention-days: 1
+        continue-on-error: true
 
       - name: Checkout third-party submodules
         run: |

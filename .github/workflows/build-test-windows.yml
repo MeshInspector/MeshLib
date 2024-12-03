@@ -75,6 +75,7 @@ jobs:
           name: RunnerSysStats-windows-${{ matrix.runner }}-${{ matrix.config }}
           path: RunnerSysStats-*
           retention-days: 1
+        continue-on-error: true
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg

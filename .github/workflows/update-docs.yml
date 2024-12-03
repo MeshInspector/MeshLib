@@ -43,6 +43,7 @@ jobs:
           doxygen DoxyfilePy
           doxygen DoxyfileCpp
           doxygen DoxyfileMain
+          doxygen Doxyfile
           bash scripts/post.sh ${{ inputs.output_folder }}
 
       - name: Commit and push changes

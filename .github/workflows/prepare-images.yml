@@ -35,16 +35,15 @@ jobs:
             arch: arm64
         include:
           - arch: x64
-            dockerfile: ${{ matrix.distro }}Dockerfile
-            image: ${{ matrix.distro }}
+            image-suffix: ''
             os: ubuntu-latest
           - arch: arm64
-            dockerfile: ${{ matrix.distro }}Dockerfile
-            image: ${{ matrix.distro }}-arm64
+            image-suffix: '-arm64'
             os: [ self-hosted, linux-arm64 ]
     runs-on: ${{ matrix.os }}
     env:
-      DOCKERHUB_BASE_PATH: "meshlib/meshlib"
+      dockerfile: ${{ matrix.distro }}Dockerfile
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
@@ -61,10 +60,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{inputs.docker_image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
 
       - name: Push Linux image
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{inputs.docker_image_tag}}
+        run: docker push ${{ env.image }}
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes

@@ -15,7 +15,7 @@ jobs:
         with:
           ref: "master"
 
-      - name: Search for Tag in build-test-windows.yml
+      - name: Search for Tag in .github/workflows/config.yml
         id: extract-tag
         run: |
           # TODO: call 'config.yml' for predefined values only

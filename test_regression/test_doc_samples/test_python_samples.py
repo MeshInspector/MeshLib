@@ -103,11 +103,6 @@ def test_python_doc_samples(tmp_path, doc_case):
         shutil.copy(out_mesh, tmp_path / out_mesh)
 
     # Compare files in tmp_path with reference files
-    # for out_mesh in doc_case['output_files']:
-    #     with check:
-    #         assert compare_mesh(out_mesh, Path(test_files_path) / 'doc_samples' / "python" /py_file / out_mesh)
-
-    # Compare files in tmp_path with reference files
     if 'verify' in doc_case and doc_case['verify'] == 'points':
         for out_cloud in doc_case['output_files']:
             with check:

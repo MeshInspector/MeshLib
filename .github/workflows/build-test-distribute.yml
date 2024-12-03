@@ -272,7 +272,6 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
-      url: https://meshinspector.github.io/MeshLib/dev
     secrets: inherit
 
   update-documentation:
@@ -282,7 +281,6 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib
-      url: https://meshinspector.github.io/MeshLib
     secrets: inherit
 
   update-artifacts:
@@ -345,4 +343,10 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Timing_Logs*
+          failOnError: false
+
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
           failOnError: false

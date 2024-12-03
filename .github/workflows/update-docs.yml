@@ -7,11 +7,6 @@ on:
         required: false
         type: string
         default: "MeshLib"
-      url:
-        required: false
-        type: string
-        default: "https://meshinspector.github.io/MeshLib"
-
 
 jobs:
   update-documentation:
@@ -26,14 +21,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: 'MeshLib/'
-
-      - name: Update url in DoxygenLayout
-        working-directory: MeshLib/doxygen
-        run: |
-          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutMain.xml
-          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutCpp.xml
-          sed -e "s|BASE_URL|${{ inputs.url }}|" -i DoxygenLayoutPy.xml
-          sed -e "s|BASE_URL|${{ inputs.url }}|" -i APIPage.dox
 
       - name: Checkout Doxygen Data
         uses: actions/checkout@v4
@@ -67,8 +54,3 @@ jobs:
           git commit --allow-empty -m "Auto update docs" -a
           git push
 
-      - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: PythonStubs
-          failOnError: false

@@ -603,6 +603,8 @@ PickPointManager::ClearHistoryAction::ClearHistoryAction( std::string name, Pick
 
 void PickPointManager::ClearHistoryAction::action( Type type )
 {
+    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
+
     switch ( type )
     {
         case Type::Undo:

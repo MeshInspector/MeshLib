@@ -101,8 +101,6 @@ def parse_job(job: dict):
     job_config = parse_job_name(job['name'])
     return {
         'id': job['id'],
-        'name': job['name'],
-        'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
         'conclusion': job['conclusion'],
         'duration_s': (parse_iso8601(job['completed_at']) - parse_iso8601(job['started_at'])).seconds if job['conclusion'] else None,
         'steps': [parse_step(step) for step in job['steps']],

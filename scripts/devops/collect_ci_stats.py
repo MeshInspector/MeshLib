@@ -19,7 +19,7 @@ class OsJobConfig:
 KNOWN_OS = {
     'windows-build-test / windows-build-test': OsJobConfig(name='windows', matrix=['config', 'runner', 'full_config_build']),
     'ubuntu-arm64-build-test / ubuntu-arm-build-test': OsJobConfig(name='ubuntu-arm64', matrix=['os', 'config', 'compiler']),
-    'ubuntu-x64-build-test / ubuntu-x64-build-test': OsJobConfig(name='ubuntu-x64', matrix=['os', 'config', 'compiler', 'full_config_build']),
+    'ubuntu-x64-build-test / ubuntu-x64-build-test': OsJobConfig(name='ubuntu-x64', matrix=['os', 'config', 'compiler', 'cxx-compiler', 'c-compiler', 'cxx-standard', 'build_mrcuda']),
     'fedora-build-test / fedora-build-test': OsJobConfig(name='fedora', matrix=['config', 'compiler', 'full_config_build']),
     'emscripten-build-test / emscripten-build': OsJobConfig(name='emscripten', matrix=['config']),
     'macos-build-test / macos-build-test': OsJobConfig(name='macos', matrix=['os', 'compiler']),

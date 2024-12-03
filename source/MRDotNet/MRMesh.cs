@@ -84,8 +84,8 @@ namespace MR
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRPointOnFace
         {
-            public FaceId face;
-            public MRVector3f point;
+            public FaceId face = new FaceId();
+            public MRVector3f point = new MRVector3f();
             public MRPointOnFace() { }
         };
 
@@ -105,12 +105,12 @@ namespace MR
         internal struct MRMeshTriPoint
         {
             /// left face of this edge is considered
-            public EdgeId e;
+            public EdgeId e = new EdgeId();
             /// barycentric coordinates
             /// \details a in [0,1], a=0 => point is on next( e ) edge, a=1 => point is in dest( e )
             /// b in [0,1], b=0 => point is on e edge, b=1 => point is in dest( next( e ) )
             /// a+b in [0,1], a+b=0 => point is in org( e ), a+b=1 => point is on prev( e.sym() ) edge
-            public MRTriPointf bary;
+            public MRTriPointf bary = new MRTriPointf();
 
             public MRMeshTriPoint() { }
         };
@@ -119,9 +119,9 @@ namespace MR
         internal struct MRMeshProjectionResult
         {
             /// the closest point on mesh, transformed by xf if it is given
-            public MRPointOnFace proj;
+            public MRPointOnFace proj = new MRPointOnFace();
             /// its barycentric representation
-            public MRMeshTriPoint mtp;
+            public MRMeshTriPoint mtp = new MRMeshTriPoint();
             /// squared distance from pt to proj
             public float distSq = 0.0f;
             public MRMeshProjectionResult() { }

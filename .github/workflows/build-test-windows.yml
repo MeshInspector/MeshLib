@@ -55,6 +55,7 @@ jobs:
     env:
       UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
 
     steps:
       - name: Checkout
@@ -142,13 +143,13 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore Dependencies
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         uses: codebeltnet/dotnet-restore@v2
         with:
           projects: 'source/**/*.csproj'
@@ -160,7 +161,7 @@ jobs:
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
-          install: make gawk procps-ng
+          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
@@ -168,19 +169,17 @@ jobs:
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
-          # Install additional packages. Must do it here, since the script above would uninstall them.
-          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build .NET
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
-        
+
       - name: Build .NET examples
-        if: matrix.runner == 'windows-2022'
-        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
+        run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}
@@ -237,9 +236,10 @@ jobs:
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
+          C_SHARP_TEST: ${{ fromJSON('["","--run-c-sharp-samples"]')[ env.BUILD_C_SHARP == 'true' || 0] }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a=${{env.C_SHARP_TEST}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

@@ -89,7 +89,7 @@ namespace MR
             public IntPtr name = IntPtr.Zero;
             public IntPtr mesh = IntPtr.Zero;
             /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
-            public MRAffineXf3f xf;
+            public MRAffineXf3f xf = new MRAffineXf3f();
             /// counter of skipped faces (faces than can't be created), not zero only if ObjLoadSettings.countSkippedFaces
             public int skippedFaceCount = 0;
             /// counter of duplicated vertices (that created for resolve non-manifold geometry)

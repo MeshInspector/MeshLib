@@ -47,41 +47,38 @@ namespace MR
             public TriangulationParameters() { }
         };
 
-        public class PointCloudTriangulation
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRTriangulationParameters
         {
-            [StructLayout(LayoutKind.Sequential)]
-            internal struct MRTriangulationParameters
-            {
-                public int numNeighbours = 16;
-                public float radius = 0;
-                public float critAngle = (float)Math.PI / 2;
-                public float boundaryAngle = 0.9f * (float)Math.PI;
-                public float critHoleLength = float.MinValue;
-                public byte automaticRadiusIncrease = 1;
-                public IntPtr searchNeighbors = IntPtr.Zero;
-                public MRTriangulationParameters() { }
-            };
+            public int numNeighbours = 16;
+            public float radius = 0;
+            public float critAngle = (float)Math.PI / 2;
+            public float boundaryAngle = 0.9f * (float)Math.PI;
+            public float critHoleLength = float.MinValue;
+            public byte automaticRadiusIncrease = 1;
+            public IntPtr searchNeighbors = IntPtr.Zero;
+            public MRTriangulationParameters() { }
+        };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern IntPtr mrTriangulatePointCloud(IntPtr pointCloud, ref MRTriangulationParameters parameters);
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrTriangulatePointCloud(IntPtr pointCloud, ref MRTriangulationParameters parameters);
 
-            /**        
-            * \brief Creates mesh from given point cloud according params
-            * Returns empty optional if was interrupted by progress bar
-            */
-            public static Mesh? TriangulatePointCloud(PointCloud pc, TriangulationParameters parameters)
-            {
-                var mrParameters = new MRTriangulationParameters();
-                mrParameters.numNeighbours = parameters.numNeighbours;
-                mrParameters.radius = parameters.radius;
-                mrParameters.critAngle = parameters.critAngle;
-                mrParameters.boundaryAngle = parameters.boundaryAngle;
-                mrParameters.critHoleLength = parameters.critHoleLength;
-                mrParameters.automaticRadiusIncrease = parameters.automaticRadiusIncrease ? (byte)1 : (byte)0;
-                mrParameters.searchNeighbors = parameters.searchNeighbors?.pc_ ?? IntPtr.Zero;
+        /**        
+        * \brief Creates mesh from given point cloud according params
+        * Returns empty optional if was interrupted by progress bar
+        */
+        public static Mesh? TriangulatePointCloud(PointCloud pc, TriangulationParameters parameters)
+        {
+            var mrParameters = new MRTriangulationParameters();
+            mrParameters.numNeighbours = parameters.numNeighbours;
+            mrParameters.radius = parameters.radius;
+            mrParameters.critAngle = parameters.critAngle;
+            mrParameters.boundaryAngle = parameters.boundaryAngle;
+            mrParameters.critHoleLength = parameters.critHoleLength;
+            mrParameters.automaticRadiusIncrease = parameters.automaticRadiusIncrease ? (byte)1 : (byte)0;
+            mrParameters.searchNeighbors = parameters.searchNeighbors?.pc_ ?? IntPtr.Zero;
 
-                return new Mesh(mrTriangulatePointCloud(pc.pc_, ref mrParameters));
-            }
+            return new Mesh(mrTriangulatePointCloud(pc.pc_, ref mrParameters));
         }
     }
 }

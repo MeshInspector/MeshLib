@@ -14,6 +14,7 @@
 #include "MRMesh/MRPointOnObject.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRViewer/MRMenu.h"
 
 #include <variant>
 
@@ -323,7 +324,14 @@ void SurfacePointWidget::setPointRadius_()
             decomposeMatrix3( baseObjectWorldXf.A, r, s );
             const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
 
-            radius = params_.radius * cameraScale / baseObjectScale;
+            radius = params_.radius;
+            if ( radius <= 0.f )
+                radius = 10.f;
+
+            radius *= cameraScale / baseObjectScale;
+
+            if ( auto menu = getViewerInstance().getMenuPlugin().get() )
+                radius *= menu->menu_scaling();
         }
             break;
     }

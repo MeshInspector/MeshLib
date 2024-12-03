@@ -31,7 +31,7 @@ jobs:
           EOF
 
   prepare-image:
-  if: ${{ needs.config.outputs.need_linux_image_rebuild == 'true'  || needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
+    if: ${{ needs.config.outputs.need_linux_image_rebuild == 'true' || needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
     needs: config
     uses: ./.github/workflows/prepare-images.yml
     with:

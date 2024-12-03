@@ -15,7 +15,7 @@ public class MeshOffsetExample
         try
         {
             float offsetValue = float.Parse(args[1],
-                      System.Globalization.NumberStyles.AllowThousands,
+                      System.Globalization.NumberStyles.AllowDecimalPoint,
                       CultureInfo.InvariantCulture);
 
             // Load mesh

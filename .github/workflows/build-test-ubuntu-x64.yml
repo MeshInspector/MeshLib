@@ -31,7 +31,25 @@ on:
         type: boolean
 
 jobs:
+  set-ubuntu-x64-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set matrix based on full_config_build input
+        id: set-matrix
+        run: |
+          if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
+          fi
+
   ubuntu-x64-build-test:
+    needs: [set-ubuntu-x64-matrix]
     timeout-minutes: 40
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
@@ -39,67 +57,15 @@ jobs:
       options: --user root
     strategy:
       fail-fast: false
-      matrix:
-        os:    [ ubuntu20, ubuntu22, ubuntu24 ]
-        config:   [ Debug, Release ]
-        compiler: [ Clang, GCC ]
-        full_config_build:
-          - ${{fromJSON(inputs.full_config_build)}}
-        exclude:
-          # Do not run Debug Clang build on every commit (but only once a day)
-          - full_config_build: false
-            config: Debug
-            compiler: Clang
-          # Do not run Release GCC build on every commit (but only once a day)
-          - full_config_build: false
-            config: Release
-            compiler: GCC
-          - os: ubuntu24
-            compiler: GCC
-          - os: ubuntu24
-            config: Debug
-        include:
-          - os: ubuntu20
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-11
-            c-compiler: /usr/bin/clang-11
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu20
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-10
-            c-compiler: /usr/bin/gcc-10
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-12
-            c-compiler: /usr/bin/gcc-12
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          - os: ubuntu24
-            compiler: Clang
-            cxx-compiler: /usr/bin/clang++-18
-            c-compiler: /usr/bin/clang-18
-            cxx-standard: 23
-            build_mrcuda: "ON"
-          # - os: ubuntu24
-            # compiler: GCC
-            # cxx-compiler: /usr/bin/g++-13
-            # c-compiler: /usr/bin/gcc-13
-            # cxx-standard: 23
-            # build_mrcuda: "OFF"
+      matrix: ${{ fromJSON(needs.set-ubuntu-x64-matrix.outputs.matrix) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
     steps:
+      - name: Display job info
+        run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -205,7 +171,7 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -214,11 +180,11 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Extract Deb
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -230,7 +196,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'Clang' && matrix.config == 'Release' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/c-examples \
@@ -242,7 +208,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.compiler == 'Clang' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

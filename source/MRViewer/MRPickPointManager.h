@@ -130,6 +130,13 @@ private:
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
 
+    /// \param index point index before which to insert new point, -1 here means insert after last one
+    /// \return index of just inserted point
+    int insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point );
+
+    /// \return location of just removed point
+    PickedPoint removePointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index );
+
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;
 
@@ -156,9 +163,6 @@ private:
     PickerPointCallBack onPointMoveFinish_;
     PickerPointCallBack onPointRemove_;
     PickerPointObjectChecker isObjectValidToPick_;
-
-    // undo/redo flag; used by the history action classes to force disable internal checks
-    bool undoRedoMode_{ false };
 
     // History classes:
     class AddRemovePointHistoryAction;

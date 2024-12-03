@@ -78,40 +78,48 @@ void PickPointManager::AddRemovePointHistoryAction::action( Type )
 void PickPointManager::AddRemovePointHistoryAction::insertPoint_()
 {
     assert( insertOnAction_ );
-    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
-    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
-
-    auto& contour = widget_.pickedPoints_[obj_];
-    if ( index_ < 0 )
-        index_ = (int)contour.size();
-
-    contour.insert( contour.begin() + index_, widget_.createPickWidget_( obj_, point_ ) );
-    if ( index_ + 1 == contour.size() ) // last point was added
-        widget_.colorLast2Points_( obj_ );
-    widget_.onPointAdd_( obj_, index_ );
+    index_ = widget_.insertPointNoHistory_( obj_, index_, point_ );
     insertOnAction_ = false;
+}
+
+int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point )
+{
+    auto& contour = pickedPoints_[obj];
+    if ( index < 0 )
+        index = (int)contour.size();
+    else
+        assert( index <= contour.size() );
+
+    contour.insert( contour.begin() + index, createPickWidget_( obj, point ) );
+    if ( index + 1 == contour.size() ) // last point was added
+        colorLast2Points_( obj );
+    onPointAdd_( obj, index );
+    return index;
 }
 
 void PickPointManager::AddRemovePointHistoryAction::removePoint_()
 {
     assert( !insertOnAction_ );
-    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
-    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
+    point_ = widget_.removePointNoHistory_( obj_, index_ );
+    insertOnAction_ = true;
+}
 
-    auto& contour = widget_.pickedPoints_[obj_];
-    assert( index_ >= 0 );
-    auto it = contour.begin() + index_;
-    point_ = (*it)->getCurrentPosition();
+PickedPoint PickPointManager::removePointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index )
+{
+    auto& contour = pickedPoints_[obj];
+    assert( index >= 0 );
+    auto it = contour.begin() + index;
+    auto point = (*it)->getCurrentPosition();
     const VisualObject * pickSphere = (*it)->getPickSphere().get();
-    widget_.myPickSpheres_.erase( pickSphere );
-    if ( widget_.draggedPointWidget_ == it->get() )
-        widget_.draggedPointWidget_ = nullptr;
+    myPickSpheres_.erase( pickSphere );
+    if ( draggedPointWidget_ == it->get() )
+        draggedPointWidget_ = nullptr;
     contour.erase( it );
 
-    if ( index_  == contour.size() ) // last point was deleted
-        widget_.colorLast2Points_( obj_ );
-    widget_.onPointRemove_( obj_, index_ );
-    insertOnAction_ = true;
+    if ( index  == contour.size() ) // last point was deleted
+        colorLast2Points_( obj );
+    onPointRemove_( obj, index );
+    return point;
 }
 
 class PickPointManager::MovePointHistoryAction : public PickPointManager::WidgetHistoryAction
@@ -141,9 +149,6 @@ std::string PickPointManager::MovePointHistoryAction::name() const
 
 void PickPointManager::MovePointHistoryAction::action( Type )
 {
-    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
-    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
-
     if ( auto w = widget_.getPointWidget( obj_, index_ ) )
     {
         w->swapCurrentPosition( point_ );
@@ -268,7 +273,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::getPointWidget( const std:
 
 bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
-    if ( !undoRedoMode_ && !isObjectValidToPick_( obj ) )
+    if ( !isObjectValidToPick_( obj ) )
         return false;
 
     auto onAddPointAction = [this, &obj, &triPoint] ()
@@ -598,7 +603,6 @@ PickPointManager::ClearHistoryAction::ClearHistoryAction( std::string name, Pick
 
 void PickPointManager::ClearHistoryAction::action( Type type )
 {
-    MR_SCOPED_VALUE( widget_.undoRedoMode_, true );
     MR_SCOPED_VALUE( widget_.params.writeHistory, false );
 
     switch ( type )
@@ -609,7 +613,7 @@ void PickPointManager::ClearHistoryAction::action( Type type )
                 if ( const auto obj = state.objPtr.lock() )
                 {
                     for ( const auto& p : state.pickedPoints )
-                        widget_.appendPoint( obj, p );
+                        widget_.insertPointNoHistory_( obj, -1, p );
                 }
             }
             break;

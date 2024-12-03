@@ -19,66 +19,65 @@ class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseMoveListener>
 {
 public:
+    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
+
     struct Params
     {
-        // Modifier key for closing a contour (ordered vector of points) using the widget
+        /// Modifier key for closing a contour (ordered vector of points) using the widget
         int widgetContourCloseMod = GLFW_MOD_CONTROL;
 
-        // Modifier key for deleting a point using the widget
+        /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
 
-        // Indicates whether to write history of the contours
+        /// Indicates whether to write history of the contours
         bool writeHistory = true;
 
-        // This is appended to the names of all undo/redo actions.
+        /// This is appended to the names of all undo/redo actions.
         std::string historyNameSuffix;
 
-        // Parameters for configuring the surface point widget
-        // Parameters affect to future points only
+        /// Parameters for configuring the surface point widget
+        /// Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;
 
-        // Color for ordinary points in the contour
-        // Parameters affect to future points only
+        /// Color for ordinary points in the contour
+        /// Parameters affect to future points only
         MR::Color ordinaryPointColor = Color::gray();
 
-        // Color for the last modified point in the contour
-        // Parameters affect to future points only
+        /// Color for the last modified point in the contour
+        /// Parameters affect to future points only
         MR::Color lastPointColor = Color::green();
 
-        // Color for the special point used to close a contour. Better do not change it.
-        // Parameters affect to future points only
+        /// Color for the special point used to close a contour. Better do not change it.
+        /// Parameters affect to future points only
         MR::Color closeContourPointColor = Color::transparent();
 
-        // Predicate to additionally filter objects that should be treated as pickable.
+        /// Predicate to additionally filter objects that should be treated as pickable.
         Viewport::PickRenderObjectPredicate pickPredicate;
+
+        /// This callback is invoked after a point is added with its index.
+        PickerPointCallBack onPointAdd;
+
+        /// This callback is invoked when a point starts being dragged.
+        PickerPointCallBack onPointMoveStart;
+
+        /// This callback is invoked when point's dragging is completed.
+        PickerPointCallBack onPointMoveFinish;
+
+        /// This callback is invoked when a point is removed with its index before deletion.
+        PickerPointCallBack onPointRemove;
     };
     Params params;
 
     // A common base class for all history actions of this widget.
     struct WidgetHistoryAction : HistoryAction {};
 
-    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
-    using PickerPointObjectChecker = std::function<bool( std::shared_ptr<MR::VisualObject> )>;
-
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
 
-    // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
-    // All callback takes a shared pointer to an MR::VisualObject as an argument.
-    // onPointAdd: This callback is invoked after a point is added with its index.
-    // onPointMove : This callback is invoked when a point starts being dragged.
-    // onPointMoveFinish : This callback is invoked when point's dragging is completed.
-    // onPointRemove : This callback is invoked when a point is removed with its index before deletion.
-    // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
-    MRVIEWER_API PickPointManager(
-            PickerPointCallBack onPointAdd,
-            PickerPointCallBack onPointMove,
-            PickerPointCallBack onPointMoveFinish,
-            PickerPointCallBack onPointRemove,
-            PickerPointObjectChecker isObjectValidToPick
-    );
+    /// create an object and starts listening for mouse events
+    MRVIEWER_API PickPointManager();
 
-    // Also remove the undo/redo actions from the history.
+    /// destroy this and remove the undo/redo actions from the history.
     MRVIEWER_API ~PickPointManager();
 
     // return contour for specific object (creating new one if necessary)
@@ -156,13 +155,6 @@ private:
         boost::signals2::scoped_connection onPointsChanged;
     };
     HashMap<std::shared_ptr<VisualObject>, ConnectionHolder> connectionHolders_;
-
-    // CallBack functions
-    PickerPointCallBack onPointAdd_;
-    PickerPointCallBack onPointMove_;
-    PickerPointCallBack onPointMoveFinish_;
-    PickerPointCallBack onPointRemove_;
-    PickerPointObjectChecker isObjectValidToPick_;
 
     // History classes:
     class AddRemovePointHistoryAction;

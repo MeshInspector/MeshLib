@@ -93,7 +93,8 @@ int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>
     contour.insert( contour.begin() + index, createPickWidget_( obj, point ) );
     if ( index + 1 == contour.size() ) // last point was added
         colorLast2Points_( obj );
-    onPointAdd_( obj, index );
+    if ( params.onPointAdd )
+        params.onPointAdd( obj, index );
     return index;
 }
 
@@ -118,7 +119,8 @@ PickedPoint PickPointManager::removePointNoHistory_( const std::shared_ptr<Visua
 
     if ( index  == contour.size() ) // last point was deleted
         colorLast2Points_( obj );
-    onPointRemove_( obj, index );
+    if ( params.onPointRemove )
+        params.onPointRemove( obj, index );
     return point;
 }
 
@@ -152,7 +154,8 @@ void PickPointManager::MovePointHistoryAction::action( Type )
     if ( auto w = widget_.getPointWidget( obj_, index_ ) )
     {
         w->swapCurrentPosition( point_ );
-        widget_.onPointMoveFinish_( obj_, index_ );
+        if ( widget_.params.onPointMoveFinish )
+            widget_.params.onPointMoveFinish( obj_, index_ );
     }
     else
         assert( false );
@@ -273,9 +276,6 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::getPointWidget( const std:
 
 bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
-    if ( !isObjectValidToPick_( obj ) )
-        return false;
-
     auto onAddPointAction = [this, &obj, &triPoint] ()
     {
         auto actionPtr = AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint );
@@ -424,7 +424,7 @@ ObjAndPick PickPointManager::pick_() const
     {
         predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
         {
-            // always keep the picked points pickable
+            // always keep my spheres pickable
             if ( myPickSpheres_.find( visObj ) != myPickSpheres_.end() )
                 return true;
             return params.pickPredicate( visObj, mask );
@@ -487,7 +487,8 @@ bool PickPointManager::onMouseMove_( int, int )
                             AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
                     }
                     draggedPointWidget_ = &pointWidget;
-                    onPointMove_( obj, index );
+                    if ( params.onPointMoveStart )
+                        params.onPointMoveStart( obj, index );
 
                 } );
                 widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
@@ -503,27 +504,16 @@ bool PickPointManager::onMouseMove_( int, int )
                     }
                     assert( draggedPointWidget_ == &pointWidget );
                     draggedPointWidget_ = nullptr;
-                    onPointMoveFinish_( obj, index );
+                    if ( params.onPointMoveFinish )
+                        params.onPointMoveFinish( obj, index );
                 } );
             }
         }
     return false;
 }
 
-PickPointManager::PickPointManager(
-        PickerPointCallBack onPointAdd,
-        PickerPointCallBack onPointMove,
-        PickerPointCallBack onPointMoveFinish,
-        PickerPointCallBack onPointRemove,
-        PickerPointObjectChecker isObjectValidToPick
-)
+PickPointManager::PickPointManager()
 {
-    onPointAdd_ = std::move( onPointAdd );
-    onPointMove_ = std::move( onPointMove );
-    onPointMoveFinish_ = std::move( onPointMoveFinish );
-    onPointRemove_ = std::move( onPointRemove );
-    isObjectValidToPick_ = std::move( isObjectValidToPick );
-
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
@@ -540,7 +530,8 @@ void PickPointManager::clear( bool writeHistory )
             myPickSpheres_.erase( contour[pickedIndex]->getPickSphere().get() );
             contour.erase( contour.begin() + pickedIndex );
             assert( contour.size() >= pickedIndex );
-            onPointRemove_( obj, pickedIndex );
+            if ( params.onPointRemove )
+                params.onPointRemove( obj, pickedIndex );
         }
     }
     pickedPoints_.clear();

@@ -33,7 +33,7 @@ def get_compiler_info(compiler_path):
     if version_line.startswith("Apple clang"):
         compiler = "appleclang"
         version = re.search(r"version (\d+)", version_line).group(1)
-    elif version_line.startswith("Clang"):
+    elif version_line.startswith("clang"):
         compiler = "clang"
         version = re.search(r"version (\d+)", version_line).group(1)
     elif version_line.startswith("g++") or version_line.startswith("gcc"):

@@ -32,17 +32,18 @@ def get_compiler_info(compiler_path):
     version_line = output.splitlines()[0]
     if version_line.startswith("Apple clang"):
         compiler = "appleclang"
-        version = re.search(r"version (\d+)", version_line).group(1)
-    elif version_line.startswith("clang") or version_line.startswith("Ubuntu clang"):
+    elif version_line.contains("clang"):
         compiler = "clang"
-        version = re.search(r"version (\d+)", version_line).group(1)
-    elif version_line.startswith("g++") or version_line.startswith("gcc"):
+    elif version_line.contains("g++") or version_line.contains("gcc"):
         compiler = "gcc"
-        version = re.search(r"\(GCC\) (\d+)", version_line).group(1)
     else:
         raise RuntimeError(f"Unknown compiler version: {version_line}")
+
+    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode()
+    major_version = re.match(r"(\d+)", output).group(1)
+
     return {
-        'compiler': f"{compiler}-{version}",
+        'compiler': f"{compiler}-{major_version}",
     }
 
 GITHUB_HEADERS = {

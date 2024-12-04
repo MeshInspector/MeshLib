@@ -38,10 +38,10 @@ jobs:
         os: [ ubuntu20, ubuntu22, ubuntu24 ]
         config: [ Release ]
         compiler: [ clang ]
-        container-options: ""
         include:
           - os: ubuntu20
             docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.docker_image_tag}}
+            container-options: ""
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             cxx-standard: 20
@@ -53,6 +53,7 @@ jobs:
             cxx-standard: 20
           - os: ubuntu24
             docker-image: meshlib/meshlib-ubuntu24-arm64:${{inputs.docker_image_tag}}
+            container-options: ""
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
             cxx-standard: 23

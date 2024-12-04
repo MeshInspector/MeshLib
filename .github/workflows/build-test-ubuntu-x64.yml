@@ -42,13 +42,10 @@ jobs:
       options: --user root
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.set-ubuntu-x64-matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-
-    env:
-      matrix: ${{ inputs.config_matrix }}
 
     steps:
       - name: Display job info

@@ -19,7 +19,7 @@ def get_ram_amount():
         output = subprocess.run(['wmic', 'ComputerSystem', 'get', 'TotalPhysicalMemory'], capture_output=True, text=True).stdout
         return int(re.search(r'\d+', output).group())
     else:
-        raise Exception(f"Unknown system {system}")
+        raise RuntimeError(f"Unknown system {system}")
 
 def get_system_stats():
     return {
@@ -39,6 +39,8 @@ def get_compiler_info(compiler_path):
     elif version_line.startswith("g++") or version_line.startswith("gcc"):
         compiler = "gcc"
         version = re.search(r"\(GCC\) (\d+)", version_line).group(1)
+    else:
+        raise RuntimeError(f"Unknown compiler version: {version_line}")
     return {
         'compiler': f"{compiler}-{version}",
     }
@@ -71,9 +73,9 @@ def get_job_id():
         if filter_job(job, job_name, runner_name)
     ]
     if len(jobs) == 0:
-        raise Exception(f"No jobs found for {job_name}")
+        raise RuntimeError(f"No jobs found for {job_name}")
     elif len(jobs) > 1:
-        raise Exception(f"Multiple jobs found for {job_name}: {jobs}")
+        raise RuntimeError(f"Multiple jobs found for {job_name}: {jobs}")
     else:
         return jobs[0]['id']
 

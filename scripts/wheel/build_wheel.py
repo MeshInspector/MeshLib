@@ -9,37 +9,25 @@ from argparse import ArgumentParser
 from pathlib import Path
 from string import Template
 
+import build_constans
+import create_stubs
 
-MODULES = [
-    "mrmeshpy",
-    "mrmeshnumpy",
-    "mrviewerpy",
-]
-
-WHEEL_SCRIPT_DIR = Path(__file__).parent.resolve()
-WHEEL_ROOT_DIR = WHEEL_SCRIPT_DIR / "meshlib"
-WHEEL_SRC_DIR = WHEEL_ROOT_DIR / "meshlib"
-SOURCE_DIR = (WHEEL_SCRIPT_DIR / ".." / "..").resolve()
-
-SYSTEM = platform.system()
-LIB_EXTENSION = {
-    'Darwin': ".so",
-    'Linux': ".so",
-    'Windows': ".pyd",
-}[SYSTEM]
-LIB_DIR = {
-    'Darwin': SOURCE_DIR / "build" / "Release" / "bin" / "meshlib",
-    'Linux': SOURCE_DIR / "build" / "Release" / "bin" / "meshlib",
-    'Windows': SOURCE_DIR / "source" / "x64" / "Release",
-}[SYSTEM]
-
+CONSTANTS = build_constans.get_build_consts()
+MODULES = CONSTANTS['MODULES']
+WHEEL_SCRIPT_DIR = CONSTANTS['WHEEL_SCRIPT_DIR']
+WHEEL_ROOT_DIR = CONSTANTS['WHEEL_ROOT_DIR']
+WHEEL_SRC_DIR = CONSTANTS['WHEEL_SRC_DIR']
+SOURCE_DIR = CONSTANTS['SOURCE_DIR']
+SYSTEM = CONSTANTS['SYSTEM']
+LIB_EXTENSION = CONSTANTS['LIB_EXTENSION']
+LIB_DIR = CONSTANTS['LIB_DIR']
 
 def install_packages():
+    create_stubs.install_packages()
+
     packages = [
         "build",
-        "pybind11-stubgen",
         "setuptools",
-        "typing-extensions",
         "wheel",
     ]
 
@@ -70,21 +58,11 @@ def setup_workspace(version, modules, plat_name):
 
     WHEEL_SRC_DIR.mkdir(parents=True)
 
+    create_stubs.setup_workspace(modules, False)
+
     print("Copying LICENSE and readme.md")
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
-
-    init_file = LIB_DIR / "__init__.py"
-    if init_file.exists():
-        shutil.copy(init_file, WHEEL_SRC_DIR / "__init__.py")
-    else:
-        shutil.copy(WHEEL_SCRIPT_DIR / "init.py", WHEEL_SRC_DIR / "__init__.py")
-
-    print(f"Copying {SYSTEM} files...")
-    for module in modules:
-        lib = LIB_DIR / f"{module}{LIB_EXTENSION}"
-        print(lib)
-        shutil.copy(lib, WHEEL_SRC_DIR)
 
     print("Copying resource files...")
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
@@ -115,24 +93,6 @@ def setup_workspace(version, modules, plat_name):
         )
     with open(WHEEL_ROOT_DIR / "setup.cfg", 'w') as config_file:
         config_file.write(config)
-
-
-def generate_stubs(modules):
-    env = dict(os.environ)
-    env['PYTHONPATH'] = str(WHEEL_ROOT_DIR)
-
-    if SYSTEM == "Windows":
-        env['PYBIND11_STUBGEN_PATH'] = str(LIB_DIR)
-        pybind11_stubgen_command = [sys.executable, "..\\pybind11-stubgen.py"]
-    else:
-        pybind11_stubgen_command = ["pybind11-stubgen"]
-
-    os.chdir(WHEEL_ROOT_DIR)
-    for module in modules:
-        subprocess.check_call(
-            [*pybind11_stubgen_command, "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
-            env=env,
-        )
 
 
 def build_wheel():
@@ -201,7 +161,7 @@ if __name__ == "__main__":
     try:
         install_packages()
         setup_workspace(version=args.version, modules=args.modules, plat_name=args.plat_name)
-        generate_stubs(modules=args.modules)
+        create_stubs.generate_stubs(modules=args.modules)
         build_wheel()
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)

@@ -31,6 +31,7 @@ jobs:
     runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +46,7 @@ jobs:
             cxx-standard: 20
           - os: ubuntu22
             docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.docker_image_tag}}
+            container-options: "--user root"
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             cxx-standard: 20

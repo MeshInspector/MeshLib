@@ -274,15 +274,6 @@ jobs:
       output_folder: MeshLib/dev
     secrets: inherit
 
-  update-documentation:
-    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
-    needs:
-      - ubuntu-arm64-build-test
-    uses: ./.github/workflows/update-docs.yml
-    with:
-      output_folder: MeshLib
-    secrets: inherit
-
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04

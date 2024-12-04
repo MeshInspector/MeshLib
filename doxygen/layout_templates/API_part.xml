@@ -1,4 +1,4 @@
-      <tab type="usergroup" url="API_PAGE_URL" title="API_PAGE_NAME">
+      <tab type="usergroup" url="__API_PAGE_URL__" title="__API_PAGE_NAME__">
         <tab type="topics" visible="yes" title="" intro=""/>
         <tab type="namespaces" visible="yes" title="">
           <tab type="namespacelist" visible="yes" title="" intro=""/>

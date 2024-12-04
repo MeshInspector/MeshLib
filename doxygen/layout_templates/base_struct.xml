@@ -4,53 +4,53 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="About"/>
-    <tab type="usergroup" url="BEGIN_URLInstallationGuideEND_URL" title="Getting Started">
-      <tab type="user" url="BEGIN_URLMeshLibPythonSetupGuideEND_URL" title="Python"/>
-      <tab type="user" url="BEGIN_URLMeshLibCppSetupGuideEND_URL" title="C++"/>
-      <tab type="user" url="BEGIN_URLMeshLibCSharpSetupGuideEND_URL" title="C#"/>
+    <tab type="usergroup" url="__BEGIN_URL__InstallationGuide__END_URL__" title="Getting Started">
+      <tab type="user" url="__BEGIN_URL__MeshLibPythonSetupGuide__END_URL__" title="Python"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibCppSetupGuide__END_URL__" title="C++"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
     </tab>
-    <tab type="user" url="BEGIN_URLLicenseEND_URL" title="License" />
-    <tab type="usergroup" url="BEGIN_URLTutorialsEND_URL" title="Tutorials">
-      <tab type="user" url="BEGIN_URLFirstPluginTutorialEND_URL" title="Create First Plugin using C++"/>
+    <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
+    <tab type="usergroup" url="__BEGIN_URL__Tutorials__END_URL__" title="Tutorials">
+      <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
     </tab>
-    <tab type="usergroup" url="BEGIN_URLExamplesEND_URL" title="Examples">
-      <tab type="usergroup" url="BEGIN_URLGeneralExamplesEND_URL" title="General Samples">
-        <tab type="user" url="BEGIN_URLBasedApplicationEND_URL" title="Application Based on MeshLib"/>
-        <tab type="user" url="BEGIN_URLExampleMeshLoadSaveEND_URL" title="Mesh Load and Save"/>
-        <tab type="user" url="BEGIN_URLExampleMeshExportEND_URL" title="Export Raw Triangles"/>
-        <tab type="user" url="BEGIN_URLExampleMeshModificationEND_URL" title="Mesh Modification"/>
-        <tab type="user" url="BEGIN_URLExampleMeshBooleanEND_URL" title="Mesh Boolean"/>
-        <tab type="user" url="BEGIN_URLExampleMeshDecimateEND_URL" title="Mesh Decimate"/>
-        <tab type="user" url="BEGIN_URLExampleMeshOffsetEND_URL" title="Mesh Offset"/>
-        <tab type="user" url="BEGIN_URLExampleMeshFillHoleEND_URL" title="Mesh Fill Hole"/>
-        <tab type="user" url="BEGIN_URLExampleMeshStitchHoleEND_URL" title="Mesh Stitch Holes"/>
-        <tab type="user" url="BEGIN_URLExampleMeshResolveDegenerationsEND_URL" title="Mesh Resolve Degenerations"/>
-        <tab type="user" url="BEGIN_URLExampleGlobalRegistrationEND_URL" title="Global Registration"/>
-        <tab type="user" url="BEGIN_URLExampleMeshICPEND_URL" title="Mesh ICP"/>
-        <tab type="user" url="BEGIN_URLExampleMeshExtrudeEND_URL" title="Mesh Extrude"/>
-        <tab type="user" url="BEGIN_URLExampleFreeFormEND_URL" title="Mesh Free Form Deformation"/>
-        <tab type="user" url="BEGIN_URLExampleLaplacianEND_URL" title="Mesh Laplacian Deformation"/>
-        <tab type="user" url="BEGIN_URLExampleNoiseDenoiseEND_URL" title="Mesh Denoise"/>
-        <tab type="user" url="BEGIN_URLExampleTriangulationEND_URL" title="Triangulation"/>
-        <tab type="user" url="BEGIN_URLExampleMeshFromTextEND_URL" title="Text to Mesh"/>
+    <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
+      <tab type="usergroup" url="__BEGIN_URL__GeneralExamples__END_URL__" title="General Samples">
+        <tab type="user" url="__BEGIN_URL__BasedApplication__END_URL__" title="Application Based on MeshLib"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshLoadSave__END_URL__" title="Mesh Load and Save"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshExport__END_URL__" title="Export Raw Triangles"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshModification__END_URL__" title="Mesh Modification"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshBoolean__END_URL__" title="Mesh Boolean"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshDecimate__END_URL__" title="Mesh Decimate"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshOffset__END_URL__" title="Mesh Offset"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshFillHole__END_URL__" title="Mesh Fill Hole"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshStitchHole__END_URL__" title="Mesh Stitch Holes"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshResolveDegenerations__END_URL__" title="Mesh Resolve Degenerations"/>
+        <tab type="user" url="__BEGIN_URL__ExampleGlobalRegistration__END_URL__" title="Global Registration"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshICP__END_URL__" title="Mesh ICP"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshExtrude__END_URL__" title="Mesh Extrude"/>
+        <tab type="user" url="__BEGIN_URL__ExampleFreeForm__END_URL__" title="Mesh Free Form Deformation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleLaplacian__END_URL__" title="Mesh Laplacian Deformation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleNoiseDenoise__END_URL__" title="Mesh Denoise"/>
+        <tab type="user" url="__BEGIN_URL__ExampleTriangulation__END_URL__" title="Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
-      <tab type="usergroup" url="BEGIN_URLPythonSpecificExamplesEND_URL" title="Python Specific Samples">
-        <tab type="user" url="BEGIN_URLExampleViewerEND_URL" title="Viewer"/>
-        <tab type="user" url="BEGIN_URLExamplePlotlyEND_URL" title="Plotly Visualization"/>
-        <tab type="user" url="BEGIN_URLExampleNumpyEND_URL" title="Using Numpy"/>
-        <tab type="user" url="BEGIN_URLExampleNumpyTriangulationEND_URL" title="Numpy Triangulation"/>
+      <tab type="usergroup" url="__BEGIN_URL__PythonSpecificExamples__END_URL__" title="Python Specific Samples">
+        <tab type="user" url="__BEGIN_URL__ExampleViewer__END_URL__" title="Viewer"/>
+        <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
+        <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>
+        <tab type="user" url="__BEGIN_URL__ExampleNumpyTriangulation__END_URL__" title="Numpy Triangulation"/>
       </tab>
     </tab>
-    <tab type="usergroup" url="BEGIN_URLPackageOverviewEND_URL" title="Package Overview">
-      <tab type="user" url="BEGIN_URLDataModelEND_URL" title="Data Model Class Hierarchy"/>
-      <tab type="user" url="BEGIN_URLSpacesHelpEND_URL" title="Spaces and Transformations"/>
-      <tab type="user" url="BEGIN_URLStatePluginsHelpEND_URL" title="State Plugins Overview"/>
+    <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">
+      <tab type="user" url="__BEGIN_URL__DataModel__END_URL__" title="Data Model Class Hierarchy"/>
+      <tab type="user" url="__BEGIN_URL__SpacesHelp__END_URL__" title="Spaces and Transformations"/>
+      <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
     </tab>
-    <tab type="usergroup" url="BEGIN_URLAPIPageEND_URL" title="API">
+    <tab type="usergroup" url="__BEGIN_URL__APIPage__END_URL__" title="API">
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
     </tab>
-    <tab type="user" url="BEGIN_URLThirdPartyEND_URL" title="Thirdparty List"/>
+    <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Thirdparty List"/>
   </navindex>
 
   <!-- Layout definition for a class page -->

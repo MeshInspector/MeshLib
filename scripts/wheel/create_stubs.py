@@ -1,31 +1,30 @@
+import functools
 import os
+import platform
 import shutil
 import subprocess
 import sys
 
+from argparse import ArgumentParser
 from pathlib import Path
+from string import Template
 
+import build_constans
 
-MODULES = [
-    "mrmeshpy",
-    "mrmeshnumpy",
-    "mrviewerpy",
-]
-
-WHEEL_SCRIPT_DIR = Path(__file__).parent.resolve()
-STUBS_ROOT_DIR = WHEEL_SCRIPT_DIR / "meshlib"
-STUBS_SRC_DIR = STUBS_ROOT_DIR / "meshlib"
-SOURCE_DIR = (WHEEL_SCRIPT_DIR / ".." / "..").resolve()
-
-LIB_DIR = SOURCE_DIR / "build" / "Release" / "bin" / "meshlib"
-
+CONSTANTS = build_constans.get_build_consts()
+MODULES = CONSTANTS['MODULES']
+WHEEL_SCRIPT_DIR = CONSTANTS['WHEEL_SCRIPT_DIR']
+WHEEL_ROOT_DIR = CONSTANTS['WHEEL_ROOT_DIR']
+WHEEL_SRC_DIR = CONSTANTS['WHEEL_SRC_DIR']
+SOURCE_DIR = CONSTANTS['SOURCE_DIR']
+SYSTEM = CONSTANTS['SYSTEM']
+LIB_EXTENSION = CONSTANTS['LIB_EXTENSION']
+LIB_DIR = CONSTANTS['LIB_DIR']
 
 def install_packages():
     packages = [
-        "build",
         "pybind11-stubgen",
-        "setuptools",
-        "typing-extensions"
+        "typing-extensions",
     ]
 
     subprocess.check_call(
@@ -36,38 +35,52 @@ def install_packages():
     )
 
 
-def setup_workspace():
-    if STUBS_ROOT_DIR.exists():
-        shutil.rmtree(STUBS_ROOT_DIR)
-
-    STUBS_SRC_DIR.mkdir(parents=True)
+def setup_workspace( modules, clear_folder = True ):    
+    if clear_folder and WHEEL_ROOT_DIR.exists():
+            shutil.rmtree(WHEEL_ROOT_DIR)
+    
+    if not WHEEL_ROOT_DIR.exists():
+        WHEEL_SRC_DIR.mkdir(parents=True)
 
     init_file = LIB_DIR / "__init__.py"
     if init_file.exists():
-        shutil.copy(init_file, STUBS_SRC_DIR / "__init__.py")
+        shutil.copy(init_file, WHEEL_SRC_DIR / "__init__.py")
     else:
-        shutil.copy(WHEEL_SCRIPT_DIR / "init.py", STUBS_SRC_DIR / "__init__.py")
+        shutil.copy(WHEEL_SCRIPT_DIR / "init.py", WHEEL_SRC_DIR / "__init__.py")
 
-    for module in MODULES:
-        lib = LIB_DIR / f"{module}.so"
-        shutil.copy(lib, STUBS_SRC_DIR)
+    print(f"Copying {SYSTEM} files...")
+    for module in modules:
+        lib = LIB_DIR / f"{module}{LIB_EXTENSION}"
+        print(lib)
+        shutil.copy(lib, WHEEL_SRC_DIR)
 
-def generate_stubs():
+def generate_stubs(modules):
     env = dict(os.environ)
-    env['PYTHONPATH'] = str(STUBS_ROOT_DIR)
-    env['PATH'] += ":/github/home/.local/bin"
+    env['PYTHONPATH'] = str(WHEEL_ROOT_DIR)
 
-    os.chdir(STUBS_ROOT_DIR)
-    for module in MODULES:
+    if SYSTEM == "Windows":
+        env['PYBIND11_STUBGEN_PATH'] = str(LIB_DIR)
+        pybind11_stubgen_command = [sys.executable, "..\\pybind11-stubgen.py"]
+    else:
+        pybind11_stubgen_command = ["pybind11-stubgen"]
+
+    os.chdir(WHEEL_ROOT_DIR)
+    for module in modules:
         subprocess.check_call(
-            ["pybind11-stubgen", "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
+            [*pybind11_stubgen_command, "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
             env=env,
         )
 
 if __name__ == "__main__":
+    csv = functools.partial(str.split, sep=",")
+
+    parser = ArgumentParser()
+    parser.add_argument("--modules", type=csv, default=MODULES)
+    args = parser.parse_args()
+
     try:
         install_packages()
-        setup_workspace()
-        generate_stubs()
+        setup_workspace( modules=args.modules)
+        generate_stubs(modules=args.modules)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)

@@ -3,24 +3,29 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
+      autotest_data_s3_url:
+        required: true
+        type: string
       full_config_build:
         default: false
         required: false
         type: boolean
-      autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2024-nov-07"
-        required: false
-        type: string
-      UPLOAD_ARTIFACTS:
+      internal_build:
         required: true
         type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+      upload_test_artifacts:
+        required: true
+        type: boolean
+      vcpkg_version:
+        required: true
+        type: string
       mrbind:
         default: true
         required: false
         type: boolean
-
-env:
-  VCPKG-VERSION: '2024.10.21'
 
 jobs:
   windows-build-test:
@@ -53,8 +58,6 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
-      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
       BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
 
     steps:
@@ -63,22 +66,22 @@ jobs:
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+      - name: Checkout Vcpkg ${{ inputs.vcpkg_version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{env.VCPKG-VERSION}}
+          git checkout ${{ inputs.vcpkg_version }}
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{ inputs.vcpkg_version }}
           path: |
             C:\vcpkg\*
 
       - name: Configure AWS Credentials
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -208,7 +211,7 @@ jobs:
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         id: cache-autotest
         uses: actions/cache@v4
         with:
@@ -216,32 +219,32 @@ jobs:
           key: ${{inputs.autotest_data_s3_url}}
 
       - name: Copy autotest data from S3 Tests
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} .\test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
         env:
-          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          SMOKE: ${{ inputs.internal_build && !inputs.full_config_build && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
           C_SHARP_TEST: ${{ fromJSON('["","--run-c-sharp-samples"]')[ env.BUILD_C_SHARP == 'true' || 0] }}
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a="${{env.C_SHARP_TEST}} --csharp-sample-dir=..\source\x64\${{ matrix.config }}"
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/windows//${{matrix.runner}}/${{matrix.config}}' --recursive
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -249,7 +252,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

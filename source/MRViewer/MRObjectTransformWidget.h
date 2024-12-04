@@ -197,6 +197,9 @@ private:
 
     VisualParams params_;
 
+    float radiusMM{ -1.0f };
+    float widthMM{ -1.0f };
+
     // Control objects
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
@@ -209,6 +212,8 @@ private:
     std::shared_ptr<ObjectMesh> hoveredObject_;
     int findHoveredIndex_() const;
     void setActiveLineFromPoints_( const Contour3f& points );
+
+    AffineXf3f xf_;
 };
 
 // Visual widget to modify transform

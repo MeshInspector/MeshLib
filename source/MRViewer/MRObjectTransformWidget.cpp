@@ -17,6 +17,8 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer.h"
+#include "ImGuiMenu.h"
 
 namespace
 {
@@ -489,6 +491,8 @@ void ObjectTransformWidget::stopModify_()
 void TransformControls::setVisualParams( const VisualParams& params )
 {
     params_ = params;
+    radiusMM = params.radius;
+    widthMM = params.width;
     update();
 }
 
@@ -561,14 +565,14 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
         {
-            getCenter() - params_.radius * params_.negativeLineExtension * baseAxis[i],
-            getCenter() + params_.radius * params_.positiveLineExtension * baseAxis[i]
+            getCenter() - radiusMM * params_.negativeLineExtension * baseAxis[i],
+            getCenter() + radiusMM * params_.positiveLineExtension * baseAxis[i]
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], widthMM, params_.coneRadiusFactor * widthMM, params_.coneSizeFactor * widthMM ) ) );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -594,7 +598,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( params_.radius, params_.width, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( radiusMM, widthMM, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
@@ -615,6 +619,11 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         activeLine_->setName( "Active line" );
         SceneRoot::get().addChild( activeLine_ );
     }
+
+    if ( parent )
+    {
+        xf_ = rotateControls_[0]->worldXf();
+    }
 }
 
 void TransformControls::update()
@@ -630,7 +639,15 @@ void TransformControls::setRadius( float radius )
     params_.radius = radius;
 
     if ( params_.typeRadius != TypeRadius::Pixels )
+    {
         update();
+    }
+    else
+    {
+        auto mmPerPixel = radiusMM / radius;
+        widthMM = mmPerPixel * params_.width;
+        update();
+    }
 }
 
 void TransformControls::setWidth( float width )
@@ -639,8 +656,17 @@ void TransformControls::setWidth( float width )
         return;
     params_.width = width;
 
-    if( params_.typeRadius != TypeRadius::Pixels )
+    if ( params_.typeRadius != TypeRadius::Pixels )
+    {
+        widthMM = width;
         update();
+    }
+    else
+    {
+        auto mmPerPixel = radiusMM / params_.radius;
+        widthMM = mmPerPixel * params_.width;
+        update();
+    }
 }
 
 void TransformControls::setTypeRadius( TypeRadius type )
@@ -648,8 +674,10 @@ void TransformControls::setTypeRadius( TypeRadius type )
     if ( params_.typeRadius == type )
         return;
 
-    if( params_.typeRadius == TypeRadius::Pixels)
+    if ( params_.typeRadius == TypeRadius::Pixels )
+    {
         resetSizeInPixel_();
+    }
 
     params_.typeRadius = type;
 }
@@ -659,9 +687,17 @@ void TransformControls::updateSizeInPixel()
     if ( params_.typeRadius != TypeRadius::Pixels )
         return;
 
-    auto& params = Viewer::instanceRef().viewport().getParameters();
+    float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( getCenter() );
+
+    Matrix3f r, s;
+    decomposeMatrix3( xf_.A, r, s );
+    const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
+
+    auto radius = params_.radius * cameraScale / baseObjectScale;
+
     AffineXf3f pixelTransform;
-    pixelTransform = AffineXf3f::linear( Matrix3f::scale( params_.radius / 100.0f * tan( params.cameraViewAngle / 360.0f * PI_F ) / params.cameraZoom ) );
+    pixelTransform.A = Matrix3f::scale( radius );
+    //pixelTransform.b = getCenter();
 
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {

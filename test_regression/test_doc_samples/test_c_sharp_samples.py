@@ -10,10 +10,6 @@ from helpers.meshlib_helpers import compare_meshes_similarity, compare_points_si
 from pytest_check import check
 
 
-
-SAMPLE_EXEC_DIR = Path("..\\source\\x64\\Release")
-SAMPLE_EXEC_NAME = "c-sharp-examples.exe"
-
 @pytest.mark.skipif(
     "not config.getoption('--run-c-sharp-samples')",
     reason="Only run when --run-c-sharp-samples is given",
@@ -68,21 +64,12 @@ SAMPLE_EXEC_NAME = "c-sharp-examples.exe"
                                            },
                                           id="MeshResolveDegenerations"),
                          ])
-def test_c_sharp_samples(tmp_path, case):
+def test_c_sharp_samples(tmp_path, case, csharp_sample_dir):
     """
-
+    Run C# sample with given arguments and compare output with reference files.
     """
-    print(SAMPLE_EXEC_DIR)
-
-    def list_all_files(directory):
-        # Walk through directory and its subdirectories
-        for root, dirs, files in os.walk(directory):
-            for file in files:
-                # Create full file path and print it
-                file_path = os.path.join(root, file)
-                print(file_path)
-
-    list_all_files(SAMPLE_EXEC_DIR)
+    SAMPLE_EXEC_NAME = "c-sharp-examples.exe"
+    SAMPLE_EXEC_DIR = csharp_sample_dir
 
     sample = case['sample']
     for mesh in case['input_files']:

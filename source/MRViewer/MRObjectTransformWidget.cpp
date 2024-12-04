@@ -628,7 +628,9 @@ void TransformControls::setRadius( float radius )
     if ( params_.radius == radius )
         return;
     params_.radius = radius;
-    update();
+
+    if ( params_.typeRadius != TypeRadius::Pixels )
+        update();
 }
 
 void TransformControls::setWidth( float width )
@@ -636,24 +638,30 @@ void TransformControls::setWidth( float width )
     if ( params_.width == width )
         return;
     params_.width = width;
-    update();
+
+    if( params_.typeRadius != TypeRadius::Pixels )
+        update();
 }
 
-void TransformControls::setSizeInPixel( int sizeInPixel )
+void TransformControls::setTypeRadius( TypeRadius type )
 {
-    if ( params_.sizeInPixel == sizeInPixel )
+    if ( params_.typeRadius == type )
         return;
-    params_.sizeInPixel = sizeInPixel;
+
+    if( params_.typeRadius == TypeRadius::Pixels)
+        resetSizeInPixel_();
+
+    params_.typeRadius = type;
 }
 
 void TransformControls::updateSizeInPixel()
 {
-    auto& params = Viewer::instanceRef().viewport().getParameters();
-    if ( params_.sizeInPixel < 0 )
+    if ( params_.typeRadius != TypeRadius::Pixels )
         return;
 
+    auto& params = Viewer::instanceRef().viewport().getParameters();
     AffineXf3f pixelTransform;
-    pixelTransform = AffineXf3f::linear( Matrix3f::scale( params_.sizeInPixel / 100.0f * tan( params.cameraViewAngle / 360.0f * PI_F ) / params.cameraZoom ) );
+    pixelTransform = AffineXf3f::linear( Matrix3f::scale( params_.radius / 100.0f * tan( params.cameraViewAngle / 360.0f * PI_F ) / params.cameraZoom ) );
 
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
@@ -665,16 +673,16 @@ void TransformControls::updateSizeInPixel()
         activeLine_->setXf( pixelTransform );
 }
 
-void TransformControls::resetSizeInPixel()
+void TransformControls::resetSizeInPixel_()
 {
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
-        translateControls_[i]->resetXf();
-        rotateControls_[i]->resetXf();
+        translateControls_[i]->setXf( AffineXf3f() );
+        rotateControls_[i]->setXf( AffineXf3f() );
     }
 
     if ( activeLine_ )
-        activeLine_->resetXf( );
+        activeLine_->setXf( AffineXf3f() );
 }
 
 ControlBit TransformControls::hover_( bool pickThrough )

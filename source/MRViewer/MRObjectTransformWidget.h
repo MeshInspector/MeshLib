@@ -129,6 +129,13 @@ private:
 class MRVIEWER_CLASS TransformControls : public ITransformControls
 {
 public:
+
+    enum class TypeRadius
+    {
+        MM = 0,
+        Pixels
+    };
+
     struct MRVIEWER_CLASS VisualParams
     {
         // updates radius and width with given box
@@ -137,8 +144,8 @@ public:
         float radius{ -1.0f };
         // negative width value means that controls are not setup
         float width{ -1.0f };
-        // negative sizeInPixel value means that controls are not setup
-        int sizeInPixel{ -1 };
+        // type radius
+        TypeRadius typeRadius = TypeRadius::MM;
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -170,15 +177,10 @@ public:
     float getWidth() const { return params_.width; }
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
-    // get current sizeInPixel of widget controls
-    // negative value means that controls are not setup
-    int getSizeInPixel() const { return params_.sizeInPixel; }
-    // set width for this widget
-    MRVIEWER_API void setSizeInPixel( int sizeInPixel );
+    // set type radius for this widget
+    MRVIEWER_API void setTypeRadius( TypeRadius type );
     // calculates and sets the matrix to set the size in pixels
     void updateSizeInPixel() override;
-    // forgets specific transform for pixel size (if you need to disable this option)
-    MRVIEWER_API void resetSizeInPixel();
 
     MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
     MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
@@ -186,6 +188,9 @@ public:
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
 private:
+    // forgets specific transform for pixel size (if you need to disable this option)
+    void resetSizeInPixel_();
+
     MRVIEWER_API virtual ControlBit hover_( bool pickThrough ) override;
     MRVIEWER_API virtual void stopModify_() override;
     MRVIEWER_API virtual void updateVisualTransformMode_( ControlBit showMask, ViewportMask viewportMask ) override;

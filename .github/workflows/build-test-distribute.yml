@@ -83,6 +83,7 @@ jobs:
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
       autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_x64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}

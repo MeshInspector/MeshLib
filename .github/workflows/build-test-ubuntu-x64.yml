@@ -9,6 +9,9 @@ on:
       autotest_data_s3_url:
         required: true
         type: string
+      config_matrix:
+        required: true
+        type: string
       docker_image_tag:
         required: true
         type: string
@@ -31,25 +34,7 @@ on:
         type: boolean
 
 jobs:
-  set-ubuntu-x64-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set matrix based on full_config_build input
-        id: set-matrix
-        run: |
-          if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
-            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
-          fi
-
   ubuntu-x64-build-test:
-    needs: [set-ubuntu-x64-matrix]
     timeout-minutes: 40
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
@@ -61,6 +46,9 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+
+    env:
+      matrix: ${{ inputs.config_matrix }}
 
     steps:
       - name: Display job info

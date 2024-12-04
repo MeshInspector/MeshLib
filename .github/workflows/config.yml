@@ -32,6 +32,9 @@ on:
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
+      ubuntu_x64_config_matrix:
+        description: "Config matrix for Ubuntu x64 builds"
+        value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
@@ -45,11 +48,12 @@ on:
 jobs:
   prepare-config:
     outputs:
-      app_version:      ${{ steps.version-tag.outputs.app_version }}
-      docker-image-tag: ${{ steps.select-docker-image-tag.outputs.image_tag }}
-      release_tag:      ${{ steps.version-tag.outputs.release_tag }}
-      linux-changes:    ${{ steps.linux-changes.outputs.src }}
-      windows-changes:  ${{ steps.windows-changes.outputs.src }}
+      app_version:              ${{ steps.version-tag.outputs.app_version }}
+      docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
+      release_tag:              ${{ steps.version-tag.outputs.release_tag }}
+      linux-changes:            ${{ steps.linux-changes.outputs.src }}
+      ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
       tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
       tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
@@ -61,6 +65,7 @@ jobs:
 
     env:
       # duplicate output values here since they cannot be accessed from steps
+      full_config_build: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       upload_artifacts: ${{ github.event_name == 'push' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
       version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
 
@@ -137,3 +142,12 @@ jobs:
           version=${{ steps.version.outputs.version }}
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
+
+      - name: Set matrix for ubuntu-arm64 builds
+        id: set-ubuntu-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" ]]; then
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
+          fi

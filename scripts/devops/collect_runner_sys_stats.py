@@ -32,9 +32,9 @@ def get_compiler_info(compiler_path):
     version_line = output.splitlines()[0]
     if version_line.startswith("Apple clang"):
         compiler = "appleclang"
-    elif version_line.contains("clang"):
+    elif "clang" in version_line:
         compiler = "clang"
-    elif version_line.contains("g++") or version_line.contains("gcc"):
+    elif "g++" in version_line or "gcc" in version_line:
         compiler = "gcc"
     else:
         raise RuntimeError(f"Unknown compiler version: {version_line}")

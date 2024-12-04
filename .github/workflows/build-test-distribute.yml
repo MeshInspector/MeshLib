@@ -16,6 +16,9 @@ on:
 
 #UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
+permissions:
+  id-token: write
+  contents: read
 
 env:
   VCPKG-VERSION: '2024.10.21'

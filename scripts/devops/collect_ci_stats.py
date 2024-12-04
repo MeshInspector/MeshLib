@@ -52,37 +52,34 @@ def parse_job_name(name: str):
             target_arch = "x64"
         else:
             target_arch = "arm64"
-        compiler = matrix_config['compiler']
         if matrix_config['os'] == "github-arm":
-            build_config = "Debug"
+            build_config = "debug"
         else:
-            build_config = "Release"
+            build_config = "release"
     elif os_config.name in ("ubuntu-arm64", "ubuntu-x64") :
         target_os = matrix_config['os']
         if os_config.name == "ubuntu-arm64":
             target_arch = "arm64"
         else:
             target_arch = "x64"
-        compiler = matrix_config['compiler']
-        build_config = matrix_config['config']
+        build_config = matrix_config['config'].lower()
     elif os_config.name == "emscripten":
         if matrix_config['config'] == "Singlethreaded":
             target_os = "emscripten-singlethreaded"
         else:
             target_os = "emscripten"
         target_arch = "wasm"
-        compiler = "Clang"
-        build_config = "Release"
+        compiler = "clang"
+        build_config = "release"
     elif os_config.name == "fedora":
         target_os = "fedora39"
         target_arch = "x64"
-        compiler = matrix_config['compiler'].split()[0]
-        build_config = matrix_config['config']
+        build_config = matrix_config['config'].lower()
     elif os_config.name == "windows":
         target_os = "windows"
         target_arch = "x64"
         compiler = matrix_config['runner'].replace("windows", "msvc")
-        build_config = matrix_config['config']
+        build_config = matrix_config['config'].lower()
 
     return {
         'target_os': target_os,
@@ -106,7 +103,7 @@ def parse_job(job: dict):
         'steps': [parse_step(step) for step in job['steps']],
         'target_os': job_config['target_os'],
         'target_arch': job_config['target_arch'],
-        'compiler': job_config['compiler'],
+        'compiler': job_config['compiler'] or runner_stats['compiler'],
         'build_config': job_config['build_config'],
         'runner_name': job['runner_name'],
         'runner_group_name': job['runner_group_name'],

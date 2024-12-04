@@ -27,6 +27,22 @@ def get_system_stats():
         'runner_ram_mb': math.floor(get_ram_amount() / 1024 / 1024),
     }
 
+def get_compiler_info(compiler_path):
+    output = subprocess.check_output([compiler_path, "--version"]).decode()
+    version_line = output.splitlines()[0]
+    if version_line.startswith("Apple clang"):
+        compiler = "appleclang"
+        version = re.search(r"version (\d+)", version_line).group(1)
+    elif version_line.startswith("Clang"):
+        compiler = "clang"
+        version = re.search(r"version (\d+)", version_line).group(1)
+    elif version_line.startswith("g++") or version_line.startswith("gcc"):
+        compiler = "gcc"
+        version = re.search(r"\(GCC\) (\d+)", version_line).group(1)
+    return {
+        'compiler': f"{compiler}-{version}",
+    }
+
 GITHUB_HEADERS = {
     'Accept': 'application/vnd.github.v3+json',
     'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
@@ -63,6 +79,8 @@ def get_job_id():
 
 if __name__ == "__main__":
     stats = get_system_stats()
+    if cxx_compiler := os.environ.get("CXX_COMPILER"):
+        stats.update(get_compiler_info(cxx_compiler))
     pprint.pprint(stats)
 
     stats_filename = f"RunnerSysStats-{get_job_id()}.json"

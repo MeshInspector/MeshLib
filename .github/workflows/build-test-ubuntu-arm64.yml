@@ -78,6 +78,7 @@ jobs:
       - name: Collect runner's system stats
         continue-on-error: true
         env:
+          CXX_COMPILER: ${{ matrix.cxx-compiler }}
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/devops/collect_runner_sys_stats.py
 

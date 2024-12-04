@@ -103,7 +103,7 @@ def parse_job(job: dict):
         'steps': [parse_step(step) for step in job['steps']],
         'target_os': job_config['target_os'],
         'target_arch': job_config['target_arch'],
-        'compiler': job_config['compiler'] or runner_stats['compiler'],
+        'compiler': job_config.get('compiler') or runner_stats['compiler'],
         'build_config': job_config['build_config'],
         'runner_name': job['runner_name'],
         'runner_group_name': job['runner_group_name'],

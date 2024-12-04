@@ -286,9 +286,16 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
+      - uses: aws-actions/configure-aws-credentials@v4
+        id: aws-creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
+          output-credentials: true
+
       - name: Collect stats
         env:
-          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
+          CI_STATS_AUTH_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
           GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
           GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

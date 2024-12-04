@@ -226,7 +226,7 @@ jobs:
           C_SHARP_TEST: ${{ fromJSON('["","--run-c-sharp-samples"]')[ env.BUILD_C_SHARP == 'true' || 0] }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a=${{env.C_SHARP_TEST}}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a="${{env.C_SHARP_TEST}} --csh-path=..\source\x64\${{ matrix.config }}"
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

@@ -23,31 +23,33 @@ const char* SceneColors::getName( Type type )
 {
     switch ( type )
     {
-        case SelectedObjectMesh:           return "SelectedObjectMesh";
-        case UnselectedObjectMesh:         return "UnselectedObjectMesh";
-        case SelectedObjectPoints:         return "SelectedObjectPoints";
-        case UnselectedObjectPoints:       return "UnselectedObjectPoints";
-        case SelectedObjectLines:          return "SelectedObjectLines";
-        case UnselectedObjectLines:        return "UnselectedObjectLines";
-        case SelectedObjectVoxels:         return "SelectedObjectVoxels";
-        case UnselectedObjectVoxels:       return "UnselectedObjectVoxels";
-        case SelectedObjectDistanceMap:    return "SelectedObjectDistanceMap";
-        case UnselectedObjectDistanceMap:  return "UnselectedObjectDistanceMap";
-        case BackFaces:                    return "BackFaces";
-        case Labels:                       return "Labels";
-        case Edges:                        return "Edges";
-        case Points:                       return "Points";
-        case SelectedFaces:                return "SelectedFaces";
-        case SelectedEdges:                return "SelectedEdges";
-        case SelectedPoints:               return "SelectedPoints";
-        case SelectedFeatures:             return "SelectedFeatures";
-        case UnselectedFeatures:           return "UnselectedFeatures";
-        case FeatureBackFaces:             return "FeatureBackFaces";
-        case SelectedFeatureDecorations:   return "SelectedFeatureDecorations";
-        case UnselectedFeatureDecorations: return "UnselectedFeatureDecorations";
-        case SelectedMeasurements:         return "SelectedMeasurements";
-        case UnselectedMeasurements:       return "UnselectedMeasurements";
-        case Count:                        break;
+        case SelectedObjectMesh:              return "SelectedObjectMesh";
+        case UnselectedObjectMesh:            return "UnselectedObjectMesh";
+        case SelectedObjectPoints:            return "SelectedObjectPoints";
+        case UnselectedObjectPoints:          return "UnselectedObjectPoints";
+        case SelectedObjectLines:             return "SelectedObjectLines";
+        case UnselectedObjectLines:           return "UnselectedObjectLines";
+        case SelectedObjectVoxels:            return "SelectedObjectVoxels";
+        case UnselectedObjectVoxels:          return "UnselectedObjectVoxels";
+        case SelectedObjectDistanceMap:       return "SelectedObjectDistanceMap";
+        case UnselectedObjectDistanceMap:     return "UnselectedObjectDistanceMap";
+        case BackFaces:                       return "BackFaces";
+        case Labels:                          return "Labels";
+        case Edges:                           return "Edges";
+        case Points:                          return "Points";
+        case SelectedFaces:                   return "SelectedFaces";
+        case SelectedEdges:                   return "SelectedEdges";
+        case SelectedPoints:                  return "SelectedPoints";
+        case SelectedFeatures:                return "SelectedFeatures";
+        case UnselectedFeatures:              return "UnselectedFeatures";
+        case FeatureBackFaces:                return "FeatureBackFaces";
+        case SelectedFeatureDecorations:      return "SelectedFeatureDecorations";
+        case UnselectedFeatureDecorations:    return "UnselectedFeatureDecorations";
+        case SelectedMeasurements:            return "SelectedMeasurements";
+        case UnselectedMeasurements:          return "UnselectedMeasurements";
+        case SelectedTemporaryMeasurements:   return "SelectedTemporaryMeasurements";
+        case UnselectedTemporaryMeasurements: return "UnselectedTemporaryMeasurements";
+        case Count:                           break;
     }
     assert( false && "Invalid enum." );
     return nullptr;

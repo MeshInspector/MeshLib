@@ -30,4 +30,4 @@ else
     sed -e "s|__API_PAGE_URL__|${BEGIN_URL}/Py/html/APIPyPage.html|" -e "s|__API_PAGE_NAME__|Python|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 fi
 
-
+sed -e "s|__BEGIN_URL__|${BEGIN_URL}|" -i ${DOXYGEN_DIR}/APIPage.dox

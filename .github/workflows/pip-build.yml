@@ -696,6 +696,12 @@ jobs:
           name: ManyLinux-*
           failOnError: false
 
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
+          failOnError: false
+
       - name: Delete all Windows
         uses: geekyeggo/delete-artifact@v5
         with:

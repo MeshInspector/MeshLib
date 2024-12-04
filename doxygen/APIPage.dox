@@ -1,7 +1,7 @@
 /**
 \page APIPage API
 
- - [C++](BASE_URL/cpp/html/APICppPage.html)
- - [Python](BASE_URL/py/html/APIPyPage.html)
+ - [C++](__BEGIN_URL__/Cpp/html/APICppPage.html)
+ - [Python](__BEGIN_URL__/Py/html/APIPyPage.html)
 
 */

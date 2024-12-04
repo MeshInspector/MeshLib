@@ -6,16 +6,13 @@ on:
       docker_image_tag:
         required: true
         type: string
-      UPLOAD_ARTIFACTS:
-        required: true
-        type: boolean
 
 jobs:
   emscripten-build:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-emscripten:${{ inputs.docker_image_tag }}
       options: --user 1001
     strategy:
       fail-fast: false

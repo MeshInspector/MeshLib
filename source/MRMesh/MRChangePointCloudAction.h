@@ -54,14 +54,14 @@ private:
     std::string name_;
 };
 
-/// Undo action for ObjectPoints points pointCloude change
+/// Undo action for points field inside ObjectPoints
 /// \ingroup HistoryGroup
 class ChangePointCloudPointsAction : public HistoryAction
 {
 public:
     using Obj = ObjectPoints;
 
-    /// use this constructor to remember object's point cloud before making any changes in it
+    /// use this constructor to remember object's points field before making any changes in it
     ChangePointCloudPointsAction( std::string name, const std::shared_ptr<ObjectPoints>& obj ) :
         objPoints_{ obj },
         name_{ std::move( name ) }
@@ -71,6 +71,15 @@ public:
             if ( auto m = obj->pointCloud() )
                 clonePoints_ = m->points;
         }
+    }
+
+    /// use this constructor to remember object's points field and immediate set new value
+    ChangePointCloudPointsAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, VertCoords && newPoints ) :
+        objPoints_{ obj },
+        clonePoints_{ std::move( newPoints ) },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
     }
 
     virtual std::string name() const override

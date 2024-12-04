@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <Reference Include="MRDotNet">
-      <HintPath>..\..\source\x64\Release\MRDotNet.dll</HintPath>
+      <HintPath>..\..\source\x64\$(Configuration)\MRDotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
 

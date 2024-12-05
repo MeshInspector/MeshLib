@@ -36,7 +36,7 @@ jobs:
     runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
-      options: "--user root" #need to install pakages in standart place. Need rework
+      options: --user root
     strategy:
       fail-fast: false
       matrix:

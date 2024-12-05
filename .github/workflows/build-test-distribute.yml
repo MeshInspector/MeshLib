@@ -218,7 +218,6 @@ jobs:
     needs:
       - config
       - windows-build-test
-      - versioning-and-release-url
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -267,7 +266,6 @@ jobs:
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-      - versioning-and-release-url
     steps:
       - name: Checkout
         uses: actions/checkout@v4

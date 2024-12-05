@@ -147,6 +147,8 @@ if __name__ == "__main__":
     }
     pprint.pp(result, indent=2, width=150)
 
-    requests.post("https://api.meshinspector.com/ci-stats/v1/log", json=result, headers={
+    resp = requests.post("https://api.meshinspector.com/ci-stats/v1/log", json=result, headers={
         'Authorization': f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}',
     })
+    if resp.status_code != 200:
+        raise RuntimeError(f'{resp.status_code}: {resp.text}')

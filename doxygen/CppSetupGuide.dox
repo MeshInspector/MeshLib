@@ -5,8 +5,8 @@
 
 \tableofcontents
 
-This guide provides detailed instructions for setting up MeshLib for C++ development across Windows, Linux, and macOS. 
-It covers all prerequisites as well as specific setup steps for each platform. 
+This guide provides detailed instructions for setting up MeshLib for C++ development across Windows, Linux, and macOS.
+It covers all prerequisites as well as specific setup steps for each platform.
 
 ## Windows
 There are two options: Download and Install release build or compile from sources:
@@ -29,8 +29,8 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
     \n Set: `/std:c++20` or later
     - **C/C++ → General → Additional Include Directories**:
     \n Add: `C:\meshlib-built\install\include`
-    - **C/C++ → Preprocessor → Use Standard Conforming Preprocessor**:
-    \n Set: `Yes (/Zc:preprocessor)`
+    <!-- - **C/C++ → Preprocessor → Use Standard Conforming Preprocessor**:
+    \n Set: `Yes (/Zc:preprocessor)` -->
     - **C/C++ → All Options → Additional Options**:
     \n Add: `/bigobj /utf8`
     - **Linker → Input → Additional Dependencies**:
@@ -86,7 +86,7 @@ vcpkg integrate install
 
 #### Installing the local build
 \note The following steps will require approximately 40 GB of disk space.
- 
+
  1. **Clone the MeshLib Repository**:
 \code{.cmd}
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
@@ -232,7 +232,7 @@ This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. 
 
 #### Install Emscripten
 
-Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below. 
+Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
  - Clone the Emscripten SDK Repository
  \n Run the following command on **all platforms**:
@@ -306,7 +306,7 @@ python3 -m http.server
  \n If using multithreading, set these headers:
   - **Cross-Origin Embedder Policy** (COEP): `require-corp`
   - **Cross-Origin Opener Policy** (COOP): `same-origin`
-  
+
   For Python servers, you can use this custom script (`server.py`):
 \code{.py}
 #!/usr/bin/env python

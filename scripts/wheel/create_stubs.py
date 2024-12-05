@@ -1,25 +1,12 @@
 import functools
 import os
-import platform
 import shutil
 import subprocess
 import sys
 
 from argparse import ArgumentParser
-from pathlib import Path
-from string import Template
 
-import build_constans
-
-CONSTANTS = build_constans.get_build_consts()
-MODULES = CONSTANTS['MODULES']
-WHEEL_SCRIPT_DIR = CONSTANTS['WHEEL_SCRIPT_DIR']
-WHEEL_ROOT_DIR = CONSTANTS['WHEEL_ROOT_DIR']
-WHEEL_SRC_DIR = CONSTANTS['WHEEL_SRC_DIR']
-SOURCE_DIR = CONSTANTS['SOURCE_DIR']
-SYSTEM = CONSTANTS['SYSTEM']
-LIB_EXTENSION = CONSTANTS['LIB_EXTENSION']
-LIB_DIR = CONSTANTS['LIB_DIR']
+from build_constants import *
 
 def install_packages():
     packages = [
@@ -37,7 +24,7 @@ def install_packages():
 
 def setup_workspace( modules, clear_folder = True ):    
     if clear_folder and WHEEL_ROOT_DIR.exists():
-            shutil.rmtree(WHEEL_ROOT_DIR)
+        shutil.rmtree(WHEEL_ROOT_DIR)
     
     if not WHEEL_ROOT_DIR.exists():
         WHEEL_SRC_DIR.mkdir(parents=True)

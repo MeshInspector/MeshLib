@@ -6,21 +6,10 @@ import subprocess
 import sys
 
 from argparse import ArgumentParser
-from pathlib import Path
 from string import Template
 
-import build_constans
+from build_constants import *
 import create_stubs
-
-CONSTANTS = build_constans.get_build_consts()
-MODULES = CONSTANTS['MODULES']
-WHEEL_SCRIPT_DIR = CONSTANTS['WHEEL_SCRIPT_DIR']
-WHEEL_ROOT_DIR = CONSTANTS['WHEEL_ROOT_DIR']
-WHEEL_SRC_DIR = CONSTANTS['WHEEL_SRC_DIR']
-SOURCE_DIR = CONSTANTS['SOURCE_DIR']
-SYSTEM = CONSTANTS['SYSTEM']
-LIB_EXTENSION = CONSTANTS['LIB_EXTENSION']
-LIB_DIR = CONSTANTS['LIB_DIR']
 
 def install_packages():
     create_stubs.install_packages()

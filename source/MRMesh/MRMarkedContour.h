@@ -9,8 +9,10 @@ namespace MR
 struct MarkedContour3f
 {
     Contour3f contour;
-    BitSet marks; ///< subset of indices of contour field
+    BitSet marks; ///< indices of control (marked) points
 };
+
+[[nodiscard]] inline bool isClosed( const Contour3f& c ) { return c.size() > 1 && c.front() == c.back(); }
 
 /// \return marked contour with all points from (in) marked
 [[nodiscard]] inline MarkedContour3f markedContour( Contour3f in )

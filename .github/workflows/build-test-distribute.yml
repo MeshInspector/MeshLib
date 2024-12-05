@@ -14,10 +14,6 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
@@ -64,7 +60,6 @@ jobs:
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
-      mrbind: ${{ needs.config.outputs.full_config_build == 'true' }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -78,7 +73,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: true
     secrets: inherit
 
   ubuntu-x64-build-test:
@@ -93,7 +87,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: true
     secrets: inherit
 
   fedora-build-test:
@@ -116,7 +109,7 @@ jobs:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
-    needs: [ versioning-and-release-url ]
+    needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -125,7 +118,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: ${{ needs.config.outputs.full_config_build == 'true' }}
     secrets: inherit
 
   update-win-version:
@@ -157,16 +149,9 @@ jobs:
           path: |
             C:\vcpkg\*
 
-      - name: Configure AWS Credentials
-        if: ${{ needs.config.outputs.internal_build == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
       - name: Update vcpkg packages
         run: |
-          .\thirdparty\install.bat --write-s3
+          .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v4

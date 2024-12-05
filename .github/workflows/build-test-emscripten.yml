@@ -13,7 +13,6 @@ jobs:
     runs-on: [self-hosted, linux-arm64]
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
-      options: --user 1001
     strategy:
       fail-fast: false
       matrix:

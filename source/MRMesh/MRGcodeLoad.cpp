@@ -12,9 +12,9 @@ namespace GcodeLoad
 
 const IOFilters Filters =
 {
-    {"G-code", "*.gcode"},
-    {"Numerical Control", "*.nc"},
-    {"Text file", "*.txt"}
+    {"G-code (.gcode)", "*.gcode"},
+    {"Numerical Control (.nc)", "*.nc"},
+    {"Text file (.txt)", "*.txt"}
 };
 
 Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )

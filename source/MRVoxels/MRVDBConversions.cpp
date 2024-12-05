@@ -256,6 +256,7 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
     return res;
 }
 
+template <>
 void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
@@ -274,12 +275,53 @@ void putSimpleVolumeInDenseGrid(
         cb( 1.f );
 }
 
+template <>
 void putSimpleVolumeInDenseGrid(
         FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    putSimpleVolumeInDenseGrid( *grid, minCoord, simpleVolume, cb );
+    openvdb::FloatGrid& gridRef = *grid;
+    putSimpleVolumeInDenseGrid( gridRef, minCoord, simpleVolume, cb );
+}
+
+template <>
+void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid::Accessor& gridAccessor,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    MR_TIMER
+    if ( cb )
+        cb( 0.0f );
+
+    auto dimsXY = size_t( simpleVolume.dims.x ) * size_t( simpleVolume.dims.y );
+    for ( int z = 0; z < simpleVolume.dims.z; ++z )
+    {
+        if ( subprogress( cb, (size_t)z, (size_t)simpleVolume.dims.z ) )
+            return;
+        for ( int y = 0; y < simpleVolume.dims.y; ++y )
+        {
+            for ( int x = 0; x < simpleVolume.dims.x; ++x )
+            {
+                auto coord = toVdb( minCoord + Vector3i{ x, y, z } );
+                gridAccessor.setValue( coord, simpleVolume.data[x + y * size_t( simpleVolume.dims.x ) + z * dimsXY] );
+            }
+        }
+    }
+}
+
+void makeVdbTopologyDense( openvdb::FloatGrid& grid, const Box3i& rect )
+{
+    auto& tree = grid.tree();
+    for ( int z = rect.min.x; z <= rect.max.z; ++z )
+        for ( int y = rect.min.y; y <= rect.max.y; ++y )
+            for ( int x = rect.min.x; x <= rect.max.x; ++x )
+                tree.touchLeaf( toVdb( Vector3i{ x, y, z } ) );
+}
+void makeVdbTopologyDense( VdbVolume& volume )
+{
+    makeVdbTopologyDense( *volume.data, Box3i{{0, 0, 0 }, volume.dims - Vector3i::diagonal( 1 ) } );
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,

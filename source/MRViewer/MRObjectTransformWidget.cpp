@@ -25,21 +25,6 @@ constexpr std::array<MR::Vector3f, 3> baseAxis =
 
 using namespace MR;
 
-// fins point on p11,p12 line
-Vector3f findClosestPointOfSkewLines( const Vector3f& p11, const Vector3f& p12, const Vector3f& p21, const Vector3f& p22 )
-{
-    auto d1 = p12 - p11;
-    auto d2 = p22 - p21;
-    auto n = cross( d1, d2 );
-    auto n2 = cross( d2, n );
-    auto lSq = n.lengthSq();
-    auto l2Sq = n2.lengthSq();
-    if ( std::isnan( lSq ) || std::isnan( l2Sq ) || l2Sq == 0 )
-        return {};
-
-    return p11 + dot( ( p21 - p11 ), n2 ) / dot( d1, n2 ) * d1;
-}
-
 float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, const Vector3f& norm,
                           const Line3f& ray, Viewport& vp, const Vector3f& vpPoint )
 {
@@ -356,12 +341,7 @@ void ObjectTransformWidget::processScaling_( Axis ax, bool press )
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
     const auto& wCenter = controls_->getCenter();
-    auto wRadius = controls_->getRadius();
-    auto newScaling = findClosestPointOfSkewLines(
-        xf( wCenter - baseAxis[int( ax )] * wRadius ),
-        xf( wCenter + baseAxis[int( ax )] * wRadius ),
-        line.p, line.p + line.d
-    );
+    auto newScaling = closestPoints( Line3f( xf( wCenter ), xf.A * baseAxis[int( ax )] ), line ).a;
     auto centerTransformed = xf( controls_->getCenter() );
 
     if ( press )
@@ -399,12 +379,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
     const auto& wCenter = controls_->getCenter();
-    auto wRadius = controls_->getRadius();
-    auto newTranslation = findClosestPointOfSkewLines(
-        xf( wCenter - baseAxis[int( ax )] * wRadius ),
-        xf( wCenter + baseAxis[int( ax )] * wRadius ),
-        line.p, line.p + line.d
-    );
+    auto newTranslation = closestPoints( Line3f( xf( wCenter ), xf.A * baseAxis[int( ax )] ), line ).a;
 
     if ( press )
     {

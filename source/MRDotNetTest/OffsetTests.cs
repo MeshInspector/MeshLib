@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
 using NUnit.Framework;
+using static MR.DotNet;
 
-using MR.DotNet;
-
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class OffsetTests

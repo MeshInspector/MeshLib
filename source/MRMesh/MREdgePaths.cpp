@@ -588,7 +588,7 @@ bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation
 int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,
     std::vector<MeshEdgePoint> * outIntersections )
 {
-    MR_TIMER;
+    MR_TIMER
     int found = 0;
     for ( auto e : path )
     {
@@ -596,9 +596,30 @@ int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const P
         auto d = plane.distance( mesh.destPnt( e ) );
         if ( ( o <= 0 && d > 0 ) || ( o >= 0 && d < 0 ) )
         {
-            float a = -o / ( d - o );
             if ( outIntersections )
-                outIntersections->emplace_back( e, a );
+                outIntersections->emplace_back( e, o / ( o - d ) );
+            ++found;
+        }
+    }
+    return found;
+}
+
+int getContourPlaneIntersections( const Contour3f & path, const Plane3f & plane,
+    std::vector<Vector3f> * outIntersections )
+{
+    MR_TIMER
+    int found = 0;
+    for ( int i = 0; i + 1 < path.size(); ++i )
+    {
+        auto o = plane.distance( path[i] );
+        auto d = plane.distance( path[i + 1] );
+        if ( ( o <= 0 && d > 0 ) || ( o >= 0 && d < 0 ) )
+        {
+            if ( outIntersections )
+            {
+                const float a = o / ( o - d );
+                outIntersections->emplace_back( a * path[i + 1] + ( 1 - a ) * path[i] );
+            }
             ++found;
         }
     }

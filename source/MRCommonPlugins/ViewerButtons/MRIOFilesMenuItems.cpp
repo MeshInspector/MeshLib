@@ -329,7 +329,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
         {
             bool anySuccess = std::any_of( loadRes.begin(), loadRes.end(), []( const auto & r ) { return r.has_value(); } );
             std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
-            ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
+            ProgressBar::setTaskCount( (int)loadRes.size() + 1 );
             std::string errors;
             for ( auto & res : loadRes )
             {
@@ -390,7 +390,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
         {
             showError( "Cannot open given folder, find more in log." );
         };
-    }, 3 );
+    }, 2 );
 }
 #endif
 

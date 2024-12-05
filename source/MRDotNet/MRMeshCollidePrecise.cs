@@ -4,116 +4,116 @@ using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MR.DotNet
+namespace MR
 {
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdgeTri
+    public partial class DotNet
     {
-        EdgeId edge;
-        FaceId tri;
-    };
-    public class PreciseCollisionResult : IDisposable
-    {
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern bool mrEdgeTriEq( ref EdgeTri a, ref EdgeTri b );
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MRVectorEdgeTri
+        public struct EdgeTri
         {
-            public IntPtr data = IntPtr.Zero;
-            public ulong size = 0;
-            public IntPtr reserved = IntPtr.Zero;
-            public MRVectorEdgeTri() { }
+            EdgeId edge;
+            FaceId tri;
         };
-
-        /// each edge is directed to have its origin inside and its destination outside of the other mesh
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( IntPtr result );
-
-        /// each edge is directed to have its origin inside and its destination outside of the other mesh
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( IntPtr result );
-
-        /// deallocates the PreciseCollisionResult object
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern void mrPreciseCollisionResultFree(IntPtr result);
-
-        
-
-        internal PreciseCollisionResult(IntPtr nativeResult)
+        public class PreciseCollisionResult : IDisposable
         {
-            nativeResult_ = nativeResult;
-        }
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern bool mrEdgeTriEq(ref EdgeTri a, ref EdgeTri b);
 
-        private bool disposed = false;
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed)
+            [StructLayout(LayoutKind.Sequential)]
+            internal struct MRVectorEdgeTri
             {
-                if (nativeResult_ != IntPtr.Zero)
-                {
-                    mrPreciseCollisionResultFree(nativeResult_);
-                }
+                public IntPtr data = IntPtr.Zero;
+                public ulong size = 0;
+                public IntPtr reserved = IntPtr.Zero;
+                public MRVectorEdgeTri() { }
+            };
 
-                disposed = true;
+            /// each edge is directed to have its origin inside and its destination outside of the other mesh
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB(IntPtr result);
+
+            /// each edge is directed to have its origin inside and its destination outside of the other mesh
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA(IntPtr result);
+
+            /// deallocates the PreciseCollisionResult object
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern void mrPreciseCollisionResultFree(IntPtr result);
+
+
+
+            internal PreciseCollisionResult(IntPtr nativeResult)
+            {
+                nativeResult_ = nativeResult;
             }
-        }
-        ~PreciseCollisionResult()
-        {
-            Dispose(false);
-        }
 
-        /// each edge is directed to have its origin inside and its destination outside of the other mesh
-        public ReadOnlyCollection<EdgeTri> EdgesAtrisB
-        {
-            get
+            private bool disposed = false;
+            public void Dispose()
             {
-                if ( edgesAtrisB_ is null )
-                {
-                    var mrEdges = mrPreciseCollisionResultEdgesAtrisB( nativeResult_ );
-                    int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
-                    edgesAtrisB_ = new List<EdgeTri>( (int)mrEdges.size );
-                    for (int i = 0; i < (int)mrEdges.size; ++i)
-                    {
-                        edgesAtrisB_.Add( Marshal.PtrToStructure<EdgeTri>( IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri) ) );
-                    }
-                }
-                return edgesAtrisB_.AsReadOnly();
+                Dispose(true);
+                GC.SuppressFinalize(this);
             }
-        }
-        /// each edge is directed to have its origin inside and its destination outside of the other mesh
-        public ReadOnlyCollection<EdgeTri> EdgesBtrisA 
-        { 
-            get
+
+            protected virtual void Dispose(bool disposing)
             {
-                if ( edgesBtrisA_ is null )
+                if (!disposed)
                 {
-                    var mrEdges = mrPreciseCollisionResultEdgesBtrisA( nativeResult_ );
-                    int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
-                    edgesBtrisA_ = new List<EdgeTri>( (int)mrEdges.size );
-                    for (int i = 0; i < (int)mrEdges.size; ++i)
+                    if (nativeResult_ != IntPtr.Zero)
                     {
-                        edgesBtrisA_.Add( Marshal.PtrToStructure<EdgeTri>( IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri) ) );
+                        mrPreciseCollisionResultFree(nativeResult_);
                     }
+
+                    disposed = true;
                 }
-                return edgesBtrisA_.AsReadOnly();
-            }            
-        }
+            }
+            ~PreciseCollisionResult()
+            {
+                Dispose(false);
+            }
 
-        private List<EdgeTri>? edgesAtrisB_;
-        private List<EdgeTri>? edgesBtrisA_;
+            /// each edge is directed to have its origin inside and its destination outside of the other mesh
+            public ReadOnlyCollection<EdgeTri> EdgesAtrisB
+            {
+                get
+                {
+                    if (edgesAtrisB_ is null)
+                    {
+                        var mrEdges = mrPreciseCollisionResultEdgesAtrisB(nativeResult_);
+                        int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
+                        edgesAtrisB_ = new List<EdgeTri>((int)mrEdges.size);
+                        for (int i = 0; i < (int)mrEdges.size; ++i)
+                        {
+                            edgesAtrisB_.Add(Marshal.PtrToStructure<EdgeTri>(IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri)));
+                        }
+                    }
+                    return edgesAtrisB_.AsReadOnly();
+                }
+            }
+            /// each edge is directed to have its origin inside and its destination outside of the other mesh
+            public ReadOnlyCollection<EdgeTri> EdgesBtrisA
+            {
+                get
+                {
+                    if (edgesBtrisA_ is null)
+                    {
+                        var mrEdges = mrPreciseCollisionResultEdgesBtrisA(nativeResult_);
+                        int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
+                        edgesBtrisA_ = new List<EdgeTri>((int)mrEdges.size);
+                        for (int i = 0; i < (int)mrEdges.size; ++i)
+                        {
+                            edgesBtrisA_.Add(Marshal.PtrToStructure<EdgeTri>(IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri)));
+                        }
+                    }
+                    return edgesBtrisA_.AsReadOnly();
+                }
+            }
 
-        internal IntPtr nativeResult_;
-    };
-    public class MeshCollidePrecise
-    {
+            private List<EdgeTri>? edgesAtrisB_;
+            private List<EdgeTri>? edgesBtrisA_;
+
+            internal IntPtr nativeResult_;
+        };
         /**
          * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh
          * \param rigidB2A rigid transformation from B-mesh space to A mesh space, NULL considered as identity transformation
@@ -124,7 +124,7 @@ namespace MR.DotNet
 
         public static PreciseCollisionResult FindCollidingEdgeTrisPrecise(MeshPart meshA, MeshPart meshB, CoordinateConverters conv, AffineXf3f? rigidB2A = null, bool anyIntersection = false)
         {
-            var mrResult = mrFindCollidingEdgeTrisPrecise( ref meshA.mrMeshPart, ref meshB.mrMeshPart, conv.GetConvertToIntVector(), rigidB2A is null ? IntPtr.Zero : rigidB2A.XfAddr(), anyIntersection );
+            var mrResult = mrFindCollidingEdgeTrisPrecise(ref meshA.mrMeshPart, ref meshB.mrMeshPart, conv.GetConvertToIntVector(), rigidB2A is null ? IntPtr.Zero : rigidB2A.XfAddr(), anyIntersection);
 
             return new PreciseCollisionResult(mrResult);
         }

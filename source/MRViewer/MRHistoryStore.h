@@ -12,7 +12,7 @@ namespace MR
 /// \{
 
 /// This class stores history stack for undo/redo
-class HistoryStore
+class MRVIEWER_CLASS HistoryStore
 {
 public:
     /// returns the instance (if any) of HistoryStore from the viewer
@@ -57,8 +57,16 @@ public:
     /// remove some actions according to condition
     MRVIEWER_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
 
+    /// performs undo of one action, must not be called during ongoing undo or redo, temporary sets undoRedoInProgress()=true
+    /// \return false if nothing to undo or if undoRedoInProgress()=true
     MRVIEWER_API virtual bool undo();
+
+    /// performs redo of one action, must not be called during ongoing undo or redo, temporary sets undoRedoInProgress()=true
+    /// \return false if nothing to redo or if undoRedoInProgress()=true
     MRVIEWER_API virtual bool redo();
+
+    /// true only during Undo or Redo ongoing operation
+    [[nodiscard]] bool undoRedoInProgress() const { return undoRedoInProgress_; }
 
     /// Returns names of last N undo actions or first N redo actions
     [[nodiscard]] MRVIEWER_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type ) const;
@@ -82,15 +90,22 @@ public:
 private:
     /// buffer for merging actions, if present, used for storing
     HistoryActionsVector* scopedBlock_{ nullptr };
+
     /// main history stack
     HistoryActionsVector stack_;
+
     /// this index points to first redo action or equals to size of stack if no redo is available
     size_t firstRedoIndex_{ 0 };
+
     /// this index points to the position in stack_ corresponding to saved scene state;
     /// if firstRedoIndex_ == savedSceneIndex_ then the scene is considered as not modified
     size_t savedSceneIndex_{ 0 };
+
     /// memory limit (bytes) to this HistoryStore if stack_ exceed it, old actions are removed
     size_t storageLimit_{ size_t( ~0 ) };
+
+    /// true only during Undo or Redo ongoing operation
+    bool undoRedoInProgress_{ false };
 
     /// removes all undo actions from the beginning of the stack that exceed memory limit
     void filterByMemoryLimit_();

@@ -20,7 +20,6 @@ libzip-devel
 libzstd-devel
 opencascade-devel
 openssl-devel
-openvdb-devel
 pkg-config
 python3
 spdlog-devel

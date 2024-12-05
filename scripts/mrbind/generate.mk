@@ -85,6 +85,8 @@ override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
+override valid_vs_modes := Debug Release
+$(if $(filter-out $(valid_vs_modes),$(VS_MODE)),$(error Invalid `VS_MODE=$(VS_MODE)`, expected one of: $(valid_vs_modes)))
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -244,11 +246,13 @@ override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
-# If this isn't empty, those are passed when compiling the PCH, and then the PCH is compiled to an object file and linked into the final result.
-PCH_CODEGEN_FLAGS :=
-# Those don't work at the moment (undefined references, d).
-# The `-fpch-instantiate-templates` flag is optional, while the other two are necessary (at least the first one), and are usually used together.
-# PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
+# Those are passed when compiling the PCH. Can be empty.
+# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it to the result.
+# (And building this `.o` even when it's not needed doesn't seem to cause any issues.)
+# There are three flags that can be used in any combination here: `-fpch-codegen -fpch-debuginfo -fpch-instantiate-templates`.
+# `-fpch-codegen` seems to be buggy, causing weird errors: undefined references to libfmt/gtest/some other functions when used with `-fpch-instantiate-templates`,
+#   or weird overload resolution errors during compilation without that.
+PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 
 
 
@@ -373,6 +377,9 @@ COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
+# Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
+# And I'm not sure if exporting them even did anything useful on Windows in the first place.
+COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
@@ -428,7 +435,7 @@ $(COMPILED_PCH_FILE): $(COMBINED_HEADER_OUTPUT)
 	@$(COMPILER) -o $@ -xc++-header $< $(COMPILER_FLAGS) $(PCH_CODEGEN_FLAGS)
 # PCH object file, if enabled.
 # We strip the include directories from the flags here, because Clang warns that those are unused.
-ifneq ($(PCH_CODEGEN_FLAGS),)
+ifneq ($(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS)),)
 PCH_OBJECT := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.o
 $(PCH_OBJECT): $(COMPILED_PCH_FILE)
 	@echo $(call quote,[Compiling PCH object] $@)

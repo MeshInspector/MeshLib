@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:
-      image: meshlib/meshlib-emscripten:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
       options: --user 1001
     strategy:
       fail-fast: false
@@ -25,6 +25,16 @@ jobs:
             aws-dir: RMI
 
     steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 

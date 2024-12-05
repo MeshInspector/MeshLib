@@ -39,7 +39,6 @@ jobs:
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
       image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
-      options: --user root
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON( inputs.config_matrix ) }}

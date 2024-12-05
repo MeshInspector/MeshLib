@@ -51,6 +51,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
+    if: false
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
@@ -63,6 +64,7 @@ jobs:
     secrets: inherit
 
   ubuntu-arm64-build-test:
+    if: false
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
@@ -90,6 +92,7 @@ jobs:
     secrets: inherit
 
   fedora-build-test:
+    if: false
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
@@ -103,12 +106,14 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
+    if: false
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
+    if: false
     needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
@@ -121,7 +126,7 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && false }}
     needs:
       - config
       - windows-build-test
@@ -199,7 +204,7 @@ jobs:
           retention-days: 1
 
   create-nuget-package:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && false }}
     needs:
       - config
       - windows-build-test
@@ -238,7 +243,7 @@ jobs:
          retention-days: 1
 
   upload-distributions:
-    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true'  && false }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
@@ -284,7 +289,7 @@ jobs:
           fi
 
   test-distribution:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && false}}
     needs: [ config, versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:

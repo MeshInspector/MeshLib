@@ -116,7 +116,7 @@ jobs:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
-    needs: [ versioning-and-release-url ]
+    needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}

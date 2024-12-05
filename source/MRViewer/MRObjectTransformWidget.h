@@ -213,7 +213,8 @@ private:
     int findHoveredIndex_() const;
     void setActiveLineFromPoints_( const Contour3f& points );
 
-    AffineXf3f xf_;
+    ViewportProperty<AffineXf3f> parentXf_;
+    ViewportProperty<AffineXf3f> xf_;
 };
 
 // Visual widget to modify transform

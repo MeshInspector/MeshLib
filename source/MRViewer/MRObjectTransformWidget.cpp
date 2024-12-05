@@ -622,7 +622,12 @@ void TransformControls::init( std::shared_ptr<Object> parent )
 
     if ( parent )
     {
-        xf_ = rotateControls_[0]->worldXf();
+        auto mask = getViewerInstance().getPresentViewports();
+        for ( auto idViewport : mask )
+        {
+            xf_ = rotateControls_[0]->worldXf( idViewport );
+            parentXf_ = parent->worldXf( idViewport );
+        }
     }
 }
 
@@ -678,6 +683,11 @@ void TransformControls::setTypeRadius( TypeRadius type )
     {
         resetSizeInPixel_();
     }
+    else
+    {
+        params_.radius = radiusMM;
+        params_.width = widthMM;
+    }
 
     params_.typeRadius = type;
 }
@@ -687,38 +697,48 @@ void TransformControls::updateSizeInPixel()
     if ( params_.typeRadius != TypeRadius::Pixels )
         return;
 
-    float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( getCenter() );
-
-    Matrix3f r, s;
-    decomposeMatrix3( xf_.A, r, s );
-    const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
-
-    auto radius = params_.radius * cameraScale / baseObjectScale;
-
-    AffineXf3f pixelTransform;
-    pixelTransform.A = Matrix3f::scale( radius );
-    //pixelTransform.b = getCenter();
-
-    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    auto mask = getViewerInstance().getPresentViewports();
+    for ( auto idViewport : mask )
     {
-        translateControls_[i]->setXf( pixelTransform );
-        rotateControls_[i]->setXf( pixelTransform );
-    }
+        auto xf = parentXf_.get( idViewport);
+        auto center = xf( getCenter() );
+        float cameraScale = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
 
-    if( activeLine_ )
-        activeLine_->setXf( pixelTransform );
+        AffineXf3f pixelTransform;
+        Matrix3f r, s;
+        decomposeMatrix3( xf_.get( idViewport ).A, r, s);
+        const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
+
+        auto radius = params_.radius;
+
+        radius *= cameraScale / baseObjectScale;
+        pixelTransform = AffineXf3f::xfAround( Matrix3f::scale( radius ), center );
+
+        for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+        {
+            translateControls_[i]->setXf( pixelTransform, idViewport );
+            rotateControls_[i]->setXf( pixelTransform, idViewport );
+        }
+
+        if ( activeLine_ )
+            activeLine_->setXf( pixelTransform, idViewport );
+    }
 }
 
 void TransformControls::resetSizeInPixel_()
 {
-    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    auto mask = getViewerInstance().getPresentViewports();
+    for ( auto idViewport : mask )
     {
-        translateControls_[i]->setXf( AffineXf3f() );
-        rotateControls_[i]->setXf( AffineXf3f() );
-    }
+        for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+        {
+            translateControls_[i]->setXf( AffineXf3f(), idViewport );
+            rotateControls_[i]->setXf( AffineXf3f(), idViewport );
+        }
 
-    if ( activeLine_ )
-        activeLine_->setXf( AffineXf3f() );
+        if ( activeLine_ )
+            activeLine_->setXf( AffineXf3f(), idViewport );
+    }
 }
 
 ControlBit TransformControls::hover_( bool pickThrough )

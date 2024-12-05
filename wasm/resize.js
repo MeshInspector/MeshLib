@@ -13,4 +13,5 @@ var registerResize = function () {
   resizeCallBack();
   window.addEventListener('resize', resizeCallBack);
   window.addEventListener('orientationchange', resizeCallBack);
+  GLFW.adjustCanvasDimensions = function(){}; // we want to prevent default EMSDK behaviour to keep current resizing logic
 }

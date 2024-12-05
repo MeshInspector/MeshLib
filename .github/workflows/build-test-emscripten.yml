@@ -13,7 +13,7 @@ on:
 jobs:
   emscripten-build:
     timeout-minutes: 40
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux-arm64]
     container:
       image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
       options: --user 1001

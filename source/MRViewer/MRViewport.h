@@ -11,7 +11,7 @@
 #include <MRMesh/MRMatrix4.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRBox.h>
-#include "imgui.h"
+#include "MRImGui.h"
 #include <memory>
 #include <functional>
 #include <unordered_map>

@@ -114,7 +114,7 @@ jobs:
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"ubuntu24Dockerfile\",   \"image\":\"ubuntu24-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"fedora39Dockerfile\",   \"image\":\"fedora39\",       \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           ]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
           echo "$MATRIX"

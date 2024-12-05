@@ -100,10 +100,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
-    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
-      -D CMAKE_C_FLAGS=-pthread \
-      -D CMAKE_CXX_FLAGS=-pthread \
-    "
+    export CFLAGS=-pthread
+    export CXXFLAGS=-pthread
   fi
 fi
 

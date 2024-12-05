@@ -14,10 +14,6 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
@@ -153,16 +149,9 @@ jobs:
           path: |
             C:\vcpkg\*
 
-      - name: Configure AWS Credentials
-        if: ${{ needs.config.outputs.internal_build == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
       - name: Update vcpkg packages
         run: |
-          .\thirdparty\install.bat --write-s3
+          .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v4

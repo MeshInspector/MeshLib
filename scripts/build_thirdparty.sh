@@ -93,6 +93,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
   EMSCRIPTEN_ROOT="${EMSDK}/upstream/emscripten"
 
+  export CFLAGS=""
+  export CXXFLAGS=""
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
@@ -100,8 +102,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
-    export CFLAGS=-pthread
-    export CXXFLAGS=-pthread
+    CFLAGS="${CFLAGS} -pthread"
+    CXXFLAGS="${CFLAGS} -pthread"
   fi
 fi
 

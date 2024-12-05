@@ -292,7 +292,7 @@ jobs:
 
   update-dev-documentation:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' }}
-    needs: [ config ]
+    needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
@@ -358,4 +358,10 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Timing_Logs*
+          failOnError: false
+
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
           failOnError: false

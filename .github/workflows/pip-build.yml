@@ -149,12 +149,28 @@ jobs:
         run: |
           ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
 
+      - name: Upload Python Stubs
+        if: ${{ matrix.platform == 'aarch64' && matrix.py-version == '3.10' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
+
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
+
+  update-documentation:
+    needs:
+      - manylinux-pip-build
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib
+    secrets: inherit
 
   windows-pip-build:
     needs: setup
@@ -676,6 +692,12 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: ManyLinux-*
+          failOnError: false
+
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
           failOnError: false
 
       - name: Delete all Windows

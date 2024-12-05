@@ -1,6 +1,6 @@
 #include "MRToolbar.h"
 #include "MRViewer/MRUITestEngine.h"
-#include "imgui.h"
+#include "MRImGui.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonButtonDrawer.h"

@@ -1,6 +1,6 @@
 #pragma once
 #include "MRFrameRedrawRequest.h"
-#include <imgui.h>
+#include "MRImGui.h"
 #include <functional>
 #include <atomic>
 #include <thread>

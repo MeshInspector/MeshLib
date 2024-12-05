@@ -89,6 +89,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
       ${MRMESH_OPTIONAL_LIBRARY_DIRS}
     )
     target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt
       blosc
       mbedtls
       mbedx509

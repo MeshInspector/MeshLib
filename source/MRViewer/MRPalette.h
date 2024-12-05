@@ -5,7 +5,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRExpected.h"
-#include <imgui.h>
+#include "MRViewer/MRImGui.h"
 #include <algorithm>
 #include <filesystem>
 

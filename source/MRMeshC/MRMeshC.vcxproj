@@ -64,11 +64,14 @@
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRTorus.h" />
+    <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVector.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="detail\Concat.h" />
     <ClInclude Include="detail\TypeCast.h" />
     <ClInclude Include="detail\Vector.h" />
+    <ClInclude Include="MRVoxelsFwd.h" />
+    <ClInclude Include="MRVoxelsLoad.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAffineXf.cpp" />
@@ -119,8 +122,10 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRTriPoint.cpp" />
     <ClCompile Include="MRTorus.cpp" />
+    <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVector.cpp" />
     <ClCompile Include="MRVector3.cpp" />
+    <ClCompile Include="MRVoxelsLoad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">

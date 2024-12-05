@@ -64,7 +64,6 @@ jobs:
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
-      mrbind: ${{ needs.config.outputs.full_config_build == 'true' }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -78,7 +77,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: true
     secrets: inherit
 
   ubuntu-x64-build-test:
@@ -93,7 +91,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: true
     secrets: inherit
 
   fedora-build-test:
@@ -116,7 +113,7 @@ jobs:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
-    needs: [ versioning-and-release-url ]
+    needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -125,7 +122,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      mrbind: ${{ needs.config.outputs.full_config_build == 'true' }}
     secrets: inherit
 
   update-win-version:

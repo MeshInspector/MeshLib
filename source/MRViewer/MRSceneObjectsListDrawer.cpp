@@ -201,7 +201,8 @@ void SceneObjectsListDrawer::changeVisible( bool isDown )
     nextVisible_.index = int( std::distance( all.begin(), itAll ) );
 
     for ( const auto& obj : nextObj->parent()->children() )
-        obj->setVisible( false );
+        if ( !obj->isAncillary() )
+            obj->setVisible( false );
     for ( const auto& obj : selected )
         obj->select( false );
     nextObj->setVisible( true );

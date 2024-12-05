@@ -1,3 +1,6 @@
+import os
+
+
 def list_compare_2d(list1, list2):
     """
     Compare two lists of lists
@@ -16,3 +19,11 @@ def list_compare_2d(list1, list2):
             if list1[i][j] != list2[i][j]:
                 return False
     return True
+
+def list_all_files(directory):
+    # Walk through directory and its subdirectories
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            # Create full file path and print it
+            file_path = os.path.join(root, file)
+            print(file_path)

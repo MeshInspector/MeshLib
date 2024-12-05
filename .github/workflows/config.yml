@@ -1,0 +1,153 @@
+name: Configuration
+
+on:
+  workflow_call:
+    outputs:
+      # manually defined values
+      autotest_data_s3_url:
+        description:
+        value: "s3://data-autotest/test_data_2024-nov-07"
+      vcpkg_version:
+        description: "vcpkg version"
+        value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+      # automatically computed or tag-based values
+      app_version:
+        description: "Version without namespace: v1.2.3.4"
+        value: ${{ jobs.prepare-config.outputs.app_version }}
+      full_config_build:
+        description:
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+      docker_image_tag:
+        description:
+        value: ${{ jobs.prepare-config.outputs.docker-image-tag }}
+      internal_build:
+        description:
+        value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      need_linux_image_rebuild:
+        description:
+        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+      need_windows_vcpkg_rebuild:
+        description:
+        value: ${{ jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' }}
+      release_tag:
+        description: "Version with namespace (if it exists): v1.2.3.4-namespace"
+        value: ${{ jobs.prepare-config.outputs.release_tag }}
+      ubuntu_x64_config_matrix:
+        description: "Config matrix for Ubuntu x64 builds"
+        value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
+      update_doc:
+        description:
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
+      upload_artifacts:
+        description:
+        value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+      upload_test_artifacts:
+        description:
+        value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
+
+jobs:
+  prepare-config:
+    outputs:
+      app_version:              ${{ steps.version-tag.outputs.app_version }}
+      docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
+      release_tag:              ${{ steps.version-tag.outputs.release_tag }}
+      linux-changes:            ${{ steps.linux-changes.outputs.src }}
+      ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows-changes:          ${{ steps.windows-changes.outputs.src }}
+      # please list the required tags here
+      tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
+      tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+      tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
+      tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
+      tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
+
+    runs-on: ubuntu-latest
+
+    env:
+      # duplicate output values here since they cannot be accessed from steps
+      full_config_build: ${{ github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+      upload_artifacts: ${{ github.event_name == 'push' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
+      version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Filter Linux paths
+        uses: dorny/paths-filter@v3
+        id: linux-changes
+        with:
+          filters: |
+            src:
+              - 'docker/ubuntu**'
+              - 'docker/fedora**'
+              - 'docker/emscripten**'
+              - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
+              - 'scripts/build_thirdparty.sh'
+              - 'scripts/install_apt_requirements.sh'
+              - 'scripts/install_dnf_requirements.sh'
+              - 'scripts/mrbind/install_deps_ubuntu.sh'
+              - 'thirdparty/!(install.bat|vcpkg/**)'
+
+      - name: Filter Windows paths
+        uses: dorny/paths-filter@v3
+        id: windows-changes
+        with:
+          filters: |
+            src:
+              - 'requirements/windows.txt'
+              - 'thirdparty/vcpkg/**'
+              - 'thirdparty/install.bat'
+
+      - name: Get current branch name
+        if: ${{ steps.linux-changes.outputs.src == 'true' }}
+        id: branch-name
+        uses: tj-actions/branch-names@v8.0.1
+
+      # if nothing to rebuild: "latest"
+      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
+      # example: fix/mesh -> fix-mesh
+      - name: Select Docker image tag
+        id: select-docker-image-tag
+        run: |
+          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+            IMAGE_TAG=$(echo "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          else
+            IMAGE_TAG="latest"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          
+      - name: Checkout full history
+        if: ${{ env.upload_artifacts == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Versioning
+        if: ${{ env.upload_artifacts == 'true' }}
+        uses: paulhatch/semantic-version@v5.4.0
+        id: version
+        with:
+          tag_prefix: "v"
+          version_format: "v${major}.${minor}.${patch}.${increment}"
+          bump_each_commit: false
+          search_commit_body: true
+          namespace: ${{ env.version_namespace }}
+
+      - name: Set version tag
+        id: version-tag
+        run: |
+          version=${{ steps.version.outputs.version }}
+          echo "release_tag=${version}" >> $GITHUB_OUTPUT
+          echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
+
+      - name: Set matrix for ubuntu-arm64 builds
+        id: set-ubuntu-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" ]]; then
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
+          fi

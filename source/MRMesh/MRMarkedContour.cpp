@@ -97,7 +97,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
     if ( mc.contour.empty() )
         return mc;
     assert( firstLastMarked( mc ) );
-    const bool closed = mc.contour.size() > 1 && mc.contour.front() == mc.contour.back();
+    const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();
     const auto mz = mc.marks.count();

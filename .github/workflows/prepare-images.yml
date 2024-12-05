@@ -2,136 +2,56 @@ name: Prepare images
 
 on:
   workflow_call:
-    outputs:
+    inputs:
       docker_image_tag:
-        description: "linux image for testing"
-        value: ${{ jobs.image-select.outputs.image_tag }}
-      windows_image_tag:
-        description: "windows image for testing"
-        value: ${{ jobs.image-select.outputs.windows_image_tag }}
+        required: true
+        type: string
+      need_linux_image_rebuild:
+        required: true
+        type: boolean
+      need_windows_vcpkg_rebuild:
+        required: true
+        type: boolean
+      vcpkg_version:
+        required: true
+        type: string
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-env:
-  VCPKG-VERSION: '2024.10.21'
-
 jobs:
-  image-select:
-    timeout-minutes: 5
-    runs-on: ubuntu-20.04
-    outputs:
-      image_tag: ${{ steps.select-tag.outputs.image_tag }}
-      windows_image_tag: ${{ steps.select-tag.outputs.windows_image_tag }}
-      image_path: ${{ steps.set-path.outputs.image_path }}
-      need_linux_rebuild: ${{ steps.need-rebuild.outputs.need_linux_rebuild }}
-      need_windows_rebuild: ${{ steps.need-rebuild.outputs.need_windows_rebuild }}
-      matrix: ${{ steps.matrix-set.outputs.matrix}}
+  always-success:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Filter Linux paths
-        uses: dorny/paths-filter@v3
-        id: linux-changes
-        with:
-          filters: |
-            src:
-              - 'docker/ubuntu**'
-              - 'docker/fedora**'
-              - 'docker/emscripten**'
-              - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
-              - 'scripts/build_thirdparty.sh'
-              - 'scripts/install_apt_requirements.sh'
-              - 'scripts/install_dnf_requirements.sh'
-              - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'thirdparty/!(install.bat|vcpkg/**)'
-
-      - name: Filter Windows paths
-        uses: dorny/paths-filter@v3
-        id: windows-changes
-        with:
-          filters: |
-            src:
-              - 'requirements/windows.txt'
-              - 'thirdparty/vcpkg/**'
-              - 'thirdparty/install.bat'
-
-      - name: Get branch names
-        if: ${{steps.linux-changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
-        id: branch-name
-        uses: tj-actions/branch-names@v8.0.1
-
-      # if nothing to rebuild: "latest"
-      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
-      # example: fix/mesh -> fix-mesh
-      - name: Select image tag
-        id: select-tag
-        run: |
-          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            IMAGE_TAG=$(echo "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
-          else
-            IMAGE_TAG="latest"
-          fi
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
-      - name: Set image tag base path
-        id: set-path
-        run: |
-          repo_path="MeshLib/MeshLib"
-          echo "image_path=${repo_path,,}" >> $GITHUB_OUTPUT
-
-      - name: Checking whether to start image rebuild
-        id: need-rebuild
-        run: |
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            echo "need_linux_rebuild=false" >> $GITHUB_OUTPUT
-          else
-            echo "need_linux_rebuild=${{ steps.linux-changes.outputs.src == 'true' }}" >> $GITHUB_OUTPUT
-          fi
-          if [[ ${{ steps.windows-changes.outputs.src == 'true' }} == 'true' || ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg') }} == 'true' ]]; then
-            echo "need_windows_rebuild=true" >> $GITHUB_OUTPUT
-          else
-            echo "need_windows_rebuild=false" >> $GITHUB_OUTPUT
-          fi
-
-        #                    [os,     runner-label ]
-        # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
-        # for MeshInspector: [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [emscripten, ubuntu-latest]
-      - name: Select matrix
-        id: matrix-set
-        if: ${{ steps.linux-changes.outputs.src == 'true' }}
-        run: |
-          echo ${{github.repository}}
-          MATRIX=" \
-          {\"include\":[ \
-          {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu20\",         \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"ubuntu24Dockerfile\",   \"image\":\"ubuntu24\",       \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-          {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-          {\"dockerfile\":\"ubuntu24Dockerfile\",   \"image\":\"ubuntu24-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-          {\"dockerfile\":\"fedora39Dockerfile\",   \"image\":\"fedora39\",       \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-          ]}"
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-          echo "$MATRIX"
+      - name: Do nothing
+        run: echo
 
   linux-image-build-upload:
-    needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    if: ${{ inputs.need_linux_image_rebuild }}
     timeout-minutes: 75
-    runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
+      matrix:
+        distro: [ ubuntu20, ubuntu22, ubuntu24, fedora39, emscripten ]
+        arch: [ x64, arm64 ]
+        exclude:
+          - distro: fedora39
+            arch: arm64
+          - distro: emscripten
+            arch: arm64
+        include:
+          - arch: x64
+            image-suffix: ''
+            os: ubuntu-latest
+          - arch: arm64
+            image-suffix: '-arm64'
+            os: [ self-hosted, linux-arm64 ]
+    runs-on: ${{ matrix.os }}
     env:
-      DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}
+      dockerfile: ${{ matrix.distro }}Dockerfile
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Remove unused Docker data
-        if: ${{ matrix.distribution != 'windows' }}
         run: docker system prune --force --all --volumes
 
       - name: Checkout
@@ -146,18 +66,16 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
 
       - name: Push Linux image
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}}
+        run: docker push ${{ env.image }}
 
       - name: Remove unused Docker data
-        if: ${{ matrix.image != 'windows' }}
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    if: ${{ inputs.need_windows_vcpkg_rebuild }}
     timeout-minutes: 240
     runs-on: windows-2019
     steps:
@@ -165,7 +83,7 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{env.VCPKG-VERSION}}
+          git checkout ${{ inputs.vcpkg_version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 

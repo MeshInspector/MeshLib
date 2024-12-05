@@ -38,6 +38,8 @@ struct SceneColors
         UnselectedFeatureDecorations,
         SelectedMeasurements,
         UnselectedMeasurements,
+        SelectedTemporaryMeasurements,
+        UnselectedTemporaryMeasurements,
         Count [[maybe_unused]],
     };
 

@@ -3,21 +3,29 @@ name: Build and test Ubuntu x64
 on:
   workflow_call:
     inputs:
-      docker_image_tag:
+      app_version:
         required: true
         type: string
-      app_version:
+      autotest_data_s3_url:
+        required: true
+        type: string
+      config_matrix:
+        required: true
+        type: string
+      docker_image_tag:
         required: true
         type: string
       full_config_build:
         default: false
         required: false
         type: boolean
-      autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2024-nov-07"
+      internal_build:
         required: false
-        type: string
-      UPLOAD_ARTIFACTS:
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+      upload_test_artifacts:
         required: true
         type: boolean
       mrbind:
@@ -26,25 +34,7 @@ on:
         type: boolean
 
 jobs:
-  set-ubuntu-x64-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set matrix based on full_config_build input
-        id: set-matrix
-        run: |
-          if [[ "${{ inputs.full_config_build }}" == "true" ]]; then
-            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-full-config.json)" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
-          fi
-
   ubuntu-x64-build-test:
-    needs: [set-ubuntu-x64-matrix]
     timeout-minutes: 40
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
@@ -52,14 +42,10 @@ jobs:
       options: --user root
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.set-ubuntu-x64-matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-
-    env:
-      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
-      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
       - name: Display job info
@@ -82,7 +68,7 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Install mrbind
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         run: scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Create virtualenv
@@ -107,13 +93,11 @@ jobs:
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Generate and build MRBind bindings
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         env:
-          CXX: ${{matrix.cxx-compiler}}
+          CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Collect Timings
@@ -140,7 +124,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -148,30 +132,31 @@ jobs:
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         id: cache-autotest
         uses: actions/cache@v4
         with:
           path: ./test_data
-          key: ${{inputs.autotest_data_s3_url}}
+          key: ${{ inputs.autotest_data_s3_url }}
 
       - name: Copy autotest data from S3 Tests
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
-        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
+        if: ${{ inputs.internal_build }}
+        run: aws s3 sync ${{ inputs.autotest_data_s3_url }} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
         env:
-          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          SMOKE: ${{ inputs.internal_build && !inputs.full_config_build && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
+        if: ${{ inputs.internal_build }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -180,35 +165,35 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Extract Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
             -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
-            -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
           cmake \
             --build cpp-examples-build \
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/c-examples \
             -B c-examples-build \
             -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
-            -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
+            -D CMAKE_C_COMPILER=${{ matrix.c-compiler }}
           cmake \
             --build c-examples-build \
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC' && matrix.config == 'Release'}}
+        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

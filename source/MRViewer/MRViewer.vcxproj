@@ -95,6 +95,7 @@
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
     <ClCompile Include="MRViewerSettingsPlugin.cpp" />
+    <ClCompile Include="MRViewerTitle.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
     <ClCompile Include="MRRecentFilesStore.cpp" />
     <ClCompile Include="MRRenderLinesObject.cpp" />
@@ -144,6 +145,7 @@
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
@@ -247,6 +249,7 @@
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRViewerIO.h" />
     <ClInclude Include="MRViewerSettingsPlugin.h" />
+    <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />

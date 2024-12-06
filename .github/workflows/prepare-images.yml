@@ -38,7 +38,7 @@ jobs:
           - distro: fedora39
             arch: arm64
           - distro: emscripten
-            arch: arm64
+            arch: x64
         include:
           - arch: x64
             image-suffix: ''

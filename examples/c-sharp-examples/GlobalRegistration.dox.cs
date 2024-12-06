@@ -35,7 +35,7 @@ public class GlobalRegistrationExample
             Box3f maxBBox = new Box3f();
             for (int i = 0; i < inputNum; ++i)
             {
-                MeshOrPointsXf obj = new MeshOrPointsXf(PointCloud.FromAnySupportedFormat(args[i + 1]), new AffineXf3f());
+                MeshOrPointsXf obj = new MeshOrPointsXf(PointsLoad.FromAnySupportedFormat(args[i + 1]), new AffineXf3f());
                 inputs.Add(obj);
                 Box3f bbox = obj.obj.BoundingBox;
                 if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
@@ -62,7 +62,7 @@ public class GlobalRegistrationExample
                     output.AddPoint(xf.Apply(inputs[i].obj.Points[j]));
             }
 
-            PointCloud.ToAnySupportedFormat(output, args[args.Length - 1]);
+            PointsSave.ToAnySupportedFormat(output, args[args.Length - 1]);
         }
         catch (Exception e)
         {

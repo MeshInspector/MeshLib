@@ -10,9 +10,12 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRParallelFor.h"
 
-#if (defined(__APPLE__) && defined(__clang__))
+#if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#if __EMSCRIPTEN__
+#pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
+#endif
 #endif
 
 #pragma warning( push )
@@ -36,7 +39,7 @@
 
 #pragma warning( pop)
 
-#if (defined(__APPLE__) && defined(__clang__))
+#if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
 #pragma clang diagnostic pop
 #endif
 

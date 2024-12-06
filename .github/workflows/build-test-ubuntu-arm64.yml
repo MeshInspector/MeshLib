@@ -36,6 +36,7 @@ jobs:
     runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
+      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +46,7 @@ jobs:
         include:
           - os: ubuntu20
             # TODO: rename image after rebuild
-            docker-image: meshlib/meshlib-ubuntu-arm64:${{ inputs.docker_image_tag }}
+            docker-image: meshlib/meshlib-ubuntu20-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             cxx-standard: 20
@@ -76,6 +77,21 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Collect runner's system stats
+        continue-on-error: true
+        env:
+          CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/devops/collect_runner_sys_stats.py
+
+      - name: Upload runner's system stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: RunnerSysStats-ubuntu-arm64-${{ matrix.os }}
+          path: RunnerSysStats-*
+          retention-days: 1
+        continue-on-error: true
 
       - name: Checkout third-party submodules
         run: |
@@ -124,6 +140,18 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+      
+      - name: Create Python Stubs
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
+        run: python3 ./scripts/wheel/create_stubs.py
+
+      - name: Upload Python Stubs
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"

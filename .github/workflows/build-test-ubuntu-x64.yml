@@ -36,7 +36,7 @@ on:
 jobs:
   ubuntu-x64-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, x64, docker-ready, build]
+    runs-on: [ubuntu-latest]
     container:
       image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
       options: --user root
@@ -53,6 +53,21 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Collect runner's system stats
+        continue-on-error: true
+        env:
+          CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/devops/collect_runner_sys_stats.py
+
+      - name: Upload runner's system stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: RunnerSysStats-ubuntu-x64-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.compiler }}
+          path: RunnerSysStats-*
+          retention-days: 1
+        continue-on-error: true
 
       - name: Checkout third-party submodules
         run: |

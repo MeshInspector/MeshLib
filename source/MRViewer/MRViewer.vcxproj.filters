@@ -448,6 +448,9 @@
     <ClCompile Include="MRProjectMeshAttributes.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerTitle.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -475,6 +478,7 @@
       <Filter>MeshModifier</Filter>
     </ClInclude>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="MRViewport.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -877,6 +881,9 @@
     </ClInclude>
     <ClInclude Include="MRProjectMeshAttributes.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerTitle.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

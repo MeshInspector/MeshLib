@@ -12,7 +12,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
 #include "MRViewer/MRUnits.h"
-#include <imgui.h>
+#include "MRViewer/MRImGui.h"
 #include <misc/cpp/imgui_stdlib.h>
 #include <algorithm>
 #include <functional>

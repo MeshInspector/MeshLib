@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using static MR.DotNet.AffineXf3f;
 
 namespace MR
 {

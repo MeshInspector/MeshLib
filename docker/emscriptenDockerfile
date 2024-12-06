@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.48
+FROM emscripten/emsdk:3.1.73-arm64
 
 # Update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \

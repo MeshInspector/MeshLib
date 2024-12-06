@@ -59,6 +59,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRSceneCache.h"
+#include "MRViewerTitle.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -751,10 +752,13 @@ int Viewer::launchInit_( const LaunchParams& params )
             spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
             spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
         }
-        defaultWindowTitle = params.name;
+
+        if ( !windowTitle )
+            windowTitle = std::make_shared<ViewerTitle>();
+
+        windowTitle->setAppName( params.name );
         if ( params.showMRVersionInTitle )
-            defaultWindowTitle += " (" + GetMRVersionString() + ")";
-        glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
+            windowTitle->setVersion( GetMRVersionString() );
 
         glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
         // Register callbacks
@@ -2101,13 +2105,8 @@ void Viewer::makeTitleFromSceneRootPath()
     if ( globalHistoryStore_ && globalHistoryStore_->isSceneModified() )
         sceneFileName += "*";
 
-    if ( !window )
-        return;
-
-    if ( sceneFileName.empty() )
-        glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
-    else
-        glfwSetWindowTitle( window, (defaultWindowTitle + " " + sceneFileName).c_str() );
+    if ( windowTitle )
+        windowTitle->setSceneName( sceneFileName );
 }
 
 ViewportId Viewer::getFirstAvailableViewportId_() const

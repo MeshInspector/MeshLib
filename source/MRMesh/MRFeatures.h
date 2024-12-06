@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRAffineXf.h"
 #include "MRMesh/MRCone3.h"
 #include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRLine3.h"
@@ -61,7 +62,7 @@ namespace Primitives
 
         // Some point on the axis, but not necessarily the true center point. Use `centerPoint()` for that.
         Vector3f referencePoint;
-        Vector3f dir; //< Must be normalized.
+        Vector3f dir; // Must be normalized.
 
         //! Cap radius in the `dir` direction.
         float positiveSideRadius = 0;
@@ -146,11 +147,20 @@ namespace Primitives
 //! `a` is the center of the base, `b` is the pointy end.
 [[nodiscard]] MRMESH_API Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, float rad );
 
-// Returns null if the object type is unknown.
+// Returns null if the object type is unknown. This overload ignores the parent xf.
 [[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObject( const Object& object );
+// Returns null if the object type is unknown. This overload respects the parent's `worldXf()`.
+[[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObjectWithWorldXf( const Object& object );
 // Can return null on some primitive configurations.
 // `infiniteExtent` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
 [[nodiscard]] MRMESH_API std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
+
+// Transform a primitive by an xf.
+// Non-uniform scaling and skewing are not supported.
+[[nodiscard]] MRMESH_API Primitives::Sphere      transformPrimitive( const AffineXf3f& xf, const Primitives::Sphere&      primitive );
+[[nodiscard]] MRMESH_API Primitives::Plane       transformPrimitive( const AffineXf3f& xf, const Primitives::Plane&       primitive );
+[[nodiscard]] MRMESH_API Primitives::ConeSegment transformPrimitive( const AffineXf3f& xf, const Primitives::ConeSegment& primitive );
+[[nodiscard]] MRMESH_API Primitives::Variant     transformPrimitive( const AffineXf3f& xf, const Primitives::Variant&     primitive );
 
 //! Stores the results of measuring two objects relative to one another.
 struct MeasureResult
@@ -322,7 +332,14 @@ requires MeasureSupported<A, B>
 
             // Check that we got the correct distance here.
             // Note that the distance is signed, so we apply `abs` to it to compare it properly.
-            assert( *dist <= ( std::abs( ( dist->closestPointB - dist->closestPointA ).length() - std::abs( dist->distance ) ) < 0.0001f ) );
+            if ( *dist )
+            {
+                assert( [&]{
+                    float a = ( dist->closestPointB - dist->closestPointA ).length();
+                    float b = std::abs( dist->distance );
+                    return std::abs( a - b ) < std::min( a, b ) * 0.0001f;
+                }() );
+            }
         }
 
         // Catch non-finite angle.

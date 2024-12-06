@@ -46,5 +46,7 @@ def get_compiler_id(compiler_path):
 if __name__ == "__main__":
     print(f"CPU_COUNT={multiprocessing.cpu_count()}")
     print(f"RAM_AMOUNT={math.floor(get_ram_amount() / 1024 / 1024)}")
-    if cxx_compiler := os.environ.get("CXX_COMPILER"):
+
+    cxx_compiler = os.environ.get("CXX_COMPILER")
+    if cxx_compiler:
         print(f"COMPILER_ID={get_compiler_id(cxx_compiler)}")

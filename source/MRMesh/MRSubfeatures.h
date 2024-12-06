@@ -17,7 +17,8 @@ struct SubfeatureInfo
     bool isInfinite = false;
 
     // Call this to create this subfeature.
-    std::function<Primitives::Variant()> create;
+    // Pass the same feature you passed to `forEachSubfeature()`, or a DIFFERENT one to create the same kind of subfeature relative to that.
+    std::function<Primitives::Variant( const Features::Primitives::Variant& feature )> create;
 };
 
 // A user callback for `forEachSubfeature()`.

@@ -66,7 +66,7 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
-    MRMESH_API void propagateWorldXfChangedSignal_() override;
+    MRMESH_API void onWorldXfChanged_() override;
 
 private:
     // Don't forget to add all the new fields to serialization.

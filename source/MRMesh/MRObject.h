@@ -243,7 +243,7 @@ public:
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
     /// triggered in addChild and addChildBefore, it is called only for children object
-    using XfChangedSignal = Signal<void() >;
+    using XfChangedSignal = Signal<void()>;
     XfChangedSignal worldXfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
@@ -285,7 +285,12 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    MRMESH_API virtual void propagateWorldXfChangedSignal_();
+    // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
+    // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children
+    //   (it doesn't use a true recursion, instead imitiating one, presumably to save stack space, though this is unlikely to be an issue).
+    MRMESH_API void sendWorldXfChangedSignal_();
+    // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
+    MRMESH_API virtual void onWorldXfChanged_();
 };
 
 template <typename T>

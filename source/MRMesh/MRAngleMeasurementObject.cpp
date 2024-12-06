@@ -135,9 +135,9 @@ void AngleMeasurementObject::setupRenderObject_() const
         renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
-void AngleMeasurementObject::propagateWorldXfChangedSignal_()
+void AngleMeasurementObject::onWorldXfChanged_()
 {
-    MeasurementObject::propagateWorldXfChangedSignal_();
+    MeasurementObject::onWorldXfChanged_();
     cachedValue_ = {};
 }
 

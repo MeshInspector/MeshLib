@@ -19,8 +19,10 @@ jobs:
         config: [Singlethreaded, Multithreaded]
         include:
           - config: Singlethreaded
+            target_name: emscripten-singlethreaded
             aws-dir: RMISingle
           - config: Multithreaded
+            target_name: emscripten
             aws-dir: RMI
 
     steps:
@@ -41,7 +43,10 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
-          cxx_compiler: ${{ matrix.cxx-compiler }}
+          target_os: ${{ matrix.target_name }}
+          target_arch: wasm
+          cxx_compiler: emcc
+          build_config: Release
 
       - name: Checkout third-party submodules
         run: |

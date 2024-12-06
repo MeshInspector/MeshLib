@@ -65,10 +65,7 @@ runs:
       working-directory: build/${{ inputs.build_config }}/bin
       env:
         MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ inputs.ubuntu20_arm_workaround && '1' || '0' }}
-      run: |
-        # TODO: disable Ubuntu ARM work-around
-        . ../../../.venv/bin/activate
-        python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{ inputs.smoke }} -bv ${{ inputs.mrbind && '3' || '2' }} -a='${{ inputs.pytest_args }}'
+      run: python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{ inputs.smoke }} -bv ${{ inputs.mrbind && '3' || '2' }} -a='${{ inputs.pytest_args }}'
 
     - name: Copy test artifacts to S3
       if: ${{ inputs.upload_test_artifacts && !cancelled() }}

@@ -69,7 +69,8 @@ jobs:
         run: |
           # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
           # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -not -uid ${UID})" ; then
+            echo "Clearing workspace directory..."
             mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
             mkdir ${GITHUB_WORKSPACE}
           fi
@@ -106,14 +107,11 @@ jobs:
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
-          # FIXME: self-hosted (on vm) runners are unable to process custom PATH correctly
-          #. .venv/bin/activate
-          #echo PATH=$PATH >> $GITHUB_ENV
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements
-        run: |
-          . .venv/bin/activate
-          python3 -m pip install -r ./requirements/python.txt
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -167,9 +165,7 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: |
-          . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}

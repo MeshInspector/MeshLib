@@ -74,7 +74,10 @@ jobs:
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
+          target_os: fedora39
+          target_arch: x64
           cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
 
       - name: Checkout third-party submodules
         run: |

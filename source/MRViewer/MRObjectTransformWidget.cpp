@@ -660,6 +660,9 @@ void TransformControls::updateSizeInPixel()
     if ( params_.typeRadius != VisualParams::TypeRadius::Pixels )
         return;
 
+    if ( !translateControls_[0] )
+        return;
+
     auto parent = translateControls_[0]->parent();
     if ( !parent )
         return;
@@ -667,7 +670,7 @@ void TransformControls::updateSizeInPixel()
     auto mask = getViewerInstance().getPresentViewports();
     for ( auto idViewport : mask )
     {
-        const auto& xf = translateControls_[0]->parent()->worldXf(idViewport);
+        const auto& xf = parent->worldXf(idViewport);
         const auto& center = xf( getCenter() );
         float lenPerPixel = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
 
@@ -691,8 +694,8 @@ void TransformControls::resetSizeInPixel_()
     {
         for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
         {
-            translateControls_[i]->setXfsForAllViewports( AffineXf3f() );
-            rotateControls_[i]->setXfsForAllViewports( AffineXf3f() );
+            translateControls_[i]->setXfsForAllViewports( {} );
+            rotateControls_[i]->setXfsForAllViewports( {} );
         }
     }
 }

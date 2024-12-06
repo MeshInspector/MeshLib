@@ -539,8 +539,8 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
-    float radius = params_.typeRadius == TypeRadius::LengthUnit ? params_.radius : 1.0f;
-    float width = params_.typeRadius == TypeRadius::LengthUnit ? params_.width : params_.width / params_.radius;
+    float radius = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.radius : 1.0f;
+    float width = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.width : params_.width / params_.radius;
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
@@ -619,11 +619,6 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         activeLine_->setName( "Active line" );
         SceneRoot::get().addChild( activeLine_ );
     }
-
-    if ( parent )
-    {
-        parent_ = parent;
-    }
 }
 
 void TransformControls::update()
@@ -650,7 +645,7 @@ void TransformControls::setWidth( float width )
     update();
 }
 
-void TransformControls::setTypeRadius( TypeRadius type )
+void TransformControls::setTypeRadius( VisualParams::TypeRadius type )
 {
     if ( params_.typeRadius == type )
         return;
@@ -662,13 +657,17 @@ void TransformControls::setTypeRadius( TypeRadius type )
 
 void TransformControls::updateSizeInPixel()
 {
-    if ( params_.typeRadius != TypeRadius::Pixels )
+    if ( params_.typeRadius != VisualParams::TypeRadius::Pixels )
+        return;
+
+    auto parent = translateControls_[0]->parent();
+    if ( !parent )
         return;
 
     auto mask = getViewerInstance().getPresentViewports();
     for ( auto idViewport : mask )
     {
-        const auto& xf = parent_->worldXf( idViewport );
+        const auto& xf = translateControls_[0]->parent()->worldXf(idViewport);
         const auto& center = xf( getCenter() );
         float lenPerPixel = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
 
@@ -692,8 +691,8 @@ void TransformControls::resetSizeInPixel_()
     {
         for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
         {
-            translateControls_[i]->setXf( AffineXf3f(), idViewport );
-            rotateControls_[i]->setXf( AffineXf3f(), idViewport );
+            translateControls_[i]->setXfsForAllViewports( AffineXf3f() );
+            rotateControls_[i]->setXfsForAllViewports( AffineXf3f() );
         }
     }
 }

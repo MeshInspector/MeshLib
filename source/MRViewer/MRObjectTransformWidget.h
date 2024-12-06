@@ -130,14 +130,16 @@ class MRVIEWER_CLASS TransformControls : public ITransformControls
 {
 public:
 
-    enum class TypeRadius
-    {
-        LengthUnit = 0,
-        Pixels
-    };
-
     struct MRVIEWER_CLASS VisualParams
     {
+        // type of length measurement units
+        enum class TypeRadius
+        {
+            // metric units of measurement
+            LengthUnit = 0,
+            // pixel units of measurement
+            Pixels
+        };
         // updates radius and width with given box
         MRVIEWER_API void update( const Box3f& box );
         // radius in units of measurement, depending on the typeRadius
@@ -180,7 +182,7 @@ public:
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
     // sets the type of widget size units ( recalculates the current values into new units of measurement )
-    MRVIEWER_API void setTypeRadius( TypeRadius type );
+    MRVIEWER_API void setTypeRadius( VisualParams::TypeRadius type );
     // calculates and sets the matrix to set the size in pixels
     MRVIEWER_API virtual void updateSizeInPixel() override;
 
@@ -211,8 +213,6 @@ private:
     std::shared_ptr<ObjectMesh> hoveredObject_;
     int findHoveredIndex_() const;
     void setActiveLineFromPoints_( const Contour3f& points );
-
-    std::shared_ptr<Object> parent_;
 };
 
 // Visual widget to modify transform

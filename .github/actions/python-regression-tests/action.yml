@@ -1,0 +1,76 @@
+name: Python regression tests
+
+inputs:
+  autotest_data_s3_url:
+    required: false
+    type: string
+    default: "s3://data-autotest/test_data_2024-nov-07"
+  build_config:
+    description: "Build config (Release, Debug)"
+    required: true
+    type: string
+  mrbind:
+    required: true
+    type: boolean
+  pytest_args:
+    description: "Additional pytest arguments"
+    required: false
+    type: string
+    default: ""
+  smoke:
+    required: true
+    type: boolean
+  test_artifacts_path:
+    description: "S3 path for test artifacts. Make sure it is unique for different jobs"
+    required: true
+    type: string
+  ubuntu20_arm_workaround:
+    description: "Disable specific tests incompatible with Ubuntu 20.04 ARM configuration"
+    required: false
+    type: boolean
+    default: false
+  upload_test_artifacts:
+    required: true
+    type: boolean
+
+runs:
+  using: composite
+  steps:
+    # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
+    - name: Cache autotest data from S3 Tests
+      uses: actions/cache@v4
+      with:
+        path: test_data
+        key: ${{ inputs.autotest_data_s3_url }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+
+    - name: Copy autotest data from S3 Tests
+      shell: bash
+      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only
+
+    - name: Python Regression Tests
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      working-directory: source\x64\${{ inputs.build_config }}
+      run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{ inputs.smoke }} -bv ${{ inputs.mrbind && '3' || '2' }} -a='${{ inputs.pytest_args }}'
+
+    - name: Python Regression Tests
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      working-directory: build/${{ inputs.build_config }}/bin
+      env:
+        MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ inputs.ubuntu20_arm_workaround && '1' || '0' }}
+      run: |
+        # TODO: disable Ubuntu ARM work-around
+        . ../../../.venv/bin/activate
+        python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{ inputs.smoke }} -bv ${{ inputs.mrbind && '3' || '2' }} -a='${{ inputs.pytest_args }}'
+
+    - name: Copy test artifacts to S3
+      if: ${{ inputs.upload_test_artifacts && !cancelled() }}
+      shell: bash
+      run: aws s3 cp pytest_temp 's3://test-artifacts-git/tests/${{ github.run_id }}/${{ inputs.test_artifacts_path }}' --recursive

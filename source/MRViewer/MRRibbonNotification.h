@@ -3,6 +3,7 @@
 #include "MRNotificationType.h"
 #include "MRAsyncTimer.h"
 #include "MRMesh/MRFlagOperators.h"
+#include "MRMesh/MRBox.h"
 #include <functional>
 #include <chrono>
 
@@ -25,6 +26,13 @@ struct NotificationTags
 MR_MAKE_FLAG_OPERATORS( NotificationTags::Tag )
 
 using NotificationTagMask = unsigned;
+
+/// corner where notifications will appear
+enum class RibbonNotificationCorner
+{
+    LowerLeft,
+    LowerRight
+};
 
 struct RibbonNotification
 {
@@ -58,13 +66,17 @@ public:
     // adds new notification for drawing
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // main draw function. draw actual notification or history, and history button
-    MRVIEWER_API void draw( float scaling, float scenePosX, float topPanelHeight );
+    // limitFramebuffer - available framebuffer space (usually same as `Viewer::getViewportsBounds()`)
+    MRVIEWER_API void draw( float scaling, const Box2i& limitFramebuffer );
 
     // this value is used as notification `lifeTimeSec` if negative values passed
     float defaultNotificationLifeTimeSeconds = 5.0f;
 
     // this mask is used to control allowed notifications by filtering with tags
     NotificationTagMask allowedTagMask = NotificationTags::Default;
+
+    // position of notifications on screen
+    RibbonNotificationCorner cornerPosition = RibbonNotificationCorner::LowerLeft;
 private:
     struct NotificationWithTimer
     {
@@ -83,11 +95,11 @@ private:
 #endif
 
     // draw button to show last notifications
-    void drawHistoryButton_( float scaling, float scenePosX );
+    void drawHistoryButton_( float scaling, const Box2i& limitFramebuffer );
     // draw notification history
-    void drawHistory_( float scaling, float scenePosX, float topPanelHeight );
+    void drawHistory_( float scaling, const Box2i& limitFramebuffer );
     // draw floating notifications
-    void drawFloating_( float scaling, float scenePosX );
+    void drawFloating_( float scaling, const Box2i& limitFramebuffer );
     
     // set this true on open history and on new notification added
     bool scrollDownNeeded_ = false;

@@ -57,7 +57,7 @@ runs:
         eval $(python3 scripts/devops/collect_runner_sys_stats.py)
         echo "cpu_count=${CPU_COUNT}" >> $GITHUB_OUTPUT
         echo "ram_amount_mb=${RAM_AMOUNT}" >> $GITHUB_OUTPUT
-        echo << EOF | tee ${STATS_FILE}
+        cat << EOF | tee ${STATS_FILE}
         {
           "target_os": "${TARGET_OS}",
           "target_arch": "${TARGET_ARCH}",

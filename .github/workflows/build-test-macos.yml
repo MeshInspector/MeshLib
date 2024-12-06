@@ -35,9 +35,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ x64, github-arm, arm ]
-        compiler: [Clang]
+        compiler: [ AppleClang ]
         include:
-          - compiler: Clang
+          - compiler: AppleClang
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64
@@ -62,6 +62,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: Collect runner's system stats
+        continue-on-error: true
+        env:
+          CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/devops/collect_runner_sys_stats.py
+
+      - name: Upload runner's system stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: RunnerSysStats-macos-${{ matrix.os }}
+          path: RunnerSysStats-*
+          retention-days: 1
+        continue-on-error: true
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh

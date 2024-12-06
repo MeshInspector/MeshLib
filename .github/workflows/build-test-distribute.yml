@@ -298,11 +298,36 @@ jobs:
       output_folder: MeshLib/dev
     secrets: inherit
 
+  collect-stats:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    needs: [ upload-distributions ]
+    if: always()
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download runners' system stats
+        uses: actions/download-artifact@v4
+        with:
+          pattern: RunnerSysStats*
+          merge-multiple: true
+
+      - name: Collect stats
+        env:
+          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
+          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/devops/collect_ci_stats.py
+
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs: [ upload-distributions ]
+    needs: [ collect-stats ]
     if: always()
+    continue-on-error: true
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
@@ -327,6 +352,12 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Wheelhouse*
+          failOnError: false
+
+      - name: Delete runners' system stats
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: RunnerSysStats*
           failOnError: false
 
       # generate timing logs archive

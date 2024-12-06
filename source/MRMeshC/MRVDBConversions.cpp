@@ -12,7 +12,7 @@ REGISTER_AUTO_CAST( FloatGrid )
 REGISTER_AUTO_CAST( GridToMeshSettings )
 REGISTER_AUTO_CAST2( std::string, MRString )
 
-MRMesh* mrGridToMesh( const MRFloatGrid* grid_, const MRGridToMeshSettings* settings_, MRString** errorStr )
+MRMesh* mrVdbConversionsGridToMesh( const MRFloatGrid* grid_, const MRGridToMeshSettings* settings_, MRString** errorStr )
 {
     ARG( grid ); ARG( settings );
     auto res = gridToMesh( grid, settings );

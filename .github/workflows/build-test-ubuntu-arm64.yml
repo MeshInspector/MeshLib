@@ -79,7 +79,7 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        uses: ./.github/actions/collect-runner-stats.yml
+        uses: ./.github/actions/collect-runner-stats
         with:
           cxx_compiler: ${{ matrix.cxx-compiler }}
 

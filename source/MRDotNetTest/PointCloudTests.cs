@@ -75,9 +75,9 @@ namespace MR.Test
         {
             var points = MakeCube();
             var tempFile = Path.GetTempFileName() + ".ply";
-            PointCloud.ToAnySupportedFormat(points, tempFile);
+            PointsSave.ToAnySupportedFormat(points, tempFile);
 
-            var readPoints = PointCloud.FromAnySupportedFormat(tempFile);
+            var readPoints = PointsLoad.FromAnySupportedFormat(tempFile);
             Assert.That(points.Points.Count == readPoints.Points.Count);
         }
 
@@ -87,7 +87,7 @@ namespace MR.Test
             string path = Path.GetTempFileName() + ".ply";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<SystemException>(() => PointCloud.FromAnySupportedFormat(path));
+            Assert.Throws<SystemException>(() => PointsLoad.FromAnySupportedFormat(path));
             File.Delete(path);
         }
 
@@ -104,6 +104,24 @@ namespace MR.Test
                 Assert.That(restored.ValidPoints.Count(), Is.EqualTo(1024));
                 Assert.That(restored.HoleRepresentiveEdges.Count == 0);
             }
+        }
+
+        [Test]
+        public void TestCreatingFromPointList()
+        {
+            var points = new List<Vector3f>(8);
+            points.Add(new Vector3f(0, 0, 0));
+            points.Add(new Vector3f(0, 1, 0));
+            points.Add(new Vector3f(1, 1, 0));
+            points.Add(new Vector3f(1, 0, 0));
+            points.Add(new Vector3f(0, 0, 1));
+            points.Add(new Vector3f(0, 1, 1));
+            points.Add(new Vector3f(1, 1, 1));
+            points.Add(new Vector3f(1, 0, 1));
+
+            var pc = PointCloud.FromPoints(points);
+            Assert.That(pc.Points.Count == 8);
+            Assert.That(pc.Normals.Count == 0);
         }
     }
 }

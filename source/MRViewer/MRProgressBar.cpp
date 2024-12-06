@@ -43,6 +43,18 @@ EMSCRIPTEN_KEEPALIVE bool emsIsProgressBarOrdered()
 }
 #endif
 
+namespace
+{
+using namespace MR;
+
+static ThreadRootTimeRecord& getProgressBarTimer()
+{
+    static ThreadRootTimeRecord rootRecord( "Progress" );
+    return rootRecord;
+}
+
+}
+
 namespace MR
 {
 void ProgressBar::setup( float scaling )
@@ -207,9 +219,8 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     {
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
-        {
-            static ThreadRootTimeRecord rootRecord( "Progress" );
-            registerThreadRootTimeRecord( rootRecord );
+        {            
+            registerThreadRootTimeRecord( getProgressBarTimer() );
             SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [&instance, task]
@@ -219,7 +230,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             } );
             ProgressBar::finish();
 
-            unregisterThreadRootTimeRecord( rootRecord );
+            unregisterThreadRootTimeRecord( getProgressBarTimer() );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -263,8 +274,7 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
         {
-            static ThreadRootTimeRecord rootRecord( "Progress" );
-            registerThreadRootTimeRecord( rootRecord );
+            registerThreadRootTimeRecord( getProgressBarTimer() );
             SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [task]
@@ -273,7 +283,7 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
                 return true;
             } );
 
-            unregisterThreadRootTimeRecord( rootRecord );
+            unregisterThreadRootTimeRecord( getProgressBarTimer() );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -409,6 +419,12 @@ bool ProgressBar::simpleCallBackSetProgress( float p )
     instance.allowCancel_ = false;
     instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
+}
+
+void ProgressBar::printTimingTree( double minTimeSec )
+{
+    getProgressBarTimer().minTimeSec = minTimeSec;
+    getProgressBarTimer().printTree();
 }
 
 ProgressBar& ProgressBar::ProgressBar::instance_()

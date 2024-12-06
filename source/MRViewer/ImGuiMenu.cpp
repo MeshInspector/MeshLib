@@ -816,9 +816,10 @@ void ImGuiMenu::draw_helpers()
         {
             viewer->resetAllCounters();
         }
-        if ( UI::buttonCommonSize( "Print time to log", Vector2f( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Print Time to Log", Vector2f( -1, 0 ) ) )
         {
-            printTimingTreeAndStop();
+            printTimingTree();
+            ProgressBar::printTimingTree();
         }
         ImGui::End();
     }

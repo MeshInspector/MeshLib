@@ -60,6 +60,10 @@ public:
     MRVIEWER_API static bool callBackSetProgress(float p);
     // these callbacks do not allow canceling
     MRVIEWER_API static bool simpleCallBackSetProgress( float p );
+
+    /// prints time tree of progress bar thread
+    /// \param minTimeSec omit printing records with time spent less than given value in seconds
+    MRVIEWER_API static void printTimingTree( double minTimeSec = 0.1 );
 private:
     static ProgressBar& instance_();
 

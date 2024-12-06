@@ -174,9 +174,8 @@ void printCurrentTimerBranch()
     }
 }
 
-void printTimingTreeAndStop( double minTimeSec )
+void printTimingTree( double minTimeSec )
 {
-    rootTimeRecord.printTreeInDtor = false;
     rootTimeRecord.minTimeSec = minTimeSec;
     rootTimeRecord.printTree();
 }

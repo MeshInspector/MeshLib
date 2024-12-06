@@ -27,6 +27,8 @@ struct GLFWwindow;
 namespace MR
 {
 
+class ViewerTitle;
+
 class SpaceMouseHandler;
 
 // This struct contains rules for viewer launch
@@ -470,8 +472,8 @@ public:
     // Stores clipping plane mesh
     std::shared_ptr<ObjectMesh> clippingPlaneObject;
 
-    // the window title that should be always displayed
-    std::string defaultWindowTitle;
+    // class that updates viewer title
+    std::shared_ptr<ViewerTitle> windowTitle;
 
     //*********
     // SIGNALS

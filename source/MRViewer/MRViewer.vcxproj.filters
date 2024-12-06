@@ -448,6 +448,9 @@
     <ClCompile Include="MRProjectMeshAttributes.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerTitle.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -878,6 +881,9 @@
     </ClInclude>
     <ClInclude Include="MRProjectMeshAttributes.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerTitle.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

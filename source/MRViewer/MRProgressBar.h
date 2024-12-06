@@ -8,6 +8,8 @@
 namespace MR
 {
 
+struct ThreadRootTimeRecord;
+
 // This class shows application progress bar for long operations
 // note! if class don't setup, then order and orderWithMainThreadPostProcessing methods call task directly
 class ProgressBar
@@ -60,6 +62,10 @@ public:
     MRVIEWER_API static bool callBackSetProgress(float p);
     // these callbacks do not allow canceling
     MRVIEWER_API static bool simpleCallBackSetProgress( float p );
+
+    /// prints time tree of progress bar thread
+    /// \param minTimeSec omit printing records with time spent less than given value in seconds
+    MRVIEWER_API static void printTimingTree( double minTimeSec = 0.1 );
 private:
     static ProgressBar& instance_();
 
@@ -107,6 +113,8 @@ private:
     bool isInit_{ false };
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
+
+    std::atomic<ThreadRootTimeRecord*> timer_{ nullptr };
 };
 
 }

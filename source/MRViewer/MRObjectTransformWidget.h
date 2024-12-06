@@ -182,7 +182,7 @@ public:
     // sets the type of widget size units ( recalculates the current values into new units of measurement )
     MRVIEWER_API void setTypeRadius( TypeRadius type );
     // calculates and sets the matrix to set the size in pixels
-    void updateSizeInPixel() override;
+    MRVIEWER_API virtual void updateSizeInPixel() override;
 
     MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
     MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;

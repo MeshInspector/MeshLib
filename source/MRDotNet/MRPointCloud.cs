@@ -61,16 +61,7 @@ namespace MR
 
             /// deallocates a PointCloud object
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern void mrPointCloudFree(IntPtr pc);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern IntPtr mrPointsLoadFromAnySupportedFormat(string filename, IntPtr* errorString);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern void mrPointsSaveToAnySupportedFormat(IntPtr pc, string file, IntPtr* errorString);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern void mrLoadIOExtras();
+            private static extern void mrPointCloudFree(IntPtr pc);                
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
@@ -190,37 +181,18 @@ namespace MR
                     return normals_.AsReadOnly();
                 }
             }
-            /// loads point cloud from file of any supported format
-            unsafe public static PointCloud FromAnySupportedFormat(string path)
+
+            /// creates a new PointCloud object from collection of points
+            public static PointCloud FromPoints( IEnumerable<Vector3f> points )
             {
-                mrLoadIOExtras();
-
-                IntPtr errString = new IntPtr();
-                var mesh = mrPointsLoadFromAnySupportedFormat(path, &errString);
-
-                if (errString != IntPtr.Zero)
+                var pc = new PointCloud();
+                foreach (var point in points)
                 {
-                    var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
-                    throw new SystemException(errorMessage);
+                    pc.AddPoint(point);
                 }
-
-                return new PointCloud(mesh);
-            }
-            /// saves point cloud to file of any supported format
-            unsafe public static void ToAnySupportedFormat(PointCloud pc, string path)
-            {
-                mrLoadIOExtras();
-
-                IntPtr errString = new IntPtr();
-                mrPointsSaveToAnySupportedFormat(pc.pc_, path, &errString);
-                if (errString != IntPtr.Zero)
-                {
-                    var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
-                    throw new SystemException(errorMessage);
-                }
-            }
+                return pc;
+            }           
+           
             /// appends a point
             public void AddPoint(Vector3f point)
             {

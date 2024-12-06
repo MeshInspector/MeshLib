@@ -33,7 +33,7 @@ on:
 jobs:
   ubuntu-arm-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
       options: --user root

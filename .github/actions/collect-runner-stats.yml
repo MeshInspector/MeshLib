@@ -1,0 +1,52 @@
+name: Collect runner's stats
+
+inputs:
+  cxx_compiler:
+    required: true
+    type: string
+
+outputs:
+  job_id:
+    value: ${{ steps.fetch_job_id.outputs.job_id }}
+  cpu_count:
+    value: ${{ steps.collect_stats.outputs.cpu_count }}
+  ram_mb:
+    value: ${{ steps.collect_stats.outputs.ram_mb }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set GitHub Path
+      shell: bash
+      env:
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+
+    - name: Fetch job ID
+      id: fetch_job_id
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        JOB_ID=$(python3 scripts/devops/fetch_job_id.py)
+        echo "job_id=${JOB_ID}" >> $GITHUB_OUTPUT
+
+    - name: Collect sys stats
+      id: collect_stats
+      shell: bash
+      env:
+        CXX_COMPILER: ${{ inputs.cxx_compiler }}
+        STATS_FILE: "RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
+      run: |
+        STATS=$(python3 scripts/devops/collect_runner_sys_stats.py | tee ${STATS_FILE})
+        echo ${STATS}
+        echo "cpu_count=$(echo ${STATS} | jq '.cpu_count')" >> $GITHUB_OUTPUT
+        echo "ram_mb=$(echo ${STATS} | jq '.ram_mb')" >> $GITHUB_OUTPUT
+
+    - name: Upload sys stats
+      uses: actions/upload-artifact@v4
+      with:
+        name: RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}
+        path: RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json
+        retention-days: 1

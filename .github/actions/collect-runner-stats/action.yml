@@ -28,13 +28,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Set GitHub Path
-      shell: bash
-      env:
-        GITHUB_ACTION_PATH: ${{ github.action_path }}
-      run: |
-        echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
-
     - name: Fetch job ID
       id: fetch_job_id
       shell: bash

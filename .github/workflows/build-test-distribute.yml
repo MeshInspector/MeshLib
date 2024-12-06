@@ -51,7 +51,6 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    if: false
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:

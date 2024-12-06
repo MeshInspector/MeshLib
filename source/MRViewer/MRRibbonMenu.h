@@ -225,6 +225,9 @@ protected:
     // need to be called if you override windows pipeline and use ActiveListPlugin
     MRVIEWER_API void drawActiveList_();
 
+    // call this to draw RibbonNotifier with respect of scene size and ribbon top panel
+    MRVIEWER_API virtual void drawNotifications_();
+
     RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
 
     RibbonMenuSearch searcher_;

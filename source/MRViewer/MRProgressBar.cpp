@@ -239,7 +239,7 @@ void setup( float scaling )
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        UI::TestEngine::pushTree( "ProgressBarImpl" );
+        UI::TestEngine::pushTree( "ProgressBar" );
         MR_FINALLY{ UI::TestEngine::popTree(); };
 
         instance.frameRequest_.reset();
@@ -382,7 +382,7 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
         instance.thread_ = std::thread( [&instance, task]
         {
             registerThreadRootTimeRecord( instance.rootTimeRecord_ );
-            SetCurrentThreadName( "ProgressBarImpl" );
+            SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [&instance, task]
             {
@@ -436,7 +436,7 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
         instance.thread_ = std::thread( [&instance, task]
         {
             registerThreadRootTimeRecord( instance.rootTimeRecord_ );
-            SetCurrentThreadName( "ProgressBarImpl" );
+            SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [task]
             {

@@ -34,24 +34,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ x64, github-arm, arm ]
+        arch: [ x64, arm64 ]
+        config: [ Debug, Release ]
         compiler: [ AppleClang ]
+        exclude:
+          - arch: x64
+            config: Debug
         include:
           - compiler: AppleClang
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
-          - os: x64
+          - arch: x64
+            config: Release
+            os: x64
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-13 # github hosted
-            config: Release
             brewpath: /usr/local
-          - os: github-arm
-            runner: macos-latest  # github hosted
+          - arch: arm64
             config: Debug
+            os: github-arm
+            runner: macos-latest  # github hosted
             brewpath: /opt/homebrew
-          - os: arm
-            runner: macos-arm-build # self-hosted
+          - arch: arm64
             config: Release
+            os: arm
+            runner: macos-arm-build # self-hosted
             brewpath: /opt/homebrew
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -65,18 +72,12 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-macos-${{ matrix.os }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: macos
+          target_arch: ${{ matrix.arch }}
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
@@ -167,13 +168,13 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
       - name: Create Pkg
-        if: ${{ inputs.upload_artifacts }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         run: |
           ./scripts/distribution_apple.sh
           mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution
-        if: ${{ inputs.upload_artifacts }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_macos-${{matrix.os}}

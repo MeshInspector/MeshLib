@@ -401,7 +401,7 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
                 instance.onFinish_ = task();
                 return true;
             } );
-            ProgressBarImpl::finish();
+            finish();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif

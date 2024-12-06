@@ -45,7 +45,6 @@ jobs:
         compiler: [ clang ]
         include:
           - os: ubuntu20
-            # TODO: rename image after rebuild
             docker-image: meshlib/meshlib-ubuntu20-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
@@ -80,18 +79,12 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-ubuntu-arm64-${{ matrix.os }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: ${{ matrix.os }}
+          target_arch: arm64
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
 
       - name: Checkout third-party submodules
         run: |

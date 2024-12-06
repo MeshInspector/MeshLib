@@ -32,36 +32,40 @@ def parse_step(step: dict):
     }
 
 def parse_job(job: dict):
-    job_id = job['id']
-    runner_stats = {}
-    stats_filename = Path(f"RunnerSysStats-{job_id}.json")
-    if stats_filename.is_file():
-        with open(stats_filename, 'r') as f:
-            runner_stats = json.load(f)
+    job_name = job['name']
+    if not any(job_name.startswith(job_prefix) for job_prefix in KNOWN_JOBS):
+        return None
 
+    job_id = job['id']
+    stats_filename = Path(f"RunnerSysStats-{job_id}.json")
+    if not stats_filename.exists():
+        return None
+
+    with open(stats_filename, 'r') as f:
+        runner_stats = json.load(f)
     return {
         'id':                job['id'],
         'conclusion':        job['conclusion'],
         'duration_s':        get_duration(job).seconds if job['conclusion'] else None,
         'steps':             [parse_step(step) for step in job['steps']],
-        'target_os':         runner_stats.get('target_os'),
-        'target_arch':       runner_stats.get('target_arch'),
-        'compiler':          runner_stats.get('compiler'),
-        'build_config':      runner_stats.get('build_config'),
+        'target_os':         runner_stats['target_os'],
+        'target_arch':       runner_stats['target_arch'],
+        'compiler':          runner_stats['compiler'],
+        'build_config':      runner_stats['build_config'],
         'runner_name':       job['runner_name'],
         'runner_group_name': job['runner_group_name'],
-        'runner_cpu_count':  runner_stats.get('cpu_count'),
-        'runner_ram_mb':     runner_stats.get('ram_mb'),
+        'runner_cpu_count':  runner_stats['cpu_count'],
+        'runner_ram_mb':     runner_stats['ram_mb'],
     }
 
 def parse_jobs(jobs: list[dict]):
     return [
-        parse_job(job)
-        for job in jobs
-        if any(
-            job['name'].startswith(job_prefix)
-            for job_prefix in KNOWN_JOBS
-        )
+        job
+        for job in [
+            parse_job(job)
+            for job in jobs
+        ]
+        if job is not None
     ]
 
 def fetch_jobs(repo: str, run_id: str):

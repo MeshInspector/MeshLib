@@ -491,8 +491,6 @@ void ObjectTransformWidget::stopModify_()
 void TransformControls::setVisualParams( const VisualParams& params )
 {
     params_ = params;
-    radiusMM = params.radius;
-    widthMM = params.width;
     update();
 }
 
@@ -541,6 +539,8 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
+    float radius = params_.typeRadius == TypeRadius::LengthUnit ? params_.radius : 1.0f;
+    float width = params_.typeRadius == TypeRadius::LengthUnit ? params_.width : params_.width / params_.radius;
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
@@ -565,14 +565,14 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
         {
-            getCenter() - radiusMM * params_.negativeLineExtension * baseAxis[i],
-            getCenter() + radiusMM * params_.positiveLineExtension * baseAxis[i]
+            getCenter() - radius * params_.negativeLineExtension * baseAxis[i],
+            getCenter() + radius * params_.positiveLineExtension * baseAxis[i]
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], widthMM, params_.coneRadiusFactor * widthMM, params_.coneSizeFactor * widthMM ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -598,7 +598,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( radiusMM, widthMM, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( radius, width, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
@@ -622,12 +622,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
 
     if ( parent )
     {
-        auto mask = getViewerInstance().getPresentViewports();
-        for ( auto idViewport : mask )
-        {
-            xf_ = rotateControls_[0]->worldXf( idViewport );
-            parentXf_ = parent->worldXf( idViewport );
-        }
+        parent_ = parent;
     }
 }
 
@@ -643,16 +638,7 @@ void TransformControls::setRadius( float radius )
         return;
     params_.radius = radius;
 
-    if ( params_.typeRadius != TypeRadius::Pixels )
-    {
-        update();
-    }
-    else
-    {
-        auto mmPerPixel = radiusMM / radius;
-        widthMM = mmPerPixel * params_.width;
-        update();
-    }
+    update();
 }
 
 void TransformControls::setWidth( float width )
@@ -661,17 +647,7 @@ void TransformControls::setWidth( float width )
         return;
     params_.width = width;
 
-    if ( params_.typeRadius != TypeRadius::Pixels )
-    {
-        widthMM = width;
-        update();
-    }
-    else
-    {
-        auto mmPerPixel = radiusMM / params_.radius;
-        widthMM = mmPerPixel * params_.width;
-        update();
-    }
+    update();
 }
 
 void TransformControls::setTypeRadius( TypeRadius type )
@@ -679,15 +655,7 @@ void TransformControls::setTypeRadius( TypeRadius type )
     if ( params_.typeRadius == type )
         return;
 
-    if ( params_.typeRadius == TypeRadius::Pixels )
-    {
-        resetSizeInPixel_();
-    }
-    else
-    {
-        params_.radius = radiusMM;
-        params_.width = widthMM;
-    }
+    resetSizeInPixel_();
 
     params_.typeRadius = type;
 }
@@ -700,28 +668,20 @@ void TransformControls::updateSizeInPixel()
     auto mask = getViewerInstance().getPresentViewports();
     for ( auto idViewport : mask )
     {
-        auto xf = parentXf_.get( idViewport);
-        auto center = xf( getCenter() );
-        float cameraScale = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
+        const auto& xf = parent_->worldXf( idViewport );
+        const auto& center = xf( getCenter() );
+        float lenPerPixel = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
 
         AffineXf3f pixelTransform;
-        Matrix3f r, s;
-        decomposeMatrix3( xf_.get( idViewport ).A, r, s);
-        const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
 
-        auto radius = params_.radius;
-
-        radius *= cameraScale / baseObjectScale;
-        pixelTransform = AffineXf3f::xfAround( Matrix3f::scale( radius ), center );
+        auto radius = params_.radius * lenPerPixel ;
+        pixelTransform = AffineXf3f::xfAround( Matrix3f::scale( radius ), getCenter() );
 
         for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
         {
             translateControls_[i]->setXf( pixelTransform, idViewport );
             rotateControls_[i]->setXf( pixelTransform, idViewport );
         }
-
-        if ( activeLine_ )
-            activeLine_->setXf( pixelTransform, idViewport );
     }
 }
 
@@ -735,9 +695,6 @@ void TransformControls::resetSizeInPixel_()
             translateControls_[i]->setXf( AffineXf3f(), idViewport );
             rotateControls_[i]->setXf( AffineXf3f(), idViewport );
         }
-
-        if ( activeLine_ )
-            activeLine_->setXf( AffineXf3f(), idViewport );
     }
 }
 

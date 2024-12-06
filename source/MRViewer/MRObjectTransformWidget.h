@@ -132,7 +132,7 @@ public:
 
     enum class TypeRadius
     {
-        MM = 0,
+        LengthUnit = 0,
         Pixels
     };
 
@@ -140,12 +140,14 @@ public:
     {
         // updates radius and width with given box
         MRVIEWER_API void update( const Box3f& box );
+        // radius in units of measurement, depending on the typeRadius
         // negative radius value means that controls are not setup
         float radius{ -1.0f };
+        // width in units of measurement, depending on the typeRadius
         // negative width value means that controls are not setup
         float width{ -1.0f };
-        // type radius
-        TypeRadius typeRadius = TypeRadius::MM;
+        // sets the type of widget size units (metric length or pixels units)
+        TypeRadius typeRadius = TypeRadius::LengthUnit;
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -177,7 +179,7 @@ public:
     float getWidth() const { return params_.width; }
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
-    // set type radius for this widget
+    // sets the type of widget size units ( recalculates the current values into new units of measurement )
     MRVIEWER_API void setTypeRadius( TypeRadius type );
     // calculates and sets the matrix to set the size in pixels
     void updateSizeInPixel() override;
@@ -197,9 +199,6 @@ private:
 
     VisualParams params_;
 
-    float radiusMM{ -1.0f };
-    float widthMM{ -1.0f };
-
     // Control objects
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
@@ -213,8 +212,7 @@ private:
     int findHoveredIndex_() const;
     void setActiveLineFromPoints_( const Contour3f& points );
 
-    ViewportProperty<AffineXf3f> parentXf_;
-    ViewportProperty<AffineXf3f> xf_;
+    std::shared_ptr<Object> parent_;
 };
 
 // Visual widget to modify transform

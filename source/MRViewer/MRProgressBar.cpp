@@ -2,6 +2,8 @@
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRFrameRedrawRequest.h"
+#include "MRImGui.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimeRecord.h"
@@ -13,10 +15,11 @@
 #include "MRColorTheme.h"
 #include "MRRibbonFontManager.h"
 #include "MRRibbonMenu.h"
-#include <thread>
 #include <GLFW/glfw3.h>
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
+#include <atomic>
+#include <thread>
 
 #ifdef _WIN32
 #include <excpt.h>
@@ -43,23 +46,181 @@ EMSCRIPTEN_KEEPALIVE bool emsIsProgressBarOrdered()
 }
 #endif
 
-namespace
-{
-using namespace MR;
-
-static ThreadRootTimeRecord& getProgressBarTimer()
-{
-    static ThreadRootTimeRecord rootRecord( "Progress" );
-    return rootRecord;
-}
-
-}
-
 namespace MR
 {
-void ProgressBar::setup( float scaling )
+
+namespace
 {
-    auto& instance = instance_();
+
+// needed to be able to call progress bar from any point, not only from ImGui frame scope
+struct DeferredInit
+{
+    int taskCount;
+    std::string name;
+    std::function<void ()> postInit;
+};
+
+class ProgressBarImpl
+{
+public:
+    static ProgressBarImpl& instance();
+
+    ProgressBarImpl();
+    ~ProgressBarImpl();
+
+    void initialize_();
+
+    // cover task execution with try catch block (in release only)
+    // if catches exception shows error in main thread overriding user defined main thread post-processing
+    [[maybe_unused]] bool tryRun_( const std::function<bool ()>& task );
+    bool tryRunWithSehHandler_( const std::function<bool ()>& task );
+
+    float lastOperationTimeSec_{ -1.0f };
+    Time operationStartTime_;
+    std::atomic<float> progress_;
+    std::atomic<int> currentTask_, taskCount_;
+    std::mutex mutex_;
+    std::string taskName_, title_;
+    bool overrideTaskName_{ false };
+
+    FrameRedrawRequest frameRequest_;
+
+    // parameter is needed for logging progress
+    std::atomic<int> percents_;
+
+    std::thread thread_;
+    std::function<void()> onFinish_;
+
+    std::unique_ptr<DeferredInit> deferredInit_;
+
+    std::atomic<bool> allowCancel_;
+    std::atomic<bool> canceled_;
+    std::atomic<bool> finished_;
+    ImGuiID setupId_ = ImGuiID( -1 );
+
+    bool isOrdered_{ false };
+    bool isInit_{ false };
+    // this is needed to show full progress before closing
+    bool closeDialogNextFrame_{ false };
+
+    ThreadRootTimeRecord rootTimeRecord_{ "Progress" };
+};
+
+ProgressBarImpl& ProgressBarImpl::instance()
+{
+    static ProgressBarImpl inst;
+    return inst;
+}
+
+ProgressBarImpl::ProgressBarImpl() :
+    progress_( 0.0f ), currentTask_( 0 ), taskCount_( 1 ),
+    taskName_( "Current task" ), title_( "Sample Title" ),
+    canceled_{ false }, finished_{ false }
+{}
+
+ProgressBarImpl::~ProgressBarImpl()
+{
+    canceled_ = true;
+    if ( thread_.joinable() )
+        thread_.join();
+}
+
+void ProgressBarImpl::initialize_()
+{
+    assert( deferredInit_ );
+
+    if ( finished_ && thread_.joinable() )
+        thread_.join();
+
+    ImGui::CloseCurrentPopup();
+
+    progress_ = 0.0f;
+
+    taskCount_ = deferredInit_->taskCount;
+    currentTask_ = 0;
+    if ( taskCount_ == 1 )
+        currentTask_ = 1;
+
+    closeDialogNextFrame_ = false;
+    canceled_ = false;
+    finished_ = false;
+
+    {
+        std::unique_lock lock( mutex_ );
+        title_ = deferredInit_->name;
+    }
+
+    ImGui::OpenPopup( setupId_ );
+    frameRequest_.reset();
+
+    operationStartTime_ = std::chrono::system_clock::now();
+    if ( deferredInit_->postInit )
+        deferredInit_->postInit();
+
+    deferredInit_.reset();
+}
+
+bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
+{
+#ifndef NDEBUG
+    return task();
+#else
+    try
+    {
+        return task();
+    }
+    catch ( const std::bad_alloc& badAllocE )
+    {
+        onFinish_ = [msg = std::string( badAllocE.what() )]
+        {
+            spdlog::error( msg );
+            showError( "Not enough memory for the requested operation." );
+        };
+        return true;
+    }
+    catch ( const std::exception& e )
+    {
+        onFinish_ = [msg = std::string( e.what() )]
+        {
+            showError( msg );
+        };
+        return true;
+    }
+#endif
+}
+
+bool ProgressBarImpl::tryRunWithSehHandler_( const std::function<bool()>& task )
+{
+#ifndef _WIN32
+    return task();
+#else
+#ifndef NDEBUG
+    return task();
+#else
+    __try
+    {
+        return tryRun_( task );
+    }
+    __except ( EXCEPTION_EXECUTE_HANDLER )
+    {
+        onFinish_ = []
+        {
+            showError( "Unknown exception occurred" );
+        };
+        return true;
+    }
+#endif
+#endif
+}
+
+} //anonymous namespace
+
+namespace ProgressBar
+{
+
+void setup( float scaling )
+{
+    auto& instance = ProgressBarImpl::ProgressBarImpl::instance();
 
     if ( instance.deferredInit_ )
         instance.initialize_();
@@ -78,7 +239,7 @@ void ProgressBar::setup( float scaling )
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        UI::TestEngine::pushTree( "ProgressBar" );
+        UI::TestEngine::pushTree( "ProgressBarImpl" );
         MR_FINALLY{ UI::TestEngine::popTree(); };
 
         instance.frameRequest_.reset();
@@ -168,14 +329,14 @@ void ProgressBar::setup( float scaling )
     instance.isInit_ = true;
 }
 
-void ProgressBar::onFrameEnd()
+void onFrameEnd()
 {
     // this is needed to prevent unexpected closing on progress bar window in:
     // ImGui::NewFrame() / ImGui::UpdateMouseMovingWindowNewFrame() / ImGui::FocusWindow()
     // that can happen if progress bar is ordered on clicking to the window
     // (for example on finish editing some InputFloat, clicking on window makes ImGui think this window is moving
     //  and close progress bar modal before it starts, task of progress bar is going but post-processing is not)
-    auto& inst = instance_();
+    auto& inst = ProgressBarImpl::instance();
     if ( !inst.isOrdered_ )
         return;
     auto ctx = ImGui::GetCurrentContext();
@@ -188,7 +349,7 @@ void ProgressBar::onFrameEnd()
     ctx->MovingWindow = nullptr;
 }
 
-void ProgressBar::order( const char* name, const std::function<void()>& task, int taskCount )
+void order( const char* name, const std::function<void()>& task, int taskCount )
 {
     return orderWithMainThreadPostProcessing(
         name,
@@ -200,9 +361,9 @@ void ProgressBar::order( const char* name, const std::function<void()>& task, in
         taskCount );
 }
 
-void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
+void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     if ( !instance.isInit_ )
     {
         auto res = task();
@@ -219,18 +380,18 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     {
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
-        {            
-            registerThreadRootTimeRecord( getProgressBarTimer() );
-            SetCurrentThreadName( "ProgressBar" );
+        {
+            registerThreadRootTimeRecord( instance.rootTimeRecord_ );
+            SetCurrentThreadName( "ProgressBarImpl" );
 
             instance.tryRunWithSehHandler_( [&instance, task]
             {
                 instance.onFinish_ = task();
                 return true;
             } );
-            ProgressBar::finish();
+            finish();
 
-            unregisterThreadRootTimeRecord( getProgressBarTimer() );
+            unregisterThreadRootTimeRecord( instance.rootTimeRecord_ );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -240,7 +401,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
                 instance.onFinish_ = task();
                 return true;
             } );
-            ProgressBar::finish();
+            ProgressBarImpl::finish();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -255,9 +416,9 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     getViewerInstance().incrementForceRedrawFrames();
 }
 
-void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
+void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
 
     if ( !instance.isInit_ )
         return;
@@ -274,8 +435,8 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
         {
-            registerThreadRootTimeRecord( getProgressBarTimer() );
-            SetCurrentThreadName( "ProgressBar" );
+            registerThreadRootTimeRecord( instance.rootTimeRecord_ );
+            SetCurrentThreadName( "ProgressBarImpl" );
 
             instance.tryRunWithSehHandler_( [task]
             {
@@ -283,7 +444,7 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
                 return true;
             } );
 
-            unregisterThreadRootTimeRecord( getProgressBarTimer() );
+            unregisterThreadRootTimeRecord( instance.rootTimeRecord_ );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -307,34 +468,34 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
     getViewerInstance().incrementForceRedrawFrames();
 }
 
-bool ProgressBar::isCanceled()
+bool isCanceled()
 {
-    return instance_().canceled_;
+    return ProgressBarImpl::instance().canceled_;
 }
 
-bool ProgressBar::isFinished()
+bool isFinished()
 {
-    return instance_().finished_;
+    return ProgressBarImpl::instance().finished_;
 }
 
-float ProgressBar::getProgress()
+float getProgress()
 {
-    return instance_().progress_;
+    return ProgressBarImpl::instance().progress_;
 }
 
-float ProgressBar::getLastOperationTime()
+float getLastOperationTime()
 {
-    return instance_().lastOperationTimeSec_;
+    return ProgressBarImpl::instance().lastOperationTimeSec_;
 }
 
-const std::string& ProgressBar::getLastOperationTitle()
+const std::string& getLastOperationTitle()
 {
-    return instance_().title_;
+    return ProgressBarImpl::instance().title_;
 }
 
-bool ProgressBar::setProgress( float p )
+bool setProgress( float p )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
 
     // this assert is not really needed
     // leave it in comment: we don't expect progress from different threads
@@ -353,26 +514,26 @@ bool ProgressBar::setProgress( float p )
     return !instance.canceled_;
 }
 
-void ProgressBar::setTaskCount( int n )
+void setTaskCount( int n )
 {
-    instance_().taskCount_ = n;
+    ProgressBarImpl::instance().taskCount_ = n;
 }
 
-void ProgressBar::finish()
+void finish()
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     instance.finished_ = true;
     instance.frameRequest_.requestFrame();
 }
 
-bool ProgressBar::isOrdered()
+bool isOrdered()
 {
-    return instance_().isOrdered_;
+    return ProgressBarImpl::instance().isOrdered_;
 }
 
-void ProgressBar::nextTask()
+void nextTask()
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     if ( instance.currentTask_ != instance.taskCount_ )
     {
         ++instance.currentTask_;
@@ -380,158 +541,54 @@ void ProgressBar::nextTask()
     }
 }
 
-void ProgressBar::nextTask( const char* s )
+void nextTask( const char* s )
 {
     {
-        std::unique_lock lock( instance_().mutex_ );
-        instance_().taskName_ = s;
+        std::unique_lock lock( ProgressBarImpl::instance().mutex_ );
+        ProgressBarImpl::instance().taskName_ = s;
     }
     nextTask();
 }
 
-void ProgressBar::forceSetTaskName( std::string taskName )
+void forceSetTaskName( std::string taskName )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     std::unique_lock lock( instance.mutex_ );
     instance.taskName_ = std::move( taskName );
     instance.overrideTaskName_ = true;
 }
 
-void ProgressBar::resetTaskName()
+void resetTaskName()
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     std::unique_lock lock( instance.mutex_ );
     instance.overrideTaskName_ = false;
     instance.taskName_.clear();
 }
 
-bool ProgressBar::callBackSetProgress( float p )
+bool callBackSetProgress( float p )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     instance.allowCancel_ = true;
-    instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
+    setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return !instance.canceled_;
 }
 
-bool ProgressBar::simpleCallBackSetProgress( float p )
+bool simpleCallBackSetProgress( float p )
 {
-    auto& instance = instance_();
+    auto& instance = ProgressBarImpl::instance();
     instance.allowCancel_ = false;
-    instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
+    setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
 }
 
-void ProgressBar::printTimingTree( double minTimeSec )
+void printTimingTree( double minTimeSec )
 {
-    getProgressBarTimer().minTimeSec = minTimeSec;
-    getProgressBarTimer().printTree();
+    auto& instance = ProgressBarImpl::instance();
+    instance.rootTimeRecord_.minTimeSec = minTimeSec;
+    instance.rootTimeRecord_.printTree();
 }
 
-ProgressBar& ProgressBar::ProgressBar::instance_()
-{
-    static ProgressBar instance_;
-    return instance_;
-}
+} //namespace ProgressBar
 
-ProgressBar::ProgressBar() :
-    progress_( 0.0f ), currentTask_( 0 ), taskCount_( 1 ),
-    taskName_( "Current task" ), title_( "Sample Title" ),
-    canceled_{ false }, finished_{ false }
-{}
-
-ProgressBar::~ProgressBar()
-{
-    canceled_ = true;
-    if ( thread_.joinable() )
-        thread_.join();
-}
-
-void ProgressBar::initialize_()
-{
-    assert( deferredInit_ );
-
-    if ( isFinished() && thread_.joinable() )
-        thread_.join();
-
-    ImGui::CloseCurrentPopup();
-
-    progress_ = 0.0f;
-
-    taskCount_ = deferredInit_->taskCount;
-    currentTask_ = 0;
-    if ( taskCount_ == 1 )
-        currentTask_ = 1;
-
-    closeDialogNextFrame_ = false;
-    canceled_ = false;
-    finished_ = false;
-
-    {
-        std::unique_lock lock( mutex_ );
-        title_ = deferredInit_->name;
-    }
-
-    ImGui::OpenPopup( setupId_ );
-    frameRequest_.reset();
-
-    operationStartTime_ = std::chrono::system_clock::now();
-    if ( deferredInit_->postInit )
-        deferredInit_->postInit();
-
-    deferredInit_.reset();
-}
-
-bool ProgressBar::tryRun_( const std::function<bool ()>& task )
-{
-#ifndef NDEBUG
-    return task();
-#else
-    try
-    {
-        return task();
-    }
-    catch ( const std::bad_alloc& badAllocE )
-    {
-        onFinish_ = [msg = std::string( badAllocE.what() )]
-        {
-            spdlog::error( msg );
-            showError( "Not enough memory for the requested operation." );
-        };
-        return true;
-    }
-    catch ( const std::exception& e )
-    {
-        onFinish_ = [msg = std::string( e.what() )]
-        {
-            showError( msg );
-        };
-        return true;
-    }
-#endif
-}
-
-bool ProgressBar::tryRunWithSehHandler_( const std::function<bool()>& task )
-{
-#ifndef _WIN32
-    return task();
-#else
-#ifndef NDEBUG
-    return task();
-#else
-    __try
-    {
-        return tryRun_( task );
-    }
-    __except ( EXCEPTION_EXECUTE_HANDLER )
-    {
-        onFinish_ = []
-        {
-            showError( "Unknown exception occurred" );
-        };
-        return true;
-    }
-#endif
-#endif
-}
-
-}
+} //namespace MR

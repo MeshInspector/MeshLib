@@ -72,18 +72,9 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-fedora-${{ matrix.config }}-${{ matrix.compiler }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          cxx_compiler: ${{ matrix.cxx-compiler }}
 
       - name: Checkout third-party submodules
         run: |

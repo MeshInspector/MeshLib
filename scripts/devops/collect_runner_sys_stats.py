@@ -19,10 +19,16 @@ def get_ram_amount():
         raise RuntimeError(f"Unknown system: {system}")
 
 def get_compiler_id(compiler_path):
+    # work-around for Windows runners
+    if compiler_path.startswith("windows-"):
+        return compiler_path.replace("windows-", "msvc-")
+
     output = subprocess.check_output([compiler_path, "--version"]).decode()
     version_line = output.splitlines()[0]
     if version_line.startswith("Apple clang"):
         compiler = "appleclang"
+    elif version_line.startswith("emcc"):
+        compiler = "emcc"
     elif "clang" in version_line:
         compiler = "clang"
     elif "g++" in version_line or "gcc" in version_line:
@@ -31,9 +37,11 @@ def get_compiler_id(compiler_path):
         raise RuntimeError(f"Unknown compiler: {version_line}")
 
     output = subprocess.check_output([compiler_path, "-dumpversion"]).decode()
-    major_version = re.match(r"(\d+)", output).group(1)
-
-    return f"{compiler}-{major_version}"
+    if compiler == "emcc":
+        return f"emcc-{output}"
+    else:
+        major_version = re.match(r"(\d+)", output).group(1)
+        return f"{compiler}-{major_version}"
 
 if __name__ == "__main__":
     print(f"CPU_COUNT={multiprocessing.cpu_count()}")

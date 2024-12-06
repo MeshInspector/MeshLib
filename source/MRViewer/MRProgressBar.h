@@ -8,8 +8,6 @@
 namespace MR
 {
 
-struct ThreadRootTimeRecord;
-
 // This class shows application progress bar for long operations
 // note! if class don't setup, then order and orderWithMainThreadPostProcessing methods call task directly
 class ProgressBar
@@ -113,8 +111,6 @@ private:
     bool isInit_{ false };
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
-
-    std::atomic<ThreadRootTimeRecord*> timer_{ nullptr };
 };
 
 }

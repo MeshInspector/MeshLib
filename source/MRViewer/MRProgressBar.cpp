@@ -43,6 +43,18 @@ EMSCRIPTEN_KEEPALIVE bool emsIsProgressBarOrdered()
 }
 #endif
 
+namespace
+{
+using namespace MR;
+
+static ThreadRootTimeRecord& getProgressBarTimer()
+{
+    static ThreadRootTimeRecord rootRecord( "Progress" );
+    return rootRecord;
+}
+
+}
+
 namespace MR
 {
 void ProgressBar::setup( float scaling )
@@ -207,15 +219,8 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
     {
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
-        {
-            static auto* rootRecordPtr = [&]()->ThreadRootTimeRecord*
-            {
-                static ThreadRootTimeRecord rootRecord( "Progress" );
-                instance.timer_ = &rootRecord;
-                return &rootRecord;
-            }();
-            
-            registerThreadRootTimeRecord( *rootRecordPtr );
+        {            
+            registerThreadRootTimeRecord( getProgressBarTimer() );
             SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [&instance, task]
@@ -225,7 +230,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             } );
             ProgressBar::finish();
 
-            unregisterThreadRootTimeRecord( *rootRecordPtr );
+            unregisterThreadRootTimeRecord( getProgressBarTimer() );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -269,14 +274,7 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance, task]
         {
-            static auto* rootRecordPtr = [&] ()->ThreadRootTimeRecord*
-            {
-                static ThreadRootTimeRecord rootRecord( "Progress" );
-                instance.timer_ = &rootRecord;
-                return &rootRecord;
-            }( );
-
-            registerThreadRootTimeRecord( *rootRecordPtr );
+            registerThreadRootTimeRecord( getProgressBarTimer() );
             SetCurrentThreadName( "ProgressBar" );
 
             instance.tryRunWithSehHandler_( [task]
@@ -285,7 +283,7 @@ void ProgressBar::orderWithManualFinish( const char* name, std::function<void ()
                 return true;
             } );
 
-            unregisterThreadRootTimeRecord( *rootRecordPtr );
+            unregisterThreadRootTimeRecord( getProgressBarTimer() );
         } );
 #else
         staticTaskForLaterCall = [&instance, task]
@@ -425,11 +423,8 @@ bool ProgressBar::simpleCallBackSetProgress( float p )
 
 void ProgressBar::printTimingTree( double minTimeSec )
 {
-    if ( auto timer = instance_().timer_.load() )
-    {
-        timer->minTimeSec = minTimeSec;
-        timer->printTree();
-    }
+    getProgressBarTimer().minTimeSec = minTimeSec;
+    getProgressBarTimer().printTree();
 }
 
 ProgressBar& ProgressBar::ProgressBar::instance_()

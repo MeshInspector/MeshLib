@@ -793,7 +793,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
 
 Expected<LoadedObject> loadObjectTreeFromGltf( const std::filesystem::path& file, const ProgressCallback& callback )
 {
-    return deserializeObjectTreeFromGltf( file, std::move( callback ) ).and_then(
+    return deserializeObjectTreeFromGltf( file, callback ).and_then(
         []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 

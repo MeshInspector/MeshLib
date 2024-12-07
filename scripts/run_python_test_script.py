@@ -10,6 +10,8 @@ parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
 parser.add_argument("-bv", dest="bindings_vers", type=str,
                     help='Version of bindings to run tests, "2" or "3"', default='3')
+parser.add_argument("-a", dest="pytest_args", type=str,
+                    help='Args string to be added to pytest command', default='')
 
 args = parser.parse_args()
 print(args)
@@ -84,6 +86,10 @@ if args.smoke == "true":
 else:
     pytest_cmd += f'"'
 
+if args.pytest_args:
+    pytest_cmd += f' {args.pytest_args}'
+
+print(python_cmd + pytest_cmd)
 res = os.system(python_cmd + pytest_cmd)
 
 if res != 0:

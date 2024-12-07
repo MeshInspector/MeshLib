@@ -149,12 +149,28 @@ jobs:
         run: |
           ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
 
+      - name: Upload Python Stubs
+        if: ${{ matrix.platform == 'aarch64' && matrix.py-version == '3.10' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
+
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
+
+  update-documentation:
+    needs:
+      - manylinux-pip-build
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib
+    secrets: inherit
 
   windows-pip-build:
     needs: setup
@@ -288,15 +304,13 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: clang64
-          install: make gawk
+          install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
-          # Install additional packages. Must do it here, since the script above would uninstall them.
-          pacman -S --needed --noconfirm $MINGW_PACKAGE_PREFIX-cmake
 
       - name: Build MRBind
         shell: cmd
@@ -678,6 +692,12 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: ManyLinux-*
+          failOnError: false
+
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
           failOnError: false
 
       - name: Delete all Windows

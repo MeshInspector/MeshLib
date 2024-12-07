@@ -3,5 +3,4 @@ var postWasmLoad = function () {
     //setupColorTheme();
     updateCalculateMouseEvent();
     registerErrorHandling();
-    registerSafeDecoder();
 };

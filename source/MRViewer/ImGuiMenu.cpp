@@ -595,10 +595,7 @@ bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
-
-    if ( ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )] )
-        return true;
-    return false;
+    return ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )];
 }
 
 bool ImGuiMenu::onKeyUp_( int key, int modifiers )
@@ -610,13 +607,7 @@ bool ImGuiMenu::onKeyUp_( int key, int modifiers )
 bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
-    if ( ImGui::GetIO().WantCaptureKeyboard )
-        return true;
-
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key, modifiers } );
-
-    return false;
+    return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 // Draw menu
@@ -825,9 +816,10 @@ void ImGuiMenu::draw_helpers()
         {
             viewer->resetAllCounters();
         }
-        if ( UI::buttonCommonSize( "Print time to log", Vector2f( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Print Time to Log", Vector2f( -1, 0 ) ) )
         {
-            printTimingTreeAndStop();
+            printTimingTree();
+            ProgressBar::printTimingTree();
         }
         ImGui::End();
     }

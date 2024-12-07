@@ -1,17 +1,12 @@
 name: Update MeshLib Documentation site
 
 on:
-  release:
-    types: [ published ]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
   workflow_call:
     inputs:
       output_folder:
         required: false
         type: string
         default: "MeshLib"
-
 
 jobs:
   update-documentation:
@@ -35,12 +30,21 @@ jobs:
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
 
-      - name: Run Doxygen
+      - name: Download Python Stubs
+        uses: actions/download-artifact@v4
+        with:
+          name: PythonStubs
+          path: MeshLib/scripts/wheel/meshlib/meshlib
+
+      - name: Build All Documentation
         working-directory: MeshInspector.github.io
         run: |
           bash scripts/pre.sh ${{ inputs.output_folder }}
+          doxygen DoxyfilePy
+          doxygen DoxyfileCpp
+          doxygen DoxyfileMain
           doxygen Doxyfile
-          bash scripts/post.sh ${{ inputs.output_folder }} 
+          bash scripts/post.sh ${{ inputs.output_folder }}
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
@@ -50,3 +54,4 @@ jobs:
           git add -A
           git commit --allow-empty -m "Auto update docs" -a
           git push
+

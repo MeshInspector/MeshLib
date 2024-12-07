@@ -46,13 +46,10 @@ rem It's not entirely optimal to run the command twice even if the first one fin
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 
-rem ------ Install some MSYS (non-mingw-w64-...) packages needed for the `msys2_install_clang_ver.sh` script called below.
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed gawk"
+rem ------ Install needed packages
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed gawk make procps-ng $MINGW_PACKAGE_PREFIX-cmake"
 
 rem ------ Install a specific version of Clang
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "'%~dp0'/msys2_install_clang_ver.sh %CLANG_VER%"
-
-rem ------ Install needed packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-cmake"
 
 endlocal

@@ -1,6 +1,8 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
+using static MR.DotNet.MeshComponents;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     public class MeshComponentsTests
@@ -10,7 +12,7 @@ namespace MR.DotNet.Test
         {
             var bigCube = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var smallCube = Mesh.MakeCube(Vector3f.Diagonal(0.1f), Vector3f.Diagonal(1.0f));
-            var boolResult = MeshBoolean.Boolean(bigCube, smallCube, BooleanOperation.Union);
+            var boolResult = Boolean(bigCube, smallCube, BooleanOperation.Union);
             return new MeshPart(boolResult.mesh);
         }
 

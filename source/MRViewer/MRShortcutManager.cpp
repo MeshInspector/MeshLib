@@ -1,6 +1,6 @@
 #include "MRShortcutManager.h"
 #include "MRRibbonConstants.h"
-#include "imgui.h"
+#include "MRImGui.h"
 #include <GLFW/glfw3.h>
 
 namespace MR

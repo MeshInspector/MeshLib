@@ -439,6 +439,18 @@
 		"g": 255,
 		"r": 255
 	},
+	"SelectedTemporaryMeasurements": {
+		"a": 255,
+		"b": 255,
+		"g": 197,
+		"r": 0
+	},
+	"UnselectedTemporaryMeasurements": {
+		"a": 255,
+		"b": 0,
+		"g": 255,
+		"r": 27
+	},
 	"SelectedObjectMesh": {
 		"a": 255,
 		"b": 236,

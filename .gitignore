@@ -1,5 +1,6 @@
 .vs
 x64
+TempOutput
 __pycache__
 install
 install_dotnet
@@ -30,5 +31,6 @@ source/MRDotNetTest/obj/*
 /doc/
 /pytest_temp
 /lib
+/lib64
 /include
 /mrbind

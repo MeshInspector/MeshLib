@@ -54,7 +54,7 @@
     <ClCompile Include="MRRibbonMenuSearch.cpp" />
     <ClCompile Include="MRSceneTextureGL.cpp" />
     <ClCompile Include="MRShowModal.cpp" />
-    <ClCompile Include="MRSurfaceContoursWidget.cpp" />
+    <ClCompile Include="MRPickPointManager.cpp" />
     <ClCompile Include="MRToolsLibrary.cpp" />
     <ClCompile Include="MRLinesShader.cpp" />
     <ClCompile Include="MRMeshShader.cpp" />
@@ -96,6 +96,7 @@
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRSaveObjects.cpp" />
     <ClCompile Include="MRViewerSettingsPlugin.cpp" />
+    <ClCompile Include="MRViewerTitle.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
     <ClCompile Include="MRRecentFilesStore.cpp" />
     <ClCompile Include="MRRenderLinesObject.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
@@ -189,7 +191,7 @@
     <ClInclude Include="MRSceneTextureGL.h" />
     <ClInclude Include="MRShowModal.h" />
     <ClInclude Include="MRSpaceMouseParameters.h" />
-    <ClInclude Include="MRSurfaceContoursWidget.h" />
+    <ClInclude Include="MRPickPointManager.h" />
     <ClInclude Include="MRToolsLibrary.h" />
     <ClInclude Include="MRLinesShader.h" />
     <ClInclude Include="MRMeshShader.h" />
@@ -249,6 +251,7 @@
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRSaveObjects.h" />
     <ClInclude Include="MRViewerSettingsPlugin.h" />
+    <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />

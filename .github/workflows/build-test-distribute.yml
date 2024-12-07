@@ -14,119 +14,144 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
-#UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-
-
-env:
-  VCPKG-VERSION: '2024.10.21'
-
 jobs:
+  # NOTE: all output values are strings
+  # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
+  config:
+    uses: ./.github/workflows/config.yml
+
+  debug-config:
+    needs: config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print config
+        run: |
+          echo << EOF
+          ${{ toJSON( needs.config.outputs ) }}
+          EOF
+
   prepare-image:
+    needs: config
     uses: ./.github/workflows/prepare-images.yml
+    with:
+      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
+      need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
+      need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
     secrets: inherit
 
   versioning-and-release-url:
+    needs: config
     uses: ./.github/workflows/versioning-release.yml
     with:
-      version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:       ${{ needs.config.outputs.app_version }}
+      release_tag:       ${{ needs.config.outputs.release_tag }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: true
+      app_version:           ${{ needs.config.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
     secrets: inherit
 
   ubuntu-x64-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: true
+      app_version:           ${{ needs.config.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_x64_config_matrix }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
     secrets: inherit
 
   fedora-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.config.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
     secrets: inherit
 
   emscripten-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
-    needs: [ versioning-and-release-url ]
+    needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
-      app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
-      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-      mrbind: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+      app_version:           ${{ needs.config.outputs.app_version }}
+      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
     secrets: inherit
 
   update-win-version:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
     needs:
+      - config
       - windows-build-test
-      - versioning-and-release-url
     timeout-minutes: 60
     runs-on: windows-2019
+    env:
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+      - name: Checkout Vcpkg ${{env.vcpkg_version}}
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{env.VCPKG-VERSION}}
+          git checkout ${{env.vcpkg_version}}
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          key: vcpkg-cache-${{env.vcpkg_version}}
           path: |
             C:\vcpkg\*
 
-      - name: Configure AWS Credentials
-        if: ${{ env.INTERNAL_BUILD }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
       - name: Update vcpkg packages
         run: |
-          .\thirdparty\install.bat --write-s3
+          .\thirdparty\install.bat
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v4
@@ -140,10 +165,10 @@ jobs:
           tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.app_version}}
+        run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
 
       - name: Make Install Folder .NET
-        run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
+        run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -174,10 +199,10 @@ jobs:
           retention-days: 1
 
   create-nuget-package:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
     needs:
+      - config
       - windows-build-test
-      - versioning-and-release-url
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -196,8 +221,8 @@ jobs:
 
      - name: Generate NuGet specification
        run: |
-        echo ${{ needs.versioning-and-release-url.outputs.app_version }}
-        py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+        echo ${{ needs.config.outputs.app_version }}
+        py -3 scripts\generate_nuget_spec.py ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -213,10 +238,12 @@ jobs:
          retention-days: 1
 
   upload-distributions:
-    if: ${{ !cancelled() && ( github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') ) }}
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
+      - config
+      - versioning-and-release-url
       - update-win-version
       - create-nuget-package
       - ubuntu-x64-build-test
@@ -224,7 +251,6 @@ jobs:
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-      - versioning-and-release-url
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -234,19 +260,18 @@ jobs:
         with:
           pattern: Distributives*
           merge-multiple: true
-          failOnError: false
 
       - name: Rename Distributives
         run: |
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
-            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
           for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
-            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
@@ -255,30 +280,54 @@ jobs:
           PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-            gh release upload ${{ needs.versioning-and-release-url.outputs.tag }} $PKG_FILES --clobber
+            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
   test-distribution:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    needs: [ versioning-and-release-url, upload-distributions ]
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    needs: [ config, versioning-and-release-url, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
+      release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
 
   update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'update-doc') }}
-    needs:
-      - versioning-and-release-url
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' }}
+    needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
     secrets: inherit
 
+  collect-stats:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    needs: [ upload-distributions ]
+    if: always()
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download runners' system stats
+        uses: actions/download-artifact@v4
+        with:
+          pattern: RunnerSysStats*
+          merge-multiple: true
+
+      - name: Collect stats
+        env:
+          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
+          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/devops/collect_ci_stats.py
+
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs: [ upload-distributions ]
+    needs: [ collect-stats ]
     if: always()
+    continue-on-error: true
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
@@ -303,6 +352,12 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Wheelhouse*
+          failOnError: false
+
+      - name: Delete runners' system stats
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: RunnerSysStats*
           failOnError: false
 
       # generate timing logs archive
@@ -334,4 +389,10 @@ jobs:
         uses: geekyeggo/delete-artifact@v5
         with:
           name: Timing_Logs*
+          failOnError: false
+
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
           failOnError: false

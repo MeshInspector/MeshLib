@@ -1,55 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using static MR.DotNet;
 
-namespace MR.DotNet
+namespace MR
 {
     using OneMeshContours = List<OneMeshContour>;
     using static MR.DotNet.CoordinateConverters;
     using static MR.DotNet.Vector3f;
-    /// represents primitive type
-    public enum VariantIndex
-    {
-        Face,
-        Edge,
-        Vertex
-    };
-    /// simple point on mesh, represented by primitive id and coordinate in mesh space
-    public struct OneMeshIntersection
-    {
-        public VariantIndex variantIndex;
-        public int index;
-        public Vector3f coordinate;
 
-        public OneMeshIntersection(VariantIndex variantIndex, int index, Vector3f coordinate) 
-        { 
-            this.variantIndex = variantIndex; 
-            this.index = index; 
-            this.coordinate = coordinate; 
-        }
-    };
-    /// one contour on mesh
-    public struct OneMeshContour
+    public partial class DotNet
     {
-        public List<OneMeshIntersection> intersections;
-        public bool closed;
-
-        public OneMeshContour(List<OneMeshIntersection> intersections, bool closed)
+        /// represents primitive type
+        public enum VariantIndex
         {
-            this.intersections = intersections;
-            this.closed = closed;
-        }
-    };
+            Face,
+            Edge,
+            Vertex
+        };
+        /// simple point on mesh, represented by primitive id and coordinate in mesh space
+        public struct OneMeshIntersection
+        {
+            public VariantIndex variantIndex;
+            public int index;
+            public Vector3f coordinate;
 
-    /// list of contours on mesh
-    public class ContoursCut
-    {
+            public OneMeshIntersection(VariantIndex variantIndex, int index, Vector3f coordinate)
+            {
+                this.variantIndex = variantIndex;
+                this.index = index;
+                this.coordinate = coordinate;
+            }
+        };
+        /// one contour on mesh
+        public struct OneMeshContour
+        {
+            public List<OneMeshIntersection> intersections;
+            public bool closed;
+
+            public OneMeshContour(List<OneMeshIntersection> intersections, bool closed)
+            {
+                this.intersections = intersections;
+                this.closed = closed;
+            }
+        };
+
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshIntersection
         {
             public int primitiveId = 0;
             public byte primitiveIdIndex = 0;
-            public MRVector3f coordinate;
+            public MRVector3f coordinate = new MRVector3f();
             public MROneMeshIntersection() { }
         };
 
@@ -65,7 +67,7 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshContour
         {
-            public MRVectorOneMeshIntersection intersections;
+            public MRVectorOneMeshIntersection intersections = new MRVectorOneMeshIntersection();
             //size of bool in C is 1, so use byte
             public byte closed = 0;
             public MROneMeshContour() { }
@@ -78,19 +80,19 @@ namespace MR.DotNet
             public FaceId tri = new FaceId();
             public bool isEdgeATriB = false;
             public MRVariableEdgeTri() { }
-        };       
+        };
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern MROneMeshContour mrOneMeshContoursGet( IntPtr contours, ulong index );
+        private static extern MROneMeshContour mrOneMeshContoursGet(IntPtr contours, ulong index);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern ulong mrOneMeshContoursSize( IntPtr contours);
+        private static extern ulong mrOneMeshContoursSize(IntPtr contours);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrOneMeshContoursFree(IntPtr contours);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr mrGetOneMeshIntersectionContours( IntPtr meshA, IntPtr meshB,
+        private static extern IntPtr mrGetOneMeshIntersectionContours(IntPtr meshA, IntPtr meshB,
                                                                      IntPtr continousContours,
                                                                      bool getMeshAIntersections,
                                                                      ref MRCoordinateConverters converters,
@@ -103,8 +105,8 @@ namespace MR.DotNet
         {
             var mrOneMeshContours = mrGetOneMeshIntersectionContours(meshA.mesh_, meshB.mesh_, contours.mrContours_, getMeshAIntersections, ref converters.conv_, rigidB2A is null ? IntPtr.Zero : rigidB2A.XfAddr());
             int contoursSize = (int)mrOneMeshContoursSize(mrOneMeshContours);
-            var oneMeshContours = new OneMeshContours( contoursSize );
-            for ( int i = 0; i < contoursSize; i++ )
+            var oneMeshContours = new OneMeshContours(contoursSize);
+            for (int i = 0; i < contoursSize; i++)
             {
                 var mrOneMeshContour = mrOneMeshContoursGet(mrOneMeshContours, (ulong)i);
                 var oneMeshContour = new OneMeshContour

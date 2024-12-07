@@ -318,13 +318,12 @@ Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file
     return objectGcode;
 }
 
-Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                       std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filename, const ProgressCallback& callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    Expected<std::vector<std::shared_ptr<Object>>> result;
+    Expected<LoadedObjects> result;
     bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
@@ -333,31 +332,33 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     
     if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
-        const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
+        std::string loadWarn;
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, &loadWarn, callback );
         if ( !objTree.has_value() )
             return unexpected( objTree.error() );
         
-        result = std::vector( { *objTree } );
-        ( *result )[0]->setName( utf8string( filename.stem() ) );
+        ( *objTree )->setName( utf8string( filename.stem() ) );
+        result = LoadedObjects{ .objs = { *objTree }, .warnings = std::move( loadWarn ) };
         loadedFromSceneFile = true;
     }
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
     {
         const auto loader = ObjectLoad::getObjectLoader( *filter );
-        result = loader( filename, loadWarn, std::move( callback ) );
+        result = loader( filename, callback );
     }
     else
     {
+        std::string loadWarn;
         MeshLoadInfo info
         {
-            .warnings = loadWarn,
+            .warnings = &loadWarn,
             .callback = callback
         };
         auto object = makeObjectFromMeshFile( filename, info );
         if ( object && *object )
         {
             (*object)->select( true );
-            result = { *object };
+            result = LoadedObjects{ .objs = { *object }, .warnings = std::move( loadWarn ) };
         }
         else if ( object.error() == "Loading canceled" )
         {
@@ -372,7 +373,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
             {
                 objectPoints->select( true );
                 auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-                result = { obj };
+                result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
             }
             else if ( result.error() == "unsupported file extension" )
             {
@@ -383,7 +384,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                 {
                     objectLines->select( true );
                     auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
-                    result = { obj };
+                    result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
                 }
                 else if ( result.error() == "unsupported file extension" )
                 {
@@ -394,7 +395,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                     {
                         objectDistanceMap->select( true );
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
-                        result = { obj };
+                        result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
                     }
                     else if ( result.error() == "unsupported file extension" )
                     {
@@ -405,7 +406,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                         {
                             objectGcode->select( true );
                             auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
-                            result = { obj };
+                            result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
                         }
                         else
                         {
@@ -418,15 +419,15 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     }
 
     if ( result.has_value() && !loadedFromSceneFile )
-        for ( const std::shared_ptr<Object>& o : result.value() )
+        for ( const std::shared_ptr<Object>& o : result->objs )
         {
             postImportObject( o, filename );
-            if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && loadWarn )
+            if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints )
             {
                 if ( !objectPoints->pointCloud()->hasNormals() )
-                    *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
+                    result->warnings += "Point cloud " + o->name() + " has no normals.\n";
                 if ( objectPoints->getRenderDiscretization() > 1 )
-                    *loadWarn += "Point cloud " + o->name() + " has too many points in PointCloud:\n"
+                    result->warnings += "Point cloud " + o->name() + " has too many points in PointCloud:\n"
                     "Visualization is simplified (only part of the points is drawn)\n";
             }
         }

@@ -16,7 +16,7 @@ class ChangePointCloudNormalsAction : public HistoryAction
 public:
     using Obj = ObjectPoints;
 
-    /// use this constructor to remember point cloud's normals before making any changes in it
+    /// use this constructor to remember point cloud's normals before making any changes in them
     ChangePointCloudNormalsAction( std::string name, const std::shared_ptr<ObjectPoints>& obj ) :
         objPoints_{ obj },
         name_{ std::move( name ) }
@@ -26,6 +26,15 @@ public:
             if ( auto pc = obj->pointCloud() )
                 backupNormals_ = pc->normals;
         }
+    }
+
+    /// use this constructor to remember point cloud's normals and immediate set new value
+    ChangePointCloudNormalsAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, VertNormals && newNormals ) :
+        objPoints_{ obj },
+        backupNormals_{ std::move( newNormals ) },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
     }
 
     virtual std::string name() const override
@@ -55,7 +64,7 @@ public:
 
 private:
     std::shared_ptr<ObjectPoints> objPoints_;
-    VertCoords backupNormals_;
+    VertNormals backupNormals_;
 
     std::string name_;
 };

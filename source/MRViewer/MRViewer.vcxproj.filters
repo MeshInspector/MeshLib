@@ -328,7 +328,7 @@
     <ClCompile Include="MRViewportDraw.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRSurfaceContoursWidget.cpp">
+    <ClCompile Include="MRPickPointManager.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="MRRenderFeatureObjects.cpp">
@@ -448,6 +448,9 @@
     <ClCompile Include="MRProjectMeshAttributes.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerTitle.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
     <ClCompile Include="MROpenObjects.cpp">
       <Filter>IO</Filter>
     </ClCompile>
@@ -478,6 +481,7 @@
       <Filter>MeshModifier</Filter>
     </ClInclude>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="MRViewport.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -740,7 +744,7 @@
     <ClInclude Include="MRNotificationType.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRSurfaceContoursWidget.h">
+    <ClInclude Include="MRPickPointManager.h">
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRImGuiVectorOperators.h">
@@ -883,6 +887,9 @@
     </ClInclude>
     <ClInclude Include="MROpenObjects.h">
       <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerTitle.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

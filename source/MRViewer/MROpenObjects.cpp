@@ -93,7 +93,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
     if ( filesTree.empty() )
         return unexpected( std::string( "Error: folder is empty." ) );
 
-    using loadObjResultType = Expected<std::vector<std::shared_ptr<MR::Object>>>;
+    using loadObjResultType = Expected<LoadedObjects>;
     // create folders objects
     struct LoadTask
     {
@@ -117,9 +117,9 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
         }
         for ( const FilePathNode& file : node.files )
         {
-            loadTasks.emplace_back( std::async( std::launch::async, [&] ()
+            loadTasks.emplace_back( std::async( std::launch::async, [filepath = file.path, &loadingCanceled] ()
             {
-                return loadObjectFromFile( file.path, loadWarn, [&]( float ){ return !loadingCanceled; } );
+                return loadObjectFromFile( filepath, [&loadingCanceled]( float ){ return !loadingCanceled; } );
             } ), objPtr );
         }
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
@@ -151,9 +151,14 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
             auto res = t.future.get();
             if ( res.has_value() )
             {
-                for ( const auto& objPtr : *res )
-                {
+                for ( const auto& objPtr : res->objs )
                     t.parent->addChild( objPtr );
+                if ( loadWarn && !res->warnings.empty() )
+                {
+                    if ( loadWarn->empty() )
+                        *loadWarn = res->warnings;
+                    else
+                        *loadWarn += '\n' + res->warnings;
                 }
                 if ( !atLeastOneLoaded )
                     atLeastOneLoaded = true;

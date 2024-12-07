@@ -791,13 +791,13 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     return {};
 }
 
-Expected<ObjectPtr> deserializeObjectTreeFromGltf( const std::filesystem::path& file, std::string*, ProgressCallback callback )
+Expected<LoadedObject> loadObjectTreeFromGltf( const std::filesystem::path& file, const ProgressCallback& callback )
 {
-    return deserializeObjectTreeFromGltf( file, std::move( callback ) );
+    return deserializeObjectTreeFromGltf( file, std::move( callback ) ).and_then(
+        []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 
-MR_ADD_SCENE_LOADER( IOFilter( "glTF JSON scene (.gltf)", "*.gltf" ), deserializeObjectTreeFromGltf )
-MR_ADD_SCENE_LOADER( IOFilter( "glTF binary scene (.glb)", "*.glb" ), deserializeObjectTreeFromGltf )
+MR_ADD_SCENE_LOADER( IOFilter( "GL Transmission Format (.gltf,.glb)", "*.gltf;*.glb" ), loadObjectTreeFromGltf )
 
 MR_ADD_SCENE_SAVER( IOFilter( "glTF JSON scene (.gltf)", "*.gltf" ), serializeObjectTreeToGltf )
 MR_ADD_SCENE_SAVER( IOFilter( "glTF binary scene (.glb)", "*.glb" ), serializeObjectTreeToGltf )

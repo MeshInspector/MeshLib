@@ -52,11 +52,10 @@ MRMESH_API Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::pa
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
 /// loads meshes from given folder in new container object
-MRMESH_API Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path& folder, std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path& folder, const ProgressCallback& callback = {} );
 
 //tries to load scene from every format listed in SceneFormatFilters
-MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 
-    std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback = {} );
 
 /**
  * \brief loads objects tree from given scene file (zip/mru)
@@ -67,9 +66,9 @@ MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( co
  * if postDecompress is set, it is called after decompression
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path,
-                                                                    FolderCallback postDecompress = {},
-                                                                    ProgressCallback progressCb = {} );
+MRMESH_API Expected<LoadedObject> deserializeObjectTree( const std::filesystem::path& path,
+                                                         const FolderCallback& postDecompress = {},
+                                                         const ProgressCallback& progressCb = {} );
 
 /**
  * \brief loads objects tree from given scene folder
@@ -79,8 +78,8 @@ MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::f
  *
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
-                                                                              ProgressCallback progressCb = {} );
+MRMESH_API Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                                   const ProgressCallback& progressCb = {} );
 
 /// \}
 

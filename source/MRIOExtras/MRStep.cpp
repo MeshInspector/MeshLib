@@ -933,7 +933,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 
 Expected<LoadedObject> fromSceneStepFile( const std::filesystem::path& path, const ProgressCallback& progressCb )
 {
-    return fromSceneStepFile( path, { .callback = progressCb } ).and_then(
+    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } } ).and_then(
         []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 

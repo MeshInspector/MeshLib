@@ -8,7 +8,14 @@ namespace MR
 
 using ObjectPtr = std::shared_ptr<Object>;
 
-/// results of loading e.g. from a file
+/// result of loading (e.g. from a file) as one object (with possible subobjects)
+struct LoadedObject
+{
+    ObjectPtr obj;
+    std::string warnings; //either empty or ends with '\n'
+};
+
+/// result of loading (e.g. from a file) as a number of objects
 struct LoadedObjects
 {
     std::vector<ObjectPtr> objs;

@@ -64,9 +64,9 @@ public:
             if ( !isEmpty( warningSummary_ ) )
                 warningSummary_ << "\n\n";
             if ( res->warnings.find( fileName ) == std::string::npos )
-                warningSummary_ << fileName << ":\n" << res->warnings << "\n";
+                warningSummary_ << fileName << ":\n" << res->warnings;
             else
-                warningSummary_ << res->warnings << "\n";
+                warningSummary_ << res->warnings;
         }
 
         const auto prevObjectCount = loadedObjects_.size();

@@ -219,8 +219,6 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
     if ( info.warnings )
     {
         holesCount = int( objectMesh->numHoles() );
-        if ( !info.warnings->empty() )
-            *info.warnings += '\n';
         auto s = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
         if ( !s.empty() )
         {

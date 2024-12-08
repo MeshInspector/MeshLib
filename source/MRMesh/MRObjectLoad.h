@@ -19,7 +19,7 @@ namespace MR
 /// information about loading process and mesh construction from primitives
 struct MeshLoadInfo
 {
-    std::string* warnings = nullptr; ///< any warnings during loading will be appended here
+    std::string* warnings = nullptr; ///< any warnings during loading will be appended here, each warning is ended with '\n'
     ProgressCallback callback;       ///< callback for set progress and stop process
 };
 

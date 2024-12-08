@@ -19,7 +19,7 @@ struct LoadedObject
 struct LoadedObjects
 {
     std::vector<ObjectPtr> objs;
-    std::string warnings;
+    std::string warnings; //either empty or ends with '\n'
 };
 
 } //namespace MR

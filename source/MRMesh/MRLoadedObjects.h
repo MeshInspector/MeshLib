@@ -15,6 +15,13 @@ struct LoadedObject
     std::string warnings; //either empty or ends with '\n'
 };
 
+/// result of mesh loading (e.g. from a file) as one object
+struct LoadedObjectMesh
+{
+    std::shared_ptr<ObjectMesh> obj;
+    std::string warnings; //either empty or ends with '\n'
+};
+
 /// result of loading (e.g. from a file) as a number of objects
 struct LoadedObjects
 {

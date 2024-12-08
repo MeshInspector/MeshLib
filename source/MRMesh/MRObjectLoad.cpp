@@ -107,43 +107,35 @@ IOFilters getAllFilters()
 
 } // namespace
 
-Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
+Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    auto expObj = makeObjectFromMeshFile( file, info, true );
-    if ( !expObj )
-        return unexpected( std::move( expObj.error() ) );
+    auto maybe = makeObjectFromMeshFile( file, cb, true );
+    if ( !maybe )
+        return unexpected( std::move( maybe.error() ) );
 
-    auto * mesh = dynamic_cast<ObjectMesh*>( expObj.value().get() );
-    if ( !mesh )
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( maybe->obj );
+    if ( !objMesh )
     {
         assert( false );
         return unexpected( "makeObjectFromMeshFile returned not a mesh" );
     }
 
-    return std::move( *mesh );
+    return LoadedObjectMesh{ .obj = std::move( objMesh ), .warnings = std::move( maybe->warnings ) };
 }
 
 static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
 {
     std::string res;
     if ( skippedFaceCount )
-        res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
+        res = fmt::format( "{} triangles were skipped as inconsistent with others.\n", skippedFaceCount );
     if ( duplicatedVertexCount )
-    {
-        if ( !res.empty() )
-            res += '\n';
-        res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
-    }
+        res += fmt::format( "{} vertices were duplicated to make them manifold.\n", duplicatedVertexCount );
     if ( holesCount )
-    {
-        if ( !res.empty() )
-            res += '\n';
-        res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
-    }
+        res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.\n", holesCount );
     return res;
 }
 
-Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadInfo& info, bool returnOnlyMesh )
+Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb, bool returnOnlyMesh )
 {
     MR_TIMER
 
@@ -161,10 +153,10 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
-        .skippedFaceCount = info.warnings ? &skippedFaceCount : nullptr,
-        .duplicatedVertexCount = info.warnings ? &duplicatedVertexCount : nullptr,
+        .skippedFaceCount = &skippedFaceCount,
+        .duplicatedVertexCount = &duplicatedVertexCount,
         .xf = &xf,
-        .callback = info.callback
+        .callback = cb
     };
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
@@ -191,7 +183,7 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
 
         objectPoints->setXf( xf );
 
-        return objectPoints;
+        return LoadedObject{ .obj = std::move( objectPoints ) };
     }
 
     const auto numVerts = mesh->points.size();
@@ -216,24 +208,15 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         objectMesh->setColoringType( ColoringType::VertsColorMap );
 
     objectMesh->setXf( xf );
-    if ( info.warnings )
-    {
-        holesCount = int( objectMesh->numHoles() );
-        auto s = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-        if ( !s.empty() )
-        {
-            *info.warnings += s;
-            *info.warnings += '\n';
-        }
-        if ( !colors.empty() && !hasColors )
-            *info.warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-        if ( !uvCoords.empty() && !hasUV )
-            *info.warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
-        if ( !info.warnings->empty() && info.warnings->back() == '\n' )
-            info.warnings->pop_back();
-    }
 
-    return objectMesh;
+    holesCount = int( objectMesh->numHoles() );
+    std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
+    if ( !colors.empty() && !hasColors )
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
+    if ( !uvCoords.empty() && !hasUV )
+        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
+
+    return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
 }
 
 Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
@@ -344,32 +327,26 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     }
     else
     {
-        std::string loadWarn;
-        MeshLoadInfo info
+        auto maybe = makeObjectFromMeshFile( filename, callback );
+        if ( maybe )
         {
-            .warnings = &loadWarn,
-            .callback = callback
-        };
-        auto object = makeObjectFromMeshFile( filename, info );
-        if ( object && *object )
-        {
-            (*object)->select( true );
-            result = LoadedObjects{ .objs = { *object }, .warnings = std::move( loadWarn ) };
+            maybe->obj->select( true );
+            result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( object.error() == "Loading canceled" )
+        else if ( maybe.error() == "Loading canceled" )
         {
-            result = unexpected( std::move( object.error() ) );
+            result = unexpected( std::move( maybe.error() ) );
         }
         else
         {
-            result = unexpected( std::move( object.error() ) );
+            result = unexpected( std::move( maybe.error() ) );
 
             auto objectPoints = makeObjectPointsFromFile( filename, callback );
             if ( objectPoints.has_value() )
             {
                 objectPoints->select( true );
                 auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-                result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                result = LoadedObjects{ .objs = { obj } };
             }
             else if ( result.error() == "unsupported file extension" )
             {
@@ -380,7 +357,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                 {
                     objectLines->select( true );
                     auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
-                    result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                    result = LoadedObjects{ .objs = { obj } };
                 }
                 else if ( result.error() == "unsupported file extension" )
                 {
@@ -391,7 +368,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                     {
                         objectDistanceMap->select( true );
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
-                        result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                        result = LoadedObjects{ .objs = { obj } };
                     }
                     else if ( result.error() == "unsupported file extension" )
                     {
@@ -402,7 +379,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                         {
                             objectGcode->select( true );
                             auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
-                            result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                            result = LoadedObjects{ .objs = { obj } };
                         }
                         else
                         {

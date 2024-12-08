@@ -175,6 +175,22 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
     return true;
 }
 
+bool isDicomFolder( const std::filesystem::path& dirPath )
+{
+    std::error_code ec;
+    for ( const auto& entry : Directory { dirPath, ec } )
+    {
+        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
+        {
+            const auto& path = entry.path();
+            const auto ext = toLower( utf8string( path.extension() ) );
+            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                return true;
+        }
+    }
+    return false;
+}
+
 struct DCMFileLoadResult
 {
     bool success = false;

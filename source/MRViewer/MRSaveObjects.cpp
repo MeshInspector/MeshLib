@@ -1,4 +1,4 @@
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -17,7 +17,7 @@
 
 #ifndef MRVIEWER_NO_VOXELS
 #include <MRVoxels/MRVoxelsSave.h>
-#include "MRVoxels/MRObjectVoxels.h"
+#include <MRVoxels/MRObjectVoxels.h>
 #endif
 
 #include "MRPch/MRSpdlog.h"

@@ -39,7 +39,7 @@ using DicomVolumeAsVdb = DicomVolumeT<VdbVolume>;
 /// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume
 template <typename T = SimpleVolumeMinMax>
 MRVOXELS_API std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::path& path,
-                                                    unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {}  );
 
 /// Loads 3D first volumetric data from DICOM files in a folder
 /// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume

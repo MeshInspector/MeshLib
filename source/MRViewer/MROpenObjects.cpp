@@ -13,7 +13,7 @@
 namespace MR
 {
 
-Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
 {
     MR_TIMER
 
@@ -128,9 +128,10 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
         }
         #endif
     };
-    Object result;
-    result.setName( utf8string( folder.filename() ) ); // not folder.stem() to preserve "extensions" in folder names
-    createFolderObj( filesTree, &result );
+    LoadedObject res;
+    res.obj = std::make_shared<Object>();
+    res.obj->setName( utf8string( folder.stem() ) );
+    createFolderObj( filesTree, res.obj.get() );
 
     // processing of results
     bool atLeastOneLoaded = false;
@@ -148,24 +149,19 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
             std::future_status status = t.future.wait_until( afterSecond );
             if ( status != std::future_status::ready )
                 continue;
-            auto res = t.future.get();
-            if ( res.has_value() )
+            auto taskRes = t.future.get();
+            if ( taskRes.has_value() )
             {
-                for ( const auto& objPtr : res->objs )
+                for ( const auto& objPtr : taskRes->objs )
                     t.parent->addChild( objPtr );
-                if ( loadWarn && !res->warnings.empty() )
-                {
-                    if ( loadWarn->empty() )
-                        *loadWarn = res->warnings;
-                    else
-                        *loadWarn += '\n' + res->warnings;
-                }
+                if ( !taskRes->warnings.empty() )
+                    res.warnings += taskRes->warnings;
                 if ( !atLeastOneLoaded )
                     atLeastOneLoaded = true;
             }
             else
             {
-                ++allErrors[res.error()];
+                ++allErrors[taskRes.error()];
             }
             ++finishedTaskCount;
             if ( callback && !callback( finishedTaskCount / taskCount ) )
@@ -190,10 +186,10 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
 
-    return result;
+    return res;
 }
 
-Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> loadObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
 {
     auto tmpFolder = UniqueTemporaryFolder( {} );
     auto contentsFolder = tmpFolder / zipPath.stem();
@@ -208,21 +204,9 @@ Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, s
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
+    return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
-using ObjectPtr = std::shared_ptr<Object>;
-
-Expected<ObjectPtr> toObjectPtr( Object&& obj )
-{
-    return std::make_shared<Object>( std::move( obj ) );
-}
-
-Expected<ObjectPtr> makeObjectPtrFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
-{
-    return makeObjectTreeFromZip( zipPath, loadWarn, callback ).and_then( toObjectPtr );
-}
-
-MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectPtrFromZip )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), loadObjectTreeFromZip )
 
 } //namespace MR

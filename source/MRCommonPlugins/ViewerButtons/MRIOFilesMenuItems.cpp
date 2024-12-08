@@ -427,12 +427,9 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     {
         ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            std::string warnings;
-            auto loadRes = makeObjectTreeFromFolder( directory, &warnings, ProgressBar::callBackSetProgress );
-            if ( loadRes.has_value() )
+            if ( auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress ) )
             {
-                auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                return [obj, directory, warnings]
+                return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
                 {
                     sSelectRecursive( *obj );
                     AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );

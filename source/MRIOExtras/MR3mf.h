@@ -6,15 +6,16 @@
 
 #include <MRMesh/MRExpected.h>
 #include <MRMesh/MRObject.h>
+#include <MRMesh/MRLoadedObjects.h>
 
 namespace MR
 {
 
 // loads scene from 3MF file in a new container object
-MRIOEXTRAS_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFrom3mf( const std::filesystem::path& file, std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+MRIOEXTRAS_API Expected<LoadedObject> deserializeObjectTreeFrom3mf( const std::filesystem::path& file, const ProgressCallback& callback = {} );
 
 // loads scene from .model file in a new container object
-MRIOEXTRAS_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromModel( const std::filesystem::path& file, std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+MRIOEXTRAS_API Expected<LoadedObject> deserializeObjectTreeFromModel( const std::filesystem::path& file, const ProgressCallback& callback = {} );
 
 } // namespace MR
 #endif

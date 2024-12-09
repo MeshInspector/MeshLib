@@ -456,7 +456,7 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
     };
 }
 
-void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap /*= nullptr */ )
+void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
     MR_WRITER( mesh );
@@ -504,10 +504,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap
         mesh.topology.setLeft( en1, nf1 );
         mesh.topology.setLeft( en2, nf2 );
         if ( new2oldMap )
-        {
-            new2oldMap->autoResizeAt( nf2 ) = f;
-            ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
-        }
+            ( *new2oldMap )[nf2] = ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
     }
 }
 
@@ -1974,40 +1971,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     res.resultCut = std::move( preRes.paths );
 
     return res;
-}
-
-std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old /*= nullptr*/ )
-{
-    MR_TIMER;
-    MR_WRITER( mesh );
-
-    auto sections = extractPlaneSections( mesh, -plane );
-    auto contours = convertSurfacePathsToMeshContours( mesh, sections );
-    CutMeshParameters params = {};
-    params.new2OldMap = mapNew2Old;
-    auto cutEdges = cutMesh( mesh, contours, params );
-    
-    FaceBitSet goodFaces = fillContourLeft( mesh.topology, cutEdges.resultCut );
-    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex );
-    for ( const auto& comp : components )
-    {
-        if ( ( comp & goodFaces ).any() )
-            continue;
-        // separated component
-        auto point = mesh.orgPnt( mesh.topology.edgePerFace()[comp.find_first()] );
-        if ( plane.distance( point ) >= 0.0f )
-            goodFaces |= comp;
-    }
-    auto removedFaces = mesh.topology.getValidFaces() - goodFaces;
-
-    mesh.topology.deleteFaces( removedFaces );
-    if ( mapNew2Old )
-    {
-        MR::FaceMap& map = *mapNew2Old;
-        for ( auto& faceId : removedFaces )
-            map[faceId] = FaceId();
-    }
-    return cutEdges.resultCut;
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

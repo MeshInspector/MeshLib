@@ -132,37 +132,15 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
-      - name: Configure AWS Credentials
-        if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
-      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
-      - name: Cache autotest data from S3 Tests
-        if: ${{ inputs.internal_build }}
-        id: cache-autotest
-        uses: actions/cache@v4
-        with:
-          path: ./test_data
-          key: ${{ inputs.autotest_data_s3_url }}
-
-      - name: Copy autotest data from S3 Tests
-        if: ${{ inputs.internal_build }}
-        run: aws s3 sync ${{ inputs.autotest_data_s3_url }} ./test_data --delete --no-sign-request --size-only
-
       - name: Python Regression Tests
-        env:
-          SMOKE: ${{ inputs.internal_build && !inputs.full_config_build && matrix.config == 'Debug' }}
-          BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
         if: ${{ inputs.internal_build }}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
-
-      - name: Copy test artifacts to S3
-        if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}
-        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          mrbind: ${{ inputs.mrbind }}
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: ${{ matrix.os }}/${{matrix.config}}/${{matrix.compiler}}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Deb
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}

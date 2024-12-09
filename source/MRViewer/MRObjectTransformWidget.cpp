@@ -689,8 +689,6 @@ void TransformControls::updateSizeInPixel()
 
 void TransformControls::resetSizeInPixel_()
 {
-    auto mask = getViewerInstance().getPresentViewports();
-
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         translateControls_[i]->setXfsForAllViewports( {} );

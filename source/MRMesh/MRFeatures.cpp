@@ -23,7 +23,7 @@ namespace MR::Features
     Matrix3f r, s;
     decomposeMatrix3( m, r, s );
     return ( s.x.x + s.y.y + s.z.z ) / 3;
-};
+}
 
 Primitives::ConeSegment Primitives::Plane::intersectWithPlane( const Plane& other ) const
 {

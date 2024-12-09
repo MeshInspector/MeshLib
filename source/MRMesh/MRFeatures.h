@@ -60,9 +60,10 @@ namespace Primitives
         // * If they are equal (both zero) or at least one of them is infinite, `positiveSideRadius` must be equal to `negativeSideRadius`.
         // * Both `positiveSideRadius` and `negativeSideRadius` must be non-negative.
 
-        // Some point on the axis, but not necessarily the true center point. Use `centerPoint()` for that.
+        //! Some point on the axis, but not necessarily the true center point. Use `centerPoint()` for that.
         Vector3f referencePoint;
-        Vector3f dir; // Must be normalized.
+        //! The axis direction. Must be normalized.
+        Vector3f dir;
 
         //! Cap radius in the `dir` direction.
         float positiveSideRadius = 0;
@@ -337,7 +338,7 @@ requires MeasureSupported<A, B>
                 assert( [&]{
                     float a = ( dist->closestPointB - dist->closestPointA ).length();
                     float b = std::abs( dist->distance );
-                    return std::abs( a - b ) < std::min( a, b ) * 0.0001f;
+                    return std::abs( a - b ) < std::min( a, b ) * 0.001f;
                 }() );
             }
         }

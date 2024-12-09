@@ -1162,14 +1162,14 @@ Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& 
             {
                 if ( nEM.splitEdges.test( newUE ) )
                 {
-                    auto oldE = nEM.map[newUE].eId;
+                    auto oldE = EdgeId( nEM.map[newUE] );
                     if ( mep.e.odd() )
                         oldE = oldE.sym();
                     inter.primitiveId = oldE;
                 }
                 else
                 {
-                    inter.primitiveId = nEM.map[newUE].fId;
+                    inter.primitiveId = FaceId( nEM.map[newUE] );
                 }
             }            
         } );
@@ -1662,7 +1662,7 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, Fa
     if ( new2OldEdgeMap )
     {
         for ( int ue = int( uesz0 ); ue < int( mesh.topology.undirectedEdgeSize() ); ++ue )
-            new2OldEdgeMap->map[UndirectedEdgeId( ue )].fId = oldFace;
+            new2OldEdgeMap->map[UndirectedEdgeId( ue )] = oldFace;
     }
 }
 
@@ -1691,7 +1691,7 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
         auto next = mesh.topology.next( e.sym() );
         auto newEdge = mesh.topology.makeEdge();
         if ( new2OldEdgeMap )
-            new2OldEdgeMap->map[newEdge.undirected()].fId = oldF;
+            new2OldEdgeMap->map[newEdge.undirected()] = oldF;
         mesh.topology.splice( e, newEdge );
         mesh.topology.splice( next.sym(), newEdge.sym() );
 
@@ -1844,7 +1844,7 @@ void cutOneEdge( Mesh& mesh,
         if ( new2OldEdgeMap )
         {
             new2OldEdgeMap->splitEdges.autoResizeSet( e0.undirected() );
-            new2OldEdgeMap->map[e0.undirected()].eId = baseEdge;
+            new2OldEdgeMap->map[e0.undirected()] = baseEdge;
         }
         if ( ePrev != e )
             mesh.topology.splice( ePrev, e0 );
@@ -1875,7 +1875,7 @@ void cutOneEdge( Mesh& mesh,
             lastEdge = mesh.topology.makeEdge();
             if ( new2OldEdgeMap )
             {
-                new2OldEdgeMap->map[lastEdge.undirected()].eId = isBaseSym ? baseEdge.sym() : baseEdge;
+                new2OldEdgeMap->map[lastEdge.undirected()] = isBaseSym ? baseEdge.sym() : baseEdge;
                 new2OldEdgeMap->splitEdges.autoResizeSet( lastEdge.undirected() );
             }
         }
@@ -1984,7 +1984,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         {
             for ( int j = 0; j < preRes.paths[i].size(); ++j )
             {
-                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()].fId = preRes.removedFaces[i][j].f;
+                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()] = preRes.removedFaces[i][j].f;
             }
         }
     }

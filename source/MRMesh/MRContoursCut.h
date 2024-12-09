@@ -138,17 +138,10 @@ struct NewEdgesMap
     /// false here is both for unmodified edges and for new edges introduced within original triangles
     UndirectedEdgeBitSet splitEdges;
 
-    union OldEdgeOrFaceId
-    {
-        OldEdgeOrFaceId() = default;
-        FaceId fId{};
-        EdgeId eId;
-    };
-
     /// maps every edge appeared during subdivision to an original edge before mesh subdivision;
     /// for splitEdges[key]=true, the value is arbitrary oriented original edge, for which key-edge is its part;
     /// for splitEdges[key]=false, the value is an original triangle
-    HashMap<UndirectedEdgeId, OldEdgeOrFaceId> map;
+    HashMap<UndirectedEdgeId, int> map;
 };
 
 /** \struct MR::CutMeshParameters
@@ -177,7 +170,7 @@ struct CutMeshParameters
         All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
     } forceFillMode{ ForceFill::None };
 
-    /// Optional output map for each new edge introduced after cut maps edge from old topology (or old face represented by this edge)
+    /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
     NewEdgesMap* new2oldEdgesMap{ nullptr };
 };
 

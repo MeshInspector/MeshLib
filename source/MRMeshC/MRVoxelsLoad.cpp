@@ -7,7 +7,6 @@
 
 using namespace MR;
 REGISTER_AUTO_CAST2( std::string, MRString )
-//REGISTER_AUTO_CAST( VdbVolume )
 REGISTER_AUTO_CAST( FloatGrid )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( Vector3i )

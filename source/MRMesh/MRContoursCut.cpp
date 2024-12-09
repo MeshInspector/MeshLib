@@ -456,7 +456,7 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
     };
 }
 
-void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap /*= nullptr */ )
+void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
     MR_WRITER( mesh );
@@ -504,10 +504,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap
         mesh.topology.setLeft( en1, nf1 );
         mesh.topology.setLeft( en2, nf2 );
         if ( new2oldMap )
-        {
-            new2oldMap->autoResizeAt( nf2 ) = f;
-            ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
-        }
+            ( *new2oldMap )[nf2] = ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
     }
 }
 

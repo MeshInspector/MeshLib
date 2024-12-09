@@ -33,7 +33,7 @@ on:
 jobs:
   ubuntu-arm-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64, office]
+    runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
       options: --user root
@@ -69,8 +69,7 @@ jobs:
         run: |
           # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
           # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -not -uid ${UID})" ; then
-            echo "Clearing workspace directory..."
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
             mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
             mkdir ${GITHUB_WORKSPACE}
           fi

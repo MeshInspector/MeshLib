@@ -460,7 +460,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
 {
     MR_TIMER;
     MR_WRITER( mesh );
-    HashMap<int, std::vector<int>> face2contoursMap;
+    HashMap<FaceId, std::vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
         FaceId f = std::get<FaceId>( contours[i].intersections.front().primitiveId );
@@ -480,31 +480,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
             massCenter += p.coordinate;
         }
         massCenter /= float( counter );
-
-        EdgeId e0, e1, e2;
-        FaceId f = FaceId( faceId );
-        e0 = mesh.topology.edgePerFace()[f];
-        e1 = mesh.topology.prev( e0.sym() );
-        e2 = mesh.topology.prev( e1.sym() );
-        mesh.topology.setLeft( e0, {} );
-        VertId newV = mesh.addPoint( massCenter );
-        EdgeId en0 = mesh.topology.makeEdge();
-        EdgeId en1 = mesh.topology.makeEdge();
-        EdgeId en2 = mesh.topology.makeEdge();
-        mesh.topology.setOrg( en0, newV );
-        mesh.topology.splice( en0, en1 );
-        mesh.topology.splice( en1, en2 );
-        mesh.topology.splice( e0, en0.sym() );
-        mesh.topology.splice( e1, en1.sym() );
-        mesh.topology.splice( e2, en2.sym() );
-        FaceId nf0 = mesh.topology.addFaceId();
-        FaceId nf1 = mesh.topology.addFaceId();
-        FaceId nf2 = mesh.topology.addFaceId();
-        mesh.topology.setLeft( en0, nf0 );
-        mesh.topology.setLeft( en1, nf1 );
-        mesh.topology.setLeft( en2, nf2 );
-        if ( new2oldMap )
-            ( *new2oldMap )[nf2] = ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
+        mesh.splitFace( faceId, massCenter, nullptr, new2oldMap );
     }
 }
 

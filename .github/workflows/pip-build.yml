@@ -148,7 +148,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
+          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload Python Stubs
         if: ${{ matrix.platform == 'aarch64' && matrix.py-version == '3.10' }}
@@ -343,7 +343,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          py -${{matrix.py-version}} .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag}}
+          py -${{matrix.py-version}} .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
@@ -462,7 +462,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag}}
+          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4

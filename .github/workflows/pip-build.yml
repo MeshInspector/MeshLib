@@ -22,6 +22,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+        # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
+        # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
       - uses: actions-ecosystem/action-get-latest-tag@v1
         if: ${{ github.event_name == 'release' }}
         id: get-latest-tag

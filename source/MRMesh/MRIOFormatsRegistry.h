@@ -330,7 +330,7 @@ MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 namespace SceneLoad
 {
 
-using SceneLoader = Expected<ObjectPtr>( * )( const std::filesystem::path&, std::string*, ProgressCallback );
+using SceneLoader = Expected<LoadedObject>( * )( const std::filesystem::path&, const ProgressCallback& );
 
 MR_FORMAT_REGISTRY_DECL( SceneLoader )
 

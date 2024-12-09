@@ -68,17 +68,12 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-windows-${{ matrix.runner }}-${{ matrix.config }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: windows
+          target_arch: x64
+          cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
+          build_config: ${{ matrix.config }}
 
       - name: Checkout Vcpkg ${{ inputs.vcpkg_version }}
         working-directory: C:\vcpkg

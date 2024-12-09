@@ -202,7 +202,7 @@ float Viewport::getPixelSize() const
 float Viewport::getPixelSizeAtPoint( const Vector3f& worldPoint ) const
 {
     Vector4f clipVec = getFullViewportMatrix() * Vector4f( worldPoint.x, worldPoint.y, worldPoint.z, 1 );
-    return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y );
+    return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y ) * 2.0f;
 }
 
 

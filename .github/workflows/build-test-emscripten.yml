@@ -19,8 +19,10 @@ jobs:
         config: [Singlethreaded, Multithreaded]
         include:
           - config: Singlethreaded
+            target_name: emscripten-singlethreaded
             aws-dir: RMISingle
           - config: Multithreaded
+            target_name: emscripten
             aws-dir: RMI
 
     steps:
@@ -39,17 +41,12 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-emscripten-${{ matrix.config }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: ${{ matrix.target_name }}
+          target_arch: wasm
+          cxx_compiler: emcc
+          build_config: Release
 
       - name: Checkout third-party submodules
         run: |

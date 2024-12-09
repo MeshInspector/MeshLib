@@ -45,7 +45,6 @@ jobs:
         compiler: [ clang ]
         include:
           - os: ubuntu20
-            # TODO: rename image after rebuild
             docker-image: meshlib/meshlib-ubuntu20-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
@@ -80,18 +79,12 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-ubuntu-arm64-${{ matrix.os }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: ${{ matrix.os }}
+          target_arch: arm64
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
 
       - name: Checkout third-party submodules
         run: |
@@ -113,14 +106,11 @@ jobs:
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
-          # FIXME: self-hosted (on vm) runners are unable to process custom PATH correctly
-          #. .venv/bin/activate
-          #echo PATH=$PATH >> $GITHUB_ENV
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements
-        run: |
-          . .venv/bin/activate
-          python3 -m pip install -r ./requirements/python.txt
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -174,9 +164,7 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: |
-          . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
         if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
@@ -205,9 +193,7 @@ jobs:
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
         if: ${{ inputs.internal_build }}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: |
-          . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
 
       - name: Copy test artifacts to S3
         if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}

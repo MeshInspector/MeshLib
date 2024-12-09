@@ -219,20 +219,17 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, params.rigidB2A );
             auto loneIntsAonB = getOneMeshIntersectionContours( meshA, meshB, loneA, false, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
-            FaceMap new2orgLocalMap;
-            FaceMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
+            FaceHashMap new2orgLocalMap;
+            FaceHashMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshA, loneIntsA, mapPointer );
             if ( new2orgSubdivideMapA.size() < new2orgLocalMap.size() )
                 new2orgSubdivideMapA.resize( new2orgLocalMap.size() );
-            ParallelFor( new2orgLocalMap, [&] ( FaceId i )
+            for ( auto [i, refFace] : new2orgLocalMap )
             {
-                if ( !new2orgLocalMap[i] )
-                    return;
-                FaceId refFace = new2orgLocalMap[i];
                 if ( new2orgSubdivideMapA[refFace] )
                     refFace = new2orgSubdivideMapA[refFace];
                 new2orgSubdivideMapA[i] = refFace;
-            } );
+            }
         }
         if ( !loneB.empty() && needCutMeshB )
         {
@@ -240,20 +237,17 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, params.rigidB2A );
             auto loneIntsBonA = getOneMeshIntersectionContours( meshA, meshB, loneB, true, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
-            FaceMap new2orgLocalMap;
-            FaceMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
+            FaceHashMap new2orgLocalMap;
+            FaceHashMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshB, loneIntsB, mapPointer );
             if ( new2orgSubdivideMapB.size() < new2orgLocalMap.size() )
                 new2orgSubdivideMapB.resize( new2orgLocalMap.size() );
-            ParallelFor( new2orgLocalMap, [&] ( FaceId i )
+            for ( auto [i, refFace] : new2orgLocalMap )
             {
-                if ( !new2orgLocalMap[i] )
-                    return;
-                FaceId refFace = new2orgLocalMap[i];
                 if ( new2orgSubdivideMapB[refFace] )
                     refFace = new2orgSubdivideMapB[refFace];
                 new2orgSubdivideMapB[i] = refFace;
-            } );
+            }
         }
     }
     if ( iters == cMaxFixLoneIterations )

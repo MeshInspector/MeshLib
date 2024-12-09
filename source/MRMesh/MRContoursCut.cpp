@@ -456,11 +456,11 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
     };
 }
 
-void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap /*= nullptr */ )
+void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
     MR_WRITER( mesh );
-    HashMap<int, std::vector<int>> face2contoursMap;
+    HashMap<FaceId, std::vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
         FaceId f = std::get<FaceId>( contours[i].intersections.front().primitiveId );
@@ -480,34 +480,7 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap
             massCenter += p.coordinate;
         }
         massCenter /= float( counter );
-
-        EdgeId e0, e1, e2;
-        FaceId f = FaceId( faceId );
-        e0 = mesh.topology.edgePerFace()[f];
-        e1 = mesh.topology.prev( e0.sym() );
-        e2 = mesh.topology.prev( e1.sym() );
-        mesh.topology.setLeft( e0, {} );
-        VertId newV = mesh.addPoint( massCenter );
-        EdgeId en0 = mesh.topology.makeEdge();
-        EdgeId en1 = mesh.topology.makeEdge();
-        EdgeId en2 = mesh.topology.makeEdge();
-        mesh.topology.setOrg( en0, newV );
-        mesh.topology.splice( en0, en1 );
-        mesh.topology.splice( en1, en2 );
-        mesh.topology.splice( e0, en0.sym() );
-        mesh.topology.splice( e1, en1.sym() );
-        mesh.topology.splice( e2, en2.sym() );
-        FaceId nf0 = mesh.topology.addFaceId();
-        FaceId nf1 = mesh.topology.addFaceId();
-        FaceId nf2 = mesh.topology.addFaceId();
-        mesh.topology.setLeft( en0, nf0 );
-        mesh.topology.setLeft( en1, nf1 );
-        mesh.topology.setLeft( en2, nf2 );
-        if ( new2oldMap )
-        {
-            new2oldMap->autoResizeAt( nf2 ) = f;
-            ( *new2oldMap )[nf1] = ( *new2oldMap )[nf0] = f;
-        }
+        mesh.splitFace( faceId, massCenter, nullptr, new2oldMap );
     }
 }
 
@@ -1974,40 +1947,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     res.resultCut = std::move( preRes.paths );
 
     return res;
-}
-
-std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old /*= nullptr*/ )
-{
-    MR_TIMER;
-    MR_WRITER( mesh );
-
-    auto sections = extractPlaneSections( mesh, -plane );
-    auto contours = convertSurfacePathsToMeshContours( mesh, sections );
-    CutMeshParameters params = {};
-    params.new2OldMap = mapNew2Old;
-    auto cutEdges = cutMesh( mesh, contours, params );
-    
-    FaceBitSet goodFaces = fillContourLeft( mesh.topology, cutEdges.resultCut );
-    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex );
-    for ( const auto& comp : components )
-    {
-        if ( ( comp & goodFaces ).any() )
-            continue;
-        // separated component
-        auto point = mesh.orgPnt( mesh.topology.edgePerFace()[comp.find_first()] );
-        if ( plane.distance( point ) >= 0.0f )
-            goodFaces |= comp;
-    }
-    auto removedFaces = mesh.topology.getValidFaces() - goodFaces;
-
-    mesh.topology.deleteFaces( removedFaces );
-    if ( mapNew2Old )
-    {
-        MR::FaceMap& map = *mapNew2Old;
-        for ( auto& faceId : removedFaces )
-            map[faceId] = FaceId();
-    }
-    return cutEdges.resultCut;
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

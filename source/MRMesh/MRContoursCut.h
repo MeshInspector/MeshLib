@@ -49,7 +49,7 @@ using OneMeshContours = std::vector<OneMeshContour>;
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face
-MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap = nullptr );
+MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 // Converts ordered continuous contours of two meshes to OneMeshContours
 // converters is required for better precision in case of degenerations
@@ -176,18 +176,5 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
-
-/** \ingroup BooleanGroup
-  * \brief Simple cut mesh by plane
-  * 
-  * This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal
-  * \param mesh Input mesh that will be cut
-  * \param plane Input plane to cut mesh with
-  * \param mapNew2Old (this is optional output) map from newly generated faces to old faces (N-1)
-  * \note This function changes input mesh
-  * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
-  */
-[[deprecated( "use trimWithPlane(...) instead" )]]
-MRMESH_API std::vector<EdgePath> cutMeshWithPlane( Mesh& mesh, const Plane3f& plane, FaceMap* mapNew2Old = nullptr );
 
 } //namespace MR

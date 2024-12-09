@@ -99,7 +99,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        auto scaling = menu_scaling();
         switch ( layoutMode_ )
         {
         case MR::RibbonLayoutMode::All:
@@ -116,7 +115,9 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
             drawActiveList_();
             draw_helpers();
-            notifier_.draw( scaling, sceneSize_.x, currentTopPanelHeight_ * scaling );
+
+            drawNotifications_();
+
             prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
             break;
         case MR::RibbonLayoutMode::SceneTree:
@@ -857,6 +858,16 @@ void RibbonMenu::drawActiveList_()
     }
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
+}
+
+void RibbonMenu::drawNotifications_()
+{
+    auto scaling = menu_scaling();
+    Box2i limitRect( Vector2i(), getViewerInstance().framebufferSize );
+    limitRect.min.x = int( sceneSize_.x );
+    limitRect.max.y -= int( currentTopPanelHeight_ * scaling );
+    limitRect.min.y = int( ( StyleConsts::Notification::cWindowsPosY - StyleConsts::Notification::cWindowPadding - StyleConsts::Notification::cHistoryButtonSizeY ) * scaling );
+    notifier_.draw( scaling, limitRect );
 }
 
 void RibbonMenu::setLayoutMode( RibbonLayoutMode mode )

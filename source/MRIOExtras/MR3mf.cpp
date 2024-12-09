@@ -207,11 +207,10 @@ class ThreeMFLoader
     size_t documentsLoaded_ = 0;
 
 public:
-    
-    std::string* loadWarn = nullptr;
+    std::string warnings;
     bool failedToLoadColoring = false;
 
-    Expected<std::shared_ptr<Object>> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
+    Expected<LoadedObject> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
 
     friend class Node;
 };
@@ -300,21 +299,21 @@ Expected<void> ThreeMFLoader::loadTree_( ProgressCallback callback )
     return {};
 }
 
-Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback )
+Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback )
 {
     rootPath_ = root.lexically_normal();
 
-    auto res = loadXmls_( files );
-    if ( !res )
-        return unexpected( res.error() );
+    auto maybe = loadXmls_( files );
+    if ( !maybe )
+        return unexpected( std::move( maybe.error() ) );
 
     if ( !reportProgress( callback, 0.2f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    res = loadTree_( subprogress( callback, 0.2f, 0.8f ) );
+    maybe = loadTree_( subprogress( callback, 0.2f, 0.8f ) );
 
-    if ( !res )
-        return unexpected( res.error() );
+    if ( !maybe )
+        return unexpected( std::move( maybe.error() ) );
 
     if ( !reportProgress( callback, 0.8f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -352,14 +351,14 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
                     objMesh->setUVCoords( std::move( node->vertUVCoords ) );
                     objMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
-                else if ( loadWarn )
+                else
                 {
-                    loadWarn->append( "Texture will not be loaded.\n" );
+                    warnings.append( "Texture will not be loaded.\n" );
                 }
             }
-            else if ( loadWarn )
+            else
             {
-                loadWarn->append(  "Object" + node->objName + " has incomplete UV coordinates. Texture will not be loaded.\n" );
+                warnings.append(  "Object" + node->objName + " has incomplete UV coordinates. Texture will not be loaded.\n" );
             }
         }
 
@@ -375,13 +374,15 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
     if ( !reportProgress( callback, 1.0f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    if ( duplicatedVertexCountAccum > 0 && loadWarn )
-        loadWarn->append( "Duplicated vertex count: " + std::to_string( duplicatedVertexCountAccum ) + "\n" );
+    if ( duplicatedVertexCountAccum > 0 )
+        warnings.append( "Duplicated vertex count: " + std::to_string( duplicatedVertexCountAccum ) + "\n" );
 
-    if ( skippedFaceCountAccum > 0 && loadWarn )
-        loadWarn->append( "Skipped face count: " + std::to_string( skippedFaceCountAccum ) + "\n" );
+    if ( skippedFaceCountAccum > 0 )
+        warnings.append( "Skipped face count: " + std::to_string( skippedFaceCountAccum ) + "\n" );
 
-    return objRes->children().size() > 1 ? objRes : objRes->children().front();
+    if ( objRes->children().size() == 1 )
+        objRes = objRes->children()[0];
+    return LoadedObject{ .obj = objRes, .warnings = std::move( warnings ) };
 }
 
 Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
@@ -501,8 +502,8 @@ Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
             if ( !resXf )
                 return unexpected( resXf.error() );
 
-            if ( resXf->A.det() == 0 && loader->loadWarn )
-                loader->loadWarn->append( "Degenerative object transform: " + objNode->objName + "\n" );
+            if ( resXf->A.det() == 0 )
+                loader->warnings.append( "Degenerative object transform: " + objNode->objName + "\n" );
 
             objNode->xf = *resXf;
         }
@@ -556,12 +557,12 @@ Expected<void> Node::load()
             return unexpected( res.error() );
         break;
     case NodeType::Texture2d:
-        if ( auto res = loadTexture2d_( node ); !res && loader->loadWarn  && loader->loadWarn->empty() )
-            loader->loadWarn->append( res.error() );
+        if ( auto res = loadTexture2d_( node ) )
+            loader->warnings.append( res.error() + '\n' );
         break;
     case NodeType::Texture2dGroup:
-        if ( auto res = loadTexture2dGroup_( node ); !res && loader->loadWarn )
-            loader->loadWarn->append( res.error() );
+        if ( auto res = loadTexture2dGroup_( node ) )
+            loader->warnings.append( res.error() + '\n' );
         break;
     case NodeType::Multiproperties:
         if ( auto res = loadMultiproperties_( node ); !res )
@@ -706,10 +707,8 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         {
             if ( !loader->failedToLoadColoring )
             {
-                if ( loader->loadWarn )
-                    loader->loadWarn->append( std::string( "3DF model has unsupported coloring\n" ) );
-
-                loader->failedToLoadColoring = true;               
+                loader->warnings.append( std::string( "3DF model has unsupported coloring\n" ) );
+                loader->failedToLoadColoring = true;
             }
             continue;
         }
@@ -779,8 +778,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
                 if ( !loader->failedToLoadColoring && !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                 {
                     loader->failedToLoadColoring = true;
-                    if ( loader->loadWarn )
-                        loader->loadWarn->append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
+                    loader->warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
                 }
 
                 vertUV = refUV;
@@ -866,8 +864,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
                     if ( !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                     {
                         loader->failedToLoadColoring = true;
-                        if ( loader->loadWarn )
-                            loader->loadWarn->append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
+                        loader->warnings.append( "Texture cannot be show correctly because 3DF model has different UV coordinates for some vertices\n" );
                     }
 
                     vertUV = refUV;
@@ -945,7 +942,7 @@ Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<std::shared_ptr<Object>> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, const ProgressCallback& callback )
 {
     const auto tmpFolder = UniqueTemporaryFolder( {} );
 
@@ -966,16 +963,12 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFrom3mf( const std::files
     if ( files.empty() )
         return unexpected( "Could not find .model" );
 
-    ThreeMFLoader loader;
-    loader.loadWarn = loadWarn;
-    return loader.load( files, tmpFolder, subprogress( callback, 0.1f, 0.9f ) );
+    return ThreeMFLoader{}.load( files, tmpFolder, subprogress( callback, 0.1f, 0.9f ) );
 }
 
-Expected<std::shared_ptr<Object>> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> deserializeObjectTreeFromModel( const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    ThreeMFLoader loader;
-    loader.loadWarn = loadWarn;
-    return loader.load( { path }, path.parent_path(), callback );
+    return ThreeMFLoader{}.load( { path }, path.parent_path(), callback );
 }
 
 MR_ADD_SCENE_LOADER( IOFilter( "3D Manufacturing format (.3mf)", "*.3mf" ), deserializeObjectTreeFrom3mf )

@@ -42,26 +42,26 @@ void RibbonNotifier::pushNotification( const RibbonNotification& notification )
     requestClosestRedraw_();
 }
 
-void RibbonNotifier::draw( float scaling, float scenePosX, float topPanelHeight )
+void RibbonNotifier::draw( float scaling, const Box2i& limitFramebuffer )
 {
-    drawHistoryButton_( scaling, scenePosX );
+    drawHistoryButton_( scaling, limitFramebuffer );
     if ( historyMode_ )
-        drawHistory_( scaling, scenePosX, topPanelHeight );
+        drawHistory_( scaling, limitFramebuffer );
     else
-        drawFloating_( scaling, scenePosX );
+        drawFloating_( scaling, limitFramebuffer );
     filterInvalid_( -1 );
 }
 
-void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
+void RibbonNotifier::drawHistoryButton_( float scaling, const Box2i& limitFramebuffer )
 {
     using namespace StyleConsts::Notification;
     if ( notificationsHistory_.empty() )
         return;
 
-    const float cWindowExpansion = cWindowPadding;
-    const float windowPosShiftY = ( cWindowsPosY - cWindowExpansion ) * scaling;
-    Vector2f windowPos = Vector2f( scenePosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
-    const auto windowSzie = ImVec2( 36, 28 ) * scaling;
+    const auto windowSzie = ImVec2( 36, cHistoryButtonSizeY ) * scaling;
+    Vector2f windowPos = Vector2f( float( limitFramebuffer.min.x ), float( getViewerInstance().framebufferSize.y - limitFramebuffer.min.y ) - windowSzie.y );
+    if ( cornerPosition == RibbonNotificationCorner::LowerRight )
+        windowPos.x = float( limitFramebuffer.max.x ) - windowSzie.x;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSzie, ImGuiCond_Always );
@@ -127,15 +127,16 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
     ImGui::PopStyleVar( 3 );
 }
 
-void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPanelHeight )
+void RibbonNotifier::drawHistory_( float scaling, const Box2i& limitFramebuffer )
 {
     using namespace StyleConsts::Notification;
-    const float windowPosShiftY = ( cWindowsPosY - cWindowPadding ) * scaling;
-    Vector2f windowPos = Vector2f( scenePosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
     const float width = 351.0f * scaling;
+    Vector2f windowPos = Vector2f( float( limitFramebuffer.min.x ), float( getViewerInstance().framebufferSize.y - limitFramebuffer.min.y ) - cHistoryButtonSizeY * scaling );
+    if ( cornerPosition == RibbonNotificationCorner::LowerRight )
+        windowPos.x = float( limitFramebuffer.max.x ) - width;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY - topPanelHeight ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( limitFramebuffer.max.y - limitFramebuffer.min.y ) - cHistoryButtonSizeY * scaling ) );
     ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
@@ -149,7 +150,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPane
     ImGui::Begin( "NotificationsHistory", nullptr, flags );
 
     const float padding = cWindowPadding * scaling;
-    Vector2f currentPos = Vector2f( scenePosX + padding, float( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling + padding );
+    Vector2f currentPos = Vector2f( windowPos.x + padding, windowPos.y );
     const float notWidth = 319.0f * scaling;
     for ( int i = 0; i < notificationsHistory_.size(); ++i )
     {
@@ -171,7 +172,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPane
     {
         if ( ImGui::IsWindowAppearing() )
             return false;
-        if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
+        if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) )
             return false;
         if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) || ImGui::IsMouseClicked( ImGuiMouseButton_Right ) || ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
             return true;
@@ -193,12 +194,14 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPane
     ImGui::PopStyleVar( 3 );
 }
 
-void RibbonNotifier::drawFloating_( float scaling, float scenePosX )
+void RibbonNotifier::drawFloating_( float scaling, const Box2i& limitFramebuffer )
 {
     using namespace StyleConsts::Notification;
     const float padding = cWindowPadding * scaling;
-    Vector2f currentPos = Vector2f( scenePosX + padding, float( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling + padding );
     const float width = 319.0f * scaling;
+    Vector2f currentPos = Vector2f( float( limitFramebuffer.min.x ) + padding, float( getViewerInstance().framebufferSize.y - limitFramebuffer.min.y ) - cHistoryButtonSizeY * scaling );
+    if ( cornerPosition == RibbonNotificationCorner::LowerRight )
+        currentPos.x = float( limitFramebuffer.max.x ) - padding - width;
 
     int filteredNumber = -1;
     for ( int i = 0; i < notifications_.size(); ++i )

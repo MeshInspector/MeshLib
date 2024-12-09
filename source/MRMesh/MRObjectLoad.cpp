@@ -107,43 +107,35 @@ IOFilters getAllFilters()
 
 } // namespace
 
-Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
+Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    auto expObj = makeObjectFromMeshFile( file, info, true );
-    if ( !expObj )
-        return unexpected( std::move( expObj.error() ) );
+    auto maybe = makeObjectFromMeshFile( file, cb, true );
+    if ( !maybe )
+        return unexpected( std::move( maybe.error() ) );
 
-    auto * mesh = dynamic_cast<ObjectMesh*>( expObj.value().get() );
-    if ( !mesh )
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( maybe->obj );
+    if ( !objMesh )
     {
         assert( false );
         return unexpected( "makeObjectFromMeshFile returned not a mesh" );
     }
 
-    return std::move( *mesh );
+    return LoadedObjectMesh{ .obj = std::move( objMesh ), .warnings = std::move( maybe->warnings ) };
 }
 
 static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
 {
     std::string res;
     if ( skippedFaceCount )
-        res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
+        res = fmt::format( "{} triangles were skipped as inconsistent with others.\n", skippedFaceCount );
     if ( duplicatedVertexCount )
-    {
-        if ( !res.empty() )
-            res += '\n';
-        res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
-    }
+        res += fmt::format( "{} vertices were duplicated to make them manifold.\n", duplicatedVertexCount );
     if ( holesCount )
-    {
-        if ( !res.empty() )
-            res += '\n';
-        res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
-    }
+        res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.\n", holesCount );
     return res;
 }
 
-Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadInfo& info, bool returnOnlyMesh )
+Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb, bool returnOnlyMesh )
 {
     MR_TIMER
 
@@ -161,10 +153,10 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
-        .skippedFaceCount = info.warnings ? &skippedFaceCount : nullptr,
-        .duplicatedVertexCount = info.warnings ? &duplicatedVertexCount : nullptr,
+        .skippedFaceCount = &skippedFaceCount,
+        .duplicatedVertexCount = &duplicatedVertexCount,
         .xf = &xf,
-        .callback = info.callback
+        .callback = cb
     };
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
@@ -191,7 +183,7 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
 
         objectPoints->setXf( xf );
 
-        return objectPoints;
+        return LoadedObject{ .obj = std::move( objectPoints ) };
     }
 
     const auto numVerts = mesh->points.size();
@@ -216,26 +208,15 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         objectMesh->setColoringType( ColoringType::VertsColorMap );
 
     objectMesh->setXf( xf );
-    if ( info.warnings )
-    {
-        holesCount = int( objectMesh->numHoles() );
-        if ( !info.warnings->empty() )
-            *info.warnings += '\n';
-        auto s = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-        if ( !s.empty() )
-        {
-            *info.warnings += s;
-            *info.warnings += '\n';
-        }
-        if ( !colors.empty() && !hasColors )
-            *info.warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-        if ( !uvCoords.empty() && !hasUV )
-            *info.warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
-        if ( !info.warnings->empty() && info.warnings->back() == '\n' )
-            info.warnings->pop_back();
-    }
 
-    return objectMesh;
+    holesCount = int( objectMesh->numHoles() );
+    std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
+    if ( !colors.empty() && !hasColors )
+        warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
+    if ( !uvCoords.empty() && !hasUV )
+        warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
+
+    return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
 }
 
 Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
@@ -331,13 +312,12 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     
     if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
-        std::string loadWarn;
-        const auto objTree = loadSceneFromAnySupportedFormat( filename, &loadWarn, callback );
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
         if ( !objTree.has_value() )
-            return unexpected( objTree.error() );
+            return unexpected( std::move( objTree.error() ) );
 
-        ( *objTree )->setName( utf8string( filename.stem() ) );
-        result = LoadedObjects{ .objs = { *objTree }, .warnings = std::move( loadWarn ) };
+        objTree->obj->setName( utf8string( filename.stem() ) );
+        result = LoadedObjects{ .objs = { objTree->obj }, .warnings = std::move( objTree->warnings ) };
         loadedFromSceneFile = true;
     }
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
@@ -347,32 +327,26 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     }
     else
     {
-        std::string loadWarn;
-        MeshLoadInfo info
+        auto maybe = makeObjectFromMeshFile( filename, callback );
+        if ( maybe )
         {
-            .warnings = &loadWarn,
-            .callback = callback
-        };
-        auto object = makeObjectFromMeshFile( filename, info );
-        if ( object && *object )
-        {
-            (*object)->select( true );
-            result = LoadedObjects{ .objs = { *object }, .warnings = std::move( loadWarn ) };
+            maybe->obj->select( true );
+            result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( object.error() == "Loading canceled" )
+        else if ( maybe.error() == "Loading canceled" )
         {
-            result = unexpected( std::move( object.error() ) );
+            result = unexpected( std::move( maybe.error() ) );
         }
         else
         {
-            result = unexpected( std::move( object.error() ) );
+            result = unexpected( std::move( maybe.error() ) );
 
             auto objectPoints = makeObjectPointsFromFile( filename, callback );
             if ( objectPoints.has_value() )
             {
                 objectPoints->select( true );
                 auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-                result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                result = LoadedObjects{ .objs = { obj } };
             }
             else if ( result.error() == "unsupported file extension" )
             {
@@ -383,7 +357,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                 {
                     objectLines->select( true );
                     auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
-                    result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                    result = LoadedObjects{ .objs = { obj } };
                 }
                 else if ( result.error() == "unsupported file extension" )
                 {
@@ -394,7 +368,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                     {
                         objectDistanceMap->select( true );
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
-                        result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                        result = LoadedObjects{ .objs = { obj } };
                     }
                     else if ( result.error() == "unsupported file extension" )
                     {
@@ -405,7 +379,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                         {
                             objectGcode->select( true );
                             auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
-                            result = LoadedObjects{ .objs = { obj }, .warnings = std::move( loadWarn ) };
+                            result = LoadedObjects{ .objs = { obj } };
                         }
                         else
                         {
@@ -475,9 +449,9 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
     return false;
 }
 
-Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
 {
-    MR_TIMER;
+    MR_TIMER
 
     if ( callback && !callback( 0.f ) )
         return unexpected( getCancelMessage( folder ) );
@@ -567,9 +541,10 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
             } ), objPtr );
         }
     };
-    Object result;
-    result.setName( utf8string( folder.stem() ) );
-    createFolderObj( filesTree, &result );
+    LoadedObject res;
+    res.obj = std::make_shared<Object>();
+    res.obj->setName( utf8string( folder.stem() ) );
+    createFolderObj( filesTree, res.obj.get() );
 
     // processing of results
     bool atLeastOneLoaded = false;
@@ -587,24 +562,19 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
             std::future_status status = t.future.wait_until( afterSecond );
             if ( status != std::future_status::ready )
                 continue;
-            auto res = t.future.get();
-            if ( res.has_value() )
+            auto taskRes = t.future.get();
+            if ( taskRes.has_value() )
             {
-                for ( const auto& objPtr : res->objs )
+                for ( const auto& objPtr : taskRes->objs )
                     t.parent->addChild( objPtr );
-                if ( loadWarn && !res->warnings.empty() )
-                {
-                    if ( loadWarn->empty() )
-                        *loadWarn = res->warnings;
-                    else
-                        *loadWarn += '\n' + res->warnings;
-                }
+                if ( !taskRes->warnings.empty() )
+                    res.warnings += taskRes->warnings;
                 if ( !atLeastOneLoaded )
                     atLeastOneLoaded = true;
             }
             else
             {
-                ++allErrors[res.error()];
+                ++allErrors[taskRes.error()];
             }
             ++finishedTaskCount;
             if ( callback && !callback( finishedTaskCount / taskCount ) )
@@ -629,10 +599,10 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
 
-    return result;
+    return res;
 }
 
-Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> loadObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
 {
     auto tmpFolder = UniqueTemporaryFolder( {} );
     auto contentsFolder = tmpFolder / zipPath.stem();
@@ -647,7 +617,7 @@ Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, s
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
+    return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
 Expected<ObjectPtr> toObjectPtr( Object&& obj )
@@ -655,13 +625,7 @@ Expected<ObjectPtr> toObjectPtr( Object&& obj )
     return std::make_shared<Object>( std::move( obj ) );
 }
 
-Expected<ObjectPtr> makeObjectPtrFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
-{
-    return makeObjectTreeFromZip( zipPath, loadWarn, callback ).and_then( toObjectPtr );
-}
-
-Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
-    ProgressCallback callback )
+Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
     for ( auto& c : ext )
@@ -671,18 +635,18 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
     if ( !loader )
         return unexpected( std::string( "unsupported file extension" ) );
 
-    return loader( path, loadWarn, callback )
-    .and_then( [&] ( ObjectPtr&& obj ) -> Expected<ObjectPtr>
+    return loader( path, callback )
+    .and_then( [&] ( LoadedObject&& l ) -> Expected<LoadedObject>
     {
         if ( ext != "*.mru" && ext != "*.zip" )
-            postImportObject( obj, path );
+            postImportObject( l.obj, path );
 
-        return std::move( obj );
+        return std::move( l );
     } );
 }
 
-Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
-                                                         ProgressCallback progressCb )
+Expected<LoadedObject> deserializeObjectTree( const std::filesystem::path& path, const FolderCallback& postDecompress,
+                                              const ProgressCallback& progressCb )
 {
     MR_TIMER;
     UniqueTemporaryFolder scenePath( postDecompress );
@@ -695,8 +659,8 @@ Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::
     return deserializeObjectTreeFromFolder( scenePath, progressCb );
 }
 
-Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
-                                                                   ProgressCallback progressCb )
+Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                        const ProgressCallback& progressCb )
 {
     MR_TIMER;
 
@@ -720,20 +684,21 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::fi
     auto root = readRes.value();
 
     auto typeTreeSize = root["Type"].size();
-    std::shared_ptr<Object> rootObject;
+    LoadedObject res;
     for (int i = typeTreeSize-1;i>=0;--i)
     {
         const auto& type = root["Type"][unsigned( i )];
         if ( type.isString() )
-            rootObject = createObject( type.asString() );
-        if ( rootObject )
+            res.obj = createObject( type.asString() );
+        if ( res.obj )
             break;
     }
-    if ( !rootObject )
+    if ( !res.obj )
         return unexpected( "Unknown root object type" );
 
     int modelNumber{ 0 };
     int modelCounter{ 0 };
+    auto cb = progressCb;
     if ( progressCb )
     {
         std::function<int( const Json::Value& )> calculateModelNum = [&calculateModelNum] ( const Json::Value& root )
@@ -759,13 +724,13 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::fi
         modelNumber = calculateModelNum( root );
 
         modelNumber = std::max( modelNumber, 1 );
-        progressCb = [progressCb, &modelCounter, modelNumber] ( float v )
+        cb = [progressCb, &modelCounter, modelNumber] ( float v )
         {
             return progressCb( ( modelCounter + v ) / modelNumber );
         };
     }
 
-    auto resDeser = rootObject->deserializeRecursive( folder, root, progressCb, &modelCounter );
+    auto resDeser = res.obj->deserializeRecursive( folder, root, cb, &modelCounter );
     if ( !resDeser.has_value() )
     {
         std::string errorStr = resDeser.error();
@@ -774,15 +739,15 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::fi
         return unexpected( errorStr );
     }
 
-    return rootObject;
+    return res;
 }
 
-Expected<ObjectPtr> deserializeObjectTree( const std::filesystem::path& path, std::string*, ProgressCallback progressCb )
+Expected<LoadedObject> deserializeObjectTree( const std::filesystem::path& path, const ProgressCallback& progressCb )
 {
-    return deserializeObjectTree( path, FolderCallback{}, std::move( progressCb ) );
+    return deserializeObjectTree( path, FolderCallback{}, progressCb );
 }
 
 MR_ADD_SCENE_LOADER_WITH_PRIORITY( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree, -1 )
-MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectPtrFromZip )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), loadObjectTreeFromZip )
 
 } //namespace MR

@@ -931,12 +931,13 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
     ;
 }
 
-Expected<ObjectPtr> fromSceneStepFile( const std::filesystem::path& path, std::string*, ProgressCallback progressCb )
+Expected<LoadedObject> loadSceneFromStp( const std::filesystem::path& path, const ProgressCallback& progressCb )
 {
-    return fromSceneStepFile( path, { .callback = progressCb } );
+    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } } ).and_then(
+        []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 
-MR_ADD_SCENE_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), fromSceneStepFile )
+MR_ADD_SCENE_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), loadSceneFromStp )
 
 } // namespace MR::MeshLoad
 

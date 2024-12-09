@@ -326,7 +326,7 @@ void SurfacePointWidget::setPointRadius_()
 
             radius = params_.radius;
             if ( radius <= 0.f )
-                radius = 10.f;
+                radius = 5.f;
 
             radius *= cameraScale / baseObjectScale;
 

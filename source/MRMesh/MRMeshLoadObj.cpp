@@ -912,7 +912,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
             if ( numEmptyTexture != 0 && numEmptyTexture != result.textureFiles.size() )
             {
-                res.warnings += " object has material with and without texture";
+                res.warnings += "object has material with and without texture\n";
             }
             else if ( numEmptyTexture == 0 && result.textureFiles.size() != 0 )
             {
@@ -933,7 +933,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
                     {
                         crashTextureLoad = true;
                         objectMesh->setTextures( {} );
-                        res.warnings += image.error();
+                        res.warnings += image.error() + '\n';
                         break;
                     }
                 }
@@ -961,23 +961,11 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         }
 
         if ( totalSkippedFaceCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings = fmt::format( "{} triangles were skipped as inconsistent with others.", totalSkippedFaceCount );
-        }
+            res.warnings += fmt::format( "{} triangles were skipped as inconsistent with others.\n", totalSkippedFaceCount );
         if ( totalDuplicatedVertexCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.", totalDuplicatedVertexCount );
-        }
+            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.\n", totalDuplicatedVertexCount );
         if ( holesCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.", holesCount );
-        }
+            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.\n", holesCount );
         return res;
     } );
 }

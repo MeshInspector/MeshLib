@@ -33,7 +33,7 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
 {
     // Actually add the subfeatures:
 
-    auto parentFeature = Features::primitiveFromObject( sourceObject );
+    auto parentFeature = Features::primitiveFromObjectWithWorldXf( sourceObject );
     assert( parentFeature && "Can't convert this object to a feature" );
     if ( !parentFeature )
         return;
@@ -45,7 +45,7 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
         if ( params.isInfinite )
             return;
 
-        const auto subFeature = params.create();
+        const auto subFeature = params.create( *parentFeature );
 
         constexpr float infiniteExtent = 10; // Whatever, we shouldn't receive any infinite features anyway.
         auto subObject = Features::primitiveToObject( subFeature, infiniteExtent );

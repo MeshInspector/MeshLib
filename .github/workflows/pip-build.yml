@@ -44,7 +44,7 @@ jobs:
             runner: ubuntu-latest
             compiler: /usr/bin/clang++-11
           - platform: "aarch64"
-            docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
+            docker-image: "meshlib/meshlib-ubuntu20-arm64:latest"
             container-options: "--user root"
             runner: [ 'self-hosted', 'linux-arm64' ]
             # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,

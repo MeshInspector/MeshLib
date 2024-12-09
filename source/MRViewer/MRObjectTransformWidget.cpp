@@ -17,6 +17,8 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer.h"
+#include "ImGuiMenu.h"
 
 namespace
 {
@@ -243,6 +245,7 @@ void ObjectTransformWidget::preDraw_()
     {
         auto showMask = transformModeMask_.get( vpId );
         controls_->updateVisualTransformMode( showMask, vpId, getControlsXf( vpId ) );
+        controls_->updateSizeInPixel();
     }
 }
 
@@ -536,6 +539,8 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
+    float radius = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.radius : 1.0f;
+    float width = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.width : params_.width / params_.radius;
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
@@ -560,14 +565,14 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
         {
-            getCenter() - params_.radius * params_.negativeLineExtension * baseAxis[i],
-            getCenter() + params_.radius * params_.positiveLineExtension * baseAxis[i]
+            getCenter() - radius * params_.negativeLineExtension * baseAxis[i],
+            getCenter() + radius * params_.positiveLineExtension * baseAxis[i]
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -593,7 +598,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( params_.radius, params_.width, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( radius, width, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
@@ -627,6 +632,7 @@ void TransformControls::setRadius( float radius )
     if ( params_.radius == radius )
         return;
     params_.radius = radius;
+
     update();
 }
 
@@ -635,7 +641,59 @@ void TransformControls::setWidth( float width )
     if ( params_.width == width )
         return;
     params_.width = width;
+
     update();
+}
+
+void TransformControls::setTypeRadius( VisualParams::TypeRadius type )
+{
+    if ( params_.typeRadius == type )
+        return;
+
+    resetSizeInPixel_();
+
+    params_.typeRadius = type;
+}
+
+void TransformControls::updateSizeInPixel()
+{
+    if ( params_.typeRadius != VisualParams::TypeRadius::Pixels )
+        return;
+
+    if ( !translateControls_[0] )
+        return;
+
+    auto parent = translateControls_[0]->parent();
+    if ( !parent )
+        return;
+
+    auto mask = getViewerInstance().getPresentViewports();
+    for ( auto idViewport : mask )
+    {
+        const auto& xf = parent->worldXf(idViewport);
+        const auto& center = xf( getCenter() );
+        float lenPerPixel = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
+
+        AffineXf3f pixelTransform;
+
+        auto radius = params_.radius * lenPerPixel ;
+        pixelTransform = AffineXf3f::xfAround( Matrix3f::scale( radius ), getCenter() );
+
+        for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+        {
+            translateControls_[i]->setXf( pixelTransform, idViewport );
+            rotateControls_[i]->setXf( pixelTransform, idViewport );
+        }
+    }
+}
+
+void TransformControls::resetSizeInPixel_()
+{
+    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    {
+        translateControls_[i]->setXfsForAllViewports( {} );
+        rotateControls_[i]->setXfsForAllViewports( {} );
+    }
 }
 
 ControlBit TransformControls::hover_( bool pickThrough )

@@ -168,6 +168,7 @@ jobs:
           retention-days: 1
 
   update-documentation:
+    if: ${{ github.event_name == 'release' }}
     needs:
       - manylinux-pip-build
     uses: ./.github/workflows/update-docs.yml

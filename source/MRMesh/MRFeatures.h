@@ -338,7 +338,7 @@ requires MeasureSupported<A, B>
                 assert( [&]{
                     float a = ( dist->closestPointB - dist->closestPointA ).length();
                     float b = std::abs( dist->distance );
-                    return std::abs( a - b ) < std::min( a, b ) * 0.001f;
+                    return std::abs( a - b ) <= std::min( a, b ) * 0.001f;
                 }() );
             }
         }

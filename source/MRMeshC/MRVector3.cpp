@@ -8,6 +8,8 @@ using namespace MR;
 
 REGISTER_AUTO_CAST( Vector3f )
 
+REGISTER_AUTO_CAST( Vector3i )
+
 static_assert( sizeof( MRVector3f ) == sizeof( Vector3f ) );
 
 MRVector3f mrVector3fDiagonal( float a )
@@ -61,4 +63,29 @@ float mrVector3fLength( const MRVector3f* v_ )
 {
     ARG( v );
     return v.length();
+}
+
+static_assert( sizeof( MRVector3i ) == sizeof( Vector3i ) );
+
+MRVector3i mrVector3iDiagonal( int a )
+{
+    RETURN( Vector3i::diagonal( a ) );
+}
+
+MRVector3i mrVector3iPlusX()
+{
+    static const auto res = Vector3i::plusX();
+    RETURN( res );
+}
+
+MRVector3i mrVector3iPlusY()
+{
+    static const auto res = Vector3i::plusY();
+    RETURN( res );
+}
+
+MRVector3i mrVector3iPlusZ()
+{
+    static const auto res = Vector3i::plusZ();
+    RETURN( res );
 }

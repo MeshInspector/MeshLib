@@ -4,7 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
-/// three-dimensional vector
+/// three-dimensional vector of floats
 typedef struct MRVector3f
 {
     float x;
@@ -40,5 +40,25 @@ MRMESHC_API float mrVector3fLength( const MRVector3f* v );
 
 /// a set of 3 vectors; useful for representing a face via its vertex coordinates
 typedef MRVector3f MRTriangle3f[3];
+
+/// three-dimensional vector of ints
+typedef struct MRVector3i
+{
+    int x;
+    int y;
+    int z;
+} MRVector3i;
+
+/// (a, a, a)
+MRMESHC_API MRVector3i mrVector3iDiagonal( float a );
+
+/// (1, 0, 0)
+MRMESHC_API MRVector3i mrVector3iPlusX( void );
+
+/// (0, 1, 0)
+MRMESHC_API MRVector3i mrVector3iPlusY( void );
+
+/// (0, 0, 1)
+MRMESHC_API MRVector3i mrVector3iPlusZ( void );
 
 MR_EXTERN_C_END

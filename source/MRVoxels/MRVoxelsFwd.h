@@ -24,11 +24,13 @@ class ObjectVoxels;
 struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
 
-MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolumeMinMax,
+MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), VoxelsVolumeMinMax,
     ( SimpleVolumeMinMax, VoxelsVolumeMinMax<std::vector<float>> )
     ( SimpleVolumeMinMaxU16, VoxelsVolumeMinMax<std::vector<uint16_t>> )
     ( VdbVolume, VoxelsVolumeMinMax<FloatGrid> )
 )
+
+using VdbVolumes = std::vector<VdbVolume>;
 
 template <typename T>
 using VoxelValueGetter = std::function<T ( const Vector3i& )>;

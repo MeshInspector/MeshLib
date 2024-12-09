@@ -99,7 +99,7 @@ jobs:
         if: ${{ matrix.py-version != '3.8' }}
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
-          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
+          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev
 
       - name: Pip setup
         run: |
@@ -515,7 +515,7 @@ jobs:
 
       - name: Ubuntu system setup
         if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
 
       - name: Fedora 37 system setup
         if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}

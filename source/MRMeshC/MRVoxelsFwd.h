@@ -6,6 +6,8 @@ MR_EXTERN_C_BEGIN
 
 typedef struct MRFloatGrid MRFloatGrid;
 
+/// represents a box in 3D space subdivided on voxels stored in data;
+/// and stores minimum and maximum values among all valid voxels
 typedef struct MRVdbVolume
 {
     MRFloatGrid* data;

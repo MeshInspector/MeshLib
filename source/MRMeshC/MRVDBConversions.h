@@ -1,5 +1,6 @@
 #pragma once
 #include "MRVoxelsFwd.h"
+#include "MRAffineXf.h"
 
 MR_EXTERN_C_BEGIN
 
@@ -11,7 +12,7 @@ typedef enum MRMeshToVolumeSettingsType
 } MRMeshToVolumeSettingsType;
 
 // Parameters structure for meshToVolume function
-typedef struct MRMeshToVolumeParams
+typedef struct MRMeshToVolumeSettings
 {
     MRMeshToVolumeSettingsType type; // Conversion type
     float surfaceOffset; // the number of voxels around surface to calculate distance in (should be positive)
@@ -19,16 +20,18 @@ typedef struct MRMeshToVolumeParams
     MRAffineXf3f worldXf; // mesh initial transform
     MRAffineXf3f* outXf; // optional output: xf to original mesh (respecting worldXf)
     MRProgressCallback cb;
-} MRMeshToVolumeParams;
+} MRMeshToVolumeSettings;
+
+MRMESHC_API MRMeshToVolumeSettings mrVdbConversionsMeshToVolumeSettingsNew( void );
 
 // eval min max value from FloatGrid
-void mrVdbConversionsEvalGridMinMax( const MRFloatGrid* grid, float* min, float* max );
+MRMESHC_API void mrVdbConversionsEvalGridMinMax( const MRFloatGrid* grid, float* min, float* max );
 
 // convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
-MRVdbVolume mrVdbConversionsMeshToVolume( const MRMesh* mesh, const MRMeshToVolumeParams* params );
+MRMESHC_API MRVdbVolume mrVdbConversionsMeshToVolume( const MRMesh* mesh, const MRMeshToVolumeSettings* settings, MRString** errorStr );
 
 // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
-MRVdbVolume mrVdbConversionsFloatGridToVdbVolume( const MRFloatGrid* grid );
+MRMESHC_API MRVdbVolume mrVdbConversionsFloatGridToVdbVolume( const MRFloatGrid* grid );
 
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm
 typedef struct MRGridToMeshSettings
@@ -47,6 +50,8 @@ typedef struct MRGridToMeshSettings
     /// to receive progress and request cancellation
     MRProgressCallback cb;
 } MRGridToMeshSettings;
+
+MRMESHC_API MRGridToMeshSettings mrVdbConversionsGridToMeshSettingsNew( void );
 
 /// converts OpenVDB Grid into mesh using Dual Marching Cubes algorithm
 MRMESHC_API MRMesh* mrVdbConversionsGridToMesh( const MRFloatGrid* grid, const MRGridToMeshSettings* settings, MRString** errorStr );

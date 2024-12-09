@@ -72,6 +72,7 @@
     <ClInclude Include="detail\Vector.h" />
     <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
+    <ClInclude Include="MRVoxelsSave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAffineXf.cpp" />
@@ -126,6 +127,7 @@
     <ClCompile Include="MRVector.cpp" />
     <ClCompile Include="MRVector3.cpp" />
     <ClCompile Include="MRVoxelsLoad.cpp" />
+    <ClCompile Include="MRVoxelsSave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">

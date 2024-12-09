@@ -77,6 +77,17 @@ MRMESH_API Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
+  * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
+  *
+  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * \param isoValue amount of offset form given point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geo path
+  */
+[[nodiscard]]
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    float isoValue, SearchPathSettings searchSettings = {} );
+
+/** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
   * 
   * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input

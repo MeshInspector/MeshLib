@@ -17,6 +17,9 @@
 #include "MRTorus.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRSurfaceDistance.h"
+#include "MRExtractIsolines.h"
+#include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
 
@@ -1118,6 +1121,63 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
     return res;
 }
 
+Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
+{
+    auto initCutContours = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings );
+    if ( !initCutContours.has_value() )
+        return unexpected( toString( initCutContours.error() ) );
+
+    if ( isoValue == 0.0f )
+        return OneMeshContours{ std::move( *initCutContours ) };
+
+    Mesh meshAfterCut = mesh;
+    NewEdgesMap nEM;
+    auto cutRes = cutMesh( meshAfterCut, { std::move( *initCutContours ) }, { .new2oldEdgesMap = &nEM } );
+    if ( cutRes.fbsWithCountourIntersections.any() )
+        return unexpected( "Initial contour has self intersections" );
+
+    VertBitSet startVertices = meshAfterCut.topology.getValidVerts() - mesh.topology.getValidVerts();
+    auto distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
+    auto isoLines = extractIsolines( meshAfterCut.topology, distances, isoValue );
+
+    OneMeshContours res;
+    res.resize( isoLines.size() );
+    for ( int i = 0; i < isoLines.size(); ++i )
+    {
+        const auto& isoLineI = isoLines[i];
+        auto& resI = res[i];
+        resI.closed = true;
+        resI.intersections.resize( isoLineI.size() );
+        ParallelFor( resI.intersections, [&] ( size_t j )
+        {
+            const auto& mep = isoLineI[j];
+            auto& inter = resI.intersections[j];
+
+            inter.coordinate = meshAfterCut.edgePoint( mep );
+
+            auto newUE = mep.e.undirected();
+            if ( newUE < mesh.topology.undirectedEdgeSize() )
+                inter.primitiveId = mep.e;
+            else
+            {
+                if ( nEM.splitEdges.test( newUE ) )
+                {
+                    auto oldE = nEM.map[newUE].eId;
+                    if ( mep.e.odd() )
+                        oldE = oldE.sym();
+                    inter.primitiveId = oldE;
+                }
+                else
+                {
+                    inter.primitiveId = nEM.map[newUE].fId;
+                }
+            }            
+        } );
+        resI.intersections.back() = resI.intersections.front();
+    }
+    return res;
+}
+
 Expected<OneMeshContour, PathError> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
@@ -1630,6 +1690,8 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
 
         auto next = mesh.topology.next( e.sym() );
         auto newEdge = mesh.topology.makeEdge();
+        if ( new2OldEdgeMap )
+            new2OldEdgeMap->map[newEdge.undirected()].fId = oldF;
         mesh.topology.splice( e, newEdge );
         mesh.topology.splice( next.sym(), newEdge.sym() );
 
@@ -1779,6 +1841,11 @@ void cutOneEdge( Mesh& mesh,
             mesh.topology.splice( ePrev, e );
         // e now becomes the second part of split edge, add first part to it
         e0 = mesh.topology.makeEdge();
+        if ( new2OldEdgeMap )
+        {
+            new2OldEdgeMap->splitEdges.autoResizeSet( e0.undirected() );
+            new2OldEdgeMap->map[e0.undirected()].eId = baseEdge;
+        }
         if ( ePrev != e )
             mesh.topology.splice( ePrev, e0 );
     }
@@ -1808,7 +1875,7 @@ void cutOneEdge( Mesh& mesh,
             lastEdge = mesh.topology.makeEdge();
             if ( new2OldEdgeMap )
             {
-                new2OldEdgeMap->map[lastEdge.undirected()].eId = baseEdge;
+                new2OldEdgeMap->map[lastEdge.undirected()].eId = isBaseSym ? baseEdge.sym() : baseEdge;
                 new2OldEdgeMap->splitEdges.autoResizeSet( lastEdge.undirected() );
             }
         }
@@ -1906,10 +1973,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     MR_TIMER;
     MR_WRITER( mesh );
     CutMeshResult res;
-
-    if ( params.new2oldEdgesMap )
-        params.new2oldEdgesMap->splitEdges.resize( mesh.topology.undirectedEdgeSize() );
-
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
@@ -1917,8 +1980,13 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     if ( params.new2oldEdgesMap )
     {
-        for ( const auto& [oldCutE, _] : preRes.edgeData )
-            params.new2oldEdgesMap->splitEdges.set( oldCutE );
+        for ( int i = 0; i < preRes.paths.size(); ++i )
+        {
+            for ( int j = 0; j < preRes.paths[i].size(); ++j )
+            {
+                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()].fId = preRes.removedFaces[i][j].f;
+            }
+        }
     }
 
     cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );

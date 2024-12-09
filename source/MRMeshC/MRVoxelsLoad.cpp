@@ -19,16 +19,18 @@ MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* file, MRProgressCa
 
     if ( res )
     {
-        auto volumes = mrVdbVolumesNewSized( res->size() );
+        std::vector<MRVdbVolume> volumes( res->size() );
+        
         for ( size_t i = 0; i < res->size(); ++i )
         {
-            volumes->data[i].data = auto_cast( new_from( ( *res )[i].data ) );
-            volumes->data[i].dims = auto_cast( ( *res )[i].dims );
-            volumes->data[i].voxelSize = auto_cast( ( *res )[i].voxelSize );
-            volumes->data[i].min = ( *res )[i].min;
-            volumes->data[i].max = ( *res )[i].max;
+            volumes[i].data = auto_cast( new_from( std::move( ( *res )[i].data ) ) );
+            volumes[i].dims = auto_cast( ( *res )[i].dims );
+            volumes[i].voxelSize = auto_cast( ( *res )[i].voxelSize );
+            volumes[i].min = ( *res )[i].min;
+            volumes[i].max = ( *res )[i].max;
         }
-        return volumes;
+        
+        return (MRVdbVolumes*)( NEW_VECTOR( std::move( volumes ) ) );
     }
 
     if ( errorStr && !res )

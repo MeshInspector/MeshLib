@@ -72,7 +72,7 @@ MRVdbVolume mrVdbConversionsMeshToVolume( const MRMesh* mesh_, const MRMeshToVol
     {
         return MRVdbVolume
         {
-            .data = auto_cast( new_from( resOrErr->data ) ),
+            .data = auto_cast( new_from( std::move( resOrErr->data ) ) ),
             .dims = auto_cast( resOrErr->dims ),
             .voxelSize = auto_cast( resOrErr->voxelSize ),
             .min = resOrErr->min,
@@ -95,7 +95,7 @@ MRVdbVolume mrVdbConversionsFloatGridToVdbVolume( const MRFloatGrid* grid_ )
 
     return MRVdbVolume
     {
-        .data = auto_cast( new_from( res.data ) ),
+        .data = auto_cast( new_from( std::move( res.data ) ) ),
         .dims = auto_cast( res.dims ),
         .voxelSize = auto_cast( res.voxelSize ),
         .min = res.min,

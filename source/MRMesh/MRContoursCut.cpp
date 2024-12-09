@@ -17,6 +17,9 @@
 #include "MRTorus.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRSurfaceDistance.h"
+#include "MRExtractIsolines.h"
+#include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
 
@@ -1091,6 +1094,63 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
     return res;
 }
 
+Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
+{
+    auto initCutContours = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings );
+    if ( !initCutContours.has_value() )
+        return unexpected( toString( initCutContours.error() ) );
+
+    if ( isoValue == 0.0f )
+        return OneMeshContours{ std::move( *initCutContours ) };
+
+    Mesh meshAfterCut = mesh;
+    NewEdgesMap nEM;
+    auto cutRes = cutMesh( meshAfterCut, { std::move( *initCutContours ) }, { .new2oldEdgesMap = &nEM } );
+    if ( cutRes.fbsWithCountourIntersections.any() )
+        return unexpected( "Initial contour has self intersections" );
+
+    VertBitSet startVertices = meshAfterCut.topology.getValidVerts() - mesh.topology.getValidVerts();
+    auto distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
+    auto isoLines = extractIsolines( meshAfterCut.topology, distances, isoValue );
+
+    OneMeshContours res;
+    res.resize( isoLines.size() );
+    for ( int i = 0; i < isoLines.size(); ++i )
+    {
+        const auto& isoLineI = isoLines[i];
+        auto& resI = res[i];
+        resI.closed = true;
+        resI.intersections.resize( isoLineI.size() );
+        ParallelFor( resI.intersections, [&] ( size_t j )
+        {
+            const auto& mep = isoLineI[j];
+            auto& inter = resI.intersections[j];
+
+            inter.coordinate = meshAfterCut.edgePoint( mep );
+
+            auto newUE = mep.e.undirected();
+            if ( newUE < mesh.topology.undirectedEdgeSize() )
+                inter.primitiveId = mep.e;
+            else
+            {
+                if ( nEM.splitEdges.test( newUE ) )
+                {
+                    auto oldE = EdgeId( nEM.map[newUE] );
+                    if ( mep.e.odd() )
+                        oldE = oldE.sym();
+                    inter.primitiveId = oldE;
+                }
+                else
+                {
+                    inter.primitiveId = FaceId( nEM.map[newUE] );
+                }
+            }            
+        } );
+        resI.intersections.back() = resI.intersections.front();
+    }
+    return res;
+}
+
 Expected<OneMeshContour, PathError> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
@@ -1561,22 +1621,28 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
-void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan & plan, FaceId oldFace, FaceMap* new2OldMap )
+void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     assert( oldFace.valid() );
     const auto fsz0 = mesh.topology.faceSize();
+    const auto uesz0 = mesh.topology.undirectedEdgeSize();
     executeHoleFillPlan( mesh, e, plan );
     if ( new2OldMap )
     {
         const auto fsz = mesh.topology.faceSize();
         new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
+    if ( new2OldEdgeMap )
+    {
+        for ( int ue = int( uesz0 ); ue < int( mesh.topology.undirectedEdgeSize() ); ++ue )
+            new2OldEdgeMap->map[UndirectedEdgeId( ue )] = oldFace;
+    }
 }
 
-void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
+void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     auto plan = getPlanarHoleFillPlan( mesh, e );
-    executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap );
+    executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
 }
 
 /* this function triangulate holes where first and last edge are the same but sym
@@ -1586,7 +1652,7 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
  /_____________\
 
 edges should be already cut */
-void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemovedFacesInfo& removedFaces, FaceMap* new2OldMap )
+void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemovedFacesInfo& removedFaces, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
 
     auto fixOrphan = [&]( EdgeId e, FaceId oldF )
@@ -1597,11 +1663,13 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
 
         auto next = mesh.topology.next( e.sym() );
         auto newEdge = mesh.topology.makeEdge();
+        if ( new2OldEdgeMap )
+            new2OldEdgeMap->map[newEdge.undirected()] = oldF;
         mesh.topology.splice( e, newEdge );
         mesh.topology.splice( next.sym(), newEdge.sym() );
 
-        triangulateContour( mesh, e, oldF, new2OldMap );
-        triangulateContour( mesh, e.sym(), oldF, new2OldMap );
+        triangulateContour( mesh, e, oldF, new2OldMap, new2OldEdgeMap );
+        triangulateContour( mesh, e.sym(), oldF, new2OldMap, new2OldEdgeMap );
     };
     for ( int i = 0; i < paths.size(); ++i )
     {
@@ -1719,7 +1787,7 @@ void connectEdges( MeshTopology& topology, EdgeId botEdge, EdgeId topEdge, EdgeI
 // cuts one edge and connects all intersecting contours with pieces
 void cutOneEdge( Mesh& mesh,
                  const EdgeData& edgeData, const OneMeshContours& contours,
-                 FaceMap* new2OldMap )
+                 FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     assert( !edgeData.empty() );
 
@@ -1746,6 +1814,11 @@ void cutOneEdge( Mesh& mesh,
             mesh.topology.splice( ePrev, e );
         // e now becomes the second part of split edge, add first part to it
         e0 = mesh.topology.makeEdge();
+        if ( new2OldEdgeMap )
+        {
+            new2OldEdgeMap->splitEdges.autoResizeSet( e0.undirected() );
+            new2OldEdgeMap->map[e0.undirected()] = baseEdge;
+        }
         if ( ePrev != e )
             mesh.topology.splice( ePrev, e0 );
     }
@@ -1771,7 +1844,14 @@ void cutOneEdge( Mesh& mesh,
 
         EdgeId lastEdge = e;
         if ( i + 1 < edgeData.size() )
+        {
             lastEdge = mesh.topology.makeEdge();
+            if ( new2OldEdgeMap )
+            {
+                new2OldEdgeMap->map[lastEdge.undirected()] = isBaseSym ? baseEdge.sym() : baseEdge;
+                new2OldEdgeMap->splitEdges.autoResizeSet( lastEdge.undirected() );
+            }
+        }
 
         if ( isAllLeftOnly && rightEdge.valid() )
             isAllLeftOnly = false;
@@ -1786,9 +1866,9 @@ void cutOneEdge( Mesh& mesh,
 
     // fix triangle if this was last or first
     if ( isAllLeftOnly && oldRight.valid() )
-        triangulateContour( mesh, e0.sym(), oldRight, new2OldMap );
+        triangulateContour( mesh, e0.sym(), oldRight, new2OldMap, new2OldEdgeMap );
     if ( isAllRightOnly && oldLeft.valid() )
-        triangulateContour( mesh, e0, oldLeft, new2OldMap );
+        triangulateContour( mesh, e0, oldLeft, new2OldMap, new2OldEdgeMap );
 }
 
 // this function cut mesh edge and connects it with result path, 
@@ -1796,7 +1876,7 @@ void cutOneEdge( Mesh& mesh,
 void cutEdgesIntoPieces( Mesh& mesh, 
                          EdgeDataMap&& edgeData, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
-                         FaceMap* new2OldMap )
+                         FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
     // sort each edge intersections in parallel
@@ -1818,7 +1898,7 @@ void cutEdgesIntoPieces( Mesh& mesh,
     } );
     // cut all
     for ( const auto& edgeInfo : edgeData )
-        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap );
+        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
@@ -1866,13 +1946,24 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     MR_TIMER;
     MR_WRITER( mesh );
     CutMeshResult res;
-
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
     auto preRes = doPreCutMesh( mesh, contours );
-    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap );
-    fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap );
+
+    if ( params.new2oldEdgesMap )
+    {
+        for ( int i = 0; i < preRes.paths.size(); ++i )
+        {
+            for ( int j = 0; j < preRes.paths[i].size(); ++j )
+            {
+                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()] = preRes.removedFaces[i][j].f;
+            }
+        }
+    }
+
+    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
+    fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithCountourIntersections.count() > 0 )
@@ -1938,7 +2029,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         params.new2OldMap->reserve( expectedTotalTris );
 
     for ( auto & hd : holeRepresentativeEdges )
-        executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap );
+        executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap, params.new2oldEdgesMap );
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )

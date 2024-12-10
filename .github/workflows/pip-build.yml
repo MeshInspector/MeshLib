@@ -141,7 +141,7 @@ jobs:
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
             -DMRVIEWER_NO_GTK=ON
             -DMESHLIB_BUILD_MRCUDA=ON
-            ${{ fromJSON('["", "-DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler"]')[matrix.platform == "aarch64"] }}
+            ${{ fromJSON('["", "-DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler"]')[matrix.platform == 'aarch64'] }}
 
       - name: Generate and build MRBind bindings
         run: |

@@ -169,6 +169,16 @@ Vector2f SurfaceManipulationWidget::getMinMax()
     return { rangeLength * -0.5f, rangeLength * 0.5f };
 }
 
+void SurfaceManipulationWidget::createLastStableObjMesh_()
+{
+    assert( !lastStableObjMesh_ );
+    lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+    lastStableObjMesh_->setAncillary( true );
+    lastStableObjMesh_->setVisible( false );
+    obj_->setPickable( false );
+    obj_->parent()->addChild( lastStableObjMesh_ );
+}
+
 bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
 {
     if ( button != MouseButton::Left || modifiers != 0 )
@@ -196,11 +206,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
         if ( settings_.workMode != WorkMode::Patch )
         {
             // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
-            assert( !lastStableObjMesh_ );
-            lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
-            lastStableObjMesh_->setAncillary( true );
-            obj_->setPickable( false );
-            obj_->parent()->addChild( lastStableObjMesh_ );
+            createLastStableObjMesh_();
             lastStableValueChanges_ = valueChanges_;
 
             appendHistoryAction_ = true;
@@ -579,9 +585,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
     historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
-    assert( !lastStableObjMesh_ );
-    lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
-    obj_->parent()->addChild( lastStableObjMesh_ );
+    createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }
 

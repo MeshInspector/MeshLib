@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - platform: "x86_64"
             docker-image: "meshlib/meshlib-ubuntu20:latest"
@@ -66,6 +66,9 @@ jobs:
           - py-version: "3.12"
             py-tag: "cp312"
             py-cmd: "python3.12"
+          - py-version: "3.13"
+            py-tag: "cp313"
+            py-cmd: "python3.13"
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -98,7 +101,7 @@ jobs:
         if: ${{ matrix.py-version != '3.8' }}
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
-          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
+          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev
 
       - name: Pip setup
         run: |
@@ -179,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -211,6 +214,12 @@ jobs:
             py-dir: "Python312"
             py-file: "python312"
             embed-version: "3.12.0"
+          - py-version: "3.13"
+            py-tag: "cp313"
+            py-short-version: "313"
+            py-dir: "Python313"
+            py-file: "python313"
+            embed-version: "3.13.0"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -359,7 +368,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86", "arm64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude: # python 3.8 disabled on x86 macOS since 2024-10-14
           - platform: "x86"
             py-version: "3.8"
@@ -388,6 +397,9 @@ jobs:
           - py-version: "3.12"
             py-tag: "cp312"
             py-cmd: "python3.12"
+          - py-version: "3.13"
+            py-tag: "cp313"
+            py-cmd: "python3.13"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -514,7 +526,7 @@ jobs:
 
       - name: Ubuntu system setup
         if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
 
       - name: Fedora 37 system setup
         if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
@@ -547,7 +559,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -588,7 +600,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude: # python 3.8 disabled on x86 macOS since 2024-10-14
           - platform: "x86"
             py-version: "3.8"
@@ -610,6 +622,8 @@ jobs:
             py-cmd: "python3.11"
           - py-version: "3.12"
             py-cmd: "python3.12"
+          - py-version: "3.13"
+            py-cmd: "python3.13"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -617,7 +631,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
-        if: ${{ !(matrix.platform == 'x86' && ( matrix.py-version == '3.11' || matrix.py-version == '3.12' ) ) }}
+        if: ${{ !(matrix.platform == 'x86' && ( matrix.py-version == '3.11' || matrix.py-version == '3.12' || matrix.py-version == '3.13' ) ) }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Create virtualenv

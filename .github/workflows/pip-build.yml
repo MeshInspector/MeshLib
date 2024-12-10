@@ -1,5 +1,8 @@
 name: Build Pip Wheels
 
+# When ran from the github UI, we build the target commit exactly.
+# When ran on release, we use the latest tagged commit in the `master` branch.
+
 on:
   release:
     types: [ published ]

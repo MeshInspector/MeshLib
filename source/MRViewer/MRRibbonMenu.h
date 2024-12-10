@@ -163,7 +163,7 @@ protected:
     using DrawTabConfig = std::vector<DrawGroupConfig>;
     // draw group of items
     MRVIEWER_API virtual DrawTabConfig setupItemsGroupConfig_( const std::vector<std::string>& groupsInTab, const std::string& tabName, bool centerItems );
-    MRVIEWER_API virtual void setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName );
+    MRVIEWER_API virtual void setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName, bool centerItems );
     MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName,
                                                DrawGroupConfig config );
     // ribbon menu item pressed

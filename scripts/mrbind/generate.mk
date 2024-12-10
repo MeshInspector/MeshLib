@@ -231,7 +231,8 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
 # Include the `MRCuda` project?
-ENABLE_CUDA := 1
+# Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
+ENABLE_CUDA := $(if $(IS_MACOS),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable ENABLE_CUDA: $(if $(cuda),YES,NO))
 

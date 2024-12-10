@@ -136,12 +136,12 @@ jobs:
           # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
           CMAKE_CXX_COMPILER: ${{matrix.compiler}}
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
-          # Disabling CUDA at least because Clang 18 is too new for it on Ubuntu 20.04, and we're using Clang 18 for reasons
-          # explained in `MeshLib/scripts/mrbind/0001-Disable-tests-that-seem-to-expose-an-ABI-incompatibility.patch`.
+          # Enabling `-allow-unsupported-compiler` because we use Clang 18 on Arm, while Cuda supports at most 16.
           MR_CMAKE_OPTIONS: >
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
             -DMRVIEWER_NO_GTK=ON
             -DMESHLIB_BUILD_MRCUDA=ON
+            ${{ matrix.platform == 'aarch64' ? '-DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler' : '' }}
 
       - name: Generate and build MRBind bindings
         run: |

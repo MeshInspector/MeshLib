@@ -6,7 +6,7 @@ namespace MR { namespace Cuda {
 
 struct MeshProjectorData;
 /// Computes the closest point on mesh to each of given points on GPU. It caches data that necessary for computing
-class PointsToMeshProjector : public IPointsToMeshProjector
+class MRCUDA_CLASS PointsToMeshProjector : public IPointsToMeshProjector
 {
     std::shared_ptr<MeshProjectorData> meshData_;
     const Mesh* mesh_{ nullptr };
@@ -16,7 +16,7 @@ public:
     /// update all data related to the referencing mesh
     MRCUDA_API virtual void updateMeshData( const Mesh* mesh ) override;
     /// <summary>
-    /// Computes the closest point on mesh to each of given points    
+    /// Computes the closest point on mesh to each of given points
     /// </summary>
     /// <param name="res">vector pf projections</param>
     /// <param name="points">vector of points to project</param>

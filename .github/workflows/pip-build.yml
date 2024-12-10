@@ -141,7 +141,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
             -DMRVIEWER_NO_GTK=ON
-            -DMESHLIB_BUILD_MRCUDA=OFF
+            -DMESHLIB_BUILD_MRCUDA=ON
 
       - name: Generate and build MRBind bindings
         run: |

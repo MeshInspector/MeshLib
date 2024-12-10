@@ -230,8 +230,14 @@ endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
+# Include the `MRCuda` project?
+ENABLE_CUDA := 1
+override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
+$(info Enable ENABLE_CUDA: $(if $(cuda),YES,NO))
+
+
 # Which MeshLib projects to bind.
-INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
+INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels $(if $(ENABLE_CUDA),MRCuda)
 
 # 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
 # Currently defaults to 1 because otherwise we get an incompatibility on Ubuntu x86 20.04 and 22.04 when MeshLib is built in debug mode,

@@ -516,10 +516,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse
         || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 
-    // If a plugin opens some UI in its `onMouseDown_()`,
-    // this condition prevents that UI from immediately getting clicked in the same frame.
-    if ( capturedMouse_ )
-        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
 
     if ( !capturedMouse_ )
     {

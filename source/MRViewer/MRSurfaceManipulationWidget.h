@@ -97,6 +97,7 @@ private:
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
     void updateValueChangesByDistance_( const VertBitSet& region );
+    void createLastStableObjMesh_();
 
     Settings settings_;
 

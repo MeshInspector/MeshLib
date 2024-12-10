@@ -16,13 +16,13 @@ const MRVdbVolume mrVdbVolumesGet( const MRVdbVolumes* volumes_, size_t index )
 {
     ARG( volumes );
     const auto& result = volumes[index];
-    return MRVdbVolume {
-        .data = (MRFloatGrid*) &result.data,
-        .dims = auto_cast( result.dims ),
-        .voxelSize = auto_cast( result.voxelSize ),
-        .min = result.min,
-        .max = result.max
-    };
+    MRVdbVolume res;
+    res.data = ( MRFloatGrid* )&result.data;
+    res.dims = auto_cast( result.dims );
+    res.voxelSize = auto_cast( result.voxelSize );
+    res.min = result.min;
+    res.max = result.max;
+    return res;    
 }
 
 size_t mrVdbVolumesSize( const MRVdbVolumes* volumes_ )

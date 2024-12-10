@@ -98,6 +98,7 @@ private:
     void updateValueChanges_( const VertBitSet& region );
     void updateValueChangesByDistance_( const VertBitSet& region );
     void createLastStableObjMesh_();
+    void removeLastStableObjMesh_();
 
     Settings settings_;
 

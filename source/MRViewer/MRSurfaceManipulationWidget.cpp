@@ -87,7 +87,11 @@ void SurfaceManipulationWidget::reset()
 {
     originalMesh_.reset();
 
-    lastStableObjMesh_.reset();
+    if ( lastStableObjMesh_ )
+    {
+        lastStableObjMesh_->detachFromParent();
+        lastStableObjMesh_.reset();
+    }
 
     obj_->clearAncillaryTexture();
     obj_->setPickable( true );
@@ -192,9 +196,11 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
         if ( settings_.workMode != WorkMode::Patch )
         {
             // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
+            assert( !lastStableObjMesh_ );
             lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
             lastStableObjMesh_->setAncillary( true );
             obj_->setPickable( false );
+            obj_->parent()->addChild( lastStableObjMesh_ );
             lastStableValueChanges_ = valueChanges_;
 
             appendHistoryAction_ = true;
@@ -299,7 +305,11 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     obj_->setPickable( true );
 
-    lastStableObjMesh_.reset();
+    if ( lastStableObjMesh_ )
+    {
+        lastStableObjMesh_->detachFromParent();
+        lastStableObjMesh_.reset();
+    }
 
     return true;
 }
@@ -495,19 +505,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     mousePos_ = mousePos;
 
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
-    // to pick some object, it must have a parent object
-    std::shared_ptr<Object> parent;
-    if ( lastStableObjMesh_ )
-    {
-        parent = std::make_shared<Object>();
-        parent->addChild( lastStableObjMesh_ );
-    }
     std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
-    if ( lastStableObjMesh_ )
-    {
-        lastStableObjMesh_->detachFromParent();
-        parent.reset();
-    }
 
     updateVizualizeSelection_( movedPosPick.empty() ? ObjAndPick() : movedPosPick.back() );
     const auto& mesh = *objMeshPtr->mesh();
@@ -559,7 +557,11 @@ void SurfaceManipulationWidget::abortEdit_()
     if ( !mousePressed_ )
         return;
     mousePressed_ = false;
-    lastStableObjMesh_.reset();
+    if ( lastStableObjMesh_ )
+    {
+        lastStableObjMesh_->detachFromParent();
+        lastStableObjMesh_.reset();
+    }
     obj_->setPickable( true );
     appendHistoryAction_ = false;
     historyAction_.reset();
@@ -577,7 +579,9 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
     historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
+    assert( !lastStableObjMesh_ );
     lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+    obj_->parent()->addChild( lastStableObjMesh_ );
     lastStableValueChanges_ = valueChanges_;
 }
 

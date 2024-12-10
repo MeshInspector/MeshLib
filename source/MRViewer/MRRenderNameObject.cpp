@@ -29,10 +29,10 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             {
                 isHovered = true;
 
-                if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
+                if ( prevFrameHovered && ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
                     isActive = true;
 
-                if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                if ( prevFrameHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
                 {
                     RibbonMenu::instance()->simulateNameTagClick(
                         // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
@@ -44,6 +44,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             }
         }
     }
+    prevFrameHovered = isHovered;
 }
 
 void RenderNameObject::Task::renderPass()

@@ -56,7 +56,7 @@ jobs:
         if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'x86-64' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
-            apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
+            apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-10-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
           python3 -m pip install --upgrade pip
@@ -73,7 +73,7 @@ jobs:
         if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'arm64' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
-            apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
+            apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-10-dev && \
             apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
           python3 -m pip install --upgrade pip

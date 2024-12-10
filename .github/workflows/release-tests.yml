@@ -58,7 +58,7 @@ jobs:
 
       - name: Ubuntu system setup
         if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
 
       - name: Fedora 37 system setup
         if: ${{matrix.os == 'fedora:37'}}
@@ -98,7 +98,7 @@ jobs:
       - name: Pip setup
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip install pytest 
+          py -${{matrix.py-version}} -m pip install pytest
           py -${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests

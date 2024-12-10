@@ -10,12 +10,36 @@ REGISTER_AUTO_CAST2( std::string, MRString )
 REGISTER_AUTO_CAST( FloatGrid )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( Vector3i )
-MR_VECTOR_LIKE_IMPL( VdbVolumes, VdbVolume )
+REGISTER_AUTO_CAST( VdbVolumes )
+
+const MRVdbVolume mrVdbVolumesGet( const MRVdbVolumes* volumes_, size_t index )
+{
+    ARG( volumes );
+    const auto& result = volumes[index];
+    return MRVdbVolume {
+        .data = (MRFloatGrid*) &result.data,
+        .dims = auto_cast( result.dims ),
+        .voxelSize = auto_cast( result.voxelSize ),
+        .min = result.min,
+        .max = result.max
+    };
+}
+
+size_t mrVdbVolumesSize( const MRVdbVolumes* volumes_ )
+{
+    ARG( volumes );
+    return volumes.size();
+}
+
+void mrVdbVolumesFree( MRVdbVolumes* volumes_ )
+{
+    ARG_PTR( volumes );
+    delete volumes;
+}
 
 MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* file, MRProgressCallback cb_, MRString** errorStr )
 {
-    auto cb = [cb_] ( float progress ) -> bool { return cb_( progress ); };
-    auto res = cb_ ? VoxelsLoad::fromAnySupportedFormat( file, cb ) : VoxelsLoad::fromAnySupportedFormat( file );
+    auto res = VoxelsLoad::fromAnySupportedFormat( file, cb_ );
 
     if ( res )
     {

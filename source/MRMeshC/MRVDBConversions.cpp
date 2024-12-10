@@ -54,9 +54,6 @@ void mrVdbConversionsEvalGridMinMax( const MRFloatGrid* grid_, float* min, float
 MRVdbVolume mrVdbConversionsMeshToVolume( const MRMesh* mesh_, const MRMeshToVolumeSettings* settings_, MRString** errorStr )
 {
     ARG( mesh );
-    AffineXf3f outXf;
-    if ( settings_->outXf )
-        outXf = auto_cast( *settings_->outXf );
 
     MeshToVolumeParams settings
     {
@@ -64,7 +61,7 @@ MRVdbVolume mrVdbConversionsMeshToVolume( const MRMesh* mesh_, const MRMeshToVol
         .surfaceOffset = settings_->surfaceOffset,
         .voxelSize = auto_cast( settings_->voxelSize ),
         .worldXf = auto_cast( settings_->worldXf ),
-        .outXf = settings_->outXf ? &outXf : nullptr,
+        .outXf = (AffineXf3f*)settings_->outXf,
         .cb = settings_->cb
     };
 

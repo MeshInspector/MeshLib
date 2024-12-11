@@ -16,6 +16,6 @@ MRMESHC_API size_t mrVdbVolumesSize( const MRVdbVolumes* volumes );
 MRMESHC_API void mrVdbVolumesFree( MRVdbVolumes* volumes );
 
 /// Detects the format from file extension and loads voxels from it
-MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* file, MRProgressCallback cb, MRString** errorStr );
+MRMESHC_API MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* file, MRProgressCallback cb, MRString** errorStr );
 
 MR_EXTERN_C_END

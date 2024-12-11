@@ -27,7 +27,7 @@ Main library with geometry operations
 
 Library with additional Input/Output formats
 
-**MRMesh** + 
+\b MRMesh + 
 |Name          |Link                                      |Description                                                                  |License                                    |
 |--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |libHaru       |http://libharu.org                        |free, cross platform, open source library for generating PDF files           |zlib                                       |
@@ -44,7 +44,7 @@ Library with additional Input/Output formats
 
 Library with text to mesh operations
 
-**MRMesh** +
+\b MRMesh +
 |Name          |Link                                      |Description                                                                  |License                                    |
 |--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |FreeType      |https://freetype.org                      |a freely available software library to render fonts                          |GPL-2.0, FTL(BSD like)                     |
@@ -64,7 +64,7 @@ Library for creating python bindings and for Embedded python
 
 Library for voxels operations
 
-**MRMesh** +
+\b MRMesh +
 |Name    |Link                                                 |Description                                                                  |License             |
 |--------|-----------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
 |OpenVDB |https://github.com/AcademySoftwareFoundation/openvdb |efficient manipulation of sparse, time-varying, volumetric data discretized  |MPL2                |
@@ -74,7 +74,7 @@ Library for voxels operations
 
 Library for CUDA based algorithms
 
-**MRMesh** + **MRVoxels** +
+\b MRMesh + **MRVoxels** +
 |Name |Link                                      |Description                                                                                          |License                                              |
 |-----|------------------------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 |CUDA |https://developer.nvidia.com/cuda-toolkit |GPU-accelerated libraries, debugging and optimization tools, a C/C++ compiler, and a runtime library |https://docs.nvidia.com/cuda/eula/index.html#license |
@@ -84,7 +84,7 @@ Library for CUDA based algorithms
 
 Main library with rendering and window handling
 
-**MRMesh** + **MRVoxels** + **MRSymbolMesh** + **MRIOExtras** +
+\b MRMesh + **MRVoxels** + **MRSymbolMesh** + **MRIOExtras** +
 |Name            |Link                               |Description                                                                                         |License                      |
 |----------------|-----------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------|
 |glad            |https://github.com/Dav1dde/glad    |GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs                                    |MIT                          |

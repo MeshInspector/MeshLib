@@ -27,7 +27,7 @@ Features illustration is available in [the features section](https://meshlib.io/
 
  - \b Automation, \b AI, \b and \b Robotics. Essential for 3D scanning in robotics, AI, and autonomous systems, MeshLib enables real-time mesh processing for environment mapping, object detection, and path planning. Mesh repair tools prepare models by fixing holes and intersections, ideal for automated systems handling large datasets.
  - \b Manufacturing \b and \b 3D \b Printing. MeshLib's Boolean operations and mesh offsetting ensure accuracy and manufacturability for 3D prints, optimizing models with decimation for industrial-scale applications.
- - \b CAD, \b Dental, \b and \b Design. MeshLib's precision tools support CAD and dental applications, providing mesh repair, offsetting, and thickening for accurate, manufacturable designs.
+ - \b Dental \b Applications. MeshLib provides specialized tools for dental workflows, offering precise mesh repair and customization for dental prosthetics, aligners, and implants. These capabilities ensure accurate, patient-specific designs ready for manufacturing.
  - \b Game \b Development \b and \b VR. Optimized for real-time rendering, MeshLib's simplification tools maintain visual quality, and Boolean operations allow dynamic model manipulation.
  - \b Scientific \b Visualization \b and \b Medical \b Imaging. MeshLib supports large datasets, crucial for scientific and medical visualization, with mesh repair and simplification for detailed, real-time models in fields like geophysics and medical planning.
 

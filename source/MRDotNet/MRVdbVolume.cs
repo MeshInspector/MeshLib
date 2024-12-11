@@ -61,9 +61,9 @@ namespace MR
             internal IntPtr mrVdbVolumes_;
             private bool disposed_ = false;
             internal VdbVolumes(IntPtr mrVdbVolumes)
+            : base((int)mrVdbVolumesSize(mrVdbVolumes))
             {
                 mrVdbVolumes_ = mrVdbVolumes;
-                this.Capacity = (int)mrVdbVolumesSize(mrVdbVolumes_);
 
                 for (int i = 0; i < this.Capacity; i++)
                 {

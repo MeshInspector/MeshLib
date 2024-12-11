@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 import sys
@@ -71,7 +72,13 @@ def copy_lib():
 	for address, dirs, files in folder:
 		for file in files:
 			if ( not any(map(file.endswith, it.lib_extentions))):
-				os.remove(os.path.join(address,file))		
+				os.remove(os.path.join(address,file))
+
+	# Prune .pyd Python modules, but only in the root directory. Preserve them in subdirectories.
+	# This is only needed on Windows. On Windows they are initially present in both, because it's hard
+	# to make VS build them directly in the subdirectory. And the `.pyd` extension is only used on Windows.
+	for f in glob.glob(os.path.join(it.path_to_libs / "*.pyd")):
+		os.remove(f)
 
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes

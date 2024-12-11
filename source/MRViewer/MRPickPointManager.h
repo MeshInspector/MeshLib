@@ -139,6 +139,9 @@ private:
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;
 
+    // point widget currently under mouse and highlighted
+    SurfacePointWidget* hoveredPointWidget_ = nullptr;
+
     // point widget currently dragged by mouse
     SurfacePointWidget* draggedPointWidget_ = nullptr;
 

@@ -37,28 +37,12 @@ void mrVdbVolumesFree( MRVdbVolumes* volumes_ )
     delete volumes;
 }
 
-MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* , MRProgressCallback , MRString**  )
+MRVdbVolumes* mrVoxelsLoadFromAnySupportedFormat( const char* file, MRProgressCallback cb, MRString** errorStr )
 {
-    /*auto res = VoxelsLoad::fromAnySupportedFormat(file, cb_);
-
-    if ( res )
-    {
-        std::vector<MRVdbVolume> volumes( res->size() );
-        
-        for ( size_t i = 0; i < res->size(); ++i )
-        {
-            volumes[i].data = auto_cast( new_from( std::move( ( *res )[i].data ) ) );
-            volumes[i].dims = auto_cast( ( *res )[i].dims );
-            volumes[i].voxelSize = auto_cast( ( *res )[i].voxelSize );
-            volumes[i].min = ( *res )[i].min;
-            volumes[i].max = ( *res )[i].max;
-        }
-        
-        return (MRVdbVolumes*)( NEW_VECTOR( std::move( volumes ) ) );
-    }
-
-    if ( errorStr && !res )
-        *errorStr = auto_cast( new_from( std::move( res.error() ) ) );*/
+    if ( auto res = VoxelsLoad::fromAnySupportedFormat( file, cb ) )    
+        RETURN_NEW( std::move( res.value() ) );    
+    else if ( errorStr )
+        *errorStr = auto_cast( new_from( std::move( res.error() ) ) );
 
     return nullptr;
 }

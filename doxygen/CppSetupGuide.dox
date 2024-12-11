@@ -5,10 +5,11 @@
 
 \tableofcontents
 
-This guide provides detailed instructions for setting up MeshLib for C++ development across Windows, Linux, and macOS.
-It covers all prerequisites as well as specific setup steps for each platform.
+This guide explains how to set up MeshLib for C++ development on \ref CppSetupWindows "Windows", \ref CppSetupLinux "Linux", and \ref CppSetupMacOS "macOS", 
+and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLib with Emscripten. 
+It covers all the prerequisites and setup steps for each platform, making it easy to get started.
 
-## Windows
+\subsection CppSetupWindows Windows
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
  1. **Download and Extract the Built Version**
@@ -102,7 +103,7 @@ cd vcpkg
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
 
-## Linux (Ubuntu/Fedora)
+\subsection CppSetupLinux Linux (Ubuntu/Fedora)
 
 ### Installing the release build
  1. **Download and Extract the Built Version**
@@ -170,7 +171,7 @@ MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
  5. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-## macOS
+\subsection CppSetupMacOS macOS
 
 ### Installing the release build
  1. **Download the Built Version**
@@ -224,7 +225,7 @@ The new window with a viewer must appear.
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-## Building WebAssembly with MeshLib Using Emscripten
+\subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 

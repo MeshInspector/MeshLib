@@ -2,40 +2,99 @@ namespace MR {
 
 /** \page ThirdParty Thirdparty List
 
-\b Emscripten - a complete compiler toolchain to WebAssembly [Find more...](https://emscripten.org) \n
-\b Boost \b C++ \b Libraries - provides free peer-reviewed portable C++ source libraries [Find more...](https://www.boost.org) \n
-\b Blosc - a blocking, shuffling and lossless compression library [Find more...](https://www.blosc.org/) \n
-\b clip - cross-platform C++ library to copy/paste clipboard content [Find more...](https://github.com/dacap/clip) \n
-\b Curl for People - a simple wrapper around libcurl [Find more...](https://github.com/libcpr/cpr) \n
-\b Eigen - a C++ template library for linear algebra [Find more...](https://eigen.tuxfamily.org) \n
-\b FreeType - a freely available software library to render fonts [Find more...](https://freetype.org/) \n
-\b GDCM - C++ library dedicated to reading/parsing and writing DICOM medical files [Find more...](http://gdcm.sourceforge.net/) \n
-\b GLAD - GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs [Find more...](https://github.com/Dav1dde/glad) \n
-\b GLFW3 - library for OpenGL, OpenGL ES and Vulkan development on the desktop [Find more...](https://www.glfw.org/) \n
-\b Google Test - C++ testing and mocking framework [Find more...](https://github.com/google/googletest) \n
-\b Dear ImGui - a bloat-free graphical user interface library for C++ [Find more...](https://github.com/ocornut/imgui) \n
-\b fmt - a library providing a fast and safe alternative to C stdio and C++ iostreams [Find more...](https://github.com/fmtlib/fmt) \n
-\b JsonCpp - manipulating JSON values, including serialization and deserialization [Find more...](https://github.com/open-source-parsers/jsoncpp) \n
-\b LAZperf - alternative LAZ implementation for C++ and JavaScript [Find more...](https://github.com/hobuinc/laz-perf) \n
-\b libE57Format - library for reading & writing the E57 file format [Find more...](https://github.com/asmaloney/libE57Format) \n
-\b libHaru - free, cross platform, open source library for generating PDF files [Find more...](http://libharu.org/) \n
-\b Mbed TLS - a C library that implements cryptographic primitives [Find more...](https://github.com/Mbed-TLS/mbedtls) \n
-\b libzip - reading, creating, and modifying zip archives [Find more...](https://libzip.org/) \n
-\b miniply - a simple and fast parser for PLY files [Find more...](https://github.com/vilya/miniply) \n
-\b OpenCTM - the Open Compressed Triangle Mesh file format [Find more...](http://openctm.sourceforge.net/) \n
-\b OpenVDB - efficient manipulation of sparse, time-varying, volumetric data discretized [Find more...](https://www.openvdb.org/) \n
-\b parallel-hashmap - fast and memory-friendly hashmap and btree containers [Find more...](https://github.com/greg7mdp/parallel-hashmap) \n
-\b pybind11 - a library that exposes C++ types in Python and vice versa [Find more...](https://github.com/pybind/pybind11) \n
-\b spdlog - very fast, header-only/compiled, C++ logging library [Find more...](https://github.com/gabime/spdlog) \n
-\b TartanLlama/expected - implementation of std::expected with functional-style extensions [Find more...](https://github.com/TartanLlama/expected) \n
-\b TBB - simplifies the work of adding parallelism to complex applications [Find more...](https://github.com/oneapi-src/oneTBB) \n
-\b tiff - provides support for the Tag Image File Format (TIFF) [Find more...](http://www.libtiff.org/) \n
-\b tinyxml2 - an efficient, C++ XML parser [Find more...](http://leethomason.github.io/tinyxml2/) \n
-\b TinyGLTF - is a header only C++11 glTF 2.0 [Find more...](https://github.com/syoyo/tinygltf) \n
-\b libjpeg-turbo - is a JPEG image codec that uses SIMD instructions [Find more...](https://libjpeg-turbo.org/) \n
-\b hidapi - is a Simple library for communicating with USB and Bluetooth HID devices on Linux, Mac, and Windows. [Find more...](https://github.com/signal11/hidapi) \n
-\b opencascade - is the only open-source full-scale 3D geometry library. [Find more...](https://dev.opencascade.org/) \n
+### MRMesh
 
+Main library with geometry operations
+
+|Name     |Link                                           |Description                                                                  |License                        |
+|---------|-----------------------------------------------|-----------------------------------------------------------------------------|-------------------------------|
+|Boost    |https://www.boost.org                          |C++ Libraries - provides free peer-reviewed portable C++ source libraries    |Boost Software License         |
+|Eigen    |https://eigen.tuxfamily.org                    |a C++ template library for linear algebra                                    |MPL2                           |
+|spdlog   |https://github.com/gabime/spdlog               |very fast, header-only/compiled, C++ logging library                         |MIT                            |
+|fmt      |https://github.com/fmtlib/fmt                  |a library providing a fast and safe alternative to C stdio and C++ iostreams |MIT                            |
+|gtest    |https://github.com/google/googletest           |Google Test - C++ testing and mocking framework                              |BSD-3-Clause                   |
+|tiff     |http://www.libtiff.org                         |provides support for the Tag Image File Format (TIFF)                        |MIT                            |
+|jsoncpp  |https://github.com/open-source-parsers/jsoncpp |manipulating JSON values, including serialization and deserialization        |MIT                            |
+|libzip   |https://libzip.org                             |libzip - reading, creating, and modifying zip archives                       |BSD-3-Clause                   |
+|zlib     |https://www.zlib.net                           |A Massively Spiffy Yet Delicately Unobtrusive Compression Library            |zlib                           |
+|minply   |https://github.com/vilya/miniply               |a simple and fast parser for PLY files                                       |MIT                            |
+|oneTBB   |https://github.com/oneapi-src/oneTBB           |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
+|phmap    |https://github.com/greg7mdp/parallel-hashmap   |fast and memory-friendly hashmap and btree containers                        |Apache 2.0                     |
+|expected |https://github.com/TartanLlama/expected        | implementation of std::expected with functional-style extensions            |CC0-1.0                        |
+|Mbed TLS |https://github.com/Mbed-TLS/mbedtls            |a C library that implements cryptographic primitives                         |Apache-2.0 or GPL-2.0-or-later |
+
+### MRIOExtras
+
+Library with additional Input/Output formats
+
+**MRMesh** + 
+|Name          |Link                                      |Description                                                                  |License                                    |
+|--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|libHaru       |http://libharu.org                        |free, cross platform, open source library for generating PDF files           |zlib                                       |
+|libjpeg-turbo |https://libjpeg-turbo.org                 |is a JPEG image codec that uses SIMD instructions                            |BSD-3-Clause, IJG (Independent JPEG Group) |
+|libpng        |https://libpng.sourceforge.io             |library for use in applications that read, create, and manipulate PNG        |libpng2                                    |
+|opencascade   |https://dev.opencascade.org               |open-source full-scale 3D geometry library                                   |LGPL-2.1                                   |
+|tinygltf      |https://github.com/syoyo/tinygltf         |is a header only C++11 glTF 2.0                                              |MIT                                        |
+|OpenCTM       |https://sourceforge.net/projects/openctm  |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
+|LAZperf       |https://github.com/hobuinc/laz-perf       |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
+|libe57format  |https://github.com/asmaloney/libE57Format |library for reading & writing the E57 file format                            |Boost Software License                     |
+|tinyxml2      |http://leethomason.github.io/tinyxml2     |an efficient, C++ XML parser                                                 |zlib                                       |
+
+### MRSymbolMesh
+
+Library with text to mesh operations
+
+**MRMesh** +
+|Name          |Link                                      |Description                                                                  |License                                    |
+|--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|FreeType      |https://freetype.org                      |a freely available software library to render fonts                          |GPL-2.0, FTL(BSD like)                     |
+
+### MRPython
+
+Library for creating python bindings and for Embedded python
+
+**MRMesh** +
+|Name          |Link                                      |Description                                                                  |License                                    |
+|--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|python3       |https://www.python.org                    |is a high-level, general-purpose programming language.                       |PSF                                        |
+|pybind11      |https://github.com/pybind/pybind11        |a library that exposes C++ types in Python and vice versa                    |BSD-3-Clause                               |
+
+
+### MRVoxels
+
+Library for voxels operations
+
+**MRMesh** +
+|Name    |Link                                                 |Description                                                                  |License             |
+|--------|-----------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
+|OpenVDB |https://github.com/AcademySoftwareFoundation/openvdb |efficient manipulation of sparse, time-varying, volumetric data discretized  |MPL2                |
+|gdcm    |http://gdcm.sourceforge.net                          |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
+
+### MRCuda
+
+Library for CUDA based algorithms
+
+**MRMesh** + **MRVoxels** +
+|Name |Link                                      |Description                                                                                          |License                                              |
+|-----|------------------------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+|CUDA |https://developer.nvidia.com/cuda-toolkit |GPU-accelerated libraries, debugging and optimization tools, a C/C++ compiler, and a runtime library |https://docs.nvidia.com/cuda/eula/index.html#license |
+
+
+### MRViewer
+
+Main library with rendering and window handling
+
+**MRMesh** + **MRVoxels** + **MRSymbolMesh** + **MRIOExtras** +
+|Name            |Link                               |Description                                                                                         |License                      |
+|----------------|-----------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------|
+|glad            |https://github.com/Dav1dde/glad    |GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs                                    |MIT                          |
+|GLFW            |https://www.glfw.org               |library for OpenGL, OpenGL ES and Vulkan development on the desktop                                 |zlib                         |
+|Dear ImGui      |https://github.com/ocornut/imgui   |a bloat-free graphical user interface library for C++                                               |MIT                          |
+|Curl for People |https://github.com/libcpr/cpr      |Curl for People - a simple wrapper around libcurl                                                   |MIT                          |
+|clip            |https://github.com/dacap/clip      |cross-platform C++ library to copy/paste clipboard content                                          |MIT                          |
+|hidapi          |https://github.com/signal11/hidapi |is a Simple library for communicating with USB and Bluetooth HID devices on Linux, Mac, and Windows |HIDAPI, BSD-3-Clause, GPL-3.0|
+|Fontawesome     |https://fontawesome.com            |is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators |https://fontawesome.com/license/free|
+|NotoSans        |https://fonts.google.com/noto/specimen/Noto+Sans |is a global font collection for writing in all modern and ancient languages           |OPEN FONT|
 
 */
 

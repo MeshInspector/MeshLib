@@ -11,21 +11,31 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
         [&]( const Features::Primitives::Sphere& sphere )
         {
             if ( sphere.radius > 0 )
-                func( { .name = "Center point", .isInfinite = false, .create = [&]{ auto ret = sphere; ret.radius = 0; return ret; } } );
+            {
+                func( { .name = "Center point", .isInfinite = false, .create = []( const Features::Primitives::Variant& f )
+                {
+                    auto ret = std::get<Features::Primitives::Sphere>( f );
+                    ret.radius = 0;
+                    return ret;
+                } } );
+            }
         },
         [&]( const Features::Primitives::ConeSegment& cone )
         {
             // Center point.
-            func( { .name = "Center point", .isInfinite = false, .create = [&] { return cone.centerPoint(); } } );
+            func( { .name = "Center point", .isInfinite = false, .create = []( const Features::Primitives::Variant& f )
+            {
+                return std::get<Features::Primitives::ConeSegment>( f ).centerPoint();
+            } } );
 
             // Central axis.
             if ( cone.positiveSideRadius > 0 || cone.negativeSideRadius > 0 )
             {
                 bool infinite = cone.isCircle();
 
-                func( { .name = "Axis", .isInfinite = infinite, .create = [&]
+                func( { .name = "Axis", .isInfinite = infinite, .create = [infinite]( const Features::Primitives::Variant& f )
                 {
-                    auto ret = cone.axis();
+                    auto ret = std::get<Features::Primitives::ConeSegment>( f ).axis();
                     if ( infinite )
                         ret = ret.extendToInfinity();
                     return ret;
@@ -35,7 +45,10 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
             if ( cone.isCircle() )
             {
                 // Plane.
-                func( { .name = "Plane", .isInfinite = true, .create = [&]{ return cone.basePlane( false ); } } );
+                func( { .name = "Plane", .isInfinite = true, .create = []( const Features::Primitives::Variant& f )
+                {
+                    return std::get<Features::Primitives::ConeSegment>( f ).basePlane( false );
+                } } );
             }
             else
             {
@@ -51,16 +64,16 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
                     {
                         if ( forwardRadius == 0 )
                         {
-                            func( { .name = backwardRadius == 0 ? fmt::format( "End point ({})", negativeCap ? "negative side" : "positive side" ).c_str() : "Apex", .isInfinite = false, .create = [&]
+                            func( { .name = backwardRadius == 0 ? fmt::format( "End point ({})", negativeCap ? "negative side" : "positive side" ).c_str() : "Apex", .isInfinite = false, .create = [negativeCap]( const Features::Primitives::Variant& f )
                             {
-                                return cone.basePoint( negativeCap );
+                                return std::get<Features::Primitives::ConeSegment>( f ).basePoint( negativeCap );
                             } } );
                         }
                         else
                         {
-                            func( { .name = backwardRadius == 0 ? "Base circle" : fmt::format( "Base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(), .isInfinite = false, .create = [&]
+                            func( { .name = backwardRadius == 0 ? "Base circle" : fmt::format( "Base circle ({})", negativeCap ? "negative side" : "positive side" ).c_str(), .isInfinite = false, .create = [negativeCap]( const Features::Primitives::Variant& f )
                             {
-                                return cone.baseCircle( negativeCap );
+                                return std::get<Features::Primitives::ConeSegment>( f ).baseCircle( negativeCap );
                             } } );
                         }
                     }
@@ -74,7 +87,10 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
 
                 if ( std::isfinite( cone.positiveLength ) && std::isfinite( cone.negativeLength ) )
                 {
-                    func( { .name = hasPositiveRadius ? "Infinite cylinder" : "Infinite line", .isInfinite = true, .create = [&] { return cone.extendToInfinity(); } } );
+                    func( { .name = hasPositiveRadius ? "Infinite cylinder" : "Infinite line", .isInfinite = true, .create = []( const Features::Primitives::Variant& f )
+                    {
+                        return std::get<Features::Primitives::ConeSegment>( f ).extendToInfinity();
+                    } } );
                 }
 
                 // We could have one-way extensions here, but they seem unnecessary.
@@ -82,11 +98,17 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
 
             // Untruncate to a full cone.
             if ( cone.positiveSideRadius != cone.negativeSideRadius && cone.positiveSideRadius > 0 && cone.negativeSideRadius > 0 )
-                func( { .name = "Untruncated cone", .isInfinite = false, .create = [&]{ return cone.untruncateCone(); } } );
+                func( { .name = "Untruncated cone", .isInfinite = false, .create = []( const Features::Primitives::Variant& f )
+            {
+                return std::get<Features::Primitives::ConeSegment>( f ).untruncateCone();
+            } } );
         },
-        [&]( const Features::Primitives::Plane& plane )
+        [&]( const Features::Primitives::Plane& )
         {
-            func( { .name = "Center point", .isInfinite = false, .create = [&]{ return Features::toPrimitive( plane.center ); } } );
+            func( { .name = "Center point", .isInfinite = false, .create = []( const Features::Primitives::Variant& f )
+            {
+                return Features::toPrimitive( std::get<Features::Primitives::Plane>( f ).center );
+            } } );
         },
     }, feature );
 }

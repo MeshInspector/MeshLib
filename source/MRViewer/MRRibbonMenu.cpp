@@ -1323,13 +1323,14 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
     return res;
 }
 
-void RibbonMenu::setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName )
+void RibbonMenu::setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName, bool centerItems )
 {
     for ( const auto& g : groupsInTab )
     {
         ImGui::TableSetupColumn( ( g + "##" + tabName ).c_str(), 0 );
     }
-    ImGui::TableSetupColumn( ( "##fictiveGroup" + tabName ).c_str(), 0 );
+    if ( !centerItems )
+        ImGui::TableSetupColumn( ( "##fictiveGroup" + tabName ).c_str(), 0 );
 }
 
 void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string& groupName,
@@ -2453,9 +2454,9 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding ); // frame padding cause horizontal scrollbar which is not needed
             ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, cScrollBarSize * menu_scaling() );
             auto config = setupItemsGroupConfig_( tabIt->second, tab, centerItems );
-            if ( ImGui::BeginTable( ( tab + "##table" ).c_str(), int( tabIt->second.size() + 1 ), tableFlags ) )
+            if ( ImGui::BeginTable( ( tab + "##table" ).c_str(), int( tabIt->second.size() ) + ( centerItems ? 0 : 1 ), tableFlags ) )
             {
-                setupItemsGroup_( tabIt->second, tab );
+                setupItemsGroup_( tabIt->second, tab, centerItems );
                 ImGui::TableNextRow();
                 UI::TestEngine::pushTree( "Ribbon" );
                 for ( int i = 0; i < tabIt->second.size(); ++i )
@@ -2465,7 +2466,8 @@ void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
                     drawItemsGroup_( tab, group, config[i] );
                 }
                 UI::TestEngine::popTree(); // "Ribbon"
-                ImGui::TableNextColumn(); // fictive
+                if ( !centerItems )
+                    ImGui::TableNextColumn(); // fictive
                 ImGui::EndTable();
             }
             ImGui::PopStyleVar( 4 );

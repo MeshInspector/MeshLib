@@ -73,26 +73,25 @@ namespace MR
             public MRGridToMeshSettings() { }
         }
 
-        // eval min max value from FloatGrid
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         unsafe private static extern void mrVdbConversionsEvalGridMinMax( IntPtr grid, float* min, float* max );
 
-        // convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRVdbVolume mrVdbConversionsMeshToVolume( IntPtr mesh, ref MRMeshToVolumeSettings settings, ref IntPtr errorStr );
 
-        // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRVdbVolume mrVdbConversionsFloatGridToVdbVolume( IntPtr grid );
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrVdbConversionsGridToMesh( IntPtr grid, ref MRGridToMeshSettings settings, ref IntPtr errorStr );
 
+        // eval min max value from FloatGrid
         unsafe public static void EvalGridMinMax( FloatGrid grid, out float min, out float max )
         {
             fixed ( float* minP = &min, maxP = &max ) mrVdbConversionsEvalGridMinMax( grid.mrFloatGrid, minP, maxP );
         }
 
+        // convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
         public static VdbVolume MeshToVolume( Mesh mesh, MeshToVolumeSettings settings )
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -118,11 +117,13 @@ namespace MR
             return new VdbVolume( mrVolume );
         }
 
+        // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
         public static VdbVolume FloatGridToVdbVolume( FloatGrid grid )
         {
             return new VdbVolume( mrVdbConversionsFloatGridToVdbVolume( grid.mrFloatGrid ) );
         }
-
+        
+        /// converts OpenVDB Grid into mesh using Dual Marching Cubes algorithm
         public static Mesh GridToMesh( FloatGrid grid, GridToMeshSettings settings )
         {
             IntPtr errorStr = IntPtr.Zero;

@@ -14,7 +14,8 @@ namespace MR
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
-
+            
+            /// Saves voxels in a file, detecting the format from file extension
             public static void ToAnySupportedFormat( VdbVolume volume, string path)
             {
                 IntPtr errorStr = IntPtr.Zero;

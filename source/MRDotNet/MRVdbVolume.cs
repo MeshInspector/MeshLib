@@ -9,6 +9,7 @@ namespace MR
 {
     public partial class DotNet
     {
+        /// stores a pointer to a native OpenVDB object
         public class FloatGrid
         {
             internal IntPtr mrFloatGrid;
@@ -17,6 +18,9 @@ namespace MR
                 this.mrFloatGrid = mrFloatGrid;
             }
         }
+        
+        /// represents a box in 3D space subdivided on voxels stored in data;
+        /// and stores minimum and maximum values among all valid voxels
         public class VdbVolume
         {
             [StructLayout(LayoutKind.Sequential)]
@@ -36,14 +40,17 @@ namespace MR
             {
                 mrVdbVolume_ = mrVdbVolume;
             }
-            public FloatGrid Data { get => new FloatGrid(mrVdbVolume_.data); }
 
+            /// returns the pointer to the data
+            public FloatGrid Data { get => new FloatGrid(mrVdbVolume_.data); }
+            /// returns the dimensions of the volume            
             public Vector3i Dims { get => new Vector3i(mrVdbVolume_.dims); }
+            /// returns the size of voxel
             public Vector3f VoxelSize { get => new Vector3f(mrVdbVolume_.voxelSize); }
             public float Min { get => mrVdbVolume_.min; }
             public float Max { get => mrVdbVolume_.max; }
         }
-
+        /// stores a list of volumes
         public class VdbVolumes : List<VdbVolume>, IDisposable 
         {
             /// gets the volumes' value at index

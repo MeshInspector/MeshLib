@@ -40,6 +40,13 @@ jobs:
         working-directory: MeshInspector.github.io
         run: |
           bash scripts/pre.sh ${{ inputs.output_folder }}
+          echo "================================================================"
+          cat ../MeshLib/doxygen/DoxygenLayoutCpp.xml
+          echo "================================================================"
+          cat ../MeshLib/doxygen/DoxygenLayoutPy.xml
+          echo "================================================================"
+          cat ../MeshLib/doxygen/DoxygenLayoutMain.xml
+          echo "================================================================"
           doxygen DoxyfilePy
           doxygen DoxyfileCpp
           doxygen DoxyfileMain

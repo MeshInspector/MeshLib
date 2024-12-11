@@ -16,9 +16,9 @@ fi
 
 # edit main block
 if [ "$1" == "Main" ]; then
-    sed -e "s|__BEGIN_URL__|${BEGIN_URL}/html/|" -e "s|__END_URL__|${END_URL}|" ${DOXYGEN_DIR}/layout_templates/base_struct.xml > ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-else
     sed -e "s|__BEGIN_URL__|@ref |" -e "s|__END_URL__||" ${DOXYGEN_DIR}/layout_templates/base_struct.xml > ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+else
+    sed -e "s|__BEGIN_URL__|${BEGIN_URL}/html/|" -e "s|__END_URL__|${END_URL}|" ${DOXYGEN_DIR}/layout_templates/base_struct.xml > ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 fi
 
 # edit C++ API block

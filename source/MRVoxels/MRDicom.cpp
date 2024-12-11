@@ -860,6 +860,20 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsV
     return obj;
 }
 
+Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
+{
+    MR_TIMER
+    return loadDicomFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.5f ) ).and_then(
+    [&]( DicomVolumeAsVdb && vdb )
+    {
+        return createObjectVoxels( vdb, subprogress( callback, 0.5f, 1.0f ) );
+    } ).and_then(
+    [&]( std::shared_ptr<ObjectVoxels> && objVoxels ) -> Expected<LoadedObjectVoxels>
+    {
+        return LoadedObjectVoxels{ .obj = std::move( objVoxels ) };
+    } );
+}
+
 template <typename T>
 Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {

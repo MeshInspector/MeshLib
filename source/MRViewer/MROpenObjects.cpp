@@ -51,7 +51,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             {
                 node.subfolders.push_back( getFilePathNode( path ) );
             }
-            else if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
+            else if ( !node.dicomFolder && ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) ) )
             {
                 auto ext = utf8string( path.extension() );
                 for ( auto& c : ext )
@@ -65,7 +65,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     {
                         node.dicomFolder = true;
                         node.files.clear();
-                        break;
                     }
                 #endif
 
@@ -100,7 +99,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::future<loadObjResultType> future;
         Object* parent = nullptr;
         LoadTask( std::future<loadObjResultType> future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
-        bool finished = false;
     };
     std::vector<LoadTask> loadTasks;
 

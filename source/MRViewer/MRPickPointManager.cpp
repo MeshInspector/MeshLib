@@ -115,6 +115,8 @@ PickedPoint PickPointManager::removePointNoHistory_( const std::shared_ptr<Visua
     myPickSpheres_.erase( pickSphere );
     if ( draggedPointWidget_ == it->get() )
         draggedPointWidget_ = nullptr;
+    if ( hoveredPointWidget_ == it->get() )
+        hoveredPointWidget_ = nullptr;
     contour.erase( it );
 
     if ( index  == contour.size() ) // last point was deleted
@@ -442,6 +444,11 @@ bool PickPointManager::onMouseMove_( int, int )
         return false;
 
     auto [pickObj, pick] = pick_();
+    if ( hoveredPointWidget_ && pickObj != hoveredPointWidget_->getPickSphere() )
+    {
+        hoveredPointWidget_->setHovered( false );
+        hoveredPointWidget_ = nullptr;
+    }
     if ( !pickObj )
         return false;
 
@@ -449,13 +456,16 @@ bool PickPointManager::onMouseMove_( int, int )
         return false;
 
     for ( const auto & [obj, widgets] : pickedPoints_ )
-        for ( int index = 0; index < widgets.size(); ++index )
+    {
+        if ( hoveredPointWidget_ )
+            break;
+        for ( int index = 0; !hoveredPointWidget_ && index < widgets.size(); ++index )
         {
             const auto& widget = widgets[index];
-            bool hovered = pickObj == widget->getPickSphere();
-            widget->setHovered( hovered );
-            if ( hovered )
+            if ( pickObj == widget->getPickSphere() )
             {
+                widget->setHovered( true );
+                hoveredPointWidget_ = widget.get();
                 // setting callback is very cheap operation (in comparison to pick_ above),
                 // and we do it here because here we know up-today index of the point
                 widget->setStartMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
@@ -486,6 +496,7 @@ bool PickPointManager::onMouseMove_( int, int )
                         if ( params.writeHistory )
                             AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
                     }
+                    assert( hoveredPointWidget_ == &pointWidget );
                     draggedPointWidget_ = &pointWidget;
                     if ( params.onPointMoveStart )
                         params.onPointMoveStart( obj, index );
@@ -509,6 +520,7 @@ bool PickPointManager::onMouseMove_( int, int )
                 } );
             }
         }
+    }
     return false;
 }
 
@@ -536,6 +548,7 @@ void PickPointManager::clear( bool writeHistory )
     }
     pickedPoints_.clear();
     myPickSpheres_.clear();
+    hoveredPointWidget_ = nullptr;
     draggedPointWidget_ = nullptr;
     connectionHolders_.clear();
 }

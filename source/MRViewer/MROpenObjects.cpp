@@ -7,6 +7,7 @@
 #include <MRMesh/MRZip.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRVoxels/MRDicom.h>
+#include <MRVoxels/MRObjectVoxels.h>
 #include <MRPch/MRSpdlog.h>
 #include <fstream>
 
@@ -61,13 +62,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     continue;
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                    if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
-                    {
-                        node.dicomFolder = true;
-                        node.files.clear();
-                    }
+                if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                {
+                    node.dicomFolder = true;
+                    node.files.clear();
+                }
+                else
                 #endif
-
                 if ( findFilter( filters, ext ) )
                     node.files.push_back( { .path = path } );
             }
@@ -123,6 +124,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
         {
+            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, &loadingCanceled] ()
+            {
+                return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, [&loadingCanceled]( float ){ return !loadingCanceled; } ).and_then(
+                [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                {
+                    return LoadedObjects{ .objs = { ld.obj } };
+                } );
+            } ), objPtr );
         }
         #endif
     };

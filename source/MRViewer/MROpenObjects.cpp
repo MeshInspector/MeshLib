@@ -189,7 +189,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     return res;
 }
 
-Expected<LoadedObject> loadObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
+Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
 {
     auto tmpFolder = UniqueTemporaryFolder( {} );
     auto contentsFolder = tmpFolder / zipPath.stem();
@@ -207,6 +207,6 @@ Expected<LoadedObject> loadObjectTreeFromZip( const std::filesystem::path& zipPa
     return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
-MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), loadObjectTreeFromZip )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectTreeFromZip )
 
 } //namespace MR

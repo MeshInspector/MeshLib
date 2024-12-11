@@ -298,6 +298,10 @@ jobs:
       output_folder: MeshLib/dev
     secrets: inherit
 
+  test-pip-build:
+    if: ${{ needs.config.outputs.test_pip_build == 'true' }}
+    uses: ./.github/workflows/pip-build.yml
+
   collect-stats:
     timeout-minutes: 5
     runs-on: ubuntu-latest

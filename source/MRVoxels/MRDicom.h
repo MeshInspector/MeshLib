@@ -6,6 +6,7 @@
 
 #include "MRMesh/MRAffineXf.h"
 #include "MRMesh/MRMatrix3.h"
+#include "MRMesh/MRLoadedObjects.h"
 
 #include <filesystem>
 #include <optional>
@@ -53,6 +54,9 @@ MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( 
 
 /// converts DicomVolumeAsVdb in ObjectVoxels
 MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsVdb & dcm, const ProgressCallback & cb = {} );
+
+/// Loads 3D volumetric data from dicom-files in given folder, and converts them into an ObjectVoxels
+MRVOXELS_API Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback = {} );
 
 /// Loads 3D volumetric data from a single DICOM file
 template <typename T = SimpleVolumeMinMax>

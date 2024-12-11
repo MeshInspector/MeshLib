@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using static MR.DotNet.Vector3f;
 
 namespace MR
 {
@@ -110,6 +111,44 @@ namespace MR
             /// returns squared Euclidean length of the vector
             public float LengthSq() => mrVector3fLengthSq(ref vec_);
 
+        }
+
+        public class Vector3i
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            internal struct MRVector3i
+            {
+                public int x = 0;
+                public int y = 0;
+                public int z = 0;
+                public MRVector3i() { }
+            };
+
+            internal MRVector3i vec_;
+            /// creates a new vector with zero coordinates
+            public Vector3i()
+            {
+                vec_ = new MRVector3i();
+            }
+
+            internal Vector3i(MRVector3i vec)
+            {
+                vec_ = vec;
+            }
+            /// creates a new vector with specified coordinates
+            public Vector3i(int x, int y, int z)
+            {
+                vec_.x = x;
+                vec_.y = y;
+                vec_.z = z;
+            }
+
+            /// returns first coordinate
+            public int X { get => vec_.x; set => vec_.x = value; }
+            /// returns second coordinate
+            public int Y { get => vec_.y; set => vec_.y = value; }
+            /// returns third coordinate
+            public int Z { get => vec_.z; set => vec_.z = value; }
         }
     }
 }

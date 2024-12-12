@@ -90,9 +90,9 @@ struct MoveMeshToVoxelMaxDerivSettings
     /// degree of the polynomial used to fit sampled points. Must be in range [3; 6]
     int degree = 3;
 
-    /// for each iteration, if target position of the vertex is greater than this threshold, it is disregarded
-    /// for small degrees, this value should be small, for large degrees it may be larger
-    /// measured in number of voxels
+    /// for each iteration, if target position of the vertex is greater than this threshold, it is disregarded.
+    /// For small degrees, this value should be small, for large degrees it may be larger.
+    /// Measured in number of voxels.
     float outlierThreshold = 1.f;
 
     /// force of the smoothing (relaxation) of vector field of shifts on each iteration

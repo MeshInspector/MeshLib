@@ -139,9 +139,7 @@ namespace MR
                 {
                     if (bs_ != IntPtr.Zero)
                     {
-                        Console.WriteLine("mrBitSetFree start");
                         mrBitSetFree(bs_);
-                        Console.WriteLine("mrBitSetFree end");
                         bs_ = IntPtr.Zero;
                     }
 

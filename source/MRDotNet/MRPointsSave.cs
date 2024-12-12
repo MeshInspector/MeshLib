@@ -9,7 +9,7 @@ namespace MR
         public class PointsSave
         {
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern void mrPointsSaveToAnySupportedFormat(IntPtr pc, string file, IntPtr* errorString);
+            private static extern void mrPointsSaveToAnySupportedFormat(IntPtr pc, string file, IntPtr settings, ref IntPtr errorString);
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
@@ -19,8 +19,9 @@ namespace MR
             {
                 mrLoadIOExtras();
 
-                IntPtr errString = new IntPtr();
-                mrPointsSaveToAnySupportedFormat(pc.pc_, path, &errString);
+                IntPtr errString = IntPtr.Zero;
+                mrPointsSaveToAnySupportedFormat(pc.pc_, path, IntPtr.Zero, ref errString);
+
                 if (errString != IntPtr.Zero)
                 {
                     var errData = mrStringData(errString);

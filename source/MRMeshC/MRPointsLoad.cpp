@@ -17,13 +17,16 @@ REGISTER_AUTO_CAST2( std::string, MRString )
 MRPointCloud* mrPointsLoadFromAnySupportedFormat( const char* filename, const MRPointsLoadSettings* settings_, MRString** errorString )
 {
     PointsLoadSettings settings;
-    if ( settings_->colors )
+    if ( settings_ )
     {
-        vector_wrapper<Color>* wrapper = ( vector_wrapper<Color>* )( settings_->colors );
-        settings.colors = (VertColors*)( &( std::vector<Color>&)(* wrapper ));
+        if ( settings_->colors )
+        {
+            vector_wrapper<Color>* wrapper = ( vector_wrapper<Color>* )( settings_->colors );
+            settings.colors = ( VertColors* )( &( std::vector<Color>& )( *wrapper ) );
+        }
+        settings.outXf = ( AffineXf3f* )settings_->outXf;
+        settings.callback = settings_->callback;
     }
-    settings.outXf = (AffineXf3f*)settings_->outXf;
-    settings.callback = settings_->callback;
 
     auto res = PointsLoad::fromAnySupportedFormat( filename, settings );
 

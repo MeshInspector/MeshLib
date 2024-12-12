@@ -15,10 +15,13 @@ void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, cons
 {
     ARG( mesh );
     SaveSettings settings;
-    settings.saveValidOnly = settings_->saveValidOnly;
-    settings.rearrangeTriangles = settings_->rearrangeTriangles;
-    settings.progress = settings_->progress;
-    settings.colors = auto_cast( settings_->colors );
+    if ( settings_ )
+    {
+        settings.saveValidOnly = settings_->saveValidOnly;
+        settings.rearrangeTriangles = settings_->rearrangeTriangles;
+        settings.progress = settings_->progress;
+        settings.colors = auto_cast( settings_->colors );
+    }
 
     auto res = MeshSave::toAnySupportedFormat( mesh, file );
     if ( !res && errorStr )

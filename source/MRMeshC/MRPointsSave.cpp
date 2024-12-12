@@ -15,10 +15,13 @@ void mrPointsSaveToAnySupportedFormat( const MRPointCloud* pc_, const char* file
 {
     ARG( pc );
     SaveSettings settings;
-    settings.saveValidOnly = settings_->saveValidOnly;
-    settings.rearrangeTriangles = settings_->rearrangeTriangles;
-    settings.progress = settings_->progress;
-    settings.colors = auto_cast( settings_->colors );
+    if ( settings_ )
+    {
+        settings.saveValidOnly = settings_->saveValidOnly;
+        settings.rearrangeTriangles = settings_->rearrangeTriangles;
+        settings.progress = settings_->progress;
+        settings.colors = auto_cast( settings_->colors );
+    }
 
     auto res = PointsSave::toAnySupportedFormat( pc, file );
     if ( !res && errorString != nullptr )

@@ -112,7 +112,7 @@ Expected<void> toAnySupportedFormat( const std::filesystem::path& path, const Di
         return filter.extensions.find( ext ) != std::string::npos;
     } );
     if ( itF == Filters.end() )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     if ( ext == "*.raw" )
         return toRAW( path, dmap );

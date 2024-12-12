@@ -349,7 +349,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                 auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
                 result = LoadedObjects{ .objs = { obj } };
             }
-            else if ( result.error() == "unsupported file extension" )
+            else if ( result.error() == stringUnsupportedFileExtension() )
             {
                 result = unexpected( objectPoints.error() );
 
@@ -360,7 +360,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                     auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
                     result = LoadedObjects{ .objs = { obj } };
                 }
-                else if ( result.error() == "unsupported file extension" )
+                else if ( result.error() == stringUnsupportedFileExtension() )
                 {
                     result = unexpected( objectLines.error() );
 
@@ -371,7 +371,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
                         result = LoadedObjects{ .objs = { obj } };
                     }
-                    else if ( result.error() == "unsupported file extension" )
+                    else if ( result.error() == stringUnsupportedFileExtension() )
                     {
                         result = unexpected( objectDistanceMap.error() );
 
@@ -458,7 +458,7 @@ Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::p
 
     auto loader = SceneLoad::getSceneLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader( path, callback )
     .and_then( [&] ( LoadedObject&& l ) -> Expected<LoadedObject>

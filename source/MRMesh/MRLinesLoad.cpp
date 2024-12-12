@@ -128,7 +128,7 @@ Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, P
 
     auto loader = getLinesLoader( ext );
     if ( !loader.fileLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.fileLoad( file, callback );
 }

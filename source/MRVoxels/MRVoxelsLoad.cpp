@@ -249,7 +249,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
 
     auto loader = getVoxelsLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
     return loader( path, cb );
 }
 

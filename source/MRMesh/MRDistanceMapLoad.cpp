@@ -163,7 +163,7 @@ Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path,
         c = ( char )tolower( c );
 
     ext.insert( std::begin( ext ), '*' );
-    Expected<DistanceMap> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<DistanceMap> res = unexpectedUnsupportedFileExtension();
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {

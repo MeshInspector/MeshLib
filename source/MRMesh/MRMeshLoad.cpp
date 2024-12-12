@@ -744,7 +744,7 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
 
     auto loader = getMeshLoader( ext );
     if ( !loader.fileLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.fileLoad( file, settings );
 }
@@ -757,7 +757,7 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
 
     auto loader = getMeshLoader( ext );
     if ( !loader.streamLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.streamLoad( in, settings );
 }

@@ -129,7 +129,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
     std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
     if ( !checkPaths( paths, filters ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return;
     }
     getViewerInstance().loadFiles( paths );
@@ -199,7 +199,7 @@ bool OpenFilesMenuItem::action()
             return;
         if ( !checkPaths( filenames, filters_ ) )
         {
-            showError( "Unsupported file extension" );
+            showError( stringUnsupportedFileExtension() );
             return;
         }
         getViewerInstance().loadFiles( filenames );
@@ -231,7 +231,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
 
     if ( !checkPaths( paths, filters_ ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return false;
     }
 

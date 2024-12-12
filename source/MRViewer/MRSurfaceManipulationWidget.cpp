@@ -87,14 +87,9 @@ void SurfaceManipulationWidget::reset()
 {
     originalMesh_.reset();
 
-    if ( lastStableObjMesh_ )
-    {
-        lastStableObjMesh_->detachFromParent();
-        lastStableObjMesh_.reset();
-    }
+    removeLastStableObjMesh_();
 
     obj_->clearAncillaryTexture();
-    obj_->setPickable( true );
     obj_.reset();
 
     clearData_();
@@ -179,6 +174,16 @@ void SurfaceManipulationWidget::createLastStableObjMesh_()
     obj_->parent()->addChild( lastStableObjMesh_ );
 }
 
+void SurfaceManipulationWidget::removeLastStableObjMesh_()
+{
+    if ( lastStableObjMesh_ )
+    {
+        lastStableObjMesh_->detachFromParent();
+        lastStableObjMesh_.reset();
+    }
+    obj_->setPickable( true );
+}
+
 bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
 {
     if ( button != MouseButton::Left || modifiers != 0 )
@@ -233,7 +238,10 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     mousePressed_ = false;
     if ( settings_.workMode == WorkMode::Laplacian )
+    {
+        removeLastStableObjMesh_();
         return true;
+    }
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_.clear();
@@ -309,13 +317,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
 
-    obj_->setPickable( true );
-
-    if ( lastStableObjMesh_ )
-    {
-        lastStableObjMesh_->detachFromParent();
-        lastStableObjMesh_.reset();
-    }
+    removeLastStableObjMesh_();
 
     return true;
 }
@@ -563,12 +565,7 @@ void SurfaceManipulationWidget::abortEdit_()
     if ( !mousePressed_ )
         return;
     mousePressed_ = false;
-    if ( lastStableObjMesh_ )
-    {
-        lastStableObjMesh_->detachFromParent();
-        lastStableObjMesh_.reset();
-    }
-    obj_->setPickable( true );
+    removeLastStableObjMesh_();
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();

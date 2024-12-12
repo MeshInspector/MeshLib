@@ -308,7 +308,7 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
         return unexpected( std::move( maybe.error() ) );
 
     if ( !reportProgress( callback, 0.2f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     maybe = loadTree_( subprogress( callback, 0.2f, 0.8f ) );
 
@@ -316,7 +316,7 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
         return unexpected( std::move( maybe.error() ) );
 
     if ( !reportProgress( callback, 0.8f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( objectNodes_.empty() )
         return unexpected( "No objects found" );
@@ -372,7 +372,7 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
     }
 
     if ( !reportProgress( callback, 1.0f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( duplicatedVertexCountAccum > 0 )
         warnings.append( "Duplicated vertex count: " + std::to_string( duplicatedVertexCountAccum ) + "\n" );
@@ -675,7 +675,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     }
 
     if ( !reportProgress( callback, 0.25f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     auto trianglesNode = meshNode->FirstChildElement( "triangles" );
     if ( !trianglesNode )
@@ -874,7 +874,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     }
 
     if ( !reportProgress( callback, 0.5f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     std::vector<MeshBuilder::VertDuplication> dups;
     int skippedFaceCount = 0;
@@ -907,7 +907,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     loader->skippedFaceCountAccum += skippedFaceCount;
 
     if ( !reportProgress( callback, 0.75f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     return res;
 }
@@ -951,7 +951,7 @@ Expected<LoadedObject> deserializeObjectTreeFrom3mf( const std::filesystem::path
         return unexpected( "ZIP container error: " + resZip.error() );
 
     if ( !reportProgress( callback, 0.1f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     std::vector<std::filesystem::path> files;
     std::error_code ec;

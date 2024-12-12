@@ -640,7 +640,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     if ( files.empty() )
         return unexpected( "loadDicomFolderAsVdb: there is no dcm file" );
@@ -667,7 +667,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     data.max = firstRes.max;
 
     if ( !reportProgress( cb, 0.4f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto presentSlices = seriesInfo.missedSlices;
     presentSlices.resize( data.dims.z );
@@ -676,7 +676,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     // other slices
     auto [numLoadedSlices, cancelCalled, slicesRes] = loadSlices( files, data, maxNumThreads, presentSlices, cb );
     if ( cancelCalled )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     // fill missed slices
     int missedSlicesNum = int( seriesInfo.missedSlices.count() );
@@ -719,7 +719,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     }
 
     if ( cancelCalled )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     for ( const auto& sliceRes : slicesRes )
     {
@@ -746,7 +746,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
-        return { unexpected( "loadDicomFolderAsVdb: path is not directory" ) };
+        return unexpected( "loadDicomFolderAsVdb: path is not directory" );
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
@@ -766,7 +766,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
         if ( entry.is_regular_file( ec ) && isDicomFile( filePath, &uid ) )
             seriesMap[uid].push_back( filePath );
         if ( !reportProgress( cb, float( fCounter ) / float( filesNum ) ) )
-            return { unexpected( "Loading canceled" ) };
+            return unexpectedOperationCanceled();
     }
 
     if ( seriesMap.empty() )
@@ -781,7 +781,7 @@ std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
     if ( !seriesMap.has_value() )
-        return { unexpected( seriesMap.error() ) };
+        return { unexpected( std::move( seriesMap.error() ) ) };
 
     int seriesCounter = 0;
     auto seriesNum = seriesMap->size();
@@ -794,8 +794,8 @@ std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::
                 0.3f + 0.7f * float( seriesCounter + 1 ) / float( seriesNum ) ) ) );
 
         ++seriesCounter;
-        if ( !res.back().has_value() && res.back().error() == "Loading canceled" )
-            return { unexpected( "Loading canceled" ) };
+        if ( !res.back().has_value() && res.back().error() == stringOperationCanceled() )
+            return { unexpectedOperationCanceled() };
     }
     return res;
 }
@@ -805,7 +805,7 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
     if ( !seriesMap.has_value() )
-        return { unexpected( seriesMap.error() ) };
+        return unexpected( std::move( seriesMap.error() ) );
 
     return loadSingleDicomFolder<T>( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
 }
@@ -823,7 +823,7 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::fi
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
         auto loadRes = loadDicomsFolderAsVdb( dir, maxNumThreads, cb );
-        if ( loadRes.size() == 1 && !loadRes[0].has_value() && loadRes[0].error() == "Loading canceled" )
+        if ( loadRes.size() == 1 && !loadRes[0].has_value() && loadRes[0].error() == stringOperationCanceled() )
             return false;
 
         res.insert( res.end(), std::make_move_iterator( loadRes.begin() ), std::make_move_iterator( loadRes.end() ) );
@@ -831,7 +831,7 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::fi
         return true;
     };
     if ( !tryLoadDir( path ) )
-        return { unexpected( "Loading canceled" ) };
+        return { unexpectedOperationCanceled() };
 
     std::error_code ec;
     for ( auto entry : DirectoryRecursive{ path, ec } )
@@ -860,12 +860,26 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsV
     return obj;
 }
 
+Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
+{
+    MR_TIMER
+    return loadDicomFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.5f ) ).and_then(
+    [&]( DicomVolumeAsVdb && vdb )
+    {
+        return createObjectVoxels( vdb, subprogress( callback, 0.5f, 1.0f ) );
+    } ).and_then(
+    [&]( std::shared_ptr<ObjectVoxels> && objVoxels ) -> Expected<LoadedObjectVoxels>
+    {
+        return LoadedObjectVoxels{ .obj = std::move( objVoxels ) };
+    } );
+}
+
 template <typename T>
 Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto vol = [] {
         if constexpr ( std::convertible_to<T, VdbVolume> )
@@ -919,7 +933,7 @@ template <typename T>
 Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb )
 {
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto [gdcmScalar, gdcmTag] = getGDCMTypeAndTag<T>();
 
@@ -959,7 +973,7 @@ Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::f
     // copies full volume
     data.SetByteValue( reinterpret_cast<const char*>( volume.data.data() ), ( uint32_t )volume.data.size() * sizeof( T ) );
     if ( !reportProgress( cb, 0.5f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     image.SetDataElement( data );
 
     iw.SetImage( image );

@@ -235,7 +235,7 @@
     <ClCompile Include="MRObjectMeshHistory.cpp">
       <Filter>History</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewerIO.cpp">
+    <ClCompile Include="MRSaveObjects.cpp">
       <Filter>IO</Filter>
     </ClCompile>
     <ClCompile Include="MRRenderGLHelpers.cpp">
@@ -451,6 +451,9 @@
     <ClCompile Include="MRViewerTitle.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MROpenObjects.cpp">
+      <Filter>IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -633,7 +636,7 @@
     <ClInclude Include="MRObjectMeshHistory.h">
       <Filter>History</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewerIO.h">
+    <ClInclude Include="MRSaveObjects.h">
       <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPlaneWidget.h">
@@ -881,6 +884,9 @@
     </ClInclude>
     <ClInclude Include="MRProjectMeshAttributes.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MROpenObjects.h">
+      <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="MRViewerTitle.h">
       <Filter>Viewer</Filter>

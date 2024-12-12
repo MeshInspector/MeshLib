@@ -62,7 +62,7 @@ Expected<DistanceMap> fromRaw( const std::filesystem::path& path, ProgressCallba
     std::vector<float> buffer( size );
 
     if ( !readByBlocks( inFile, ( char* )buffer.data(), buffer.size() * sizeof( float ), progressCb ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( !inFile )
         return unexpected( readError );
@@ -110,7 +110,7 @@ Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, Dist
     std::vector<float> buffer( size );
 
     if ( !readByBlocks( inFile, ( char* )buffer.data(), buffer.size() * sizeof( float ), progressCb ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( !inFile )
         return unexpected( readError );
@@ -130,7 +130,7 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
         return unexpected( paramsExp.error() );
 
     if ( progressCb && !progressCb( 0.2f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     DistanceMap res( paramsExp->imageSize.x, paramsExp->imageSize.y );
     RawTiffOutput output;
@@ -150,7 +150,7 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
     params.direction = transposedM.z;
 
     if ( progressCb && !progressCb( 0.8f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     return res;
 }
@@ -163,7 +163,7 @@ Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path,
         c = ( char )tolower( c );
 
     ext.insert( std::begin( ext ), '*' );
-    Expected<DistanceMap> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<DistanceMap> res = unexpectedUnsupportedFileExtension();
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {

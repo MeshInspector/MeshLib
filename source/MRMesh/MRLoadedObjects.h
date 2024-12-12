@@ -6,21 +6,22 @@
 namespace MR
 {
 
+class ObjectVoxels;
 using ObjectPtr = std::shared_ptr<Object>;
 
 /// result of loading (e.g. from a file) as one object (with possible subobjects)
-struct LoadedObject
+template<typename ObjectT = Object>
+struct LoadedObjectT
 {
-    ObjectPtr obj;
+    std::shared_ptr<ObjectT> obj;
     std::string warnings; //either empty or ends with '\n'
 };
 
-/// result of mesh loading (e.g. from a file) as one object
-struct LoadedObjectMesh
-{
-    std::shared_ptr<ObjectMesh> obj;
-    std::string warnings; //either empty or ends with '\n'
-};
+using LoadedObject =       LoadedObjectT<Object>;
+using LoadedObjectMesh =   LoadedObjectT<ObjectMesh>;
+using LoadedObjectPoints = LoadedObjectT<ObjectPoints>;
+using LoadedObjectLines  = LoadedObjectT<ObjectLines>;
+using LoadedObjectVoxels = LoadedObjectT<ObjectVoxels>;
 
 /// result of loading (e.g. from a file) as a number of objects
 struct LoadedObjects

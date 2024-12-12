@@ -299,6 +299,7 @@ jobs:
     secrets: inherit
 
   test-pip-build:
+    needs: config
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
 

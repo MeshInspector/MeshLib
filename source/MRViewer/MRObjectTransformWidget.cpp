@@ -397,7 +397,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     accumShift_ = dot( newTranslation - startTranslation_, ( xf.A * baseAxis[int( ax )] ).normalized() );
 
     if ( controls_ )
-        controls_->updateTranslation( ax, startTranslation_, newTranslation );
+        controls_->updateTranslation( ax, startTranslation_, newTranslation, viewport.id );
 }
 
 void ObjectTransformWidget::processRotation_( Axis ax, bool press )
@@ -432,7 +432,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
         accumAngle_ = 2.0f * PI_F + accumAngle_;
 
     if ( controls_ )
-        controls_->updateRotation( ax, controlsRoot_->xf( viewport.id ), startAngle_, startAngle_ + accumAngle_ );
+        controls_->updateRotation( ax, controlsRoot_->xf( viewport.id ), startAngle_, startAngle_ + accumAngle_, viewport.id );
 }
 
 void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id )
@@ -539,8 +539,8 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
-    float radius = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.radius : 1.0f;
-    float width = params_.typeRadius == VisualParams::TypeRadius::LengthUnit ? params_.width : params_.width / params_.radius;
+    float radius = params_.sizeType == VisualParams::SizeType::LengthUnit ? params_.radius : 1.0f;
+    float width = params_.sizeType == VisualParams::SizeType::LengthUnit ? params_.width : params_.width / params_.radius;
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
@@ -645,19 +645,19 @@ void TransformControls::setWidth( float width )
     update();
 }
 
-void TransformControls::setTypeRadius( VisualParams::TypeRadius type )
+void TransformControls::setSizeType( VisualParams::SizeType type )
 {
-    if ( params_.typeRadius == type )
+    if ( params_.sizeType == type )
         return;
 
     resetSizeInPixel_();
 
-    params_.typeRadius = type;
+    params_.sizeType = type;
 }
 
 void TransformControls::updateSizeInPixel()
 {
-    if ( params_.typeRadius != VisualParams::TypeRadius::Pixels )
+    if ( params_.sizeType != VisualParams::SizeType::Pixels )
         return;
 
     if ( !translateControls_[0] )
@@ -691,8 +691,10 @@ void TransformControls::resetSizeInPixel_()
 {
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
-        translateControls_[i]->setXfsForAllViewports( {} );
-        rotateControls_[i]->setXfsForAllViewports( {} );
+        if ( translateControls_[i] )
+            translateControls_[i]->setXfsForAllViewports( {} );
+        if ( rotateControls_[i] )
+            rotateControls_[i]->setXfsForAllViewports( {} );
     }
 }
 
@@ -826,12 +828,12 @@ void TransformControls::updateVisualTransformMode_( ControlBit showMask, Viewpor
     }
 }
 
-void TransformControls::updateTranslation( Axis, const Vector3f& startMove, const Vector3f& endMove )
+void TransformControls::updateTranslation( Axis, const Vector3f& startMove, const Vector3f& endMove, ViewportId )
 {
     setActiveLineFromPoints_( { startMove,endMove } );
 }
 
-void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle )
+void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId )
 {
     std::vector<Vector3f> activePoints;
     activePoints.reserve( 182 );
@@ -841,7 +843,7 @@ void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float sta
     if ( ( endAngle - startAngle ) < 0.0f )
         step = -1;
 
-    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - getCenter() ).length();
+    auto radius = ( rotateControls_[int( ax )]->xf( vpId ).A * ( rotateLines_[0]->polyline()->points.vec_[0] - getCenter() ) ).length();
     Vector3f basisXTransfomed = xf.A * baseAxis[( int( ax ) + 1 ) % 3];
     Vector3f basisYTransfomed = xf.A * baseAxis[( int( ax ) + 2 ) % 3];
 

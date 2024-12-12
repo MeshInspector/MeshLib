@@ -336,15 +336,15 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
             ProgressBar::setTaskCount( (int)loadRes.size() + 1 );
             std::string errors;
             // conversion factor from meters into current UI length units
-            float k = 1;
+            float scaleFactor = 1;
             if ( auto uiLengthUnit = UnitSettings::getUiLengthUnit() )
-                k = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *uiLengthUnit ).conversionFactor;
+                scaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *uiLengthUnit ).conversionFactor;
             for ( auto & res : loadRes )
             {
                 if ( res.has_value() )
                 {
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
-                    res->vol.voxelSize *= k;
+                    res->vol.voxelSize *= scaleFactor;
                     auto expObj = createObjectVoxels( *res, ProgressBar::callBackSetProgress );
                     if ( ProgressBar::isCanceled() )
                     {

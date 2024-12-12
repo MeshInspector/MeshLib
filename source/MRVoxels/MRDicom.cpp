@@ -766,7 +766,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
         if ( entry.is_regular_file( ec ) && isDicomFile( filePath, &uid ) )
             seriesMap[uid].push_back( filePath );
         if ( !reportProgress( cb, float( fCounter ) / float( filesNum ) ) )
-            return { unexpectedOperationCanceled() };
+            return unexpectedOperationCanceled();
     }
 
     if ( seriesMap.empty() )
@@ -781,7 +781,7 @@ std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
     if ( !seriesMap.has_value() )
-        return unexpected( std::move( seriesMap.error() ) );
+        return { unexpected( std::move( seriesMap.error() ) ) };
 
     int seriesCounter = 0;
     auto seriesNum = seriesMap->size();

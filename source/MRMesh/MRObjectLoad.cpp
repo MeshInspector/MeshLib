@@ -24,8 +24,8 @@
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
 #include "MRVoxels/MRDicom.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -304,7 +304,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     if ( callback && !callback( 0.f ) )
         return unexpectedOperationCanceled();
 
-    Expected<LoadedObjects> result;
+    Expected<LoadedObjects> result = unexpectedUnsupportedFileExtension();
     bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
@@ -326,7 +326,8 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         const auto loader = ObjectLoad::getObjectLoader( *filter );
         result = loader( filename, callback );
     }
-    else
+    // no else to support same extensions in object and mesh loaders
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
     {
         auto maybe = makeObjectFromMeshFile( filename, callback );
         if ( maybe )
@@ -334,62 +335,60 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             maybe->obj->select( true );
             result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( maybe.error() == stringOperationCanceled() )
-        {
+        else if ( maybe.error() != stringUnsupportedFileExtension() )
             result = unexpected( std::move( maybe.error() ) );
-        }
-        else
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectPoints = makeObjectPointsFromFile( filename, callback );
+        if ( objectPoints.has_value() )
         {
-            result = unexpected( std::move( maybe.error() ) );
-
-            auto objectPoints = makeObjectPointsFromFile( filename, callback );
-            if ( objectPoints.has_value() )
-            {
-                objectPoints->select( true );
-                auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-                result = LoadedObjects{ .objs = { obj } };
-            }
-            else if ( result.error() == stringUnsupportedFileExtension() )
-            {
-                result = unexpected( objectPoints.error() );
-
-                auto objectLines = makeObjectLinesFromFile( filename, callback );
-                if ( objectLines.has_value() )
-                {
-                    objectLines->select( true );
-                    auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
-                    result = LoadedObjects{ .objs = { obj } };
-                }
-                else if ( result.error() == stringUnsupportedFileExtension() )
-                {
-                    result = unexpected( objectLines.error() );
-
-                    auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
-                    if ( objectDistanceMap.has_value() )
-                    {
-                        objectDistanceMap->select( true );
-                        auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
-                        result = LoadedObjects{ .objs = { obj } };
-                    }
-                    else if ( result.error() == stringUnsupportedFileExtension() )
-                    {
-                        result = unexpected( objectDistanceMap.error() );
-
-                        auto objectGcode = makeObjectGcodeFromFile( filename, callback );
-                        if ( objectGcode.has_value() )
-                        {
-                            objectGcode->select( true );
-                            auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
-                            result = LoadedObjects{ .objs = { obj } };
-                        }
-                        else
-                        {
-                            result = unexpected( objectGcode.error() );
-                        }
-                    }
-                }
-            }
+            objectPoints->select( true );
+            auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
         }
+        else if ( objectPoints.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectPoints.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectLines = makeObjectLinesFromFile( filename, callback );
+        if ( objectLines.has_value() )
+        {
+            objectLines->select( true );
+            auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectLines.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectLines.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
+        if ( objectDistanceMap.has_value() )
+        {
+            objectDistanceMap->select( true );
+            auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectDistanceMap.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectDistanceMap.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectGcode = makeObjectGcodeFromFile( filename, callback );
+        if ( objectGcode.has_value() )
+        {
+            objectGcode->select( true );
+            auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectGcode.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectGcode.error() ) );
     }
 
     if ( result.has_value() && !loadedFromSceneFile )
@@ -405,9 +404,6 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                     "Visualization is simplified (only part of the points is drawn)\n";
             }
         }
-
-    if ( !result.has_value() )
-        spdlog::error( result.error() );
 
     return result;
 }

@@ -7,7 +7,6 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointsLoad.h"
-#include "MRMesh/MRPointsLoadSettings.h"
 
 using namespace MR;
 

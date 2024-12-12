@@ -50,7 +50,7 @@ int main( int argc, char* argv[] )
     }
 
     // Save result
-    mrMeshSaveToAnySupportedFormat( outputMesh, "mesh_offset.stl", &errorString );
+    mrMeshSaveToAnySupportedFormat( outputMesh, "mesh_offset.stl", mrSaveSettingsNew(), &errorString );
     if ( errorString )
     {
         fprintf( stderr, "Failed to save inputMesh: %s", mrStringData( errorString ) );

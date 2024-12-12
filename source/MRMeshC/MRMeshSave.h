@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRSaveSettings.h"
 
 MR_EXTERN_C_BEGIN
 

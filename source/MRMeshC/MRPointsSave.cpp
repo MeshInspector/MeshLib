@@ -1,5 +1,4 @@
 #include "MRPointsSave.h"
-#include "MRSaveSettings.h"
 #include "detail/TypeCast.h"
 #include "detail/Vector.h"
 

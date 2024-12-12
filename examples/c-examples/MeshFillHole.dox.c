@@ -58,7 +58,7 @@ int main( int argc, char* argv[] )
 #define FILL_ALL_HOLES 1
 #if FILL_ALL_HOLES
     mrFillHoles( mesh, holes->data, holes->size, &params );
-    newFaceCount = mrBitSetCount( newFaces );
+    newFaceCount = mrBitSetCount( (const MRBitSet*)newFaces );
 #else
     for ( int i = 0; i < mrEdgePathSize( holes ); i++ )
     {
@@ -74,7 +74,7 @@ int main( int argc, char* argv[] )
 
     printf( "Added new %zu faces", newFaceCount );
 
-    mrMeshSaveToAnySupportedFormat( mesh, output, &errorString );
+    mrMeshSaveToAnySupportedFormat( mesh, output, mrSaveSettingsNew(), &errorString);
     if ( errorString )
     {
         fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );

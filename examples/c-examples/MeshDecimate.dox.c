@@ -39,7 +39,7 @@ int main( int argc, char* argv[] )
     printf( "Removed %d vertices, %d faces", result.vertsDeleted, result.facesDeleted );
 
     // Save result
-    mrMeshSaveToAnySupportedFormat( mesh, "decimated_mesh.stl", &errorString );
+    mrMeshSaveToAnySupportedFormat( mesh, "decimated_mesh.stl", mrSaveSettingsNew(), &errorString);
     if ( errorString )
     {
         fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );

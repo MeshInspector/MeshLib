@@ -163,7 +163,7 @@ Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::files
 
     auto saver = getLinesSaver( ext );
     if ( !saver.fileSave )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver.fileSave( polyline, file, settings );
 }

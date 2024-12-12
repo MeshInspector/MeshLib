@@ -43,7 +43,7 @@ Expected<GcodeSource> fromAnySupportedFormat( const std::filesystem::path& file,
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<std::vector<std::string>> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::vector<std::string>> res = unexpectedUnsupportedFileExtension();
     if ( ext == ".gcode" || ext == ".txt" || ext == ".nc" )
         res = fromGcode( file, callback );
     return res;
@@ -55,7 +55,7 @@ Expected<MR::GcodeSource> fromAnySupportedFormat( std::istream& in, const std::s
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<GcodeSource> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<GcodeSource> res = unexpectedUnsupportedFileExtension();
     if ( ext == ".gcode" || ext == ".txt" || ext == ".nc" )
         res = fromGcode( in, callback );
     return res;

@@ -453,7 +453,7 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::pa
 
     auto saver = getMeshSaver( ext );
     if ( !saver.fileSave )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver.fileSave( mesh, file, settings );
 }

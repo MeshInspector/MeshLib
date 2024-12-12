@@ -403,7 +403,7 @@ Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, 
 
     auto loader = getPointsLoader( ext );
     if ( !loader.fileLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.fileLoad( file, settings );
 }
@@ -416,7 +416,7 @@ Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string
 
     auto loader = getPointsLoader( ext );
     if ( !loader.streamLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.streamLoad( in, settings );
 }

@@ -257,7 +257,7 @@ Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::file
 
     auto saver = getVoxelsSaver( ext );
     if ( !saver )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver( vdbVolume, file, callback );
 }

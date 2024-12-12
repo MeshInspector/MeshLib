@@ -1,7 +1,6 @@
 #include "MRUITestEngine.h"
 #include "MRPch/MRSpdlog.h"
-
-#include <imgui.h>
+#include "MRImGui.h"
 
 #ifndef MR_ENABLE_UI_TEST_ENGINE
 // Set to 0 to disable the UI test engine. All functions will act as if no UI elements are registered.

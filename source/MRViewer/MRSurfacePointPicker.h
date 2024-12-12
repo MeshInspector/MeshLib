@@ -31,8 +31,8 @@ public:
     struct Parameters
     {
         enum class PointSizeType {
-            Metrical, // point size in mm 
-            Pixel   // point size in pixels 
+            Metrical, // point size in mm
+            Pixel   // point size in pixels (will automatically be multipled by the UI scale)
         };
         // type of point positioning, look at PositionType comments for more info
         PositionType positionType{ PositionType::Faces };
@@ -43,10 +43,11 @@ public:
         // color of control sphere when it is in move
         Color activeColor{ { Color::red() } };
         // how to set the size of the dots in mm or in pixels.
-        PointSizeType radiusSizeType{ PointSizeType::Metrical };
-        // radius of control sphere, if <= 0.0f it is equal to 5e-3*box.diagonal()
+        PointSizeType radiusSizeType{ PointSizeType::Pixel };
+        // Radius of control sphere. If <= 0.0f, uses a default value (a certain fraction of the AABB diagnoal of the target object for `radiusSizeType == Metrical`, or a fixed pixel size for `radiusSizeType == Pixel`).
+        // When `radiusSizeType == Pixel`, this is automatically multiplied by the current UI scale, you don't need to do that yourself.
         float radius{ 0.0f };
-        // Typically, the widget does not respond to actions with a modifier. 
+        // Typically, the widget does not respond to actions with a modifier.
         // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
         int customModifiers = 0; // GLFW modifier bitmask
         // pick_render_object parameters. Allow to use object in which pick exactly fell, instead of closer object in pick radius.
@@ -61,7 +62,7 @@ public:
     // resets whole widget
     MRVIEWER_API void reset();
     // returns object of control sphere
-    std::shared_ptr<SphereObject> getPickSphere() const
+    const std::shared_ptr<SphereObject>& getPickSphere() const
     {
         return pickSphere_;
     }
@@ -70,8 +71,13 @@ public:
     {
         return params_;
     }
+
     // set parameters for this widget
     MRVIEWER_API void setParameters( const Parameters& params );
+
+    // set baseColor parameter for this widget
+    MRVIEWER_API void setBaseColor( const Color& color );
+
     /// Update the widget parameters.
     /// \param visitor - the function that takes the widget parameters and modifies them. Then the parameters are applied by \ref setParameters.
     MRVIEWER_API void updateParameters( const std::function<void ( Parameters& )>& visitor );
@@ -96,7 +102,7 @@ public:
         return currentPos_;
     }
 
-    /// return current position transformed to Vector3f 
+    /// return current position transformed to Vector3f
     MRVIEWER_API Vector3f toVector3f() const;
 
     /// returns stored position as MeshTriPoint, otherwise returns invalid (default) MeshTriPoint
@@ -118,17 +124,17 @@ public:
     MRVIEWER_API void swapCurrentPosition( PickedPoint& pos );
 
     // this callback is called when modification starts if it is set
-    void setStartMoveCallback( std::function<void( const PickedPoint& )> startMove )
+    void setStartMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove )
     {
         startMove_ = startMove;
     }
     // this callback is called on modification if it is set
-    void setOnMoveCallback( std::function<void( const PickedPoint& )> onMove )
+    void setOnMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove )
     {
         onMove_ = onMove;
     }
     // this callback is called when modification ends if it is set
-    void setEndMoveCallback( std::function<void( const PickedPoint& )> endMove )
+    void setEndMoveCallback( std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove )
     {
         endMove_ = endMove;
     }
@@ -168,9 +174,9 @@ private:
 
     boost::signals2::scoped_connection onBaseObjectWorldXfChanged_;
 
-    std::function<void( const PickedPoint& )> startMove_;
-    std::function<void( const PickedPoint& )> onMove_;
-    std::function<void( const PickedPoint& )> endMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> startMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> onMove_;
+    std::function<void( SurfacePointWidget &, const PickedPoint& )> endMove_;
 
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();

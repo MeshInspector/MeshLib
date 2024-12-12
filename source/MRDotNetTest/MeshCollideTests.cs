@@ -23,9 +23,9 @@ namespace MR.Test
 
             Assert.That(contours.Count, Is.EqualTo(4));
             Assert.That(contours[0].Count, Is.EqualTo(69));
-            Assert.That(contours[1].Count, Is.EqualTo(71));
-            Assert.That(contours[2].Count, Is.EqualTo(7));
-            Assert.That(contours[3].Count, Is.EqualTo(9));
+            Assert.That(contours[1].Count, Is.EqualTo(9));
+            Assert.That(contours[2].Count, Is.EqualTo(71));
+            Assert.That(contours[3].Count, Is.EqualTo(7));
             var aConts = GetOneMeshIntersectionContours(meshA.mesh, meshB.mesh, orderedIntersections, true, conv);
             Assert.That(aConts.Count, Is.EqualTo(4));
             var bConts = GetOneMeshIntersectionContours(meshA.mesh, meshB.mesh, orderedIntersections, false, conv);

@@ -2,7 +2,6 @@
 #include "MRUIRectAllocator.h"
 #include "MRUITestEngine.h"
 #include "MRImGuiVectorOperators.h"
-#include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"

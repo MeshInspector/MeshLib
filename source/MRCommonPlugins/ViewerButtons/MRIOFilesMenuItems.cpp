@@ -3,6 +3,7 @@
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
 #include "MRViewer/MRViewport.h"
+#include "MRViewer/MROpenObjects.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
@@ -32,9 +33,8 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRMesh/MRMeshSaveObj.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRShowModal.h"
-#include "MRViewer/MRViewerIO.h"
+#include "MRViewer/MRSaveObjects.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
@@ -42,7 +42,6 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRLambdaRibbonItem.h"
-#include "MRPch/MRWasm.h"
 #include "MRIOExtras/MRPng.h"
 
 #ifndef MESHLIB_NO_VOXELS
@@ -53,6 +52,9 @@
 #include "MRVoxels/MRDicom.h"
 #endif
 #endif
+
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -127,7 +129,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
     std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
     if ( !checkPaths( paths, filters ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return;
     }
     getViewerInstance().loadFiles( paths );
@@ -197,7 +199,7 @@ bool OpenFilesMenuItem::action()
             return;
         if ( !checkPaths( filenames, filters_ ) )
         {
-            showError( "Unsupported file extension" );
+            showError( stringUnsupportedFileExtension() );
             return;
         }
         getViewerInstance().loadFiles( filenames );
@@ -229,7 +231,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
 
     if ( !checkPaths( paths, filters_ ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return false;
     }
 
@@ -329,7 +331,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
         {
             bool anySuccess = std::any_of( loadRes.begin(), loadRes.end(), []( const auto & r ) { return r.has_value(); } );
             std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
-            ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
+            ProgressBar::setTaskCount( (int)loadRes.size() + 1 );
             std::string errors;
             for ( auto & res : loadRes )
             {
@@ -390,7 +392,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
         {
             showError( "Cannot open given folder, find more in log." );
         };
-    }, 3 );
+    }, 2 );
 }
 #endif
 
@@ -413,19 +415,10 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 
 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
     // check if the directory can be opened as a DICOM archive
-    std::error_code ec;
-    for ( const auto& entry : Directory { directory, ec } )
+    if ( VoxelsLoad::isDicomFolder( directory ) )
     {
-        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
-        {
-            const auto& path = entry.path();
-            const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
-            {
-                sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
-                return;
-            }
-        }
+        sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
+        return;
     }
 #endif
 
@@ -434,12 +427,9 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     {
         ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            std::string warnings;
-            auto loadRes = makeObjectTreeFromFolder( directory, &warnings, ProgressBar::callBackSetProgress );
-            if ( loadRes.has_value() )
+            if ( auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress ) )
             {
-                auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                return [obj, directory, warnings]
+                return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
                 {
                     sSelectRecursive( *obj );
                     AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );

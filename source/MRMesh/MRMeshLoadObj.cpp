@@ -408,7 +408,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combin
         return unexpected( data.error() );
 
     if ( !reportProgress(settings.callback, 0.25f) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     // TODO: redefine callback
 
     ObjLoadSettings newSettings = settings;
@@ -563,13 +563,13 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     const auto lineCount = newlines.size() - 1;
 
     if ( !reportProgress( settings.callback, 0.4f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
@@ -868,7 +868,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             return unexpected( parseError );
 
         if ( !reportProgress( subprogress( settings.callback, 0.5f, 1.f ), ( float )group.end / ( float )lineCount ) )
-            return unexpected( "Loading canceled" );
+            return unexpectedOperationCanceled();
     }
 
     if ( auto exp = finishObject(); !exp )
@@ -912,7 +912,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
             if ( numEmptyTexture != 0 && numEmptyTexture != result.textureFiles.size() )
             {
-                res.warnings += " object has material with and without texture";
+                res.warnings += "object has material with and without texture\n";
             }
             else if ( numEmptyTexture == 0 && result.textureFiles.size() != 0 )
             {
@@ -933,7 +933,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
                     {
                         crashTextureLoad = true;
                         objectMesh->setTextures( {} );
-                        res.warnings += image.error();
+                        res.warnings += image.error() + '\n';
                         break;
                     }
                 }
@@ -961,23 +961,11 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         }
 
         if ( totalSkippedFaceCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings = fmt::format( "{} triangles were skipped as inconsistent with others.", totalSkippedFaceCount );
-        }
+            res.warnings += fmt::format( "{} triangles were skipped as inconsistent with others.\n", totalSkippedFaceCount );
         if ( totalDuplicatedVertexCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.", totalDuplicatedVertexCount );
-        }
+            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.\n", totalDuplicatedVertexCount );
         if ( holesCount )
-        {
-            if ( !res.warnings.empty() )
-                res.warnings += '\n';
-            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.", holesCount );
-        }
+            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.\n", holesCount );
         return res;
     } );
 }

@@ -201,7 +201,8 @@ void SceneObjectsListDrawer::changeVisible( bool isDown )
     nextVisible_.index = int( std::distance( all.begin(), itAll ) );
 
     for ( const auto& obj : nextObj->parent()->children() )
-        obj->setVisible( false );
+        if ( !obj->isAncillary() )
+            obj->setVisible( false );
     for ( const auto& obj : selected )
         obj->select( false );
     nextObj->setVisible( true );
@@ -261,7 +262,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
         return depths[i];
     };
 
-    int curentDepth = 0;
+    int currentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
 
     SkippableRenderer skippableRenderer;
@@ -301,9 +302,9 @@ void SceneObjectsListDrawer::drawObjectsList_()
         {
             if ( getDepth( i ) > collapsedHeaderDepth)
             {
-                if ( curentDepth > nextDepth )
+                if ( currentDepth > nextDepth )
                 {
-                    for ( ; curentDepth > nextDepth; --curentDepth )
+                    for ( ; currentDepth > nextDepth; --currentDepth )
                     {
                         if ( needDragDropTarget_() )
                             skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( *objDepthStack.top(), false, true, "0" ); } );
@@ -318,13 +319,13 @@ void SceneObjectsListDrawer::drawObjectsList_()
         }
 
         auto& object = *all[i];
-        if ( curentDepth < getDepth( i ) )
+        if ( currentDepth < getDepth( i ) )
         {
             ImGui::Indent();
             if ( i > 0 )
                 objDepthStack.push( all[i - 1] );
-            ++curentDepth;
-            assert( curentDepth == getDepth( i ) );
+            ++currentDepth;
+            assert( currentDepth == getDepth( i ) );
         }
 
         {
@@ -349,8 +350,8 @@ void SceneObjectsListDrawer::drawObjectsList_()
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
-            [&] { isOpen = drawObject_( object, uniqueStr, curentDepth ); },
-            [&] { isOpen = drawSkippedObject_( object, uniqueStr, curentDepth ); } );
+            [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); },
+            [&] { isOpen = drawSkippedObject_( object, uniqueStr, currentDepth ); } );
 
             if ( object.isSelected() )
                 previousWasSelected = true;
@@ -374,10 +375,10 @@ void SceneObjectsListDrawer::drawObjectsList_()
                     skippableRenderer.draw( drawPropertiesHeight, itemSpacingY, [&] { drawCustomTreeObjectProperties_( object, false ); } );
             }
             else
-                collapsedHeaderDepth = curentDepth;
+                collapsedHeaderDepth = currentDepth;
         }
 
-        for ( ; curentDepth > nextDepth; --curentDepth )
+        for ( ; currentDepth > nextDepth; --currentDepth )
         {
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(*objDepthStack.top(), false, true, "0"); });

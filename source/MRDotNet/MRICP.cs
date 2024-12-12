@@ -60,11 +60,11 @@ namespace MR
             public float weight = 1.0f;
 
             /// id of the source point
-            public VertId srcVertId;
+            public VertId srcVertId = new VertId();
 
             /// for point clouds it is the closest vertex on target,
             /// for meshes it is the closest vertex of the triangle with the closest point on target
-            public VertId tgtCloseVert;
+            public VertId tgtCloseVert = new VertId();
 
             /// cosine between normals in source and target points
             public float normalsAngleCos = 1.0f;
@@ -169,10 +169,10 @@ namespace MR
             [StructLayout(LayoutKind.Sequential)]
             internal struct MRICPPairData
             {
-                public MRVector3f srcPoint;
-                public MRVector3f srcNorm;
-                public MRVector3f tgtPoint;
-                public MRVector3f tgtNorm;
+                public MRVector3f srcPoint = new MRVector3f();
+                public MRVector3f srcNorm = new MRVector3f();
+                public MRVector3f tgtPoint = new MRVector3f();
+                public MRVector3f tgtNorm = new MRVector3f();
                 public float distSq = 0.0f;
                 public float weight = 0.0f;
                 public MRICPPairData() { }
@@ -181,9 +181,9 @@ namespace MR
             [StructLayout(LayoutKind.Sequential)]
             internal struct MRPointPair
             {
-                public MRICPPairData ICPPairData;
-                public VertId srcVertId;
-                public VertId tgtCloseVert;
+                public MRICPPairData ICPPairData = new MRICPPairData();
+                public VertId srcVertId = new VertId();
+                public VertId tgtCloseVert = new VertId();
                 public float normalsAngleCos = 0.0f;
                 public byte tgtOnBd = 0;
 
@@ -209,7 +209,7 @@ namespace MR
                 /// Finds only translation. Rotation part is identity matrix
                 public ICPMode icpMode = ICPMode.AnyRigidXf;
                 /// If this vector is not zero then rotation is allowed relative to this axis only
-                public MRVector3f fixedRotationAxis;
+                public MRVector3f fixedRotationAxis = new MRVector3f();
                 /// maximum iterations
                 public int iterLimit = 10;
                 /// maximum iterations without improvements

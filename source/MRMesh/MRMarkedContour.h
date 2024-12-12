@@ -9,8 +9,10 @@ namespace MR
 struct MarkedContour3f
 {
     Contour3f contour;
-    BitSet marks; ///< subset of indices of contour field
+    BitSet marks; ///< indices of control (marked) points
 };
+
+[[nodiscard]] inline bool isClosed( const Contour3f& c ) { return c.size() > 1 && c.front() == c.back(); }
 
 /// \return marked contour with all points from (in) marked
 [[nodiscard]] inline MarkedContour3f markedContour( Contour3f in )
@@ -29,10 +31,10 @@ struct MarkedContour3f
     return res;
 }
 
-/// \param in input marked contour
-/// \param maxStep maximum distance from not-marked point of returned contour to a neighbor point
-/// \return contour with same marked points and not-marked points located on input contour with given maximum distance along it
-[[nodiscard]] MRMESH_API MarkedContour3f resample( const MarkedContour3f & in, float maxStep );
+/// keeps all marked points from input contour and adds/removes other points to have them as many as possible,
+/// but at the distance along the input line not shorter than (minStep) from their neighbor points
+/// \param normals optional parameter with the normals of input points that will be resampled to become normals of output points
+[[nodiscard]] MRMESH_API MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f * normals = nullptr );
 
 /// \param in input marked contour
 /// \param markStability a positive value, the more the value the closer marked points will be to their original positions

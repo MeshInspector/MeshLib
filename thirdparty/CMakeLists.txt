@@ -127,7 +127,12 @@ IF(MR_EMSCRIPTEN)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
+  add_subdirectory(./fmt)
+  #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
   set(SPDLOG_INSTALL ON)
+  set(SPDLOG_FMT_EXTERNAL ON)
+  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)

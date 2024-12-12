@@ -86,7 +86,7 @@ namespace MR
             /// Additionally smooth 3 layers of vertices near hole boundary both inside and outside of the hole
             public bool NaturalSmooth = false;
             /// Edge weighting scheme for smoothCurvature mode
-            public EdgeWeights EdgeWeights;
+            public EdgeWeights EdgeWeights = EdgeWeights.Cotan;
             public FillHoleNicelyParams() { }
         }
 
@@ -112,7 +112,7 @@ namespace MR
             public float maxAngleChangeAfterFlip = 30.0f * (float)Math.PI / 180.0f;
             public byte smoothCurvature = 1;
             public byte naturalSmooth = 0;
-            public EdgeWeights edgeWeights;
+            public EdgeWeights edgeWeights = EdgeWeights.Cotan;
             public MRFillHoleNicelyParams() { }
         };
 

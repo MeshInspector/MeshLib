@@ -7,10 +7,19 @@ on:
         required: true
         type: string
       autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2024-nov-07"
-        required: false
+        required: true
         type: string
-      UPLOAD_ARTIFACTS:
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
+      internal_build:
+        required: false
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+      upload_test_artifacts:
         required: true
         type: boolean
       mrbind:
@@ -25,32 +34,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ x64, github-arm, arm ]
-        compiler: [Clang]
+        arch: [ x64, arm64 ]
+        config: [ Debug, Release ]
+        compiler: [ AppleClang ]
+        exclude:
+          - arch: x64
+            config: Debug
         include:
-          - compiler: Clang
+          - compiler: AppleClang
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
-          - os: x64
+          - arch: x64
+            config: Release
+            os: x64
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-13 # github hosted
-            config: Release
             brewpath: /usr/local
-          - os: github-arm
-            runner: macos-latest  # github hosted
+          - arch: arm64
             config: Debug
+            os: github-arm
+            runner: macos-latest  # github hosted
             brewpath: /opt/homebrew
-          - os: arm
-            runner: macos-arm-build # self-hosted
+          - arch: arm64
             config: Release
+            os: arm
+            runner: macos-arm-build # self-hosted
             brewpath: /opt/homebrew
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-
-    env:
-      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
-      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
       - name: Checkout
@@ -58,11 +70,20 @@ jobs:
         with:
           submodules: true
 
+      - name: Collect runner's system stats
+        continue-on-error: true
+        uses: ./.github/actions/collect-runner-stats
+        with:
+          target_os: macos
+          target_arch: ${{ matrix.arch }}
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
+
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
       - name: Install MRBind
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         run: |
           ./scripts/mrbind/install_deps_macos.sh
           ./scripts/mrbind/install_mrbind_macos.sh
@@ -85,13 +106,11 @@ jobs:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_CMAKE_OPTIONS: -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }} -DMR_CXX_STANDARD=23
 
       - name: Generate and build MRBind bindings
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         env:
           PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
         run: |
@@ -117,7 +136,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.upload_test_artifacts && inputs.internal_build }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -125,37 +144,37 @@ jobs:
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ inputs.internal_build }}
         id: cache-autotest
         uses: actions/cache@v4
         with:
           path: ./test_data
-          key: ${{inputs.autotest_data_s3_url}}
+          key: ${{ inputs.autotest_data_s3_url }}
 
       - name: Copy autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
+        if: ${{ inputs.internal_build }}
+        run: aws s3 sync ${{ inputs.autotest_data_s3_url }} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
         env:
-          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          SMOKE: ${{ inputs.internal_build && !inputs.full_config_build && matrix.config == 'Debug' }}
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
+        if: ${{ inputs.internal_build }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
 
       - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
       - name: Create Pkg
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         run: |
           ./scripts/distribution_apple.sh
           mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_macos-${{matrix.os}}

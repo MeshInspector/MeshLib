@@ -43,7 +43,7 @@ To install MeshLib via Visual Studio, follow these steps:
   - Select the MeshLib package from the search results.
   - Click "Install" and follow any prompts to complete the installation.
  5. **Start Using MeshLib**:
-  - Add `using MR.DotNet;` at the top of your C# files to start using MeshLib features.
+  - Add `using static MR.DotNet;` at the top of your C# files to start using MeshLib features.
 
 ## Installation from a Downloaded NuGet Package
 If you prefer to download the MeshLib package directly from the NuGet website, follow these steps:

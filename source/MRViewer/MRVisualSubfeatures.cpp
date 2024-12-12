@@ -22,7 +22,7 @@ void forEachVisualSubfeature( const Features::Primitives::Variant& feature, cons
                     func( {
                         .name = otherSideRadius <= 0 ? "Base circle center" : negativeCap ? "Base circle center (negative side)" : "Base circle center (positive side)",
                         .isInfinite = false,
-                        .create = [&] { return cone->basePoint( negativeCap ); },
+                        .create = [negativeCap]( const Features::Primitives::Variant& f ){ return std::get<Features::Primitives::ConeSegment>( f ).basePoint( negativeCap ); },
                     } );
                 }
             }

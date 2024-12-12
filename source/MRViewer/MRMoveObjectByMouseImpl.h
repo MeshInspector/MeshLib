@@ -3,7 +3,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRMouse.h"
-#include "imgui.h"
+#include "MRViewer/MRImGui.h"
 
 namespace MR
 {

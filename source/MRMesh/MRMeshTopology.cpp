@@ -2222,7 +2222,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( v / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     // read verts
     std::uint32_t numVerts;
@@ -2235,7 +2235,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( ( 1.f + v ) / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     // read faces
     std::uint32_t numFaces;
@@ -2248,7 +2248,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( ( 2.f + v ) / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     computeValidsFromEdges();
 

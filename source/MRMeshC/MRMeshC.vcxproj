@@ -15,6 +15,7 @@
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRBox.h" />
+    <ClInclude Include="MRColor.h" />
     <ClInclude Include="MRContoursCut.h" />
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
@@ -57,24 +58,31 @@
     <ClInclude Include="MRPointCloudTriangulation.h" />
     <ClInclude Include="MRPointOnFace.h" />
     <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
     <ClInclude Include="MRRegionBoundary.h" />
+    <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRTorus.h" />
+    <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVector.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="detail\Concat.h" />
     <ClInclude Include="detail\TypeCast.h" />
     <ClInclude Include="detail\Vector.h" />
+    <ClInclude Include="MRVoxelsFwd.h" />
+    <ClInclude Include="MRVoxelsLoad.h" />
+    <ClInclude Include="MRVoxelsSave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRBox.cpp" />
+    <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
@@ -113,14 +121,19 @@
     <ClCompile Include="MRPointCloudTriangulation.cpp" />
     <ClCompile Include="MRPointOnFace.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsLoadSettings.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRRegionBoundary.cpp" />
+    <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRTriPoint.cpp" />
     <ClCompile Include="MRTorus.cpp" />
+    <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVector.cpp" />
     <ClCompile Include="MRVector3.cpp" />
+    <ClCompile Include="MRVoxelsLoad.cpp" />
+    <ClCompile Include="MRVoxelsSave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
@@ -128,6 +141,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRVoxels\MRVoxels.vcxproj">
       <Project>{7cc4f0fe-ace6-4441-9dd7-296066b6d69f}</Project>
@@ -175,6 +191,10 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -199,6 +219,10 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

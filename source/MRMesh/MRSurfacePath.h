@@ -50,7 +50,7 @@ enum class GeodesicPathApprox : char
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// It is the same as calling computeGeodesicPathApprox() then reducePath()
 MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
-    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype = GeodesicPathApprox::FastMarching,
     int maxGeodesicIters = 100 ); ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
 
 /// computes by given method and returns intermediate points of approximately geodesic path from start to end,

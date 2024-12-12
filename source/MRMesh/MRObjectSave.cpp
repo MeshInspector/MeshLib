@@ -181,7 +181,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     }
     else
     {
-        return unexpected( "unsupported file extension" );
+        return unexpectedUnsupportedFileExtension();
     }
 }
 

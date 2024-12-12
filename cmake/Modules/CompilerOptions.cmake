@@ -92,6 +92,9 @@ IF(MR_EMSCRIPTEN)
     add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
   ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
 
+  add_compile_definitions(SPDLOG_FMT_EXTERNAL)
+  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
+  
   # FIXME: comment required
   add_compile_definitions(EIGEN_STACK_ALLOCATION_LIMIT=0)
 ENDIF() # MR_EMSCRIPTEN

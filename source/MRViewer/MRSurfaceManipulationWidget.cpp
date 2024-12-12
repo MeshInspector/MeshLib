@@ -87,10 +87,9 @@ void SurfaceManipulationWidget::reset()
 {
     originalMesh_.reset();
 
-    lastStableObjMesh_.reset();
+    removeLastStableObjMesh_();
 
     obj_->clearAncillaryTexture();
-    obj_->setPickable( true );
     obj_.reset();
 
     clearData_();
@@ -165,6 +164,26 @@ Vector2f SurfaceManipulationWidget::getMinMax()
     return { rangeLength * -0.5f, rangeLength * 0.5f };
 }
 
+void SurfaceManipulationWidget::createLastStableObjMesh_()
+{
+    assert( !lastStableObjMesh_ );
+    lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+    lastStableObjMesh_->setAncillary( true );
+    lastStableObjMesh_->setVisible( false );
+    obj_->setPickable( false );
+    obj_->parent()->addChild( lastStableObjMesh_ );
+}
+
+void SurfaceManipulationWidget::removeLastStableObjMesh_()
+{
+    if ( lastStableObjMesh_ )
+    {
+        lastStableObjMesh_->detachFromParent();
+        lastStableObjMesh_.reset();
+    }
+    obj_->setPickable( true );
+}
+
 bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
 {
     if ( button != MouseButton::Left || modifiers != 0 )
@@ -192,9 +211,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
         if ( settings_.workMode != WorkMode::Patch )
         {
             // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
-            lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
-            lastStableObjMesh_->setAncillary( true );
-            obj_->setPickable( false );
+            createLastStableObjMesh_();
             lastStableValueChanges_ = valueChanges_;
 
             appendHistoryAction_ = true;
@@ -221,7 +238,10 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     mousePressed_ = false;
     if ( settings_.workMode == WorkMode::Laplacian )
+    {
+        removeLastStableObjMesh_();
         return true;
+    }
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     pointsShift_.clear();
@@ -297,9 +317,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
 
-    obj_->setPickable( true );
-
-    lastStableObjMesh_.reset();
+    removeLastStableObjMesh_();
 
     return true;
 }
@@ -495,19 +513,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     mousePos_ = mousePos;
 
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
-    // to pick some object, it must have a parent object
-    std::shared_ptr<Object> parent;
-    if ( lastStableObjMesh_ )
-    {
-        parent = std::make_shared<Object>();
-        parent->addChild( lastStableObjMesh_ );
-    }
     std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
-    if ( lastStableObjMesh_ )
-    {
-        lastStableObjMesh_->detachFromParent();
-        parent.reset();
-    }
 
     updateVizualizeSelection_( movedPosPick.empty() ? ObjAndPick() : movedPosPick.back() );
     const auto& mesh = *objMeshPtr->mesh();
@@ -559,8 +565,7 @@ void SurfaceManipulationWidget::abortEdit_()
     if ( !mousePressed_ )
         return;
     mousePressed_ = false;
-    lastStableObjMesh_.reset();
-    obj_->setPickable( true );
+    removeLastStableObjMesh_();
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
@@ -577,7 +582,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
     historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
-    lastStableObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+    createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;
 }
 

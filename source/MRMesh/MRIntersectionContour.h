@@ -11,6 +11,7 @@ using OneMeshContours = std::vector<OneMeshContour>;
 struct VariableEdgeTri : EdgeTri
 {
     bool isEdgeATriB{false};
+    bool operator==( const VariableEdgeTri& ) const = default;
 };
 
 using ContinuousContour = std::vector<VariableEdgeTri>;

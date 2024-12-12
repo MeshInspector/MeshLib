@@ -8,7 +8,7 @@ MODULES = [
     "mrmeshnumpy",
     "mrviewerpy",
 ]
-if SYSTEM == "Darwin":
+if SYSTEM != "Darwin":
     MODULES.append("mrcudapy")
 
 

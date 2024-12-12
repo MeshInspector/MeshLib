@@ -12,7 +12,7 @@ REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( VertColors )
 REGISTER_AUTO_CAST2( std::string, MRString )
 
-void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const MRSaveSettings* settings_, const char* file, MRString** errorStr )
+void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, const MRSaveSettings* settings_, MRString** errorStr )
 {
     ARG( mesh );
     SaveSettings settings;

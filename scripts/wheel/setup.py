@@ -27,10 +27,12 @@ elif platform_system == "Darwin":
     LIBS_EXTENSION = "so"
 
 MODULES = [
-    "mrmeshnumpy",
     "mrmeshpy",
+    "mrmeshnumpy",
     "mrviewerpy",
 ]
+if platform.system() != "Darwin":
+    MODULES.append("mrcudapy")
 
 here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the readme file

@@ -206,10 +206,9 @@ IF(NOT MR_EMSCRIPTEN)
 
     IF(MESHLIB_BUILD_PYTHON_MODULES)
       add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
+      add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
       IF(MESHLIB_BUILD_MRMESH_PY_LEGACY)
         add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
-        # `generate.mk` builds this as well. See `BUILD_MRMESHNUMPY` in it for why we do it this way.
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
       ENDIF()
     ENDIF()
   ENDIF()

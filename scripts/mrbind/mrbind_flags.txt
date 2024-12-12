@@ -1,7 +1,6 @@
 --format=macros
 --combine-types=cv,ref,ptr,smart_ptr
 --ignore ::
---allow MR
 --ignore MR::detail
 --ignore MR::Signal
 --ignore MR::UniquePtr

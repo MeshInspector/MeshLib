@@ -10,11 +10,11 @@ PYTHON_EXECUTABLE="python${PYTHON_VERSION}"
 
 MESHLIB_VERSION="${MESHLIB_VERSION}"
 
-MESHLIB_PYTHON_MODULES=(mrmeshpy mrmeshnumpy mrviewerpy)
+MESHLIB_PYTHON_MODULES=(mrmeshpy mrmeshnumpy mrcudapy mrviewerpy)
 
 set +e
 which $PYTHON_EXECUTABLE >/dev/null
-if [ $? -ne 0 ] ; then 
+if [ $? -ne 0 ] ; then
     echo "No Python ${PYTHON_VERSION} executable found"
     exit 1
 fi

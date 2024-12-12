@@ -1,0 +1,50 @@
+/**
+\page MeshLibCmakeSetupGuide MeshLib CMake Setup Guide
+
+# How to Use MeshLib with CMake
+
+\tableofcontents
+
+## CMake Integration Support
+MeshLib provides CMake integration support for \b Linux and \b macOS. Please note that CMake integration is not currently supported on Windows. 
+Example CMake configuration files are available to demonstrate how to link against the pre-built libraries. 
+You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
+
+## Quick Integration Guide
+
+### Find MeshLib CMake Configuration Files
+
+For a start, find the MeshLib package:
+\code{.cmake}
+find_package(MeshLib CONFIG REQUIRED)
+\endcode
+
+### Include the MeshLib Headers
+
+Ensure that the `include` directory from the installed MeshLib package is added to your project's include directories. In your CMake configuration (`CMakeLists.txt`), add:
+\code{.cmake}
+include_directories(${MESHLIB_INCLUDE_DIR})
+# or
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR})
+\endcode
+
+### Link the MeshLib Libraries
+
+Specify which MeshLib libraries to link with your project:
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MRMesh)
+# if you want to use viewer libraries
+target_link_libraries(your_project_name PUBLIC MeshLib::MRMesh MeshLib::MRViewer)
+\endcode
+
+### Find Third-Party Dependencies
+
+MeshLib have extended functionality that may have additional dependencies that need to be linked. 
+Check the example `CMakeLists.txt` provided in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) to see how to add required dependencies:
+
+\code{.cmake}
+target_include_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+target_link_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
+\endcode
+
+*/

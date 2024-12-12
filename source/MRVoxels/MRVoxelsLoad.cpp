@@ -290,11 +290,16 @@ LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 }
 
 template <VoxelsLoader voxelsLoader>
-Expected<LoadedObjects> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<LoadedObjects, LoadedObjectsError> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
 {
-    return voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
+    auto ret = voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return toObjectVoxels( volumes, path, subprogress( cb, 1.f / 3.f, 1.f ) ); } )
         .transform( toObjects );
+
+    if ( ret )
+        return std::move( *ret );
+    else
+        return unexpected( LoadedObjectsError{ .message = std::move( ret.error() ) } );
 }
 
 #define MR_ADD_VOXELS_LOADER( filter, loader )                         \

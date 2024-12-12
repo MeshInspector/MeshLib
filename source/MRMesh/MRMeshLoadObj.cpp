@@ -518,7 +518,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                 {
                     materialIt = mtl->begin();
                 }
-                
+
                 if ( maxTextureId.valid() )
                 {
                     result.textureFiles.resize( maxTextureId + 1 );
@@ -702,7 +702,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                             return;
                         }
                     }
-                   
+
                     auto it = additions.upper_bound( v );
                     int toAdd = 0;
                     if ( it == additions.end() )
@@ -712,7 +712,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
                     if ( toAdd > 0 )
                         v += toAdd;
-                   
+
                 }
                 if ( vs.size() < 3 )
                 {
@@ -720,7 +720,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                         parseError = "Face with less than 3 vertices in OBJ-file";
                     return;
                 }
-                
+
                 auto& vts = f.textures;
                 if ( !vts.empty() )
                 {
@@ -877,9 +877,9 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     return res;
 }
 
-Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
+Expected<LoadedObjects, LoadedObjectsError> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
+    Expected<LoadedObjects> ret = fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
     .transform( [&] ( std::vector<NamedMesh>&& results )
     {
         int totalSkippedFaceCount = 0;
@@ -968,6 +968,11 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
             res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.\n", holesCount );
         return res;
     } );
+
+    if ( ret )
+        return std::move( *ret );
+    else
+        return unexpected( LoadedObjectsError{ .message = std::move( ret.error() ) } );
 }
 
 MR_ADD_OBJECT_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), loadObjectFromObj )

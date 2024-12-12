@@ -46,7 +46,7 @@ MRIOEXTRAS_API Expected<PointCloud> fromE57( const std::filesystem::path& file,
                                              const PointsLoadSettings& settings = {} );
 MRIOEXTRAS_API Expected<PointCloud> fromE57( std::istream& in, const PointsLoadSettings& settings = {} );
 
-MRIOEXTRAS_API Expected<LoadedObjects> loadObjectFromE57( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRIOEXTRAS_API Expected<LoadedObjects, LoadedObjectsError> loadObjectFromE57( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
 } // namespace MR::PointsLoad
 #endif

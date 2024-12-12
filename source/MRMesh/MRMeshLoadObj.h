@@ -69,7 +69,7 @@ MRMESH_API Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, 
                                                                            const ObjLoadSettings& settings = {} );
 
 /// reads all objects from .OBJ file
-MRMESH_API Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb = {} );
+MRMESH_API Expected<LoadedObjects, LoadedObjectsError> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
 } // namespace MeshLoad
 

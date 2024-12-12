@@ -269,9 +269,9 @@ Expected<PointCloud> fromE57( std::istream&, const PointsLoadSettings& )
 
 MR_ADD_POINTS_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), fromE57 )
 
-Expected<LoadedObjects> loadObjectFromE57( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<LoadedObjects, LoadedObjectsError> loadObjectFromE57( const std::filesystem::path& path, const ProgressCallback& cb )
 {
-    return fromSceneE57File( path, { .progress = std::move( cb ) } )
+    auto ret = fromSceneE57File( path, { .progress = std::move( cb ) } )
     .transform( [&path] ( std::vector<NamedCloud>&& nclouds )
     {
         LoadedObjects res;
@@ -295,6 +295,11 @@ Expected<LoadedObjects> loadObjectFromE57( const std::filesystem::path& path, co
         }
         return res;
     } );
+
+    if ( ret )
+        return std::move( *ret );
+    else
+        return unexpected( LoadedObjectsError{ .message = std::move( ret.error() ) } );
 }
 
 MR_ADD_OBJECT_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), loadObjectFromE57 )

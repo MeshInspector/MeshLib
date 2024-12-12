@@ -1009,7 +1009,23 @@ MR_ON_INIT
             );
         }
     );
-    MR::ObjectLoad::setObjectLoader( filter, MR::makeObjectFromVoxelsFile );
+    MR::ObjectLoad::setObjectLoader(
+        filter,
+        []( const std::filesystem::path& file, const ProgressCallback& callback ) -> Expected<LoadedObjects, LoadedObjectsError>
+        {
+            if ( !isDicomFile( file ) )
+            {
+                // 3shape mesh files have the same extension.
+                return unexpected( LoadedObjectsError{ .message = "Not a Dicom file.", .kind = LoadedObjectsErrorKind::tryAnotherFormat } );
+            }
+
+            auto ret = MR::makeObjectFromVoxelsFile( file, callback );
+            if ( ret )
+                return std::move( *ret );
+            else
+                return unexpected( LoadedObjectsError{ .message = std::move( ret.error() ) } );
+        }
+    );
 };
 
 } // namespace VoxelsSave

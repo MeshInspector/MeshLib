@@ -30,4 +30,16 @@ struct LoadedObjects
     std::string warnings; //either empty or ends with '\n'
 };
 
+enum class LoadedObjectsErrorKind
+{
+    generic,
+    tryAnotherFormat, // The file clearly uses some other format.
+};
+
+struct LoadedObjectsError
+{
+    std::string message;
+    LoadedObjectsErrorKind kind = LoadedObjectsErrorKind::generic;
+};
+
 } //namespace MR

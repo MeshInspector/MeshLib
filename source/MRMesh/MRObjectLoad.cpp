@@ -45,7 +45,7 @@ bool detectFlatShading( const Mesh& mesh )
     {
         double sumDblArea = 0;
         double sumSharpDblArea = 0;
-        Data operator + ( const Data & b ) const 
+        Data operator + ( const Data & b ) const
         {
             return { sumDblArea + b.sumDblArea, sumSharpDblArea + b.sumSharpDblArea };
         }
@@ -162,7 +162,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
-    
+
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {
         if ( returnOnlyMesh )
@@ -210,11 +210,11 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     objectMesh->setXf( xf );
 
-        holesCount = int( objectMesh->numHoles() );
+    holesCount = int( objectMesh->numHoles() );
     std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-        if ( !colors.empty() && !hasColors )
+    if ( !colors.empty() && !hasColors )
         warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-        if ( !uvCoords.empty() && !hasUV )
+    if ( !uvCoords.empty() && !hasUV )
         warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
 
     return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
@@ -306,11 +306,12 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
 
     Expected<LoadedObjects> result;
     bool loadedFromSceneFile = false;
+    bool loadedOrFailedAsObject = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    
+
     if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
@@ -324,9 +325,20 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     else if ( const auto filter = findFilter( ObjectLoad::getFilters(), ext ) )
     {
         const auto loader = ObjectLoad::getObjectLoader( *filter );
-        result = loader( filename, callback );
+        auto objResult = loader( filename, callback );
+
+        // If the load succeeded or failed with any error other than `tryAnotherFormat`...
+        if ( !( !objResult && objResult.error().kind == LoadedObjectsErrorKind::tryAnotherFormat ) )
+        {
+            if ( objResult )
+                result = std::move( *objResult );
+            else
+                result = unexpected( std::move( objResult.error().message ) );
+            loadedOrFailedAsObject = true;
+        }
     }
-    else
+
+    if ( !loadedFromSceneFile && !loadedOrFailedAsObject )
     {
         auto maybe = makeObjectFromMeshFile( filename, callback );
         if ( maybe )

@@ -143,7 +143,7 @@ struct MeshLoader
 
 MR_FORMAT_REGISTRY_DECL( MeshLoader )
 
-/** 
+/**
  * \brief Register filter with loader function
  * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, const MeshLoadSettings& settings );
  * example:
@@ -296,7 +296,7 @@ MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver, priori
 namespace ObjectLoad
 {
 
-using ObjectLoader = Expected<LoadedObjects>( * )( const std::filesystem::path&, const ProgressCallback& );
+using ObjectLoader = Expected<LoadedObjects, LoadedObjectsError>( * )( const std::filesystem::path&, const ProgressCallback& );
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 

@@ -73,8 +73,8 @@ int main( int argc, char* argv[] )
 #endif
 
     printf( "Added new %zu faces", newFaceCount );
-
-    mrMeshSaveToAnySupportedFormat( mesh, output, mrSaveSettingsNew(), &errorString);
+    MRSaveSettings saveSettings = mrSaveSettingsNew();
+    mrMeshSaveToAnySupportedFormat( mesh, output, &saveSettings, &errorString);
     if ( errorString )
     {
         fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );

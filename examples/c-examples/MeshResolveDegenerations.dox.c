@@ -45,7 +45,8 @@ int main( int argc, char* argv[] )
         goto out_mesh;
     }
 
-    mrMeshSaveToAnySupportedFormat( mesh, output, mrSaveSettingsNew(), &errorString);
+    MRSettings saveSettings = mrSaveSettingsNew();
+    mrMeshSaveToAnySupportedFormat( mesh, output, &saveSettings, &errorString);
     if ( errorString )
     {
         fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );

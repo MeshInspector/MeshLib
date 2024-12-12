@@ -38,11 +38,15 @@ typedef struct MRFaceBitSet MRFaceBitSet;
 typedef struct MRVertBitSet MRVertBitSet;
 
 typedef struct MRVector3f MRVector3f;
+typedef struct MRAffineXf3f MRAffineXf3f;
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
 
 typedef struct MRPointCloud MRPointCloud;
+typedef struct MRPointsLoadSettings MRPointsLoadSettings;
+
+typedef struct MRSaveSettings MRSaveSettings;
 
 typedef bool (*MRProgressCallback)( float );
 

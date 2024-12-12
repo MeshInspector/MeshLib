@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using static MR.DotNet.Vector3f;
 
 namespace MR
 {

@@ -15,6 +15,7 @@
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRBox.h" />
+    <ClInclude Include="MRColor.h" />
     <ClInclude Include="MRContoursCut.h" />
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
@@ -57,9 +58,11 @@
     <ClInclude Include="MRPointCloudTriangulation.h" />
     <ClInclude Include="MRPointOnFace.h" />
     <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
     <ClInclude Include="MRRegionBoundary.h" />
+    <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRTriPoint.h" />
@@ -79,6 +82,7 @@
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRBox.cpp" />
+    <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
@@ -117,9 +121,11 @@
     <ClCompile Include="MRPointCloudTriangulation.cpp" />
     <ClCompile Include="MRPointOnFace.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsLoadSettings.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRRegionBoundary.cpp" />
+    <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRTriPoint.cpp" />
     <ClCompile Include="MRTorus.cpp" />

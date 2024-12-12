@@ -47,6 +47,9 @@ override var = $(eval override $(subst $,$$$$,$1))
 # This is relatively expensive, so don't call this more than necessary.
 override seq = $(call safe_shell,bash -c $(call quote,echo {0..$(call safe_shell,bash -c 'echo $$(($(strip $1)-1))')}))
 
+# Enable double expansion of prerequisites. `$1_ObjectFiles` below needs this.
+.SECONDEXPANSION:
+
 
 
 
@@ -521,9 +524,10 @@ $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | 
 $(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_NumFragments))))
 
 # Link the module.
+# Have to evaluate `$1_ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
 $(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$1$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
-$($1__LinkerOutput): $$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
+$($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects))
 
@@ -546,7 +550,7 @@ $(_generated): $2 | $(TEMP_OUTPUT_DIR)
 	@$(MRBIND_EXE) $(MRBIND_FLAGS_FOR_EXTRA_INPUTS) $(call quote,$2) -o $(call quote,$(_generated)) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
 $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Compiling] $(_generated))
-	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
 $(foreach x,$(MODULES),$(foreach y,$($x_ExtraInputFiles),$(eval $(call extra_file_snippet,$x,$y))))
 
@@ -557,7 +561,7 @@ $(call var,_object := $(TEMP_OUTPUT_DIR)/$1.custom.$(notdir $(1:.cpp=.o)))
 $(call var,$1__ObjectFiles += $(_object))
 $(_object): $2 | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Compiling] $2)
-	@$(COMPILER) $(call quote,$2) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+	@$(COMPILER) $(call quote,$2) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
 $(foreach x,$(MODULES),$(foreach y,$($x_ExtraSourceFiles),$(eval $(call extra_pregen_file_snippet,$x,$y))))
 

@@ -53,7 +53,7 @@ Library with text to mesh operations
 
 Library for creating python bindings and for Embedded python
 
-**MRMesh** +
+\b MRMesh +
 |Name          |Link                                      |Description                                                                  |License                                    |
 |--------------|------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |python3       |https://www.python.org                    |is a high-level, general-purpose programming language.                       |PSF                                        |

@@ -302,7 +302,7 @@ Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file
 Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filename, const ProgressCallback& callback )
 {
     if ( callback && !callback( 0.f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     Expected<LoadedObjects> result;
     bool loadedFromSceneFile = false;
@@ -334,7 +334,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             maybe->obj->select( true );
             result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( maybe.error() == "Loading canceled" )
+        else if ( maybe.error() == stringOperationCanceled() )
         {
             result = unexpected( std::move( maybe.error() ) );
         }
@@ -559,7 +559,7 @@ Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::p
     if ( !resDeser.has_value() )
     {
         std::string errorStr = resDeser.error();
-        if ( errorStr != "Loading canceled" )
+        if ( errorStr != stringOperationCanceled() )
             errorStr = "Cannot deserialize: " + errorStr;
         return unexpected( errorStr );
     }

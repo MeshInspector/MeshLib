@@ -38,7 +38,7 @@ Expected<void> toMrLines( const Polyline3& polyline, std::ostream& out, const Sa
     VertCoords buf;
     const auto & xfVerts = transformPoints( polyline.points, polyline.topology.getValidVerts(), settings.xf, buf );
     if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( !out )
         return unexpected( std::string( "Error saving in MrLines-format" ) );
@@ -79,7 +79,7 @@ Expected<void> toPts( const Polyline3& polyline, std::ostream& out, const SaveSe
                 saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
-                return unexpected( std::string( "Saving canceled" ) );
+                return unexpectedOperationCanceled();
         }
         out << "END_Polyline\n";
     }
@@ -139,7 +139,7 @@ Expected<void> toDxf( const Polyline3& polyline, std::ostream& out, const SaveSe
                 saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
-                return unexpected( std::string( "Saving canceled" ) );
+                return unexpectedOperationCanceled();
         }
         out << "0\nSEQEND\n";
     }

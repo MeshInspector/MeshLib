@@ -152,7 +152,7 @@ Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& se
         return unexpected( dataExp.error() );
 
     if ( settings.callback && !settings.callback( 0.25f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     const auto& data = *dataExp;
     auto lineOffsets = splitByLines( data.data(), data.size() );
@@ -191,7 +191,7 @@ Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& se
     }, subprogress( settings.callback, 0.25f, 1.0f ) );
 
     if ( !keepGoing )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     if ( !parseError.empty() )
         return unexpected( parseError );
@@ -250,7 +250,7 @@ Expected<MR::PointCloud> fromPly( std::istream& in, const PointsLoadSettings& se
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( settings.callback && !settings.callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
             continue;
         }
     }
@@ -316,7 +316,7 @@ Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& se
         {
             const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !settings.callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
         }
     }
 

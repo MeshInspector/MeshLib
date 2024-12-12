@@ -110,7 +110,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
         {
             const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
         }
     }
     if ( isPolylineBlock )

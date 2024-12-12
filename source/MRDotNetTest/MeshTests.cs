@@ -2,8 +2,9 @@
 using System.IO;
 using System.Collections.Generic;
 using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class MeshTests
@@ -43,7 +44,7 @@ namespace MR.DotNet.Test
             }
             catch (System.Exception e)
             {
-                Assert.That(e.Message.Contains("unsupported file extension"));
+                Assert.That(e.Message.Contains("Unsupported file extension"));
             }
 
             try
@@ -52,7 +53,7 @@ namespace MR.DotNet.Test
             }
             catch (System.Exception e)
             {
-                Assert.That(e.Message.Contains("unsupported file extension"));
+                Assert.That(e.Message.Contains("Unsupported file extension"));
             }
         }
 
@@ -375,7 +376,7 @@ namespace MR.DotNet.Test
         public void TestShortEdges()
         {
             var mesh = Mesh.MakeTorus(1.0f, 0.05f, 16, 16);
-            var shortEdges = MeshFixer.FindShortEdges(new MeshPart( mesh ), 0.1f);
+            var shortEdges = FindShortEdges(new MeshPart( mesh ), 0.1f);
             Assert.That(shortEdges.Count(), Is.EqualTo(256));
         }
     }    

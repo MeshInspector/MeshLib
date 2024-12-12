@@ -4,6 +4,8 @@ set -eo pipefail
 SOURCE_DIR="$1"
 BUILD_DIR="${2:-./openvdb_build}"
 
+CXXFLAGS="${CXXFLAGS} -Wno-missing-template-arg-list-after-template-kw"
+
 CMAKE_OPTIONS="${CMAKE_OPTIONS} \
   -D OPENVDB_ENABLE_UNINSTALL=OFF \
   -D OPENVDB_ENABLE_INSTALL=OFF \

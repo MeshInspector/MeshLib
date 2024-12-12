@@ -9,6 +9,8 @@
 #include "MRMeshBuilder.h"
 #include "MRFixSelfIntersections.h"
 #include "MRExpandShrink.h"
+#include "MRPointCloud.h"
+#include "MRVDBConversions.h"
 
 int main( void )
 {
@@ -36,4 +38,6 @@ int main( void )
     testShortEdges();
     testIncidentFacesFromVerts();
     testIncidentFacesFromEdges();
+    testTriangulation();
+    testVDBConversions();
 }

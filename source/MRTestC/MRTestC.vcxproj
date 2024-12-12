@@ -22,7 +22,9 @@
     <ClCompile Include="MRMeshDecimate.c" />
     <ClCompile Include="MRMeshFillHole.c" />
     <ClCompile Include="MRMeshNormals.c" />
+    <ClCompile Include="MRPointCloud.c" />
     <ClCompile Include="MRTestCApp.c" />
+    <ClCompile Include="MRVDBConversions.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -41,6 +43,8 @@
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />
+    <ClInclude Include="MRPointCloud.h" />
+    <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestMacros.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

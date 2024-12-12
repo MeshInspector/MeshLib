@@ -1,6 +1,5 @@
 # TODO: WRITE README
 Please do not duplicate https://github.com/MeshInspector/MeshLib?tab=readme-ov-file#distribution, also don't forget about:
- - /Zc:preprocessor
  - /bigobj /utf-8
  - c++ 20+
  - And this:

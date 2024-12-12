@@ -12,19 +12,17 @@
 namespace MR
 {
 
-Expected<std::shared_ptr<MR::Object>> fromSceneMison( const std::filesystem::path& path, 
-    std::string* loadWarn, ProgressCallback callback )
+Expected<LoadedObject> fromSceneMison( const std::filesystem::path& path, const ProgressCallback& callback )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
 
-    return addFileNameInError( fromSceneMison( in, loadWarn, callback ), path );
+    return addFileNameInError( fromSceneMison( in, callback ), path );
 }
 
-// TODO: we need some code to prevent recursive openeing same file with this format
-Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
-    std::string* loadWarn, ProgressCallback callback )
+// TODO: we need some code to prevent recursive opening same file with this format
+Expected<LoadedObject> fromSceneMison( std::istream& in, const ProgressCallback& callback )
 {
     auto rootVal = deserializeJsonValue( in );
     const auto invalidFormatError = unexpected( "Mison format invalid: " + rootVal.error() );
@@ -35,7 +33,7 @@ Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
         return invalidFormatError;
     const auto& root = rootJSObj.isArray() ? rootJSObj : rootJSObj["Objects"];
     int numFiles = int( root.size() );
-    std::shared_ptr<MR::Object> rootObj = std::make_shared<MR::Object>();
+    LoadedObject res{ .obj = std::make_shared<MR::Object>() };
     for ( int i = 0; i < numFiles; ++i )
     {
         const Json::Value& el = root[i];
@@ -43,15 +41,13 @@ Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
             return invalidFormatError;
         auto path = pathFromUtf8( el["Filename"].asString() );
 
-        std::string localWornStr;
-        auto loadRes = loadObjectFromFile( path, loadWarn ? &localWornStr : nullptr, subprogress( callback, i / float( numFiles ), ( i + 1 ) / float( numFiles ) ) );
+        auto loadRes = loadObjectFromFile( path, subprogress( callback, i / float( numFiles ), ( i + 1 ) / float( numFiles ) ) );
         if ( !loadRes.has_value() )
             return unexpected( loadRes.error() + ": " + utf8string( path ) );
 
-        if ( loadRes->empty() )
+        if ( loadRes->objs.empty() )
             continue;
-        if ( loadWarn && !localWornStr.empty() )
-            *loadWarn += ( localWornStr + "\n" );
+        res.warnings += loadRes->warnings;
 
         AffineXf3f xf;
         if ( el["XF"].isObject() )
@@ -61,24 +57,20 @@ Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
         if ( hasName )
         {
             name = el["Name"].asString();
-            if ( loadRes->size() == 1 )
-                loadRes.value().front()->setName(name);
+            if ( loadRes->objs.size() == 1 )
+                loadRes->objs.front()->setName(name);
             else
-                for ( auto& obj : *loadRes )
+                for ( auto& obj : loadRes->objs )
                     obj->setName( name + ": " + obj->name() );
         }
-        for ( auto& obj : *loadRes )
+        for ( auto& obj : loadRes->objs )
         {
             obj->setXf( xf * obj->xf() );
-            rootObj->addChild( obj );
+            res.obj->addChild( obj );
         }
     }
 
-    // remove last "\n"
-    if ( loadWarn && !loadWarn->empty() )
-        loadWarn->erase( loadWarn->begin() + loadWarn->size() - 1 );
-
-    return rootObj;
+    return res;
 }
 
 MR_ADD_SCENE_LOADER( IOFilter( "MeshInSpector Object Notation (.mison)", "*.mison" ), fromSceneMison )

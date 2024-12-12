@@ -6,8 +6,7 @@
 #include "MRMesh/MRphmap.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRViewportId.h"
-
-#include <imgui.h>
+#include "MRImGui.h"
 
 namespace MR::UI
 {

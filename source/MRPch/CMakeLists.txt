@@ -20,6 +20,7 @@ IF(MR_PCH)
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt
       jsoncpp
       tbb
     )

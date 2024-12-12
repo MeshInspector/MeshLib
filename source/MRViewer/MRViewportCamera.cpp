@@ -156,22 +156,24 @@ void Viewport::rotateView_()
     Vector3f shift = static_point_ - xf.A * rotationPivot_;
     viewM_.setTranslation( shift );
 
-    auto line = unprojectPixelRay( static_viewport_point );
-    line.d = line.d.normalized();
+    if ( params_.compensateRotation )
+    {
+        auto line = unprojectPixelRay( static_viewport_point );
+        line.d = line.d.normalized();
 
-    auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
+        auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
 
-    auto dir = sceneCenter - getCameraPoint();
-    auto dirOnMoveProjLength = dot( dir, line.d );
+        auto dir = sceneCenter - getCameraPoint();
+        auto dirOnMoveProjLength = dot( dir, line.d );
 
-    auto hLengthSq = dir.lengthSq() - sqr( dirOnMoveProjLength );
-    auto distHDiffSq = sqr( distToSceneCenter_ ) - hLengthSq;
-    // distHDiffSq > 0.0f prevents view matrix degeneration in case of bad rotation center
-    auto moveLength = ( distHDiffSq > 0.0f ) ? ( std::sqrt( distHDiffSq ) - dirOnMoveProjLength ) : 0.0f;
+        auto hLengthSq = dir.lengthSq() - sqr( dirOnMoveProjLength );
+        auto distHDiffSq = sqr( distToSceneCenter_ ) - hLengthSq;
+        // distHDiffSq > 0.0f prevents view matrix degeneration in case of bad rotation center
+        auto moveLength = ( distHDiffSq > 0.0f ) ? ( std::sqrt( distHDiffSq ) - dirOnMoveProjLength ) : 0.0f;
 
-    Vector3f transformedDir = xf.A * ( moveLength * line.d );
-    shift += transformedDir;
-
+        Vector3f transformedDir = xf.A * ( moveLength * line.d );
+        shift += transformedDir;
+    }
     // changing translation should not really be here, so const cast is OK
     // meanwhile it is because we need to keep distance(camera, scene center) static
     params_.cameraTranslation = Matrix3f( params_.cameraTrackballAngle.inverse() ) * ( shift + cameraEye ) / params_.cameraZoom;
@@ -200,7 +202,7 @@ float Viewport::getPixelSize() const
 float Viewport::getPixelSizeAtPoint( const Vector3f& worldPoint ) const
 {
     Vector4f clipVec = getFullViewportMatrix() * Vector4f( worldPoint.x, worldPoint.y, worldPoint.z, 1 );
-    return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y );
+    return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y ) * 2.0f;
 }
 
 

@@ -1,4 +1,4 @@
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -11,21 +11,16 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectDistanceMap.h"
 #include "MRMesh/MRDistanceMap.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRWasm.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
-#include "MRMesh/MRMeshLoadObj.h"
-#include "MRViewerInstance.h"
-#include "MRViewer/MRViewer.h"
-#include "MRMesh/MRObjectLoad.h"
-#include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRTimer.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include <MRVoxels/MRVoxelsSave.h>
-#include "MRVoxels/MRObjectVoxels.h"
+#include <MRVoxels/MRObjectVoxels.h>
 #endif
+
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -34,7 +29,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
 {
     MR_TIMER
     if ( !reportProgress( settings.callback, 0.f ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
 
     std::optional<std::filesystem::path> copyPath;
     std::error_code ec;

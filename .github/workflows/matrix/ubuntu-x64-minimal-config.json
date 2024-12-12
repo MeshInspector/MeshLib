@@ -1,0 +1,31 @@
+{
+  "include": [
+    {
+      "os": "ubuntu20",
+      "config": "Release",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-10",
+      "c-compiler": "/usr/bin/gcc-10",
+      "cxx-standard": 20,
+      "build_mrcuda": "ON"
+    },
+    {
+      "os": "ubuntu22",
+      "config": "Release",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-12",
+      "c-compiler": "/usr/bin/gcc-12",
+      "cxx-standard": 23,
+      "build_mrcuda": "ON"
+    },
+    {
+      "os": "ubuntu24",
+      "config": "Debug",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-13",
+      "c-compiler": "/usr/bin/gcc-13",
+      "cxx-standard": 23,
+      "build_mrcuda": "ON"
+    }
+  ]
+}

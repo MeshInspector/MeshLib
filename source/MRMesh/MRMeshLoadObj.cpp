@@ -408,7 +408,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combin
         return unexpected( data.error() );
 
     if ( !reportProgress(settings.callback, 0.25f) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     // TODO: redefine callback
 
     ObjLoadSettings newSettings = settings;
@@ -563,13 +563,13 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     const auto lineCount = newlines.size() - 1;
 
     if ( !reportProgress( settings.callback, 0.4f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
@@ -868,7 +868,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             return unexpected( parseError );
 
         if ( !reportProgress( subprogress( settings.callback, 0.5f, 1.f ), ( float )group.end / ( float )lineCount ) )
-            return unexpected( "Loading canceled" );
+            return unexpectedOperationCanceled();
     }
 
     if ( auto exp = finishObject(); !exp )
@@ -877,22 +877,23 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     return res;
 }
 
-Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::filesystem::path& path, std::string* warnings, ProgressCallback cb )
+Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    return fromSceneObjFile( path, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
+    return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
     .transform( [&] ( std::vector<NamedMesh>&& results )
     {
         int totalSkippedFaceCount = 0;
         int totalDuplicatedVertexCount = 0;
         int holesCount = 0;
-        std::vector<std::shared_ptr<Object>> objects( results.size() );
-        for ( int i = 0; i < objects.size(); ++i )
+        LoadedObjects res;
+        res.objs.resize( results.size() );
+        for ( int i = 0; i < res.objs.size(); ++i )
         {
             auto& result = results[i];
 
             std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
             if ( result.name.empty() )
-                objectMesh->setName( utf8string( path.stem() ) );
+                objectMesh->setName( utf8string( file.stem() ) );
             else
                 objectMesh->setName( std::move( result.name ) );
             objectMesh->select( true );
@@ -911,8 +912,7 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::fil
 
             if ( numEmptyTexture != 0 && numEmptyTexture != result.textureFiles.size() )
             {
-                if ( warnings )
-                    *warnings += " object has material with and without texture";
+                res.warnings += "object has material with and without texture\n";
             }
             else if ( numEmptyTexture == 0 && result.textureFiles.size() != 0 )
             {
@@ -933,8 +933,7 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::fil
                     {
                         crashTextureLoad = true;
                         objectMesh->setTextures( {} );
-                        if ( warnings )
-                            *warnings += image.error();
+                        res.warnings += image.error() + '\n';
                         break;
                     }
                 }
@@ -953,7 +952,7 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::fil
 
             objectMesh->setXf( result.xf );
 
-            objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+            res.objs[i] = std::dynamic_pointer_cast< Object >( objectMesh );
 
             holesCount += int( objectMesh->numHoles() );
 
@@ -961,31 +960,13 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::fil
             totalDuplicatedVertexCount += result.duplicatedVertexCount;
         }
 
-        if ( warnings )
-        {
-            const auto makeWarningString = [] ( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
-            {
-                std::string res;
-                if ( skippedFaceCount )
-                    res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
-                if ( duplicatedVertexCount )
-                {
-                    if ( !res.empty() )
-                        res += '\n';
-                    res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
-                }
-                if ( holesCount )
-                {
-                    if ( !res.empty() )
-                        res += '\n';
-                    res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
-                }
-                return res;
-            };
-            *warnings = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
-        }
-
-        return objects;
+        if ( totalSkippedFaceCount )
+            res.warnings += fmt::format( "{} triangles were skipped as inconsistent with others.\n", totalSkippedFaceCount );
+        if ( totalDuplicatedVertexCount )
+            res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.\n", totalDuplicatedVertexCount );
+        if ( holesCount )
+            res.warnings += fmt::format( "The objects contain {} holes. Please consider using Fill Holes tool.\n", holesCount );
+        return res;
     } );
 }
 

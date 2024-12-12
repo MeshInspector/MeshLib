@@ -133,9 +133,9 @@ void RadiusMeasurementObject::setupRenderObject_() const
         renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
-void RadiusMeasurementObject::propagateWorldXfChangedSignal_()
+void RadiusMeasurementObject::onWorldXfChanged_()
 {
-    MeasurementObject::propagateWorldXfChangedSignal_();
+    MeasurementObject::onWorldXfChanged_();
     cachedValue_ = {};
 }
 

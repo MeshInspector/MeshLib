@@ -83,7 +83,15 @@ namespace MR
 
     void DirectionWidget::setVisible( bool visible )
     {
-        directionObj_->setVisible( visible );
+        if ( directionObj_ )
+            directionObj_->setVisible( visible );
+    }
+
+    bool DirectionWidget::isVisible() const
+    {
+        if ( !directionObj_ )
+            return false;
+        return directionObj_->isVisible();
     }
 
     void DirectionWidget::clear_()

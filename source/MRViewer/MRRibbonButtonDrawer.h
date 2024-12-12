@@ -1,7 +1,7 @@
 #pragma once
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonIcons.h"
-#include "imgui.h"
+#include "MRImGui.h"
 #include <functional>
 
 namespace MR

@@ -209,7 +209,10 @@ public:
     ///   models in the folder by given path and
     ///   fields in given JSON
     /// \param childId is its ordinal number within the parent
-    MRMESH_API Expected<std::vector<std::future<Expected<void>>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
+    // This would be automatically skipped in the bindings anyway because of the `Json::Value` parameter.
+    // But skipping it here prevents the vector-of-futures type from being registered, which is helpful.
+    // TODO: figure out how to automate this (add a flag to the parser to outright reject functions based on their parameter and return types).
+    MRMESH_API MR_BIND_IGNORE Expected<std::vector<std::future<Expected<void>>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
 
     /// loads subtree into this Object
     ///   models from the folder by given path and
@@ -240,7 +243,7 @@ public:
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
     /// triggered in addChild and addChildBefore, it is called only for children object
-    using XfChangedSignal = Signal<void() >;
+    using XfChangedSignal = Signal<void()>;
     XfChangedSignal worldXfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
@@ -282,7 +285,12 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    MRMESH_API virtual void propagateWorldXfChangedSignal_();
+    // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
+    // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children
+    //   (it doesn't use a true recursion, instead imitiating one, presumably to save stack space, though this is unlikely to be an issue).
+    MRMESH_API void sendWorldXfChangedSignal_();
+    // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
+    MRMESH_API virtual void onWorldXfChanged_();
 };
 
 template <typename T>

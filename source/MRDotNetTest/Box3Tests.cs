@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 { 
     [TestFixture]
     internal class Box3Tests
@@ -8,14 +9,14 @@ namespace MR.DotNet.Test
         [Test]
         public void TestDefaultConstructor()
         {
-            var box = new MR.DotNet.Box3f();
+            var box = new Box3f();
             Assert.That(!box.Valid());
         }
 
         [Test]
         public void TestBox()
         {
-            var box = new MR.DotNet.Box3f(new Vector3f(1, 2, 3), new Vector3f(4, 5, 6));
+            var box = new Box3f(new Vector3f(1, 2, 3), new Vector3f(4, 5, 6));
             Assert.That(box.Min.X == 1);
             Assert.That(box.Min.Y == 2);
             Assert.That(box.Min.Z == 3);

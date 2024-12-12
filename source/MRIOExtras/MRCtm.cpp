@@ -100,7 +100,7 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
     auto vertices  = ctmGetFloatArray( context, CTM_VERTICES );
     auto indices   = ctmGetIntegerArray( context, CTM_INDICES );
     if ( loadData.wasCanceled )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     if ( ctmGetError(context) != CTM_NONE )
         return unexpected( "Error reading CTM format" );
 
@@ -318,7 +318,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
     }, &saveData );
 
     if ( saveData.wasCanceled )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
     if ( !out || ctmGetError(context) != CTM_NONE )
         return unexpected( std::string( "Error saving in CTM-format" ) );
 
@@ -393,7 +393,7 @@ Expected<MR::PointCloud> fromCtm( std::istream& in, const PointsLoadSettings& se
     auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
     auto vertices = ctmGetFloatArray( context, CTM_VERTICES );
     if ( loadData.wasCanceled )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     if ( ctmGetError( context ) != CTM_NONE )
         return unexpected( "Error reading CTM format" );
 
@@ -582,7 +582,7 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     }, &saveData );
 
     if ( saveData.wasCanceled )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return unexpected( std::string( "Error saving in CTM-format" ) );
 

@@ -49,7 +49,7 @@ using OneMeshContours = std::vector<OneMeshContour>;
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face
-MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap = nullptr );
+MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 // Converts ordered continuous contours of two meshes to OneMeshContours
 // converters is required for better precision in case of degenerations
@@ -75,6 +75,17 @@ struct SearchPathSettings
 [[nodiscard]]
 MRMESH_API Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
+
+/** \ingroup BooleanGroup
+  * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
+  *
+  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * \param isoValue amount of offset form given point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geo path
+  */
+[[nodiscard]]
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    float isoValue, SearchPathSettings searchSettings = {} );
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
@@ -119,6 +130,20 @@ MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& m
 [[nodiscard]]
 MRMESH_API OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths );
 
+/// \ingroup BooleanGroup
+/// Map structure to find primitives of old topology by edges introduced in cutMesh
+struct NewEdgesMap
+{
+    /// true here means that a subdivided edge is a part of some original edge edge before mesh subdivision;
+    /// false here is both for unmodified edges and for new edges introduced within original triangles
+    UndirectedEdgeBitSet splitEdges;
+
+    /// maps every edge appeared during subdivision to an original edge before mesh subdivision;
+    /// for splitEdges[key]=true, the value is arbitrary oriented original edge, for which key-edge is its part;
+    /// for splitEdges[key]=false, the value is an original triangle
+    HashMap<UndirectedEdgeId, int> map;
+};
+
 /** \struct MR::CutMeshParameters
   * \ingroup BooleanGroup
   * \brief Parameters of MR::cutMesh
@@ -144,6 +169,9 @@ struct CutMeshParameters
         Good, //< fills all faces except bad ones
         All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
     } forceFillMode{ ForceFill::None };
+
+    /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
+    NewEdgesMap* new2oldEdgesMap{ nullptr };
 };
 
 /** \struct MR::CutMeshResult
@@ -176,18 +204,5 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
-
-/** \ingroup BooleanGroup
-  * \brief Simple cut mesh by plane
-  * 
-  * This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal
-  * \param mesh Input mesh that will be cut
-  * \param plane Input plane to cut mesh with
-  * \param mapNew2Old (this is optional output) map from newly generated faces to old faces (N-1)
-  * \note This function changes input mesh
-  * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
-  */
-[[deprecated( "use trimWithPlane(...) instead" )]]
-MRMESH_API std::vector<EdgePath> cutMeshWithPlane( Mesh& mesh, const Plane3f& plane, FaceMap* mapNew2Old = nullptr );
 
 } //namespace MR

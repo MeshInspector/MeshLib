@@ -16,6 +16,15 @@
 namespace MR::Features
 {
 
+// Extracts a uniform scale factor from a matrix.
+// If the scaling isn't actually uniform, returns some unspecified average scaling, which is hopefully better than just taking an arbitrary axis.
+[[nodiscard]] static float getUniformScale( const Matrix3f& m )
+{
+    Matrix3f r, s;
+    decomposeMatrix3( m, r, s );
+    return ( s.x.x + s.y.y + s.z.z ) / 3;
+}
+
 Primitives::ConeSegment Primitives::Plane::intersectWithPlane( const Plane& other ) const
 {
     Vector3f point = intersectWithLine( { .referencePoint = other.center, .dir = cross( other.normal, cross( other.normal, normal ) ).normalized() } ).center;
@@ -142,44 +151,28 @@ Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, flo
 
 std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
 {
-    // FIXME: We use `getUniformScale` in a few place before, but the scale isn't always uniform!
-    // E.g. when we're a child of a different feature.
-
-    // Extracts a uniform scale factor from a matrix.
-    // If the scaling isn't actually uniform, returns some unspecified average scaling, which is hopefully better than just taking an arbitrary axis.
-    static constexpr auto getUniformScale = [&]( const Matrix3f& m ) -> float
-    {
-        Matrix3f r, s;
-        decomposeMatrix3( m, r, s );
-        return ( s.x.x + s.y.y + s.z.z ) / 3;
-    };
-
-    AffineXf3f parentXf;
-    if ( object.parent() )
-        parentXf = object.parent()->worldXf(); // Otherwise an identity xf is used, which is fine.
-
     if ( auto point = dynamic_cast<const PointObject*>( &object ) )
     {
-        return toPrimitive( parentXf( point->getPoint() ) );
+        return toPrimitive( point->getPoint() );
     }
     else if ( auto line = dynamic_cast<const LineObject*>( &object ) )
     {
-        return toPrimitive( LineSegm3f( parentXf( line->getPointA() ), parentXf( line->getPointB() ) ) );
+        return toPrimitive( LineSegm3f( line->getPointA(), line->getPointB() ) );
     }
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
-        return Primitives::Plane{ .center = parentXf( plane->getCenter() ), .normal = ( parentXf.A * plane->getNormal() ).normalized() };
+        return Primitives::Plane{ .center = plane->getCenter(), .normal = plane->getNormal()/* Already normalized. */ };
     }
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
-        return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * getUniformScale( parentXf.A ) ) );
+        return toPrimitive( Sphere( sphere->getCenter(), sphere->getRadius() ) );
     }
     else if ( auto circle = dynamic_cast<const CircleObject*>( &object ) )
     {
-        float radius = circle->getRadius() * getUniformScale( parentXf.A );
+        float radius = circle->getRadius();
         return Primitives::ConeSegment{
-            .referencePoint = parentXf( circle->getCenter() ),
-            .dir = parentXf.A * circle->getNormal(),
+            .referencePoint = circle->getCenter(),
+            .dir = circle->getNormal(),
             .positiveSideRadius = radius,
             .negativeSideRadius = radius,
             .hollow = true,
@@ -187,12 +180,11 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
     {
-        float scale = getUniformScale( parentXf.A );
-        float radius = cyl->getRadius() * scale;
-        float halfLen = cyl->getLength() / 2 * scale;
+        float radius = cyl->getRadius();
+        float halfLen = cyl->getLength() / 2;
         return Primitives::ConeSegment{
-            .referencePoint = parentXf( cyl->getCenter() ),
-            .dir = parentXf.A * cyl->getDirection(),
+            .referencePoint = cyl->getCenter(),
+            .dir = cyl->getDirection(),
             .positiveSideRadius = radius,
             .negativeSideRadius = radius,
             .positiveLength = halfLen,
@@ -205,10 +197,10 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         // I want the "positive" direction to point towards the tip (so "axis -> positive/negative end").
         // It's moot where the center should be, but currently having it at the tip is ok.
         Primitives::ConeSegment ret{
-            .referencePoint = parentXf( cone->getCenter() ),
-            .dir = parentXf.A * -cone->getDirection(),
+            .referencePoint = cone->getCenter(),
+            .dir = -cone->getDirection(),
             .positiveSideRadius = 0,
-            .negativeSideRadius = cone->getBaseRadius() * getUniformScale( parentXf.A ),
+            .negativeSideRadius = cone->getBaseRadius(),
             .positiveLength = 0,
             .negativeLength = cone->getHeight(),
             .hollow = true, // I guess?
@@ -217,6 +209,14 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
 
     return {};
+}
+
+std::optional<Primitives::Variant> primitiveFromObjectWithWorldXf( const Object& object )
+{
+    auto ret = primitiveFromObject( object );
+    if ( ret )
+        *ret = transformPrimitive( object.worldXf(), *ret );
+    return ret;
 }
 
 std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent )
@@ -332,6 +332,51 @@ std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& pri
             return nullptr;
         },
     }, primitive );
+}
+
+Primitives::Sphere transformPrimitive( const AffineXf3f& xf, const Primitives::Sphere& primitive )
+{
+    Primitives::Sphere ret;
+    ret.center = xf( primitive.center );
+    ret.radius = getUniformScale( xf.A ) * primitive.radius;
+    return ret;
+}
+
+Primitives::Plane transformPrimitive( const AffineXf3f& xf, const Primitives::Plane& primitive )
+{
+    Primitives::Plane ret;
+    ret.center = xf( primitive.center );
+    ret.normal = ( xf.A.inverse().transposed() * primitive.normal ).normalized();
+    return ret;
+}
+
+Primitives::ConeSegment transformPrimitive( const AffineXf3f& xf, const Primitives::ConeSegment& primitive )
+{
+    Primitives::ConeSegment ret;
+    ret.referencePoint = xf( primitive.referencePoint );
+    ret.dir = xf.A * primitive.dir;
+    ret.hollow = primitive.hollow;
+
+    float dirScale = ret.dir.length(); // Not dividing by `primitive.dir.length()`, that's supposed to be already normalized.
+    ret.dir /= dirScale; // ...which ensures that this normalizes correctly without accumulating error.
+
+    ret.positiveLength = primitive.positiveLength * dirScale;
+    ret.negativeLength = primitive.negativeLength * dirScale;
+
+    auto [n1, n2] = primitive.dir.perpendicular();
+    n1 = xf.A * n1;
+    n2 = xf.A * n2;
+    float radiusScale = ( n1.length() + n2.length() ) / 2.f;
+
+    ret.positiveSideRadius = primitive.positiveSideRadius * radiusScale;
+    ret.negativeSideRadius = primitive.negativeSideRadius * radiusScale;
+
+    return ret;
+}
+
+Primitives::Variant transformPrimitive( const AffineXf3f& xf, const Primitives::Variant& primitive )
+{
+    return std::visit( [&]( const auto& primitive ) -> Primitives::Variant { return (transformPrimitive)( xf, primitive ); }, primitive );
 }
 
 float MeasureResult::Angle::computeAngleInRadians() const

@@ -1,15 +1,13 @@
-using MR.DotNet;
-using System;
-using System.Reflection;
+using static MR.DotNet;
 
-class Program
+public class MeshDecimateExample
 {
-    static void Main(string[] args)
+    public static void Run(string[] args)
     {
         try
         {
             // Load mesh
-            var mesh = Mesh.FromAnySupportedFormat( "mesh.stl" );
+            var mesh = MeshLoad.FromAnySupportedFormat("mesh.stl");
 
             // Setup decimate parameters
             DecimateParameters dp = new DecimateParameters();
@@ -19,10 +17,10 @@ class Program
             dp.packMesh = true;
 
             // Decimate mesh
-            var result = MeshDecimate.Decimate(mesh, dp);
+            var result = Decimate(ref mesh, dp);
 
             // Save result
-            Mesh.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
         }
         catch (Exception e)
         {

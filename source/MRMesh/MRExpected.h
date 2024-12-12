@@ -65,19 +65,28 @@ MR_BIND_IGNORE inline auto unexpected( E &&e )
 
 #endif
 
-/// return type for a void function that can produce an error string
-using VoidOrErrStr [[deprecated]] = Expected<void>;
-
-/// Common operation canceled line for all
+/// common message about user termination of an operation
 MR_BIND_IGNORE inline std::string stringOperationCanceled()
 {
     return "Operation was canceled";
 }
 
-/// Returns Expected error with `stringOperationCanceled()`
+/// returns Expected error with `stringOperationCanceled()`
 MR_BIND_IGNORE inline auto unexpectedOperationCanceled()
 {
-    return MR::unexpected(stringOperationCanceled());
+    return MR::unexpected( stringOperationCanceled() );
+}
+
+/// common message about unknown file extension
+MR_BIND_IGNORE inline std::string stringUnsupportedFileExtension()
+{
+    return "Unsupported file extension";
+}
+
+/// returns Expected error with `stringUnsupportedFileExtension()`
+MR_BIND_IGNORE inline auto unexpectedUnsupportedFileExtension()
+{
+    return MR::unexpected( stringUnsupportedFileExtension() );
 }
 
 } //namespace MR

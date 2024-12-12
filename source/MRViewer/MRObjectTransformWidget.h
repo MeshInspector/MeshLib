@@ -50,6 +50,9 @@ public:
     // should return current radius of the widget
     virtual float getRadius() const { return 1.0f; }
 
+    // should calculates and sets the matrix to set the size in pixels
+    virtual void updateSizeInPixel() {};
+
     // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
     // if not set, full mask is return
     void setTransformModesValidator( TransformModesValidator validator ) { validator_ = validator; }
@@ -75,9 +78,9 @@ public:
     MRVIEWER_API void updateVisualTransformMode( ControlBit showMask, ViewportMask viewportMask, const AffineXf3f& xf );
 
     // One have to implement these functions to have visualization of translation and rotation
-    virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
+    virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove, ViewportId vpId ) = 0;
     // xf - widget current xf
-    virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) = 0;
+    virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId ) = 0;
 
     // build-in history action class for change center
     class ChangeCenterAction : public HistoryAction
@@ -126,14 +129,27 @@ private:
 class MRVIEWER_CLASS TransformControls : public ITransformControls
 {
 public:
+
     struct MRVIEWER_CLASS VisualParams
     {
+        // type of length measurement units
+        enum class SizeType
+        {
+            // metric units of measurement
+            LengthUnit = 0,
+            // pixel units of measurement
+            Pixels
+        };
         // updates radius and width with given box
         MRVIEWER_API void update( const Box3f& box );
+        // radius in units of measurement, depending on the typeRadius
         // negative radius value means that controls are not setup
         float radius{ -1.0f };
+        // width in units of measurement, depending on the typeRadius
         // negative width value means that controls are not setup
         float width{ -1.0f };
+        // sets the type of widget size units (metric length or pixels units)
+        SizeType sizeType = SizeType::LengthUnit;
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -165,13 +181,20 @@ public:
     float getWidth() const { return params_.width; }
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
+    // sets the type of widget size units ( recalculates the current values into new units of measurement )
+    MRVIEWER_API void setSizeType( VisualParams::SizeType type );
+    // calculates and sets the matrix to set the size in pixels
+    MRVIEWER_API virtual void updateSizeInPixel() override;
 
-    MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
-    MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
+    MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove, ViewportId vpId ) override;
+    MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId ) override;
 
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
 private:
+    // forgets specific transform for pixel size (if you need to disable this option)
+    void resetSizeInPixel_();
+
     MRVIEWER_API virtual ControlBit hover_( bool pickThrough ) override;
     MRVIEWER_API virtual void stopModify_() override;
     MRVIEWER_API virtual void updateVisualTransformMode_( ControlBit showMask, ViewportMask viewportMask ) override;

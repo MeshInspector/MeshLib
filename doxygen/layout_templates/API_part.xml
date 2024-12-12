@@ -1,0 +1,21 @@
+      <tab type="usergroup" url="__API_PAGE_URL__" title="__API_PAGE_NAME__">
+        <tab type="topics" visible="yes" title="" intro=""/>
+        <tab type="namespaces" visible="yes" title="">
+          <tab type="namespacelist" visible="yes" title="" intro=""/>
+          <tab type="namespacemembers" visible="yes" title="" intro=""/>
+        </tab>
+        <tab type="classes" visible="yes" title="">
+          <tab type="classlist" visible="yes" title="" intro=""/>
+          <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/>
+          <tab type="hierarchy" visible="yes" title="" intro=""/>
+          <tab type="classmembers" visible="yes" title="" intro=""/>
+        </tab>
+        <tab type="structs" visible="yes" title="">
+          <tab type="structlist" visible="yes" title="" intro=""/>
+          <tab type="structindex" visible="$ALPHABETICAL_INDEX" title=""/>
+        </tab>
+        <tab type="files" visible="yes" title="">
+          <tab type="filelist" visible="yes" title="" intro=""/>
+          <tab type="globals" visible="yes" title="" intro=""/>
+        </tab>
+      </tab>

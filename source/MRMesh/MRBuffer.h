@@ -116,9 +116,9 @@ private:
 
 /// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
 template <typename T, typename I>
-inline T getAt( const Buffer<T, I> & bmap, I key )
+inline T getAt( const Buffer<T, I> & bmap, I key, T def = {} )
 {
-    return key ? T{bmap[key]} : T{};
+    return key ? T{bmap[key]} : def;
 }
 
 template <typename T, typename I>

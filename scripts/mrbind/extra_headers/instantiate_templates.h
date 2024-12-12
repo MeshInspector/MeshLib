@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef MR_PARSING_FOR_PB11_BINDINGS
+
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointCloud.h"
@@ -96,3 +98,5 @@ FORCE_INSTANTIATE_TYPE( std::vector<MR::Polyline3> );
 #undef FORCE_INSTANTIATE_TYPE
 
 }
+
+#endif

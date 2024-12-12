@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class SelfIntersectionsTests
@@ -11,16 +12,16 @@ namespace MR.DotNet.Test
             var mesh = Mesh.MakeTorusWithSelfIntersections(1.0f, 0.2f, 32, 16);
             Assert.That( mesh.ValidFaces.Count(), Is.EqualTo(1024) );
 
-            var intersections = FixSelfIntersections.GetFaces(mesh);
+            var intersections = SelfIntersections.GetFaces(mesh);
             Assert.That( intersections.Count, Is.EqualTo(128) );
 
-            FixSelfIntersections.Settings settings = new FixSelfIntersections.Settings();
-            settings.method = FixSelfIntersections.Method.CutAndFill;
+            var settings = new SelfIntersections.Settings();
+            settings.method = SelfIntersections.Method.CutAndFill;
 
-            Assert.DoesNotThrow(() => FixSelfIntersections.Fix(ref mesh, settings) );
+            Assert.DoesNotThrow(() => SelfIntersections.Fix(ref mesh, settings) );
             Assert.That(mesh.ValidFaces.Count(), Is.EqualTo(1194));
             
-            intersections = FixSelfIntersections.GetFaces(mesh);
+            intersections = SelfIntersections.GetFaces(mesh);
             Assert.That(intersections.Count, Is.EqualTo(0));
         }
     }

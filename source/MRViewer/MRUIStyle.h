@@ -1,10 +1,10 @@
 #pragma once
 #include "MRMesh/MRFinally.h"
 #include "MRPch/MRFmt.h"
-#include "MRViewer/MRUnits.h"
-#include "MRViewer/MRVectorTraits.h"
 #include "exports.h"
-#include "imgui.h"
+#include "MRUnits.h"
+#include "MRVectorTraits.h"
+#include "MRImGui.h"
 #include "MRColorTheme.h"
 #include <span>
 #include <string>

@@ -85,6 +85,8 @@ override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
+override valid_vs_modes := Debug Release
+$(if $(filter-out $(valid_vs_modes),$(VS_MODE)),$(error Invalid `VS_MODE=$(VS_MODE)`, expected one of: $(valid_vs_modes)))
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -244,18 +246,75 @@ override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
-# If this isn't empty, those are passed when compiling the PCH, and then the PCH is compiled to an object file and linked into the final result.
-PCH_CODEGEN_FLAGS :=
-# Those don't work at the moment (undefined references, d).
-# The `-fpch-instantiate-templates` flag is optional, while the other two are necessary (at least the first one), and are usually used together.
-# PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
+# Those are passed when compiling the PCH. Can be empty.
+# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it to the result.
+# (And building this `.o` even when it's not needed doesn't seem to cause any issues.)
+# There are three flags that can be used in any combination here: `-fpch-codegen -fpch-debuginfo -fpch-instantiate-templates`.
+# `-fpch-codegen` seems to be buggy, causing weird errors: undefined references to libfmt/gtest/some other functions when used with `-fpch-instantiate-templates`,
+#   or weird overload resolution errors during compilation without that.
+PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates
 
+
+
+# --- Guess the build settings for the optimal speed:
+
+# Guess the amount of RAM we have (in gigabytes), to select an appropriate build profile.
+# Also guess the number of CPU cores.
+ifneq ($(IS_MACOS),)
+ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
+ASSUME_NPROC := $(call safe_shell,sysctl -n hw.ncpu)
+else
+# `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
+ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | gawk 'NR==2{print $$2}')
+ASSUME_NPROC := $(call safe_shell,nproc)
+endif
+
+# We clamp the nproc to this value, because when you have more cores, our heuristics fall apart (and you might run out of ram).
+# The heuristics are not necessarily bad though, it's possible that less cores than jobs can be better in some cases?
+MAX_NPROC := 16
+CAPPED_NPROC := $(ASSUME_NPROC)
+override nproc_string := $(ASSUME_NPROC) cores
+ifeq ($(call safe_shell,echo $$(($(ASSUME_NPROC) >= $(MAX_NPROC)))),1)
+CAPPED_NPROC := $(MAX_NPROC)
+override nproc_string := >=$(MAX_NPROC) cores
+endif
+
+ifneq ($(ASSUME_RAM),)
+ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 64))),1)
+override ram_string := >=64G RAM
+# The default number of jobs. Override with `-jN` or `JOBS=N`, both work fine.
+JOBS := $(CAPPED_NPROC)
 # How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
 # When changing this, update the default value for `-j` above.
+NUM_FRAGMENTS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 32))),1)
+override ram_string := ~32G RAM
+NUM_FRAGMENTS := $(call safe_shell,echo $$(($(CAPPED_NPROC) * 2)))# = CAPPED_NPROC * 2
+JOBS := $(CAPPED_NPROC)
+else ifeq ($(call safe_shell,echo $$(($(ASSUME_RAM) >= 16))),1)
+# At this point we have so little RAM that we ignore nproc completely (or would need to clamp it to something like ~8, but who even has less cores than that?).
+override ram_string := ~16G RAM
 NUM_FRAGMENTS := 64
+JOBS := 8
+else
+override ram_string := ~8G RAM (oof)
+NUM_FRAGMENTS := 64
+JOBS := 4
+endif
+else
+override ram_string := unknown, assuming ~16G
+NUM_FRAGMENTS := 64
+JOBS := 8
+endif
+MAKEFLAGS += -j$(JOBS)
+ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
+$(info Build machine: $(nproc_string), $(ram_string); defaulting to NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))
+else
+$(info Build machine: $(nproc_string), $(ram_string); NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))# This can print the wrong `-j` if you override it using `-j` instead of `JOBS=N`.
+endif
 
-# The default number of jobs. Override with `-jN`.
-MAKEFLAGS += -j8
+
+
 
 # --- End of configuration variables.
 
@@ -318,6 +377,9 @@ COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
+# Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
+# And I'm not sure if exporting them even did anything useful on Windows in the first place.
+COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
@@ -373,7 +435,7 @@ $(COMPILED_PCH_FILE): $(COMBINED_HEADER_OUTPUT)
 	@$(COMPILER) -o $@ -xc++-header $< $(COMPILER_FLAGS) $(PCH_CODEGEN_FLAGS)
 # PCH object file, if enabled.
 # We strip the include directories from the flags here, because Clang warns that those are unused.
-ifneq ($(PCH_CODEGEN_FLAGS),)
+ifneq ($(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS)),)
 PCH_OBJECT := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.o
 $(PCH_OBJECT): $(COMPILED_PCH_FILE)
 	@echo $(call quote,[Compiling PCH object] $@)

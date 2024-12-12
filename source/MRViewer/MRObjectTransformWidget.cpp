@@ -17,6 +17,8 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer.h"
+#include "ImGuiMenu.h"
 
 namespace
 {
@@ -24,21 +26,6 @@ constexpr std::array<MR::Vector3f, 3> baseAxis =
 { MR::Vector3f::plusX(),MR::Vector3f::plusY(),MR::Vector3f::plusZ() };
 
 using namespace MR;
-
-// fins point on p11,p12 line
-Vector3f findClosestPointOfSkewLines( const Vector3f& p11, const Vector3f& p12, const Vector3f& p21, const Vector3f& p22 )
-{
-    auto d1 = p12 - p11;
-    auto d2 = p22 - p21;
-    auto n = cross( d1, d2 );
-    auto n2 = cross( d2, n );
-    auto lSq = n.lengthSq();
-    auto l2Sq = n2.lengthSq();
-    if ( std::isnan( lSq ) || std::isnan( l2Sq ) || l2Sq == 0 )
-        return {};
-
-    return p11 + dot( ( p21 - p11 ), n2 ) / dot( d1, n2 ) * d1;
-}
 
 float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, const Vector3f& norm,
                           const Line3f& ray, Viewport& vp, const Vector3f& vpPoint )
@@ -258,6 +245,7 @@ void ObjectTransformWidget::preDraw_()
     {
         auto showMask = transformModeMask_.get( vpId );
         controls_->updateVisualTransformMode( showMask, vpId, getControlsXf( vpId ) );
+        controls_->updateSizeInPixel();
     }
 }
 
@@ -356,12 +344,7 @@ void ObjectTransformWidget::processScaling_( Axis ax, bool press )
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
     const auto& wCenter = controls_->getCenter();
-    auto wRadius = controls_->getRadius();
-    auto newScaling = findClosestPointOfSkewLines(
-        xf( wCenter - baseAxis[int( ax )] * wRadius ),
-        xf( wCenter + baseAxis[int( ax )] * wRadius ),
-        line.p, line.p + line.d
-    );
+    auto newScaling = closestPoints( Line3f( xf( wCenter ), xf.A * baseAxis[int( ax )] ), line ).a;
     auto centerTransformed = xf( controls_->getCenter() );
 
     if ( press )
@@ -399,12 +382,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf( viewport.id );
     const auto& wCenter = controls_->getCenter();
-    auto wRadius = controls_->getRadius();
-    auto newTranslation = findClosestPointOfSkewLines(
-        xf( wCenter - baseAxis[int( ax )] * wRadius ),
-        xf( wCenter + baseAxis[int( ax )] * wRadius ),
-        line.p, line.p + line.d
-    );
+    auto newTranslation = closestPoints( Line3f( xf( wCenter ), xf.A * baseAxis[int( ax )] ), line ).a;
 
     if ( press )
     {
@@ -419,7 +397,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     accumShift_ = dot( newTranslation - startTranslation_, ( xf.A * baseAxis[int( ax )] ).normalized() );
 
     if ( controls_ )
-        controls_->updateTranslation( ax, startTranslation_, newTranslation );
+        controls_->updateTranslation( ax, startTranslation_, newTranslation, viewport.id );
 }
 
 void ObjectTransformWidget::processRotation_( Axis ax, bool press )
@@ -454,7 +432,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
         accumAngle_ = 2.0f * PI_F + accumAngle_;
 
     if ( controls_ )
-        controls_->updateRotation( ax, controlsRoot_->xf( viewport.id ), startAngle_, startAngle_ + accumAngle_ );
+        controls_->updateRotation( ax, controlsRoot_->xf( viewport.id ), startAngle_, startAngle_ + accumAngle_, viewport.id );
 }
 
 void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id )
@@ -561,6 +539,8 @@ TransformControls::~TransformControls()
 
 void TransformControls::init( std::shared_ptr<Object> parent )
 {
+    float radius = params_.sizeType == VisualParams::SizeType::LengthUnit ? params_.radius : 1.0f;
+    float width = params_.sizeType == VisualParams::SizeType::LengthUnit ? params_.width : params_.width / params_.radius;
     for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
     {
         if ( !translateControls_[i] )
@@ -585,14 +565,14 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
         {
-            getCenter() - params_.radius * params_.negativeLineExtension * baseAxis[i],
-            getCenter() + params_.radius * params_.positiveLineExtension * baseAxis[i]
+            getCenter() - radius * params_.negativeLineExtension * baseAxis[i],
+            getCenter() + radius * params_.positiveLineExtension * baseAxis[i]
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -618,7 +598,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( params_.radius, params_.width, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( radius, width, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
@@ -652,6 +632,7 @@ void TransformControls::setRadius( float radius )
     if ( params_.radius == radius )
         return;
     params_.radius = radius;
+
     update();
 }
 
@@ -660,7 +641,61 @@ void TransformControls::setWidth( float width )
     if ( params_.width == width )
         return;
     params_.width = width;
+
     update();
+}
+
+void TransformControls::setSizeType( VisualParams::SizeType type )
+{
+    if ( params_.sizeType == type )
+        return;
+
+    resetSizeInPixel_();
+
+    params_.sizeType = type;
+}
+
+void TransformControls::updateSizeInPixel()
+{
+    if ( params_.sizeType != VisualParams::SizeType::Pixels )
+        return;
+
+    if ( !translateControls_[0] )
+        return;
+
+    auto parent = translateControls_[0]->parent();
+    if ( !parent )
+        return;
+
+    auto mask = getViewerInstance().getPresentViewports();
+    for ( auto idViewport : mask )
+    {
+        const auto& xf = parent->worldXf(idViewport);
+        const auto& center = xf( getCenter() );
+        float lenPerPixel = getViewerInstance().viewport( idViewport ).getPixelSizeAtPoint( center );
+
+        AffineXf3f pixelTransform;
+
+        auto radius = params_.radius * lenPerPixel ;
+        pixelTransform = AffineXf3f::xfAround( Matrix3f::scale( radius ), getCenter() );
+
+        for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+        {
+            translateControls_[i]->setXf( pixelTransform, idViewport );
+            rotateControls_[i]->setXf( pixelTransform, idViewport );
+        }
+    }
+}
+
+void TransformControls::resetSizeInPixel_()
+{
+    for ( int i = int( Axis::X ); i < int( Axis::Count ); ++i )
+    {
+        if ( translateControls_[i] )
+            translateControls_[i]->setXfsForAllViewports( {} );
+        if ( rotateControls_[i] )
+            rotateControls_[i]->setXfsForAllViewports( {} );
+    }
 }
 
 ControlBit TransformControls::hover_( bool pickThrough )
@@ -793,12 +828,12 @@ void TransformControls::updateVisualTransformMode_( ControlBit showMask, Viewpor
     }
 }
 
-void TransformControls::updateTranslation( Axis, const Vector3f& startMove, const Vector3f& endMove )
+void TransformControls::updateTranslation( Axis, const Vector3f& startMove, const Vector3f& endMove, ViewportId )
 {
     setActiveLineFromPoints_( { startMove,endMove } );
 }
 
-void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle )
+void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId )
 {
     std::vector<Vector3f> activePoints;
     activePoints.reserve( 182 );
@@ -808,7 +843,7 @@ void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float sta
     if ( ( endAngle - startAngle ) < 0.0f )
         step = -1;
 
-    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - getCenter() ).length();
+    auto radius = ( rotateControls_[int( ax )]->xf( vpId ).A * ( rotateLines_[0]->polyline()->points.vec_[0] - getCenter() ) ).length();
     Vector3f basisXTransfomed = xf.A * baseAxis[( int( ax ) + 1 ) % 3];
     Vector3f basisYTransfomed = xf.A * baseAxis[( int( ax ) + 2 ) % 3];
 

@@ -6,30 +6,47 @@ on:
       docker_image_tag:
         required: true
         type: string
-      UPLOAD_ARTIFACTS:
-        required: true
-        type: boolean
 
 jobs:
   emscripten-build:
     timeout-minutes: 40
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux-arm64]
     container:
-      image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
-      options: --user 1001
+      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded]
         include:
           - config: Singlethreaded
+            target_name: emscripten-singlethreaded
             aws-dir: RMISingle
           - config: Multithreaded
+            target_name: emscripten
             aws-dir: RMI
 
     steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Collect runner's system stats
+        continue-on-error: true
+        uses: ./.github/actions/collect-runner-stats
+        with:
+          target_os: ${{ matrix.target_name }}
+          target_arch: wasm
+          cxx_compiler: emcc
+          build_config: Release
 
       - name: Checkout third-party submodules
         run: |

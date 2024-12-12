@@ -516,10 +516,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse
         || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 
-    // If a plugin opens some UI in its `onMouseDown_()`,
-    // this condition prevents that UI from immediately getting clicked in the same frame.
-    if ( capturedMouse_ )
-        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
 
     if ( !capturedMouse_ )
     {
@@ -595,10 +592,7 @@ bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
-
-    if ( ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )] )
-        return true;
-    return false;
+    return ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )];
 }
 
 bool ImGuiMenu::onKeyUp_( int key, int modifiers )
@@ -610,13 +604,7 @@ bool ImGuiMenu::onKeyUp_( int key, int modifiers )
 bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
-    if ( ImGui::GetIO().WantCaptureKeyboard )
-        return true;
-
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key, modifiers } );
-
-    return false;
+    return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 // Draw menu
@@ -825,9 +813,10 @@ void ImGuiMenu::draw_helpers()
         {
             viewer->resetAllCounters();
         }
-        if ( UI::buttonCommonSize( "Print time to log", Vector2f( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Print Time to Log", Vector2f( -1, 0 ) ) )
         {
-            printTimingTreeAndStop();
+            printTimingTree();
+            ProgressBar::printTimingTree();
         }
         ImGui::End();
     }

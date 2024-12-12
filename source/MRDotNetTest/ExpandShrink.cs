@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class ExpandShrinkTests
@@ -9,11 +10,11 @@ namespace MR.DotNet.Test
         public void TestExpandShrink()
         {
             var mesh = Mesh.MakeSphere(1.0f, 3000);
-            var region = ExpandShrink.Expand(mesh, new FaceId(0), 3);
+            var region = Expand(mesh, new FaceId(0), 3);
             Assert.That(region.Count, Is.EqualTo(75));
-            ExpandShrink.Expand(mesh, region, 3);
+            Expand(mesh, region, 3);
             Assert.That(region.Count, Is.GreaterThan(75));
-            ExpandShrink.Shrink(mesh, region, 3);
+            Shrink(mesh, region, 3);
             Assert.That(region.Count, Is.EqualTo(75));
         }
 
@@ -21,11 +22,11 @@ namespace MR.DotNet.Test
         public void TestExpandShrinkVerts()
         {
             var mesh = Mesh.MakeSphere(1.0f, 3000);
-            var region = ExpandShrink.Expand(mesh, new VertId(0), 3);
+            var region = Expand(mesh, new VertId(0), 3);
             Assert.That(region.Count, Is.EqualTo(37));
-            ExpandShrink.Expand(mesh, region, 3);
+            Expand(mesh, region, 3);
             Assert.That(region.Count, Is.GreaterThan(37));
-            ExpandShrink.Shrink(mesh, region, 3);
+            Shrink(mesh, region, 3);
             Assert.That(region.Count, Is.EqualTo(37));
         }
 

@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
+using static MR.DotNet;
 
-namespace MR.DotNet.Test
+namespace MR.Test
 {
     [TestFixture]
     internal class FillHoleTests
@@ -31,9 +32,9 @@ namespace MR.DotNet.Test
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(2) );
 
             var param = new FillHoleParams();
-            param.OutNewFaces = new BitSet();
+            param.OutNewFaces = new FaceBitSet();
 
-            MeshFillHole.FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
+            FillHoles(ref mesh, mesh.HoleRepresentiveEdges.ToList(), param);
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(0));
         }
 
@@ -45,7 +46,7 @@ namespace MR.DotNet.Test
 
             var param = new FillHoleNicelyParams();
 
-            var patch = MeshFillHole.FillHoleNicely(ref mesh, mesh.HoleRepresentiveEdges[0], param);
+            var patch = FillHoleNicely(ref mesh, mesh.HoleRepresentiveEdges[0], param);
 
             Assert.That( patch.Count, Is.EqualTo(1887) );
             Assert.That(mesh.HoleRepresentiveEdges.Count, Is.EqualTo(1));
@@ -65,7 +66,7 @@ namespace MR.DotNet.Test
         public void TestFindHoleComplicatedFaces()
         {
             var mesh = CreateMeshWithHoles();
-            var complicatedFaces = MeshFixer.FindHoleComplicatingFaces(mesh);
+            var complicatedFaces = FindHoleComplicatingFaces(mesh);
             Assert.That(complicatedFaces.Count(), Is.EqualTo(0));
         }
     }

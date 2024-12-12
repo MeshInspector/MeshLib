@@ -29,7 +29,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
 {
     MR_TIMER
     if ( !reportProgress( settings.callback, 0.f ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
 
     std::optional<std::filesystem::path> copyPath;
     std::error_code ec;

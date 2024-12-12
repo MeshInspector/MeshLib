@@ -408,7 +408,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combin
         return unexpected( data.error() );
 
     if ( !reportProgress(settings.callback, 0.25f) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
     // TODO: redefine callback
 
     ObjLoadSettings newSettings = settings;
@@ -563,13 +563,13 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     const auto lineCount = newlines.size() - 1;
 
     if ( !reportProgress( settings.callback, 0.4f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     timer.restart( "group element lines" );
     const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( !reportProgress( settings.callback, 0.5f ) )
-        return unexpected( "Loading canceled" );
+        return unexpectedOperationCanceled();
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
@@ -868,7 +868,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             return unexpected( parseError );
 
         if ( !reportProgress( subprogress( settings.callback, 0.5f, 1.f ), ( float )group.end / ( float )lineCount ) )
-            return unexpected( "Loading canceled" );
+            return unexpectedOperationCanceled();
     }
 
     if ( auto exp = finishObject(); !exp )

@@ -13,6 +13,71 @@
 namespace MR
 {
 
+/**
+\defgroup SubvoxelMeshCorrection Subvoxel Mesh Correction
+\ingroup VoxelGroup
+\brief Precise automatic mesh correction or/and smoothing based on reference voxel (volume) data.
+
+This group provides highlevel interface of the algorithm: \ref moveMeshToVoxelMaxDeriv configurable through
+\ref MoveMeshToVoxelMaxDerivSettings and the low-level structure \ref MeshOnVoxelsT that allows creation of custom correction strategy.
+
+\paragraph description Description of the algorithm.
+
+-# **Input**: Mesh and VdbVolume with corresponding transforms. The objects must be aligned.
+-# First step is to apply preparation smoothing with force specified by \ref MoveMeshToVoxelMaxDerivSettings::preparationSmoothForce.
+   This step might be needed if the initial surface is very noisy.
+-# Then the algorithm performs correction iteratively for the total number of iterations
+   specified by \ref MoveMeshToVoxelMaxDerivSettings::iters.
+
+    -# Each iteration consist of moving each vertex of the mesh towards its optimal position.
+       More formally, let's denote, \f$ V = \left\{ ( v_i, n_i ) \right\} \f$ -- set of vertices and corresponding normals of the mesh,
+       and \f$ F: \mathbb{R}^3 \rightarrow \mathbb{R} \f$ -- scalar field of volume -- for each position in the scene, it gives the density
+       of the voxels in this position. For points with non-integer coordinates, the density is interpolated linearly (for details see \ref MeshOnVoxelsT).
+
+       The optimal position \f$ p_i \f$ of the vertex \f$ v_i \f$ is given by fitting the polynomial \f$ Q_i \f$ of degree \ref MoveMeshToVoxelMaxDerivSettings::degree
+       to the set of points \f$ \left\{ F\left( v_i + n_i \cdot k \cdot \text{voxel size} \right) \mid k \in -l \dots l \right\} \f$ where \f$ l = \frac{\text{sample points}}{2} \f$
+       (see \ref MoveMeshToVoxelMaxDerivSettings::samplePoints); and finding the minimum of the derivative of this polynomial.
+
+       Since the \ref MoveMeshToVoxelMaxDerivSettings::degree is limited to \f$ 6 \f$, we know that the degree of \f$ \frac{d^2 Q_i}{dx^2} \f$
+       is limited to \f$ 4 \f$ and thus the equation \f$ \frac{d^2 Q_i}{dx^2} \left( x \right) = 0 \f$ has analytical solution and
+       it gives us the extrema of the derivative.
+       Comparing the evaluations of the polynomial at extrema and on the border of the interval we obtain the optimal position \f$ p_i \f$.
+       To sum up:
+       \f{align*}{
+            &l = \frac{\text{sample points}}{2} \\
+            &N_i \leftarrow \left\{ v_i + n_i \cdot k \cdot \text{voxel size} \mid k = -l \dots l \right\} \\
+            &\overline{N_i} \leftarrow \left\{ v_i + n_i \cdot x \cdot \text{voxel size} \mid x \in \left[-l; l\right] \right\} \\
+            &Q_i \leftarrow \text{fit polynomial from } \left\{ \left( p, F(p) \right) \mid p \in N_i \right\} \\
+            &p_i \leftarrow \min_{x \in \overline{N_i}} \frac{dQ_i}{dx}
+       \f}
+       Note that we are finding the minimum of \f$ \frac{dQ_i}{dx} \f$ analytically over the real interval \f$ \overline{N_i} \f$ and not over \f$ N_i \f$.
+       This is exactly where the subvoxel precision comes from.
+
+    -# However, directly using the optimal position has proven to be error-prone, as both voxels and mesh could contain noise.
+       Therefore, we use the following heuristic: instead of moving the vertex \f$ v_i \f$ to position \f$ p_i \f$, we construct a field of shifts
+       with domain on the mesh vertices \f$ S : v_i \mapsto \text{clamp}\left( p_i - v_i \right) \f$ and smooth it with the force specified by
+       \ref MoveMeshToVoxelMaxDerivSettings::intermediateSmoothForce for 15 iterations. Then we update the vertices according to the smoothed field:
+       \f[
+            v_i \leftarrow v_i + S_{smooth}\left( v_i \right)
+       \f]
+        and proceed to the next interation.
+-# The algorithm modifies the mesh inplace and returns the set of vertices that were moved during the correction.
+
+A nice visualization of \a why it works could be found in MeshInspector's plugin "Voxels Inspector". Just click on any vertex and you will see
+the values of \f$ F, Q_i \f$ on the interval \f$ \overline{N_i} \f$, as well as points of \f$ N_i \f$.
+
+\paragraph usage Usage
+
+The algorithm can be used in different cases related to the CT-scanning workflows:
+- To increase precision of the mesh retrieved by marching cubes meshing from a noisy scan.
+- To smooth a noisy mesh taking into account extra information from voxels. In this case, even if both mesh and voxels are noisy, the result
+  is expected to be better than after a simple smoothing. For this use-case, you might need to increase the force of both preparation and intermidiate
+  smoothings.
+
+*/
+
+
+/// \ingroup SubvoxelMeshCorrection
 struct MoveMeshToVoxelMaxDerivSettings
 {
     /// number of iterations. Each iteration moves vertex only slightly and smooths the vector field of shifts.
@@ -40,6 +105,7 @@ struct MoveMeshToVoxelMaxDerivSettings
 
 /// Moves each vertex along its normal to the minimize (with sign, i.e. maximize the absolute value with negative sign) the derivative
 /// of voxels.
+/// \ingroup SubvoxelMeshCorrection
 /// @return Vertices that were moved by the algorithm
 MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
         Mesh& mesh, const AffineXf3f& meshXf,
@@ -50,8 +116,9 @@ MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
 
 
 
-// Helper class to organize mesh and voxels volume access and build point sequences
-// Note: this class is not thread-safe but accessing same volume from different instances is ok
+/// Helper class to organize mesh and voxels volume access and build point sequences
+/// \note this class is not thread-safe but accessing same volume from different instances is ok
+/// \ingroup SubvoxelMeshCorrection
 template <typename MeshType>
 class MeshOnVoxelsT
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRMesh/MRPointsLoadSettings.h"
+#include "MRPointsLoadSettings.h"
 
 MR_EXTERN_C_BEGIN
 

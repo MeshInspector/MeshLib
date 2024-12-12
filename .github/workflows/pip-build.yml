@@ -2,13 +2,15 @@ name: Build Pip Wheels
 
 # When ran from the github UI, we build the target commit exactly.
 # When ran on release, we use the latest tagged commit in the `master` branch.
+# This doesn't run directly on pull request, because it's impossible to disable the whole file
+#   with a single condition (specific label present). Because of that, we conditionally run this from a separate `.yml` file.
 
 on:
   release:
     types: [ published ]
   # This is the manual run from the UI.
   workflow_dispatch:
-  # This is the `uses:` call from `test-pip-build.yml`. See that file for why this is needed.
+  # This is the `uses:` call from other `.yml` files.
   workflow_call:
 
 env:

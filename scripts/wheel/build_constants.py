@@ -4,6 +4,7 @@ from pathlib import Path
 MODULES = [
     "mrmeshpy",
     "mrmeshnumpy",
+    "mrcudapy",
     "mrviewerpy",
 ]
 

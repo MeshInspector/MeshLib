@@ -4,6 +4,10 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSolarRadiation.h"
 
+#ifdef MR_COMPILING_PB11_BINDINGS
+#include "MRMesh/MRMeshIntersect.h"
+#endif
+
 namespace MR
 {
 namespace Cuda

@@ -27,8 +27,9 @@ elif platform_system == "Darwin":
     LIBS_EXTENSION = "so"
 
 MODULES = [
-    "mrmeshnumpy",
     "mrmeshpy",
+    "mrmeshnumpy",
+    "mrcudapy",
     "mrviewerpy",
 ]
 

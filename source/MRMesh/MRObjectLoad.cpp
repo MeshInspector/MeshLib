@@ -25,6 +25,7 @@
 #include "MRZip.h"
 #include "MRVoxels/MRDicom.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {

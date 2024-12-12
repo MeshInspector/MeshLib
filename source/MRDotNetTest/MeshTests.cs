@@ -44,7 +44,7 @@ namespace MR.Test
             }
             catch (System.Exception e)
             {
-                Assert.That(e.Message.Contains("unsupported file extension"));
+                Assert.That(e.Message.Contains("Unsupported file extension"));
             }
 
             try
@@ -53,7 +53,7 @@ namespace MR.Test
             }
             catch (System.Exception e)
             {
-                Assert.That(e.Message.Contains("unsupported file extension"));
+                Assert.That(e.Message.Contains("Unsupported file extension"));
             }
         }
 

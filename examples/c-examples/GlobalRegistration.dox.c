@@ -120,7 +120,8 @@ int main( int argc, char* argv[] )
             mrPointCloudAddPoint( output, point );
         }
     }
-    SaveSettings saveSettings = mrSaveSettingsNew();
+    
+    MRSaveSettings saveSettings = mrSaveSettingsNew();
     mrPointsSaveToAnySupportedFormat( output, argv[argc - 1], &saveSettings, &errorString );
     if ( errorString )
     {

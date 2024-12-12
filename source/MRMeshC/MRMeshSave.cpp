@@ -8,11 +8,21 @@
 using namespace MR;
 
 REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( VertColors )
 REGISTER_AUTO_CAST2( std::string, MRString )
 
-void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, MRString** errorStr )
+void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, const MRSaveSettings* settings_, MRString** errorStr )
 {
     ARG( mesh );
+    SaveSettings settings;
+    if ( settings_ )
+    {
+        settings.saveValidOnly = settings_->saveValidOnly;
+        settings.rearrangeTriangles = settings_->rearrangeTriangles;
+        settings.progress = settings_->progress;
+        settings.colors = auto_cast( settings_->colors );
+    }
+
     auto res = MeshSave::toAnySupportedFormat( mesh, file );
     if ( !res && errorStr )
     {

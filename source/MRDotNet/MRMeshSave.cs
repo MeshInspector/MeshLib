@@ -36,15 +36,16 @@ namespace MR
             private static extern void mrLoadIOExtras();
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern void mrMeshSaveToAnySupportedFormat(IntPtr mesh, string file, IntPtr* errorStr);
+            private static extern void mrMeshSaveToAnySupportedFormat(IntPtr mesh, string file, IntPtr settings, ref IntPtr errorStr);
 
             /// saves mesh to file of any supported format
-            unsafe public static void ToAnySupportedFormat(Mesh mesh, string path)
+            public static void ToAnySupportedFormat(Mesh mesh, string path)
             {
                 mrLoadIOExtras();
 
-                IntPtr errString = new IntPtr();
-                mrMeshSaveToAnySupportedFormat(mesh.mesh_, path, &errString);
+                IntPtr errString = IntPtr.Zero;
+                mrMeshSaveToAnySupportedFormat(mesh.mesh_, path, IntPtr.Zero, ref errString);
+
                 if (errString != IntPtr.Zero)
                 {
                     var errData = mrStringData(errString);

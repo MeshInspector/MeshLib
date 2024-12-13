@@ -587,9 +587,13 @@ ifneq ($(IS_WINDOWS),)
 override all_outputs += $(MESHLIB_SHLIB_DIR)/__init__.py
 $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 	@cp $< $@
-override all_outputs += $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
-$(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
-	@cp $< $@
+override modules_copied_to_bin_dir := $(patsubst %,,$(MODULES))
+$(foreach m,$(MODULES),\
+	$(call var,_in := $(MODULE_OUTPUT_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,all_outputs += $(_out))\
+	$(eval $(_out): $(_in) ; @cp $(_in) $(_out))\
+)
 endif
 
 

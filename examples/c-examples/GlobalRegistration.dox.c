@@ -70,9 +70,8 @@ int main( int argc, char* argv[] )
     MRBox3f maxBBox = mrBox3fNew();
     for ( int i = 0; i < inputNum; ++i )
     {
-        MRPointsLoadSettings* loadSettings = mrPointsLoadSettingsNew();
-        inputs[i] = mrPointsLoadFromAnySupportedFormat( argv[1 + i], loadSettings, &errorString );
-        mrPointsLoadSettingsFree( loadSettings );
+        MRPointsLoadSettings loadSettings = mrPointsLoadSettingsNew();
+        inputs[i] = mrPointsLoadFromAnySupportedFormat( argv[1 + i], &loadSettings, &errorString );
         if ( errorString )
         {
             fprintf( stderr, "Failed to load point cloud: %s\n", mrStringData( errorString ) );

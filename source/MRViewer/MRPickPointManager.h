@@ -107,14 +107,24 @@ public:
     // Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
 
-    /// remove all points from all objects
-    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
-    MRVIEWER_API void clear( bool writeHistory = true );
-
     // if ( makeClosed ), and the contour is open add a special transparent point contour to the end of contour connected with given object.
     // A coordinated of this special transparent point will be equal to the firs point in contour, which will means that contour is closed.
     // if ( !makeClosed ), and the contour is closed remove last point of contour connected with given object.
     MRVIEWER_API bool closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed = true );
+
+    struct ObjectState
+    {
+        std::weak_ptr<VisualObject> objPtr;
+        std::vector<PickedPoint> pickedPoints;
+    };
+    using FullState = std::vector<ObjectState>;
+
+    /// returns the state of this
+    MRVIEWER_API FullState getFullState() const;
+
+    /// remove all points from all objects
+    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
+    MRVIEWER_API void clear( bool writeHistory = true );
 
 private:
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
@@ -128,6 +138,13 @@ private:
 
     // creates point widget for add to contour.
     [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
+
+    /// removes everything
+    void clearNoHistory_();
+
+    /// adds pick points on all objects as prescribed by given state,
+    /// puts original state of this in s on return
+    void swapStateNoHistory_( FullState& s );
 
     /// \param index point index before which to insert new point, -1 here means insert after last one
     /// \return index of just inserted point
@@ -160,9 +177,9 @@ private:
     HashMap<std::shared_ptr<VisualObject>, ConnectionHolder> connectionHolders_;
 
     // History classes:
+    class SetStateHistoryAction;
     class AddRemovePointHistoryAction;
     class MovePointHistoryAction;
-    class ClearHistoryAction;
 };
 
 } //namespace MR

@@ -14,6 +14,44 @@
 namespace MR
 {
 
+class PickPointManager::SetStateHistoryAction : public PickPointManager::WidgetHistoryAction
+{
+public:
+    /// clears given PickPointManager, and returns undo action for restoring original state
+    static std::shared_ptr<SetStateHistoryAction> clearAndGetUndo( PickPointManager& widget );
+
+    virtual std::string name() const override { return name_ + widget_.params.historyNameSuffix; }
+    void action( Type type ) override;
+    [[nodiscard]] virtual size_t heapBytes() const override { return 0; } //this undo action will be deleted in widget disable
+
+private:
+    SetStateHistoryAction( std::string name, PickPointManager& widget, FullState&& fullState );
+
+private:
+    std::string name_;
+    PickPointManager& widget_;
+    FullState fullState_;
+};
+
+std::shared_ptr<PickPointManager::SetStateHistoryAction> PickPointManager::SetStateHistoryAction::clearAndGetUndo(  PickPointManager& widget )
+{
+    std::shared_ptr<SetStateHistoryAction> res( new SetStateHistoryAction( "Clear Pick Points", widget, widget.getFullState() ) );
+    widget.clearNoHistory_();
+    return res;
+}
+
+PickPointManager::SetStateHistoryAction::SetStateHistoryAction( std::string name, PickPointManager& widget, FullState&& fullState )
+    : name_( std::move( name ) )
+    , widget_( widget )
+    , fullState_( std::move( fullState ) )
+{
+}
+
+void PickPointManager::SetStateHistoryAction::action( Type )
+{
+    widget_.swapStateNoHistory_( fullState_ );
+}
+
 class PickPointManager::AddRemovePointHistoryAction : public PickPointManager::WidgetHistoryAction
 {
 public:
@@ -530,11 +568,23 @@ PickPointManager::PickPointManager()
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
 
-void PickPointManager::clear( bool writeHistory )
+auto PickPointManager::getFullState() const -> FullState
 {
-    if ( params.writeHistory && writeHistory )
-        AppendHistory<ClearHistoryAction>( "Clear points" + params.historyNameSuffix, *this );
+    std::vector<ObjectState> res;
+    for ( const auto& [obj, contour] : pickedPoints_ )
+    {
+        ObjectState state;
+        state.objPtr = obj;
+        state.pickedPoints.reserve( contour.size() );
+        for ( const auto& p : contour )
+            state.pickedPoints.emplace_back( p->getCurrentPosition() );
+        res.emplace_back( std::move( state ) );
+    }
+    return res;
+}
 
+void PickPointManager::clearNoHistory_()
+{
     for ( auto& [obj, contour] : pickedPoints_ )
     {
         for ( int pickedIndex = int( contour.size() ) - 1; pickedIndex >= 0; --pickedIndex )
@@ -553,6 +603,29 @@ void PickPointManager::clear( bool writeHistory )
     connectionHolders_.clear();
 }
 
+void PickPointManager::swapStateNoHistory_( FullState& s )
+{
+    auto orgiginal = getFullState();
+
+    clearNoHistory_();
+    for ( const auto& state : s )
+    {
+        if ( const auto obj = state.objPtr.lock() )
+        {
+            for ( const auto& p : state.pickedPoints )
+                insertPointNoHistory_( obj, -1, p );
+        }
+    }
+    s = std::move( orgiginal );
+}
+
+void PickPointManager::clear( bool writeHistory )
+{
+    auto actionPtr = SetStateHistoryAction::clearAndGetUndo( *this );
+    if ( params.writeHistory && writeHistory )
+        AppendHistory( std::move( actionPtr ) );
+}
+
 PickPointManager::~PickPointManager()
 {
     if ( params.writeHistory )
@@ -564,73 +637,6 @@ PickPointManager::~PickPointManager()
     }
 
     disconnect();
-}
-
-class PickPointManager::ClearHistoryAction : public PickPointManager::WidgetHistoryAction
-{
-public:
-    ClearHistoryAction( std::string name, PickPointManager& widget );
-
-public:
-    [[nodiscard]] std::string name() const override { return name_; }
-
-    void action( Type type ) override;
-
-    [[nodiscard]] size_t heapBytes() const override;
-
-private:
-    std::string name_;
-    PickPointManager& widget_;
-
-    struct ObjectState
-    {
-        std::weak_ptr<VisualObject> objPtr;
-        std::vector<PickedPoint> pickedPoints;
-    };
-    std::vector<ObjectState> states_;
-};
-
-PickPointManager::ClearHistoryAction::ClearHistoryAction( std::string name, PickPointManager& widget )
-    : name_( std::move( name ) )
-    , widget_( widget )
-{
-    for ( const auto& [obj, contour] : widget_.pickedPoints_ )
-    {
-        ObjectState state;
-        state.objPtr = obj;
-        state.pickedPoints.reserve( contour.size() );
-        for ( const auto& p : contour )
-            state.pickedPoints.emplace_back( p->getCurrentPosition() );
-        states_.emplace_back( std::move( state ) );
-    }
-}
-
-void PickPointManager::ClearHistoryAction::action( Type type )
-{
-    MR_SCOPED_VALUE( widget_.params.writeHistory, false );
-
-    switch ( type )
-    {
-        case Type::Undo:
-            for ( const auto& state : states_ )
-            {
-                if ( const auto obj = state.objPtr.lock() )
-                {
-                    for ( const auto& p : state.pickedPoints )
-                        widget_.insertPointNoHistory_( obj, -1, p );
-                }
-            }
-            break;
-
-        case Type::Redo:
-            widget_.clear();
-            break;
-    }
-}
-
-size_t PickPointManager::ClearHistoryAction::heapBytes() const
-{
-    return 0; // this undo action will be deleted in widget disable
 }
 
 } // namespace MR

@@ -23,7 +23,10 @@ MRPointCloud* mrPointsLoadFromAnySupportedFormat( const char* filename, const MR
         {
             vector_wrapper<Color>* wrapper = reinterpret_cast<vector_wrapper<Color>* >( settings_->colors );
             if ( wrapper )
-                settings.colors = reinterpret_cast<VertColors* >( &reinterpret_cast<std::vector<Color>& >( *wrapper ) );
+            {
+                auto& colors = (std::vector<Color>&)( *wrapper );
+                settings.colors = reinterpret_cast< VertColors* >( &colors );
+            }
         }
         settings.outXf = ( AffineXf3f* )settings_->outXf;
         settings.callback = settings_->callback;

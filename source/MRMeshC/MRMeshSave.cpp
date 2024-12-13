@@ -21,9 +21,9 @@ void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, cons
         settings.saveValidOnly = settings_->saveValidOnly;
         settings.rearrangeTriangles = settings_->rearrangeTriangles;
         settings.progress = settings_->progress;
-        const vector_wrapper<Color>* wrapper = reinterpret_cast< const vector_wrapper<Color>* >( settings_->colors );
+        vector_wrapper<Color>* wrapper = (vector_wrapper<Color>*)( settings_->colors );
         if ( wrapper )
-            settings.colors = reinterpret_cast< const VertColors* >( &reinterpret_cast< const std::vector<Color>& >( *wrapper ) );
+            settings.colors = reinterpret_cast< const VertColors* >( &(const std::vector<Color>&) ( *wrapper ) );
     }
 
     auto res = MeshSave::toAnySupportedFormat( mesh, file );

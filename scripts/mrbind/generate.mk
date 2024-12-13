@@ -474,7 +474,6 @@ $(if $($1_NumFragments),,$(call var,$1_NumFragments := 1))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
 $(call var,$1_CompilerFlagsFixed := $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))
-$(warning $($1_CompilerFlagsFixed))
 
 # Produce the one combined header including all our input headers.
 # And if PCH is enabled, this also includes the headers to bake.

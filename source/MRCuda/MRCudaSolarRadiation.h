@@ -4,9 +4,8 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSolarRadiation.h"
 
-#ifdef MR_COMPILING_PB11_BINDINGS
+// Only strictly necessary for the bindings (to make `MR::MeshIntersectionResult` a complete type).
 #include "MRMesh/MRMeshIntersect.h"
-#endif
 
 namespace MR
 {

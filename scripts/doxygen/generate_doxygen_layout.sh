@@ -17,7 +17,7 @@ fi
 # edit main block
 cp ${DOXYGEN_DIR}/layout_templates/base_struct.xml ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 if [ "$1" = "Main" ]; then
-    sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"mainpage\" visible=\"yes\" title=\"About\g"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+    sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"mainpage\" visible=\"yes\" title=\"About\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
     sed -e "s|__BEGIN_URL__|@ref |" -e "s|__END_URL__||" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 else
     sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"user\" url=\"${BEGIN_URL}/html/index.html\" title=\"About\"/>|"  -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml

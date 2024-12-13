@@ -1,6 +1,7 @@
 #include "MRMeshSave.h"
 
 #include "detail/TypeCast.h"
+#include "detail/Vector.h"
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
@@ -20,7 +21,9 @@ void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, cons
         settings.saveValidOnly = settings_->saveValidOnly;
         settings.rearrangeTriangles = settings_->rearrangeTriangles;
         settings.progress = settings_->progress;
-        settings.colors = auto_cast( settings_->colors );
+        vector_wrapper<Color>* wrapper = (vector_wrapper<Color>*)( settings_->colors );
+        if ( wrapper )
+            settings.colors = reinterpret_cast< const VertColors* >( &(const std::vector<Color>&) ( *wrapper ) );
     }
 
     auto res = MeshSave::toAnySupportedFormat( mesh, file );

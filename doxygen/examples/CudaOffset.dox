@@ -1,0 +1,13 @@
+/**
+ \page ExampleCudaOffset Offset with Cuda
+
+Example of Python usage of Cuda to offset mesh
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\include CudaOffset.dox.py
+
+</div>
+
+ */

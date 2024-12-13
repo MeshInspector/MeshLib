@@ -33,5 +33,5 @@ unsigned int mrColorGetUInt32( const MRColor* color_ )
 
 MRVertColors* mrVertColorsNewSized( size_t size )
 {
-    return reinterpret_cast< MRVertColors* >( new vector_wrapper<VertColors>( std::vector<VertColors>( size ) ) );
+    return reinterpret_cast< MRVertColors* >( new vector_wrapper<Color>( std::vector<Color>( size ) ) );
 }

@@ -20,10 +20,12 @@ void mrPointsSaveToAnySupportedFormat( const MRPointCloud* pc_, const char* file
         settings.saveValidOnly = settings_->saveValidOnly;
         settings.rearrangeTriangles = settings_->rearrangeTriangles;
         settings.progress = settings_->progress;
-        settings.colors = auto_cast( settings_->colors );
+        vector_wrapper<Color>* wrapper = ( vector_wrapper<Color>* )( settings_->colors );
+        if ( wrapper )
+            settings.colors = (const VertColors*)( &( std::vector<Color>& )( *wrapper ) );
     }
 
-    auto res = PointsSave::toAnySupportedFormat( pc, file );
+    auto res = PointsSave::toAnySupportedFormat( pc, file, settings );
     if ( !res && errorString != nullptr )
         *errorString = auto_cast( new_from( std::move( res.error() ) ) );
 }

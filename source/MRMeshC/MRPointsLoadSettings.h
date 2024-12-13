@@ -12,7 +12,6 @@ typedef struct MRPointsLoadSettings
     MRProgressCallback callback; ///< callback for set progress and stop process
 } MRPointsLoadSettings;
 
-MRMESHC_API MRPointsLoadSettings* mrPointsLoadSettingsNew( void );
-MRMESHC_API void mrPointsLoadSettingsFree( MRPointsLoadSettings* settings );
+MRMESHC_API MRPointsLoadSettings mrPointsLoadSettingsNew( void );
 
 MR_EXTERN_C_END

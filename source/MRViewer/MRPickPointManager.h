@@ -29,9 +29,6 @@ public:
         /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
 
-        /// Indicates whether to write history of the contours
-        bool writeHistory = true;
-
         /// This is appended to the names of all undo/redo actions.
         std::string historyNameSuffix;
 
@@ -122,9 +119,8 @@ public:
     /// returns the state of this
     MRVIEWER_API FullState getFullState() const;
 
-    /// remove all points from all objects
-    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
-    MRVIEWER_API void clear( bool writeHistory = true );
+    /// remove all points from all objects, adding undo action for reverting
+    MRVIEWER_API void clear();
 
 private:
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;

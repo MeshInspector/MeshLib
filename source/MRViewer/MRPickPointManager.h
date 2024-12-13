@@ -13,7 +13,8 @@
 namespace MR
 {
 
-/// this object allows the user to pick/move/delete several ordered points on one or more visual objects
+/// PickPointManager allows the user to pick/move/delete several ordered points on one or more visual objects;
+/// mouse events and public methods automatically add history actions for reverting
 class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
@@ -65,7 +66,7 @@ public:
     };
     Params params;
 
-    // A common base class for all history actions of this widget.
+    /// A common base class for all history actions of this widget.
     struct WidgetHistoryAction : HistoryAction {};
 
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
@@ -74,22 +75,16 @@ public:
     /// create an object and starts listening for mouse events
     MRVIEWER_API PickPointManager();
 
-    /// destroy this and remove the undo/redo actions from the history.
+    /// destroy this and remove the undo/redo actions referring this from the history.
     MRVIEWER_API ~PickPointManager();
 
-    // return contour for specific object (creating new one if necessary)
-    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj )
-    {
-        return pickedPoints_[obj];
-    }
+    /// return contour for specific object (creating new one if necessary)
+    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj ) { return pickedPoints_[obj]; }
 
-    // return all contours, i.e. per object unorderd_map of ordered surface points [vector].
-    [[nodiscard]] const SurfaceContours& getSurfaceContours() const
-    {
-        return pickedPoints_;
-    }
+    /// return all contours, i.e. per object unorderd_map of ordered surface points [vector].
+    [[nodiscard]] const SurfaceContours& getSurfaceContours() const { return pickedPoints_; }
 
-    // check whether the contour is closed for a particular object.
+    /// check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
     /// returns point widget by index from given object or nullptr if no such widget exists
@@ -98,10 +93,10 @@ public:
     /// returns point widget currently dragged by mouse
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
-    // Add a point to the end of non closed contour connected with obj.
+    /// Add a point to the end of non closed contour connected with obj.
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
 
-    // Remove point with pickedIndex index from contour connected with obj.
+    /// Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
 
     // if ( makeClosed ), and the contour is open add a special transparent point contour to the end of contour connected with given object.
@@ -119,7 +114,7 @@ public:
     /// returns the state of this
     MRVIEWER_API FullState getFullState() const;
 
-    /// remove all points from all objects, adding undo action for reverting
+    /// removes all points from all objects
     MRVIEWER_API void clear();
 
     /// removes all current points, then adds pick points on all objects as prescribed by given state

@@ -186,7 +186,8 @@ public:
 
     virtual std::string name() const override;
     virtual void action( Type ) override;
-    [[nodiscard]] virtual size_t heapBytes() const override;
+    [[nodiscard]] virtual size_t heapBytes() const override { return 0; } //this undo action will be deleted in widget disable
+
 private:
     PickPointManager& widget_;
     const std::shared_ptr<MR::VisualObject> obj_;
@@ -196,7 +197,7 @@ private:
 
 std::string PickPointManager::MovePointHistoryAction::name() const
 {
-    return "Move point" + widget_.params.historyNameSuffix;
+    return "Move Point" + widget_.params.historyNameSuffix;
 }
 
 void PickPointManager::MovePointHistoryAction::action( Type )
@@ -209,11 +210,6 @@ void PickPointManager::MovePointHistoryAction::action( Type )
     }
     else
         assert( false );
-}
-
-size_t PickPointManager::MovePointHistoryAction::heapBytes() const
-{
-    return 0; //this undo action will be deleted in widget disable
 }
 
 std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
@@ -326,14 +322,12 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::getPointWidget( const std:
 
 bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
-    SCOPED_HISTORY( "Append Point" + params.historyNameSuffix );
     AppendHistory( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint ) );
     return true;
 }
 
 bool PickPointManager::removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex )
 {
-    SCOPED_HISTORY( "Remove Point" + params.historyNameSuffix );
     AppendHistory( AddRemovePointHistoryAction::removeAndGetUndo( *this, obj, pickedIndex ) );
     return true;
 }
@@ -497,7 +491,7 @@ bool PickPointManager::onMouseMove_( int, int )
                         const auto& contour = pickedPoints_[obj];
                         if ( &pointWidget == contour[0].get() )
                         {
-                            SCOPED_HISTORY( "Move point" + params.historyNameSuffix );
+                            SCOPED_HISTORY( "Move Point" + params.historyNameSuffix );
                             AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
                             AppendHistory<MovePointHistoryAction>( *this, obj, point, int( contour.size() ) - 1 );
                             moveClosedPoint_ = true;

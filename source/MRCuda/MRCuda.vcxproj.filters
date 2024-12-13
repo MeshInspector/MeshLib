@@ -30,7 +30,7 @@
     <ClCompile Include="MRCudaBasic.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaContoursDisntaceMap.cpp">
+    <ClCompile Include="MRCudaContoursDistanceMap.cpp">
       <Filter>DistanceMaps</Filter>
     </ClCompile>
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp">

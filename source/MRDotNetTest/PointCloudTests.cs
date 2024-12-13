@@ -123,5 +123,40 @@ namespace MR.Test
             Assert.That(pc.Points.Count == 8);
             Assert.That(pc.Normals.Count == 0);
         }
+
+        [Test]
+        public void TestSaveLoadWithColors()
+        {
+            var points = MakeCube();
+            var colors = new List<Color>(8);
+            colors.Add(new Color(1.0f, 0.0f, 0.0f));
+            colors.Add(new Color(0.0f, 1.0f, 0.0f));
+            colors.Add(new Color(0.0f, 0.0f, 1.0f));
+            colors.Add(new Color(1.0f, 1.0f, 0.0f));
+            colors.Add(new Color(1.0f, 0.0f, 1.0f));
+            colors.Add(new Color(0.0f, 1.0f, 1.0f));
+            colors.Add(new Color(1.0f, 1.0f, 1.0f));
+            colors.Add(new Color(0.0f, 0.0f, 0.0f));
+
+            var saveSettings = new SaveSettings();
+            saveSettings.colors = new VertColors(colors);
+            
+            string path = Path.GetTempFileName() + ".ply";
+            PointsSave.ToAnySupportedFormat(points, path, saveSettings);
+
+            var loadSettings = new PointsLoadSettings();
+            loadSettings.colors = new VertColors();
+            var readPoints = PointsLoad.FromAnySupportedFormat(path, loadSettings);
+            Assert.That(points.Points.Count == 8);
+
+            var readColors = loadSettings.colors.ToList();
+            Assert.That(colors.Count == readColors.Count);
+            for (int i = 0; i < colors.Count; i++)
+            {
+                Assert.That(colors[i] == readColors[i]);
+            }
+
+            File.Delete(path);
+        }
     }
 }

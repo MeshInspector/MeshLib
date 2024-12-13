@@ -122,6 +122,9 @@ public:
     /// remove all points from all objects, adding undo action for reverting
     MRVIEWER_API void clear();
 
+    /// removes all current points, then adds pick points on all objects as prescribed by given state
+    MRVIEWER_API void setFullState( FullState s );
+
 private:
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;

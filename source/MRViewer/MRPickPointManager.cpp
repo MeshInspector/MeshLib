@@ -20,6 +20,9 @@ public:
     /// clears given PickPointManager, and returns undo action for restoring original state
     static std::shared_ptr<SetStateHistoryAction> clearAndGetUndo( PickPointManager& widget );
 
+    /// sets given state to given PickPointManager, and returns undo action for restoring original state
+    static std::shared_ptr<SetStateHistoryAction> setAndGetUndo( PickPointManager& widget, FullState&& fullState );
+
     virtual std::string name() const override { return name_ + widget_.params.historyNameSuffix; }
     void action( Type type ) override;
     [[nodiscard]] virtual size_t heapBytes() const override { return 0; } //this undo action will be deleted in widget disable
@@ -33,10 +36,17 @@ private:
     FullState fullState_;
 };
 
-std::shared_ptr<PickPointManager::SetStateHistoryAction> PickPointManager::SetStateHistoryAction::clearAndGetUndo(  PickPointManager& widget )
+std::shared_ptr<PickPointManager::SetStateHistoryAction> PickPointManager::SetStateHistoryAction::clearAndGetUndo( PickPointManager& widget )
 {
     std::shared_ptr<SetStateHistoryAction> res( new SetStateHistoryAction( "Clear Pick Points", widget, widget.getFullState() ) );
     widget.clearNoHistory_();
+    return res;
+}
+
+std::shared_ptr<PickPointManager::SetStateHistoryAction> PickPointManager::SetStateHistoryAction::setAndGetUndo( PickPointManager& widget, FullState&& fullState )
+{
+    std::shared_ptr<SetStateHistoryAction> res( new SetStateHistoryAction( "Set Pick Points", widget, std::move( fullState ) ) );
+    res->action( HistoryAction::Type::Redo ); // actually perform state setting
     return res;
 }
 
@@ -589,6 +599,11 @@ void PickPointManager::swapStateNoHistory_( FullState& s )
 void PickPointManager::clear()
 {
     AppendHistory( SetStateHistoryAction::clearAndGetUndo( *this ) );
+}
+
+void PickPointManager::setFullState( FullState s )
+{
+    AppendHistory( SetStateHistoryAction::setAndGetUndo( *this, std::move( s ) ) );
 }
 
 PickPointManager::~PickPointManager()

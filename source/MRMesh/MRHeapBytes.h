@@ -70,6 +70,20 @@ template<typename T>
     return 0;
 }
 
+/// returns the amount of memory given HashMap occupies on heap
+template<typename ...Ts>
+[[nodiscard]] inline size_t heapBytes( const phmap::flat_hash_map<Ts...>& hashMap )
+{
+    // from parallel_hashmap/phmap.h:
+    // The control state and slot array are stored contiguously in a shared heap
+    // allocation. The layout of this allocation is: `capacity()` control bytes,
+    // one sentinel control byte, `Group::kWidth - 1` cloned control bytes,
+    // <possible padding>, `capacity()` slots
+    const auto cap = hashMap.capacity();
+    constexpr size_t kWidth = 16; // the usage of phmap::priv::Group::kWidth here will require inclusion of phmap.h
+    return cap + kWidth + cap * sizeof( typename phmap::flat_hash_map<Ts...>::slot_type );
+}
+
 /// \}
 
 } // namespace MR

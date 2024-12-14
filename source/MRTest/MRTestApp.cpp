@@ -82,7 +82,7 @@ int main( int argc, char** argv )
         auto lib = dlopen( mrmeshpyPath.c_str(), RTLD_NOW | RTLD_GLOBAL );
         if ( !lib )
         {
-            spdlog::error( "Unable to load the Python module {} error: {}", utf8string( mrmeshpyPath ), dlerror() );
+            spdlog::error( "Unable to load the Python module {} error: {}", mrmeshpyPath.c_str(), dlerror() );
             std::exit(1);
         }
         #endif

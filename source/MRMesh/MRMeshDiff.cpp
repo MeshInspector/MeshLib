@@ -86,7 +86,7 @@ void MeshDiff::applyAndSwap( Mesh & m )
 
 size_t MeshDiff::heapBytes() const
 {
-    return MR::heapBytes( changedPoints_ );
+    return MR::heapBytes( changedPoints_ ) + MR::heapBytes( changedEdges_ );
 }
 
 TEST(MRMesh, MeshDiff)

@@ -24,11 +24,14 @@ public:
     /// then the method will return false since nothing is stored here
     [[nodiscard]] bool any() const { return !changedPoints_.empty() || !changedEdges_.empty(); }
 
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+
 private:
     size_t toPointsSize_ = 0;
-    ParallelHashMap<VertId, Vector3f> changedPoints_;
+    HashMap<VertId, Vector3f> changedPoints_;
     size_t toEdgesSize_ = 0;
-    ParallelHashMap<EdgeId, MeshTopology::HalfEdgeRecord> changedEdges_;
+    HashMap<EdgeId, MeshTopology::HalfEdgeRecord> changedEdges_;
 };
 
 } // namespace MR

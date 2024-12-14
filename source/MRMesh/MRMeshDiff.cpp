@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRMeshBuilder.h"
+#include "MRHeapBytes.h"
 #include "MRGTest.h"
 
 namespace MR
@@ -81,6 +82,11 @@ void MeshDiff::applyAndSwap( Mesh & m )
     toEdgesSize_ = mEdgesSize;
 
     m.topology.computeAllFromEdges_();
+}
+
+size_t MeshDiff::heapBytes() const
+{
+    return MR::heapBytes( changedPoints_ ) + MR::heapBytes( changedEdges_ );
 }
 
 TEST(MRMesh, MeshDiff)

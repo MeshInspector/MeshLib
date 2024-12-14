@@ -25,7 +25,7 @@ public:
     [[nodiscard]] bool any() const { return !changedPoints_.empty() || !changedEdges_.empty(); }
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const;
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 private:
     size_t toPointsSize_ = 0;

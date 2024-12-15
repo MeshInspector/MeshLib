@@ -30,36 +30,19 @@ runs:
   steps:
     - name: Fetch job ID
       id: fetch_job_id
-      shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        JOB_ID=$(python3 scripts/devops/fetch_job_id.py)
-        echo "job_id=${JOB_ID}" >> $GITHUB_OUTPUT
+      run: python3 ${{ github.action_path }}/../../../scripts/devops/fetch_job_id.py
 
     - name: Collect sys stats
       id: collect_stats
-      shell: bash
       env:
         TARGET_OS: ${{ inputs.target_os }}
         TARGET_ARCH: ${{ inputs.target_arch }}
         CXX_COMPILER: ${{ inputs.cxx_compiler }}
         BUILD_CONFIG: ${{ inputs.build_config }}
         STATS_FILE: "RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
-      run: |
-        eval $(python3 scripts/devops/collect_runner_sys_stats.py)
-        echo "cpu_count=${CPU_COUNT}" >> $GITHUB_OUTPUT
-        echo "ram_amount_mb=${RAM_AMOUNT}" >> $GITHUB_OUTPUT
-        cat << EOF | tee ${STATS_FILE}
-        {
-          "target_os": "${TARGET_OS}",
-          "target_arch": "${TARGET_ARCH}",
-          "compiler": "${COMPILER_ID}",
-          "build_config": "$(echo ${BUILD_CONFIG} | tr '[:upper:]' '[:lower:]')",
-          "cpu_count": ${CPU_COUNT},
-          "ram_mb": ${RAM_AMOUNT}
-        }
-        EOF
+      run: python3 ${{ github.action_path }}/../../../scripts/devops/collect_runner_sys_stats.py
 
     - name: Upload sys stats
       uses: actions/upload-artifact@v4

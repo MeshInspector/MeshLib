@@ -37,4 +37,6 @@ def get_job_id():
         return jobs[0]['id']
 
 if __name__ == "__main__":
-    print(get_job_id())
+    if os.environ.get('CI'):
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+            print(f"job_id={get_job_id()}", file=out)

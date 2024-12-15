@@ -1239,6 +1239,12 @@
     <ClInclude Include="MRPartialChangeMeshAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRVertCoordsDiff.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTopologyDiff.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2035,6 +2041,12 @@
     </ClCompile>
     <ClCompile Include="MRMarkedContour.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVertCoordsDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTopologyDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

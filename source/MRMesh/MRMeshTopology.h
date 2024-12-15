@@ -512,7 +512,7 @@ public:
     MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
-    friend class MeshDiff;
+    friend class MeshTopologyDiff;
     /// computes from edges_ all remaining fields: \n
     /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_

@@ -12,6 +12,9 @@ namespace MR
 class MeshDiff
 {
 public:
+    /// constructs minimal difference, where applyAndSwap( m ) will produce empty mesh
+    MeshDiff() = default;
+
     /// computes the difference, that can be applied to mesh-from in order to get mesh-to
     MRMESH_API MeshDiff( const Mesh & from, const Mesh & to );
 

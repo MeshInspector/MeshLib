@@ -289,7 +289,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             FaceBitSet newFaces = getInnerFaces( newMesh->topology, newVerts );
             auto meshAttribs = projectMeshAttributes( *obj_, MeshPart( *newMesh, &newFaces ) );
 
-            AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, std::move( newMesh ) ) );
+            AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, setNew, std::move( newMesh ) ) );
             if ( meshAttribs )
                 emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
 

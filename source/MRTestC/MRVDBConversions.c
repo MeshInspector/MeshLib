@@ -102,9 +102,13 @@ void testAccessors( void )
 
     MRVoxelBitSet* region = mrVoxelBitSetNew( volume.dims.x * volume.dims.y * volume.dims.z, false );
     mrBitSetSet( (MRBitSet*)region, 0, true );
-    mrFloatGridSetValue( volume.data, region, 1.0f );
+    mrFloatGridSetValueForRegion( volume.data, region, 1.0f );
     mrVoxelBitSetFree( region );
 
     value = mrFloatGridGetValue( volume.data, &p );
-    TEST_ASSERT( value == 1.0f );    
+    TEST_ASSERT( value == 1.0f );
+
+    mrFloatGridSetValue( volume.data, &p, 2.0f );
+    value = mrFloatGridGetValue( volume.data, &p );
+    TEST_ASSERT( value == 2.0f );
 }

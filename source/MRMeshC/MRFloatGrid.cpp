@@ -37,7 +37,13 @@ float mrFloatGridGetValue( const MRFloatGrid* grid_, const MRVector3i* p_ )
     return getValue( grid, p );
 }
 
-void mrFloatGridSetValue( MRFloatGrid* grid_, const MRVoxelBitSet* region_, float value )
+void mrFloatGridSetValue( MRFloatGrid* grid_, const MRVector3i* p_, float value )
+{
+    ARG( grid ); ARG( p );
+    setValue( grid, p, value );
+}
+
+void mrFloatGridSetValueForRegion( MRFloatGrid* grid_, const MRVoxelBitSet* region_, float value )
 {
     ARG( grid ); ARG( region );
     setValue( grid, region, value );

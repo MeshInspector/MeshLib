@@ -99,7 +99,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     {
         std::future<loadObjResultType> future;
         Object* parent = nullptr;
-        LoadTask( std::future<loadObjResultType> future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
+        bool dicomFolder = false;
+        LoadTask( std::future<loadObjResultType> future, Object* parent, bool dicomFolder = false ) :
+            future( std::move( future ) ), parent( parent ), dicomFolder( dicomFolder ) {}
     };
     std::vector<LoadTask> loadTasks;
 
@@ -124,14 +126,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
         {
-            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, &loadingCanceled] ()
+            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, cb = cb.newTask()]()
             {
-                return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, [&loadingCanceled]( float ){ return !loadingCanceled; } ).and_then(
+                return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, cb ).and_then(
                 [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
                 {
                     return LoadedObjects{ .objs = { ld.obj } };
                 } );
-            } ), objPtr );
+            } ), objPtr, true );
         }
         #endif
     };
@@ -139,6 +141,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     res.obj = std::make_shared<Object>();
     res.obj->setName( utf8string( folder.stem() ) );
     createFolderObj( filesTree, res.obj.get() );
+
+    auto pseudoRoot = std::make_shared<Object>();
+    pseudoRoot->addChild( res.obj );
 
     // processing of results
     bool atLeastOneLoaded = false;
@@ -159,8 +164,16 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             auto taskRes = t.future.get();
             if ( taskRes.has_value() )
             {
-                for ( const auto& objPtr : taskRes->objs )
-                    t.parent->addChild( objPtr );
+                if ( t.dicomFolder && taskRes->objs.size() == 1 )
+                {
+                    t.parent->parent()->addChild( taskRes->objs[0] );
+                    t.parent->parent()->removeChild( t.parent );
+                }
+                else
+                {
+                    for ( const auto& objPtr : taskRes->objs )
+                        t.parent->addChild( objPtr );
+                }
                 if ( !taskRes->warnings.empty() )
                     res.warnings += taskRes->warnings;
                 if ( !atLeastOneLoaded )
@@ -192,6 +205,8 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         return unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
+
+    res.obj = pseudoRoot->children()[0];
 
     return res;
 }

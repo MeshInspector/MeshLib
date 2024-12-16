@@ -31,6 +31,10 @@ MRVOXELS_API FloatGrid cropped( const FloatGrid& grid, const Box3i& box, Progres
 
 /// sets given region voxels value
 /// \note region is in grid space (0 voxel id is minimum active voxel in grid)
+MRVOXELS_API void setValue( FloatGrid& grid, const Vector3i& p, float value );
+
+/// sets given region voxels value
+/// \note region is in grid space (0 voxel id is minimum active voxel in grid)
 MRVOXELS_API void setValue( FloatGrid & grid, const VoxelBitSet& region, float value );
 
 /// sets type of this grid as LEVEL SET (for normal flipping)

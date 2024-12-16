@@ -112,6 +112,11 @@ void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
         accessor.setValue( coord, value );
     }
 }
+void setValue( FloatGrid& grid, const Vector3i& p, float value )
+{
+    if ( grid )
+        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
+}
 
 void setLevelSetType( FloatGrid & grid )
 {

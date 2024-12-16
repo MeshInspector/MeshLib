@@ -11,6 +11,7 @@ REGISTER_AUTO_CAST( EdgeBitSet )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_AUTO_CAST( VoxelBitSet )
 
 MRBitSet* mrBitSetCopy( const MRBitSet* bs_ )
 {
@@ -141,6 +142,23 @@ MRVertBitSet* mrVertBitSetCopy( const MRVertBitSet* vbs_ )
 }
 
 void mrVertBitSetFree( MRVertBitSet* vbs_ )
+{
+    ARG_PTR( vbs );
+    delete vbs;
+}
+
+MRVoxelBitSet* mrVoxelBitSetNew( size_t numBits, bool fillValue )
+{
+    RETURN_NEW( VoxelBitSet( numBits, fillValue ) );
+}
+
+MRVoxelBitSet* mrVoxelBitSetCopy( const MRVoxelBitSet* vbs_ )
+{
+    ARG( vbs );
+    RETURN_NEW( vbs );
+}
+
+void mrVoxelBitSetFree( MRVoxelBitSet* vbs_ )
 {
     ARG_PTR( vbs );
     delete vbs;

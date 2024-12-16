@@ -109,6 +109,7 @@ private:
     {
         EdgePath newCutEdges; // newly added edges of cut part
         EdgePath newFillEdges; // newly added edges of fill part
+        EdgePath interEdges; // spliced intersection edges
     };
     // connect hole on terrain with cut structure
     ConnectionEdges connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
@@ -408,6 +409,7 @@ TerrainEmbedder::ConnectionEdges TerrainEmbedder::connect_( std::vector<EdgeLoop
                 result_.topology.setOrg( be, {} );
                 result_.topology.splice( be, e );
                 result_.topology.setOrg( e, vert );
+                connectionInfo.interEdges.push_back( be );
             }
             else
             {
@@ -467,6 +469,18 @@ void TerrainEmbedder::fill_( size_t oldVertSize, ConnectionEdges&& connectionInf
         if ( !result_.topology.left( edge.sym() ) )
             fillHole( result_, edge.sym(), fhParams );
     }
+
+    // fill missed edges (no intermediate vertex)
+    //for ( auto edge : connectionInfo.interEdges )
+    //{
+    //    if ( params_.outFillFaces )
+    //        fhParams.outNewFaces = params_.outStructFaces;
+    //
+    //    if ( !result_.topology.left( edge ) )
+    //        fillHole( result_, edge, fhParams );
+    //    if ( !result_.topology.left( edge.sym() ) )
+    //        fillHole( result_, edge.sym(), fhParams );
+    //}
 }
 
 TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContour& mc, float cutOffset, float fillOffset )

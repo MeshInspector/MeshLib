@@ -24,10 +24,70 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MRPartialChangeMeshAction.h"
+#include "MRMesh/MRFinally.h"
 
 namespace MR
 {
+
+/// Undo action for ObjectMesh points only (not topology) change;
+/// It can store all points (uncompressed format), or only modified points (compressed format)
+class SurfaceManipulationWidget::SmartChangeMeshPointsAction : public HistoryAction
+{
+public:
+    using Obj = ObjectMesh;
+
+    /// use this constructor to remember object's mesh points in uncompressed format before making any changes in it
+    SmartChangeMeshPointsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
+        stdAction_{ std::make_unique<ChangeMeshPointsAction>( std::move( name ), obj ) }
+    {
+    }
+
+    virtual std::string name() const override
+    {
+        return stdAction_ ? stdAction_->name() : diffAction_->name();
+    }
+
+    virtual void action( HistoryAction::Type t ) override
+    {
+        if ( stdAction_ )
+            stdAction_->action( t );
+        else
+            diffAction_->action( t );
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_POSITION );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return MR::heapBytes( stdAction_ ) + MR::heapBytes( diffAction_ );
+    }
+
+    /// switch from uncompressed to compressed format to occupy less amount of memory
+    void compress()
+    {
+        assert( stdAction_ );
+        if ( stdAction_ )
+        {
+            diffAction_ = std::make_unique<PartialChangeMeshPointsAction>(
+                stdAction_->name(), stdAction_->obj(), cmpOld, stdAction_->clonePoints() );
+            stdAction_.reset();
+        }
+        assert( !stdAction_ );
+        assert( diffAction_ );
+    }
+
+private:
+    std::unique_ptr<ChangeMeshPointsAction> stdAction_;
+    std::unique_ptr<PartialChangeMeshPointsAction> diffAction_;
+};
+
+
 //const float k = r < 1-a ? std::sqrt( sqr( 1 - a ) - sqr( r ) ) + ( 1 - a ) : -std::sqrt( sqr( a ) - sqr( r - 1 ) ) + a; // alternative version F_point_shift(r,i) (i == a)
 
 // not in the header to be able to destroy Laplacian
@@ -224,7 +284,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Relax )
                 name += "Smooth";
 
-            historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
+            historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( name, obj_ );
         }
         changeSurface_();
     }
@@ -232,10 +292,21 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
     return true;
 }
 
+void SurfaceManipulationWidget::compressChangePointsAction_()
+{
+    if ( historyAction_ )
+    {
+        historyAction_->compress();
+        historyAction_.reset();
+    }
+}
+
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
 {
     if ( button != MouseButton::Left || !mousePressed_ )
         return false;
+
+    MR_FINALLY{ compressChangePointsAction_(); };
 
     mousePressed_ = false;
     if ( settings_.workMode == WorkMode::Laplacian )
@@ -335,7 +406,7 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
             if ( appendHistoryAction_ )
             {
                 appendHistoryAction_ = false;
-                AppendHistory( std::move( historyAction_ ) );
+                AppendHistory( historyAction_ );
             }
             laplacianMoveVert_( mousePos );
         }
@@ -418,7 +489,7 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
-        AppendHistory( std::move(  historyAction_ ) );
+        AppendHistory( historyAction_ );
     }
 
     MR_TIMER;
@@ -581,7 +652,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertIniPos_ = mesh.points[touchVertId_];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
-    historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
+    historyAction_ = std::make_shared<SmartChangeMeshPointsAction>( "Brush: Deform", obj_ );
     changedRegion_ |= singleEditingRegion_;
     createLastStableObjMesh_();
     lastStableValueChanges_ = valueChanges_;

@@ -40,4 +40,8 @@ int main( void )
     testIncidentFacesFromEdges();
     testTriangulation();
     testVDBConversions();
+    testUniformResampling();
+    testResampling();
+    testCropping();
+    testAccessors();
 }

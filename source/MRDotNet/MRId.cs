@@ -47,5 +47,13 @@ namespace MR
             public RegionId(int id = -1) { Id = id; }
             public bool Valid() => Id >= 0;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct VoxelId
+        {
+            public int Id;
+            public VoxelId(int id = -1) { Id = id; }
+            public bool Valid() => Id >= 0;
+        }
     }
 }

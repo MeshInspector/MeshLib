@@ -6,6 +6,7 @@ Example of Python usage of Cuda to offset mesh
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>
+You can use CUDA-driven offset for faster healing mesh with holes, example healing script can be found [here](https://github.com/MeshInspector/MeshLib/blob/master/python_scripts/healer.py)
 \include CudaOffset.dox.py
 
 </div>

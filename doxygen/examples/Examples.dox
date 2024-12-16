@@ -33,5 +33,6 @@ This page contains some examples of using MeshLib
  - \ref ExamplePlotly
  - \ref ExampleNumpy
  - \ref ExampleNumpyTriangulation
+ - \ref ExampleCudaOffset
 
 */

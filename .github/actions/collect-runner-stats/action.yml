@@ -30,12 +30,14 @@ runs:
   steps:
     - name: Fetch job ID
       id: fetch_job_id
+      shell: ${{ runner.os != 'Windows' && bash || powershell }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: python3 ${{ github.action_path }}/../../../scripts/devops/fetch_job_id.py
 
     - name: Collect sys stats
       id: collect_stats
+      shell: ${{ runner.os != 'Windows' && bash || powershell }}
       env:
         TARGET_OS: ${{ inputs.target_os }}
         TARGET_ARCH: ${{ inputs.target_arch }}

@@ -239,6 +239,9 @@ public:
         return name_.capacity() + clonePoints_.heapBytes();
     }
 
+    const std::shared_ptr<ObjectMesh> & obj() const { return objMesh_; }
+    const VertCoords & clonePoints() const { return clonePoints_; }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     VertCoords clonePoints_;

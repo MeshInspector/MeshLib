@@ -471,16 +471,16 @@ void TerrainEmbedder::fill_( size_t oldVertSize, ConnectionEdges&& connectionInf
     }
 
     // fill missed edges (no intermediate vertex)
-    //for ( auto edge : connectionInfo.interEdges )
-    //{
-    //    if ( params_.outFillFaces )
-    //        fhParams.outNewFaces = params_.outStructFaces;
-    //
-    //    if ( !result_.topology.left( edge ) )
-    //        fillHole( result_, edge, fhParams );
-    //    if ( !result_.topology.left( edge.sym() ) )
-    //        fillHole( result_, edge.sym(), fhParams );
-    //}
+    for ( auto edge : connectionInfo.interEdges )
+    {
+        if ( params_.outFillFaces )
+            fhParams.outNewFaces = params_.outStructFaces;
+    
+        if ( !result_.topology.left( edge ) )
+            fillHole( result_, edge, fhParams );
+        if ( !result_.topology.left( edge.sym() ) )
+            fillHole( result_, edge.sym(), fhParams );
+    }
 }
 
 TerrainEmbedder::OffsetBlock TerrainEmbedder::offsetContour_( const MarkedContour& mc, float cutOffset, float fillOffset )

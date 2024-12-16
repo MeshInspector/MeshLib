@@ -1,12 +1,14 @@
 #include "MRSurfaceManipulationWidget.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
-#include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRMesh.h"
 #include "MRViewer.h"
 #include "MRAppendHistory.h"
 #include "MRMouse.h"
+#include "MRPalette.h"
+#include "MRProjectMeshAttributes.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRPositionVertsSmoothly.h"
 #include "MRMesh/MRSurfaceDistance.h"
@@ -19,11 +21,10 @@
 #include "MRMesh/MRFillHoleNicely.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRPalette.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRParallelFor.h"
-#include "MRProjectMeshAttributes.h"
+#include "MRMesh/MRPartialChangeMeshAction.h"
 
 namespace MR
 {
@@ -288,7 +289,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             FaceBitSet newFaces = getInnerFaces( newMesh->topology, newVerts );
             auto meshAttribs = projectMeshAttributes( *obj_, MeshPart( *newMesh, &newFaces ) );
 
-            Historian<ChangeMeshAction>( "mesh", obj_, newMesh );
+            AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, setNew, std::move( newMesh ) ) );
             if ( meshAttribs )
                 emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
 

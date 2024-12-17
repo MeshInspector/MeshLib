@@ -30,6 +30,8 @@ runs:
   steps:
     - name: Fetch job ID
       id: fetch_job_id
+      # `shell` must be specified explicitly for composite actions.
+      # To prevent problems with running a unified shell (bash/pwsh) on all OSes, the script is called directly instead.
       shell: python3 fetch_job_id.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
@@ -38,6 +40,8 @@ runs:
 
     - name: Collect sys stats
       id: collect_stats
+      # `shell` must be specified explicitly for composite actions.
+      # To prevent problems with running a unified shell (bash/pwsh) on all OSes, the script is called directly instead.
       shell: python3 collect_runner_sys_stats.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:

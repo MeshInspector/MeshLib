@@ -65,9 +65,14 @@ class MRVIEWER_CLASS RibbonNotifier
 public:
     // adds new notification for drawing
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
+    
     // main draw function. draw actual notification or history, and history button
     // limitFramebuffer - available framebuffer space (usually same as `Viewer::getViewportsBounds()`)
     MRVIEWER_API void draw( float scaling, const Box2i& limitFramebuffer );
+
+    // set maximum time while history button will be present on screen
+    // negative value means that history button will never be hidden
+    MRVIEWER_API void setHitoryButtonMaxLifeTime( float histBtnMaxLifeTime );
 
     // this value is used as notification `lifeTimeSec` if negative values passed
     float defaultNotificationLifeTimeSeconds = 5.0f;
@@ -89,6 +94,8 @@ private:
     bool requestRedraw_ = false;
     bool historyMode_ = false;
 
+    float showHistoryBtnMaxTime_{ -1.0f }; // negative value here means that there is no need to hide history button
+    float currentHistoryBtnTimer_{ -1.0f }; // update to validly hide the button
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };
     AsyncRequest asyncRequest_;

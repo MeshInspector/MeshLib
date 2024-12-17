@@ -37,7 +37,7 @@ def get_compiler_id(compiler_path):
     else:
         raise RuntimeError(f"Unknown compiler: {version_line}")
 
-    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode()
+    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode().strip()
     if compiler == "emcc":
         return f"emcc-{output}"
     else:

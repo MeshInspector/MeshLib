@@ -2,8 +2,8 @@
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MREnums.h"
+#include "MRMesh/MRBitSet.h"
 #include "MRViewer/MRViewport.h"
 #include <chrono>
 
@@ -100,6 +100,10 @@ private:
     void createLastStableObjMesh_();
     void removeLastStableObjMesh_();
 
+    /// this function is called after all modifications are finished;
+    /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
+    void compressChangePointsAction_();
+
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
@@ -133,7 +137,12 @@ private:
     Vector3f touchVertIniPos_; // initial position of fixed vertex
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
-    std::shared_ptr<HistoryAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
+
+    // prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
+    class SmartChangeMeshPointsAction;
+    std::shared_ptr<SmartChangeMeshPointsAction> historyAction_;
+
+    // true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
 
     std::shared_ptr<Palette> palette_;

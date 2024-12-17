@@ -30,15 +30,15 @@ runs:
   steps:
     - name: Fetch job ID
       id: fetch_job_id
-      shell: bash
+      shell: python3 fetch_job_id.py
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: python3 fetch_job_id.py
+      run: ""
 
     - name: Collect sys stats
       id: collect_stats
-      shell: bash
+      shell: python3 collect_runner_sys_stats.py
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
         TARGET_OS: ${{ inputs.target_os }}
@@ -46,7 +46,7 @@ runs:
         CXX_COMPILER: ${{ inputs.cxx_compiler }}
         BUILD_CONFIG: ${{ inputs.build_config }}
         STATS_FILE: "RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
-      run: python3 collect_runner_sys_stats.py
+      run: ""
 
     - name: Upload sys stats
       uses: actions/upload-artifact@v4

@@ -30,7 +30,7 @@ runs:
   steps:
     - name: Fetch job ID
       id: fetch_job_id
-      shell: python3 fetch_job_id.py
+      shell: python3 fetch_job_id.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -38,7 +38,7 @@ runs:
 
     - name: Collect sys stats
       id: collect_stats
-      shell: python3 collect_runner_sys_stats.py
+      shell: python3 collect_runner_sys_stats.py {0}
       working-directory: ${{ github.action_path }}/../../../scripts/devops
       env:
         TARGET_OS: ${{ inputs.target_os }}

@@ -62,6 +62,8 @@ namespace MR.Test
             Assert.That(readVolume.Dims.Z, Is.EqualTo(26));
             Assert.That(readVolume.Min, Is.EqualTo(0).Within(0.001));
             Assert.That(readVolume.Max, Is.EqualTo(3).Within(0.001));
+
+            File.Delete(tempFile);
         }
 
         [Test]
@@ -70,10 +72,15 @@ namespace MR.Test
             var vdbVolume = CreateVolume();
             var resampledGrid = Resampled(vdbVolume.Data, 2);
             var resampledVolume = FloatGridToVdbVolume(resampledGrid);
+            resampledVolume.VoxelSize = vdbVolume.VoxelSize * 2;
 
             Assert.That(resampledVolume.Dims.X, Is.EqualTo(13));
             Assert.That(resampledVolume.Dims.Y, Is.EqualTo(13));
             Assert.That(resampledVolume.Dims.Z, Is.EqualTo(13));
+
+            Assert.That(resampledVolume.VoxelSize.X, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(resampledVolume.VoxelSize.Y, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(resampledVolume.VoxelSize.Z, Is.EqualTo(0.2f).Within(0.001f));
         }
 
         [Test]
@@ -83,9 +90,34 @@ namespace MR.Test
             var resampledGrid = Resampled(vdbVolume.Data, new Vector3f( 2.0f, 1.0f, 0.5f ) );
             var resampledVolume = FloatGridToVdbVolume(resampledGrid);
 
+            resampledVolume.VoxelSize.X = vdbVolume.VoxelSize.X * 2;
+            resampledVolume.VoxelSize.Y = vdbVolume.VoxelSize.Y * 1;
+            resampledVolume.VoxelSize.Z = vdbVolume.VoxelSize.Z * 0.5f;
+
             Assert.That(resampledVolume.Dims.X, Is.EqualTo(13));
             Assert.That(resampledVolume.Dims.Y, Is.EqualTo(27));
             Assert.That(resampledVolume.Dims.Z, Is.EqualTo(53));
+
+            Assert.That(resampledVolume.VoxelSize.X, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(resampledVolume.VoxelSize.Y, Is.EqualTo(0.1f).Within(0.001f));
+            Assert.That(resampledVolume.VoxelSize.Z, Is.EqualTo(0.05f).Within(0.001f));
+
+            var tempFile = Path.GetTempFileName() + ".vdb";
+            VoxelsSave.ToAnySupportedFormat(resampledVolume, tempFile);
+
+            var restored = VoxelsLoad.FromAnySupportedFormat(tempFile);
+            Assert.That(restored is not null);
+            if (restored is null)
+                return;
+
+            Assert.That(restored.Count, Is.EqualTo(1));
+
+            var readVolume = restored[0];
+            Assert.That(readVolume.VoxelSize.X, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(readVolume.VoxelSize.Y, Is.EqualTo(0.1f).Within(0.001f));
+            Assert.That(readVolume.VoxelSize.Z, Is.EqualTo(0.05f).Within(0.001f));
+
+            File.Delete(tempFile);
         }
 
         [Test]

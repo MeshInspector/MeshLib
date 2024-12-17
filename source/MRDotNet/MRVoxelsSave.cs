@@ -19,7 +19,8 @@ namespace MR
             public static void ToAnySupportedFormat( VdbVolume volume, string path)
             {
                 IntPtr errorStr = IntPtr.Zero;
-                mrVoxelsSaveToAnySupportedFormat( ref volume.mrVdbVolume_, path, IntPtr.Zero, ref errorStr);
+                var nativeVolume = volume.volume();
+                mrVoxelsSaveToAnySupportedFormat( ref nativeVolume, path, IntPtr.Zero, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
                     var errData = mrStringData(errorStr);

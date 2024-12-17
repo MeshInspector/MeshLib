@@ -15,6 +15,14 @@ def pytest_addoption(parser):
         type=str,
         default=None
     )
+    parser.addoption(
+        "--run-cuda",
+        action="store",
+        help="Run cuda tests: positive, negative or skip",
+        type=str,
+        default='skip',
+        choices=("positive", "negative", "skip")
+    )
 
 @pytest.fixture
 def csharp_sample_dir(request):

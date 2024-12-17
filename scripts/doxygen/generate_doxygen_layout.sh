@@ -23,19 +23,6 @@ else
     sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"user\" url=\"${BEGIN_URL}/html/index.html\" title=\"About\"/>|"  -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
     sed -e "s|__BEGIN_URL__|${BEGIN_URL}/html/|" -e "s|__END_URL__|${END_URL}|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 fi
-if [ "$1" = "Py" ]; then
-    sed \
-        -e "s|__NAMESPACES_TITLE__|Modules|" \
-        -e "s|__NAMESPACES_LIST_TITLE__|Modules List|" \
-        -e "s|__NAMESPACES_MEMBERS_TITLE__|Modules Members|" \
-        -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-else
-    sed \
-        -e "s|__NAMESPACES_TITLE__||" \
-        -e "s|__NAMESPACES_LIST_TITLE__||" \
-        -e "s|__NAMESPACES_MEMBERS_TITLE__||" \
-        -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-fi
 
 # edit C++ API block
 if [ ! "$1" = "Cpp" ]; then
@@ -51,6 +38,20 @@ if [ ! "$1" = "Py" ]; then
 else
     sed -e "/      <!-- API_PY_PAGE -->/r ${DOXYGEN_DIR}/layout_templates/API_part.xml" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
     sed -e "s|__API_PAGE_URL__|@ref APIPyPage|" -e "s|__API_PAGE_NAME__|Python|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+fi
+
+if [ "$1" = "Py" ]; then
+    sed \
+        -e "s|__NAMESPACES_TITLE__|Modules|" \
+        -e "s|__NAMESPACES_LIST_TITLE__|Modules List|" \
+        -e "s|__NAMESPACES_MEMBERS_TITLE__|Modules Members|" \
+        -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+else
+    sed \
+        -e "s|__NAMESPACES_TITLE__||" \
+        -e "s|__NAMESPACES_LIST_TITLE__||" \
+        -e "s|__NAMESPACES_MEMBERS_TITLE__||" \
+        -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 fi
 
 sed -e "s|__BEGIN_URL__|${BEGIN_URL}|" -i ${DOXYGEN_DIR}/APIPage.dox

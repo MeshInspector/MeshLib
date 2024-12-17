@@ -222,6 +222,9 @@ void RibbonNotifier::drawHistory_( float scaling, const Box2i& limitFramebuffer 
     if ( lostFoucsClickCheck() )
     {
         historyMode_ = false;
+        currentHistoryBtnTimer_ = showHistoryBtnMaxTime_;
+        if ( currentHistoryBtnTimer_ > 0 )
+            requestClosestRedraw_();
     }
 
     ImGui::End();

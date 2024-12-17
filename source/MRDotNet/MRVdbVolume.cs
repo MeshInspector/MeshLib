@@ -66,7 +66,7 @@ namespace MR
         /// sets given region voxels value
         /// \note region is in grid space (0 voxel id is minimum active voxel in grid)
         public static void SetValue(FloatGrid grid, VoxelBitSet region, float value) => mrFloatGridSetValueForRegion(grid.mrFloatGrid, region.bs_, value);
-        
+
         /// represents a box in 3D space subdivided on voxels stored in data;
         /// and stores minimum and maximum values among all valid voxels
         public class VdbVolume
@@ -82,11 +82,19 @@ namespace MR
                 public MRVdbVolume() { }
             }
 
-            internal MRVdbVolume mrVdbVolume_;
+            private MRVdbVolume mrVdbVolume_;
+            private Vector3f voxelSize_;
 
             internal VdbVolume(MRVdbVolume mrVdbVolume)
             {
                 mrVdbVolume_ = mrVdbVolume;
+                voxelSize_ = new Vector3f(mrVdbVolume_.voxelSize);
+            }
+
+            internal MRVdbVolume volume()
+            {
+                mrVdbVolume_.voxelSize = voxelSize_.vec_;
+                return mrVdbVolume_;
             }
 
             /// returns the pointer to the data
@@ -94,7 +102,7 @@ namespace MR
             /// returns the dimensions of the volume            
             public Vector3i Dims { get => new Vector3i(mrVdbVolume_.dims); }
             /// returns the size of voxel
-            public Vector3f VoxelSize { get => new Vector3f(mrVdbVolume_.voxelSize); }
+            public Vector3f VoxelSize { get => voxelSize_; set => voxelSize_ = value; }
             public float Min { get => mrVdbVolume_.min; }
             public float Max { get => mrVdbVolume_.max; }
         }

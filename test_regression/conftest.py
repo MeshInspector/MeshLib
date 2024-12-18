@@ -36,3 +36,8 @@ def csharp_sample_dir(request):
         sample_exec_dir = Path("..\\source\\x64\\Release")
         print(f"WARNING: using default path for C# sample: {sample_exec_dir}")
     yield sample_exec_dir
+
+@pytest.fixture(scope="module")
+def cuda_module():
+    from meshlib import mrcudapy as mc
+    return mc

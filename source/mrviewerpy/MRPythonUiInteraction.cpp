@@ -211,13 +211,23 @@ namespace
     void writeValue( const std::vector<std::string>& path, T value )
     {
         if ( path.empty() )
-            throw std::runtime_error( "Empty path not allowed here." );
+            throw std::runtime_error( "writeValue: empty path not allowed here." );
+
+        std::string pathString;
+        for ( const auto & s : path )
+        {
+            if ( !pathString.empty() )
+                pathString += '/';
+            pathString += s;
+        }
+        spdlog::info( "writeValue {} = {}", pathString, value );
+
         MR::pythonAppendOrRun( [&]
         {
             const auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
-                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
+                throw std::runtime_error( fmt::format( "writeValue {}: no such entry: `{}`. Known entries are: {}.", pathString, path.back(), listKeys( group ) ) );
             const auto& entry = *MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ValueEntry>( path.back() ) );
 
             T simulatedValue{};
@@ -226,10 +236,10 @@ namespace
             {
                 auto opt = std::get_if<TestEngine::ValueEntry::Value<T>>( &entry.value );
                 if ( !opt )
-                    throw std::runtime_error( "This isn't a string." );
+                    throw std::runtime_error( fmt::format( "writeValue {}: this isn't a string.", pathString ) );
 
                 if ( opt->allowedValues && std::find( opt->allowedValues->begin(), opt->allowedValues->end(), value ) == opt->allowedValues->end() )
-                    throw std::runtime_error( "This string is not in the allowed list." );
+                    throw std::runtime_error( fmt::format( "writeValue {}: this string is not in the allowed list.", pathString ) );
 
                 simulatedValue = std::move( value );
             }
@@ -246,7 +256,7 @@ namespace
                     {
                         // Allow if at least the min bound fits inside the input range.
                         if ( val->min > std::uint64_t( std::numeric_limits<std::int64_t>::max() ) )
-                            throw std::runtime_error( "Attempt to write an int64_t into an uint64_t, but the min allowed value is larger than the max representable int64_t. Write as uint64_t instead." );
+                            throw std::runtime_error( fmt::format( "writeValue {}: attempt to write an int64_t into an uint64_t, but the min allowed value is larger than the max representable int64_t. Write as uint64_t instead.", pathString ) );
 
                         usedDifferentSignedness = true;
                         min = std::int64_t( val->min );
@@ -259,7 +269,7 @@ namespace
                     {
                         // Allow if at least the max bound is nonnegative.
                         if ( val->max >= 0 )
-                            throw std::runtime_error( "Attempt to write an uint64_t into an int64_t, but the max allowed value is negative. Write as uint64_t instead." );
+                            throw std::runtime_error( fmt::format( "writeValue {}: attempt to write an uint64_t into an int64_t, but the max allowed value is negative. Write as uint64_t instead.", pathString ) );
 
                         usedDifferentSignedness = true;
                         min = std::uint64_t( std::max( val->min, std::int64_t( 0 ) ) );
@@ -274,8 +284,8 @@ namespace
                     if ( !opt )
                     {
                         throw std::runtime_error( std::is_floating_point_v<T>
-                            ? "This isn't a floating-point value."
-                            : "This isn't an integer value."
+                            ? fmt::format( "writeValue {}: this isn't a floating-point value.", pathString )
+                            : fmt::format( "writeValue {}: this isn't an integer value.", pathString )
                         );
                     }
 
@@ -287,9 +297,9 @@ namespace
                 }
 
                 if ( value < min )
-                    throw std::runtime_error( fmt::format( "The specified value {} is less than the min bound {}.", value, min ) );
+                    throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is less than the min bound {}.", pathString, value, min ) );
                 if ( value > max )
-                    throw std::runtime_error( fmt::format( "The specified value {} is more than the max bound {}.", value, max ) );
+                    throw std::runtime_error( fmt::format( "writeValue {}: the specified value {} is more than the max bound {}.", pathString, value, max ) );
                 simulatedValue = value;
 
                 // Write the value back.

@@ -144,7 +144,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     }
     else
     {
-        const bool funcVolume = !params.fwn && params.memoryEfficient;
+        const bool funcVolume = ( params.signDetectionMode != SignDetectionMode::HoleWindingRule || !params.fwn ) && params.memoryEfficient;
         MeshToDistanceVolumeParams msParams;
         if ( !funcVolume )
             msParams.vol.cb = meshToLSCb;

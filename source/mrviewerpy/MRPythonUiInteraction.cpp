@@ -1,8 +1,8 @@
 #include "MRPython/MRPython.h"
-#include "MRPch/MRFmt.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewer/MRViewer.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 
 #include <pybind11/stl.h>
@@ -287,9 +287,9 @@ namespace
                 }
 
                 if ( value < min )
-                    throw std::runtime_error( "The specified value is less than the min bound." );
+                    throw std::runtime_error( fmt::format( "The specified value {} is less than the min bound {}.", value, min ) );
                 if ( value > max )
-                    throw std::runtime_error( "The specified value is less than the max bound." );
+                    throw std::runtime_error( fmt::format( "The specified value {} is more than the max bound {}.", value, max ) );
                 simulatedValue = value;
 
                 // Write the value back.

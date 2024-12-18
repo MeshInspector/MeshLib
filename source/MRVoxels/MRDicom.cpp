@@ -857,16 +857,19 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsV
 
     obj->select( true );
     obj->setXf( dcm.xf );
+
+    reportProgress( cb, 1.f );
+
     return obj;
 }
 
 Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
 {
     MR_TIMER
-    return loadDicomFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.5f ) ).and_then(
+    return loadDicomFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.7f ) ).and_then(
     [&]( DicomVolumeAsVdb && vdb )
     {
-        return createObjectVoxels( vdb, subprogress( callback, 0.5f, 1.0f ) );
+        return createObjectVoxels( vdb, subprogress( callback, 0.7f, 1.0f ) );
     } ).and_then(
     [&]( std::shared_ptr<ObjectVoxels> && objVoxels ) -> Expected<LoadedObjectVoxels>
     {

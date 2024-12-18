@@ -17,36 +17,43 @@ namespace MR
 
 class ParallelProgressReporter
 {
+private:
+
+    struct TaskInfo
+    {
+        float progress = 0.f;
+        float weight = 1.f;
+    };
+
 public:
-    ParallelProgressReporter( ProgressCallback cb, int tasks ):
-        cb_( cb ),
-        tasks_( tasks )
+    ParallelProgressReporter( const ProgressCallback& cb ):
+        cb_( cb )
     {}
 
     struct PerTaskReporter
     {
         bool operator()( float p ) const
         {
-            bool res = reporter_->updateTask( p - *progress_ );
-            *progress_ = p;
+            bool res = reporter_->updateTask( ( p - task_->progress ) * task_->weight );
+            task_->progress = p;
             return res;
         }
         ParallelProgressReporter* reporter_ = nullptr;
-        float* progress_ = nullptr;
+        TaskInfo* task_ = nullptr;
     };
 
 
-    PerTaskReporter newTask()
+    PerTaskReporter newTask( float weight = 1.f )
     {
-        auto currentTasks = static_cast<float>( tasks_ );
-        progress_ = progress_ * currentTasks / ( currentTasks + 1 );
-        tasks_ += 1;
-        return PerTaskReporter( this, &perTaskProgress_.emplace_front( 0.f ) );
+        const float totalWeight = totalWeight_;
+        progress_ = progress_ * totalWeight / ( totalWeight + weight );
+        totalWeight_ += weight;
+        return PerTaskReporter( this, &perTaskInfo_.emplace_front() );
     }
 
     bool updateTask( float delta )
     {
-        progress_ += delta / static_cast<float>( tasks_ );
+        progress_ += delta / static_cast<float>( totalWeight_ );
         return continue_;
     }
 
@@ -57,14 +64,15 @@ public:
     }
 
 private:
-    ProgressCallback cb_;
+    const ProgressCallback& cb_;
 
     // progress of each task
-    std::forward_list<float> perTaskProgress_;
-    // size of the list above as an atomic
-    std::atomic<int> tasks_;
+    std::forward_list<TaskInfo> perTaskInfo_;
 
-    // avg progress for all tasks
+    // sum of the weights of all the tasks
+    std::atomic<float> totalWeight_;
+
+    // avg progress for all the tasks
     std::atomic<float> progress_ = 0;
 
     bool continue_ = true;
@@ -77,7 +85,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     if ( callback && !callback( 0.f ) )
         return unexpected( getCancelMessage( folder ) );
 
-    ParallelProgressReporter cb( callback, 0 );
+    ParallelProgressReporter cb( callback );
 
     struct FilePathNode
     {
@@ -184,7 +192,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
         {
-            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, cb = cb.newTask()]()
+            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, cb = cb.newTask( 10.f )]()
             {
                 return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, cb ).and_then(
                 [&]( LoadedObjectVoxels && ld ) -> loadObjResultType

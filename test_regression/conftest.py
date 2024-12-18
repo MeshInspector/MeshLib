@@ -15,6 +15,14 @@ def pytest_addoption(parser):
         type=str,
         default=None
     )
+    parser.addoption(
+        "--run-cuda",
+        action="store",
+        help="Run cuda tests: positive, negative or skip",
+        type=str,
+        default='skip',
+        choices=("positive", "negative", "skip")
+    )
 
 @pytest.fixture
 def csharp_sample_dir(request):
@@ -28,3 +36,8 @@ def csharp_sample_dir(request):
         sample_exec_dir = Path("..\\source\\x64\\Release")
         print(f"WARNING: using default path for C# sample: {sample_exec_dir}")
     yield sample_exec_dir
+
+@pytest.fixture(scope="module")
+def cuda_module():
+    from meshlib import mrcudapy as mc
+    return mc

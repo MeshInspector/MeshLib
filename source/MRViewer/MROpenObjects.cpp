@@ -15,6 +15,11 @@
 namespace MR
 {
 
+
+/// This class allows progress to be reported from different threads.
+/// Unlike progress callback that is passed to \ref ParallelFor, each task may report the progress separately,
+/// and the progress displayed to user is not just a number of completed tasks divided by the total number of tasks,
+/// but rather a (weighted) average of progresses reported from each task
 class ParallelProgressReporter
 {
 private:
@@ -30,11 +35,13 @@ public:
         cb_( cb )
     {}
 
+    /// Local reporter. It should be passed as a callback to task.
+    /// @note One local reporter must not be invoked concurrently.
     struct PerTaskReporter
     {
         bool operator()( float p ) const
         {
-            bool res = reporter_->updateTask( ( p - task_->progress ) * task_->weight );
+            bool res = reporter_->updateTask_( ( p - task_->progress ) * task_->weight );
             task_->progress = p;
             return res;
         }
@@ -43,6 +50,9 @@ public:
     };
 
 
+    /// Add task to the pull
+    /// @note This function must not be invoked concurrently.
+    /// @return The reporter functor, that could be safely invoked from a different thread
     PerTaskReporter newTask( float weight = 1.f )
     {
         const float totalWeight = totalWeight_;
@@ -51,19 +61,20 @@ public:
         return PerTaskReporter( this, &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) );
     }
 
-    bool updateTask( float delta )
+    /// Actually report the progress. Designed to be invoked in loop until all tasks are completed or until the operation is cancelled
+    bool operator()()
+    {
+        return continue_ = cb_( progress_ );
+    }
+
+private:
+    /// Invoked from local reporters concurrently.
+    bool updateTask_( float delta )
     {
         progress_ += delta / static_cast<float>( totalWeight_ );
         return continue_;
     }
 
-    bool operator()()
-    {
-        continue_ = cb_( progress_ );
-        return continue_;
-    }
-
-private:
     const ProgressCallback& cb_;
 
     // progress of each task
@@ -75,7 +86,7 @@ private:
     // avg progress for all the tasks
     std::atomic<float> progress_ = 0;
 
-    bool continue_ = true;
+    std::atomic<bool> continue_ = true;
 };
 
 Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )

@@ -63,8 +63,8 @@ def test_make_bridge(input_case, tmp_path):
     with check:
         assert topl.numValidFaces() - faces_num_before == 2, "Faces number should be increased on 2"
 
-    mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:

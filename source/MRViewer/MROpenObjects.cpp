@@ -48,7 +48,7 @@ public:
         const float totalWeight = totalWeight_;
         progress_ = progress_ * totalWeight / ( totalWeight + weight );
         totalWeight_ += weight;
-        return PerTaskReporter( this, &perTaskInfo_.emplace_front() );
+        return PerTaskReporter( this, &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) );
     }
 
     bool updateTask( float delta )

@@ -444,7 +444,7 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     FaceVolumeCalc fcalc( *this, faces );
     parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), fcalc );
 
-    const auto holeRepresEdges = topology.findHoleRepresentiveEdges();
+    const auto holeRepresEdges = topology.findHoleRepresentiveEdges( region );
     HoleVolumeCalc hcalc( *this, holeRepresEdges );
     parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
 

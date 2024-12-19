@@ -423,7 +423,11 @@ struct VertexRepr
     int vId{ 0 };
     int vtId{ 0 };
     // int vnId{0}; // not used yet
-    bool operator==( const VertexRepr& other ) const = default;
+    bool operator==( const VertexRepr& o ) const = default;
+    bool operator<( const VertexRepr& o ) const
+    {
+        return std::tuple( vId, vtId ) < std::tuple( o.vId, o.vtId );
+    }
 };
 
 struct VertexReprHasher
@@ -448,8 +452,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
 {
     MR_TIMER;
-    using ParallelIndicesMap = ParallelHashMap<VertexRepr, VertId, VertexReprHasher>;
-    ParallelIndicesMap map;
 
     bool haveColors = false;
     bool haveUVs = !faces[minFace].textures.empty();
@@ -466,58 +468,48 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     std::string error;
     tbb::task_group_context ctx;
-    std::vector<size_t> maxVertIdPerSubcnt( map.subcnt() );
-    MinMax<int> minmaxV;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, map.subcnt(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::enumerable_thread_specific<std::vector<VertexRepr>> tlOrderedPoints;
+    tbb::parallel_for( tbb::blocked_range<size_t>( minFace, maxFace ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( size_t mpId = range.begin(); mpId < range.end(); ++mpId )
+        auto& local = tlOrderedPoints.local();
+        for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            for ( size_t i = minFace; i < maxFace; ++i )
+            if ( faces[i].vertices.size() < 3 )
             {
-                if ( faces[i].vertices.size() < 3 )
+                if ( ctx.cancel_group_execution() )
+                    error = "Face with less than 3 vertices in OBJ-file";
+                return;
+            }
+            for ( int v = 0; v < faces[i].vertices.size(); ++v )
+            {
+                VertexRepr repr;
+                repr.vId = faces[i].vertices[v];
+                if ( repr.vId < 0 )
+                    repr.vId = int( points.size() ) - repr.vId;
+                else
+                    --repr.vId;
+                if ( repr.vId < 0 || repr.vId >= points.size() )
                 {
                     if ( ctx.cancel_group_execution() )
-                        error = "Face with less than 3 vertices in OBJ-file";
+                        error = "Out of bounds Vertex ID in OBJ-file";
                     return;
                 }
-                for ( int v = 0; v < faces[i].vertices.size(); ++v )
+                if ( v < faces[i].textures.size() )
                 {
-                    VertexRepr repr;
-                    repr.vId = faces[i].vertices[v];
-                    if ( repr.vId < 0 )
-                        repr.vId = int( points.size() ) - repr.vId;
+                    repr.vtId = faces[i].textures[v];
+                    if ( repr.vtId < 0 )
+                        repr.vtId = int( uvCoords.size() ) - repr.vtId;
                     else
-                        --repr.vId;
-                    if ( repr.vId < 0 || repr.vId >= points.size() )
+                        --repr.vtId;
+                    if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
                     {
                         if ( ctx.cancel_group_execution() )
-                            error = "Out of bounds Vertex ID in OBJ-file";
+                            error = "Out of bounds Texture Vertex ID in OBJ-file";
                         return;
                     }
-                    if ( v < faces[i].textures.size() )
-                    {
-                        repr.vtId = faces[i].textures[v];
-                        if ( repr.vtId < 0 )
-                            repr.vtId = int( uvCoords.size() ) - repr.vtId;
-                        else
-                            --repr.vtId;
-                        if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
-                        {
-                            if ( ctx.cancel_group_execution() )
-                                error = "Out of bounds Texture Vertex ID in OBJ-file";
-                            return;
-                        }
-                    }
-                    if ( mpId == 0 ) // to do it only once, not for each subcnt
-                        minmaxV.include( repr.vId );
-                    const auto hashval = map.hash( repr );
-                    const auto idx = map.subidx( hashval );
-                    if ( idx != mpId )
-                        continue;
-                    auto [it, inserted] = map.insert( { repr,VertId{} } );
-                    if ( inserted )
-                        it->second = VertId( maxVertIdPerSubcnt[idx]++ );
                 }
+
+                local.emplace_back( repr );
             }
         }
     }, ctx );
@@ -528,27 +520,48 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( !error.empty() )
         return unexpected( error );
 
-    for ( int i = 1; i < maxVertIdPerSubcnt.size(); ++i )
-        maxVertIdPerSubcnt[i] += maxVertIdPerSubcnt[i - 1];
+    size_t sumOVsSize = 0;
+    for ( const auto& localPoints : tlOrderedPoints )
+        sumOVsSize += localPoints.size();
+    std::vector<VertexRepr> orderedPoints;
+    orderedPoints.reserve( sumOVsSize );
+    for ( auto& localPoints : tlOrderedPoints )
+        orderedPoints.insert( orderedPoints.end(), std::make_move_iterator( localPoints.begin() ), std::make_move_iterator( localPoints.end() ) );
+    tlOrderedPoints = {}; // reduce peak memory
+    tbb::parallel_sort( orderedPoints.begin(), orderedPoints.end() );
 
-    // update vertices in map
-    ParallelFor( size_t( 1 ), map.subcnt(), [&] ( size_t id )
+    orderedPoints.erase( std::unique( orderedPoints.begin(), orderedPoints.end() ), orderedPoints.end() );
+
+    using ParallelIndicesMap = ParallelHashMap<VertexRepr, VertId, VertexReprHasher>;
+    ParallelIndicesMap map;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, map.subcnt(), 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        map.with_submap( id, [&] ( const ParallelIndicesMap::EmbeddedSet& subset )
+        for ( size_t mId = range.begin(); mId < range.end(); ++mId )
         {
-            // const_cast here is safe, we don't write to map, just sort internal data
-            for ( auto& [_, vId] : const_cast< ParallelIndicesMap::EmbeddedSet& >( subset ) )
+            for ( size_t i = 0; i < orderedPoints.size(); ++i )
             {
-                vId += VertId( maxVertIdPerSubcnt[id - 1] );
+                auto hash = map.hash( orderedPoints[i] );
+                if ( mId != map.subidx( hash ) )
+                    continue;
+                map.insert( { orderedPoints[i],VertId( i ) } );
             }
-        } );
+        }
     } );
+
+    size_t numCoords = orderedPoints.size();
+    if ( numCoords == 0 )
+        return unexpected( "No vertex found in OBJ-file" );
+
+    MinMax<int> minmaxV;
+    minmaxV.min = orderedPoints.front().vId;
+    minmaxV.max = orderedPoints.back().vId;
+    orderedPoints = {}; // reduce peak memory
 
     if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     MeshLoad::NamedMesh res;
-    VertCoords coords( maxVertIdPerSubcnt.back() );
+    VertCoords coords( numCoords );
     res.colors.resize( haveColors ? coords.size() : 0 );
     res.uvCoords.resize( haveUVs ? coords.size() : 0 );
 
@@ -637,7 +650,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     struct OrderedTriangulation
     {
-        size_t startF;
+        size_t startF{ 0 };
         Triangulation t;
     };
     tbb::enumerable_thread_specific<std::vector<OrderedTriangulation>> tls;

@@ -417,7 +417,26 @@ struct ObjectScope
     std::string objName;
 };
 
-Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
+
+struct VertexRepr
+{
+    int vId{ 0 };
+    int vtId{ 0 };
+    // int vnId{0}; // not used yet
+    bool operator==( const VertexRepr& other ) const = default;
+};
+
+struct VertexReprHasher
+{
+    size_t operator()( VertexRepr const& vr ) const noexcept
+    {
+        std::uint64_t vvt;
+        std::memcpy( &vvt, &vr.vId, sizeof( std::uint64_t ) );
+        return size_t( vvt );
+    }
+};
+
+Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::filesystem::path& dir,
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
@@ -429,7 +448,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
     const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
 {
     MR_TIMER;
-    using ParallelIndicesMap = ParallelHashMap<Vector2i, VertId>;
+    using ParallelIndicesMap = ParallelHashMap<VertexRepr, VertId, VertexReprHasher>;
     ParallelIndicesMap map;
 
     bool haveColors = false;
@@ -463,13 +482,13 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
                 }
                 for ( int v = 0; v < faces[i].vertices.size(); ++v )
                 {
-                    Vector2i repr( 0, 0 );
-                    repr.x = faces[i].vertices[v];
-                    if ( repr.x < 0 )
-                        repr.x = int( points.size() ) - repr.x;
+                    VertexRepr repr;
+                    repr.vId = faces[i].vertices[v];
+                    if ( repr.vId < 0 )
+                        repr.vId = int( points.size() ) - repr.vId;
                     else
-                        --repr.x;
-                    if ( repr.x < 0 || repr.x >= points.size() )
+                        --repr.vId;
+                    if ( repr.vId < 0 || repr.vId >= points.size() )
                     {
                         if ( ctx.cancel_group_execution() )
                             error = "Out of bounds Vertex ID in OBJ-file";
@@ -477,20 +496,20 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
                     }
                     if ( v < faces[i].textures.size() )
                     {
-                        repr.y = faces[i].textures[v];
-                        if ( repr.y < 0 )
-                            repr.y = int( uvCoords.size() ) - repr.y;
+                        repr.vtId = faces[i].textures[v];
+                        if ( repr.vtId < 0 )
+                            repr.vtId = int( uvCoords.size() ) - repr.vtId;
                         else
-                            --repr.y;
-                        if ( repr.y < 0 || repr.y >= uvCoords.size() )
+                            --repr.vtId;
+                        if ( repr.vtId < 0 || repr.vtId >= uvCoords.size() )
                         {
                             if ( ctx.cancel_group_execution() )
                                 error = "Out of bounds Texture Vertex ID in OBJ-file";
                             return;
                         }
                     }
-                    if ( mpId == 0 )
-                        minmaxV.include( repr.x );
+                    if ( mpId == 0 ) // to do it only once, not for each subcnt
+                        minmaxV.include( repr.vId );
                     const auto hashval = map.hash( repr );
                     const auto idx = map.subidx( hashval );
                     if ( idx != mpId )
@@ -518,9 +537,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
         map.with_submap( id, [&] ( const ParallelIndicesMap::EmbeddedSet& subset )
         {
             // const_cast here is safe, we don't write to map, just sort internal data
-            for ( auto& element : const_cast< ParallelIndicesMap::EmbeddedSet& >( subset ) )
+            for ( auto& [_, vId] : const_cast< ParallelIndicesMap::EmbeddedSet& >( subset ) )
             {
-                element.second += VertId( maxVertIdPerSubcnt[id - 1] );
+                vId += VertId( maxVertIdPerSubcnt[id - 1] );
             }
         } );
     } );
@@ -550,11 +569,11 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
         {
             for ( const auto& [repr, vId] : subset )
             {
-                coords[vId] = Vector3f( points[VertId( repr.x )] - pointOffset );
-                if ( haveColors && repr.x < colors.size() )
-                    res.colors[vId] = colors[repr.x];
-                if ( haveUVs && repr.y < uvCoords.size() )
-                    res.uvCoords[vId] = uvCoords[repr.y];
+                coords[vId] = Vector3f( points[VertId( repr.vId )] - pointOffset );
+                if ( haveColors && repr.vId < colors.size() )
+                    res.colors[vId] = colors[repr.vId];
+                if ( haveUVs && repr.vtId < uvCoords.size() )
+                    res.uvCoords[vId] = uvCoords[repr.vtId];
             }
         } );
     } );
@@ -562,21 +581,21 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
     if ( !reportProgress( settings.callback, 0.4f ) )
         return unexpectedOperationCanceled();
 
-    auto getRepr = [&] ( size_t fId, int ind )->VertId
+    auto getReprVertId = [&] ( size_t fId, int ind )->VertId
     {
-        Vector2i repr;
-        repr.x = faces[fId].vertices[ind];
-        if ( repr.x < 0 )
-            repr.x = int( points.size() ) - repr.x;
+        VertexRepr repr;
+        repr.vId = faces[fId].vertices[ind];
+        if ( repr.vId < 0 )
+            repr.vId = int( points.size() ) - repr.vId;
         else
-            --repr.x;
+            --repr.vId;
         if ( ind < faces[fId].textures.size() )
         {
-            repr.y = faces[fId].textures[ind];
-            if ( repr.y < 0 )
-                repr.y = int( uvCoords.size() ) - repr.y;
+            repr.vtId = faces[fId].textures[ind];
+            if ( repr.vtId < 0 )
+                repr.vtId = int( uvCoords.size() ) - repr.vtId;
             else
-                --repr.y;
+                --repr.vtId;
         }
         auto it = map.find( repr );
         assert( it != map.end() );
@@ -587,7 +606,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
     timer.restart( "prepare model triangulation" );
 
     // triangulation
-    struct OrederedMaterial
+    struct OrderedMaterial
     {
         int mScopeId{ 0 };
         size_t fId{ 0 };
@@ -595,7 +614,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
         size_t orderedTriangulationStartF = 0; 
         size_t orderedTriangulationOffset = 0;
     };
-    std::vector<OrederedMaterial> materialFaces;
+    std::vector<OrderedMaterial> materialFaces;
     if ( mtl )
     {
         MinMax<int> minmaxMtl;
@@ -642,14 +661,19 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
                 }
             }
             for ( int j = 1; j + 1 < faces[i].vertices.size(); ++j )
-                thisOT.t.push_back( { getRepr( i, 0 ), getRepr( i, j ), getRepr( i, j + 1 ) } );
+                thisOT.t.push_back( { getReprVertId( i, 0 ), getReprVertId( i, j ), getReprVertId( i, j + 1 ) } );
         }
     } );
 
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpectedOperationCanceled();
 
+    size_t sumOTsSize = 0;
+    for ( const auto& local : tls )
+        sumOTsSize += local.size();
+
     std::vector<OrderedTriangulation> mergedOT;
+    mergedOT.reserve( sumOTsSize );
     for ( auto& local : tls )
         mergedOT.insert( mergedOT.end(), std::make_move_iterator( local.begin() ), std::make_move_iterator( local.end() ) );
 
@@ -966,7 +990,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( mergeAllObjects || oScopes.size() <= 1 )
     {
         newSettings.callback = subprogress( settings.callback, 0.5f, 1.0f );
-        auto meshObj = loadSingleModelFormObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtl.has_value() ? &*mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtl.has_value() ? &*mtl : nullptr );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
@@ -984,7 +1008,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         size_t minFace = oScopes[i].fId;
         size_t maxFace = i + 1 < res.size() ? oScopes[i + 1].fId : faces.size();
 
-        auto meshObj = loadSingleModelFormObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtl.has_value() ? &*mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtl.has_value() ? &*mtl : nullptr );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );

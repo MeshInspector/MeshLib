@@ -1201,20 +1201,15 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
     if ( objs.empty() )
         return {};
 
-    auto res = objs[0]->getClassName();
+    auto cn = objs[0]->getClassName();
     if ( objs.size() == 1 )
-        return res;
+        return cn;
 
     for ( int i = 1; i < objs.size(); ++i )
-        if ( res != objs[i]->getClassName() )
+        if ( cn != objs[i]->getClassName() )
             return {};
 
-    if ( res.empty() )
-        return {};
-
-    if ( res.back() != 's' )
-        res += 's';
-    return res;
+    return objs[0]->getClassNameInPlural();
 }
 
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )

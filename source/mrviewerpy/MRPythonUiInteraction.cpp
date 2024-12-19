@@ -108,16 +108,16 @@ namespace
     void pressButton( const std::vector<std::string>& path )
     {
         if ( path.empty() )
-            throw std::runtime_error( "Empty path not allowed here." );
+            throw std::runtime_error( "pressButton: empty path not allowed here." );
+        const std::string pathString = pathToString( path );
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
-            const std::string pathString = pathToString( path );
-            spdlog::info( "pressButton {}, frame {}", pathString, MR::getViewerInstance().getTotalFrames() );
+            spdlog::info( "pressButton {}: frame {}", pathString, MR::getViewerInstance().getTotalFrames() );
 
             auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
-                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
+                throw std::runtime_error( fmt::format( "pressButton {}: no such entry: `{}`. Known entries are: {}.", pathString, path.back(), listKeys( group ) ) );
             MR::expectedValueOrThrow( iter->second.getAs<TestEngine::ButtonEntry>( path.back() ) )->simulateClick = true;
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )

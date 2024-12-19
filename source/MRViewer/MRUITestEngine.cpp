@@ -153,8 +153,9 @@ bool createButton( std::string_view name )
 
     iter->second.visitedOnThisFrame = true;
 
-    if ( button->simulateClick )
-        spdlog::info( "Button {} click simulation", name );
+    // commented, because it is already logged in MRPythonUiInteraction.cpp/pressButton
+    // if ( button->simulateClick )
+    //    spdlog::info( "Button {} click simulation", name );
 
     return std::exchange( button->simulateClick, false );
     #else

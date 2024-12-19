@@ -335,8 +335,9 @@ public:
     /// returns true if the mesh (region) does not have any neighboring holes
     [[nodiscard]] MRMESH_API bool isClosed( const FaceBitSet * region = nullptr ) const;
 
-    /// returns one edge with no valid left face for every boundary in the mesh
-    [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns one edge with no valid left face for every boundary in the mesh;
+    /// if region is given, then returned edges must have valid right faces from the region
+    [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges( const FaceBitSet * region = nullptr ) const;
 
     /// returns the number of hole loops in the mesh;
     /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole

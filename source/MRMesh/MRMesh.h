@@ -175,8 +175,8 @@ struct [[nodiscard]] Mesh
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return projArea( dir, topology.getFaceIds( fs ) ); }
 
-    /// returns volume of closed mesh region, if region is not closed DBL_MAX is returned
-    /// if region is nullptr - whole mesh is region
+    /// returns volume of the object surrounded by given region (or whole mesh if (region) is nullptr);
+    /// if the region has holes then each hole will be virtually filled by adding triangles for each edge and the hole's geometrical center
     [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)

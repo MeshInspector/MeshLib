@@ -56,7 +56,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( "findBoundaryVerts", &MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
         def( "deleteFaces", &MeshTopology::deleteFaces, pybind11::arg( "fs" ), pybind11::arg( "keepEdges" ) = nullptr,
             "deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces ant not in keepFaces" ).
-        def( "findHoleRepresentiveEdges", &MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
+        def( "findHoleRepresentiveEdges", &MeshTopology::findHoleRepresentiveEdges, pybind11::arg( "region" ) = nullptr,
+            "returns one edge with no valid left face for every boundary in the mesh" ).
         def( "getTriVerts", ( void( MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "gets 3 vertices of given triangular face;\n"

@@ -24,306 +24,282 @@
 
 namespace
 {
-using namespace MR;
+    using namespace MR;
 
-enum class ObjElement
-{
-    Unknown,
-    Vertex,
-    Face,
-    Object,
-    TextureVertex,
-    MaterialLibrary,
-    MaterialName,
-};
-
-enum class MtlElement
-{
-    Unknown,
-    MaterialName,
-    AmbientColor,
-    DiffuseColor,
-    SpecularColor,
-    SpecularExponent,
-    Dissolve,
-    IlluminationModel,
-    AmbientTexture,
-    DiffuseTexture,
-    SpecularTexture,
-    SpecularExponentTexture,
-    DissolveTexture,
-};
-
-template <typename T>
-T parseToken( std::string_view line );
-
-template <>
-ObjElement parseToken<ObjElement>( std::string_view line )
-{
-    while ( !line.empty() && line[0] == ' ' )
-        line.remove_prefix( 1 );
-
-    assert( !line.empty() );
-    switch ( line[0] )
+    enum class ObjElement
     {
-    case 'v':
-        assert( line.size() >= 2 );
-        switch ( line[1] )
+        Unknown,
+        Vertex,
+        Face,
+        Object,
+        TextureVertex,
+        MaterialLibrary,
+        MaterialName,
+    };
+
+    enum class MtlElement
+    {
+        Unknown,
+        MaterialName,
+        AmbientColor,
+        DiffuseColor,
+        SpecularColor,
+        SpecularExponent,
+        Dissolve,
+        IlluminationModel,
+        AmbientTexture,
+        DiffuseTexture,
+        SpecularTexture,
+        SpecularExponentTexture,
+        DissolveTexture,
+    };
+
+    template <typename T>
+    T parseToken( std::string_view line );
+
+    template <>
+    ObjElement parseToken<ObjElement>( std::string_view line )
+    {
+        while ( !line.empty() && line[0] == ' ' )
+            line.remove_prefix( 1 );
+
+        assert( !line.empty() );
+        switch ( line[0] )
         {
-        case ' ':
-            return ObjElement::Vertex;
-        case 't':
-            return ObjElement::TextureVertex;
+        case 'v':
+            assert( line.size() >= 2 );
+            switch ( line[1] )
+            {
+            case ' ':
+                return ObjElement::Vertex;
+            case 't':
+                return ObjElement::TextureVertex;
+            default:
+                return ObjElement::Unknown;
+            }
+        case 'f':
+            return ObjElement::Face;
+        case 'o':
+            return ObjElement::Object;
+        case 'u':
+            if ( line.starts_with( "usemtl" ) )
+                return ObjElement::MaterialName;
+            return ObjElement::Unknown;
+        case 'm':
+            if ( line.starts_with( "mtllib" ) )
+                return ObjElement::MaterialLibrary;
+            return ObjElement::Unknown;
         default:
             return ObjElement::Unknown;
         }
-    case 'f':
-        return ObjElement::Face;
-    case 'o':
-        return ObjElement::Object;
-    case 'u':
-        if ( line.starts_with( "usemtl" ) )
-            return ObjElement::MaterialName;
-        return ObjElement::Unknown;
-    case 'm':
-        if ( line.starts_with( "mtllib" ) )
-            return ObjElement::MaterialLibrary;
-        return ObjElement::Unknown;
-    default:
-        return ObjElement::Unknown;
     }
-}
 
-template <>
-MtlElement parseToken<MtlElement>( std::string_view line )
-{
-    while ( !line.empty() && line[0] == ' ' )
-        line.remove_prefix( 1 );
-
-    assert( !line.empty() );
-    switch ( line[0] )
+    template <>
+    MtlElement parseToken<MtlElement>( std::string_view line )
     {
-    case 'n':
-        if ( line.starts_with( "newmtl" ) )
-            return MtlElement::MaterialName;
-        else
-            return MtlElement::Unknown;
-    case 'K':
-        assert( line.size() >= 2 );
-        switch ( line[1] )
+        while ( !line.empty() && line[0] == ' ' )
+            line.remove_prefix( 1 );
+
+        assert( !line.empty() );
+        switch ( line[0] )
         {
-        case 'a':
-            return MtlElement::AmbientColor;
-        case 'd':
-            return MtlElement::DiffuseColor;
-        case 's':
-            return MtlElement::SpecularColor;
-        default:
-            return MtlElement::Unknown;
-        }
-    case 'm':
-        if ( line.starts_with( "map_" ) )
-        {
-            assert( line.size() >= 5 );
-            switch ( line[4] )
+        case 'n':
+            if ( line.starts_with( "newmtl" ) )
+                return MtlElement::MaterialName;
+            else
+                return MtlElement::Unknown;
+        case 'K':
+            assert( line.size() >= 2 );
+            switch ( line[1] )
             {
-            case 'K':
-                assert( line.size() >= 6 );
-                switch ( line[5] )
-                {
-                case 'a':
-                    return MtlElement::AmbientTexture;
-                case 'd':
-                    return MtlElement::DiffuseTexture;
-                case 's':
-                    return MtlElement::SpecularTexture;
-                default:
-                    return MtlElement::Unknown;
-                }
+            case 'a':
+                return MtlElement::AmbientColor;
+            case 'd':
+                return MtlElement::DiffuseColor;
+            case 's':
+                return MtlElement::SpecularColor;
             default:
                 return MtlElement::Unknown;
             }
-        }
-        else
-        {
+        case 'm':
+            if ( line.starts_with( "map_" ) )
+            {
+                assert( line.size() >= 5 );
+                switch ( line[4] )
+                {
+                case 'K':
+                    assert( line.size() >= 6 );
+                    switch ( line[5] )
+                    {
+                    case 'a':
+                        return MtlElement::AmbientTexture;
+                    case 'd':
+                        return MtlElement::DiffuseTexture;
+                    case 's':
+                        return MtlElement::SpecularTexture;
+                    default:
+                        return MtlElement::Unknown;
+                    }
+                default:
+                    return MtlElement::Unknown;
+                }
+            }
+            else
+            {
+                return MtlElement::Unknown;
+            }
+        default:
             return MtlElement::Unknown;
         }
-    default:
-        return MtlElement::Unknown;
     }
-}
 
-template <typename Element>
-struct ElementGroup
-{
-    Element element{ Element() };
-    size_t begin{ 0 };
-    size_t end{ 0 };
-};
-
-template <typename Element>
-std::vector<ElementGroup<Element>> groupLines( const char* data, size_t, const std::vector<size_t>& newlines )
-{
-    const auto lineCount = newlines.size() - 1;
-
-    std::vector<ElementGroup<Element>> groups{ { Element(), 0, 0 } }; // emplace stub initial group
-    for ( size_t li = 0; li < lineCount; li++ )
+    template <typename Element>
+    struct ElementGroup
     {
-        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        const auto element = parseToken<Element>( line );
-        if ( element != groups.back().element )
-        {
-            groups.back().end = li;
-            groups.push_back( { element, li, 0 } );
-        }
-    }
-    groups.back().end = lineCount;
-    return groups;
-}
-
-Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
-{
-    using namespace boost::spirit::x3;
-
-    std::array<float, 3> coords{ 0.f, 0.f, 0.f };
-    int i = 0;
-    auto coord = [&] ( auto& ctx )
-    {
-        coords[i++] = _attr( ctx );
+        Element element{ Element() };
+        size_t begin{ 0 };
+        size_t end{ 0 };
     };
 
-    bool r = phrase_parse(
+    template <typename Element>
+    std::vector<ElementGroup<Element>> groupLines( const char* data, size_t, const std::vector<size_t>& newlines )
+    {
+        const auto lineCount = newlines.size() - 1;
+
+        std::vector<ElementGroup<Element>> groups{ { Element(), 0, 0 } }; // emplace stub initial group
+        for ( size_t li = 0; li < lineCount; li++ )
+        {
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            const auto element = parseToken<Element>( line );
+            if ( element != groups.back().element )
+            {
+                groups.back().end = li;
+                groups.push_back( { element, li, 0 } );
+            }
+        }
+        groups.back().end = lineCount;
+        return groups;
+    }
+
+    Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
+    {
+        using namespace boost::spirit::x3;
+
+        std::array<float, 3> coords{ 0.f, 0.f, 0.f };
+        int i = 0;
+        auto coord = [&] ( auto& ctx ) { coords[i++] = _attr( ctx ); };
+
+        bool r = phrase_parse(
+                str.begin(),
+                str.end(),
+                ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
+                ascii::space
+        );
+
+        static constexpr int MaxErrorStringLen = 80;
+        if ( !r )
+            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
+
+        vt = { coords[0], coords[1] };
+        return {};
+    }
+
+    struct ObjFace
+    {
+        std::vector<int> vertices;
+        std::vector<int> textures;
+        std::vector<int> normals;
+    };
+
+    Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
+    {
+        using namespace boost::spirit::x3;
+
+        auto v = [&] ( auto& ctx ) { f.vertices.emplace_back( _attr( ctx ) ); };
+        auto vt = [&] ( auto& ctx ) { f.textures.emplace_back( _attr( ctx ) ); };
+        auto vn = [&] ( auto& ctx ) { f.normals.emplace_back( _attr( ctx ) ); };
+
+        bool r = phrase_parse(
             str.begin(),
             str.end(),
-            ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
+            // NOTE: actions are not being reverted after backtracking
+            // https://github.com/boostorg/spirit/issues/378
+            ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
             ascii::space
-    );
+        );
+        if ( !r )
+            return unexpected( "Failed to parse face in OBJ-file" );
 
-    static constexpr int MaxErrorStringLen = 80;
-    if ( !r )
-        return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
+        if ( f.vertices.empty() )
+            return unexpected( "Invalid face vertex count in OBJ-file" );
+        if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
+            return unexpected( "Invalid face texture count in OBJ-file" );
+        if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
+            return unexpected( "Invalid face normal count in OBJ-file" );
+        return {};
+    }
 
-    vt = { coords[0], coords[1] };
-    return {};
-}
-
-struct ObjFace
-{
-    std::vector<int> vertices;
-    std::vector<int> textures;
-    std::vector<int> normals;
-};
-
-Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
-{
-    using namespace boost::spirit::x3;
-
-    auto v = [&] ( auto& ctx )
+    Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
     {
-        f.vertices.emplace_back( _attr( ctx ) );
-    };
-    auto vt = [&] ( auto& ctx )
-    {
-        f.textures.emplace_back( _attr( ctx ) );
-    };
-    auto vn = [&] ( auto& ctx )
-    {
-        f.normals.emplace_back( _attr( ctx ) );
-    };
+        using namespace boost::spirit::x3;
 
-    bool r = phrase_parse(
-        str.begin(),
-        str.end(),
-        // NOTE: actions are not being reverted after backtracking
-        // https://github.com/boostorg/spirit/issues/378
-        ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
-        ascii::space
-    );
-    if ( !r )
-        return unexpected( "Failed to parse face in OBJ-file" );
+        auto r = [&] ( auto& ctx ) { color.x = _attr( ctx ); };
+        auto g = [&] ( auto& ctx ) { color.y = _attr( ctx ); };
+        auto b = [&] ( auto& ctx ) { color.z = _attr( ctx ); };
 
-    if ( f.vertices.empty() )
-        return unexpected( "Invalid face vertex count in OBJ-file" );
-    if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
-        return unexpected( "Invalid face texture count in OBJ-file" );
-    if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
-        return unexpected( "Invalid face normal count in OBJ-file" );
-    return {};
-}
-
-Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
-{
-    using namespace boost::spirit::x3;
-
-    auto r = [&] ( auto& ctx )
-    {
-        color.x = _attr( ctx );
-    };
-    auto g = [&] ( auto& ctx )
-    {
-        color.y = _attr( ctx );
-    };
-    auto b = [&] ( auto& ctx )
-    {
-        color.z = _attr( ctx );
-    };
-
-    bool res = phrase_parse(
-        str.begin(),
-        str.end(),
-        (
-            char_( 'K' ) >> ( char_( 'a' ) | char_( 'd' ) | char_( 's' ) )
-            >> (
-                ( float_[r] >> float_[g] >> float_[b] ) |
-                ( lit( "spectral" ) >> no_skip[+char_] ) |
-                ( lit( "xyz" ) >> float_ >> float_ >> float_ )
-                )
+        bool res = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                char_( 'K' ) >> ( char_( 'a' ) | char_( 'd' ) | char_( 's' ) )
+                >> (
+                        ( float_[r] >> float_[g] >> float_[b] ) |
+                        ( lit( "spectral" ) >> no_skip[+char_] ) |
+                        ( lit( "xyz" ) >> float_ >> float_ >> float_ )
+                    )
             ),
-        space
-    );
-    if ( !res )
-        return unexpected( "Failed to parse color in MTL-file" );
+            space
+        );
+        if ( !res )
+            return unexpected( "Failed to parse color in MTL-file" );
 
-    return {};
-}
+        return {};
+    }
 
-Expected<void> parseMtlTexture( const std::string_view& str, std::string& textureFile )
-{
-    using namespace boost::spirit::x3;
-
-    auto file = [&] ( auto& ctx )
+    Expected<void> parseMtlTexture( const std::string_view& str, std::string& textureFile )
     {
-        textureFile = _attr( ctx );
-    };
+        using namespace boost::spirit::x3;
 
-    bool r = phrase_parse(
-        str.begin(),
-        str.end(),
-        (
-            lit( "map_" ) >> ( lit( "Ka" ) | lit( "Kd" ) | lit( "Ks" ) | lit( "Ns" ) | lit( "d" ) )
-            >> *(
-                ( lit( "-blendu" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
-                ( lit( "-blendv" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
-                ( lit( "-cc" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
-                ( lit( "-clamp" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
-                ( lit( "-imfchan" ) >> ( char_( 'r' ) | char_( 'b' ) | char_( 'g' ) | char_( 'm' ) | char_( 'l' ) | char_( 'z' ) ) ) |
-                ( lit( "-mm" ) >> float_ >> float_ ) |
-                ( lit( "-bm" ) >> float_ ) |
-                ( lit( "-o" ) >> float_ >> float_ >> float_ ) |
-                ( lit( "-s" ) >> float_ >> float_ >> float_ ) |
-                ( lit( "-t" ) >> float_ >> float_ >> float_ ) |
-                ( lit( "-texres" ) >> float_ )
-                )
-            >> no_skip[+char_][file]
+        auto file = [&] ( auto& ctx ) { textureFile = _attr( ctx ); };
+
+        bool r = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                lit( "map_") >> ( lit( "Ka" ) | lit( "Kd" ) | lit( "Ks" ) | lit( "Ns" ) | lit( "d" ) )
+                >> *(
+                        ( lit( "-blendu" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-blendv" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-cc" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-clamp" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-imfchan" ) >> ( char_( 'r' ) | char_( 'b' ) | char_( 'g' ) | char_( 'm' ) | char_( 'l' ) | char_( 'z' ) ) ) |
+                        ( lit( "-mm" ) >> float_ >> float_ ) |
+                        ( lit( "-bm" ) >> float_ ) |
+                        ( lit( "-o" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-s" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-t" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-texres" ) >> float_ )
+                    )
+                >> no_skip[+char_][file]
             ),
-        space
-    );
-    if ( !r )
-        return unexpected( "Failed to parse texture in MTL-file" );
+            space
+        );
+        if ( !r )
+            return unexpected( "Failed to parse texture in MTL-file" );
 
-    boost::trim( textureFile );
-    return {};
-}
+        boost::trim( textureFile );
+        return {};
+    }
 
 struct MtlMaterial
 {
@@ -331,75 +307,75 @@ struct MtlMaterial
     std::string diffuseTextureFile;
 };
 
-using MtlLibrary = HashMap<std::string, MtlMaterial>;
+    using MtlLibrary = HashMap<std::string, MtlMaterial>;
 
-Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
-{
-    std::ifstream mtlIn( path, std::ios::binary );
-    if ( !mtlIn.is_open() )
-        return unexpected( "unable to open MTL file" );
-
-    const auto mtlContent = readCharBuffer( mtlIn );
-    if ( !mtlContent )
-        return unexpected( "Unable to open MTL file: " + mtlContent.error() );
-    const auto* data = mtlContent->data();
-    const auto mtlSize = mtlContent->size();
-
-    const auto newlines = splitByLines( data, mtlSize );
-
-    const auto groups = groupLines<MtlElement>( data, mtlSize, newlines );
-
-    MtlLibrary result;
-    std::string currentMaterialName;
-    MtlMaterial currentMaterial;
-
-    for ( const auto& group : groups )
+    Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     {
-        std::string parseError;
-        switch ( group.element )
-        {
-        case MtlElement::Unknown:
-            break;
-        case MtlElement::MaterialName:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+        std::ifstream mtlIn( path, std::ios::binary );
+        if ( !mtlIn.is_open() )
+            return unexpected( "unable to open MTL file" );
 
-            if ( !currentMaterialName.empty() )
+        const auto mtlContent = readCharBuffer( mtlIn );
+        if ( !mtlContent )
+            return unexpected( "Unable to open MTL file: " + mtlContent.error() );
+        const auto* data = mtlContent->data();
+        const auto mtlSize = mtlContent->size();
+
+        const auto newlines = splitByLines( data, mtlSize );
+
+        const auto groups = groupLines<MtlElement>( data, mtlSize, newlines );
+
+        MtlLibrary result;
+        std::string currentMaterialName;
+        MtlMaterial currentMaterial;
+
+        for ( const auto& group : groups )
+        {
+            std::string parseError;
+            switch ( group.element )
             {
-                result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
-                currentMaterial = {};
+            case MtlElement::Unknown:
+                break;
+            case MtlElement::MaterialName:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                if ( !currentMaterialName.empty() )
+                {
+                    result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
+                    currentMaterial = {};
+                }
+                currentMaterialName = line.substr( 6, std::string_view::npos );
+                boost::trim( currentMaterialName );
             }
-            currentMaterialName = line.substr( 6, std::string_view::npos );
-            boost::trim( currentMaterialName );
-        }
-        break;
-        case MtlElement::DiffuseColor:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-
-            auto res = parseMtlColor( line, currentMaterial.diffuseColor );
-            if ( !res.has_value() )
-                parseError = std::move( res.error() );
-        }
-        break;
-        case MtlElement::DiffuseTexture:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-
-            auto res = parseMtlTexture( line, currentMaterial.diffuseTextureFile );
-            if ( !res.has_value() )
-                parseError = std::move( res.error() );
-        }
-        break;
-        default:
             break;
+            case MtlElement::DiffuseColor:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                auto res = parseMtlColor( line, currentMaterial.diffuseColor );
+                if ( !res.has_value() )
+                    parseError = std::move( res.error() );
+            }
+            break;
+            case MtlElement::DiffuseTexture:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                auto res = parseMtlTexture( line, currentMaterial.diffuseTextureFile );
+                if ( !res.has_value() )
+                    parseError = std::move( res.error() );
+            }
+            break;
+            default:
+                break;
+            }
+            if ( !parseError.empty() )
+                return unexpected( parseError );
         }
-        if ( !parseError.empty() )
-            return unexpected( parseError );
-    }
 
     if ( !currentMaterialName.empty() )
         result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );

@@ -690,7 +690,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     for ( auto& local : tls )
         mergedOT.insert( mergedOT.end(), std::make_move_iterator( local.begin() ), std::make_move_iterator( local.end() ) );
 
-    std::sort( mergedOT.begin(), mergedOT.end(), [] ( const auto& l, const auto& r ) { return l.startF < r.startF; } );
+    tls = {}; // reduce peak memory
+
+    tbb::parallel_sort( mergedOT.begin(), mergedOT.end(), [] ( const auto& l, const auto& r ) { return l.startF < r.startF; } );
     size_t sumFaceSize = 0;
     for ( const auto& ot : mergedOT )
     {
@@ -708,6 +710,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     t.reserve( sumFaceSize );
     for ( auto& ot : mergedOT )
         t.vec_.insert( t.vec_.end(), std::make_move_iterator( ot.t.vec_.begin() ), std::make_move_iterator( ot.t.vec_.end() ) );
+
+    mergedOT = {}; // reduce peak memory
 
     for ( const auto& mf : materialFaces )
     {

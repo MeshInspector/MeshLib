@@ -49,7 +49,11 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
 
     // restore original grid class
     if ( backupClass == openvdb::GRID_LEVEL_SET )
+    {
         const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );
+        dest = openvdb::tools::levelSetRebuild( *dest );
+    }
+
     if ( interrupter.getWasInterrupted() )
         return {};
     // restore normal scale

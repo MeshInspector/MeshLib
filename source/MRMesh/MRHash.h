@@ -32,6 +32,18 @@ struct hash<MR::Vector2f>
 };
 
 template<>
+struct hash<MR::Vector2i>
+{
+    size_t operator()( MR::Vector2i const& p ) const noexcept
+    {
+        std::uint64_t xy;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        return size_t( xy );
+    }
+};
+
+template<>
 struct hash<MR::Vector3f>
 {
     size_t operator()( MR::Vector3f const& p ) const noexcept

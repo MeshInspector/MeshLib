@@ -93,13 +93,26 @@ namespace
         return ret;
     }
 
+    static std::string pathToString( const std::vector<std::string>& path )
+    {
+        std::string pathString;
+        for ( const auto & s : path )
+        {
+            if ( !pathString.empty() )
+                pathString += '/';
+            pathString += s;
+        }
+        return pathString;
+    }
+
     void pressButton( const std::vector<std::string>& path )
     {
         if ( path.empty() )
             throw std::runtime_error( "Empty path not allowed here." );
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
-            spdlog::info( "\n  Click: {}\n  Num Frame {}", path.back(), MR::getViewerInstance().getTotalFrames() );
+            const std::string pathString = pathToString( path );
+            spdlog::info( "pressButton {}, frame {}", pathString, MR::getViewerInstance().getTotalFrames() );
 
             auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
@@ -213,14 +226,8 @@ namespace
         if ( path.empty() )
             throw std::runtime_error( "writeValue: empty path not allowed here." );
 
-        std::string pathString;
-        for ( const auto & s : path )
-        {
-            if ( !pathString.empty() )
-                pathString += '/';
-            pathString += s;
-        }
-        spdlog::info( "writeValue {} = {}", pathString, value );
+        const std::string pathString = pathToString( path );
+        spdlog::info( "writeValue {} = {}, frame {}", pathString, value, MR::getViewerInstance().getTotalFrames() );
 
         MR::pythonAppendOrRun( [&]
         {

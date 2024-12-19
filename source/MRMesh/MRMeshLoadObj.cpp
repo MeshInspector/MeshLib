@@ -408,12 +408,12 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
 
 struct MaterialScope
 {
-    size_t fId; // material begins with this face
+    size_t fId{ 0 }; // material begins with this face
     std::string mtName;
 };
 struct ObjectScope
 {
-    size_t fId; // object begins with this face
+    size_t fId{ 0 }; // object begins with this face
     std::string objName;
 };
 
@@ -589,8 +589,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
     // triangulation
     struct OrederedMaterial
     {
-        int mScopeId;
-        size_t fId;
+        int mScopeId{ 0 };
+        size_t fId{ 0 };
         // for ordering
         size_t orderedTriangulationStartF = 0; 
         size_t orderedTriangulationOffset = 0;
@@ -988,7 +988,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
-        res[i].name = std::move( oScopes[i].objName);
+        res[i].name = std::move( oScopes[i].objName );
     }
     return res;
 }

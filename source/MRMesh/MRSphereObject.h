@@ -28,7 +28,8 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     SphereObject( ProtectedStruct, const SphereObject& obj ) : SphereObject( obj ) {}
 
-    virtual std::string getClassName() const override { return "Sphere"; }
+    std::string getClassName() const override { return "Sphere"; }
+    std::string getClassNameInPlural() const override { return "Spheres"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

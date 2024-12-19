@@ -25,7 +25,7 @@ struct hash<MR::Vector2f>
     size_t operator()( MR::Vector2f const& p ) const noexcept
     {
         std::uint64_t xy;
-        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        static_assert( sizeof( MR::Vector2f::ValueType ) == sizeof( std::uint32_t ) );
         std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
         return size_t( xy );
     }
@@ -37,7 +37,7 @@ struct hash<MR::Vector2i>
     size_t operator()( MR::Vector2i const& p ) const noexcept
     {
         std::uint64_t xy;
-        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        static_assert( sizeof( MR::Vector2i::ValueType ) == sizeof( std::uint32_t ) );
         std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
         return size_t( xy );
     }
@@ -52,7 +52,7 @@ struct hash<MR::Vector3f>
         // phmap::HashState().combine(phmap::Hash<float>()(p.x), p.y, p.z);
         std::uint64_t xy;
         std::uint32_t z;
-        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        static_assert( sizeof( MR::Vector3f::ValueType ) == sizeof( std::uint32_t ) );
         std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
         std::memcpy( &z, &p.z, sizeof( std::uint32_t ) );
         return size_t( xy ) ^ ( size_t( z ) << 16 );

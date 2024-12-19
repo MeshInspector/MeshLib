@@ -438,8 +438,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
     auto firstVert = faces[minFace].vertices.front();
     if ( firstVert < 0 )
         firstVert = int( points.size() ) - firstVert;
-    if ( firstVert < 0 )
-        return unexpected( "Too negative vertex ID in OBJ-file" );
+    if ( firstVert < 0 || firstVert >= points.size() )
+        return unexpected( "Out of bounds Vertex ID in OBJ-file" );
     haveColors = firstVert < colors.size();
 
 
@@ -469,10 +469,10 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
                         repr.x = int( points.size() ) - repr.x;
                     else
                         --repr.x;
-                    if ( repr.x < 0 )
+                    if ( repr.x < 0 || repr.x >= points.size() )
                     {
                         if ( ctx.cancel_group_execution() )
-                            error = "Too negative vertex ID in OBJ-file";
+                            error = "Out of bounds Vertex ID in OBJ-file";
                         return;
                     }
                     if ( v < faces[i].textures.size() )
@@ -482,10 +482,10 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFormObj(
                             repr.y = int( uvCoords.size() ) - repr.y;
                         else
                             --repr.y;
-                        if ( repr.y < 0 )
+                        if ( repr.y < 0 || repr.y >= uvCoords.size() )
                         {
                             if ( ctx.cancel_group_execution() )
-                                error = "Too negative texture vertex ID in OBJ-file";
+                                error = "Out of bounds Texture Vertex ID in OBJ-file";
                             return;
                         }
                     }

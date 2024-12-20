@@ -19,15 +19,35 @@ EmbeddedPython::Config EmbeddedPython::pythonConfig{};
 
 bool EmbeddedPython::isAvailable()
 {
-    return instance_().available_;
+    EmbeddedPython &self = instance_();
+    return self.available_ && !self.shutdownCalled_;
+}
+
+void EmbeddedPython::shutdown()
+{
+    if ( !isAvailable() )
+        return;
+
+    EmbeddedPython &self = instance_();
+    self.shutdownCalled_ = true;
+
+    if ( !self.interpreterThread_.joinable() )
+        return; // Nothing to do.
+
+    { // Tell the thread to stop.
+        self.stopInterpreterThread_ = true;
+        self.cv_.notify_all();
+    }
+
+    self.interpreterThread_.join();
 }
 
 bool EmbeddedPython::runString( std::string pythonString, std::function<void( bool success )> onDoneAsync )
 {
-    EmbeddedPython &self = instance_();
-    if ( !self.available_ )
+    if ( !isAvailable() )
         return false;
 
+    EmbeddedPython &self = instance_();
     self.ensureInterpreterThreadIsRunning_();
 
     // Negotiate with the interpreter thread.
@@ -52,7 +72,7 @@ bool EmbeddedPython::runString( std::string pythonString, std::function<void( bo
 
 bool EmbeddedPython::runScript( const std::filesystem::path& path )
 {
-    if ( !instance_().available_ || !isPythonScript( path ) )
+    if ( !isAvailable() || !isPythonScript( path ) )
         return false;
 
     std::ifstream ifs( path );
@@ -73,7 +93,7 @@ bool EmbeddedPython::isPythonScript( const std::filesystem::path& path )
 
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
-        c = (char) tolower( c );
+        c = (char)std::tolower( (unsigned char)c );
 
     if ( ext != ".py" )
         return false;
@@ -88,21 +108,12 @@ EmbeddedPython::EmbeddedPython()
 
 EmbeddedPython::~EmbeddedPython()
 {
-    if ( !interpreterThread_.joinable() )
-        return; // Nothing to do.
-
-    { // Tell the thread to stop.
-        stopInterpreterThread_ = true;
-        cv_.notify_all();
-    }
-
-    interpreterThread_.join();
+    shutdown();
 }
 
 bool EmbeddedPython::init_()
 {
-    EmbeddedPython &self = instance_();
-    if ( !self.available_ )
+    if ( !isAvailable() )
         return true;
 
     // Initialize our patched pybind11.

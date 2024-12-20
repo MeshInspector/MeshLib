@@ -26,6 +26,12 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
             .worldXf = AffineXf3f::translation( -cParams.vol.origin - 0.5f * cParams.vol.voxelSize ),
             .cb = subprogress( cParams.vol.cb, 0.0f, 0.8f )
         };
+        assert( cParams.dist.maxDistSq < FLT_MAX ); // the amount of work is proportional to maximal distance
+        if ( cParams.dist.maxDistSq < FLT_MAX )
+        {
+            m2vPrams.surfaceOffset = std::sqrt( cParams.dist.maxDistSq )
+                / std::min( { cParams.vol.voxelSize.x, cParams.vol.voxelSize.y, cParams.vol.voxelSize.z } );
+        }
         return meshToDistanceVdbVolume( mp, m2vPrams ).and_then(
             [&cParams]( VdbVolume && vdbVolume )
             {

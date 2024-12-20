@@ -50,8 +50,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     // restore original grid class
     if ( backupClass == openvdb::GRID_LEVEL_SET )
     {
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );
-        dest = openvdb::tools::levelSetRebuild( *dest );
+        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );        
     }
 
     if ( interrupter.getWasInterrupted() )
@@ -60,7 +59,35 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
     dest->setGridClass( grid->getGridClass() );
 
-    return MakeFloatGrid( std::move( dest ) );
+    auto res = MakeFloatGrid( std::move( dest ) );
+    if ( backupClass == openvdb::GRID_LEVEL_SET )
+    {
+        const auto minValue = openvdb::tools::minMax( grid->tree() ).min();
+
+        const auto orgBbox = grid->evalActiveVoxelBoundingBox();
+        const auto dstBbox = res->evalActiveVoxelBoundingBox();
+
+        Vector3i dims = { dstBbox.dim().x(),dstBbox.dim().y(),dstBbox.dim().z() };
+
+        for ( int z = 0; z < dims.z; ++z )
+            for ( int y = 0; y < dims.y; ++y )
+                for ( int x = 0; x < dims.x; ++x )
+                {
+                    openvdb::Coord dstCoord( x, y, z );
+                    dstCoord += dstBbox.min();
+
+                    openvdb::Coord orgCoord( int( x * voxelScale.x + 0.5f ), int( y * voxelScale.y + 0.5f ) , int ( z * voxelScale.z  + 0.5f ) );
+                    orgCoord += orgBbox.min();
+
+                    auto orgVal = grid->getAccessor().getValue( orgCoord );
+                    auto dstVal = res->getAccessor().getValue( dstCoord );
+                    dstVal = dstVal;
+                    if ( fabs( orgVal - minValue ) < 1e-6f )
+                        res->getAccessor().setValue( dstCoord, orgVal );
+                }
+    }
+
+    return res;
 }
 
 FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb )

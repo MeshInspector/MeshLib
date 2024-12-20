@@ -1,4 +1,4 @@
-# to force update thirdparty touch this line 
+# to force update thirdparty touch this line
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -167,6 +167,8 @@ set(GLAD_INSTALL ON)
 set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
+set(PYBIND11_NONLIMITEDAPI_PYTHON_HEX_VERSION 0x030800f0 CACHE STRING "") # Python 3.8
+set(PYBIND11_NONLIMITEDAPI_SUFFIX "_meshlib" CACHE STRING "")
 add_subdirectory(./pybind11)
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
@@ -180,4 +182,3 @@ install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/i
 install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-

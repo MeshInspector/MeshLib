@@ -105,50 +105,57 @@ bool EmbeddedPython::init_()
     if ( !self.available_ )
         return true;
 
-    PyConfig config;
-    PyConfig_InitPythonConfig( &config );
-    MR_FINALLY { PyConfig_Clear( &config ); };
+    // Initialize our patched pybind11.
+    #ifdef PYBIND11_NONLIMITEDAPI_H_
+    pybind11::non_limited_api::EnsureSharedLibraryIsLoaded(false, "meshlib");
+    #endif
 
-    config.site_import = pythonConfig.siteImport ? 1 : 0;
+    PyConfig *config = pybind11::non_limited_api::PyConfig_new();
+    MR_FINALLY{ pybind11::non_limited_api::PyConfig_delete( config ); };
+    pybind11::non_limited_api::PyConfig_InitPythonConfig( config );
+    MR_FINALLY{ pybind11::non_limited_api::PyConfig_Clear( config ); };
+
+    pybind11::non_limited_api::PyConfig_set_site_import( config, pythonConfig.siteImport ? 1 : 0 );
 
     if ( !pythonConfig.home.empty() )
     {
         const auto homeW = utf8ToWide( pythonConfig.home.c_str() );
-        PyConfig_SetString( &config, &config.home, homeW.c_str() );
+        pybind11::non_limited_api::PyStatus_delete( pybind11::non_limited_api::PyConfig_SetString( config, pybind11::non_limited_api::PyConfig_home_ptr( config ), homeW.c_str() ) );
     }
 
     for ( const auto& mod : PythonExport::instance().modules() )
         PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
 
-    PyStatus status{};
+    pybind11::non_limited_api::PyStatus_ *status = nullptr;
+    MR_FINALLY{ pybind11::non_limited_api::PyStatus_delete( status ); };
     if ( pythonConfig.argv.empty() )
     {
-        config.parse_argv = 0;
-        config.install_signal_handlers = 0;
-        status = PyConfig_SetBytesArgv( &config, 0, NULL );
+        pybind11::non_limited_api::PyConfig_set_parse_argv( config, 0 );
+        pybind11::non_limited_api::PyConfig_set_install_signal_handlers( config, 0 );
+        status = pybind11::non_limited_api::PyConfig_SetBytesArgv( config, 0, NULL );
     }
     else
     {
-        config.isolated = 1;
+        pybind11::non_limited_api::PyConfig_set_isolated( config, 1 );
         std::vector<char *> argv;
         for ( auto& str : pythonConfig.argv )
             argv.push_back( str.data() );
         argv.push_back( nullptr ); // Unsure if needed, just in case.
-        status = PyConfig_SetBytesArgv( &config, argv.size() - 1, argv.data() );
+        status = pybind11::non_limited_api::PyConfig_SetBytesArgv( config, argv.size() - 1, argv.data() );
     }
 
-    if ( PyStatus_Exception( status ) )
+    if ( pybind11::non_limited_api::PyStatus_Exception( status ) )
     {
-        spdlog::error( status.err_msg );
-        UnifiedPythonStream::get() << status.err_msg; // add to unified python stream
+        spdlog::error( pybind11::non_limited_api::PyStatus_get_err_msg( status ) );
+        UnifiedPythonStream::get() << pybind11::non_limited_api::PyStatus_get_err_msg( status ); // add to unified python stream
         return false;
     }
 
-    status = Py_InitializeFromConfig( &config );
-    if ( PyStatus_Exception( status ) )
+    status = pybind11::non_limited_api::Py_InitializeFromConfig( config );
+    if ( pybind11::non_limited_api::PyStatus_Exception( status ) )
     {
-        spdlog::error( status.err_msg );
-        UnifiedPythonStream::get() << status.err_msg; // add to unified python stream
+        spdlog::error( pybind11::non_limited_api::PyStatus_get_err_msg( status ) );
+        UnifiedPythonStream::get() << pybind11::non_limited_api::PyStatus_get_err_msg( status ); // add to unified python stream
         return false;
     }
 

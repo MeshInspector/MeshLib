@@ -29,6 +29,7 @@ if(APPLE)
     spdlog
     fmt
     pybind11::module
+    pybind11nonlimitedapi_stubs
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -40,6 +41,7 @@ ELSE()
     fmt
     tbb
     Python::Python
+    pybind11nonlimitedapi_stubs
   )
 ENDIF()
 

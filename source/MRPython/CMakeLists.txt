@@ -16,12 +16,14 @@ IF(APPLE)
     MRMesh
     Python::Python
     spdlog
+    pybind11nonlimitedapi_stubs
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Python::Python
     spdlog::spdlog
+    pybind11nonlimitedapi_stubs
   )
 ENDIF()
 
@@ -58,4 +60,3 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
-

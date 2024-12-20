@@ -19,16 +19,6 @@ on:
   
 jobs:
   create-stubs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Doxygen
-        uses: ssciwr/doxygen-install@v1
-        with:
-          version: "1.11.0"
-
-
-jobs:
-  create-stubs:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:

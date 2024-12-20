@@ -47,8 +47,9 @@ struct MeshToVolumeParams
 // eval min max value from FloatGrid
 MRVOXELS_API void evalGridMinMax( const FloatGrid& grid, float& min, float& max );
 
-// convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
-MRVOXELS_API Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
+/// converts mesh (or its part) into a volume filled with signed or unsigned distances to mesh using OpenVDB library;
+/// for signed distances the mesh must be closed
+MRVOXELS_API Expected<VdbVolume> meshToVolume( const MeshPart& mp, const MeshToVolumeParams& params = {} );
 
 // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
 MRVOXELS_API VdbVolume floatGridToVdbVolume( FloatGrid grid );

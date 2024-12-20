@@ -116,41 +116,8 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER
-
-    MeshToDistanceVolumeParams msParams;
-    msParams.vol.cb = params.callBack;
-    auto absOffset = std::abs( offset );
-    const auto box = mp.mesh.computeBoundingBox( mp.region ).expanded( Vector3f::diagonal( absOffset ) );
-    const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
-    msParams.vol.origin = origin;
-    msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
-    msParams.vol.dimensions = dimensions;
-    msParams.dist.maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
-    msParams.dist.minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
-    msParams.dist.signMode = SignDetectionMode::OpenVDB;// params.signDetectionMode;
-    msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
-    msParams.dist.windingNumberBeta = params.windingNumberBeta;
-    //msParams.fwn = params.fwn;
-
-    MarchingCubesParams vmParams;
-    vmParams.origin = msParams.vol.origin;
-    vmParams.iso = offset;
-    vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
-    vmParams.lessInside = true;
-    vmParams.outVoxelPerFaceMap = outMap;
-
-    return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
-    {
-        vmParams.freeVolume = [&volume]
-        {
-            Timer t( "~SimpleVolume" );
-            volume = {};
-        };
-        return marchingCubes( volume, vmParams );
-    } );
-
-/*    auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
+    MR_TIMER;
+    auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
         auto offsetInVoxels = offset / params.voxelSize;
@@ -217,7 +184,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
                 return marchingCubes( volume, vmParams );
             } );
         }
-    }*/
+    }
 }
 
 Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,

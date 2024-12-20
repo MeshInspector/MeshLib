@@ -1,4 +1,5 @@
 #include "MRMeshToDistanceVolume.h"
+#include "MRVDBConversions.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTimer.h"
@@ -15,9 +16,25 @@ namespace MR
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
-    auto params = cParams;
-    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
+    if ( cParams.dist.signMode == SignDetectionMode::OpenVDB )
+    {
+        //AffineXf3f outxf;
+        MeshToVolumeParams m2vPrams
+        {
+            .type = MeshToVolumeParams::Type::Signed,
+            .voxelSize = cParams.vol.voxelSize,
+            .worldXf = AffineXf3f::translation( -cParams.vol.voxelSize ),
+            //.outXf = &outxf,
+            .cb = subprogress( cParams.vol.cb, 0.0f, 0.8f )
+        };
+        return meshToVolume( mp, m2vPrams ).and_then(
+            [sp = subprogress( cParams.vol.cb, 0.8f, 1.0f )]( VdbVolume && vdbVolume ) -> Expected<SimpleVolumeMinMax>
+            {
+                return vdbVolumeToSimpleVolume( vdbVolume, Box3i(), sp );
+            } );
+    }
 
+    auto params = cParams;
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
         SimpleVolumeMinMax res;

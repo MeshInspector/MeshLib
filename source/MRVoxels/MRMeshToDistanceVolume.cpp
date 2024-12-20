@@ -18,19 +18,18 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
     MR_TIMER
     if ( cParams.dist.signMode == SignDetectionMode::OpenVDB )
     {
-        //AffineXf3f outxf;
         MeshToVolumeParams m2vPrams
         {
             .type = MeshToVolumeParams::Type::Signed,
             .voxelSize = cParams.vol.voxelSize,
-            .worldXf = AffineXf3f::translation( -cParams.vol.voxelSize ),
-            //.outXf = &outxf,
+            // SimpleVolume and VdbVolume are shifted on half voxel relative one another, see also VoxelsVolumeAccessor::shift()
+            .worldXf = AffineXf3f::translation( -cParams.vol.origin - 0.5f * cParams.vol.voxelSize ),
             .cb = subprogress( cParams.vol.cb, 0.0f, 0.8f )
         };
-        return meshToVolume( mp, m2vPrams ).and_then(
-            [sp = subprogress( cParams.vol.cb, 0.8f, 1.0f )]( VdbVolume && vdbVolume ) -> Expected<SimpleVolumeMinMax>
+        return meshToDistanceVdbVolume( mp, m2vPrams ).and_then(
+            [&cParams]( VdbVolume && vdbVolume ) -> Expected<SimpleVolumeMinMax>
             {
-                return vdbVolumeToSimpleVolume( vdbVolume, Box3i(), sp );
+                return vdbVolumeToSimpleVolume( vdbVolume, Box3i{ Vector3i( 0, 0, 0 ), cParams.vol.dimensions }, subprogress( cParams.vol.cb, 0.8f, 1.0f ) );
             } );
     }
 

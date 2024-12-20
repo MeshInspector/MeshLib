@@ -1,4 +1,4 @@
-name: Update MeshLib Documentation site
+name: Manual Update MeshLib Documentation Site
 
 on:
   # Allows you to run this workflow manually from the Actions tab

@@ -27,7 +27,7 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
             .cb = subprogress( cParams.vol.cb, 0.0f, 0.8f )
         };
         return meshToDistanceVdbVolume( mp, m2vPrams ).and_then(
-            [&cParams]( VdbVolume && vdbVolume ) -> Expected<SimpleVolumeMinMax>
+            [&cParams]( VdbVolume && vdbVolume )
             {
                 return vdbVolumeToSimpleVolume( vdbVolume, Box3i{ Vector3i( 0, 0, 0 ), cParams.vol.dimensions }, subprogress( cParams.vol.cb, 0.8f, 1.0f ) );
             } );

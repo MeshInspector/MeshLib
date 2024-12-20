@@ -211,21 +211,21 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 #endif
 }
 
-Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+Expected<VdbVolume> meshToVolume( const MeshPart& mp, const MeshToVolumeParams& params /*= {} */ )
 {
-    if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
+    if ( params.type == MeshToVolumeParams::Type::Signed && !mp.mesh.topology.isClosed( mp.region ) )
         return unexpected( "Only closed mesh can be converted to signed volume" );
     MR_TIMER
 
-    auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
+    auto shift = AffineXf3f::translation( mp.mesh.computeBoundingBox( mp.region, &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
     FloatGrid grid;
     if ( params.type == MeshToVolumeParams::Type::Signed )
-        grid = meshToLevelSet( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToLevelSet( mp, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
     else
-        grid = meshToDistanceField( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToDistanceField( mp, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
 
     if ( !grid )
-        return unexpected( "Operation canceled" );
+        return unexpectedOperationCanceled();
 
     // to get proper normal orientation both for signed and unsigned cases
     grid->setGridClass( openvdb::GRID_LEVEL_SET );

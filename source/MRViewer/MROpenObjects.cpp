@@ -9,85 +9,13 @@
 #include <MRVoxels/MRDicom.h>
 #include <MRVoxels/MRObjectVoxels.h>
 #include <MRPch/MRSpdlog.h>
+#include <MRMesh/MRParallelProgressReporter.h>
+#include <MRMesh/MRParallelFor.h>
 #include <fstream>
-#include <forward_list>
 
 namespace MR
 {
 
-
-/// This class allows progress to be reported from different threads.
-/// Unlike progress callback that is passed to \ref ParallelFor, each task may report the progress separately,
-/// and the progress displayed to user is not just a number of completed tasks divided by the total number of tasks,
-/// but rather a (weighted) average of progresses reported from each task
-class ParallelProgressReporter
-{
-private:
-
-    struct TaskInfo
-    {
-        float progress = 0.f;
-        float weight = 1.f;
-    };
-
-public:
-    ParallelProgressReporter( const ProgressCallback& cb ):
-        cb_( cb )
-    {}
-
-    /// Local reporter. It should be passed as a callback to task.
-    /// @note One local reporter must not be invoked concurrently.
-    struct PerTaskReporter
-    {
-        bool operator()( float p ) const
-        {
-            bool res = reporter_->updateTask_( ( p - task_->progress ) * task_->weight );
-            task_->progress = p;
-            return res;
-        }
-        ParallelProgressReporter* reporter_ = nullptr;
-        TaskInfo* task_ = nullptr;
-    };
-
-
-    /// Add task to the pull
-    /// @note This function must not be invoked concurrently.
-    /// @return The reporter functor, that could be safely invoked from a different thread
-    PerTaskReporter newTask( float weight = 1.f )
-    {
-        const float totalWeight = totalWeight_;
-        progress_ = progress_ * totalWeight / ( totalWeight + weight );
-        totalWeight_ += weight;
-        return PerTaskReporter( this, &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) );
-    }
-
-    /// Actually report the progress. Designed to be invoked in loop until all tasks are completed or until the operation is cancelled
-    bool operator()()
-    {
-        return continue_ = cb_( progress_ );
-    }
-
-private:
-    /// Invoked from local reporters concurrently.
-    bool updateTask_( float delta )
-    {
-        progress_ += delta / static_cast<float>( totalWeight_ );
-        return continue_;
-    }
-
-    const ProgressCallback& cb_;
-
-    // progress of each task
-    std::forward_list<TaskInfo> perTaskInfo_;
-
-    // sum of the weights of all the tasks
-    std::atomic<float> totalWeight_;
-
-    // avg progress for all the tasks
-    std::atomic<float> progress_ = 0;
-
-    std::atomic<bool> continue_ = true;
-};
 
 Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
 {
@@ -171,18 +99,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         return unexpected( std::string( "Error: folder is empty." ) );
 
     using loadObjResultType = Expected<LoadedObjects>;
-    // create folders objects
-    struct LoadTask
+    struct NodeAndResult
     {
-        std::future<loadObjResultType> future;
-        Object* parent = nullptr;
-        bool dicomFolder = false;
-        LoadTask( std::future<loadObjResultType> future, Object* parent, bool dicomFolder = false ) :
-            future( std::move( future ) ), parent( parent ), dicomFolder( dicomFolder ) {}
+        FilePathNode node;
+        Object* parent;
+        ProgressCallback cb;
+        loadObjResultType result;
     };
-    std::vector<LoadTask> loadTasks;
 
-    std::atomic_bool loadingCanceled = false;
+    // create folders objects
+    std::vector<NodeAndResult> nodes;
+
     std::function<void( const FilePathNode&, Object* )> createFolderObj = {};
     createFolderObj = [&] ( const FilePathNode& node, Object* objPtr )
     {
@@ -193,25 +120,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             objPtr->addChild( pObj );
             createFolderObj( folder, pObj.get() );
         }
+
         for ( const FilePathNode& file : node.files )
-        {
-            loadTasks.emplace_back( std::async( std::launch::async, [filepath = file.path, cb = cb.newTask()]()
-            {
-                return loadObjectFromFile( filepath, cb );
-            } ), objPtr );
-        }
+            nodes.emplace_back( file, objPtr, cb.newTask() );
+
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
-        {
-            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, cb = cb.newTask( 10.f )]()
-            {
-                return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, cb ).and_then(
-                [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
-                {
-                    return LoadedObjects{ .objs = { ld.obj } };
-                } );
-            } ), objPtr, true );
-        }
+            nodes.emplace_back( node, objPtr, cb.newTask( 10.f ) );
         #endif
     };
     LoadedObject res;
@@ -222,52 +137,54 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     auto pseudoRoot = std::make_shared<Object>();
     pseudoRoot->addChild( res.obj );
 
+    auto loadingCanceled = !ParallelFor( nodes, [&nodes] ( size_t i )
+    {
+        auto& nodeAndRes = nodes[i];
+        if ( !nodeAndRes.node.dicomFolder )
+        {
+            nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
+        }
+        #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+        else
+        {
+            nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
+                [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                {
+                    return LoadedObjects{ .objs = { ld.obj } };
+                } );
+        }
+        #endif
+    }, [&cb] ( float ) { return cb(); } );
+    if ( loadingCanceled )
+        return unexpected( getCancelMessage( folder ) );
+
     // processing of results
     bool atLeastOneLoaded = false;
     std::unordered_map<std::string, int> allErrors;
-    const float taskCount = float( loadTasks.size() );
-    int finishedTaskCount = 0;
-    std::chrono::system_clock::time_point afterPause = std::chrono::system_clock::now();
-    while ( finishedTaskCount < taskCount )
+    for ( const auto& [node, parent, _, taskRes] : nodes )
     {
-        afterPause += +std::chrono::milliseconds ( 200 );
-        for ( auto& t : loadTasks )
+        if ( taskRes.has_value() )
         {
-            if ( !cb() )
-                loadingCanceled = true;
-            if ( !t.future.valid() )
-                continue;
-            std::future_status status = t.future.wait_until( afterPause );
-            if ( status != std::future_status::ready )
-                continue;
-            auto taskRes = t.future.get();
-            if ( taskRes.has_value() )
+            if ( node.dicomFolder && taskRes->objs.size() == 1 )
             {
-                if ( t.dicomFolder && taskRes->objs.size() == 1 )
-                {
-                    t.parent->parent()->addChild( taskRes->objs[0] );
-                    t.parent->parent()->removeChild( t.parent );
-                }
-                else
-                {
-                    for ( const auto& objPtr : taskRes->objs )
-                        t.parent->addChild( objPtr );
-                }
-                if ( !taskRes->warnings.empty() )
-                    res.warnings += taskRes->warnings;
-                if ( !atLeastOneLoaded )
-                    atLeastOneLoaded = true;
+                parent->parent()->addChild( taskRes->objs[0] );
+                parent->parent()->removeChild( parent );
             }
             else
             {
-                ++allErrors[taskRes.error()];
+                for ( const auto& objPtr : taskRes->objs )
+                    parent->addChild( objPtr );
             }
-            ++finishedTaskCount;
+            if ( !taskRes->warnings.empty() )
+                res.warnings += taskRes->warnings;
+            if ( !atLeastOneLoaded )
+                atLeastOneLoaded = true;
+        }
+        else
+        {
+            ++allErrors[taskRes.error()];
         }
     }
-
-    if ( !cb() )
-        loadingCanceled = true;
 
     std::string errorString;
     for ( const auto& error : allErrors )
@@ -281,8 +198,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
     if ( !errorString.empty() )
         spdlog::warn( "Load folder error:\n{}", errorString );
-    if ( loadingCanceled )
-        return unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
 

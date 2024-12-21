@@ -334,6 +334,7 @@
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRProgressCallback.h" />
+    <ClInclude Include="MRParallelProgressReporter.h" />
     <ClInclude Include="MRSystem.h" />
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
@@ -390,6 +391,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />

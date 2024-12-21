@@ -171,6 +171,9 @@
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRParallelProgressReporter.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1241,6 +1244,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRParallelProgressReporter.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
     <ClCompile Include="MRObject.cpp">
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>

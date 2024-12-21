@@ -14,7 +14,7 @@ ParallelProgressReporter::PerTaskReporter ParallelProgressReporter::newTask( flo
 {
     const float totalWeight = totalWeight_;
     progress_ = progress_ * totalWeight / ( totalWeight + weight );
-    totalWeight_ += weight;
+    totalWeight_.fetch_add( weight );
     return PerTaskReporter( this, &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) );
 }
 
@@ -25,7 +25,7 @@ bool ParallelProgressReporter::operator()()
 
 bool ParallelProgressReporter::updateTask_( float delta )
 {
-    progress_ += delta / static_cast<float>( totalWeight_ );
+    progress_.fetch_add( delta / static_cast<float>( totalWeight_ ) );
     if ( mainThreadId_ == std::this_thread::get_id() )
         return (*this)();
     return continue_;

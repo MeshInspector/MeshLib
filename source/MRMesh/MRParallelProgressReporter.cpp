@@ -15,7 +15,8 @@ ParallelProgressReporter::PerTaskReporter ParallelProgressReporter::newTask( flo
     const float totalWeight = totalWeight_;
     progress_ = progress_ * totalWeight / ( totalWeight + weight );
     totalWeight_.fetch_add( weight );
-    return PerTaskReporter( this, &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) );
+    return PerTaskReporter{ .reporter_ = this,
+                            .task_ = &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) };
 }
 
 bool ParallelProgressReporter::operator()()

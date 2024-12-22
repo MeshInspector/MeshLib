@@ -413,15 +413,6 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     if ( directory.empty() )
         return;
 
-#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-    // check if the directory can be opened as a DICOM archive
-    if ( VoxelsLoad::isDicomFolder( directory ) )
-    {
-        sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
-        return;
-    }
-#endif
-
     bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
     if ( isAnySupportedFiles )
     {

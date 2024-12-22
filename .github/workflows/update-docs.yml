@@ -38,13 +38,7 @@ jobs:
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io
-        run: |
-          bash scripts/pre.sh ${{ inputs.output_folder }}
-          doxygen DoxyfilePy
-          doxygen DoxyfileCpp
-          doxygen DoxyfileMain
-          doxygen Doxyfile
-          bash scripts/post.sh ${{ inputs.output_folder }}
+        run: scripts/update_doc.sh ${{ inputs.output_folder }}
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

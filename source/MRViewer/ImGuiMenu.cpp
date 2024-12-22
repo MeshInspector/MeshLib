@@ -1135,7 +1135,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalVerts = 0;
     size_t totalEdges = 0;
     size_t totalSelectedEdges = 0;
-    std::optional<float> totalVolume = 0.0f;
+    double totalVolume = 0.0;
     double totalArea = 0.;
     double totalSelectedArea = 0.;
     float avgEdgeLen = 0.f;
@@ -1203,14 +1203,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += mesh->topology.numValidVerts();
                 totalEdges += mObj->numUndirectedEdges();
                 totalSelectedEdges += mObj->numSelectedEdges();
-                if ( totalVolume && mObj->isMeshClosed() )
-                {
-                    *totalVolume += float( mObj->volume() );
-                }
-                else
-                {
-                    totalVolume = std::nullopt;
-                }
+                totalVolume += mObj->volume();
                 totalArea += mObj->totalArea();
                 totalSelectedArea += mObj->selectedArea();
                 avgEdgeLen = mObj->avgEdgeLen();
@@ -1410,10 +1403,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( totalFaces )
     {
-        if ( totalVolume )
-        {
-            drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
-        }
+        drawUnitInfo( "Volume", totalVolume, VolumeUnit{} );
 
         if ( selectedObjs.size() == 1 )
         {

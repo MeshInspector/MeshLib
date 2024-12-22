@@ -6,7 +6,7 @@ on:
       # manually defined values
       autotest_data_s3_url:
         description:
-        value: "s3://data-autotest/test_data_2024-nov-07"
+        value: "s3://data-autotest/test_data_2024-12-19"
       vcpkg_version:
         description: "vcpkg version"
         value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info

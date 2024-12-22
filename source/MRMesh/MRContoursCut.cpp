@@ -1103,13 +1103,19 @@ Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& 
     if ( isoValue == 0.0f )
         return OneMeshContours{ std::move( *initCutContours ) };
 
+    // need to set non-cut vertices too
+    VertBitSet startVertices( mesh.topology.lastValidVert() + 1 );
+    for ( const auto& i : initCutContours->intersections )
+        if ( i.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
+            startVertices.set( std::get<VertId>( i.primitiveId ) );
+
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
-    auto cutRes = cutMesh( meshAfterCut, { std::move( *initCutContours ) }, { .new2oldEdgesMap = &nEM } );
-    if ( cutRes.fbsWithCountourIntersections.any() )
-        return unexpected( "Initial contour has self intersections" );
+    // .forceFillMode = CutMeshParameters::ForceFill::All
+    // because we don't really care about intermediate mesh quality
+    auto cutRes = cutMesh( meshAfterCut, { std::move( *initCutContours ) }, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
 
-    VertBitSet startVertices = meshAfterCut.topology.getValidVerts() - mesh.topology.getValidVerts();
+    startVertices |= ( meshAfterCut.topology.getValidVerts() - mesh.topology.getValidVerts() );
     auto distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
     auto isoLines = extractIsolines( meshAfterCut.topology, distances, isoValue );
 

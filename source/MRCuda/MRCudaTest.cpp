@@ -9,18 +9,22 @@ namespace MR
 
 namespace Cuda
 {
-
-void negatePicture( Image& image )
+Expected<void> negatePicture( Image& image )
 {
-    CUDA_EXEC( cudaSetDevice( 0 ) );
+    if ( auto code = CUDA_EXEC( cudaSetDevice( 0 ) ) )
+        return unexpected( Cuda::getError( code ) );
 
     DynamicArray<Cuda::Color> cudaArray;
-    cudaArray.fromVector( image.pixels );
+    if ( auto code = cudaArray.fromVector( image.pixels ) )
+        return unexpected( Cuda::getError( code ) );
 
     negatePictureKernel( cudaArray );
-    CUDA_EXEC( cudaGetLastError() );
+    if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
+        return unexpected( Cuda::getError( code ) );
 
-    cudaArray.toVector( image.pixels );
+    if ( auto code = cudaArray.toVector( image.pixels ) )
+        return unexpected( Cuda::getError( code ) );
+    return {};
 }
 
 } //namespace Cuda

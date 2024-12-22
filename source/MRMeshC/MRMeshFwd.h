@@ -36,7 +36,10 @@ typedef struct MREdgeBitSet MREdgeBitSet;
 typedef struct MRUndirectedEdgeBitSet MRUndirectedEdgeBitSet;
 typedef struct MRFaceBitSet MRFaceBitSet;
 typedef struct MRVertBitSet MRVertBitSet;
+typedef struct MRVoxelBitSet MRVoxelBitSet;
 
+typedef struct MRBox3f MRBox3f;
+typedef struct MRBox3i MRBox3i;
 typedef struct MRVector3f MRVector3f;
 typedef struct MRAffineXf3f MRAffineXf3f;
 

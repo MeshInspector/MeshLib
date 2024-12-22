@@ -350,6 +350,10 @@ Vector3d Mesh::dirArea( const FaceBitSet & fs ) const
     [] ( auto a, auto b ) { return a + b; } );
 }
 
+namespace
+{
+
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0) and other three vertices taken from a mesh's triangle
 class FaceVolumeCalc
 {
 public:
@@ -385,17 +389,66 @@ private:
     double volume_{ 0.0 };
 };
 
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0), another vertex at the center of hole,
+/// and other two vertices taken from a hole's edge
+class HoleVolumeCalc
+{
+public:
+    HoleVolumeCalc( const Mesh& mesh, const std::vector<EdgeId>& holeRepresEdges ) : mesh_( mesh ), holeRepresEdges_( holeRepresEdges )
+    {}
+    HoleVolumeCalc( HoleVolumeCalc& x, tbb::split ) : mesh_( x.mesh_ ), holeRepresEdges_( x.holeRepresEdges_ )
+    {}
+    void join( const HoleVolumeCalc& y )
+    {
+        volume_ += y.volume_;
+    }
+
+    double volume() const
+    {
+        return volume_;
+    }
+
+    void operator()( const tbb::blocked_range<size_t>& r )
+    {
+        for ( size_t i = r.begin(); i < r.end(); ++i )
+        {
+            const auto e0 = holeRepresEdges_[i];
+            Vector3d sumBdPos;
+            int countBdVerts = 0;
+            for ( auto e : leftRing( mesh_.topology, e0 ) )
+            {
+                sumBdPos += Vector3d( mesh_.orgPnt( e ) );
+                ++countBdVerts;
+            }
+            Vector3d holeCenter = sumBdPos / double( countBdVerts );
+            for ( auto e : leftRing( mesh_.topology, e0 ) )
+            {
+                volume_ += mixed( holeCenter, Vector3d( mesh_.orgPnt( e ) ), Vector3d( mesh_.destPnt( e ) ) );
+            }
+        }
+    }
+
+private:
+    const Mesh& mesh_;
+    const std::vector<EdgeId>& holeRepresEdges_;
+    double volume_{ 0.0 };
+};
+
+} // anonymous namespace
+
 double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
 {
-    if ( !topology.isClosed( region ) )
-        return DBL_MAX;
-
     MR_TIMER
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
-    FaceVolumeCalc calc( *this, faces );
-    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), calc );
-    return calc.volume() / 6.0;
+    FaceVolumeCalc fcalc( *this, faces );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), fcalc );
+
+    const auto holeRepresEdges = topology.findHoleRepresentiveEdges( region );
+    HoleVolumeCalc hcalc( *this, holeRepresEdges );
+    parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
+
+    return ( fcalc.volume() + hcalc.volume() ) / 6.0;
 }
 
 double Mesh::holePerimiter( EdgeId e0 ) const

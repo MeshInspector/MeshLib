@@ -1,8 +1,8 @@
       <tab type="usergroup" url="__API_PAGE_URL__" title="__API_PAGE_NAME__">
         <tab type="topics" visible="yes" title="" intro=""/>
-        <tab type="namespaces" visible="yes" title="">
-          <tab type="namespacelist" visible="yes" title="" intro=""/>
-          <tab type="namespacemembers" visible="yes" title="" intro=""/>
+        <tab type="namespaces" visible="yes" title="__NAMESPACES_TITLE__">
+          <tab type="namespacelist" visible="yes" title="__NAMESPACES_LIST_TITLE__" intro=""/>
+          <tab type="namespacemembers" visible="yes" title="__NAMESPACES_MEMBERS_TITLE__" intro=""/>
         </tab>
         <tab type="classes" visible="yes" title="">
           <tab type="classlist" visible="yes" title="" intro=""/>

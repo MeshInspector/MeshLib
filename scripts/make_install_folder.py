@@ -74,10 +74,10 @@ def copy_lib():
 			if ( not any(map(file.endswith, it.lib_extentions))):
 				os.remove(os.path.join(address,file))
 
-	# Prune .pyd Python modules, but only in the root directory. Preserve them in subdirectories.
-	# This is only needed on Windows. On Windows they are initially present in both, because it's hard
+	# Prune .pyd Python modules, but only in the Debug/Release directories, not in their subdirectories.
+	# This is only needed on Windows. On Windows they are initially present both there and in `__/meshlib`, because it's hard
 	# to make VS build them directly in the subdirectory. And the `.pyd` extension is only used on Windows.
-	for f in glob.glob(os.path.join(it.path_to_libs, "*.pyd")):
+	for f in glob.glob(os.path.join(it.path_to_app, "*/*.pyd")):
 		os.remove(f)
 
 it.prepare_includes_list = prepare_includes_list

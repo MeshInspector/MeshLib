@@ -68,7 +68,7 @@ jobs:
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory '*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Install thirdparty libs
@@ -158,7 +158,7 @@ jobs:
           BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
         if: ${{ inputs.internal_build }}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a="--run-cuda=negative"
 
       - name: Copy test artifacts to S3
         if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}

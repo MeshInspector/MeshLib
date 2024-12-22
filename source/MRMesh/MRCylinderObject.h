@@ -38,10 +38,8 @@ public:
     CylinderObject( ProtectedStruct, const CylinderObject& obj ) : CylinderObject( obj )
     {}
 
-    virtual std::string getClassName() const override
-    {
-        return "Cylinder";
-    }
+    std::string getClassName() const override { return "Cylinder"; }
+    std::string getClassNameInPlural() const override { return "Cylinders"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

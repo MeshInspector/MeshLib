@@ -22,6 +22,7 @@ public:
     AngleMeasurementObject( ProtectedStruct, const AngleMeasurementObject& obj ) : AngleMeasurementObject( obj ) {}
 
     std::string getClassName() const override { return "Angle"; }
+    std::string getClassNameInPlural() const override { return "Angles"; }
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;

@@ -12,6 +12,7 @@
 #include <MRMesh/MRParallelProgressReporter.h>
 #include <MRMesh/MRParallelFor.h>
 #include <fstream>
+#include <tbb/task_group.h>
 
 namespace MR
 {
@@ -137,24 +138,37 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     auto pseudoRoot = std::make_shared<Object>();
     pseudoRoot->addChild( res.obj );
 
-    auto loadingCanceled = !ParallelFor( nodes, [&nodes] ( size_t i )
+    tbb::task_group group;
+    std::atomic<int> completed;
+    bool loadingCanceled = false;
+    for ( auto& nodeAndRes : nodes )
     {
-        auto& nodeAndRes = nodes[i];
-        if ( !nodeAndRes.node.dicomFolder )
-        {
-            nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
-        }
-        #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-        else
-        {
-            nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
-                {
-                    return LoadedObjects{ .objs = { ld.obj } };
-                } );
-        }
-        #endif
-    }, [&cb] ( float ) { return cb(); } );
+        group.run( [&nodeAndRes, &completed] {
+            if ( !nodeAndRes.node.dicomFolder )
+            {
+                nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
+            }
+            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+            else
+            {
+                nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
+                    [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                    {
+                        return LoadedObjects{ .objs = { ld.obj } };
+                    } );
+            }
+            #endif
+            completed += 1;
+        } );
+    }
+
+    while ( !loadingCanceled && completed < nodes.size() )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
+        loadingCanceled = !cb();
+    }
+    group.wait();
+
     if ( loadingCanceled )
         return unexpected( getCancelMessage( folder ) );
 

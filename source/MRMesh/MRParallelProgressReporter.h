@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
+#include <MRPch/MRBindingMacros.h>
 #include <forward_list>
 #include <atomic>
 #include <thread>
@@ -13,17 +14,16 @@ namespace MR
 /// Unlike progress callback that is passed to \ref ParallelFor, each task may report the progress separately,
 /// and the progress displayed to user is not just a number of completed tasks divided by the total number of tasks,
 /// but rather a (weighted) average of progresses reported from each task
-class ParallelProgressReporter
+class MR_BIND_IGNORE ParallelProgressReporter
 {
-private:
+public:
+    MRMESH_API ParallelProgressReporter( const ProgressCallback& cb );
+
     struct TaskInfo
     {
         float progress = 0.f;
         float weight = 1.f;
     };
-
-public:
-    MRMESH_API ParallelProgressReporter( const ProgressCallback& cb );
 
     /// Local reporter. It should be passed as a callback to task.
     /// @note One local reporter must not be invoked concurrently.

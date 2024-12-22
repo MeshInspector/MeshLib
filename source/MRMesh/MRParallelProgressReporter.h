@@ -55,7 +55,7 @@ private:
     std::forward_list<TaskInfo> perTaskInfo_;
 
     /// sum of the weights of all the tasks
-    float totalWeight_;
+    float totalWeight_ = 0;
 
     /// avg progress for all the tasks
     float progress_ = 0;

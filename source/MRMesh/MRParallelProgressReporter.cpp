@@ -12,21 +12,24 @@ ParallelProgressReporter::ParallelProgressReporter( const ProgressCallback& cb )
 
 ParallelProgressReporter::PerTaskReporter ParallelProgressReporter::newTask( float weight )
 {
+    std::lock_guard lock( mutex_ );
     const float totalWeight = totalWeight_;
     progress_ = progress_ * totalWeight / ( totalWeight + weight );
-    totalWeight_.fetch_add( weight );
+    totalWeight_ += weight;
     return PerTaskReporter{ .reporter_ = this,
                             .task_ = &perTaskInfo_.emplace_front( TaskInfo{ .progress = 0.f, .weight = weight } ) };
 }
 
 bool ParallelProgressReporter::operator()()
 {
+    std::lock_guard lock( mutex_ );
     return continue_ = cb_( progress_ );
 }
 
 bool ParallelProgressReporter::updateTask_( float delta )
 {
-    progress_.fetch_add( delta / static_cast<float>( totalWeight_ ) );
+    std::lock_guard lock( mutex_ );
+    progress_ += delta / static_cast<float>( totalWeight_ );
     if ( mainThreadId_ == std::this_thread::get_id() )
         return (*this)();
     return continue_;

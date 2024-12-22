@@ -54,12 +54,14 @@ private:
     std::forward_list<TaskInfo> perTaskInfo_;
 
     /// sum of the weights of all the tasks
-    std::atomic<float> totalWeight_;
+    float totalWeight_;
 
     /// avg progress for all the tasks
-    std::atomic<float> progress_ = 0;
+    float progress_ = 0;
 
-    std::atomic<bool> continue_ = true;
+    bool continue_ = true;
+
+    std::mutex mutex_;
 
     /// id if the thread from which the constructor was called (it is supposed to be the main thread)
     std::thread::id mainThreadId_;

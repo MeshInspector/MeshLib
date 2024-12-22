@@ -333,6 +333,12 @@ void sOpenDICOMs( const std::filesystem::path & directory )
                 SceneRoot::get().addChild( obj );
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 getViewerInstance().recentFilesStore().storeFile( directory );
+                if ( getAllObjectsInTree( obj.get() ).size() == 1 )
+                {
+                    std::filesystem::path scenePath = directory;
+                    scenePath += ".mru";
+                    getViewerInstance().onSceneSaved( scenePath, false );
+                }
                 if ( !warnings.empty() )
                     pushNotification( { .text = warnings, .type = NotificationType::Warning } );
             };

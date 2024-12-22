@@ -122,11 +122,11 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         }
 
         for ( const FilePathNode& file : node.files )
-            nodes.emplace_back( file, objPtr, cb.newTask() );
+            nodes.push_back( { file, objPtr, cb.newTask() } );
 
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
-            nodes.emplace_back( node, objPtr, cb.newTask( 10.f ) );
+            nodes.push_back( { node, objPtr, cb.newTask( 10.f ) } );
         #endif
     };
     LoadedObject res;

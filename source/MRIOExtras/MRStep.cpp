@@ -763,7 +763,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
     {
         auto& mesh = objMesh->varMesh();
         mesh->transform( objMesh->worldXf() );
-        result.addPart( *mesh );
+        result.addMesh( *mesh );
     }
     return result;
 }

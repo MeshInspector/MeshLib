@@ -111,7 +111,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     auto compsMap = MeshComponents::getAllComponentsMap( origin );
     leftPart = preparePart( origin, compsMap, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
 
-    outMesh.addPartByMask( origin, leftPart, needFlip, {}, {},
+    outMesh.addMeshPart( { origin, &leftPart }, needFlip, {}, {},
         HashToVectorMappingConverter( origin.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
 
     for ( auto& path : cutPaths )
@@ -141,14 +141,14 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
     VertMap* vMapNewPtr = mapper ? &vMapNew : nullptr;
 
     if ( pathsA.empty() )
-        partA.addPart( partB, fMapNewPtr, vMapNewPtr, eMapNewPtr );
+        partA.addMesh( partB, fMapNewPtr, vMapNewPtr, eMapNewPtr );
     else
     {
         if ( !pathsHaveLeftHole )
-            partA.addPartByMask( partB, partB.topology.getValidFaces(), false, pathsA, pathsB, 
+            partA.addMeshPart( partB, false, pathsA, pathsB,
                 HashToVectorMappingConverter( partB.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
         else
-            partB.addPartByMask( partA, partA.topology.getValidFaces(), false, pathsB, pathsA,
+            partB.addMeshPart( partA, false, pathsB, pathsA,
                 HashToVectorMappingConverter( partA.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
     }
 
@@ -203,7 +203,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
         WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newEdges : nullptr;
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newVerts : nullptr;
 
-        aPart.addPartByMask( std::move( meshACut ), aPartFbs, operation == BooleanOperation::DifferenceBA,
+        aPart.addMeshPart( { meshACut, &aPartFbs }, operation == BooleanOperation::DifferenceBA,
                              {}, {}, HashToVectorMappingConverter( meshACut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 
@@ -213,7 +213,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
         WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newEdges : nullptr;
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newVerts : nullptr;
 
-        bPart.addPartByMask( std::move( meshBCut ), bPartFbs, operation == BooleanOperation::DifferenceAB,
+        bPart.addMeshPart( { meshBCut, &bPartFbs }, operation == BooleanOperation::DifferenceAB,
                              {}, {}, HashToVectorMappingConverter( meshBCut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 

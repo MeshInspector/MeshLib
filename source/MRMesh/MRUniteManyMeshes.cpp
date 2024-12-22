@@ -116,7 +116,7 @@ public:
             else
             {
                 FaceMap fMap;
-                resultMesh.addPart( y.resultMesh, collectNewFaces_ ? &fMap : nullptr );
+                resultMesh.addMesh( y.resultMesh, collectNewFaces_ ? &fMap : nullptr );
                 if ( collectNewFaces_ )
                 {
                     newFaces.resize( fMap.size() );
@@ -287,7 +287,7 @@ Expected<Mesh> uniteManyMeshes(
                 auto& mergedMesh = mergedMeshes[i];
                 auto& mergeGroup = nonIntersectingGroups[i];
                 for ( auto meshIndex : mergeGroup )
-                    mergedMesh.addPart( *meshes[meshIndex] );
+                    mergedMesh.addMesh( *meshes[meshIndex] );
             }
         } );
     }

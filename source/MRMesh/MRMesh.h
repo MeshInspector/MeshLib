@@ -371,28 +371,34 @@ struct [[nodiscard]] Mesh
     VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr ) { return splitFace( f, triCenter( f ), region, new2Old ); }
 
     /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
-    MRMESH_API void addPart( const Mesh & from,
+    MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    [[deprecated]] void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
+        { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 
     /// the same but copies only portion of (from) specified by fromFaces
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map );
+    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
+    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
 
     /// this version has more parameters:
     ///   if flipOrientation then every from triangle is inverted before adding
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+    MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
+    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
+        { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }
 
     /// fromFaces contains mapping from this-mesh (considering it is empty) to from-mesh
     MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-    
         const PartMapping & map = {} );
+
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
     MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,

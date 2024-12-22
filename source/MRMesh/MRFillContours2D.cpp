@@ -173,7 +173,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     }
     
     // add patch surface to original mesh
-    mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
+    mesh.addMeshPart( patchMesh, false, paths, newPaths );
     return {};
 }
 
@@ -183,7 +183,7 @@ TEST( MRMesh, fillContours2D )
     Mesh sphereSmall = makeUVSphere( 0.7f, 16, 16 );
 
     sphereSmall.topology.flipOrientation();
-    sphereBig.addPart( std::move( sphereSmall ) );
+    sphereBig.addMesh( sphereSmall );
 
     trimWithPlane( sphereBig, TrimWithPlaneParams{ .plane = Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) } );
     sphereBig.pack();

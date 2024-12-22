@@ -978,7 +978,7 @@ VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * regi
     return newv;
 }
 
-void Mesh::addPart( const Mesh & from,
+void Mesh::addMesh( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
@@ -1000,18 +1000,19 @@ void Mesh::addPart( const Mesh & from,
     invalidateCaches();
 }
 
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map )
+void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
 {
-    addPartByMask( from, fromFaces, false, {}, {}, map );
+    addMeshPart( from, false, {}, {}, map );
 }
 
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
+void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
+    const auto & fromFaces = from.mesh.topology.getFaceIds( from.region );
+    addPartBy( from.mesh, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
 void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
@@ -1068,7 +1069,7 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
     const auto ecount = 2 * getIncidentEdges( topology, region ).count();
     res.topology.edgeReserve( ecount );
 
-    res.addPartByMask( *this, region, flipOrientation, {}, {}, map );
+    res.addMeshPart( { *this, &region }, flipOrientation, {}, {}, map );
 
     assert( res.topology.faceSize() == fcount );
     assert( res.topology.faceCapacity() == fcount );
@@ -1090,7 +1091,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     packed.topology.vertReserve( topology.numValidVerts() );
     packed.topology.faceReserve( topology.numValidFaces() );
     packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
-    packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
+    packed.addMesh( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
 }
 

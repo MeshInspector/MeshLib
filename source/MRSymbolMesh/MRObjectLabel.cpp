@@ -198,7 +198,7 @@ void ObjectLabel::buildMeshFromText() const
         mesh.transform( AffineXf3f::translation(
             Vector3f::minusY() * SymbolMeshParams::MaxGeneratedFontHeight * 1.3f * float( i ) ) );
 
-        mesh_->addPart( mesh );
+        mesh_->addMesh( mesh );
     }
 
     meshBox_ = mesh_->computeBoundingBox();

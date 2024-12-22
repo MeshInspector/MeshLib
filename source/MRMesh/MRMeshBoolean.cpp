@@ -611,7 +611,7 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
 
         auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
 
-        meshA.addPartByMask( meshASup, meshASup.topology.getValidFaces(), true, { border }, { border } );
+        meshA.addMeshPart( meshASup, true, { border }, { border } );
     }
 
     auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );

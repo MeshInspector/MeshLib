@@ -133,7 +133,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         if ( !mapping.src2tgtEdges )
             mapping.src2tgtEdges = &src2tgtEdges;
 
-        mesh.addPartByMask( part, part.topology.getValidFaces(), mapping );
+        mesh.addMeshPart( part, mapping );
 
         if ( settings.postMerge )
             settings.postMerge( mesh, mapping );
@@ -161,7 +161,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     if ( !mapping.src2tgtEdges )
         mapping.src2tgtEdges = &src2tgtEdges;
 
-    mesh.addPartByMask( part, part.topology.getValidFaces(), false, cutContours, leftCutContours, mapping );
+    mesh.addMeshPart( part, false, cutContours, leftCutContours, mapping );
 
     if ( settings.postMerge )
         settings.postMerge( mesh, mapping );

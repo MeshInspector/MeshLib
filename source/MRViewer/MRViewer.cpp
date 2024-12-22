@@ -1979,8 +1979,8 @@ void Viewer::initGlobalBasisAxesObject_()
         }
         basis.transform( rotTramsform );
         cone.transform( rotTramsform * translate );
-        mesh.addPart( basis );
-        mesh.addPart( cone );
+        mesh.addMesh( basis );
+        mesh.addMesh( cone );
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
         std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );

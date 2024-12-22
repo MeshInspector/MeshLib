@@ -29,7 +29,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-    virtual std::string getClassName() const override { return "Distance Map"; }
+
+    std::string getClassName() const override { return "Distance Map"; }
+    std::string getClassNameInPlural() const override { return "Distance Maps"; }
 
     /// rebuilds the mesh;
     /// if it is executed in the rendering stream then you can set the needUpdateMesh = true

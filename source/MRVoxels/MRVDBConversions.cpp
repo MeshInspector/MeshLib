@@ -211,27 +211,23 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 #endif
 }
 
-Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+Expected<VdbVolume> meshToDistanceVdbVolume( const MeshPart& mp, const MeshToVolumeParams& params /*= {} */ )
 {
-    if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
+    if ( params.type == MeshToVolumeParams::Type::Signed && !mp.mesh.topology.isClosed( mp.region ) )
         return unexpected( "Only closed mesh can be converted to signed volume" );
     MR_TIMER
 
-    auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
     FloatGrid grid;
     if ( params.type == MeshToVolumeParams::Type::Signed )
-        grid = meshToLevelSet( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToLevelSet( mp, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
     else
-        grid = meshToDistanceField( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToDistanceField( mp, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
 
     if ( !grid )
-        return unexpected( "Operation canceled" );
+        return unexpectedOperationCanceled();
 
     // to get proper normal orientation both for signed and unsigned cases
     grid->setGridClass( openvdb::GRID_LEVEL_SET );
-
-    if ( params.outXf )
-        *params.outXf = shift;
 
     VdbVolume res;
     res.data = grid;
@@ -241,6 +237,20 @@ Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& pa
     res.voxelSize = params.voxelSize;
 
     return res;
+}
+
+Expected<VdbVolume> meshToVolume( const MeshPart& mp, const MeshToVolumeParams& cParams /*= {} */ )
+{
+    MR_TIMER
+
+    auto shift = AffineXf3f::translation( mp.mesh.computeBoundingBox( mp.region, &cParams.worldXf ).min
+        - cParams.surfaceOffset * cParams.voxelSize );
+    if ( cParams.outXf )
+        *cParams.outXf = shift;
+
+    auto params = cParams;
+    params.worldXf = shift.inverse() * cParams.worldXf;
+    return meshToDistanceVdbVolume( mp, params );
 }
 
 VdbVolume floatGridToVdbVolume( FloatGrid grid )

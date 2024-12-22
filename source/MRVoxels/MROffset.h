@@ -39,6 +39,8 @@ struct OffsetParameters : BaseShellParameters
     float windingNumberBeta = 2;
 
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
+    /// this only used if signDetectionMode == SignDetectionMode::HoleWindingRule, otherwise it is ignored
+    /// providing this will disable memoryEfficient (as if memoryEfficient == false)
     std::shared_ptr<IFastWindingNumber> fwn;
 
     /// use FunctionVolume for voxel grid representation:

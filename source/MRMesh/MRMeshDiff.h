@@ -1,13 +1,13 @@
 #pragma once
 
-#include "MRMeshTopology.h"
-#include "MRphmap.h"
+#include "MRVertCoordsDiff.h"
+#include "MRMeshTopologyDiff.h"
 
 namespace MR
 {
 
 /// this object stores a difference between two meshes: both in coordinates and in topology
-/// \details if the meshes are similar then this object is small, if the meshes are very distinct then this object will be comparable to a mesh in size
+/// \details if the meshes are similar then this object is small, if the meshes are very distinct then this object will be even larger than one mesh itself
 /// \ingroup MeshAlgorithmGroup
 class MeshDiff
 {
@@ -25,16 +25,14 @@ public:
     /// returns true if this object does contain some difference in point coordinates or in topology;
     /// if (from) mesh has just more points or more topology elements than (to) and the common elements are the same,
     /// then the method will return false since nothing is stored here
-    [[nodiscard]] bool any() const { return !changedPoints_.empty() || !changedEdges_.empty(); }
+    [[nodiscard]] bool any() const { return pointsDiff_.any() || topologyDiff_.any(); }
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    [[nodiscard]] size_t heapBytes() const { return pointsDiff_.heapBytes() + topologyDiff_.heapBytes(); }
 
 private:
-    size_t toPointsSize_ = 0;
-    HashMap<VertId, Vector3f> changedPoints_;
-    size_t toEdgesSize_ = 0;
-    HashMap<EdgeId, MeshTopology::HalfEdgeRecord> changedEdges_;
+    VertCoordsDiff pointsDiff_;
+    MeshTopologyDiff topologyDiff_;
 };
 
 } // namespace MR

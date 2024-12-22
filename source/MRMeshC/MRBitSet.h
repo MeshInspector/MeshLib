@@ -91,4 +91,13 @@ MRMESHC_API MRVertBitSet* mrVertBitSetCopy( const MRVertBitSet* vbs );
 /// deallocates a VertBitSet object
 MRMESHC_API void mrVertBitSetFree( MRVertBitSet* vbs );
 
+/// creates a new VoxelBitSet object
+MRMESHC_API MRVoxelBitSet* mrVoxelBitSetNew( size_t numBits, bool fillValue );
+
+/// creates a copy of a VoxelBitSet object
+MRMESHC_API MRVoxelBitSet* mrVoxelBitSetCopy( const MRVoxelBitSet* vbs );
+
+/// deallocates a VoxelBitSet object
+MRMESHC_API void mrVoxelBitSetFree( MRVoxelBitSet* vbs );
+
 MR_EXTERN_C_END

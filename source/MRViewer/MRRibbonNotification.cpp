@@ -38,6 +38,7 @@ void RibbonNotifier::pushNotification( const RibbonNotification& notification )
         addNotification_( notifications_, notification );
     addNotification_( notificationsHistory_, notification );
 
+    currentHistoryBtnTimer_ = showHistoryBtnMaxTime_;
     scrollDownNeeded_ = true;    
     requestClosestRedraw_();
 }
@@ -52,11 +53,39 @@ void RibbonNotifier::draw( float scaling, const Box2i& limitFramebuffer )
     filterInvalid_( -1 );
 }
 
+void RibbonNotifier::setHitoryButtonMaxLifeTime( float histBtnMaxLifeTime )
+{
+    if ( showHistoryBtnMaxTime_ == histBtnMaxLifeTime )
+        return; // do nothing
+    if ( showHistoryBtnMaxTime_ <= 0 && histBtnMaxLifeTime <= 0 )
+        return; // do nothing
+
+    if ( showHistoryBtnMaxTime_ <= 0 )
+    {
+        currentHistoryBtnTimer_ = histBtnMaxLifeTime;
+    }
+    else
+    {
+        if ( currentHistoryBtnTimer_ > 0 )
+            currentHistoryBtnTimer_ += ( histBtnMaxLifeTime - showHistoryBtnMaxTime_ ); // decrease current timer
+    }
+    showHistoryBtnMaxTime_ = histBtnMaxLifeTime;
+    requestClosestRedraw_();
+}
+
 void RibbonNotifier::drawHistoryButton_( float scaling, const Box2i& limitFramebuffer )
 {
     using namespace StyleConsts::Notification;
     if ( notificationsHistory_.empty() )
         return;
+
+    if ( showHistoryBtnMaxTime_ > 0 )
+    {
+        if ( currentHistoryBtnTimer_ >= 0 && !historyMode_ )
+            currentHistoryBtnTimer_ -= ImGui::GetIO().DeltaTime;
+        if ( currentHistoryBtnTimer_ < 0 )
+            return;
+    }
 
     const auto windowSzie = ImVec2( 36, cHistoryButtonSizeY ) * scaling;
     Vector2f windowPos = Vector2f( float( limitFramebuffer.min.x ), float( getViewerInstance().framebufferSize.y - limitFramebuffer.min.y ) - windowSzie.y );
@@ -112,6 +141,12 @@ void RibbonNotifier::drawHistoryButton_( float scaling, const Box2i& limitFrameb
             {
                 notifications_.clear();
                 scrollDownNeeded_ = true;
+            }
+            else
+            {
+                currentHistoryBtnTimer_ = showHistoryBtnMaxTime_;
+                if ( currentHistoryBtnTimer_ > 0 )
+                    requestClosestRedraw_();
             }
         }
 
@@ -187,6 +222,9 @@ void RibbonNotifier::drawHistory_( float scaling, const Box2i& limitFramebuffer 
     if ( lostFoucsClickCheck() )
     {
         historyMode_ = false;
+        currentHistoryBtnTimer_ = showHistoryBtnMaxTime_;
+        if ( currentHistoryBtnTimer_ > 0 )
+            requestClosestRedraw_();
     }
 
     ImGui::End();
@@ -499,6 +537,13 @@ void RibbonNotifier::requestClosestRedraw_()
         if ( neededTime < minTimeReq )
             minTimeReq = neededTime;
     }
+
+    if ( showHistoryBtnMaxTime_ > 0 && currentHistoryBtnTimer_ > 0 )
+    {
+        if ( currentHistoryBtnTimer_ < minTimeReq )
+            minTimeReq = currentHistoryBtnTimer_;
+    }
+
     if ( minTimeReq == FLT_MAX )
         return;
     requestRedraw_ = true;

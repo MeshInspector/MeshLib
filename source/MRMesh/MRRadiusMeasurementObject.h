@@ -23,6 +23,7 @@ public:
     RadiusMeasurementObject( ProtectedStruct, const RadiusMeasurementObject& obj ) : RadiusMeasurementObject( obj ) {}
 
     std::string getClassName() const override { return "Radius"; }
+    std::string getClassNameInPlural() const override { return "Radii"; }
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;

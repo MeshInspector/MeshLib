@@ -52,7 +52,9 @@ public:
     { return vdbVolume_.voxelSize; }
 
     MRVOXELS_API virtual std::vector<std::string> getInfoLines() const override;
-    virtual std::string getClassName() const override { return "Voxels"; }
+
+    std::string getClassName() const override { return "Voxels"; }
+    std::string getClassNameInPlural() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
     /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction

@@ -39,10 +39,8 @@ public:
     ConeObject( ProtectedStruct, const ConeObject& obj ) : ConeObject( obj )
     {}
 
-    virtual std::string getClassName() const override
-    {
-        return "Cone";
-    }
+    std::string getClassName() const override { return "Cone"; }
+    std::string getClassNameInPlural() const override { return "Cones"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

@@ -202,8 +202,12 @@ public:
 
     /// return several info lines that can better describe object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const;
+
     /// return human readable name of subclass
     virtual std::string getClassName() const { return "Object"; }
+
+    /// return human readable name of subclass in plural form
+    virtual std::string getClassNameInPlural() const { return "Objects"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and

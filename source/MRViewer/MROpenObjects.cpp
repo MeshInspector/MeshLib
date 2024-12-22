@@ -12,7 +12,7 @@
 #include <MRMesh/MRParallelProgressReporter.h>
 #include <MRMesh/MRParallelFor.h>
 #include <fstream>
-#include <tbb/task_group.h>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

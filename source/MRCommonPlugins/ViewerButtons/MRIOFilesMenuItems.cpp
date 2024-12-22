@@ -5,7 +5,6 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MROpenObjects.h"
 #include "MRMesh/MRDirectory.h"
-#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
@@ -321,78 +320,31 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 }
 
 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
+void sOpenDICOMs( const std::filesystem::path & directory )
 {
-    ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
+    ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory] () -> std::function<void()>
     {
-        ProgressBar::nextTask( "Load DICOM Folder" );
-        auto loadRes = VoxelsLoad::loadDicomsFolderTreeAsVdb( directory, 4, ProgressBar::callBackSetProgress );
-        if ( !loadRes.empty() )
+        if ( auto loadRes = makeObjectTreeFromFolder( directory, true, ProgressBar::callBackSetProgress ) )
         {
-            bool anySuccess = std::any_of( loadRes.begin(), loadRes.end(), []( const auto & r ) { return r.has_value(); } );
-            std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
-            ProgressBar::setTaskCount( (int)loadRes.size() + 1 );
-            std::string errors;
-            for ( auto & res : loadRes )
+            return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
             {
-                if ( res.has_value() )
-                {
-                    ProgressBar::nextTask( "Construct ObjectVoxels" );
-                    auto expObj = createObjectVoxels( *res, ProgressBar::callBackSetProgress );
-                    if ( ProgressBar::isCanceled() )
-                    {
-                        errors = getCancelMessage( directory );
-                        break;
-                    }
-                    if ( !expObj )
-                    {
-                        errors += ( !errors.empty() ? "\n" : "" ) + expObj.error();
-                        break;
-                    }
-                    voxelObjects.push_back( *expObj );
-                }
-                else if ( ProgressBar::isCanceled() )
-                {
-                    errors = getCancelMessage( directory );
-                    break;
-                }
-                else if ( !anySuccess )
-                {
-                    if ( simpleError.empty() )
-                        errors += ( !errors.empty() ? "\n" : "" ) + res.error();
-                    else
-                        errors = simpleError;
-                }
-            }
-            return [viewer, voxelObjects, errors, directory] ()
-            {
-                SCOPED_HISTORY( "Open DICOMs" );
-                for ( auto & obj : voxelObjects )
-                {
-                    AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
-                }
-                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-
-                if ( voxelObjects.size() == 1 )
-                {
-                    std::filesystem::path scenePath = directory;
-                    scenePath += ".mru";
-                    getViewerInstance().onSceneSaved( scenePath, false );
-                }
-
-                if ( !voxelObjects.empty() )
-                    getViewerInstance().recentFilesStore().storeFile( directory );
-
-                if ( !errors.empty() )
-                    showError( errors );
+                sSelectRecursive( *obj );
+                AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
+                SceneRoot::get().addChild( obj );
+                getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                getViewerInstance().recentFilesStore().storeFile( directory );
+                if ( !warnings.empty() )
+                    pushNotification( { .text = warnings, .type = NotificationType::Warning } );
             };
         }
-        return [] ()
+        else
         {
-            showError( "Cannot open given folder, find more in log." );
-        };
-    }, 2 );
+            return [error = loadRes.error()]
+            {
+                showError( error );
+            };
+        }
+    } );
 }
 #endif
 
@@ -418,7 +370,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     {
         ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            if ( auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress ) )
+            if ( auto loadRes = makeObjectTreeFromFolder( directory, false, ProgressBar::callBackSetProgress ) )
             {
                 return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
                 {
@@ -454,7 +406,7 @@ bool OpenDICOMsMenuItem::action()
     {
         if ( directory.empty() )
             return;
-        sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+        sOpenDICOMs( directory );
     } );
     return false;
 }

@@ -18,7 +18,7 @@ namespace MR
 {
 
 
-Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
 {
     MR_TIMER
 
@@ -122,8 +122,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             createFolderObj( folder, pObj.get() );
         }
 
-        for ( const FilePathNode& file : node.files )
-            nodes.push_back( { file, objPtr, cb.newTask() } );
+        if ( !dicomOnly )
+            for ( const FilePathNode& file : node.files )
+                nodes.push_back( { file, objPtr, cb.newTask() } );
 
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
@@ -235,7 +236,7 @@ Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPa
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, callback );
+    return makeObjectTreeFromFolder( contentsFolder, false, callback );
 }
 
 MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectTreeFromZip )

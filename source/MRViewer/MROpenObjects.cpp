@@ -13,6 +13,7 @@
 #include <MRMesh/MRParallelFor.h>
 #include <fstream>
 #include "MRPch/MRTBB.h"
+#include "MRUnitSettings.h"
 
 namespace MR
 {
@@ -142,9 +143,12 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     tbb::task_group group;
     std::atomic<int> completed;
     bool loadingCanceled = false;
+    const float dicomScaleFactor = UnitSettings::getUiLengthUnit()
+        .transform( [] ( const auto& u ) { return getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( u ).conversionFactor; } )
+        .value_or( 1.f );
     for ( auto& nodeAndRes : nodes )
     {
-        group.run( [&nodeAndRes, &completed] {
+        group.run( [&nodeAndRes, &completed, dicomScaleFactor] {
             if ( !nodeAndRes.node.dicomFolder )
             {
                 nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
@@ -153,8 +157,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             else
             {
                 nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                    [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                    [&, dicomScaleFactor]( LoadedObjectVoxels && ld ) -> loadObjResultType
                     {
+                        // dicom is always opened in meters, and we can use this information to convert them properly
+                        ld.obj->applyScale( dicomScaleFactor );
                         return LoadedObjects{ .objs = { ld.obj } };
                     } );
             }

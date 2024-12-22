@@ -370,19 +370,19 @@ struct [[nodiscard]] Mesh
     // same, putting new vertex in the centroid of original triangle
     VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr ) { return splitFace( f, triCenter( f ), region, new2Old ); }
 
-    /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
+    /// appends another mesh as separate connected component(s) to this
     MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     [[deprecated]] void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
         { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 
-    /// the same but copies only portion of (from) specified by fromFaces
+    /// appends whole or part of another mesh as separate connected component(s) to this
     MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
     [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
 
-    /// this version has more parameters:
-    ///   if flipOrientation then every from triangle is inverted before adding
+    /// appends whole or part of another mesh as separate connected component(s) to this
+    /// \param flipOrientation true means that every (from) triangle is inverted before adding
     MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition

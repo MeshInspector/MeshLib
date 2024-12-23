@@ -82,6 +82,6 @@ runs:
       run: python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{ inputs.smoke }} -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }} -a='${{ inputs.pytest_args }}'
 
     - name: Copy test artifacts to S3
-      if: ${{ inputs.upload_test_artifacts && fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
+      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
       shell: bash
       run: aws s3 cp pytest_temp 's3://test-artifacts-git/tests/${{ github.run_id }}/${{ inputs.test_artifacts_path }}' --recursive --quiet

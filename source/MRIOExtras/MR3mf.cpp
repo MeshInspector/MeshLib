@@ -451,13 +451,13 @@ Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressC
             bgColor = it->second->bgColor;
             if ( transform == AffineXf3f() )
             {
-                mesh.addPart( it->second->mesh );
+                mesh.addMesh( it->second->mesh );
             }
             else
             {
                 auto meshCopy = it->second->mesh;
                 meshCopy.transform( transform );
-                mesh.addPart( std::move( meshCopy ) );
+                mesh.addMesh( meshCopy );
             }
         }
         return {};

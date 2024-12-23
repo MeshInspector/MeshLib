@@ -13,9 +13,9 @@ def test_copy_mesh():
 def test_copy_part_mesh():
     torus = mrmesh.makeOuterHalfTorus(2, 1, 10, 10, None)
     copyMesh = mrmesh.Mesh()
-    copyMesh.addPartByMask(torus, torus.topology.getValidFaces())
+    copyMesh.addMesh(torus)
     assert copyMesh.topology.numValidFaces() == torus.topology.numValidFaces()
 
-    copyMesh.addPartByMask(torus, torus.topology.getValidFaces())
+    copyMesh.addMesh(torus)
 
     assert copyMesh.topology.numValidFaces() == 2 * torus.topology.numValidFaces()

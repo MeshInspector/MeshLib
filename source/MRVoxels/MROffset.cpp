@@ -272,13 +272,13 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     if ( offset >= 0 )
     {
         // add original mesh to the result with flipping
-        resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
+        resMesh.addMeshPart( mesh, true ); // true = with flipping
     }
     else
     {
         resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
-        resMesh.addPart( mesh );
+        resMesh.addMesh( mesh );
     }
     return res;
 }

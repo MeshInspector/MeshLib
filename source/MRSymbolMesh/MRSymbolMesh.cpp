@@ -299,7 +299,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
 
     mesh2.topology.flipOrientation();
 
-    mesh.addPart( mesh2 );
+    mesh.addMesh( mesh2 );
 
     auto edges = mesh.topology.findHoleRepresentiveEdges();
     for ( int bi = 0; bi < edges.size() / 2; ++bi )

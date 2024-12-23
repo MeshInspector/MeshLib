@@ -67,7 +67,7 @@ def test_issue_2899(tmp_path):
     slope_res = mr.Mesh()
     slope_res.addMeshPart(mr.MeshPart(mesh, slope_faces))
     slide_res = mr.Mesh()
-    slide_res.addPartByMask(mesh, mesh.topology.getValidFaces() - slope_faces)
+    slide_res.addMeshPart(mr.MeshPart(mesh, mesh.topology.getValidFaces() - slope_faces))
 
     # Save in files
     mr.saveMesh(slope_res, tmp_path / "slopeRes.off")

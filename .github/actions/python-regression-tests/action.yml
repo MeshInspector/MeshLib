@@ -40,7 +40,14 @@ runs:
       shell: bash
       run: |
         echo << EOF
-        ${{ fromJSON( inputs ) }}
+        autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}
+        build_config: ${{ inputs.build_config }}
+        mrbind: ${{ inputs.mrbind }}
+        pytest_args: ${{ inputs.pytest_args }}
+        smoke: ${{ inputs.smoke }}
+        test_artifacts_path: ${{ inputs.test_artifacts_path }}
+        ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}
+        upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
         EOF
 
     # cache management: https://github.com/MeshInspector/MeshLib/actions/caches

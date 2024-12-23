@@ -20,7 +20,7 @@ def parse_iso8601(s):
     return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
 
 def get_duration(obj):
-    if obj.get('started_at') and obj.get('completed_at'):
+    if 'started_at' in obj and 'completed_at' in obj:
         return parse_iso8601(obj['completed_at']) - parse_iso8601(obj['started_at'])
 
 def parse_step(step: dict):

@@ -143,9 +143,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     tbb::task_group group;
     std::atomic<int> completed;
     bool loadingCanceled = false;
-    const float dicomScaleFactor = UnitSettings::getUiLengthUnit()
-        .transform( [] ( LengthUnit u ) { return getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( u ).conversionFactor; } )
-        .value_or( 1.f );
+    float dicomScaleFactor = 1.f;
+    if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
+        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
+
     for ( auto& nodeAndRes : nodes )
     {
         group.run( [&nodeAndRes, &completed, dicomScaleFactor] {

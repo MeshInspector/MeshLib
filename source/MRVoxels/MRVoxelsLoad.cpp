@@ -165,7 +165,7 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
     {
         auto& gridsRef = *grids;
         if ( grids->size() == 0 )
-            unexpected( std::string( "Nothing to load" ) );
+            return unexpected( std::string( "Nothing to load" ) );
 
         bool anyLoaded = false;
         int size = int( gridsRef.size() );
@@ -178,7 +178,11 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
             if ( !gridsRef[i] )
                 continue;
 
-            OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] ) ) );
+            std::shared_ptr<openvdb::FloatGrid> floatGridPtr = std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] );
+            if ( !floatGridPtr )
+                return unexpected( "Wrong grid type");
+
+            OpenVdbFloatGrid ovfg( std::move( *floatGridPtr ) );
             VdbVolume vdbVolume;
             vdbVolume.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
 
@@ -210,10 +214,10 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
             anyLoaded = true;
         }
         if ( !anyLoaded )
-            unexpected( std::string( "No loaded grids" ) );
+            return unexpected( std::string( "No loaded grids" ) );
     }
     else
-        unexpected( std::string( "Nothing to read" ) );
+        return unexpected( std::string( "Nothing to read" ) );
 
     if ( cb )
         cb( 1.f );
@@ -249,7 +253,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
 
     auto loader = getVoxelsLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
     return loader( path, cb );
 }
 

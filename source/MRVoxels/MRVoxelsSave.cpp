@@ -32,7 +32,7 @@ Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out,
 {
     MR_TIMER
     if ( !writeByBlocks( out, (const char*) simpleVolume.data.data(), simpleVolume.data.size() * sizeof( float ), callback ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
     if ( !out )
         return unexpected( std::string( "Stream write error" ) );
     return {};
@@ -257,7 +257,7 @@ Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::file
 
     auto saver = getVoxelsSaver( ext );
     if ( !saver )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver( vdbVolume, file, callback );
 }

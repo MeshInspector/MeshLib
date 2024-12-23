@@ -31,8 +31,8 @@ def test_make_bridge_edge(input_case, tmp_path):
         assert topl.edgeSize() - edges_num_before == 2, "Edges number should be increased on 2"
     with check:
         assert topl.numValidFaces() == faces_num_before, "Faces number should be the same"
-    mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
-    ref_mesh_path = input_folder / f"{case_name}.ctm"
+    mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
+    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:

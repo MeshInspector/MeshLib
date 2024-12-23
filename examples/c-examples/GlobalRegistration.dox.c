@@ -70,7 +70,8 @@ int main( int argc, char* argv[] )
     MRBox3f maxBBox = mrBox3fNew();
     for ( int i = 0; i < inputNum; ++i )
     {
-        inputs[i] = mrPointsLoadFromAnySupportedFormat( argv[1 + i], &errorString );
+        MRPointsLoadSettings loadSettings = mrPointsLoadSettingsNew();
+        inputs[i] = mrPointsLoadFromAnySupportedFormat( argv[1 + i], &loadSettings, &errorString );
         if ( errorString )
         {
             fprintf( stderr, "Failed to load point cloud: %s\n", mrStringData( errorString ) );
@@ -93,7 +94,7 @@ int main( int argc, char* argv[] )
     // set progress callback
     samplingParams.cb = onProgress;
 
-    MRMultiwayICP* icp = mrMultiwayICPNew( inputXfs, inputNum, &samplingParams );
+    MRMultiwayICP* icp = mrMultiwayICPNew( (const MRMeshOrPointsXf**)inputXfs, inputNum, &samplingParams );
 
     MRICPProperties params = mrICPPropertiesNew();
     mrMultiwayICPSetParams( icp, &params );
@@ -118,8 +119,9 @@ int main( int argc, char* argv[] )
             mrPointCloudAddPoint( output, point );
         }
     }
-
-    mrPointsSaveToAnySupportedFormat( output, argv[argc - 1], &errorString );
+    
+    MRSaveSettings saveSettings = mrSaveSettingsNew();
+    mrPointsSaveToAnySupportedFormat( output, argv[argc - 1], &saveSettings, &errorString );
     if ( errorString )
     {
         fprintf( stderr, "Failed to save point cloud: %s\n", mrStringData( errorString ) );

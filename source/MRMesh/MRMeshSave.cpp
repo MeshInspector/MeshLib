@@ -37,7 +37,7 @@ Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettin
     VertCoords buf;
     const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), settings.xf, buf );
     if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( !out )
         return unexpected( std::string( "Error saving in Mrmesh-format" ) );
@@ -81,7 +81,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
             saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
     }
     out << '\n';
 
@@ -91,7 +91,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
     {
         ++faceIndex;
         if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
         if ( !e.valid() )
             continue;
 
@@ -172,7 +172,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
     }
 
     if ( settings.uvMap )
@@ -187,7 +187,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
             ++numSaved;
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
-                return unexpected( std::string( "Saving canceled" ) );
+                return unexpectedOperationCanceled();
         }
         out << "usemtl Texture\n";
     }
@@ -199,7 +199,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     {
         ++faceIndex;
         if ( settings.progress && !( faceIndex & 0x3FF ) && !sb( faceIndex / facesNum ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
         if ( !e.valid() )
             continue;
 
@@ -296,7 +296,7 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
         std::uint16_t attr{ 0 };
         out.write( ( const char* )&attr, 2 );
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
         ++trisIndex;
     }
 
@@ -347,7 +347,7 @@ Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettin
         out << "endloop\n";
         out << "endfacet\n";
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
         ++trisIndex;
     }
     out << "endsolid " << solid_name << "\n";
@@ -433,7 +433,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             tri.v[i] = vertRenumber( vs[i] );
         out.write( (const char *)&tri, 13 );
         if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
-            return unexpected( std::string( "Saving canceled" ) );
+            return unexpectedOperationCanceled();
         ++faceIndex;
     }
 
@@ -453,7 +453,7 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::pa
 
     auto saver = getMeshSaver( ext );
     if ( !saver.fileSave )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver.fileSave( mesh, file, settings );
 }

@@ -283,7 +283,7 @@ void MoveObjectByMouseImpl::applyCurrentXf_( bool history )
     auto itXf = initialXfs_.begin();
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
-        if ( history )
+        if ( history && historyEnabled_ )
             AppendHistory<ChangeXfAction>( "xf", obj );
         obj->setWorldXf( currentXf_ * *itXf++ );
     }

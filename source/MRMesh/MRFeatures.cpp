@@ -409,7 +409,7 @@ std::string_view toString( MeasureResult::Status status )
         return "Doesn't make sense for those features";
         break;
     case Features::MeasureResult::Status::badRelativeLocation:
-        return "N/A because of how the features are located";
+        return "N/A because of how the features are arranged";
         break;
     case Features::MeasureResult::Status::notFinite:
         return "Infinite";

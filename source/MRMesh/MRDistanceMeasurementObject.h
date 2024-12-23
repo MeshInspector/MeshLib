@@ -22,6 +22,7 @@ public:
     DistanceMeasurementObject( ProtectedStruct, const DistanceMeasurementObject& obj ) : DistanceMeasurementObject( obj ) {}
 
     std::string getClassName() const override { return "Distance"; }
+    std::string getClassNameInPlural() const override { return "Distances"; }
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;

@@ -33,7 +33,9 @@ public:
     ObjectPoints( ProtectedStruct, const ObjectPoints& obj ) : ObjectPoints( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-    virtual std::string getClassName() const override { return "Points"; }
+
+    std::string getClassName() const override { return "Points"; }
+    std::string getClassNameInPlural() const override { return "Points"; }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 

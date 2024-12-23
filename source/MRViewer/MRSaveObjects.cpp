@@ -1,4 +1,4 @@
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -17,7 +17,7 @@
 
 #ifndef MRVIEWER_NO_VOXELS
 #include <MRVoxels/MRVoxelsSave.h>
-#include "MRVoxels/MRObjectVoxels.h"
+#include <MRVoxels/MRObjectVoxels.h>
 #endif
 
 #include "MRPch/MRSpdlog.h"
@@ -29,7 +29,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
 {
     MR_TIMER
     if ( !reportProgress( settings.callback, 0.f ) )
-        return unexpected( std::string( "Saving canceled" ) );
+        return unexpectedOperationCanceled();
 
     std::optional<std::filesystem::path> copyPath;
     std::error_code ec;

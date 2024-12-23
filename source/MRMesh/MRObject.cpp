@@ -440,7 +440,7 @@ void Object::serializeFields_( Json::Value& root ) const
 Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
     return{};
 }
 

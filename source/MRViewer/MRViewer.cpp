@@ -64,7 +64,7 @@
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 #include "MRProgressBar.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"
@@ -1195,6 +1195,23 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
+/// returns class name of all objects or nullopt if they are of different types
+static std::optional<std::string> commonClassName( const std::vector<std::shared_ptr<Object>>& objs )
+{
+    if ( objs.empty() )
+        return {};
+
+    auto cn = objs[0]->getClassName();
+    if ( objs.size() == 1 )
+        return cn;
+
+    for ( int i = 1; i < objs.size(); ++i )
+        if ( cn != objs[i]->getClassName() )
+            return {};
+
+    return objs[0]->getClassNameInPlural();
+}
+
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
 {
     if ( filesList.empty() )
@@ -1207,10 +1224,14 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             const bool wasEmptyScene = SceneRoot::get().children().empty();
             const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
+            std::string undoName = options.undoPrefix + commonFilesName( result.loadedFiles );
+            if ( auto cn = commonClassName( result.scene->children() ) )
+                undoName += " as " + *cn;
+
             if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
                 // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( options.undoPrefix + commonFilesName( result.loadedFiles ) );
+                AppendHistory<SwapRootAction>( undoName );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
@@ -1222,7 +1243,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
 
-                SCOPED_HISTORY( options.undoPrefix + commonFilesName( result.loadedFiles ) );
+                SCOPED_HISTORY( undoName );
 
                 const auto children = result.scene->children();
                 result.scene->removeAllChildren();

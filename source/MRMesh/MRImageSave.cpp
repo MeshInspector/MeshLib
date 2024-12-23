@@ -90,7 +90,7 @@ Expected<void> toAnySupportedFormat( const Image& image, const std::filesystem::
 
     auto saver = getImageSaver( ext );
     if ( !saver )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver( image, file );
 }

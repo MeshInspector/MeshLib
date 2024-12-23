@@ -6,7 +6,7 @@ on:
       # manually defined values
       autotest_data_s3_url:
         description:
-        value: "s3://data-autotest/test_data_2024-nov-07"
+        value: "s3://data-autotest/test_data_2024-12-19"
       vcpkg_version:
         description: "vcpkg version"
         value: "2024.10.21" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
@@ -44,6 +44,9 @@ on:
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
+      test_pip_build:
+        description:
+        value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
 
 jobs:
   prepare-config:
@@ -60,6 +63,7 @@ jobs:
       tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
       tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
+      tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
 
     runs-on: ubuntu-latest
 
@@ -118,7 +122,7 @@ jobs:
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          
+
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}
         uses: actions/checkout@v4

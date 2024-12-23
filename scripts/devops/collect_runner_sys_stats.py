@@ -1,3 +1,4 @@
+import json
 import math
 import multiprocessing
 import os
@@ -36,7 +37,7 @@ def get_compiler_id(compiler_path):
     else:
         raise RuntimeError(f"Unknown compiler: {version_line}")
 
-    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode()
+    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode().strip()
     if compiler == "emcc":
         return f"emcc-{output}"
     else:
@@ -44,9 +45,27 @@ def get_compiler_id(compiler_path):
         return f"{compiler}-{major_version}"
 
 if __name__ == "__main__":
-    print(f"CPU_COUNT={multiprocessing.cpu_count()}")
-    print(f"RAM_AMOUNT={math.floor(get_ram_amount() / 1024 / 1024)}")
+    if os.environ.get('CI'):
+        cpu_count = multiprocessing.cpu_count()
+        ram_amount = math.floor(get_ram_amount() / 1024 / 1024)
 
-    cxx_compiler = os.environ.get("CXX_COMPILER")
-    if cxx_compiler:
-        print(f"COMPILER_ID={get_compiler_id(cxx_compiler)}")
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+            print(f"cpu_count={cpu_count}", file=out)
+            print(f"ram_amount_mb={ram_amount}", file=out)
+
+        compiler_id = None
+        cxx_compiler = os.environ.get("CXX_COMPILER")
+        if cxx_compiler:
+            compiler_id = get_compiler_id(cxx_compiler)
+
+        results = {
+            'target_os': os.environ.get('TARGET_OS'),
+            'target_arch': os.environ.get('TARGET_ARCH'),
+            'compiler': compiler_id,
+            'build_config': os.environ.get('BUILD_CONFIG').lower(),
+            'cpu_count': cpu_count,
+            'ram_mb': ram_amount,
+        }
+        with open(os.environ['STATS_FILE'], 'w') as f:
+            json.dump(results, f)
+            print(json.dumps(results, indent=2))

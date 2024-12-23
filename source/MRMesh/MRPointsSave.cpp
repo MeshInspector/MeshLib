@@ -212,7 +212,7 @@ Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesy
 
     auto saver = getPointsSaver( ext );
     if ( !saver.fileSave )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return saver.fileSave( points, file, settings );
 }

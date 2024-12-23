@@ -110,7 +110,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
         {
             const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
         }
     }
     if ( isPolylineBlock )
@@ -128,7 +128,7 @@ Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, P
 
     auto loader = getLinesLoader( ext );
     if ( !loader.fileLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.fileLoad( file, callback );
 }

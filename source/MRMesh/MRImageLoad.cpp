@@ -21,7 +21,7 @@ Expected<Image> fromAnySupportedFormat( const std::filesystem::path& file )
 
     auto loader = getImageLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader( file );
 }

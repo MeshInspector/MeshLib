@@ -9,18 +9,19 @@ namespace MR
         public class PointsLoad
         {
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern IntPtr mrPointsLoadFromAnySupportedFormat(string filename, IntPtr* errorString);
+            private static extern IntPtr mrPointsLoadFromAnySupportedFormat(string filename, ref MRPointsLoadSettings settings, ref IntPtr errorString);
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
 
             /// loads point cloud from file of any supported format
-            unsafe public static PointCloud FromAnySupportedFormat(string path)
+            public static PointCloud FromAnySupportedFormat(string path, PointsLoadSettings? settings = null)
             {
                 mrLoadIOExtras();
 
-                IntPtr errString = new IntPtr();
-                var mesh = mrPointsLoadFromAnySupportedFormat(path, &errString);
+                MRPointsLoadSettings mrSettings = settings is null ? new MRPointsLoadSettings() : settings.Value.ToNative();
+                IntPtr errString = IntPtr.Zero;
+                var mesh = mrPointsLoadFromAnySupportedFormat(path, ref mrSettings, ref errString);
 
                 if (errString != IntPtr.Zero)
                 {

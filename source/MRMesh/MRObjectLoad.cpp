@@ -21,10 +21,11 @@
 #include "MRSerializer.h"
 #include "MRDirectory.h"
 #include "MRSceneSettings.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
+#include "MRVoxels/MRDicom.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -94,6 +95,8 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
         postImportObject( child, filename );
 }
 
+} // namespace
+
 IOFilters getAllFilters()
 {
     return
@@ -104,8 +107,6 @@ IOFilters getAllFilters()
         | PointsLoad::getFilters()
     ;
 }
-
-} // namespace
 
 Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
@@ -209,11 +210,11 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     objectMesh->setXf( xf );
 
-    holesCount = int( objectMesh->numHoles() );
+        holesCount = int( objectMesh->numHoles() );
     std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
-    if ( !colors.empty() && !hasColors )
+        if ( !colors.empty() && !hasColors )
         warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
-    if ( !uvCoords.empty() && !hasUV )
+        if ( !uvCoords.empty() && !hasUV )
         warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
 
     return LoadedObject{ .obj = std::move( objectMesh ), .warnings = std::move( warnings ) };
@@ -301,9 +302,9 @@ Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file
 Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filename, const ProgressCallback& callback )
 {
     if ( callback && !callback( 0.f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
-    Expected<LoadedObjects> result;
+    Expected<LoadedObjects> result = unexpectedUnsupportedFileExtension();
     bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
@@ -325,7 +326,8 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         const auto loader = ObjectLoad::getObjectLoader( *filter );
         result = loader( filename, callback );
     }
-    else
+    // no else to support same extensions in object and mesh loaders
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
     {
         auto maybe = makeObjectFromMeshFile( filename, callback );
         if ( maybe )
@@ -333,62 +335,60 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             maybe->obj->select( true );
             result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( maybe.error() == "Loading canceled" )
-        {
+        else if ( maybe.error() != stringUnsupportedFileExtension() )
             result = unexpected( std::move( maybe.error() ) );
-        }
-        else
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectPoints = makeObjectPointsFromFile( filename, callback );
+        if ( objectPoints.has_value() )
         {
-            result = unexpected( std::move( maybe.error() ) );
-
-            auto objectPoints = makeObjectPointsFromFile( filename, callback );
-            if ( objectPoints.has_value() )
-            {
-                objectPoints->select( true );
-                auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-                result = LoadedObjects{ .objs = { obj } };
-            }
-            else if ( result.error() == "unsupported file extension" )
-            {
-                result = unexpected( objectPoints.error() );
-
-                auto objectLines = makeObjectLinesFromFile( filename, callback );
-                if ( objectLines.has_value() )
-                {
-                    objectLines->select( true );
-                    auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
-                    result = LoadedObjects{ .objs = { obj } };
-                }
-                else if ( result.error() == "unsupported file extension" )
-                {
-                    result = unexpected( objectLines.error() );
-
-                    auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
-                    if ( objectDistanceMap.has_value() )
-                    {
-                        objectDistanceMap->select( true );
-                        auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
-                        result = LoadedObjects{ .objs = { obj } };
-                    }
-                    else if ( result.error() == "unsupported file extension" )
-                    {
-                        result = unexpected( objectDistanceMap.error() );
-
-                        auto objectGcode = makeObjectGcodeFromFile( filename, callback );
-                        if ( objectGcode.has_value() )
-                        {
-                            objectGcode->select( true );
-                            auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
-                            result = LoadedObjects{ .objs = { obj } };
-                        }
-                        else
-                        {
-                            result = unexpected( objectGcode.error() );
-                        }
-                    }
-                }
-            }
+            objectPoints->select( true );
+            auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
         }
+        else if ( objectPoints.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectPoints.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectLines = makeObjectLinesFromFile( filename, callback );
+        if ( objectLines.has_value() )
+        {
+            objectLines->select( true );
+            auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectLines.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectLines.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
+        if ( objectDistanceMap.has_value() )
+        {
+            objectDistanceMap->select( true );
+            auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectDistanceMap.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectDistanceMap.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectGcode = makeObjectGcodeFromFile( filename, callback );
+        if ( objectGcode.has_value() )
+        {
+            objectGcode->select( true );
+            auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectGcode.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectGcode.error() ) );
     }
 
     if ( result.has_value() && !loadedFromSceneFile )
@@ -404,9 +404,6 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
                     "Visualization is simplified (only part of the points is drawn)\n";
             }
         }
-
-    if ( !result.has_value() )
-        spdlog::error( result.error() );
 
     return result;
 }
@@ -449,182 +446,6 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
     return false;
 }
 
-Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
-{
-    MR_TIMER
-
-    if ( callback && !callback( 0.f ) )
-        return unexpected( getCancelMessage( folder ) );
-
-    struct FilePathNode
-    {
-        std::filesystem::path path;
-        std::vector<FilePathNode> subfolders;
-        std::vector<FilePathNode> files;
-    };
-
-    std::function<FilePathNode( const std::filesystem::path& )> getFilePathNode;
-    getFilePathNode = [&getFilePathNode, filters = getAllFilters()] ( const std::filesystem::path& folder )
-    {
-        FilePathNode node{ .path = folder };
-        std::error_code ec;
-        for ( auto entry : Directory{ folder, ec } )
-        {
-            auto path = entry.path();
-            if ( entry.is_directory( ec ) )
-            {
-                node.subfolders.push_back( getFilePathNode( path ) );
-            }
-            else if ( entry.is_regular_file( ec ) )
-            {
-                auto ext = utf8string( path.extension() );
-                for ( auto& c : ext )
-                    c = ( char )tolower( c );
-
-                if ( ext.empty() )
-                    continue;
-
-                if ( findFilter( filters, ext ) )
-                    node.files.push_back( { .path = path } );
-            }
-        }
-        return node;
-    };
-    FilePathNode filesTree = getFilePathNode( folder );
-
-    // clear empty folders
-    std::function<void( FilePathNode& )> clearEmptySubfolders = {};
-    clearEmptySubfolders = [&clearEmptySubfolders] ( FilePathNode& node )
-    {
-        for ( int i = int( node.subfolders.size() ) - 1; i >= 0; --i )
-        {
-            clearEmptySubfolders( node.subfolders[i] );
-            if ( node.subfolders[i].files.empty() && node.subfolders[i].subfolders.empty() )
-                node.subfolders.erase( node.subfolders.begin() + i );
-        }
-    };
-    clearEmptySubfolders( filesTree );
-
-    
-    if ( filesTree.subfolders.empty() && filesTree.files.empty() )
-        return unexpected( std::string( "Error: folder is empty." ) );
-
-
-    using loadObjResultType = Expected<LoadedObjects>;
-    // create folders objects
-    struct LoadTask
-    {
-        std::future<loadObjResultType> future;
-        Object* parent = nullptr;
-        LoadTask( std::future<loadObjResultType> future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
-        bool finished = false;
-    };
-    std::vector<LoadTask> loadTasks;
-
-    std::atomic_bool loadingCanceled = false;
-    std::function<void( const FilePathNode&, Object* )> createFolderObj = {};
-    createFolderObj = [&] ( const FilePathNode& node, Object* objPtr )
-    {
-
-        for ( const FilePathNode& folder : node.subfolders )
-        {
-            auto pObj = std::make_shared<Object>();
-            pObj->setName( utf8string( folder.path.filename() ) ); // not path.stem() to preserve "extensions" in folder names
-            objPtr->addChild( pObj );
-            createFolderObj( folder, pObj.get() );
-        }
-        for ( const FilePathNode& file : node.files )
-        {
-            loadTasks.emplace_back( std::async( std::launch::async, [filepath = file.path, &loadingCanceled] ()
-            {
-                return loadObjectFromFile( filepath, [&loadingCanceled]( float ){ return !loadingCanceled; } );
-            } ), objPtr );
-        }
-    };
-    LoadedObject res;
-    res.obj = std::make_shared<Object>();
-    res.obj->setName( utf8string( folder.stem() ) );
-    createFolderObj( filesTree, res.obj.get() );
-
-    // processing of results
-    bool atLeastOneLoaded = false;
-    std::unordered_map<std::string, int> allErrors;
-    const float taskCount = float( loadTasks.size() );
-    int finishedTaskCount = 0;
-    std::chrono::system_clock::time_point afterSecond = std::chrono::system_clock::now();
-    while ( finishedTaskCount < taskCount )
-    {
-        afterSecond += +std::chrono::seconds( 1 );
-        for ( auto& t : loadTasks )
-        {
-            if ( !t.future.valid() )
-                continue;
-            std::future_status status = t.future.wait_until( afterSecond );
-            if ( status != std::future_status::ready )
-                continue;
-            auto taskRes = t.future.get();
-            if ( taskRes.has_value() )
-            {
-                for ( const auto& objPtr : taskRes->objs )
-                    t.parent->addChild( objPtr );
-                if ( !taskRes->warnings.empty() )
-                    res.warnings += taskRes->warnings;
-                if ( !atLeastOneLoaded )
-                    atLeastOneLoaded = true;
-            }
-            else
-            {
-                ++allErrors[taskRes.error()];
-            }
-            ++finishedTaskCount;
-            if ( callback && !callback( finishedTaskCount / taskCount ) )
-                loadingCanceled = true;
-        }
-    }
-
-    std::string errorString;
-    for ( const auto& error : allErrors )
-    {
-        errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
-        if ( error.second > 1 )
-        {
-            errorString += std::string( " (" ) + std::to_string( error.second ) + std::string( ")" );
-        }
-    }
-
-    if ( !errorString.empty() )
-        spdlog::warn( "Load folder error:\n{}", errorString );
-    if ( loadingCanceled )
-        return unexpected( getCancelMessage( folder ) );
-    if ( !atLeastOneLoaded )
-        return unexpected( errorString );
-
-    return res;
-}
-
-Expected<LoadedObject> loadObjectTreeFromZip( const std::filesystem::path& zipPath, const ProgressCallback& callback )
-{
-    auto tmpFolder = UniqueTemporaryFolder( {} );
-    auto contentsFolder = tmpFolder / zipPath.stem();
-
-    std::ifstream in( zipPath, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( zipPath.filename() ) );
-
-    std::error_code ec;
-    std::filesystem::create_directory( contentsFolder, ec );
-    auto resZip = decompressZip( in, contentsFolder );
-    if ( !resZip )
-        return unexpected( "ZIP container error: " + resZip.error() );
-
-    return makeObjectTreeFromFolder( contentsFolder, callback );
-}
-
-Expected<ObjectPtr> toObjectPtr( Object&& obj )
-{
-    return std::make_shared<Object>( std::move( obj ) );
-}
-
 Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
@@ -633,7 +454,7 @@ Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::p
 
     auto loader = SceneLoad::getSceneLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader( path, callback )
     .and_then( [&] ( LoadedObject&& l ) -> Expected<LoadedObject>
@@ -734,7 +555,7 @@ Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::p
     if ( !resDeser.has_value() )
     {
         std::string errorStr = resDeser.error();
-        if ( errorStr != "Loading canceled" )
+        if ( errorStr != stringOperationCanceled() )
             errorStr = "Cannot deserialize: " + errorStr;
         return unexpected( errorStr );
     }
@@ -748,6 +569,5 @@ Expected<LoadedObject> deserializeObjectTree( const std::filesystem::path& path,
 }
 
 MR_ADD_SCENE_LOADER_WITH_PRIORITY( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree, -1 )
-MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), loadObjectTreeFromZip )
 
 } //namespace MR

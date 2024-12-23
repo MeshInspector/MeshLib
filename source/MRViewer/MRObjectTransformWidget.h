@@ -78,9 +78,9 @@ public:
     MRVIEWER_API void updateVisualTransformMode( ControlBit showMask, ViewportMask viewportMask, const AffineXf3f& xf );
 
     // One have to implement these functions to have visualization of translation and rotation
-    virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
+    virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove, ViewportId vpId ) = 0;
     // xf - widget current xf
-    virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) = 0;
+    virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId ) = 0;
 
     // build-in history action class for change center
     class ChangeCenterAction : public HistoryAction
@@ -133,7 +133,7 @@ public:
     struct MRVIEWER_CLASS VisualParams
     {
         // type of length measurement units
-        enum class TypeRadius
+        enum class SizeType
         {
             // metric units of measurement
             LengthUnit = 0,
@@ -149,7 +149,7 @@ public:
         // negative width value means that controls are not setup
         float width{ -1.0f };
         // sets the type of widget size units (metric length or pixels units)
-        TypeRadius typeRadius = TypeRadius::LengthUnit;
+        SizeType sizeType = SizeType::LengthUnit;
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -182,12 +182,12 @@ public:
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
     // sets the type of widget size units ( recalculates the current values into new units of measurement )
-    MRVIEWER_API void setTypeRadius( VisualParams::TypeRadius type );
+    MRVIEWER_API void setSizeType( VisualParams::SizeType type );
     // calculates and sets the matrix to set the size in pixels
     MRVIEWER_API virtual void updateSizeInPixel() override;
 
-    MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
-    MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
+    MRVIEWER_API virtual void updateTranslation( Axis ax, const Vector3f& startMove, const Vector3f& endMove, ViewportId vpId ) override;
+    MRVIEWER_API virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId ) override;
 
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );

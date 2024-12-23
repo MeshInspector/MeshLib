@@ -1,4 +1,5 @@
 #include "MRMeshToDistanceVolume.h"
+#include "MRVDBConversions.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTimer.h"
@@ -15,9 +16,30 @@ namespace MR
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
-    auto params = cParams;
-    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
+    if ( cParams.dist.signMode == SignDetectionMode::OpenVDB )
+    {
+        MeshToVolumeParams m2vPrams
+        {
+            .type = MeshToVolumeParams::Type::Signed,
+            .voxelSize = cParams.vol.voxelSize,
+            // SimpleVolume and VdbVolume are shifted on half voxel relative one another, see also VoxelsVolumeAccessor::shift()
+            .worldXf = AffineXf3f::translation( -cParams.vol.origin - 0.5f * cParams.vol.voxelSize ),
+            .cb = subprogress( cParams.vol.cb, 0.0f, 0.8f )
+        };
+        assert( cParams.dist.maxDistSq < FLT_MAX ); // the amount of work is proportional to maximal distance
+        if ( cParams.dist.maxDistSq < FLT_MAX )
+        {
+            m2vPrams.surfaceOffset = std::sqrt( cParams.dist.maxDistSq )
+                / std::min( { cParams.vol.voxelSize.x, cParams.vol.voxelSize.y, cParams.vol.voxelSize.z } );
+        }
+        return meshToDistanceVdbVolume( mp, m2vPrams ).and_then(
+            [&cParams]( VdbVolume && vdbVolume )
+            {
+                return vdbVolumeToSimpleVolume( vdbVolume, Box3i{ Vector3i( 0, 0, 0 ), cParams.vol.dimensions }, subprogress( cParams.vol.cb, 0.8f, 1.0f ) );
+            } );
+    }
 
+    auto params = cParams;
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
         SimpleVolumeMinMax res;

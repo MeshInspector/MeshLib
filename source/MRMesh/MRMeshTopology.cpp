@@ -605,7 +605,7 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
     return res.load( std::memory_order_relaxed );
 }
 
-std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
+std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges( const FaceBitSet * region ) const
 {
     MR_TIMER
 
@@ -618,8 +618,9 @@ std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 
     res.reserve( num );
     for ( EdgeId e : representativeEdges )
-        res.push_back( e );
-    assert( res.size() == num );
+        if ( !region || contains( *region, right( e ) ) )
+            res.push_back( e );
+    assert( region || res.size() == num );
     return res;
 }
 
@@ -2222,7 +2223,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( v / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     // read verts
     std::uint32_t numVerts;
@@ -2235,7 +2236,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( ( 1.f + v ) / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     // read faces
     std::uint32_t numFaces;
@@ -2248,7 +2249,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
     {
         return callback( ( 2.f + v ) / 3.f );
     } : callback ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     computeValidsFromEdges();
 

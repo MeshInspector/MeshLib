@@ -139,9 +139,7 @@ namespace MR
                 {
                     if (bs_ != IntPtr.Zero)
                     {
-                        Console.WriteLine("mrBitSetFree start");
                         mrBitSetFree(bs_);
-                        Console.WriteLine("mrBitSetFree end");
                         bs_ = IntPtr.Zero;
                     }
 
@@ -341,6 +339,42 @@ namespace MR
             public static UndirectedEdgeBitSet operator |(UndirectedEdgeBitSet a, UndirectedEdgeBitSet b)
             {
                 return new UndirectedEdgeBitSet(mrBitSetOr(a.bs_, b.bs_));
+            }
+        }
+
+        /// container of bits representing voxel indices
+        public class VoxelBitSet : BitSet
+        {
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern IntPtr mrBitSetCopy(IntPtr bs);
+
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
+
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
+
+            internal VoxelBitSet(IntPtr bs) : base(bs) { }
+            /// creates bitset with given size
+            public VoxelBitSet(int size = 0) : base(size) { }
+            /// creates bitset with given size and fill value
+            public VoxelBitSet(int size, bool fillValue) : base(size, fillValue) { }
+            /// returns a deep copy of the bitset
+            public override BitSetReadOnly Clone()
+            {
+                IntPtr bsCopy = mrBitSetCopy(bs_);
+                return new VoxelBitSet(bsCopy);
+            }
+            /// creates a new bitset including a's bits and excluding b's bits 
+            public static VoxelBitSet operator -(VoxelBitSet a, VoxelBitSet b)
+            {
+                return new VoxelBitSet(mrBitSetSub(a.bs_, b.bs_));
+            }
+
+            /// creates a new bitset including both a's bits and  b's bits
+            public static VoxelBitSet operator |(VoxelBitSet a, VoxelBitSet b)
+            {
+                return new VoxelBitSet(mrBitSetOr(a.bs_, b.bs_));
             }
         }
     }

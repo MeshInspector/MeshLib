@@ -3,6 +3,7 @@
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
 #include "MRViewer/MRViewport.h"
+#include "MRViewer/MROpenObjects.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
@@ -33,7 +34,7 @@
 #include "MRViewer/MRSceneCache.h"
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRViewer/MRShowModal.h"
-#include "MRViewer/MRViewerIO.h"
+#include "MRViewer/MRSaveObjects.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
@@ -128,7 +129,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
     std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
     if ( !checkPaths( paths, filters ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return;
     }
     getViewerInstance().loadFiles( paths );
@@ -198,7 +199,7 @@ bool OpenFilesMenuItem::action()
             return;
         if ( !checkPaths( filenames, filters_ ) )
         {
-            showError( "Unsupported file extension" );
+            showError( stringUnsupportedFileExtension() );
             return;
         }
         getViewerInstance().loadFiles( filenames );
@@ -230,7 +231,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
 
     if ( !checkPaths( paths, filters_ ) )
     {
-        showError( "Unsupported file extension" );
+        showError( stringUnsupportedFileExtension() );
         return false;
     }
 
@@ -411,15 +412,6 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 {
     if ( directory.empty() )
         return;
-
-#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-    // check if the directory can be opened as a DICOM archive
-    if ( VoxelsLoad::isDicomFolder( directory ) )
-    {
-        sOpenDICOMs( directory, "Failed to open directory as DICOM:\n" + utf8string( directory ) );
-        return;
-    }
-#endif
 
     bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
     if ( isAnySupportedFiles )

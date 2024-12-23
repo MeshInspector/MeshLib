@@ -132,6 +132,7 @@
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
+    <ClInclude Include="MRMeshTopologyDiff.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMultiwayAligningTransform.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
     <ClInclude Include="MRParallel.h" />
+    <ClInclude Include="MRPartialChangeMeshAction.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRPointOnObject.h" />
@@ -316,6 +318,7 @@
     <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
+    <ClInclude Include="MRVertCoordsDiff.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
@@ -333,6 +336,7 @@
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRProgressCallback.h" />
+    <ClInclude Include="MRParallelProgressReporter.h" />
     <ClInclude Include="MRSystem.h" />
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
@@ -389,6 +393,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
@@ -496,6 +501,7 @@
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp" />
     <ClCompile Include="MRMeshThickness.cpp" />
+    <ClCompile Include="MRMeshTopologyDiff.cpp" />
     <ClCompile Include="MRMisonLoad.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRMultiwayAligningTransform.cpp" />
@@ -602,6 +608,7 @@
     <ClCompile Include="MRStringConvert.cpp" />
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
+    <ClCompile Include="MRVertCoordsDiff.cpp" />
     <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />

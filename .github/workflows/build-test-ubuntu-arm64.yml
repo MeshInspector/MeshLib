@@ -91,7 +91,7 @@ jobs:
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory '*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Install thirdparty libs
@@ -172,6 +172,7 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
+          pytest_args: "--run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ubuntu_arm64/${{ matrix.os }}
           ubuntu20_arm_workaround: ${{ inputs.mrbind && matrix.os == 'ubuntu20' }}

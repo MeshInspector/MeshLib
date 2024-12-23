@@ -4,6 +4,7 @@
 
 #include "MRDistanceVolumeParams.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRPointCloud.h"
 
 namespace MR
 {

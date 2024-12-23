@@ -1415,7 +1415,7 @@ PaletteChanges Palette(
 
     if ( UI::button( "Reset Palette", Vector2f( scaledWidth, 0 ) ) )
     {
-        changes |= ImGui::PaletteChanges::Reset;
+        changes |= ImGui::PaletteChanges::Ranges | ImGui::PaletteChanges::Reset | ImGui::PaletteChanges::Texture;
     }
     UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );
 

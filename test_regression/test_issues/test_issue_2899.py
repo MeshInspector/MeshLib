@@ -65,7 +65,7 @@ def test_issue_2899(tmp_path):
     # Separate result on Slide and Slope
     slope_faces = mr.MeshComponents.getLargestComponent(mesh)
     slope_res = mr.Mesh()
-    slope_res.addPartByMask(mesh, slope_faces)
+    slope_res.addMeshPart(mr.MeshPart(mesh, slope_faces))
     slide_res = mr.Mesh()
     slide_res.addPartByMask(mesh, mesh.topology.getValidFaces() - slope_faces)
 

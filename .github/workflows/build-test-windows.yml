@@ -3,9 +3,6 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
-      autotest_data_s3_url:
-        required: true
-        type: string
       full_config_build:
         default: false
         required: false

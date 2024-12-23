@@ -6,9 +6,6 @@ on:
       app_version:
         required: true
         type: string
-      autotest_data_s3_url:
-        required: true
-        type: string
       docker_image_tag:
         required: true
         type: string

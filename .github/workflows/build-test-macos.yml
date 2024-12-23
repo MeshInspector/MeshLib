@@ -6,9 +6,6 @@ on:
       app_version:
         required: true
         type: string
-      autotest_data_s3_url:
-        required: true
-        type: string
       full_config_build:
         default: false
         required: false

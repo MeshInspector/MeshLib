@@ -19,6 +19,10 @@ public:
     /// get the MRMesh binary's file path
     MRMESH_API static Expected<std::filesystem::path> getLibraryPath();
 
+    /// get the location of a shared library containing the given symbol
+    /// \param symbol - pointer to a function
+    MRMESH_API static Expected<std::filesystem::path> getLibraryPathForSymbol( const void* symbol );
+
     /// get the current executable's directory path
     MRMESH_API static Expected<std::filesystem::path> getExecutableDirectory();
 

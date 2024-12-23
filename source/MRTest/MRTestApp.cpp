@@ -4,6 +4,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRViewer/MRViewer.h"
@@ -54,6 +55,9 @@ int main( int argc, char** argv )
     MR::loadMRViewerDll();
 
     MR::setupLoggerByDefault();
+
+    if ( auto path = MR::SystemPath::getLibraryPathForSymbol( (void*)MR::loadMRViewerDll ) )
+        spdlog::info( "MRViewer location: {}", MR::utf8string( *path ) );
 
     // print compiler info
 #ifdef __clang__

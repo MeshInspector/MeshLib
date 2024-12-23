@@ -31,7 +31,7 @@ def test_movement_body():
             for j in range(plSections[i].size()):
                 contours[i][j] = inputMesh.edgePoint( plSections[i][j] )
         moveMesh = mrmesh.makeMovementBuildBody(bodyContours,contours)
-        sumMesh.addMesh(moveMesh)
+        sumMesh.addPartByMask(moveMesh,moveMesh.topology.getValidFaces())
         start = start + step;
         pass
 

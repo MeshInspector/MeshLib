@@ -150,4 +150,62 @@ private:
     std::string name_;
 };
 
+
+/// History action for visualizeProperties change
+/// \ingroup HistoryGroup
+class ChangeAllVisualizePropertyAction : public HistoryAction
+{
+public:
+    using Obj = VisualObject;
+
+    /// use this constructor to remember object's visualize property mask before making any changes in it
+    ChangeAllVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj )
+            allVisualizeProperties_ = obj_->getAllVisualizeProperties( );
+    }
+
+    /// use this constructor to remember object's visualize property mask and immediately set new value
+    ChangeAllVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, AllVisualizeProperties&& allVisualizeProperties ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj )
+        {
+            allVisualizeProperties_ = obj_->getAllVisualizeProperties();
+            obj_->setAllVisualizeProperties( std::move( allVisualizeProperties ) );
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !obj_ )
+            return;
+        
+        auto prevProperties = obj_->getAllVisualizeProperties();
+        obj_->setAllVisualizeProperties( std::move( allVisualizeProperties_ ) );
+        allVisualizeProperties_ = prevProperties;
+    }
+
+    static void setObjectDirty( const std::shared_ptr<VisualObject>& )
+    {}
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
+private:
+    std::shared_ptr<VisualObject> obj_;
+    AllVisualizeProperties allVisualizeProperties_;
+    std::string name_;
+};
+
 }

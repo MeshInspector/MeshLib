@@ -36,6 +36,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Debug inputs
+      shell: bash
+      run: |
+        echo << EOF
+        ${{ fromJSON( inputs ) }}
+        EOF
+
     # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
     - name: Cache autotest data from S3 Tests
       uses: actions/cache@v4

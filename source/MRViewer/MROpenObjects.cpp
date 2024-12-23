@@ -144,7 +144,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     std::atomic<int> completed;
     bool loadingCanceled = false;
     const float dicomScaleFactor = UnitSettings::getUiLengthUnit()
-        .transform( [] ( const auto& u ) { return getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( u ).conversionFactor; } )
+        .transform( [] ( LengthUnit u ) { return getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( u ).conversionFactor; } )
         .value_or( 1.f );
     for ( auto& nodeAndRes : nodes )
     {

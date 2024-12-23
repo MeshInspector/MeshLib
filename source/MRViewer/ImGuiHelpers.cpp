@@ -1413,6 +1413,13 @@ PaletteChanges Palette(
     }
     PopStyleVar( 3 );
 
+    if ( UI::button( "Reset Palette", Vector2f( scaledWidth, 0 ) ) )
+    {
+        changes |= ImGui::PaletteChanges::Reset;
+        return changes;
+    }
+    UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );
+
     // for linear texture filter, uv-coordinates depend on texture size
     if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )
         changes |= ImGui::PaletteChanges::Ranges;

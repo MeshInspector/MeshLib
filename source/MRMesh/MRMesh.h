@@ -381,7 +381,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
     [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
 
-    /// appends whole or part of another mesh as separate connected component(s) to this
+    /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
     MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with

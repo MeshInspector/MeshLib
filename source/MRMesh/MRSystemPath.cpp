@@ -128,6 +128,7 @@ Expected<std::filesystem::path> SystemPath::getLibraryPath()
 Expected<std::filesystem::path> SystemPath::getLibraryPathForSymbol( const void* symbol )
 {
 #if defined( __EMSCRIPTEN__ )
+    (void)symbol;
     return unexpected( "Not supported on Wasm" );
 #elif defined( _WIN32 )
     HMODULE module = NULL;

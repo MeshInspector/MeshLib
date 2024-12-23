@@ -51,7 +51,7 @@ runs:
 
     - name: Copy autotest data from S3 Tests
       shell: bash
-      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only
+      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only --quiet
 
     - name: Python Regression Tests
       if: ${{ runner.os == 'Windows' }}

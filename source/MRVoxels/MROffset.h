@@ -29,6 +29,9 @@ struct OffsetParameters : BaseShellParameters
     /// determines the method to compute distance sign
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
+    /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber
+    bool closeHolesInHoleWindingNumber = true;
+
     /// only for SignDetectionMode::HoleWindingRule:
     /// positive distance if winding number below or equal this threshold;
     /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes

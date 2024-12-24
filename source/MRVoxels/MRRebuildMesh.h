@@ -17,6 +17,9 @@ struct RebuildMeshSettings
 
     SignDetectionModeShort signMode = SignDetectionModeShort::Auto;
 
+    /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber
+    bool closeHolesInHoleWindingNumber = true;
+
     OffsetMode offsetMode = OffsetMode::Standard;
 
     /// if non-null then created sharp edges (only if offsetMode = OffsetMode::Sharpening) will be saved here

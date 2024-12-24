@@ -1415,6 +1415,7 @@ PaletteChanges Palette(
 
     if ( UI::button( "Reset Palette", Vector2f( scaledWidth, 0 ) ) )
     {
+        presetName = std::string();
         palette = MR::Palette( Palette::DefaultColors );
         changes |= ImGui::PaletteChanges::All;
     }

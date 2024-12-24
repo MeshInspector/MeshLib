@@ -329,7 +329,7 @@ void sOpenDICOMs( const std::filesystem::path & directory )
             return [obj = std::move( loadRes->obj ), directory, warnings = std::move( loadRes->warnings ) ]
             {
                 sSelectRecursive( *obj );
-                AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
+                AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( obj );
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 getViewerInstance().recentFilesStore().storeFile( directory );

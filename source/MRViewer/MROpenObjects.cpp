@@ -13,12 +13,13 @@
 #include <MRMesh/MRParallelFor.h>
 #include <fstream>
 #include "MRPch/MRTBB.h"
+#include "MRUnitSettings.h"
 
 namespace MR
 {
 
 
-Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
 {
     MR_TIMER
 
@@ -122,8 +123,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             createFolderObj( folder, pObj.get() );
         }
 
-        for ( const FilePathNode& file : node.files )
-            nodes.push_back( { file, objPtr, cb.newTask() } );
+        if ( !dicomOnly )
+            for ( const FilePathNode& file : node.files )
+                nodes.push_back( { file, objPtr, cb.newTask() } );
 
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
@@ -141,9 +143,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     tbb::task_group group;
     std::atomic<int> completed;
     bool loadingCanceled = false;
+    float dicomScaleFactor = 1.f;
+    if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
+        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
+
     for ( auto& nodeAndRes : nodes )
     {
-        group.run( [&nodeAndRes, &completed] {
+        group.run( [&nodeAndRes, &completed, dicomScaleFactor] {
             if ( !nodeAndRes.node.dicomFolder )
             {
                 nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
@@ -152,8 +158,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             else
             {
                 nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                    [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                    [&, dicomScaleFactor]( LoadedObjectVoxels && ld ) -> loadObjResultType
                     {
+                        // dicom is always opened in meters, and we can use this information to convert them properly
+                        ld.obj->applyScale( dicomScaleFactor );
                         return LoadedObjects{ .objs = { ld.obj } };
                     } );
             }
@@ -235,7 +243,7 @@ Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPa
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, callback );
+    return makeObjectTreeFromFolder( contentsFolder, false, callback );
 }
 
 MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectTreeFromZip )

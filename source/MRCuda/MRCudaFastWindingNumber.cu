@@ -2,6 +2,7 @@
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRConstants.h"
 #include "device_launch_parameters.h"
+#include <limits>
 
 namespace MR
 {
@@ -59,7 +60,7 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     res *= INV_4PI;
 }
 
-__device__ float calcDistance( const float3& pt,
+__device__ float calcDistanceSq( const float3& pt,
     const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float maxDistSq, float minDistSq )
 {
@@ -130,7 +131,7 @@ __device__ float calcDistance( const float3& pt,
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
-    return sqrt( resSq );
+    return resSq;
 }
 
 __global__ void fastWindingNumberFromVectorKernel( const float3* points,
@@ -195,6 +196,8 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
     processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
 }
 
+static constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
+
 __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, size_t size )
@@ -215,13 +218,19 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
-    float& res = resVec[index];
-    res = calcDistance( transformedPoint, nodes, meshPoints, faces, maxDistSq, minDistSq );
+    float resSq = calcDistanceSq( transformedPoint, nodes, meshPoints, faces, maxDistSq, minDistSq );
+    if ( resSq < minDistSq || resSq >= maxDistSq ) // note that resSq == minDistSq (e.g. == 0) is a valid situation
+    {
+        resVec[index] = cQuietNan;
+        return;
+    }
 
     float fwn{ 0 };
     processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, beta, index );
+    float res = sqrt( resSq );
     if ( fwn > windingNumberThreshold )
         res = -res;
+    resVec[index] = res;
 }
 
 void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,

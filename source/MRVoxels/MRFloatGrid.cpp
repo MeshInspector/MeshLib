@@ -29,8 +29,8 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     dest->setTransform( openvdb::math::Transform::createLinearTransform( transform ) ); // org voxel size is 1.0f
     // for some reason openvdb does not resample correctly for GRID_LEVEL_SET
     auto backupClass = grid_.getGridClass();
-    if ( backupClass == openvdb::GRID_LEVEL_SET )
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_FOG_VOLUME );
+//    if ( backupClass == openvdb::GRID_LEVEL_SET )
+    const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_UNKNOWN );
 
     // just grows to 100% 
     // first grows fast, then slower
@@ -48,8 +48,8 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
 
     // restore original grid class
-    if ( backupClass == openvdb::GRID_LEVEL_SET )
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );
+//    if ( backupClass == openvdb::GRID_LEVEL_SET )
+    const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( backupClass );
     if ( interrupter.getWasInterrupted() )
         return {};
     // restore normal scale

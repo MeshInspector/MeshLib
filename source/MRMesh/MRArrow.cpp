@@ -61,8 +61,8 @@ Mesh makeBasisAxes(const float& size, const float& thickness, const float& coneR
     Mesh meshObjX = makeArrow(base, base + Vector3f::plusX() * size, thickness, coneRadius, coneSize, qual);
     Mesh meshObjY = makeArrow(base, base + Vector3f::plusY() * size, thickness, coneRadius, coneSize, qual);
     Mesh meshObjZ = makeArrow(base, base + Vector3f::plusZ() * size, thickness, coneRadius, coneSize, qual);
-    meshObjX.addPart(meshObjY);
-    meshObjX.addPart(meshObjZ);
+    meshObjX.addMesh( meshObjY );
+    meshObjX.addMesh( meshObjZ );
     return meshObjX;
 }
 

@@ -605,7 +605,7 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
     return res.load( std::memory_order_relaxed );
 }
 
-std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
+std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges( const FaceBitSet * region ) const
 {
     MR_TIMER
 
@@ -618,8 +618,9 @@ std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 
     res.reserve( num );
     for ( EdgeId e : representativeEdges )
-        res.push_back( e );
-    assert( res.size() == num );
+        if ( !region || contains( *region, right( e ) ) )
+            res.push_back( e );
+    assert( region || res.size() == num );
     return res;
 }
 

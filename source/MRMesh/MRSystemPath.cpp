@@ -121,13 +121,19 @@ Expected<std::filesystem::path> SystemPath::getExecutablePath()
 
 Expected<std::filesystem::path> SystemPath::getLibraryPath()
 {
+    return getLibraryPathForSymbol( (void*)MR::SystemPath::getLibraryPath );
+}
+
+Expected<std::filesystem::path> SystemPath::getLibraryPathForSymbol( const void* symbol )
+{
 #if defined( __EMSCRIPTEN__ )
+    (void)symbol;
     return unexpected( "Not supported on Wasm" );
 #elif defined( _WIN32 )
     HMODULE module = NULL;
     auto rc = GetModuleHandleExW(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        (LPCTSTR)MR::SystemPath::getLibraryPath,
+        (LPCTSTR)symbol,
         &module
     );
     if ( !rc )
@@ -142,7 +148,7 @@ Expected<std::filesystem::path> SystemPath::getLibraryPath()
     return std::filesystem::path { path };
 #else
     Dl_info info;
-    if ( !dladdr( (void*)MR::SystemPath::getLibraryPath, &info ) )
+    if ( !dladdr( symbol, &info ) )
         return unexpected( "Failed to get library path" );
     return std::filesystem::path { info.dli_fname };
 #endif

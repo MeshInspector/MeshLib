@@ -286,7 +286,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
         VertMap vertMap;
         FaceMap faceMap;
-        mesh->addPart( *obj->mesh(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
+        mesh->addMesh( *obj->mesh(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = obj->worldXf();
         for ( const auto& vInd : vertMap )

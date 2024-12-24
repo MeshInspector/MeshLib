@@ -175,8 +175,8 @@ struct [[nodiscard]] Mesh
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
     [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return projArea( dir, topology.getFaceIds( fs ) ); }
 
-    /// returns volume of closed mesh region, if region is not closed DBL_MAX is returned
-    /// if region is nullptr - whole mesh is region
+    /// returns volume of the object surrounded by given region (or whole mesh if (region) is nullptr);
+    /// if the region has holes then each hole will be virtually filled by adding triangles for each edge and the hole's geometrical center
     [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
@@ -370,29 +370,35 @@ struct [[nodiscard]] Mesh
     // same, putting new vertex in the centroid of original triangle
     VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr ) { return splitFace( f, triCenter( f ), region, new2Old ); }
 
-    /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
-    MRMESH_API void addPart( const Mesh & from,
+    /// appends another mesh as separate connected component(s) to this
+    MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    [[deprecated]] void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
+        { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 
-    /// the same but copies only portion of (from) specified by fromFaces
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map );
+    /// appends whole or part of another mesh as separate connected component(s) to this
+    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map );
+    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map ) { addMeshPart( { from, &fromFaces }, map ); }
 
-    /// this version has more parameters:
-    ///   if flipOrientation then every from triangle is inverted before adding
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+    /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
+    /// \param flipOrientation true means that every (from) triangle is inverted before adding
+    MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
+    [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
+        { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }
 
     /// fromFaces contains mapping from this-mesh (considering it is empty) to from-mesh
     MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-    
         const PartMapping & map = {} );
+
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
     MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,

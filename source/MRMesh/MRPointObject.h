@@ -27,7 +27,8 @@ public:
     PointObject( ProtectedStruct, const PointObject& obj ) : PointObject( obj )
     {}
 
-    virtual std::string getClassName() const override { return "Point"; }
+    std::string getClassName() const override { return "Point"; }
+    std::string getClassNameInPlural() const override { return "Points"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

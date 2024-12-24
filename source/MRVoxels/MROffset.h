@@ -29,6 +29,9 @@ struct OffsetParameters : BaseShellParameters
     /// determines the method to compute distance sign
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
+    /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber
+    bool closeHolesInHoleWindingNumber = true;
+
     /// only for SignDetectionMode::HoleWindingRule:
     /// positive distance if winding number below or equal this threshold;
     /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
@@ -39,6 +42,8 @@ struct OffsetParameters : BaseShellParameters
     float windingNumberBeta = 2;
 
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
+    /// this only used if signDetectionMode == SignDetectionMode::HoleWindingRule, otherwise it is ignored
+    /// providing this will disable memoryEfficient (as if memoryEfficient == false)
     std::shared_ptr<IFastWindingNumber> fwn;
 
     /// use FunctionVolume for voxel grid representation:

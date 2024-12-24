@@ -28,7 +28,7 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(9) ); // 5*2 = 10 half-edges in total
 
     Mesh dbl = mesh;
-    dbl.addPart( mesh );
+    dbl.addMesh( mesh );
     EXPECT_TRUE( dbl.topology.checkValidity() );
     EXPECT_EQ( dbl.points.size(), 8 );
     EXPECT_EQ( dbl.topology.numValidVerts(), 8 );
@@ -94,7 +94,7 @@ TEST(MRMesh, AddPartByMask)
     mapping.src2tgtFaces = &meshIntoMesh2;
     mapping.tgt2srcFaces = &mesh2IntoMesh;
 
-    mesh.addPartByMask( mesh2, faces, mapping );
+    mesh.addMeshPart( { mesh2, &faces }, mapping );
     for ( auto [f, f2] : meshIntoMesh2 )
         EXPECT_EQ( mesh2IntoMesh[f2], f );
 
@@ -110,7 +110,7 @@ TEST(MRMesh, AddPartByMask)
 
     faces.set( 0_f );
     faces.reset( 1_f );
-    mesh.addPartByMask( mesh2, faces );
+    mesh.addMeshPart( { mesh2, &faces } );
 
     EXPECT_EQ( mesh.points.size(), 10 );
     EXPECT_EQ( mesh.topology.edgePerVertex().size(), 10 );

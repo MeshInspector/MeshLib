@@ -9,17 +9,24 @@
 #include <MRVoxels/MRDicom.h>
 #include <MRVoxels/MRObjectVoxels.h>
 #include <MRPch/MRSpdlog.h>
+#include <MRMesh/MRParallelProgressReporter.h>
+#include <MRMesh/MRParallelFor.h>
 #include <fstream>
+#include "MRPch/MRTBB.h"
+#include "MRUnitSettings.h"
 
 namespace MR
 {
 
-Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, const ProgressCallback& callback )
+
+Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
 {
     MR_TIMER
 
     if ( callback && !callback( 0.f ) )
         return unexpected( getCancelMessage( folder ) );
+
+    ParallelProgressReporter cb( callback );
 
     struct FilePathNode
     {
@@ -94,16 +101,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         return unexpected( std::string( "Error: folder is empty." ) );
 
     using loadObjResultType = Expected<LoadedObjects>;
-    // create folders objects
-    struct LoadTask
+    struct NodeAndResult
     {
-        std::future<loadObjResultType> future;
-        Object* parent = nullptr;
-        LoadTask( std::future<loadObjResultType> future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
+        FilePathNode node;
+        Object* parent;
+        ProgressCallback cb;
+        loadObjResultType result;
     };
-    std::vector<LoadTask> loadTasks;
 
-    std::atomic_bool loadingCanceled = false;
+    // create folders objects
+    std::vector<NodeAndResult> nodes;
+
     std::function<void( const FilePathNode&, Object* )> createFolderObj = {};
     createFolderObj = [&] ( const FilePathNode& node, Object* objPtr )
     {
@@ -114,25 +122,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             objPtr->addChild( pObj );
             createFolderObj( folder, pObj.get() );
         }
-        for ( const FilePathNode& file : node.files )
-        {
-            loadTasks.emplace_back( std::async( std::launch::async, [filepath = file.path, &loadingCanceled] ()
-            {
-                return loadObjectFromFile( filepath, [&loadingCanceled]( float ){ return !loadingCanceled; } );
-            } ), objPtr );
-        }
+
+        if ( !dicomOnly )
+            for ( const FilePathNode& file : node.files )
+                nodes.push_back( { file, objPtr, cb.newTask() } );
+
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
         if ( node.dicomFolder )
-        {
-            loadTasks.emplace_back( std::async( std::launch::async, [folder = node.path, &loadingCanceled] ()
-            {
-                return VoxelsLoad::makeObjectVoxelsFromDicomFolder( folder, [&loadingCanceled]( float ){ return !loadingCanceled; } ).and_then(
-                [&]( LoadedObjectVoxels && ld ) -> loadObjResultType
-                {
-                    return LoadedObjects{ .objs = { ld.obj } };
-                } );
-            } ), objPtr );
-        }
+            nodes.push_back( { node, objPtr, cb.newTask( 10.f ) } );
         #endif
     };
     LoadedObject res;
@@ -140,39 +137,74 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     res.obj->setName( utf8string( folder.stem() ) );
     createFolderObj( filesTree, res.obj.get() );
 
+    auto pseudoRoot = std::make_shared<Object>();
+    pseudoRoot->addChild( res.obj );
+
+    tbb::task_group group;
+    std::atomic<int> completed;
+    bool loadingCanceled = false;
+    float dicomScaleFactor = 1.f;
+    if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
+        dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
+
+    for ( auto& nodeAndRes : nodes )
+    {
+        group.run( [&nodeAndRes, &completed, dicomScaleFactor] {
+            if ( !nodeAndRes.node.dicomFolder )
+            {
+                nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
+            }
+            #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+            else
+            {
+                nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
+                    [&, dicomScaleFactor]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                    {
+                        // dicom is always opened in meters, and we can use this information to convert them properly
+                        ld.obj->applyScale( dicomScaleFactor );
+                        return LoadedObjects{ .objs = { ld.obj } };
+                    } );
+            }
+            #endif
+            completed += 1;
+        } );
+    }
+
+    while ( !loadingCanceled && completed < nodes.size() )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
+        loadingCanceled = !cb();
+    }
+    group.wait();
+
+    if ( loadingCanceled )
+        return unexpected( getCancelMessage( folder ) );
+
     // processing of results
     bool atLeastOneLoaded = false;
     std::unordered_map<std::string, int> allErrors;
-    const float taskCount = float( loadTasks.size() );
-    int finishedTaskCount = 0;
-    std::chrono::system_clock::time_point afterSecond = std::chrono::system_clock::now();
-    while ( finishedTaskCount < taskCount )
+    for ( const auto& [node, parent, _, taskRes] : nodes )
     {
-        afterSecond += +std::chrono::seconds( 1 );
-        for ( auto& t : loadTasks )
+        if ( taskRes.has_value() )
         {
-            if ( !t.future.valid() )
-                continue;
-            std::future_status status = t.future.wait_until( afterSecond );
-            if ( status != std::future_status::ready )
-                continue;
-            auto taskRes = t.future.get();
-            if ( taskRes.has_value() )
+            if ( node.dicomFolder && taskRes->objs.size() == 1 )
             {
-                for ( const auto& objPtr : taskRes->objs )
-                    t.parent->addChild( objPtr );
-                if ( !taskRes->warnings.empty() )
-                    res.warnings += taskRes->warnings;
-                if ( !atLeastOneLoaded )
-                    atLeastOneLoaded = true;
+                parent->parent()->addChild( taskRes->objs[0] );
+                parent->parent()->removeChild( parent );
             }
             else
             {
-                ++allErrors[taskRes.error()];
+                for ( const auto& objPtr : taskRes->objs )
+                    parent->addChild( objPtr );
             }
-            ++finishedTaskCount;
-            if ( callback && !callback( finishedTaskCount / taskCount ) )
-                loadingCanceled = true;
+            if ( !taskRes->warnings.empty() )
+                res.warnings += taskRes->warnings;
+            if ( !atLeastOneLoaded )
+                atLeastOneLoaded = true;
+        }
+        else
+        {
+            ++allErrors[taskRes.error()];
         }
     }
 
@@ -188,10 +220,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
     if ( !errorString.empty() )
         spdlog::warn( "Load folder error:\n{}", errorString );
-    if ( loadingCanceled )
-        return unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
+
+    res.obj = pseudoRoot->children()[0];
 
     return res;
 }
@@ -211,7 +243,7 @@ Expected<LoadedObject> makeObjectTreeFromZip( const std::filesystem::path& zipPa
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, callback );
+    return makeObjectTreeFromFolder( contentsFolder, false, callback );
 }
 
 MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectTreeFromZip )

@@ -350,7 +350,7 @@ TerrainEmbedder::ConnectionEdges TerrainEmbedder::connect_( std::vector<EdgeLoop
 {
     WholeEdgeMap emap;
     auto faceNum = int( result_.topology.faceSize() );
-    result_.addPart( std::move( cutStructure_ ), nullptr, nullptr, &emap );
+    result_.addMesh( cutStructure_, nullptr, nullptr, &emap );
     if ( params_.outStructFaces )
     {
         params_.outStructFaces->resize( result_.topology.faceSize() );

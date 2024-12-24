@@ -8,6 +8,7 @@ from pytest_check import check
 from constants import test_files_path
 from pathlib import Path
 
+@pytest.mark.smoke
 @pytest.mark.bindingsV3
 def test_issue_2899(tmp_path):
     """
@@ -65,9 +66,9 @@ def test_issue_2899(tmp_path):
     # Separate result on Slide and Slope
     slope_faces = mr.MeshComponents.getLargestComponent(mesh)
     slope_res = mr.Mesh()
-    slope_res.addPartByMask(mesh, slope_faces)
+    slope_res.addMeshPart(mr.MeshPart(mesh, slope_faces))
     slide_res = mr.Mesh()
-    slide_res.addPartByMask(mesh, mesh.topology.getValidFaces() - slope_faces)
+    slide_res.addMeshPart(mr.MeshPart(mesh, mesh.topology.getValidFaces() - slope_faces))
 
     # Save in files
     mr.saveMesh(slope_res, tmp_path / "slopeRes.off")

@@ -40,7 +40,8 @@ public:
     virtual Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
 
     /// <summary>
-    /// calculates distances with the sign obtained from winding number in each point from a three-dimensional grid
+    /// calculates distances with the sign obtained from generalized winding number in each point from a three-dimensional grid;
+    /// if sqr(res) < minDistSq or sqr(res) >= maxDistSq, then NaN is returned for such point
     /// </summary>
     /// <param name="res">resulting signed distances, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>

@@ -1149,7 +1149,7 @@ PaletteChanges Palette(
 
             if ( fixZero )
                 *fixZero = false;
-            changes = PaletteChanges::All;
+            changes = PaletteChanges::AllBitReset;
             CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
@@ -1203,7 +1203,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::All;
+        changes |= PaletteChanges::AllBitReset;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );

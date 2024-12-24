@@ -2385,22 +2385,25 @@ void RibbonMenu::endTopPanel_()
 
 void RibbonMenu::updateTopPanelSize_( bool drawTabs )
 {
-    if ( drawTabs && topPanelHiddenHeight_ == 33 )
+    constexpr int cTabSize = int( cTabHeight + cTabYOffset + 1 );
+    constexpr int cSumPanelSizeSize = cTabSize + 80;
+    if ( drawTabs && topPanelHiddenHeight_ == cTabSize )
         return;
     if ( !drawTabs && topPanelHiddenHeight_ == 0 )
         return;
     if ( drawTabs )
     {
-        currentTopPanelHeight_ = 113;
-        topPanelOpenedHeight_ = 113;
-        topPanelHiddenHeight_ = 33;
+        topPanelOpenedHeight_ = cSumPanelSizeSize;
+        topPanelHiddenHeight_ = cTabSize;
     }
     else
     {
-        currentTopPanelHeight_ = 113 - 33;
-        topPanelOpenedHeight_ = 113 - 33;
-        topPanelHiddenHeight_ = 33 - 33;
+        topPanelOpenedHeight_ = cSumPanelSizeSize - cTabSize;
+        topPanelHiddenHeight_ = 0;
+        collapseState_ = CollapseState::Pinned;
     }
+    currentTopPanelHeight_ = collapseState_ == CollapseState::Closed ? topPanelHiddenHeight_ : topPanelOpenedHeight_;
+
     fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
 }
 

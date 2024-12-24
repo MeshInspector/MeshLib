@@ -2383,8 +2383,12 @@ void RibbonMenu::endTopPanel_()
     ImGui::PopStyleVar( 3 );
 }
 
-void RibbonMenu::drawTopPanel_( bool drawTabs, bool centerItems )
+void RibbonMenu::updateTopPanelSize_( bool drawTabs )
 {
+    if ( drawTabs && topPanelHiddenHeight_ == 33 )
+        return;
+    if ( !drawTabs && topPanelHiddenHeight_ == 0 )
+        return;
     if ( drawTabs )
     {
         currentTopPanelHeight_ = 113;
@@ -2397,6 +2401,12 @@ void RibbonMenu::drawTopPanel_( bool drawTabs, bool centerItems )
         topPanelOpenedHeight_ = 113 - 33;
         topPanelHiddenHeight_ = 33 - 33;
     }
+    fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
+}
+
+void RibbonMenu::drawTopPanel_( bool drawTabs, bool centerItems )
+{
+    updateTopPanelSize_( drawTabs );
 
     switch ( collapseState_ )
     {

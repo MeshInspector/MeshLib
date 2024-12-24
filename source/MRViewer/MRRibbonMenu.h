@@ -228,6 +228,9 @@ protected:
     // call this to draw RibbonNotifier with respect of scene size and ribbon top panel
     MRVIEWER_API virtual void drawNotifications_();
 
+    // this function changes internal sizes of topPanel when it is enabled or disabled
+    MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
+
     RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
 
     RibbonMenuSearch searcher_;

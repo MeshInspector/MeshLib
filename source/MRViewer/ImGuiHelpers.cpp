@@ -1149,7 +1149,7 @@ PaletteChanges Palette(
 
             if ( fixZero )
                 *fixZero = false;
-            changes = PaletteChanges::All;
+            changes = PaletteChanges::Ranges | PaletteChanges::Texture;
             CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
@@ -1203,7 +1203,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::All;
+        changes |= PaletteChanges::Ranges | PaletteChanges::Texture;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1412,6 +1412,14 @@ PaletteChanges Palette(
         ImGui::EndPopup();
     }
     PopStyleVar( 3 );
+
+    if ( UI::button( "Reset Palette", Vector2f( scaledWidth, 0 ) ) )
+    {
+        presetName = std::string();
+        palette = MR::Palette( Palette::DefaultColors );
+        changes |= ImGui::PaletteChanges::All;
+    }
+    UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );
 
     // for linear texture filter, uv-coordinates depend on texture size
     if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )

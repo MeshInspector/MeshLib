@@ -334,9 +334,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     if ( !( *cut2oldAPtr )[i] )
                         return;
                     FaceId refFace = ( *cut2oldAPtr )[i];
-                    if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
-                        ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
-
+                    auto it = new2orgSubdivideMapA.find( refFace );
+                    if ( it != new2orgSubdivideMapA.end() && it->second )
+                        ( *cut2oldAPtr )[i] = it->second;
                 } );
             }
             result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
@@ -366,8 +366,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 if ( !( *cut2oldBPtr )[i] )
                     return;
                 FaceId refFace = ( *cut2oldBPtr )[i];
-                if ( new2orgSubdivideMapB.size() > refFace && new2orgSubdivideMapB[refFace] )
-                    ( *cut2oldBPtr )[i] = new2orgSubdivideMapB[refFace];
+                auto it = new2orgSubdivideMapB.find( refFace );
+                if ( it != new2orgSubdivideMapB.end() && it->second )
+                    ( *cut2oldBPtr )[i] = it->second;
             } );
         }
         result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );

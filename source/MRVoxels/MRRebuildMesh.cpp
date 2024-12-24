@@ -48,6 +48,7 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     if ( settings.onSignDetectionModeSelected )
         settings.onSignDetectionModeSelected( genOffsetParams.signDetectionMode );
 
+    genOffsetParams.closeHolesInHoleWindingNumber = settings.closeHolesInHoleWindingNumber;
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;

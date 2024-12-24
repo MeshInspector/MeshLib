@@ -249,7 +249,7 @@ enum class PaletteChanges
     Reset   = 1, // reset palette
     Texture = 2, // texture and legend must be updated
     Ranges  = 4, // uv-coordinates must be recomputed for the same values
-    AllBitReset = Texture | Ranges | Reset, // 0b111
+    All = Texture | Ranges | Reset, // 0b111
 };
 MR_MAKE_FLAG_OPERATORS( PaletteChanges )
 

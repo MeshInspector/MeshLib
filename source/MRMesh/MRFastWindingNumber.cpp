@@ -7,6 +7,7 @@
 #include "MRMeshProject.h"
 #include "MRAABBTree.h"
 #include "MRDipole.h"
+#include "MRIsNaN.h"
 
 namespace MR
 {
@@ -60,8 +61,11 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
 
 float FastWindingNumber::calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq )
 {
+    auto resSq = findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq;
+    if ( resSq < minDistSq || resSq >= maxDistSq ) // note that resSq == minDistSq (e.g. == 0) is a valid situation
+        return cQuietNan;
     const auto sign = calc_( p, beta ) > windingNumberThreshold ? -1.f : +1.f;
-    return sign * std::sqrt( findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq );
+    return sign * std::sqrt( resSq );
 }
 
 Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )

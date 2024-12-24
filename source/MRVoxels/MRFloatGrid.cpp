@@ -36,11 +36,12 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     // first grows fast, then slower
     ProgressCallback dummyProgressCb;
     float i = 1.0f;
+    const float maxProg = backupClass == openvdb::GRID_LEVEL_SET ? 0.9f : 1.0f;
     if ( cb )
         dummyProgressCb = [&] ( float )->bool
     {
         i += 1e-4f;
-        return cb( 1.0f - 1.0f / std::sqrt( i ) );
+        return cb( maxProg * ( 1.0f - 1.0f / std::sqrt( i ) ) );
     };
 
     ProgressInterrupter interrupter( dummyProgressCb );
@@ -49,14 +50,52 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
 
     // restore original grid class
     if ( backupClass == openvdb::GRID_LEVEL_SET )
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );
+    {
+        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );        
+    }
+
     if ( interrupter.getWasInterrupted() )
         return {};
     // restore normal scale
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
     dest->setGridClass( grid->getGridClass() );
 
-    return MakeFloatGrid( std::move( dest ) );
+    auto res = MakeFloatGrid( std::move( dest ) );
+    if ( backupClass == openvdb::GRID_LEVEL_SET )
+    {
+        const auto minValue = openvdb::tools::minMax( grid->tree() ).min();
+        const auto maxValue = openvdb::tools::minMax( grid->tree() ).max();
+        const auto range = maxValue - minValue;
+
+
+        const auto orgBbox = grid->evalActiveVoxelBoundingBox();
+        const auto dstBbox = res->evalActiveVoxelBoundingBox();
+
+        Vector3i dims = { dstBbox.dim().x(),dstBbox.dim().y(),dstBbox.dim().z() };
+        openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler( *grid );
+
+        auto scb = subprogress( cb, 0.9f, 1.0f );
+        for ( int z = 0; z < dims.z; ++z )
+        {
+            if ( !reportProgress( scb, float( z ) / float( dims.z ) ) )
+                return {};
+
+            for ( int y = 0; y < dims.y; ++y )
+                for ( int x = 0; x < dims.x; ++x )
+                {
+                    openvdb::Coord dstCoord( x, y, z );
+                    dstCoord += dstBbox.min();
+                    openvdb::Vec3R orgCoord( orgBbox.min().x() + x * voxelScale.x, orgBbox.min().y() + y * voxelScale.y, orgBbox.min().z() + z * voxelScale.z);
+
+                    auto orgVal = sampler.wsSample( orgCoord );
+                    auto dstVal = res->getAccessor().getValue( dstCoord );
+                    if ( fabs( dstVal - orgVal ) > range * 0.5f )
+                        res->getAccessor().setValue( dstCoord, orgVal );
+                }
+        }
+    }
+
+    return res;
 }
 
 FloatGrid resampled( const FloatGrid& grid, float voxelScale, ProgressCallback cb )

@@ -3,7 +3,7 @@
 // distance queries to one mesh only, please see MRMeshMeshDistance.h for queries involving two meshes
 
 #include "MRMeshPart.h"
-#include "MRSignDetectionMode.h"
+#include "MRDistanceToMeshOptions.h"
 #include <cfloat>
 #include <functional>
 #include <optional>
@@ -32,37 +32,9 @@ using TriangleCallback = std::function<ProcessOneResult( const Vector3f & p, Fac
 /// given squared distance from t-triangle
 MRMESH_API void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rangeSq, const TriangleCallback & call );
 
-struct DistanceToMeshOptions
-{
-    /// minimum squared distance from a point to mesh to be computed precisely
-    float minDistSq{ 0 };
-
-    /// maximum squared distance from a point to mesh to be computed precisely
-    float maxDistSq{ FLT_MAX };
-
-    /// what to do if actual distance is outside [min, max) range:
-    /// true - return std::nullopt,
-    /// false - return approximate value of the distance (with correct sign in case of SignDetectionMode::HoleWindingRule);
-    /// please note that in HoleWindingRule the sign can change even for too small or too large distances,
-    /// so if you would like to get closed mesh from marching cubes, set false here
-    bool nullOutsideMinMax = true;
-
-    /// the method to compute distance sign
-    SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
-
-    /// only for SignDetectionMode::HoleWindingRule:
-    /// positive distance if winding number below or equal this threshold;
-    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
-    float windingNumberThreshold = 0.5f;
-
-    /// only for SignDetectionMode::HoleWindingRule:
-    /// determines the precision of fast approximation: the more the better, minimum value is 1
-    float windingNumberBeta = 2;
-};
-
 /// computes signed distance from point (p) to mesh part (mp) following options (op);
 /// returns std::nullopt if distance is smaller than op.minDist or larger than op.maxDist (except for op.signMode == HoleWindingRule)
-[[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op );
+[[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op );
 
 /// \}
 

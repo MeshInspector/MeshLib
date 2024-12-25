@@ -9,7 +9,7 @@
 namespace MR
 {
 
-std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
+std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op )
 {
     assert( op.signMode != SignDetectionMode::OpenVDB );
     const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );

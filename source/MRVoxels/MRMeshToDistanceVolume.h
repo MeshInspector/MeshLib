@@ -13,7 +13,7 @@ struct MeshToDistanceVolumeParams
 {
     DistanceVolumeParams vol;
 
-    DistanceToMeshOptions dist;
+    SignedDistanceToMeshOptions dist;
 
     std::shared_ptr<IFastWindingNumber> fwn;
 };

@@ -4,7 +4,6 @@
 
 #include "MRMeshPart.h"
 #include "MRDistanceToMeshOptions.h"
-#include <cfloat>
 #include <functional>
 #include <optional>
 

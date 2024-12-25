@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRSignDetectionMode.h"
+#include <cfloat>
 
 namespace MR
 {

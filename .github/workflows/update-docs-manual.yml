@@ -18,6 +18,22 @@ on:
         default: "MeshLib/dev"
   
 jobs:
+  # NOTE: all output values are strings
+  # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
+  config:
+    uses: ./.github/workflows/config.yml
+    
+  prepare-image:
+    if: false
+    needs: config
+    uses: ./.github/workflows/prepare-images.yml
+    with:
+      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
+      need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
+      need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
+    secrets: inherit
+
   create-stubs:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]

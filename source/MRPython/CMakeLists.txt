@@ -27,6 +27,13 @@ ELSE()
   )
 ENDIF()
 
+# It's a good idea to have this match `PYTHON_MIN_VERSION` in `scripts/mrbind/generate.mk`.
+# Here `0x030800f0` corresponds to 3.8 (ignore the `f0` suffix at the end, it just means a release version as opposed to alpha/beta/etc).
+target_compile_definitions(${PROJECT_NAME} PRIVATE Py_LIMITED_API=0x030800f0)
+
+# It's a good idea to have this match the value specified in `scripts/mrbind/generate.mk`. See that file for the explanation.
+target_compile_definitions(${PROJECT_NAME} PRIVATE PYBIND11_INTERNALS_VERSION=5)
+
 IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRPYTHON_EXPORT)
 ENDIF()

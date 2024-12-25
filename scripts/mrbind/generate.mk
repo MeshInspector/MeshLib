@@ -212,9 +212,17 @@ endif
 $(if $(PYTHON_VERSIONS),,$(error Unable to guess the Python versions))
 # Adjust commas to spaces for easier manual setup.
 override PYTHON_VERSIONS := $(subst $(comma), ,$(PYTHON_VERSIONS))
-$(info Python versions: $(PYTHON_VERSIONS))
+# Sort the versions.
+override PYTHON_VERSIONS := $(call safe_shell,echo $(call quote,$(PYTHON_VERSIONS)) | tr ' ' '\n' | sort -V)
+$(info Targeting Python versions: $(PYTHON_VERSIONS))
+
+# Pick a Python version to use the headers from. Normally it doesn't matter which one we use, since defining `Py_LIMITED_API` should make them almost equivalent.
+# Here we use the smallest version from `PYTHON_VERSIONS`.
+PYTHON_HEADER_VERSION := $(firstword $(PYTHON_VERSIONS))
+$(info Using Python headers from version: $(PYTHON_HEADER_VERSION))
 
 # The min Python version to support. We use this to compute the value of the `Py_LIMITED_API` macro.
+# It's probably a good idea to have this match the value in `source/MRPython/CMakeLists.txt`.
 PYTHON_MIN_VERSION := 3.8
 override python_min_version_hex := 0x$(call safe_shell,printf "%02x%02x" $(subst ., ,$(PYTHON_MIN_VERSION)))00f0
 $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_version_hex)))
@@ -484,6 +492,10 @@ override all_outputs :=
 
 COMPILER += -DPYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE='"meshlib"'
 COMPILER += -DPYBIND11_NONLIMITEDAPI_LIB_PATH_RELATIVE_TO_PARENT_LIB='"$(if $(FOR_WHEEL),.,..)"'
+# Pybind normally sets this to 5 in Python 3.12 and newer, and to 4 before that. But we need the same number everywhere for our modules to work on
+#   multiple different Python versions. We can't set it to 4 (since that's not compatible with the new Python, see https://github.com/pybind/pybind11/pull/4570),
+#   but we can set it to 5 unconditionally (Pybind doesn't do it by default only for ABI compatibility).
+COMPILER += -DPYBIND11_INTERNALS_VERSION=5
 
 # Build the library files for different Python versions, for our patched Pybind.
 PYBIND_LIBS_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)
@@ -516,7 +528,7 @@ $(if $(ENABLE_PCH),,$(call var,$1_EnablePch :=))
 $(if $($1_NumFragments),,$(call var,$1_NumFragments := 1))
 
 # Pick whatever Python version for get_python_cflags, it shouldn't matter.
-$(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(firstword $(PYTHON_VERSIONS))))
+$(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
 $(call var,$1_CompilerFlagsFixed := $(COMPILER_FLAGS) $($1_CompilerFlagsPython) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))

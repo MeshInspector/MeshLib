@@ -34,11 +34,18 @@ MRMESH_API void processCloseTriangles( const MeshPart& mp, const Triangle3f & t,
 
 struct DistanceToMeshOptions
 {
-    /// minimum squared distance from a point to mesh
+    /// minimum squared distance from a point to mesh to be computed precisely
     float minDistSq{ 0 };
 
-    /// maximum squared distance from a point to mesh
+    /// maximum squared distance from a point to mesh to be computed precisely
     float maxDistSq{ FLT_MAX };
+
+    /// what to do if actual distance is outside [min, max) range:
+    /// true - return std::nullopt,
+    /// false - return approximate value of the distance (with correct sign in case of SignDetectionMode::HoleWindingRule);
+    /// please note that in HoleWindingRule the sign can change even for too small or too large distances,
+    /// so if you would like to get closed mesh from marching cubes, set false here
+    bool nullOutsideMinMax = true;
 
     /// the method to compute distance sign
     SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };

@@ -308,9 +308,6 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
                 auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
                 auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
                 auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;
-                auto sPoint = result_.triPoint( start );
-                auto ePoint = result_.triPoint( end );
-                auto midPoint = ( sPoint + ePoint ) * 0.5f;
                 auto ccwPath = trackSection( result_, start, end, planePoint, true );
                 auto cwPath = trackSection( result_, start, end, planePoint, false );
                 if ( ccwPath.has_value() && cwPath.has_value() )

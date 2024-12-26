@@ -17,6 +17,8 @@ public:
     SceneRootObject( ProtectedStruct, const SceneRootObject& obj ) : SceneRootObject( obj ) {}
     constexpr static const char* TypeName() noexcept { return "RootObject"; }
     constexpr static const char* RootName() noexcept { return "Root"; }
+    virtual std::string getClassName() const override { return "Root"; }
+    virtual std::string getClassNameInPlural() const override { return "Roots"; }
     virtual const char* typeName() const override { return TypeName(); }
     virtual void setAncillary( bool ) override { Object::setAncillary( false ); }
     virtual bool select( bool ) override { return Object::select( false ); }

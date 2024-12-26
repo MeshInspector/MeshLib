@@ -1,10 +1,13 @@
 #pragma once
+
 #include "MRCudaBasic.cuh"
 #include "MRCudaMath.cuh"
 #include "MRCudaFloat.cuh"
 
 namespace MR
 {
+
+struct DistanceToMeshOptions;
 
 namespace Cuda
 {
@@ -48,7 +51,7 @@ void fastWindingNumberFromGrid( int3 gridSize, Matrix4 gridToMeshXf,
 /// calls fast winding number for each point in three-dimensional grid to get sign
 void signedDistance( int3 gridSize, Matrix4 gridToMeshXf,
                                       const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                      float* resVec, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq );
+                                      float* resVec, const DistanceToMeshOptions& options );
 
 
 } //namespece Cuda

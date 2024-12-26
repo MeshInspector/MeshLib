@@ -167,8 +167,6 @@ set(GLAD_INSTALL ON)
 set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
-set(PYBIND11_NONLIMITEDAPI_PYTHON_HEX_VERSION 0x030800f0 CACHE STRING "") # Python 3.8
-set(PYBIND11_NONLIMITEDAPI_SUFFIX "_meshlib" CACHE STRING "")
 add_subdirectory(./pybind11)
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRExpected.h"
 
 namespace MR
 {
@@ -38,6 +39,12 @@ namespace MR
 /// returns track on surface and end point (same as start if path has looped)
 [[nodiscard]] MRMESH_API PlaneSection trackSection( const MeshPart& mp,
     const MeshTriPoint& start, MeshTriPoint& end, const Vector3f& direction, float distance );
+
+/// track section of plane set by start point, end point and planePoint
+/// from start to end
+/// returns track on surface without end point (return error if path was looped or reached boundary)
+[[nodiscard]] MRMESH_API Expected<PlaneSection> trackSection( const MeshPart& mp,
+    const MeshTriPoint& start, const MeshTriPoint& end, const Vector3f& planePoint, bool ccw );
 
 /// converts PlaneSections in 2D contours by computing coordinate of each point, applying given xf to it, and retaining only x and y
 [[nodiscard]] MRMESH_API Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & section, const AffineXf3f & meshToPlane );

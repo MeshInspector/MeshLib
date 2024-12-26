@@ -58,6 +58,19 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+
+using MeshTriPointsConnector = std::function<Expected<SurfacePath>( const MeshTriPoint& start, const MeshTriPoint& end, int startIndex, int endIndex )>;
+/** \ingroup BooleanGroup
+  * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
+  *
+  * Finds paths between neighbor \p meshTriPoints with MeshTriPointsConnector function and build contour MR::cutMesh input
+  * \param connectorFn function to build path between neighbor meshTriPoints, if not present simple geodesic path function is used
+  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
+  */
+[[nodiscard]]
+MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    MeshTriPointsConnector connectorFn, std::vector<int>* pivotIndices = nullptr );
+
 /// Geo path search settings
 struct SearchPathSettings
 {
@@ -73,7 +86,7 @@ struct SearchPathSettings
   * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
@@ -95,7 +108,7 @@ MRMESH_API Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( c
   * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour, PathError> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup

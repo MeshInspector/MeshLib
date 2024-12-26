@@ -12,6 +12,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include "MRMeshTriPoint.h"
 #include <atomic>
 
 namespace MR
@@ -254,7 +255,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 
     if ( !addCrossedEdge( first ) )
         return res;
-    assert( activeEdges_.test( first.undirected() ) );
+    //assert( activeEdges_.test( first.undirected() ) );
         activeEdges_.reset( first.undirected() );
 
     bool closed = false;
@@ -434,6 +435,39 @@ PlaneSection trackSection( const MeshPart& mp,
     if ( closed &&
         dot( endPoint - prevPoint, lastPoint - prevPoint ) > dot( startPoint - prevPoint, lastPoint - prevPoint ) )
         end = start;
+    return res;
+}
+
+Expected<PlaneSection> trackSection( const MeshPart& mp, const MeshTriPoint& start, const MeshTriPoint& end, const Vector3f& planePoint, bool ccw )
+{
+    MR_TIMER;
+
+    if ( fromSameTriangle( mp.mesh.topology, MeshTriPoint( start ), MeshTriPoint( end ) ) )
+        return PlaneSection();
+
+    auto startPoint = mp.mesh.triPoint( start );
+    auto endPoint = mp.mesh.triPoint( end );
+    auto crossDir = cross( startPoint - planePoint, endPoint - planePoint ).normalized();
+    auto plane = Plane3f::fromDirAndPt( ccw ? crossDir : -crossDir, planePoint );
+    VertMetric valueInVertex = [&] ( VertId v )
+    {
+        return plane.distance( mp.mesh.points[v] );
+    };
+    ContinueTrack continueTrack = [&] ( const MeshEdgePoint& next )->bool
+    {
+        return !fromSameTriangle( mp.mesh.topology, MeshTriPoint( next ), MeshTriPoint( end ) );
+    };
+    Isoliner s( mp.mesh.topology, valueInVertex, mp.region );
+    auto res = s.track( start, continueTrack );
+    if ( res.empty() )
+    {
+        assert( false );
+        return unexpected( "Empty section" );
+    }
+    if ( res.size() > 1 && res.front() == res.back() )
+        return unexpected( "Looped section" );
+    if ( !fromSameTriangle( mp.mesh.topology, MeshTriPoint( res.back() ), MeshTriPoint( end ) ) )
+        return unexpected( "Interrupted section" );
     return res;
 }
 

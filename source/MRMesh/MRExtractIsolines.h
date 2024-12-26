@@ -42,6 +42,7 @@ namespace MR
 
 /// track section of plane set by start point, end point and planePoint
 /// from start to end
+/// \param ccw - if true use start->end->planePoint plane, otherwise use start->planePoint->end (changes direction of plane tracking)
 /// returns track on surface without end point (return error if path was looped or reached boundary)
 [[nodiscard]] MRMESH_API Expected<PlaneSection> trackSection( const MeshPart& mp,
     const MeshTriPoint& start, const MeshTriPoint& end, const Vector3f& planePoint, bool ccw );

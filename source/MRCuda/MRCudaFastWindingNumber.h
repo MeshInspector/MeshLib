@@ -2,6 +2,7 @@
 #include "exports.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRDistanceToMeshOptions.h" // only for bindings generation
 
 namespace MR
 {

@@ -127,8 +127,7 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ needs.config.outputs.build_enable_windows }}
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows }}
     needs:
       - config
       - windows-build-test
@@ -206,8 +205,7 @@ jobs:
           retention-days: 1
 
   create-nuget-package:
-    if: ${{ needs.config.outputs.build_enable_windows }}
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows }}
     needs:
       - config
       - windows-build-test

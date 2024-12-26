@@ -255,8 +255,10 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 
     if ( !addCrossedEdge( first ) )
         return res;
+    
+    // looks like this assert is excessive for trackSection functions
     //assert( activeEdges_.test( first.undirected() ) );
-        activeEdges_.reset( first.undirected() );
+    activeEdges_.reset( first.undirected() );
 
     bool closed = false;
     while ( auto next = findNextEdge_( res.back().e ) )

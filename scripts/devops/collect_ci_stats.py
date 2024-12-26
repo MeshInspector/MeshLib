@@ -7,15 +7,6 @@ from pathlib import Path
 
 import requests
 
-KNOWN_JOBS = [
-    'emscripten-build-test / emscripten-build',
-    'fedora-build-test / fedora-build-test',
-    'macos-build-test / macos-build-test',
-    'windows-build-test / windows-build-test',
-    'ubuntu-arm64-build-test / ubuntu-arm-build-test',
-    'ubuntu-x64-build-test / ubuntu-x64-build-test',
-]
-
 def parse_iso8601(s):
     return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
 
@@ -32,10 +23,6 @@ def parse_step(step: dict):
     }
 
 def parse_job(job: dict):
-    job_name = job['name']
-    if not any(job_name.startswith(job_prefix) for job_prefix in KNOWN_JOBS):
-        return None
-
     job_id = job['id']
     stats_filename = Path(f"RunnerSysStats-{job_id}.json")
     if not stats_filename.exists():

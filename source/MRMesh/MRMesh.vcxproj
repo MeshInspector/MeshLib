@@ -26,6 +26,7 @@
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
+    <ClInclude Include="MRDistanceToMeshOptions.h" />
     <ClInclude Include="MREnums.h" />
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />

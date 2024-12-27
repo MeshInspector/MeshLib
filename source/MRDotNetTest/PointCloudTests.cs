@@ -158,5 +158,14 @@ namespace MR.Test
 
             File.Delete(path);
         }
+
+        [Test]
+        public void TestCachedPoints()
+        {
+            var points = MakeCube();
+            Assert.That(points.Points.Count == 8);
+            points.AddPoint(new Vector3f(0, 0, 0));
+            Assert.That(points.Points.Count == 9);
+        }
     }
 }

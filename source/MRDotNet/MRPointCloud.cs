@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Text;
 using static MR.DotNet;
 using static MR.DotNet.Box3f;
 using static MR.DotNet.Vector3f;
@@ -82,6 +80,19 @@ namespace MR
             {
                 Dispose(true);
                 GC.SuppressFinalize(this);
+            }
+
+            private void clearManagedResources()
+            {
+                if (validPoints_ is not null)
+                {
+                    validPoints_.Dispose();
+                    validPoints_ = null;
+                }
+
+                points_ = null;
+                normals_ = null;
+                boundingBox_ = null;
             }
 
             protected virtual void Dispose(bool disposing)
@@ -200,6 +211,7 @@ namespace MR
                     throw new InvalidOperationException("Normals must be empty");
 
                 mrPointCloudAddPoint(pc_, ref point.vec_);
+                clearManagedResources();
             }
             /// appends a point and a normal
             public void AddPoint(Vector3f point, Vector3f normal)
@@ -208,6 +220,7 @@ namespace MR
                     throw new InvalidOperationException("Points and normals must have the same size");
 
                 mrPointCloudAddPointWithNormal(pc_, ref point.vec_, ref normal.vec_);
+                clearManagedResources();
             }
 
             internal IntPtr pc_;

@@ -53,19 +53,19 @@ on:
         value: true
       build_enable_ubuntu_x64:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_fedora:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_windows:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_macos:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_emscripten:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
 
 jobs:
   prepare-config:

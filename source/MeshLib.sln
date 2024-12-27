@@ -57,10 +57,13 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRIOExtras", "MRIOExtras\MRIOExtras.vcxproj", "{99EB9674-ABBF-47CD-A8D5-EE122EB5DA0C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRPython", "MRPython\MRPython.vcxproj", "{90BC6971-76CA-4ECD-92E0-585FE3BD6672}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5612E480-6980-4242-9039-BE367F4ECBF0} = {5612E480-6980-4242-9039-BE367F4ECBF0}
+	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11_nonlimitedapi_stubs", "..\thirdparty\pybind11_nonlimitedapi_stubs.vcxproj", "{CB6D82FB-E91D-4D62-B82E-BE644244E30A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_stubs", "..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj", "{CB6D82FB-E91D-4D62-B82E-BE644244E30A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11_nonlimitedapi", "..\thirdparty\pybind11_nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_meshlib_3.11", "..\thirdparty\pybind11nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

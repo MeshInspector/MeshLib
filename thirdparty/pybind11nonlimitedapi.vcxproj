@@ -11,14 +11,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pybind11\source\non_limited_api\non_limited_api_stubs.cpp" />
+    <ClCompile Include="pybind11\source\non_limited_api\non_limited_api.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="pybind11nonlimitedapi_stubs.vcxproj">
+      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</ProjectGuid>
-    <RootNamespace>pybind11nonlimitedapistubs</RootNamespace>
+    <ProjectGuid>{5612E480-6980-4242-9039-BE367F4ECBF0}</ProjectGuid>
+    <RootNamespace>pybind11nonlimitedapi</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>pybind11nonlimitedapi_meshlib_3.11</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -49,12 +55,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\meshlib\</OutDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\meshlib\</OutDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -68,7 +74,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)pybind11\include</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
-      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;4297;4457;4191;4548;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -87,7 +93,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)pybind11\include</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;4297;4457;4191;4548;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

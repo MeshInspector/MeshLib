@@ -65,8 +65,10 @@ Vector3f findEdgeTriIntersectionPoint( const Mesh& edgeMesh, EdgeId edge, const 
 
 void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, VertBitSet& orgs, VertBitSet& dests )
 {
-    faces.set( topology.left( e ) );
-    faces.set( topology.right( e ) );
+    if ( auto l = topology.left( e ) )
+        faces.set( l );
+    if ( auto r = topology.right( e ) )
+        faces.set( r );
     orgs.set( topology.org( e ) );
     dests.set( topology.dest( e ) );
 }

@@ -37,7 +37,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
       update_doc:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       upload_artifacts:
         description:
         value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
@@ -50,22 +50,22 @@ on:
       # flags for disabling builds for different systems
       build_enable_ubuntu_arm64:
         description:
-        value: false
+        value: true
       build_enable_ubuntu_x64:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_fedora:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_windows:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_macos:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_emscripten:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
 
 jobs:
   prepare-config:

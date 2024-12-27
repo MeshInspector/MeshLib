@@ -37,7 +37,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
       update_doc:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
         value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}

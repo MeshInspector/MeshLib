@@ -59,13 +59,13 @@ on:
         value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_windows:
         description:
-        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_macos:
         description:
-        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_emscripten:
         description:
-        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
 
 jobs:
   prepare-config:

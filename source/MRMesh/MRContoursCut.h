@@ -68,7 +68,7 @@ using MeshTriPointsConnector = std::function<Expected<SurfacePath>( const MeshTr
   * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MR_BIND_IGNORE MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     MeshTriPointsConnector connectorFn, std::vector<int>* pivotIndices = nullptr );
 
 /// Geo path search settings

@@ -3,9 +3,6 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
-      autotest_data_s3_url:
-        required: true
-        type: string
       full_config_build:
         default: false
         required: false
@@ -59,6 +56,7 @@ jobs:
 
     env:
       BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
+      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
       - name: Checkout
@@ -218,31 +216,16 @@ jobs:
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 
-      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
-      - name: Cache autotest data from S3 Tests
-        if: ${{ inputs.internal_build }}
-        id: cache-autotest
-        uses: actions/cache@v4
-        with:
-          path: test_data
-          key: ${{inputs.autotest_data_s3_url}}
-
-      - name: Copy autotest data from S3 Tests
-        if: ${{ inputs.internal_build }}
-        run: aws s3 sync ${{inputs.autotest_data_s3_url}} .\test_data --delete --no-sign-request --size-only
-
       - name: Python Regression Tests
-        env:
-          SMOKE: ${{ inputs.internal_build && !inputs.full_config_build && matrix.config == 'Debug' }}
-          BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-          C_SHARP_TEST: ${{ fromJSON('["","--run-c-sharp-samples"]')[ env.BUILD_C_SHARP == 'true' || 0] }}
         if: ${{ inputs.internal_build }}
-        working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}} -a="${{env.C_SHARP_TEST}} --csharp-sample-dir=..\source\x64\${{ matrix.config }} --run-cuda=negative"
-
-      - name: Copy test artifacts to S3
-        if: ${{ inputs.upload_test_artifacts && inputs.internal_build && !cancelled() }}
-        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/windows//${{matrix.runner}}/${{matrix.config}}' --recursive
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          mrbind: ${{ inputs.mrbind }}
+          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative"
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}

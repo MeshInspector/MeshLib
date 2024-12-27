@@ -13,6 +13,7 @@
 #include "MRMesh/MRImage.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRMesh/MRStringConvert.h"
 #include <pybind11/stl.h>
 #include <memory>
 
@@ -36,6 +37,18 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     {
         auto image = viewer->captureSceneScreenShot();
         MR::ImageSave::toAnySupportedFormat( image, path );
+    } );
+}
+
+static void pythonCaptureUIScreenShot( MR::Viewer* viewer, const char* path )
+{
+    auto filename = MR::pathFromUtf8( path );
+    MR::CommandLoop::runCommandFromGUIThread( [filename, viewer] ()
+    {
+        viewer->captureUIScreenShot( [filename] ( const MR::Image& image )
+        {
+            MR::ImageSave::toAnySupportedFormat( image, filename );
+        } );
     } );
 }
 
@@ -217,6 +230,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "params - params fit data" ).
         def( "captureScreenShot", &pythonCaptureScreenShot,pybind11::arg("path"),
             "Captures part of window (redraw 3d scene over UI (without redrawing UI))" ).
+        def( "captureUIScreenShot", &pythonCaptureUIScreenShot, pybind11::arg( "path" ),
+            "Captures full window screenshot with UI" ).
         def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" ).
         // Input events:
         def( "mouseDown",

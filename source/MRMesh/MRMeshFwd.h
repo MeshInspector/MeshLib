@@ -540,6 +540,8 @@ MR_CANONICAL_TYPEDEFS( (template<typename V> struct [[nodiscard]]), PolylineProj
 )
 
 class DistanceMap;
+struct DistanceToMeshOptions;
+struct SignedDistanceToMeshOptions;
 
 using GcodeSource = std::vector<std::string>;
 

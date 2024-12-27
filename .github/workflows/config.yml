@@ -53,7 +53,7 @@ on:
         value: true
       build_enable_ubuntu_x64:
         description:
-        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_fedora:
         description:
         value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}

@@ -56,7 +56,7 @@ on:
         value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_fedora:
         description:
-        value: true #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_windows:
         description:
         value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}

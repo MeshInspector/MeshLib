@@ -690,6 +690,24 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
     return {};
 }
 
+[[nodiscard]] static const char * asString( openvdb::GridClass gc )
+{
+    switch ( gc )
+    {
+    case openvdb::GRID_UNKNOWN:
+        return "Unknown";
+    case openvdb::GRID_LEVEL_SET:
+        return "Level Set";
+    case openvdb::GRID_FOG_VOLUME:
+        return "Fog Volume";
+    case openvdb::GRID_STAGGERED:
+        return "Staggered";
+    default:
+        assert( false );
+        return "";
+    }
+}
+
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
     auto activeBox = getActiveBounds();
@@ -714,7 +732,10 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     if( activeVoxels != totalVoxels )
         res.back() += " / " + std::to_string( activeVoxels ) + " active";
     if ( vdbVolume_.data )
+    {
         res.push_back( fmt::format( "background: {:.3}", vdbVolume_.data->background() ) );
+        res.push_back( fmt::format( "grid class: {}", asString( vdbVolume_.data->getGridClass() ) ) );
+    }
 
     return res;
 }

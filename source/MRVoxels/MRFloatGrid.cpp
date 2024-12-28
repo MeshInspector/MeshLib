@@ -42,13 +42,26 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
 
     ProgressInterrupter interrupter( dummyProgressCb );
     // openvdb::util::NullInterrupter template argument to avoid tbb inconsistency
-    openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
+
+    bool failed = true;
+    if ( dest->getGridClass() == openvdb::GRID_LEVEL_SET )
+    {
+        try {
+            dest = openvdb::tools::doLevelSetRebuild( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
+            failed = false;
+        }
+        catch( ... )
+        {}
+    }
+    if ( failed )
+    {
+        openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
+    }
 
     if ( interrupter.getWasInterrupted() )
         return {};
     // restore normal scale
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
-    dest->setGridClass( grid->getGridClass() );
 
     return MakeFloatGrid( std::move( dest ) );
 }

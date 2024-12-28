@@ -54,7 +54,6 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
@@ -67,7 +66,6 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
-      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -80,7 +78,6 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
-      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       config_matrix:         ${{ needs.config.outputs.ubuntu_x64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
@@ -94,7 +91,6 @@ jobs:
     uses: ./.github/workflows/build-test-fedora.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
-      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -113,7 +109,6 @@ jobs:
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
-      autotest_data_s3_url:  ${{ needs.config.outputs.autotest_data_s3_url }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}

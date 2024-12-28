@@ -558,7 +558,8 @@ bool buttonUniqueIcon(
     const std::string& text, 
     const ImVec2& buttonSize, 
     int* value, 
-    int ownValue )
+    int ownValue,
+    ImGuiKey key /*= ImGuiKey_None*/ )
 {
     StyleParamHolder sh;
     if ( *value == ownValue )
@@ -571,7 +572,7 @@ bool buttonUniqueIcon(
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
         sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
     }
-    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize, key ) || checkKey( key );
     if ( res )
         value[0] = ownValue;
 

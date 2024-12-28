@@ -79,6 +79,8 @@ def copy_lib():
 	# to make VS build them directly in the subdirectory. And the `.pyd` extension is only used on Windows.
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*.pyd")):
 		os.remove(f)
+	for f in glob.glob(os.path.join(it.path_to_libs, "__init__.py")):
+		os.remove(f)
 
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes

@@ -212,8 +212,9 @@ struct [[nodiscard]] Mesh
     /// computes normalized half sum of face normals sharing given edge (only (region) faces will be considered);
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
 
-    /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation;
-    /// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
+    /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation
+    /// as suggested in the article "Signed Distance Computation Using the Angle Weighted Pseudonormal" by J. Andreas Baerentzen and Henrik Aanaes,
+    /// https://backend.orbit.dtu.dk/ws/portalfiles/portal/3977815/B_rentzen.pdf
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
 
@@ -300,9 +301,10 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
 
     /// computes quadratic form in the vertex as the sum of squared distances from
-    /// 1) planes of adjacent triangles
+    /// 1) planes of adjacent triangles, with the weight equal to the angle of adjacent triangle at this vertex divided on PI in case of angleWeigted=true;
     /// 2) lines of adjacent boundary and crease edges
-    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
+    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
+        const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
     /// passes through all valid vertices and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space

@@ -751,7 +751,7 @@ float Mesh::leftCotan( EdgeId e ) const
     return nom / den;
 }
 
-QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
+QuadraticForm3f Mesh::quadraticForm( VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
 {
     QuadraticForm3f qf;
     for ( EdgeId e : orgRing( topology, v ) )
@@ -764,9 +764,20 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const 
         }
         if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
         {
-            // zero-area triangle is treated as no triangle with no penalty at all,
-            // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
-            qf.addDistToPlane( leftNormal( e ) );
+            if ( angleWeigted )
+            {
+                auto d0 = edgeVector( e );
+                auto d1 = edgeVector( topology.next( e ) );
+                auto angle = MR::angle( d0, d1 );
+                static constexpr float INV_PIF = 1 / PI_F;
+                qf.addDistToPlane( leftNormal( e ), angle * INV_PIF );
+            }
+            else
+            {
+                // zero-area triangle is treated as no triangle with no penalty at all,
+                // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
+                qf.addDistToPlane( leftNormal( e ) );
+            }
         }
     }
     return qf;

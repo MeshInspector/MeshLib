@@ -7,6 +7,8 @@
 #include "MRMeshProject.h"
 #include "MRAABBTree.h"
 #include "MRDipole.h"
+#include "MRIsNaN.h"
+#include "MRDistanceToMeshOptions.h"
 
 namespace MR
 {
@@ -58,13 +60,16 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     return {};
 }
 
-float FastWindingNumber::calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq )
+float FastWindingNumber::calcWithDistances( const Vector3f& p, const DistanceToMeshOptions& options )
 {
-    const auto sign = calc_( p, beta ) > windingNumberThreshold ? -1.f : +1.f;
-    return sign * std::sqrt( findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq );
+    auto resSq = findProjection( p, mesh_, options.maxDistSq, nullptr, options.minDistSq ).distSq;
+    if ( options.nullOutsideMinMax && ( resSq < options.minDistSq || resSq >= options.maxDistSq ) ) // note that resSq == minDistSq (e.g. == 0) is a valid situation
+        return cQuietNan;
+    const auto sign = calc_( p, options.windingNumberBeta ) > options.windingNumberThreshold ? -1.f : +1.f;
+    return sign * std::sqrt( resSq );
 }
 
-Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
 {
     MR_TIMER
 
@@ -76,7 +81,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
         {
             const auto transformedPoint = gridToMeshXf( Vector3f( indexer.toPos( i ) ) );
-            res[i] = calcWithDistances( transformedPoint, windingNumberThreshold, beta, maxDistSq, minDistSq );
+            res[i] = calcWithDistances( transformedPoint, options );
         }, cb ) )
         return unexpectedOperationCanceled();
     return {};

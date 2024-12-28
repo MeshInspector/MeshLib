@@ -9,12 +9,12 @@
 namespace MR
 {
 
-std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
+std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op )
 {
     assert( op.signMode != SignDetectionMode::OpenVDB );
     const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
-    if ( op.signMode != SignDetectionMode::HoleWindingRule // for HoleWindingRule the sign can change even for too small or too large distances
-        && ( proj.distSq < op.minDistSq || proj.distSq >= op.maxDistSq ) ) // note that proj.distSq == op.minDistSq (e.g. == 0) is a valid situation
+
+    if ( op.nullOutsideMinMax && ( proj.distSq < op.minDistSq || proj.distSq >= op.maxDistSq ) ) // note that proj.distSq == op.minDistSq (e.g. == 0) is a valid situation
         return {}; // distance is too small or too large, discard them
 
     float dist = std::sqrt( proj.distSq );

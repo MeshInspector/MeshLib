@@ -896,9 +896,8 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
     return res;
 }
 
-
-Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
-    SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
+Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg, 
+    MeshTriPointsConnector connectorFn /*= {}*/, std::vector<int>* pivotIndices /*= nullptr */ )
 {
     MR_TIMER;
     if ( meshTriPointsOrg.size() < 2 )
@@ -950,6 +949,17 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
     if ( meshTriPoints.size() < 2 )
         return {};
 
+    if ( !connectorFn )
+    {
+        connectorFn = [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
+        {
+            auto res = computeGeodesicPath( mesh, start, end );
+            if ( !res.has_value() )
+                return unexpected( toString( res.error() ) );
+            return *res;
+        };
+    }
+
     int sameMtpsNavigator = 0;
     int pivotNavigator = 0;
     sizeMTP = closed ? meshTriPoints.size() : meshTriPoints.size() - 1;
@@ -958,8 +968,27 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
     std::vector<OneMeshContour> surfacePaths( sizeMTP );
     for ( int i = 0; i < sizeMTP; ++i )
     {
+        while ( sameMtpsNavigator < sameEdgeMTPs.size() && pivotNavigator == sameEdgeMTPs[sameMtpsNavigator] )
+        {
+            ++pivotNavigator;
+            ++sameMtpsNavigator;
+        }
+        int firstIndex = pivotNavigator;
+        ++pivotNavigator;
+        int secondIndex = pivotNavigator;
+        int secSameNav = sameMtpsNavigator;
+        while ( secSameNav < sameEdgeMTPs.size() && secondIndex == sameEdgeMTPs[secSameNav] )
+        {
+            ++secondIndex;
+            ++secSameNav;
+            if ( secondIndex >= meshTriPointsOrg.size() )
+            {
+                secondIndex = 0;
+                secSameNav = 0;
+            }
+        }
         // using DijkstraAStar here might be faster, in most case points are close to each other
-        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], searchSettings.geodesicPathApprox, searchSettings.maxReduceIters );
+        auto sp = connectorFn( meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], firstIndex, secondIndex );
         if ( !sp.has_value() )
             return unexpected( sp.error() );
         auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
@@ -999,6 +1028,8 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
         }
     }
 
+    sameMtpsNavigator = 0;
+    pivotNavigator = 0;
     const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
     // add interjacent
     for ( int i = 0; i < meshTriPoints.size(); ++i )
@@ -1094,11 +1125,24 @@ Expected<OneMeshContour, PathError> convertMeshTriPointsToMeshContour( const Mes
     return res;
 }
 
+Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+    SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
+{
+    MeshTriPointsConnector conFn = [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
+    {
+        auto res = computeGeodesicPath( mesh, start, end, searchSettings.geodesicPathApprox, searchSettings.maxReduceIters );
+        if ( !res.has_value() )
+            return unexpected( toString( res.error() ) );
+        return *res;
+    };
+    return convertMeshTriPointsToMeshContour( mesh, meshTriPointsOrg, conFn, pivotIndices );
+}
+
 Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
 {
     auto initCutContours = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings );
     if ( !initCutContours.has_value() )
-        return unexpected( toString( initCutContours.error() ) );
+        return unexpected( initCutContours.error() );
 
     if ( isoValue == 0.0f )
         return OneMeshContours{ std::move( *initCutContours ) };
@@ -1157,7 +1201,7 @@ Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& 
     return res;
 }
 
-Expected<OneMeshContour, PathError> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
     auto conts = meshTriPointsOrg;

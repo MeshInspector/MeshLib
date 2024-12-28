@@ -138,11 +138,17 @@ inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const
     return buttonIconEx( name, iconSize, text, buttonSize );
 }
 // button without a gradient, always ative, configurable by an external style
-inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+inline bool buttonIconFlatBG( 
+    const std::string& name, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize,
+    ImGuiKey key = ImGuiKey_None )
 {
     ButtonIconCustomizationParams params;
     params.flatBackgroundColor = true;
     params.forceImguiTextColor = true;
+    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
     return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
 /// draw button with icon same logic as radioButton
@@ -153,7 +159,8 @@ MRVIEWER_API bool buttonUniqueIcon(
     const std::string& text, 
     const ImVec2& buttonSize, 
     int* value, 
-    int ownValue );
+    int ownValue,
+    ImGuiKey key = ImGuiKey_None );
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

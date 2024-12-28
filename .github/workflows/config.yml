@@ -53,19 +53,19 @@ on:
         value: true
       build_enable_ubuntu_x64:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_fedora:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_windows:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_macos:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
       build_enable_emscripten:
         description:
-        value: false #${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc-only != 'true' }}
 
 jobs:
   prepare-config:
@@ -81,10 +81,9 @@ jobs:
       tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
       tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
       tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
+      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
       tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
-      # tags for disabling builds for different systems
-      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
 
     runs-on: ubuntu-latest
 

@@ -713,6 +713,8 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     res.push_back( "voxels: " + std::to_string( totalVoxels ) );
     if( activeVoxels != totalVoxels )
         res.back() += " / " + std::to_string( activeVoxels ) + " active";
+    if ( vdbVolume_.data )
+        res.push_back( fmt::format( "background: {:.3}", vdbVolume_.data->background() ) );
 
     return res;
 }

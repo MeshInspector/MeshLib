@@ -14,6 +14,8 @@
 #include <openvdb/tools/SignedFloodFill.h>
 #endif
 
+#include <thread>
+
 namespace MR
 {
 

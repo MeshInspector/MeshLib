@@ -229,7 +229,7 @@ private:
     mutable std::optional<Box3i> activeBounds_;
     mutable std::optional<size_t> activeVoxels_;
 
-    const char * serializeFormat_ = ".raw";
+    const char * serializeFormat_ = ".vdb";
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );

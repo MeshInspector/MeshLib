@@ -19,32 +19,11 @@ Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
     Mesh subMesh;
     if ( settings.preSubdivide )
     {
-        // copy mesh
-        if ( mp.region )
-            subMesh.addMeshPart( mp );
+        if ( auto maybeMesh = copySubdividePackMesh( mp, settings.voxelSize, subprogress( progress, 0.0f, 0.2f ) ) )
+            subMesh = std::move( *maybeMesh );
         else
-            subMesh = mp.mesh;
+            return unexpected( std::move( maybeMesh.error() ) );
         mp = MeshPart{ subMesh };
-        if ( !reportProgress( progress, 0.05f ) )
-            return unexpectedOperationCanceled();
-
-        // subdivide copied mesh
-        SubdivideSettings subSettings
-        {
-            .maxEdgeLen = settings.voxelSize,
-            .maxEdgeSplits = int( subMesh.area() / sqr( settings.voxelSize ) ),
-            .maxDeviationAfterFlip = 0.1f * settings.voxelSize,
-            .progressCallback = subprogress( progress, 0.05f, 0.15f )
-        };
-        subdivideMesh( subMesh, subSettings );
-        if ( !reportProgress( progress, 0.15f ) )
-            return unexpectedOperationCanceled();
-
-        // pack subdivided mesh
-        subMesh.packOptimally(); // preserve tree to use during voxels filling
-        if ( !reportProgress( progress, 0.2f ) )
-            return unexpectedOperationCanceled();
-
         progress = subprogress( progress, 0.2f, 1.0f );
     }
 

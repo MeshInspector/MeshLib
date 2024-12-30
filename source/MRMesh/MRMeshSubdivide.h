@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include "MRExpected.h"
 #include "MRConstants.h"
 #include <cfloat>
 #include <functional>
@@ -64,6 +65,9 @@ struct SubdivideSettings
 /// \return The total number of edge splits performed
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
 
+/// create a copy of given mesh part, subdivides it to get approximate maximum edge length given, then pack resulting mesh
+[[nodiscard]] MRMESH_API Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float approxMaxEdgeLen, const ProgressCallback & cb = {} );
+
 /// \}
 
-}
+} //namespace MR

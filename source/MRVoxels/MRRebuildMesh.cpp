@@ -6,15 +6,49 @@
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRMeshSubdivide.h"
 
 namespace MR
 {
 
-Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings )
+Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
 {
     MR_TIMER
-    GeneralOffsetParameters genOffsetParams;
 
+    auto progress = settings.progress;
+    Mesh subMesh;
+    if ( settings.preSubdivide )
+    {
+        // copy mesh
+        if ( mp.region )
+            subMesh.addMeshPart( mp );
+        else
+            subMesh = mp.mesh;
+        mp = MeshPart{ subMesh };
+        if ( !reportProgress( progress, 0.05f ) )
+            return unexpectedOperationCanceled();
+
+        // subdivide copied mesh
+        SubdivideSettings subSettings
+        {
+            .maxEdgeLen = settings.voxelSize,
+            .maxEdgeSplits = int( subMesh.area() / sqr( settings.voxelSize ) ),
+            .maxDeviationAfterFlip = 0.1f * settings.voxelSize,
+            .progressCallback = subprogress( progress, 0.05f, 0.15f )
+        };
+        subdivideMesh( subMesh, subSettings );
+        if ( !reportProgress( progress, 0.15f ) )
+            return unexpectedOperationCanceled();
+
+        // pack subdivided mesh
+        subMesh.packOptimally(); // preserve tree to use during voxels filling
+        if ( !reportProgress( progress, 0.2f ) )
+            return unexpectedOperationCanceled();
+
+        progress = subprogress( progress, 0.2f, 1.0f );
+    }
+
+    GeneralOffsetParameters genOffsetParams;
     switch ( settings.signMode )
     {
     default:
@@ -23,7 +57,7 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     case SignDetectionModeShort::Auto:
         if ( mp.mesh.topology.isClosed( mp.region ) )
         {
-            auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( settings.progress, 0.0f, 0.1f ) );
+            auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( progress, 0.0f, 0.1f ) );
             if ( !expSelfy )
                 return unexpected( std::move( expSelfy.error() ) );
             if ( *expSelfy )
@@ -54,7 +88,7 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;
     genOffsetParams.windingNumberBeta = settings.windingNumberBeta;
     genOffsetParams.fwn = settings.fwn;
-    genOffsetParams.callBack = subprogress( settings.progress, 0.1f, ( settings.decimate ? 0.7f : 1.0f ) );
+    genOffsetParams.callBack = subprogress( progress, 0.1f, ( settings.decimate ? 0.7f : 1.0f ) );
 
     UndirectedEdgeBitSet sharpEdges;
     genOffsetParams.outSharpEdges = &sharpEdges;
@@ -66,7 +100,7 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     if ( settings.decimate && resMesh->topology.numValidFaces() > 0 )
     {
         const auto map = resMesh->packOptimally( false );
-        if ( !reportProgress( settings.progress, 0.75f ) )
+        if ( !reportProgress( progress, 0.75f ) )
             return unexpectedOperationCanceled();
 
         sharpEdges = mapEdges( map.e, sharpEdges );
@@ -78,7 +112,7 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
             .stabilizer = 1e-5f, // 1e-6 here resulted in a bit worse mesh
             .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr,
             .packMesh = true,
-            .progressCallback = subprogress( settings.progress, 0.75f, 1.0f ),
+            .progressCallback = subprogress( progress, 0.75f, 1.0f ),
             .subdivideParts = 64
         };
         if ( decimateMesh( *resMesh, decimSettings ).cancelled )

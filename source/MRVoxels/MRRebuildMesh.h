@@ -11,6 +11,11 @@ namespace MR
 
 struct RebuildMeshSettings
 {
+    /// whether to make subdivision of initial mesh before conversion to voxels,
+    /// despite time and memory required for the subdivision, it typically makes the whole rebuilding faster (or even much faster in case of large initial triangles),
+    /// because AABB tree contains small triangles in leaves, which is good for both closest triangle location and winding number approximation
+    bool preSubdivide = true;
+
     /// Size of voxel in grid conversions;
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;
@@ -55,6 +60,6 @@ struct RebuildMeshSettings
 
 /// fixes all types of issues in input mesh (degenerations, holes, self-intersections, etc.)
 /// by first converting mesh in voxel representation, and then backward
-[[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings );
 
 } //namespace MR

@@ -60,6 +60,6 @@ struct RebuildMeshSettings
 
 /// fixes all types of issues in input mesh (degenerations, holes, self-intersections, etc.)
 /// by first converting mesh in voxel representation, and then backward
-[[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings );
 
 } //namespace MR

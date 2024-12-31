@@ -11,21 +11,11 @@
 namespace MR
 {
 
-Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
+Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings )
 {
     MR_TIMER
 
     auto progress = settings.progress;
-    Mesh subMesh;
-    if ( settings.preSubdivide )
-    {
-        if ( auto maybeMesh = copySubdividePackMesh( mp, settings.voxelSize, subprogress( progress, 0.0f, 0.1f ) ) )
-            subMesh = std::move( *maybeMesh );
-        else
-            return unexpected( std::move( maybeMesh.error() ) );
-        mp = MeshPart{ subMesh };
-        progress = subprogress( progress, 0.1f, 1.0f );
-    }
 
     GeneralOffsetParameters genOffsetParams;
     switch ( settings.signMode )
@@ -37,6 +27,7 @@ Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
         if ( mp.mesh.topology.isClosed( mp.region ) )
         {
             auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( progress, 0.0f, 0.1f ) );
+            progress = subprogress( progress, 0.1f, 1.0f );
             if ( !expSelfy )
                 return unexpected( std::move( expSelfy.error() ) );
             if ( *expSelfy )
@@ -61,18 +52,28 @@ Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
     if ( settings.onSignDetectionModeSelected )
         settings.onSignDetectionModeSelected( genOffsetParams.signDetectionMode );
 
+    std::optional<Mesh> subMesh;
+    if ( settings.preSubdivide && genOffsetParams.signDetectionMode != SignDetectionMode::OpenVDB ) // OpenVDB slows down with more input triangles
+    {
+        if ( auto maybeMesh = copySubdividePackMesh( mp, settings.voxelSize, subprogress( progress, 0.0f, 0.1f ) ) )
+            subMesh = std::move( *maybeMesh );
+        else
+            return unexpected( std::move( maybeMesh.error() ) );
+        progress = subprogress( progress, 0.1f, 1.0f );
+    }
+
     genOffsetParams.closeHolesInHoleWindingNumber = settings.closeHolesInHoleWindingNumber;
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;
     genOffsetParams.windingNumberBeta = settings.windingNumberBeta;
     genOffsetParams.fwn = settings.fwn;
-    genOffsetParams.callBack = subprogress( progress, 0.1f, ( settings.decimate ? 0.7f : 1.0f ) );
+    genOffsetParams.callBack = subprogress( progress, 0.0f, ( settings.decimate ? 0.7f : 1.0f ) );
 
     UndirectedEdgeBitSet sharpEdges;
     genOffsetParams.outSharpEdges = &sharpEdges;
 
-    auto resMesh = generalOffsetMesh( mp, 0.0f, genOffsetParams );
+    auto resMesh = generalOffsetMesh( subMesh ? *subMesh : mp, 0.0f, genOffsetParams );
     if ( !resMesh.has_value() )
         return resMesh;
 

@@ -13,7 +13,9 @@ struct RebuildMeshSettings
 {
     /// whether to make subdivision of initial mesh before conversion to voxels,
     /// despite time and memory required for the subdivision, it typically makes the whole rebuilding faster (or even much faster in case of large initial triangles),
-    /// because AABB tree contains small triangles in leaves, which is good for both closest triangle location and winding number approximation
+    /// because AABB tree contains small triangles in leaves, which is good for both
+    /// 1) search for closest triangle because the closest box more frequently contains the closest triangle,
+    /// 2) and winding number approximation because of more frequent usage of approximation for distant dipoles
     bool preSubdivide = true;
 
     /// Size of voxel in grid conversions;

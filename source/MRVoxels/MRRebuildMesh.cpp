@@ -19,12 +19,12 @@ Expected<Mesh> rebuildMesh( MeshPart mp, const RebuildMeshSettings& settings )
     Mesh subMesh;
     if ( settings.preSubdivide )
     {
-        if ( auto maybeMesh = copySubdividePackMesh( mp, settings.voxelSize, subprogress( progress, 0.0f, 0.2f ) ) )
+        if ( auto maybeMesh = copySubdividePackMesh( mp, settings.voxelSize, subprogress( progress, 0.0f, 0.1f ) ) )
             subMesh = std::move( *maybeMesh );
         else
             return unexpected( std::move( maybeMesh.error() ) );
         mp = MeshPart{ subMesh };
-        progress = subprogress( progress, 0.2f, 1.0f );
+        progress = subprogress( progress, 0.1f, 1.0f );
     }
 
     GeneralOffsetParameters genOffsetParams;

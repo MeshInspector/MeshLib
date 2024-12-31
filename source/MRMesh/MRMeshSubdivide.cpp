@@ -212,7 +212,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     return splitsDone;
 }
 
-Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float approxMaxEdgeLen, const ProgressCallback & cb )
+Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb )
 {
     MR_TIMER
     Mesh subMesh;
@@ -225,12 +225,16 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float approxMaxEdgeLe
     if ( !reportProgress( cb, 0.25f ) )
         return unexpectedOperationCanceled();
 
+    // smaller edge lengths require too much space and time for subdivision,
+    // larger edge lengths do not give significant benefits in AABB-tree optimized searches
+    const float approxMaxEdgeLen = 5 * voxelSize;
+
     // subdivide copied mesh
     SubdivideSettings subSettings
     {
         .maxEdgeLen = approxMaxEdgeLen,
         .maxEdgeSplits = int( subMesh.area() / sqr( approxMaxEdgeLen ) ),
-        .maxDeviationAfterFlip = 0.1f * approxMaxEdgeLen,
+        .maxDeviationAfterFlip = 0.1f * voxelSize,
         .progressCallback = subprogress( cb, 0.25f, 0.75f )
     };
     subdivideMesh( subMesh, subSettings );

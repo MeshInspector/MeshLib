@@ -78,12 +78,13 @@ struct SubdivideSettings
     ProgressCallback progressCallback;
 };
 
-/// Split edges in mesh region according to the settings;\n
+/// splits edges in mesh region according to the settings;\n
 /// \return The total number of edge splits performed
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
 
-/// create a copy of given mesh part, subdivides it to get approximate maximum edge length given, then pack resulting mesh
-[[nodiscard]] MRMESH_API Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float approxMaxEdgeLen, const ProgressCallback & cb = {} );
+/// creates a copy of given mesh part, subdivides it to get rid of too long edges compared with voxelSize, then packs resulting mesh,
+/// this is called typically in preparation for 3D space sampling with voxelSize step, and subdivision is important for making leaves of AABB tree not too big compared with voxelSize
+[[nodiscard]] MRMESH_API Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb = {} );
 
 /// \}
 

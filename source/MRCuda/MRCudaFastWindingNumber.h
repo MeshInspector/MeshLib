@@ -30,7 +30,7 @@ public:
     MRCUDA_API Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) override;
 
 private:
-    bool prepareData_( ProgressCallback cb );
+    Expected<void> prepareData_( ProgressCallback cb );
 };
 
 } // namespace Cuda

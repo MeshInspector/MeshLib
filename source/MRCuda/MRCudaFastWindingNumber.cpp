@@ -92,32 +92,36 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     } );
 }
 
-bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )
+Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb )
 {
     MR_TIMER
-    if ( !prepareData_( subprogress( cb, 0.0f, 0.5f ) ) )
-        return false;
-
-    const size_t size = mesh_.topology.faceSize();
-    DynamicArrayF cudaResult( size );
-    //CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
-
-    fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, size);
-    if ( CUDA_LOGE( cudaGetLastError() ) )
-        return false;
-
-    std::vector<float> wns;
-    if ( CUDA_LOGE( cudaResult.toVector( wns ) ) )
-        return false;
-    if ( !reportProgress( cb, 0.9f ) )
-        return false;
-    
-    res.resize( size );
-    return BitSetParallelForAll( res, [&] (FaceId f)
+    return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
-        if ( wns[f] < 0 || wns[f] > 1 )
-            res.set( f );
-    }, subprogress( cb, 0.9f, 1.0f ) );
+        const size_t size = mesh_.topology.faceSize();
+        DynamicArrayF cudaResult;
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
+        if ( !reportProgress( cb, 0.6f ) )
+            return unexpectedOperationCanceled();
+
+        fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, size);
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        if ( !reportProgress( cb, 0.7f ) )
+            return unexpectedOperationCanceled();
+
+        std::vector<float> wns;
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( wns ) );
+        if ( !reportProgress( cb, 0.9f ) )
+            return unexpectedOperationCanceled();
+    
+        res.resize( size );
+        if ( !BitSetParallelForAll( res, [&] (FaceId f)
+        {
+            if ( wns[f] < 0 || wns[f] > 1 )
+                res.set( f );
+        }, subprogress( cb, 0.9f, 1.0f ) ) )
+            return unexpectedOperationCanceled();
+        return {};
+    } );
 }
 
 Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )

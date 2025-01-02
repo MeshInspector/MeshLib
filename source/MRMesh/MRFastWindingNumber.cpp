@@ -37,15 +37,18 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     return {};
 }
 
-bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )
+Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb )
 {
+    MR_TIMER
     res.resize( mesh_.topology.faceSize() );
-    return BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
+    if ( !BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
     {
         auto wn = calc_( mesh_.triCenter( f ), beta, f );
         if ( wn < 0 || wn > 1 )
             res.set( f );
-    }, cb );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return {};
 }
 
 Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )

@@ -27,8 +27,7 @@ public:
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    /// <returns>false if the operation was canceled by the user</returns>
-    virtual bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb = {} ) = 0;
+    virtual Expected<void> calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb = {} ) = 0;
 
     /// <summary>
     /// calculates winding numbers in each point from a three-dimensional grid
@@ -61,7 +60,7 @@ public:
 
     // see methods' descriptions in IFastWindingNumber
     MRMESH_API Expected<void> calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace, const ProgressCallback& cb ) override;
-    MRMESH_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
+    MRMESH_API Expected<void> calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb ) override;
     MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
     MRMESH_API float calcWithDistances( const Vector3f& p, const DistanceToMeshOptions& options );
     MRMESH_API Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) override;

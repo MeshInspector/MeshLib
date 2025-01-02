@@ -25,13 +25,16 @@ inline float FastWindingNumber::calc_( const Vector3f & q, float beta, FaceId sk
     return calcFastWindingNumber( dipoles_, tree_, mesh_, q, beta, skipFace );
 }
 
-void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace )
+Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace, const ProgressCallback& cb )
 {
+    MR_TIMER
     res.resize( points.size() );
-    ParallelFor( points, [&]( size_t i )
+    if ( !ParallelFor( points, [&]( size_t i )
     {
         res[i] = calc_( points[i], beta, skipFace );
-    } );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return {};
 }
 
 bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )

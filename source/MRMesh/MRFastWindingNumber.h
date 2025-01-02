@@ -20,7 +20,7 @@ public:
     /// <param name="points">incoming points</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     /// <param name="skipFace">this triangle (if it is close to `q`) will be skipped from summation</param>
-    virtual void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) = 0;
+    virtual Expected<void> calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {}, const ProgressCallback& cb = {} ) = 0;
 
     /// <summary>
     /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
@@ -60,7 +60,7 @@ public:
     [[nodiscard]] MRMESH_API FastWindingNumber( const Mesh & mesh );
 
     // see methods' descriptions in IFastWindingNumber
-    MRMESH_API void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) override;
+    MRMESH_API Expected<void> calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace, const ProgressCallback& cb ) override;
     MRMESH_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
     MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
     MRMESH_API float calcWithDistances( const Vector3f& p, const DistanceToMeshOptions& options );

@@ -51,7 +51,7 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
     return {};
 }
 
-Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
+Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb )
 {
     MR_TIMER
 

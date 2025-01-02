@@ -36,7 +36,7 @@ public:
     /// <param name="dims">dimensions of the grid</param>
     /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
+    virtual Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb = {} ) = 0;
 
     /// <summary>
     /// calculates distances with the sign obtained from generalized winding number in each point from a three-dimensional grid;
@@ -61,7 +61,7 @@ public:
     // see methods' descriptions in IFastWindingNumber
     MRMESH_API Expected<void> calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace, const ProgressCallback& cb ) override;
     MRMESH_API Expected<void> calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb ) override;
-    MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+    MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb ) override;
     MRMESH_API float calcWithDistances( const Vector3f& p, const DistanceToMeshOptions& options );
     MRMESH_API Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) override;
 

@@ -17,17 +17,21 @@ namespace Cuda
 /// spdlog::error the information about some CUDA error including optional filename and line number
 MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, int line = 0 );
 
-/// executes given CUDA function and logs the error if any
-#define CUDA_EXEC( func ) MR::Cuda::logError( func, __FILE__ , __LINE__ )
+/// evaluates given expression and logs the error if any
+#define CUDA_LOGE( expr ) MR::Cuda::logError( expr, __FILE__ , __LINE__ )
+// deprecated
+#define CUDA_EXEC( expr ) CUDA_LOGE( expr )
 
-/// executes given CUDA function, logs if it fails and returns error code
-#define CUDA_EXEC_RETURN( func ) if ( auto code = CUDA_EXEC( func ); code != cudaError::cudaSuccess ) return code
+/// evaluates given expression, logs if it fails and returns error code
+#define CUDA_LOGE_RETURN( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaError::cudaSuccess ) return code
+// deprecated
+#define CUDA_EXEC_RETURN( expr ) CUDA_LOGE_RETURN( expr )
 
-/// if func evaluates not to cudaError::cudaSuccess, then returns MR::unexpected with the error string without logging
-#define CUDA_RETURN_UNEXPECTED( func ) if ( auto code = ( func ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
+/// if given expression evaluates to not cudaError::cudaSuccess, then returns MR::unexpected with the error string without logging
+#define CUDA_RETURN_UNEXPECTED( expr ) if ( auto code = ( expr ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
 
-/// executes given CUDA function, logs if it fails and returns MR::unexpected with the error string
-#define CUDA_EXEC_RETURN_UNEXPECTED( func ) if ( auto code = CUDA_EXEC( func ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
+/// evaluates given expression, logs if it fails and returns MR::unexpected with the error string
+#define CUDA_LOGE_RETURN_UNEXPECTED( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
 
 template<typename T>
 DynamicArray<T>::DynamicArray( size_t size )
@@ -55,7 +59,7 @@ inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
     static_assert ( sizeof( T ) == sizeof( U ) ); 
     if ( auto code = resize( vec.size() ) )
         return code;
-    return CUDA_EXEC( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ) );
+    return CUDA_LOGE( cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice ) );
 }
 
 
@@ -64,13 +68,13 @@ inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBy
 {
     assert( numBytes % sizeof( T ) == 0 );
     resize( numBytes / sizeof( T ) );
-    return CUDA_EXEC( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ) );
+    return CUDA_LOGE( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ) );
 }
 
 template <typename T>
 inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data )
 {
-    return CUDA_EXEC( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    return CUDA_LOGE( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 template<typename T>
@@ -80,14 +84,14 @@ cudaError_t DynamicArray<T>::resize( size_t size )
         return cudaSuccess;
     if ( size_ != 0 )
     {
-        if ( auto code = CUDA_EXEC( cudaFree( data_ ) ) )
+        if ( auto code = CUDA_LOGE( cudaFree( data_ ) ) )
             return code;
     }
 
     size_ = size;
     if ( size_ != 0 )
     {
-        if ( auto code = CUDA_EXEC( cudaMalloc( ( void** )&data_, size_ * sizeof( T ) ) ) )
+        if ( auto code = CUDA_LOGE( cudaMalloc( ( void** )&data_, size_ * sizeof( T ) ) ) )
             return code;
     }
     return cudaSuccess;
@@ -99,14 +103,14 @@ cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const
 {
     static_assert ( sizeof( T ) == sizeof( U ) );
     vec.resize( size_ );
-    return CUDA_EXEC( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+    return CUDA_LOGE( cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 inline cudaError_t setToZero( DynamicArrayF& devArray )
 {
     if ( devArray.size() == 0 )
         return cudaSuccess;
-    return CUDA_EXEC( cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) ) );
+    return CUDA_LOGE( cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) ) );
 }
 
 } // namespace Cuda

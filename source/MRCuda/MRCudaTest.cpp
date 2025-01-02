@@ -11,15 +11,15 @@ namespace Cuda
 {
 Expected<void> negatePicture( Image& image )
 {
-    CUDA_EXEC_RETURN_UNEXPECTED( cudaSetDevice( 0 ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaSetDevice( 0 ) );
 
     DynamicArray<Cuda::Color> cudaArray;
-    CUDA_RETURN_UNEXPECTED( cudaArray.fromVector( image.pixels ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaArray.fromVector( image.pixels ) );
 
     negatePictureKernel( cudaArray );
-    CUDA_EXEC_RETURN_UNEXPECTED( cudaGetLastError() );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-    CUDA_RETURN_UNEXPECTED( cudaArray.toVector( image.pixels ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaArray.toVector( image.pixels ) );
 
     return {};
 }

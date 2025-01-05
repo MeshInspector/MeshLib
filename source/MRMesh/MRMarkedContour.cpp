@@ -196,7 +196,22 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
 
 MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSettings & settings )
 {
-    return makeSpline( resample( markedContour( controlPoints ), settings.samplingStep ), settings.controlStability );
+    MR_TIMER
+    assert( settings.iterations >= 1 );
+    MarkedContour3f res = markedContour( controlPoints );
+    for( int i = 0; i < settings.iterations; ++i )
+    {
+        assert( controlPoints.size() == res.marks.count() );
+        if ( i > 0 )
+        {
+            // restore exact control points positions
+            int n = 0;
+            for ( auto m : res.marks )
+                res.contour[m] = controlPoints[n++];
+        }
+        res = makeSpline( resample( res, settings.samplingStep ), settings.controlStability );
+    }
+    return res;
 }
 
 TEST(MRMesh, MarkedContour)

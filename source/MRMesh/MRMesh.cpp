@@ -488,6 +488,14 @@ Vector3d Mesh::holeDirArea( EdgeId e0 ) const
     return 0.5 * sum;
 }
 
+Vector3f Mesh::leftTangent( EdgeId e ) const
+{
+    assert( topology.left( e ) );
+    const auto lNorm = leftNormal( e );
+    const auto eDir = edgeVector( e ).normalized();
+    return cross( lNorm, eDir );
+}
+
 Vector3f Mesh::dirDblArea( VertId v ) const
 {
     Vector3f sum;

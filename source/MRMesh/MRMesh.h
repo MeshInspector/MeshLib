@@ -186,6 +186,9 @@ struct [[nodiscard]] Mesh
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
     [[nodiscard]] MRMESH_API Vector3d holeDirArea( EdgeId e ) const;
 
+    /// computes unit vector that is both orthogonal to given edge and to the normal of its left triangle, the vector is directed inside left triangle
+    [[nodiscard]] MRMESH_API Vector3f leftTangent( EdgeId e ) const;
+
     /// computes triangular face normal from its vertices
     [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
 

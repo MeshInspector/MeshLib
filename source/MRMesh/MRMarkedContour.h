@@ -49,6 +49,11 @@ struct SplineSettings
 
     /// a positive value, the more the value the closer resulting spline will be to given control points
     float controlStability = 1;
+
+    /// the shape of resulting spline depends on the total number of points in the contour,
+    /// which in turn depends on the length of input contour being sampled;
+    /// setting iterations greater than one allows you to pass a constructed spline as a better input contour to the next run of the algorithm
+    int iterations = 1;
 };
 
 /// \param controlPoints ordered point the spline to interpolate

@@ -209,7 +209,7 @@ MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSetting
             for ( auto m : res.marks )
                 res.contour[m] = controlPoints[n++];
         }
-        res = makeSpline( resample( res, settings.samplingStep ), settings.controlStability );
+        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability );
     }
     return res;
 }

@@ -54,6 +54,9 @@ struct SplineSettings
     /// which in turn depends on the length of input contour being sampled;
     /// setting iterations greater than one allows you to pass a constructed spline as a better input contour to the next run of the algorithm
     int iterations = 1;
+
+    /// optional parameter with the normals of input points that will be resampled to become normals of output points
+    Contour3f * normals = nullptr;
 };
 
 /// \param controlPoints ordered point the spline to interpolate

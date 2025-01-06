@@ -100,7 +100,14 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         const auto xSq = sqr( x );
         if ( !( xSq < res.oppositeTouchPoint.distSq ) )
             return false; // no reduction of circle
-        res.center = m.pt + m.inDir * x;
+        const auto candidateSphereCenter = m.pt + m.inDir * x;
+        if ( settings.minAngleCos > -1 )
+        {
+            const auto candidateAngleCos = dot( m.inDir, ( candidate.proj.point - candidateSphereCenter ).normalized() );
+            if ( candidateAngleCos < settings.minAngleCos )
+                return false;
+        }
+        res.center = candidateSphereCenter;
         res.radius = x;
         res.oppositeTouchPoint = candidate;
         res.oppositeTouchPoint.distSq = xSq;

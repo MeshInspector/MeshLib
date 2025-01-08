@@ -228,8 +228,15 @@ struct MakeBridgeResult
 
 /// creates a bridge between two boundary edges a and b (both having no valid left face);
 /// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
-/// \return false if bridge cannot be created because otherwise multiple edges appear
+/// \return MakeBridgeResult evaluating to false if bridge cannot be created because otherwise multiple edges appear
 MRMESH_API MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
+
+/// creates a bridge between two boundary edges a and b (both having no valid left face);
+/// bridge consists of strip of quadrangles (each consisting of two triangles) in general or of some triangles if a and b are neighboring edges on the boundary;
+/// the bridge is made as smooth as possible with small angles in between its links and on the boundary with existed triangles;
+/// \param samplingStep boundaries of the bridge will be subdivided until the distance between neighbor points becomes less than this distance
+/// \return MakeBridgeResult evaluating to false if bridge cannot be created because otherwise multiple edges appear
+MRMESH_API MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float samplingStep, FaceBitSet * outNewFaces = nullptr );
 
 /// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
 /// \return invalid id if bridge cannot be created because otherwise multiple edges appear

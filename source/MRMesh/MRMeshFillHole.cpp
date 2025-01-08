@@ -8,9 +8,10 @@
 #include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
 #include "MRHash.h"
+#include "MRMarkedContour.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRGTest.h"
 #include <parallel_hashmap/phmap.h>
 #include <queue>
 #include <functional>
@@ -1055,6 +1056,32 @@ MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBi
         outNewFaces->autoResizeSet( fa );
         outNewFaces->autoResizeSet( fb );
     }
+    return res;
+}
+
+MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float samplingStep, FaceBitSet * outNewFaces )
+{
+    MR_TIMER
+    MakeBridgeResult res = makeBridge( mesh.topology, a, b, outNewFaces );
+    if ( !res.na && !res.nb )
+        return res;
+
+    const Vector3f centerA = mesh.edgeCenter( a );
+    const Vector3f centerB = mesh.edgeCenter( b );
+    const Vector3f tangentA = mesh.leftTangent( a.sym() );
+    const Vector3f tangentB = mesh.leftTangent( b.sym() );
+    const Vector3f dirA = mesh.edgeVector( a ).normalized();
+    const Vector3f dirB = mesh.edgeVector( b.sym() ).normalized();
+
+    const float tangentStep = 0.99f * samplingStep; // to avoid splitting of tangents
+
+    Contour3f normals{ dirA, dirA, dirB, dirB };
+    auto marked = makeSpline( Contour3f{ centerA + tangentStep * tangentA, centerA, centerB, centerB + tangentStep * tangentB },
+        { .samplingStep = samplingStep, .controlStability = 10, .iterations = 3, .normals = &normals } );
+    assert( normals.size() == marked.contour.size() );
+
+    //...
+
     return res;
 }
 

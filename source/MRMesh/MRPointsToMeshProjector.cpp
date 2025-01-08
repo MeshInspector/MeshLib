@@ -75,7 +75,7 @@ VertScalars findSignedDistances(
 
         ParallelFor( 0_v, testPoints.endId(), [&] ( VertId v )
         {
-            if ( validTestPoints && !validTestPoints-> test( v ) )
+            if ( validTestPoints && !validTestPoints->test( v ) )
                 return;
             const auto& mpResV = mpRes[v.get()];
             if ( mpResV.mtp.e )
@@ -89,7 +89,7 @@ VertScalars findSignedDistances(
         // no projector is given, use fully CPU computation
         ParallelFor( 0_v, testPoints.endId(), [&] ( VertId v )
         {
-            if ( validTestPoints && !validTestPoints-> test( v ) )
+            if ( validTestPoints && !validTestPoints->test( v ) )
                 return;
             const auto pt = testToRefXf( testPoints[v] );
             const auto mpResV = findProjection( pt, refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq );

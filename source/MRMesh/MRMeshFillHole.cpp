@@ -965,14 +965,13 @@ EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFa
         outNewFaces );
 }
 
-bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
 {
     assert( !topology.left( a ) );
     assert( !topology.left( b ) );
+    MakeBridgeResult res;
     if ( a == b )
-    {
-        return false;
-    }
+        return res;
     if ( topology.prev( b.sym() ) == a )
         std::swap( a, b );
     if ( topology.prev( a.sym() ) == b )
@@ -985,7 +984,7 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
                 if ( topology.dest( e ) == bDest )
                 {
                     // there is an edge between org(a) and dest(b), so if create another one, then multiple edges appear
-                    return false;
+                    return res;
                 }
             }
 
@@ -995,13 +994,16 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
                 auto e = topology.makeEdge();
                 topology.splice( a, e );
                 topology.splice( topology.prev( b.sym() ), e.sym() );
+                res.na = e;
             }
         }
         auto f = topology.addFaceId();
         topology.setLeft( a, f );
+        ++res.newFaces;
         if ( outNewFaces )
             outNewFaces->autoResizeSet( f );
-        return true;
+        assert( !res.na || ( topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
+        return res;
     }
 
     // general case
@@ -1014,7 +1016,7 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
         if ( eDest == bOrg || eDest == bDest )
         {
             // there is an edge between org(a) and ( org(b) or dest(b) ), so if create another one, then multiple edges appear
-            return false;
+            return res;
         }
     }
     for ( auto e : orgRing( topology, a.sym() ) )
@@ -1023,7 +1025,7 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
         if ( eDest == bOrg || eDest == bDest )
         {
             // there is an edge between dest(a) and ( org(b) or dest(b) ), so if create another one, then multiple edges appear
-            return false;
+            return res;
         }
     }
 
@@ -1033,9 +1035,11 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
     topology.splice( topology.prev( a.sym() ), c );
     topology.splice( c, d );
     topology.splice( a, e.sym() );
+    res.na = e.sym();
     topology.splice( topology.prev( b.sym() ), e );
     topology.splice( e, d.sym() );
     topology.splice( b, c.sym() );
+    res.nb = c.sym();
     assert( topology.isLeftTri( a ) );
     assert( topology.isLeftTri( b ) );
 
@@ -1043,12 +1047,15 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
     topology.setLeft( a, fa );
     auto fb = topology.addFaceId();
     topology.setLeft( b, fb );
+    res.newFaces += 2;
+    assert( res.na && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) );
+    assert( res.nb && topology.fromSameOriginRing( b, res.nb ) && !topology.left( res.nb ) );
     if ( outNewFaces )
     {
         outNewFaces->autoResizeSet( fa );
         outNewFaces->autoResizeSet( fb );
     }
-    return true;
+    return res;
 }
 
 EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
@@ -1130,7 +1137,17 @@ TEST( MRMesh, makeBridge )
     topology.setOrg( b.sym(), topology.addVertId() );
     EXPECT_EQ( topology.numValidFaces(), 0 );
     FaceBitSet fbs;
-    EXPECT_TRUE( makeBridge( topology, a, b, &fbs ) );
+    auto bridgeRes = makeBridge( topology, a, b, &fbs );
+    EXPECT_TRUE( bridgeRes );
+    EXPECT_EQ( bridgeRes.newFaces, 2 );
+    EXPECT_TRUE( bridgeRes.na );
+    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
+    EXPECT_TRUE( topology.left( a ) );
+    EXPECT_FALSE( topology.left( bridgeRes.na ) );
+    EXPECT_TRUE( bridgeRes.nb );
+    EXPECT_EQ( topology.org( b ), topology.org( bridgeRes.nb ) );
+    EXPECT_TRUE( topology.left( b ) );
+    EXPECT_FALSE( topology.left( bridgeRes.nb ) );
     EXPECT_EQ( fbs.count(), 2 );
     EXPECT_EQ( topology.numValidVerts(), 4 );
     EXPECT_EQ( topology.numValidFaces(), 2 );
@@ -1145,7 +1162,15 @@ TEST( MRMesh, makeBridge )
     topology.setOrg( b.sym(), topology.addVertId() );
     EXPECT_EQ( topology.numValidFaces(), 0 );
     fbs.reset();
-    makeBridge( topology, a, b, &fbs );
+    bridgeRes = makeBridge( topology, a, b, &fbs );
+    EXPECT_TRUE( bridgeRes );
+    EXPECT_EQ( bridgeRes.newFaces, 1 );
+    EXPECT_TRUE( bridgeRes.na );
+    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
+    EXPECT_TRUE( topology.left( a ) );
+    EXPECT_FALSE( topology.left( bridgeRes.na ) );
+    EXPECT_FALSE( bridgeRes.nb );
+    EXPECT_TRUE( topology.left( b ) );
     EXPECT_EQ( fbs.count(), 1 );
     EXPECT_EQ( topology.numValidVerts(), 3 );
     EXPECT_EQ( topology.numValidFaces(), 1 );

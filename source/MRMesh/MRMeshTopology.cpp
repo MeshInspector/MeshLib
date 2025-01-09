@@ -1034,7 +1034,8 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         setLeft_( e.sym(), FaceId{} );
 
     // disconnect edge e from its origin
-    EdgeId ePrev = prev( e );
+    const EdgeId ePrev = prev( e );
+    const EdgeId eNext = next( e );
     VertId v0;
     if ( ePrev != e )
     {
@@ -1056,14 +1057,15 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         setOrg( e0, v0 );
 
     // subdivide left and right faces
-    EdgeId eSymPrev = prev( e.sym() );
-    if ( l.valid() && e.sym() != eSymPrev )
+    if ( l.valid() && eNext != e )
     {
         EdgeId el = makeEdge();
         splice( e, el );
-        splice( prev( eSymPrev.sym() ), el.sym() );
+        splice( eNext.sym(), el.sym() );
         auto newFace = addFaceId();
         setLeft( el, newFace );
+        assert( isLeftTri( e0 ) );
+        assert( left( e0 ) == newFace );
         if ( region && region->test( l ) )
             region->autoResizeSet( newFace );
         setNewToOld( new2Old, {newFace}, l );
@@ -1075,6 +1077,8 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         splice( prev( ePrev.sym() ), er.sym() );
         auto newFace = addFaceId();
         setLeft( er.sym(), newFace );
+        assert( isLeftTri( e0.sym() ) );
+        assert( left( e0.sym() ) == newFace );
         if ( region && region->test( r ) )
             region->autoResizeSet( newFace );
         setNewToOld( new2Old, {newFace}, r );

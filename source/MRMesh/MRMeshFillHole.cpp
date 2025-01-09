@@ -1122,8 +1122,8 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
             if ( res.nb )
             {
                 const auto p = marked.contour[i + 2] + 0.5f * len * normals[i + 2];
-                const auto e = mesh.splitEdge( res.nb.sym(), p, outNewFaces );
-                assert( mesh.topology.isLeftTri( res.nb.sym() ) );
+                [[maybe_unused]] const auto e = mesh.splitEdge( res.nb.sym(), p, outNewFaces );
+                assert( mesh.topology.isLeftTri( e ) );
                 ++res.newFaces;
             }
         }

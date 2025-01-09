@@ -14,12 +14,16 @@ def get_duration(obj):
     if obj.get('started_at') and obj.get('completed_at'):
         return parse_iso8601(obj['completed_at']) - parse_iso8601(obj['started_at'])
 
+def get_duration_s(obj):
+    dur = get_duration(obj)
+    return dur.seconds if dur else None
+
 def parse_step(step: dict):
     return {
         'number':     step['number'],
         'name':       step['name'],
         'conclusion': step['conclusion'],
-        'duration_s': get_duration(step).seconds if step['conclusion'] else None,
+        'duration_s': get_duration_s(step),
     }
 
 def parse_job(job: dict):
@@ -33,7 +37,7 @@ def parse_job(job: dict):
     return {
         'id':                job['id'],
         'conclusion':        job['conclusion'],
-        'duration_s':        get_duration(job).seconds if job['conclusion'] else None,
+        'duration_s':        get_duration_s(job),
         'steps':             [parse_step(step) for step in job['steps']],
         'target_os':         runner_stats['target_os'],
         'target_arch':       runner_stats['target_arch'],

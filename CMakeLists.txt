@@ -12,8 +12,12 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
 ENDIF()
 
 project(MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
-add_compile_definitions(MR_FRAMEWORK)
+
+set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
+add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
+IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  add_compile_definitions(MR_FRAMEWORK)
+ENDIF()
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 include(CompilerOptions)

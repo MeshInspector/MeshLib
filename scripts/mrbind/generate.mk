@@ -230,7 +230,8 @@ $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_ve
 # Python compilation flags.
 # By default we guess the flags using pkg-config, in an OS-dependent way.
 # You can override this by setting `PYTHON_CFLAGS` and `PYTHON_LDFLAGS`,
-#   the values of which should contain `%` which will be replaced with the `X.Y` Python version.
+#   the values of which should contain `@X.Y@` which will be replaced with the `X.Y` Python version, or `@XY@` for the two numbers concatenated.
+# Obtain the resulting flags by calling `$(call get_python_cflags,3.10)` (and similarly for ldflags).
 PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified
@@ -249,8 +250,8 @@ override get_python_ldflags = $(call safe_shell,pkg-config --libs python-$1-embe
 endif # not MacOS
 endif # Linux or MacOS
 else # if using custom flags
-override get_python_cflags = $(patsubst %,$(PYTHON_CFLAGS),$1)
-override get_python_ldflags = $(patsubst %,$(PYTHON_LDFLAGS),$1)
+override get_python_cflags = $(subst @XY@,$(subst .,,$1),$(subst @X.Y@,$1,$(PYTHON_CFLAGS)))
+override get_python_ldflags = $(subst @XY@,$(subst .,,$1),$(subst @X.Y@,$1,$(PYTHON_LDFLAGS)))
 endif # using custom flags
 
 

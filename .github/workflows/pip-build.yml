@@ -129,14 +129,14 @@ jobs:
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -multi-cmd
+        run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
+          python3 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload Python Stubs
-        if: ${{ github.event_name == 'release' && matrix.platform == 'aarch64' && matrix.py-version == '3.10' }}
+        if: ${{ github.event_name == 'release' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v4
         with:
           name: PythonStubs
@@ -146,7 +146,7 @@ jobs:
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
+          name: ManyLinux-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
@@ -165,45 +165,6 @@ jobs:
     runs-on: windows-2019
     strategy:
       fail-fast: false
-      matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-        include:
-          - py-version: "3.8"
-            py-tag: "cp38"
-            py-short-version: "38"
-            py-dir: "Python38"
-            py-file: "python38"
-            embed-version: "3.8.9"
-          - py-version: "3.9"
-            py-tag: "cp39"
-            py-short-version: "39"
-            py-dir: "Python39"
-            py-file: "python39"
-            embed-version: "3.9.9"
-          - py-version: "3.10"
-            py-tag: "cp310"
-            py-short-version: "310"
-            py-dir: "Python310"
-            py-file: "python310"
-            embed-version: "3.10.0"
-          - py-version: "3.11"
-            py-tag: "cp311"
-            py-short-version: "311"
-            py-dir: "Python311"
-            py-file: "python311"
-            embed-version: "3.11.0"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-short-version: "312"
-            py-dir: "Python312"
-            py-file: "python312"
-            embed-version: "3.12.0"
-          - py-version: "3.13"
-            py-tag: "cp313"
-            py-short-version: "313"
-            py-dir: "Python313"
-            py-file: "python313"
-            embed-version: "3.13.0"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -242,23 +203,17 @@ jobs:
         working-directory: C:\vcpkg
         run: C:\vcpkg\vcpkg.exe integrate install
 
-      - uses: actions/setup-python@v5
-        id: setup-python
-        with:
-          python-version: ${{matrix.py-version}}
+      - name: Install all Python versions
+        run: scripts/mrbind-pybind11/install_pythons_windows.bat
 
       - name: Setup python
         working-directory: C:\vcpkg\installed\x64-windows-meshlib
         run: |
-          py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
-          py -${{matrix.py-version}} -m pip install pytest
-
-      - name: Setup thirdparty
-        working-directory: ${{ github.workspace }}\thirdparty\python
-        run: |
-          curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
-          tar -xf python-embed.zip ${{matrix.py-file}}.zip
+          for /f %%x in (scripts\mrbind-pybind11\python_versions.txt) (
+            py -%%x -m pip install --upgrade pip
+            py -%%x -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
+            py -%%x -m pip install pytest
+          )
 
       - name: Restore CUDA Cache
         uses: actions/cache@v4
@@ -289,7 +244,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Build
-        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
+        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release
 
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
@@ -320,27 +275,27 @@ jobs:
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_CFLAGS=-I$env:localappdata/Programs/Python/Python@XY@/Include PYTHON_LDFLAGS="-L$env:localappdata/Programs/Python/Python@XY@/libs -lpython@XY@"
 
       - name: Run Test
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
-        run: py -${{matrix.py-version}} scripts\run_unit_test_script.py Release
+        run: py scripts\run_unit_test_script.py Release
 
       - name: Python Tests
         working-directory: source\x64\Release
-        run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"
+        run: py ..\..\..\scripts\run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
         run: |
-          py -${{matrix.py-version}} .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
+          py .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-python${{ matrix.py-version }}
+          name: Windows
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 

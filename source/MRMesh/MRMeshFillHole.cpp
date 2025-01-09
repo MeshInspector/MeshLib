@@ -1086,6 +1086,8 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
     if ( !res.na && !res.nb )
         return res;
 
+    // build spline starting in the middle of edge (a) and ending in the middle of edge (b),
+    // with tangents at the ends inside existing triangles
     const Vector3f centerA = mesh.edgeCenter( a );
     const Vector3f centerB = mesh.edgeCenter( b );
     const Vector3f tangentA = mesh.leftTangent( a.sym() );
@@ -1100,12 +1102,13 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
         { .samplingStep = samplingStep, .controlStability = 10, .iterations = 3, .normals = &normals } );
     assert( normals.size() == marked.contour.size() );
 
+    const EdgeId ca = res.na;
+    // split the only bridge's triangle or quadrangle on segments according to the spline
     const int midPoints = (int)normals.size() - 4;
     if ( midPoints > 0 )
     {
         const auto lenA = mesh.edgeLength( a );
         const auto lenB = mesh.edgeLength( b );
-        EdgeId ca = res.na;
         for ( int i = 0; i < midPoints; ++i )
         {
             const auto u = float( i + 1 ) / ( midPoints + 1 );
@@ -1127,13 +1130,13 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
                 ++res.newFaces;
             }
         }
-        if ( ca && mesh.topology.isLeftQuad( ca.sym() ) )
-        {
-            // split the last quadrangle;
-            // mesh.topology.prev( ca ) below to have the same diagonal as in above quadrangles
-            splitQuad( mesh.topology, mesh.topology.prev( ca ), outNewFaces );
-            ++res.newFaces;
-        }
+    }
+    if ( ca && mesh.topology.isLeftQuad( ca.sym() ) )
+    {
+        // split the last quadrangle;
+        // mesh.topology.prev( ca ) below to have the same diagonal as in above quadrangles
+        splitQuad( mesh.topology, mesh.topology.prev( ca ), outNewFaces );
+        ++res.newFaces;
     }
 
     return res;

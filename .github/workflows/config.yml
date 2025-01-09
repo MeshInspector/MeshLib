@@ -56,16 +56,16 @@ on:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-ubuntu-x64 == 'true' ) }}
       build_enable_fedora:
         description:
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only != 'true' || jobs.prepare-config.outputs.tag-disable-fedora == 'true' ) }}
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-fedora == 'true' ) }}
       build_enable_windows:
         description:
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only != 'true' || jobs.prepare-config.outputs.tag-disable-windows == 'true' ) }}
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-windows == 'true' ) }}
       build_enable_macos:
         description:
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only != 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
       build_enable_emscripten:
         description:
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only != 'true' || jobs.prepare-config.outputs.tag-disable-emscripteen == 'true' ) }}
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripteen == 'true' ) }}
 
 jobs:
   prepare-config:

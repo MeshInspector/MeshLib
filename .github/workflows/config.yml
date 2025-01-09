@@ -65,7 +65,7 @@ on:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
       build_enable_emscripten:
         description:
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripteen == 'true' ) }}
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripten == 'true' ) }}
 
 jobs:
   prepare-config:
@@ -87,7 +87,7 @@ jobs:
       # tags for disabling builds for different systems
       tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
       tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubunru-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
+      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
       tag-disable-fedora:        ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-fedora' ) }}
       tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}

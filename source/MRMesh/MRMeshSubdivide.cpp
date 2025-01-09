@@ -12,6 +12,7 @@
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
+#include "MRBuffer.h"
 #include <queue>
 
 namespace MR
@@ -211,7 +212,44 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     return splitsDone;
 }
 
-TEST(MRMesh, SubdivideMesh) 
+Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb )
+{
+    MR_TIMER
+    Mesh subMesh;
+
+    // copy mesh
+    if ( mp.region )
+        subMesh.addMeshPart( mp );
+    else
+        subMesh = mp.mesh;
+    if ( !reportProgress( cb, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    // smaller edge lengths require too much space and time for subdivision,
+    // larger edge lengths do not give significant benefits in AABB-tree optimized searches
+    const float approxMaxEdgeLen = 5 * voxelSize;
+
+    // subdivide copied mesh
+    SubdivideSettings subSettings
+    {
+        .maxEdgeLen = approxMaxEdgeLen,
+        .maxEdgeSplits = int( subMesh.area() / sqr( approxMaxEdgeLen ) ),
+        .maxDeviationAfterFlip = 0.1f * voxelSize,
+        .progressCallback = subprogress( cb, 0.25f, 0.75f )
+    };
+    subdivideMesh( subMesh, subSettings );
+    if ( !reportProgress( cb, 0.75f ) )
+        return unexpectedOperationCanceled();
+
+    // pack subdivided mesh
+    subMesh.packOptimally();
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    return subMesh;
+}
+
+TEST(MRMesh, SubdivideMesh)
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },

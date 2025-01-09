@@ -58,6 +58,10 @@ struct DecimateSettings
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
 
+    /// if false, then quadratic error metric is equal to the sum of distances to the planes of original mesh triangles;
+    /// if true, then the sum is weighted, and the weight is equal to the angle of adjacent triangle at the vertex divided on PI (to get one after summing all 3 vertices of the triangle)
+    bool angleWeightedDistToPlane = false;
+
     /// if true then after each edge collapse the position of remaining vertex is optimized to
     /// minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position
     bool optimizeVertexPos = true;
@@ -193,13 +197,13 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer, const UndirectedEdgeBitSet * creases = nullptr );
+[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases = nullptr );
 
 /**
  * \brief Computes quadratic forms at every vertex of mesh part before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet * creases = nullptr );
+[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases = nullptr );
 
 /**
  * \brief returns given subdivision part of all valid faces;

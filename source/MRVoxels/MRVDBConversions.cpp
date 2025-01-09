@@ -175,12 +175,12 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     const Vector3f& voxelSize, float surfaceOffset /*= 3 */,
     ProgressCallback cb )
 {
-    MR_TIMER
     if ( surfaceOffset <= 0.0f )
     {
         assert( false );
         return {};
     }
+    MR_TIMER
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
 
@@ -201,6 +201,7 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 {
     if ( !grid )
         return;
+    MR_TIMER
 #if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
     (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
     auto minMax = openvdb::tools::minMax( grid->tree() );
@@ -323,12 +324,14 @@ void putSimpleVolumeInDenseGrid(
 
 void makeVdbTopologyDense( openvdb::FloatGrid& grid, const Box3i& rect )
 {
+    MR_TIMER
     auto& tree = grid.tree();
     for ( int z = rect.min.x; z <= rect.max.z; ++z )
         for ( int y = rect.min.y; y <= rect.max.y; ++y )
             for ( int x = rect.min.x; x <= rect.max.x; ++x )
                 tree.touchLeaf( toVdb( Vector3i{ x, y, z } ) );
 }
+
 void makeVdbTopologyDense( VdbVolume& volume )
 {
     makeVdbTopologyDense( *volume.data, Box3i{{0, 0, 0 }, volume.dims - Vector3i::diagonal( 1 ) } );
@@ -363,6 +366,7 @@ template<typename T, bool Norm>
 Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> maybeSourceScale = {}, ProgressCallback cb = {} )
 {
+    MR_TIMER
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
     VoxelsVolumeMinMax<std::vector<T>> res;
@@ -458,7 +462,7 @@ Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & set
 
 Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
 {
-    MR_TIMER;
+    MR_TIMER
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 

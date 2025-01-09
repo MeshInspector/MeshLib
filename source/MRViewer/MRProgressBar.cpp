@@ -7,17 +7,18 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimeRecord.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRWasm.h"
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "MRCommandLoop.h"
 #include "MRColorTheme.h"
 #include "MRRibbonFontManager.h"
 #include "MRRibbonMenu.h"
-#include <GLFW/glfw3.h>
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
+#include <boost/exception/diagnostic_information.hpp>
+#include <GLFW/glfw3.h>
 #include <atomic>
 #include <thread>
 
@@ -178,9 +179,9 @@ bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
         };
         return true;
     }
-    catch ( const std::exception& e )
+    catch ( ... )
     {
-        onFinish_ = [msg = std::string( e.what() )]
+        onFinish_ = [msg = boost::current_exception_diagnostic_information()]
         {
             showError( msg );
         };
@@ -192,7 +193,7 @@ bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
 bool ProgressBarImpl::tryRunWithSehHandler_( const std::function<bool()>& task )
 {
 #ifndef _WIN32
-    return task();
+    return tryRun_( task );
 #else
 #ifndef NDEBUG
     return task();

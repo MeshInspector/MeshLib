@@ -203,14 +203,14 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, const UndirectedEdgeBitSet * creases )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
-    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region, creases );
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, angleWeigted, mp.region, creases );
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
 
-Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet * creases )
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
     MR_TIMER;
 
@@ -220,7 +220,7 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer, creases );
+        res[v] = computeFormAtVertex( mp, v, stabilizer, angleWeigted, creases );
     } );
 
     return res;
@@ -264,7 +264,7 @@ bool MeshDecimator::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.notFlippable );
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.angleWeightedDistToPlane, settings_.notFlippable );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -940,7 +940,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.vertForms )
         mVertForms = std::move( *settings.vertForms );
     if ( mVertForms.empty() )
-        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer, settings.notFlippable );
+        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer, settings.angleWeightedDistToPlane, settings.notFlippable );
     if ( settings.progressCallback && !settings.progressCallback( 0.2f ) )
         return res;
 

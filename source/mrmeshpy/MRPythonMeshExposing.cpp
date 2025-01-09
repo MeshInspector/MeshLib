@@ -529,8 +529,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\ta - first EdgeId\n"
         "\tb - second EdgeId\n" );
 
-    m.def( "makeBridge", & makeBridge,
-        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr"),
+    m.def( "makeBridge", []( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+        { return (bool)makeBridge( topology, a, b, outNewFaces ); },
+        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr" ),
         "creates a bridge between two boundary edges a and b (both having no valid left face);\n"
         "bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;\n"
         "return false if bridge cannot be created because otherwise multiple edges appear\n"

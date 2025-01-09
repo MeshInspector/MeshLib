@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMeshMetrics.h"
+#include "MRId.h"
 #include <functional>
 #include <memory>
 
@@ -212,10 +213,23 @@ MRMESH_API EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExt
 /// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
+struct MakeBridgeResult
+{
+    /// the number of triangular faces added to the mesh
+    int newFaces = 0;
+
+    /// the edge na (nb) if valid is a new boundary edge of the created bridge without left face,
+    /// having the same origin as input edge a (b)
+    EdgeId na, nb;
+
+    /// bridge construction is successful if at least one new face was created
+    explicit operator bool() const { return newFaces > 0; }
+};
+
 /// creates a bridge between two boundary edges a and b (both having no valid left face);
 /// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
 /// \return false if bridge cannot be created because otherwise multiple edges appear
-MRMESH_API bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
+MRMESH_API MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
 
 /// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
 /// \return invalid id if bridge cannot be created because otherwise multiple edges appear

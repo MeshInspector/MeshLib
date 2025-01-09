@@ -39,7 +39,7 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
     if ( params.voxelSize <= 0 )
     {
         assert( false );
-        return unexpected( "wrong voxelSize" );
+        return unexpected( "invalid voxelSize value" );
     }
 
     float voxelSize = params.voxelSize;
@@ -116,7 +116,12 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER;
+    MR_TIMER
+    if ( params.voxelSize <= 0 )
+    {
+        assert( false );
+        return unexpected( "invalid voxelSize value" );
+    }
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {

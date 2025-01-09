@@ -17,6 +17,7 @@
 #include "MRMeshIntersect.h"
 #include "MRPolyline.h"
 #include "MRMapEdge.h"
+#include "MRSurfacePath.h"
 
 namespace MR
 {
@@ -297,9 +298,41 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
         for ( int i = 0; i < res.contours.size(); ++i )
         {
             bool lone = true;
-            auto contourRes = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], {}, &res.map[i] );
+            auto cont = noBowtiesMtps[i];
+            cont.push_back( cont.front() );
+            auto contourRes = convertMeshTriPointsToMeshContour( result_, cont,
+                [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
+            {
+                auto initSMtpIndex = res.filtBowTiesMap[i][startInd];
+                auto initEMtpIndex = res.filtBowTiesMap[i][endInd];
+                auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+                auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+                auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;
+                auto ccwPath = trackSection( result_, start, end, planePoint, true );
+                auto cwPath = trackSection( result_, start, end, planePoint, false );
+                if ( ccwPath.has_value() && cwPath.has_value() )
+                {
+                    auto ccwL = surfacePathLength( result_, *ccwPath );
+                    auto cwL = surfacePathLength( result_, *cwPath );
+                    if ( ccwL < cwL )
+                        return ccwPath;
+                    else
+                        return cwPath;
+                }
+                else if ( ccwPath.has_value() )
+                    return ccwPath;
+                else if ( cwPath.has_value() )
+                    return cwPath;
+                else
+                {
+                    auto locRes = computeGeodesicPath( result_, start, end );
+                    if ( !locRes.has_value() )
+                        return unexpected( toString( locRes.error() ) );
+                    return *locRes;
+                }
+            }, &res.map[i] );
             if ( !contourRes.has_value() )
-                return unexpected( toString( contourRes.error() ) );
+                return unexpected( contourRes.error() );
             res.contours[i] = std::move( *contourRes );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {

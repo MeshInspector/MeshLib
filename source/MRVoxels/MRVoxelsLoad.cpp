@@ -144,6 +144,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path, const ProgressCa
 
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
+    MR_TIMER
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
 
@@ -259,6 +260,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
 
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::vector<VdbVolume>& volumes, const std::filesystem::path& file, const ProgressCallback& callback )
 {
+    MR_TIMER
     std::vector<std::shared_ptr<ObjectVoxels>> res;
     const auto size = volumes.size();
     for ( size_t i = 0; i < size; ++i )
@@ -296,6 +298,7 @@ LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 template <VoxelsLoader voxelsLoader>
 Expected<LoadedObjects> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
 {
+    MR_TIMER
     return voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return toObjectVoxels( volumes, path, subprogress( cb, 1.f / 3.f, 1.f ) ); } )
         .transform( toObjects );
@@ -336,6 +339,7 @@ struct TiffParams
 
 Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
+    MR_TIMER
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
         return unexpected( "Given path is not directory" );

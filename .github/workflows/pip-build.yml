@@ -208,6 +208,7 @@ jobs:
 
       - name: Setup python
         working-directory: C:\vcpkg\installed\x64-windows-meshlib
+        shell: cmd
         run: |
           for /f %%x in (scripts\mrbind-pybind11\python_versions.txt) (
             py -%%x -m pip install --upgrade pip

@@ -965,7 +965,7 @@ EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFa
         outNewFaces );
 }
 
-MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
 {
     assert( !topology.left( a ) );
     assert( !topology.left( b ) );
@@ -1030,30 +1030,50 @@ MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBi
     }
 
     auto c = topology.makeEdge();
-    auto d = topology.makeEdge();
     auto e = topology.makeEdge();
     topology.splice( topology.prev( a.sym() ), c );
-    topology.splice( c, d );
     topology.splice( a, e.sym() );
     res.na = e.sym();
     topology.splice( topology.prev( b.sym() ), e );
-    topology.splice( e, d.sym() );
     topology.splice( b, c.sym() );
     res.nb = c.sym();
-    assert( topology.isLeftTri( a ) );
-    assert( topology.isLeftTri( b ) );
+    assert( topology.isLeftQuad( a ) );
 
     auto fa = topology.addFaceId();
     topology.setLeft( a, fa );
-    auto fb = topology.addFaceId();
-    topology.setLeft( b, fb );
-    res.newFaces += 2;
+    ++res.newFaces;
     assert( res.na && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) );
     assert( res.nb && topology.fromSameOriginRing( b, res.nb ) && !topology.left( res.nb ) );
     if ( outNewFaces )
-    {
         outNewFaces->autoResizeSet( fa );
-        outNewFaces->autoResizeSet( fb );
+    return res;
+}
+
+void splitQuad( MeshTopology & topology, EdgeId a, FaceBitSet * outNewFaces )
+{
+    assert( topology.isLeftQuad( a ) );
+    assert( topology.left( a ) );
+    auto d = topology.makeEdge();
+    topology.splice( topology.prev( a.sym() ), d );
+    topology.splice( topology.next( a ).sym(), d.sym() );
+    assert( topology.isLeftTri( d ) );
+    assert( topology.isLeftTri( d.sym() ) );
+    assert( topology.left( d ) );
+    assert( !topology.left( d.sym() ) );
+    auto f = topology.addFaceId();
+    topology.setLeft( d.sym(), f );
+    if ( outNewFaces )
+        outNewFaces->autoResizeSet( f );
+}
+
+MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+{
+    auto res = makeQuadBridge( topology, a, b, outNewFaces );
+    if ( res.na && res.nb )
+    {
+        assert( res.newFaces == 1 );
+        splitQuad( topology, a, outNewFaces );
+        ++res.newFaces;
     }
     return res;
 }

@@ -1085,17 +1085,23 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
     {
         const auto lenA = mesh.edgeLength( a );
         const auto lenB = mesh.edgeLength( b );
-        if ( res.na )
+        EdgeId ca = res.na;
+        for ( int i = 0; i < midPoints; ++i )
         {
-            EdgeId e = res.na;
-            for ( int i = 0; i < midPoints; ++i )
+            const auto u = float( i + 1 ) / ( midPoints + 1 );
+            const auto len = ( 1 - u ) * lenA + u * lenB;
+            if ( ca )
             {
-                const auto u = float( i + 1 ) / ( midPoints + 1 );
-                const auto len = ( 1 - u ) * lenA + u * lenB;
-                const auto p0 = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
-                const auto e0 = mesh.splitEdge( e, p0, outNewFaces );
+                const auto p = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
+                const auto e = mesh.splitEdge( ca, p, outNewFaces );
+                ++res.newFaces;
                 if ( i == 0 )
-                    res.na = e0;
+                    res.na = e;
+            }
+            if ( res.nb )
+            {
+                const auto p = marked.contour[i + 2] + 0.5f * len * normals[i + 2];
+                res.nb = mesh.splitEdge( res.nb, p, outNewFaces );
                 ++res.newFaces;
             }
         }

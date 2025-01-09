@@ -215,7 +215,7 @@ MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet
 
 struct MakeBridgeResult
 {
-    /// the number of triangular faces added to the mesh
+    /// the number of faces added to the mesh
     int newFaces = 0;
 
     /// the edge na (nb) if valid is a new boundary edge of the created bridge without left face,
@@ -225,6 +225,11 @@ struct MakeBridgeResult
     /// bridge construction is successful if at least one new face was created
     explicit operator bool() const { return newFaces > 0; }
 };
+
+/// creates a bridge between two boundary edges a and b (both having no valid left face);
+/// bridge consists of one quadrangle in general (beware that it cannot be rendered) or of one triangle if a and b are neighboring edges on the boundary;
+/// \return false if bridge cannot be created because otherwise multiple edges appear
+MRMESH_API MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
 
 /// creates a bridge between two boundary edges a and b (both having no valid left face);
 /// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
@@ -241,6 +246,9 @@ MRMESH_API MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, f
 /// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
 /// \return invalid id if bridge cannot be created because otherwise multiple edges appear
 MRMESH_API EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b );
+
+/// given quadrangle face to the left of a, splits it in two triangles with new diagonal edge via dest(a)
+MRMESH_API void splitQuad( MeshTopology & topology, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
 /// \}
 

@@ -973,8 +973,12 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
     MakeBridgeResult res;
     if ( a == b )
         return res;
+    bool swapped = false;
     if ( topology.prev( b.sym() ) == a )
+    {
+        swapped = true;
         std::swap( a, b );
+    }
     if ( topology.prev( a.sym() ) == b )
     {
         if ( !topology.isLeftTri( a ) )
@@ -995,7 +999,10 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
                 auto e = topology.makeEdge();
                 topology.splice( a, e );
                 topology.splice( topology.prev( b.sym() ), e.sym() );
-                res.na = e;
+                if ( swapped )
+                    res.nb = e;
+                else
+                    res.na = e;
             }
         }
         auto f = topology.addFaceId();
@@ -1003,9 +1010,11 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
         ++res.newFaces;
         if ( outNewFaces )
             outNewFaces->autoResizeSet( f );
-        assert( !res.na || ( topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
+        assert( !res.na || ( !swapped && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
+        assert( !res.nb || (  swapped && topology.fromSameOriginRing( a, res.nb ) && !topology.left( res.nb ) ) );
         return res;
     }
+    assert( !swapped );
 
     // general case
 
@@ -1115,6 +1124,7 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
             const auto len = ( 1 - u ) * lenA + u * lenB;
             if ( ca )
             {
+                // split the first boundary of the bridge
                 const auto p = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
                 const auto e = mesh.splitEdge( ca, p, outNewFaces );
                 ++res.newFaces;
@@ -1124,6 +1134,7 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
             }
             if ( res.nb )
             {
+                // split the second boundary of the bridge
                 const auto p = marked.contour[i + 2] + 0.5f * len * normals[i + 2];
                 [[maybe_unused]] const auto e = mesh.splitEdge( res.nb.sym(), p, outNewFaces );
                 assert( mesh.topology.isLeftTri( e ) );
@@ -1139,6 +1150,8 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
         ++res.newFaces;
     }
 
+    assert( !res.na || ( mesh.topology.fromSameOriginRing( a, res.na ) && !mesh.topology.left( res.na ) ) );
+    assert( !res.nb || ( mesh.topology.fromSameOriginRing( b, res.nb ) && !mesh.topology.left( res.nb ) ) );
     return res;
 }
 

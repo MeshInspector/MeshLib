@@ -11,9 +11,10 @@
 #include "MRParallelFor.h"
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
-#include "MRPch/MRTBB.h"
 #include "MRParallelFor.h"
 #include "MRIOParsing.h"
+#include "MRGTest.h"
+#include "MRPch/MRTBB.h"
 #include <atomic>
 #include <initializer_list>
 
@@ -1028,19 +1029,14 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
 {
     FaceId l = left( e );
     if ( l.valid() )
-    {
-        assert( isLeftTri( e ) );
         setLeft_( e, FaceId{} );
-    }
     FaceId r = right( e );
     if ( r.valid() )
-    {
-        assert( isLeftTri( e.sym() ) );
         setLeft_( e.sym(), FaceId{} );
-    }
-    
+
     // disconnect edge e from its origin
-    EdgeId ePrev = prev( e );
+    const EdgeId ePrev = prev( e );
+    const EdgeId eNext = next( e );
     VertId v0;
     if ( ePrev != e )
     {
@@ -1061,15 +1057,16 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
     else
         setOrg( e0, v0 );
 
-    // subdivide left and right triangles
-    EdgeId eSymPrev = prev( e.sym() );
-    if ( l.valid() && e.sym() != eSymPrev )
+    // subdivide left and right faces
+    if ( l.valid() && eNext != e )
     {
         EdgeId el = makeEdge();
         splice( e, el );
-        splice( prev( eSymPrev.sym() ), el.sym() );
+        splice( eNext.sym(), el.sym() );
         auto newFace = addFaceId();
         setLeft( el, newFace );
+        assert( isLeftTri( e0 ) );
+        assert( left( e0 ) == newFace );
         if ( region && region->test( l ) )
             region->autoResizeSet( newFace );
         setNewToOld( new2Old, {newFace}, l );
@@ -1081,6 +1078,8 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         splice( prev( ePrev.sym() ), er.sym() );
         auto newFace = addFaceId();
         setLeft( er.sym(), newFace );
+        assert( isLeftTri( e0.sym() ) );
+        assert( left( e0.sym() ) == newFace );
         if ( region && region->test( r ) )
             region->autoResizeSet( newFace );
         setNewToOld( new2Old, {newFace}, r );
@@ -2363,6 +2362,30 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
 
 void loadMeshDll()
 {
+}
+
+TEST( MRMesh, splitEdge )
+{
+    MeshTopology topology;
+    EdgeId a = topology.makeEdge();
+    EdgeId b = topology.makeEdge();
+    EdgeId c = topology.makeEdge();
+    EdgeId d = topology.makeEdge();
+    topology.splice( b, a.sym() );
+    topology.splice( c, b.sym() );
+    topology.splice( d, c.sym() );
+    topology.splice( a, d.sym() );
+    EXPECT_TRUE( topology.isLeftQuad( a ) );
+    EXPECT_TRUE( topology.isLeftQuad( a.sym() ) );
+    topology.setLeft( a, topology.addFaceId() );
+    EdgeId a0 = topology.splitEdge( a );
+    EXPECT_TRUE( topology.isLeftTri( a0 ) );
+    EXPECT_TRUE( topology.isLeftQuad( a ) );
+    EXPECT_EQ( topology.getLeftDegree( a.sym() ), 5 );
+    EdgeId a1 = topology.splitEdge( a.sym() );
+    EXPECT_TRUE( topology.isLeftTri( a1.sym() ) );
+    EXPECT_TRUE( topology.isLeftQuad( a ) );
+    EXPECT_EQ( topology.getLeftDegree( a.sym() ), 6 );
 }
 
 } //namespace MR

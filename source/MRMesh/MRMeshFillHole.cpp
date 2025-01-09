@@ -1080,7 +1080,26 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
         { .samplingStep = samplingStep, .controlStability = 10, .iterations = 3, .normals = &normals } );
     assert( normals.size() == marked.contour.size() );
 
-    //...
+    const int midPoints = (int)normals.size() - 4;
+    if ( midPoints > 0 )
+    {
+        const auto lenA = mesh.edgeLength( a );
+        const auto lenB = mesh.edgeLength( b );
+        if ( res.na )
+        {
+            EdgeId e = res.na;
+            for ( int i = 0; i < midPoints; ++i )
+            {
+                const auto u = float( i + 1 ) / ( midPoints + 1 );
+                const auto len = ( 1 - u ) * lenA + u * lenB;
+                const auto p0 = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
+                const auto e0 = mesh.splitEdge( e, p0, outNewFaces );
+                if ( i == 0 )
+                    res.na = e0;
+                ++res.newFaces;
+            }
+        }
+    }
 
     return res;
 }

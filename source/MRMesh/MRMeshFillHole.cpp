@@ -1129,7 +1129,9 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
         }
         if ( ca && mesh.topology.isLeftQuad( ca.sym() ) )
         {
-            splitQuad( mesh.topology, ca.sym(), outNewFaces );
+            // split the last quadrangle;
+            // mesh.topology.prev( ca ) below to have the same diagonal as in above quadrangles
+            splitQuad( mesh.topology, mesh.topology.prev( ca ), outNewFaces );
             ++res.newFaces;
         }
     }

@@ -32,22 +32,30 @@ def parse_job(job: dict):
     if not stats_filename.exists():
         return None
 
-    with open(stats_filename, 'r') as f:
-        runner_stats = json.load(f)
-    return {
-        'id':                job['id'],
-        'conclusion':        job['conclusion'],
-        'duration_s':        get_duration_s(job),
-        'steps':             [parse_step(step) for step in job['steps']],
-        'target_os':         runner_stats['target_os'],
-        'target_arch':       runner_stats['target_arch'],
-        'compiler':          runner_stats['compiler'],
-        'build_config':      runner_stats['build_config'],
-        'runner_name':       job['runner_name'],
-        'runner_group_name': job['runner_group_name'],
-        'runner_cpu_count':  runner_stats['cpu_count'],
-        'runner_ram_mb':     runner_stats['ram_mb'],
-    }
+    runner_stats = None
+    try:
+        with open(stats_filename, 'r') as f:
+            runner_stats = json.load(f)
+        return {
+            'id':                job['id'],
+            'conclusion':        job['conclusion'],
+            'duration_s':        get_duration_s(job),
+            'steps':             [parse_step(step) for step in job['steps']],
+            'target_os':         runner_stats['target_os'],
+            'target_arch':       runner_stats['target_arch'],
+            'compiler':          runner_stats['compiler'],
+            'build_config':      runner_stats['build_config'],
+            'runner_name':       job['runner_name'],
+            'runner_group_name': job['runner_group_name'],
+            'runner_cpu_count':  runner_stats['cpu_count'],
+            'runner_ram_mb':     runner_stats['ram_mb'],
+        }
+    except:
+        print("Something went wrong while parsing the job/runner info. Debug info:")
+        pprint.pp(job)
+        pprint.pp(runner_stats)
+        # re-throw the exception
+        raise
 
 def parse_jobs(jobs: list[dict]):
     return [

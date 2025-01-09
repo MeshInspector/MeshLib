@@ -1028,17 +1028,11 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
 {
     FaceId l = left( e );
     if ( l.valid() )
-    {
-        assert( isLeftTri( e ) );
         setLeft_( e, FaceId{} );
-    }
     FaceId r = right( e );
     if ( r.valid() )
-    {
-        assert( isLeftTri( e.sym() ) );
         setLeft_( e.sym(), FaceId{} );
-    }
-    
+
     // disconnect edge e from its origin
     EdgeId ePrev = prev( e );
     VertId v0;
@@ -1061,7 +1055,7 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
     else
         setOrg( e0, v0 );
 
-    // subdivide left and right triangles
+    // subdivide left and right faces
     EdgeId eSymPrev = prev( e.sym() );
     if ( l.valid() && e.sym() != eSymPrev )
     {

@@ -1082,7 +1082,7 @@ MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBi
 MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float samplingStep, FaceBitSet * outNewFaces )
 {
     MR_TIMER
-    MakeBridgeResult res = makeBridge( mesh.topology, a, b, outNewFaces );
+    MakeBridgeResult res = makeQuadBridge( mesh.topology, a, b, outNewFaces );
     if ( !res.na && !res.nb )
         return res;
 
@@ -1115,15 +1115,23 @@ MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float sampli
                 const auto p = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
                 const auto e = mesh.splitEdge( ca, p, outNewFaces );
                 ++res.newFaces;
+                assert( mesh.topology.isLeftTri( e.sym() ) );
                 if ( i == 0 )
                     res.na = e;
             }
             if ( res.nb )
             {
                 const auto p = marked.contour[i + 2] + 0.5f * len * normals[i + 2];
-                res.nb = mesh.splitEdge( res.nb, p, outNewFaces );
+                const auto e = mesh.splitEdge( res.nb, p, outNewFaces );
+                assert( mesh.topology.isLeftTri( e.sym() ) );
                 ++res.newFaces;
+                res.nb = e;
             }
+        }
+        if ( ca && mesh.topology.isLeftQuad( ca.sym() ) )
+        {
+            splitQuad( mesh.topology, ca.sym(), outNewFaces );
+            ++res.newFaces;
         }
     }
 

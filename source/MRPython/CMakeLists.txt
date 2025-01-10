@@ -29,6 +29,13 @@ ELSE()
   )
 ENDIF()
 
+# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+IF(NOT WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
+ENDIF()
+
 IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRPYTHON_EXPORT)
 ENDIF()

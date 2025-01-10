@@ -56,6 +56,13 @@ ELSE()
   ENDIF()
 ENDIF()
 
+# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+IF(NOT WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
+ENDIF()
+
 add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}

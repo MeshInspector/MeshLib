@@ -47,6 +47,13 @@ ELSE()
   )
 ENDIF()
 
+# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+IF(NOT WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
+ENDIF()
+
 IF(MESHLIB_BUILD_VOXELS)
   IF(APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE

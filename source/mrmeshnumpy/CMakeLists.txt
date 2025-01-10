@@ -19,7 +19,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
 add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
 
-if(APPLE)
+IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
@@ -39,6 +39,13 @@ ELSE()
     Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
+  )
+ENDIF()
+
+# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+IF(NOT WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
   )
 ENDIF()
 

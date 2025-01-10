@@ -2,22 +2,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-set(PROJECT_SOURCE_DIR ./source)
-set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
-IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
-  message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
-ENDIF()
-IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
-  include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
-ENDIF()
-IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
-  link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
-ENDIF()
-
-IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
-
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   # print compile time of each translation unit in the CSV format (user time, system time, command)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
@@ -57,14 +41,6 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_BUILD_MESHCONV OFF)
 ENDIF()
 
-option(MESHLIB_KEEP_CTEST_TARGETS "Keep default CTest targets (Continuous*, Experimental*, Nightly*, etc.)" OFF)
-IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
-  set_property(GLOBAL PROPERTY
-    CTEST_TARGETS_ADDED 1
-  )
-ENDIF()
-include(CTest)
-
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
 set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
@@ -77,6 +53,18 @@ ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
 ENDIF()
+
+IF(APPLE)
+  include(ConfigureHomebrew)
+ENDIF()
+
+option(MESHLIB_KEEP_CTEST_TARGETS "Keep default CTest targets (Continuous*, Experimental*, Nightly*, etc.)" OFF)
+IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
+  set_property(GLOBAL PROPERTY
+    CTEST_TARGETS_ADDED 1
+  )
+ENDIF()
+include(CTest)
 
 IF(APPLE)
   # need to hardcode some path to fix wheel (no option to pass path)
@@ -129,6 +117,7 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
+set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(NOT MR_EMSCRIPTEN)

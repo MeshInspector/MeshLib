@@ -51,6 +51,7 @@
     <ClInclude Include="MRMarkedContour.h" />
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
+    <ClInclude Include="MRMeshDecimateDouble.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
@@ -394,6 +395,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRMeshDecimateDouble.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />

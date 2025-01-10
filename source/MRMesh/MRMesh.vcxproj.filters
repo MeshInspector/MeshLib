@@ -1251,6 +1251,9 @@
     <ClInclude Include="MRDistanceToMeshOptions.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDecimateDouble.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2056,6 +2059,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshTopologyDiff.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimateDouble.cpp">
+      <Filter>Source Files\Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

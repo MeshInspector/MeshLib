@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
-IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
-
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   # print compile time of each translation unit in the CSV format (user time, system time, command)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
@@ -63,6 +58,11 @@ IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
+ENDIF()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+IF(APPLE)
+  include(ConfigureHomebrew)
 ENDIF()
 
 IF(APPLE)

@@ -59,7 +59,7 @@ IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_
   message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
-  include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
+  include_directories(BEFORE ${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)

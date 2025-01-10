@@ -23,6 +23,7 @@ IF(APPLE)
     GTest::gtest
     spdlog
     Python::Python
+    pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
 ELSE()
@@ -37,6 +38,7 @@ ELSE()
       gtest
       spdlog
       Python::Python
+      pybind11nonlimitedapi_stubs
       ${CMAKE_DL_LIBS}
     )
   ELSE()
@@ -52,6 +54,13 @@ ELSE()
       -Wl,--no-whole-archive
     )
   ENDIF()
+ENDIF()
+
+# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+IF(NOT WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
 ENDIF()
 
 add_test(

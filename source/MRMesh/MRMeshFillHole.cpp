@@ -8,9 +8,10 @@
 #include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
 #include "MRHash.h"
+#include "MRMarkedContour.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRGTest.h"
 #include <parallel_hashmap/phmap.h>
 #include <queue>
 #include <functional>
@@ -972,8 +973,12 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
     MakeBridgeResult res;
     if ( a == b )
         return res;
+    bool swapped = false;
     if ( topology.prev( b.sym() ) == a )
+    {
+        swapped = true;
         std::swap( a, b );
+    }
     if ( topology.prev( a.sym() ) == b )
     {
         if ( !topology.isLeftTri( a ) )
@@ -994,7 +999,10 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
                 auto e = topology.makeEdge();
                 topology.splice( a, e );
                 topology.splice( topology.prev( b.sym() ), e.sym() );
-                res.na = e;
+                if ( swapped )
+                    res.nb = e;
+                else
+                    res.na = e;
             }
         }
         auto f = topology.addFaceId();
@@ -1002,9 +1010,11 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
         ++res.newFaces;
         if ( outNewFaces )
             outNewFaces->autoResizeSet( f );
-        assert( !res.na || ( topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
+        assert( !res.na || ( !swapped && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
+        assert( !res.nb || (  swapped && topology.fromSameOriginRing( a, res.nb ) && !topology.left( res.nb ) ) );
         return res;
     }
+    assert( !swapped );
 
     // general case
 
@@ -1075,6 +1085,73 @@ MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBi
         splitQuad( topology, a, outNewFaces );
         ++res.newFaces;
     }
+    return res;
+}
+
+MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float samplingStep, FaceBitSet * outNewFaces )
+{
+    MR_TIMER
+    MakeBridgeResult res = makeQuadBridge( mesh.topology, a, b, outNewFaces );
+    if ( !res.na && !res.nb )
+        return res;
+
+    // build spline starting in the middle of edge (a) and ending in the middle of edge (b),
+    // with tangents at the ends inside existing triangles
+    const Vector3f centerA = mesh.edgeCenter( a );
+    const Vector3f centerB = mesh.edgeCenter( b );
+    const Vector3f tangentA = mesh.leftTangent( a.sym() );
+    const Vector3f tangentB = mesh.leftTangent( b.sym() );
+    const Vector3f dirA = mesh.edgeVector( a ).normalized();
+    const Vector3f dirB = mesh.edgeVector( b.sym() ).normalized();
+
+    const float tangentStep = 0.99f * samplingStep; // to avoid splitting of tangents
+
+    Contour3f normals{ dirA, dirA, dirB, dirB };
+    auto marked = makeSpline( Contour3f{ centerA + tangentStep * tangentA, centerA, centerB, centerB + tangentStep * tangentB },
+        { .samplingStep = samplingStep, .controlStability = 10, .iterations = 3, .normals = &normals } );
+    assert( normals.size() == marked.contour.size() );
+
+    const EdgeId ca = res.na;
+    // split the only bridge's triangle or quadrangle on segments according to the spline
+    const int midPoints = (int)normals.size() - 4;
+    if ( midPoints > 0 )
+    {
+        const auto lenA = mesh.edgeLength( a );
+        const auto lenB = mesh.edgeLength( b );
+        for ( int i = 0; i < midPoints; ++i )
+        {
+            const auto u = float( i + 1 ) / ( midPoints + 1 );
+            const auto len = ( 1 - u ) * lenA + u * lenB;
+            if ( ca )
+            {
+                // split the first boundary of the bridge
+                const auto p = marked.contour[i + 2] - 0.5f * len * normals[i + 2];
+                const auto e = mesh.splitEdge( ca, p, outNewFaces );
+                ++res.newFaces;
+                assert( mesh.topology.isLeftTri( e.sym() ) );
+                if ( i == 0 )
+                    res.na = e;
+            }
+            if ( res.nb )
+            {
+                // split the second boundary of the bridge
+                const auto p = marked.contour[i + 2] + 0.5f * len * normals[i + 2];
+                [[maybe_unused]] const auto e = mesh.splitEdge( res.nb.sym(), p, outNewFaces );
+                assert( mesh.topology.isLeftTri( e ) );
+                ++res.newFaces;
+            }
+        }
+    }
+    if ( ca && mesh.topology.isLeftQuad( ca.sym() ) )
+    {
+        // split the last quadrangle;
+        // mesh.topology.prev( ca ) below to have the same diagonal as in above quadrangles
+        splitQuad( mesh.topology, mesh.topology.prev( ca ), outNewFaces );
+        ++res.newFaces;
+    }
+
+    assert( !res.na || ( mesh.topology.fromSameOriginRing( a, res.na ) && !mesh.topology.left( res.na ) ) );
+    assert( !res.nb || ( mesh.topology.fromSameOriginRing( b, res.nb ) && !mesh.topology.left( res.nb ) ) );
     return res;
 }
 

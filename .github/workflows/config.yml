@@ -34,7 +34,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
       update_doc:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
         value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
@@ -44,6 +44,25 @@ on:
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+      # flags for disabling builds for different systems
+      build_enable_ubuntu_arm64:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-disable-ubuntu-arm64 == 'true' ) }}
+      build_enable_ubuntu_x64:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-ubuntu-x64 == 'true' ) }}
+      build_enable_fedora:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-fedora == 'true' ) }}
+      build_enable_windows:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-windows == 'true' ) }}
+      build_enable_macos:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
+      build_enable_emscripten:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripten == 'true' ) }}
 
 jobs:
   prepare-config:
@@ -59,8 +78,16 @@ jobs:
       tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
       tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
       tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
+      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
       tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
       tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
+      # tags for disabling builds for different systems
+      tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
+      tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
+      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
+      tag-disable-fedora:        ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-fedora' ) }}
+      tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
+      tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 
     runs-on: ubuntu-latest
 

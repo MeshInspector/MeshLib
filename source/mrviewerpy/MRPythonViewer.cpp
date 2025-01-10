@@ -1,3 +1,8 @@
+#ifndef _WIN32
+// This needs to be early, otherwinse on Ubuntu Arm this gets included without `_GNU_SOURCE` somehow.
+#include <dlfcn.h>
+#endif
+
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRCommandLoop.h"

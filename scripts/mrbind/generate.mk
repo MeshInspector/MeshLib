@@ -509,7 +509,7 @@ $(foreach v,$(PYTHON_VERSIONS),\
     $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
     $(call var,all_outputs += $(_shlib))\
     $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(COMPILER_FLAGS) $(call get_python_cflags,$v) $$< -c -o $$@)\
-    $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs)\
+    $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs $(call get_python_ldflags,$v))\
 )
 
 # Those are used by `module_snippet` below.

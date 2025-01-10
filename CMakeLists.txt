@@ -2,6 +2,22 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
+set(PROJECT_SOURCE_DIR ./source)
+set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
+IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
+  message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
+ENDIF()
+IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
+  include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
+ENDIF()
+IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
+  link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
+ENDIF()
+
+IF(APPLE)
+  include(ConfigureHomebrew)
+ENDIF()
+
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   # print compile time of each translation unit in the CSV format (user time, system time, command)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
@@ -63,10 +79,6 @@ IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
 ENDIF()
 
 IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
-
-IF(APPLE)
   # need to hardcode some path to fix wheel (no option to pass path)
   # TODO: revise
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
@@ -117,7 +129,6 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(NOT MR_EMSCRIPTEN)

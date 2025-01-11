@@ -23,8 +23,13 @@ public:
     MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings );
     DecimateResult run();
 
+    double edgeLengthSq( EdgeId e ) const
+    {
+        return ( points_[topology_.dest( e )] - points_[topology_.org( e )] ).lengthSq();
+    };
+
 private:
-    MeshTopology & meshTopology_;
+    MeshTopology & topology_;
     VertCoordsD points_;
     const DecimateSettingsDouble & settings_;
     const double maxErrorSq_;
@@ -115,7 +120,7 @@ private:
 };
 
 MeshDeciamatorDouble::MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings )
-    : meshTopology_( mesh.topology )
+    : topology_( mesh.topology )
     , points_( begin( mesh.points ), end( mesh.points ) )
     , settings_( settings )
     , maxErrorSq_( sqr( settings.maxError ) )
@@ -181,7 +186,7 @@ public:
             EdgeId e{ ue };
             if ( decimator_.regionEdges_.empty() )
             {
-                if ( decimator_.meshTopology_.isLoneEdge( e ) )
+                if ( decimator_.topology_.isLoneEdge( e ) )
                     continue;
             }
             else
@@ -202,7 +207,47 @@ public:
 QuadraticForm3d computeFormAtVertex( const MeshTopology & topology, const VertCoordsD & points, const FaceBitSet * region,
     MR::VertId v, double stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
-    QuadraticForm3d qf = mp.mesh.quadraticForm( v, angleWeigted, mp.region, creases );
+    QuadraticForm3d qf;
+    auto edgeVector = [&]( EdgeId e )
+    {
+        return points[topology.dest( e )] - points[topology.org( e )];
+    };
+    auto leftNormal = [&]( EdgeId e )
+    {
+        VertId a, b, c;
+        topology.getLeftTriVerts( e, a, b, c );
+        assert( a.valid() && b.valid() && c.valid() );
+        const auto & ap = points[a];
+        const auto & bp = points[b];
+        const auto & cp = points[c];
+        return cross( bp - ap, cp - ap ).normalized();
+    };
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        if ( topology.isBdEdge( e, region ) || ( creases && creases->test( e ) ) )
+        {
+            // zero-length boundary edge is treated as uniform stabilizer: all shift directions are equally penalized,
+            // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
+            qf.addDistToLine( edgeVector( e ).normalized() );
+        }
+        if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
+        {
+            if ( angleWeigted )
+            {
+                auto d0 = edgeVector( e );
+                auto d1 = edgeVector( topology.next( e ) );
+                auto angle = MR::angle( d0, d1 );
+                static constexpr float INV_PIF = 1 / PI_F;
+                qf.addDistToPlane( leftNormal( e ), angle * INV_PIF );
+            }
+            else
+            {
+                // zero-area triangle is treated as no triangle with no penalty at all,
+                // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
+                qf.addDistToPlane( leftNormal( e ) );
+            }
+        }
+    }
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
@@ -213,43 +258,15 @@ Vector<QuadraticForm3d, VertId> computeFormsAtVertices( const MeshTopology & top
     MR_TIMER;
 
     VertBitSet store;
-    const VertBitSet & regionVertices = getIncidentVerts( mp.mesh.topology, mp.region, store );
+    const VertBitSet & regionVertices = getIncidentVerts( topology, region, store );
 
     Vector<QuadraticForm3d, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer, angleWeigted, creases );
+        res[v] = computeFormAtVertex( topology, points, region, v, stabilizer, angleWeigted, creases );
     } );
 
     return res;
-}
-
-bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
-{
-    MR_TIMER;
-
-    DecimateSettingsDouble dsettings
-    {
-        .maxError = settings.maxDeviation,
-        .criticalTriAspectRatio = settings.criticalAspectRatio,
-        .tinyEdgeLength = settings.tinyEdgeLength,
-        .stabilizer = settings.stabilizer,
-        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
-        .region = settings.region,
-        .maxAngleChange = settings.maxAngleChange
-    };
-    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
-}
-
-bool resolveMeshDegenerations( MR::Mesh& mesh, int, double maxDeviation, double maxAngleChange, double criticalAspectRatio )
-{
-    ResolveMeshDegenSettings settings
-    {
-        .maxDeviation = maxDeviation,
-        .maxAngleChange = maxAngleChange,
-        .criticalAspectRatio = criticalAspectRatio
-    };
-    return resolveMeshDegenerations( mesh, settings );
 }
 
 bool MeshDeciamatorDouble::initializeQueue_()
@@ -262,7 +279,7 @@ bool MeshDeciamatorDouble::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.angleWeightedDistToPlane, settings_.notFlippable );
+        *pVertForms_ = computeFormsAtVertices( topology_, points_, settings_.region, settings_.stabilizer, settings_.angleWeightedDistToPlane, settings_.notFlippable );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -271,7 +288,7 @@ bool MeshDeciamatorDouble::initializeQueue_()
     if ( settings_.region )
     {
         // all region edges
-        regionEdges_ = getIncidentEdges( meshTopology_, *settings_.region );
+        regionEdges_ = getIncidentEdges( topology_, *settings_.region );
         if ( settings_.edgesToCollapse )
             regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchNearBdEdges )
@@ -279,8 +296,8 @@ bool MeshDeciamatorDouble::initializeQueue_()
             // exclude edges touching boundary
             BitSetParallelFor( regionEdges_, [&]( UndirectedEdgeId ue )
             {
-                if ( pBdVerts_->test( meshTopology_.org( ue ) ) ||
-                     pBdVerts_->test( meshTopology_.dest( ue ) ) )
+                if ( pBdVerts_->test( topology_.org( ue ) ) ||
+                     pBdVerts_->test( topology_.dest( ue ) ) )
                     regionEdges_.reset( ue );
             } );
         }
@@ -289,14 +306,14 @@ bool MeshDeciamatorDouble::initializeQueue_()
     {
         assert( !settings_.region );
         regionEdges_.clear();
-        regionEdges_.resize( meshTopology_.undirectedEdgeSize(), true );
+        regionEdges_.resize( topology_.undirectedEdgeSize(), true );
         // exclude lone edges and edges touching boundary
         BitSetParallelForAll( regionEdges_, [&]( UndirectedEdgeId ue )
         {
             if ( ( settings_.edgesToCollapse && !settings_.edgesToCollapse->test( ue ) ) ||
-                 meshTopology_.isLoneEdge( ue ) ||
-                 pBdVerts_->test( meshTopology_.org( ue ) ) ||
-                 pBdVerts_->test( meshTopology_.dest( ue ) ) )
+                 topology_.isLoneEdge( ue ) ||
+                 pBdVerts_->test( topology_.org( ue ) ) ||
+                 pBdVerts_->test( topology_.dest( ue ) ) )
                 regionEdges_.reset( ue );
         } );
     }
@@ -304,12 +321,12 @@ bool MeshDeciamatorDouble::initializeQueue_()
         regionEdges_ = *settings_.edgesToCollapse;
 
     EdgeMetricCalc calc( *this );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{meshTopology_.undirectedEdgeSize()} ), calc );
+    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{topology_.undirectedEdgeSize()} ), calc );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.2f ) )
         return false;
 
-    presentInQueue_.resize( meshTopology_.undirectedEdgeSize() );
+    presentInQueue_.resize( topology_.undirectedEdgeSize() );
     for ( const auto & qe : calc.elements() )
         presentInQueue_.set( qe.uedgeId() );
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
@@ -322,10 +339,10 @@ bool MeshDeciamatorDouble::initializeQueue_()
 QuadraticForm3d MeshDeciamatorDouble::collapseForm_( UndirectedEdgeId ue, const Vector3d & collapsePos ) const
 {
     EdgeId e{ ue };
-    const auto o = meshTopology_.org( e );
-    const auto d = meshTopology_.dest( e );
-    const auto po = mesh_.points[o];
-    const auto pd = mesh_.points[d];
+    const auto o = topology_.org( e );
+    const auto d = topology_.dest( e );
+    const auto po = points_[o];
+    const auto pd = points_[d];
     const auto vo = (*pVertForms_)[o];
     const auto vd = (*pVertForms_)[d];
     return sumAt( vo, po, vd, pd, collapsePos );
@@ -335,10 +352,10 @@ auto MeshDeciamatorDouble::computeQueueElement_( UndirectedEdgeId ue, bool optim
     QuadraticForm3d * outCollapseForm, Vector3d * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
-    const auto o = meshTopology_.org( e );
-    const auto d = meshTopology_.dest( e );
-    const auto po = mesh_.points[o];
-    const auto pd = mesh_.points[d];
+    const auto o = topology_.org( e );
+    const auto d = topology_.dest( e );
+    const auto po = points_[o];
+    const auto pd = points_[d];
     const auto vo = (*pVertForms_)[o];
     const auto vd = (*pVertForms_)[d];
 
@@ -362,7 +379,7 @@ auto MeshDeciamatorDouble::computeQueueElement_( UndirectedEdgeId ue, bool optim
 
     if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )
     {
-        if ( earlyReturn( mesh_.edgeLengthSq( e ) ) )
+        if ( earlyReturn( edgeLengthSq( e ) ) )
             return res;
     }
 
@@ -431,19 +448,19 @@ void MeshDeciamatorDouble::addInQueueIfMissing_( UndirectedEdgeId ue )
 void MeshDeciamatorDouble::flipEdge_( UndirectedEdgeId ue )
 {
     EdgeId e = ue;
-    meshTopology_.flipEdge( e );
-    assert( meshTopology_.left( e ) );
-    assert( meshTopology_.right( e ) );
+    topology_.flipEdge( e );
+    assert( topology_.left( e ) );
+    assert( topology_.right( e ) );
     addInQueueIfMissing_( e.undirected() );
-    addInQueueIfMissing_( meshTopology_.prev( e ).undirected() );
-    addInQueueIfMissing_( meshTopology_.next( e ).undirected() );
-    addInQueueIfMissing_( meshTopology_.prev( e.sym() ).undirected() );
-    addInQueueIfMissing_( meshTopology_.next( e.sym() ).undirected() );
+    addInQueueIfMissing_( topology_.prev( e ).undirected() );
+    addInQueueIfMissing_( topology_.next( e ).undirected() );
+    addInQueueIfMissing_( topology_.prev( e.sym() ).undirected() );
+    addInQueueIfMissing_( topology_.next( e.sym() ).undirected() );
 }
 
 auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos ) -> CanCollapseRes
 {
-    const auto & topology = meshTopology_;
+    const auto & topology = topology_;
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
     auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
@@ -459,8 +476,8 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
 
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );
-    auto po = mesh_.points[vo];
-    auto pd = mesh_.points[vd];
+    auto po = points_[vo];
+    auto pd = points_[vd];
     if ( collapsePos == pd )
     {
         // reverse the edge to have its origin in remaining fixed vertex
@@ -480,16 +497,16 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
             return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from collapsing boundary edge
         if ( !vr )
         {
-            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( meshTopology_.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
+            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( topology_.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
                 return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
-            if ( !smallShift( LineSegm3f{ mesh_.destPnt( meshTopology_.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
+            if ( !smallShift( LineSegm3f{ mesh_.destPnt( topology_.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
                 return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
         }
         if ( !vl )
         {
-            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( meshTopology_.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
+            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( topology_.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
                 return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
-            if ( !smallShift( LineSegm3f{ mesh_.destPnt( meshTopology_.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
+            if ( !smallShift( LineSegm3f{ mesh_.destPnt( topology_.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
                 return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
         }
     }
@@ -513,7 +530,7 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         if ( eDest != vl && eDest != vr )
             originNeis_.push_back( eDest );
 
-        const auto pDest = mesh_.points[eDest];
+        const auto pDest = points_[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( po - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
@@ -558,7 +575,7 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         if ( std::binary_search( originNeis_.begin(), originNeis_.end(), eDest ) )
             return { .status =  CollapseStatus::MultipleEdge }; // to prevent appearance of multiple edges
 
-        const auto pDest = mesh_.points[eDest];
+        const auto pDest = points_[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
         if ( !topology.left( e ) )
@@ -626,7 +643,7 @@ VertId MeshDeciamatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector
 {
     ++res_.vertsDeleted;
 
-    auto & topology = meshTopology_;
+    auto & topology = topology_;
     const auto l = topology.left( edgeToCollapse );
     const auto r = topology.left( edgeToCollapse.sym() );
     if ( l )
@@ -635,7 +652,7 @@ VertId MeshDeciamatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector
         ++res_.facesDeleted;
 
     const auto vo = topology.org( edgeToCollapse );
-    mesh_.points[vo] = collapsePos;
+    points_[vo] = collapsePos;
     if ( settings_.region )
     {
         if ( l )
@@ -648,11 +665,11 @@ VertId MeshDeciamatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector
         return {};
 
     // update edges around remaining vertex
-    for ( EdgeId e : orgRing( meshTopology_, vo ) )
+    for ( EdgeId e : orgRing( topology_, vo ) )
     {
         addInQueueIfMissing_( e.undirected() );
-        if ( meshTopology_.left( e ) )
-            addInQueueIfMissing_( meshTopology_.prev( e.sym() ).undirected() );
+        if ( topology_.left( e ) )
+            addInQueueIfMissing_( topology_.prev( e.sym() ).undirected() );
     }
     return vo;
 }
@@ -707,7 +724,7 @@ DecimateResult MeshDeciamatorDouble::run()
     {
         pBdVerts_ = &myBdVerts_;
         if ( !settings_.touchNearBdEdges )
-            myBdVerts_ = getBoundaryVerts( meshTopology_, settings_.region );
+            myBdVerts_ = getBoundaryVerts( topology_, settings_.region );
     }
 
     if ( !initializeQueue_() )
@@ -716,7 +733,7 @@ DecimateResult MeshDeciamatorDouble::run()
     res_.errorIntroduced = settings_.maxError;
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
-        settings_.region ? (int)settings_.region->count() : meshTopology_.numValidFaces(), settings_.maxDeletedFaces );
+        settings_.region ? (int)settings_.region->count() : topology_.numValidFaces(), settings_.maxDeletedFaces );
     while ( !queue_.empty() )
     {
         const auto topQE = queue_.top();
@@ -736,7 +753,7 @@ DecimateResult MeshDeciamatorDouble::run()
             lastProgressFacesDeleted = res_.facesDeleted;
         }
 
-        if ( meshTopology_.isLoneEdge( ue ) )
+        if ( topology_.isLoneEdge( ue ) )
         {
             // edge has been deleted by this moment
             presentInQueue_.reset( ue );

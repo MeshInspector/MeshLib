@@ -17,10 +17,10 @@ namespace MR
 
 using VertCoordsD = Vector<Vector3d, VertId>;
 
-class MeshDeciamatorDouble
+class MeshDecimatorDouble
 {
 public:
-    MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings );
+    MeshDecimatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings );
     DecimateResult run( Mesh & mesh );
 
     const Vector3d& orgPnt( EdgeId e ) const { return points_[topology_.org( e )]; }
@@ -119,7 +119,7 @@ private:
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos );
 };
 
-MeshDeciamatorDouble::MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings )
+MeshDecimatorDouble::MeshDecimatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings )
     : topology_( mesh.topology )
     , points_( begin( mesh.points ), end( mesh.points ) )
     , settings_( settings )
@@ -168,10 +168,10 @@ MeshDeciamatorDouble::MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsD
     }
 }
 
-class MeshDeciamatorDouble::EdgeMetricCalc 
+class MeshDecimatorDouble::EdgeMetricCalc 
 {
 public:
-    EdgeMetricCalc( const MeshDeciamatorDouble & decimator ) : decimator_( decimator ) { }
+    EdgeMetricCalc( const MeshDecimatorDouble & decimator ) : decimator_( decimator ) { }
     EdgeMetricCalc( EdgeMetricCalc & x, tbb::split ) : decimator_( x.decimator_ ) { }
     void join( EdgeMetricCalc & y ) { auto yes = y.takeElements(); elems_.insert( elems_.end(), yes.begin(), yes.end() ); }
 
@@ -200,7 +200,7 @@ public:
     }
 
 public:
-    const MeshDeciamatorDouble & decimator_;
+    const MeshDecimatorDouble & decimator_;
     std::vector<QueueElement> elems_;
 };
 
@@ -269,7 +269,7 @@ Vector<QuadraticForm3d, VertId> computeFormsAtVertices( const MeshTopology & top
     return res;
 }
 
-bool MeshDeciamatorDouble::initializeQueue_()
+bool MeshDecimatorDouble::initializeQueue_()
 {
     MR_TIMER;
 
@@ -336,7 +336,7 @@ bool MeshDeciamatorDouble::initializeQueue_()
     return true;
 }
 
-QuadraticForm3d MeshDeciamatorDouble::collapseForm_( UndirectedEdgeId ue, const Vector3d & collapsePos ) const
+QuadraticForm3d MeshDecimatorDouble::collapseForm_( UndirectedEdgeId ue, const Vector3d & collapsePos ) const
 {
     EdgeId e{ ue };
     const auto o = topology_.org( e );
@@ -348,7 +348,7 @@ QuadraticForm3d MeshDeciamatorDouble::collapseForm_( UndirectedEdgeId ue, const 
     return sumAt( vo, po, vd, pd, collapsePos );
 }
 
-auto MeshDeciamatorDouble::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+auto MeshDecimatorDouble::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
     QuadraticForm3d * outCollapseForm, Vector3d * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
@@ -432,7 +432,7 @@ auto MeshDeciamatorDouble::computeQueueElement_( UndirectedEdgeId ue, bool optim
     return res;
 }
 
-void MeshDeciamatorDouble::addInQueueIfMissing_( UndirectedEdgeId ue )
+void MeshDecimatorDouble::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
@@ -445,7 +445,7 @@ void MeshDeciamatorDouble::addInQueueIfMissing_( UndirectedEdgeId ue )
     }
 }
 
-void MeshDeciamatorDouble::flipEdge_( UndirectedEdgeId ue )
+void MeshDecimatorDouble::flipEdge_( UndirectedEdgeId ue )
 {
     EdgeId e = ue;
     topology_.flipEdge( e );
@@ -458,7 +458,7 @@ void MeshDeciamatorDouble::flipEdge_( UndirectedEdgeId ue )
     addInQueueIfMissing_( topology_.next( e.sym() ).undirected() );
 }
 
-auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos ) -> CanCollapseRes
+auto MeshDecimatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos ) -> CanCollapseRes
 {
     const auto & topology = topology_;
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
@@ -639,7 +639,7 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
     return { .e = edgeToCollapse };
 }
 
-VertId MeshDeciamatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos )
+VertId MeshDecimatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos )
 {
     ++res_.vertsDeleted;
 
@@ -674,7 +674,7 @@ VertId MeshDeciamatorDouble::forceCollapse_( EdgeId edgeToCollapse, const Vector
     return vo;
 }
 
-auto MeshDeciamatorDouble::collapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos ) -> CollapseRes
+auto MeshDecimatorDouble::collapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos ) -> CollapseRes
 {
     CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
     if ( can.status != CollapseStatus::Ok )
@@ -714,7 +714,7 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettingsDouble & settin
         *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
 }
 
-DecimateResult MeshDeciamatorDouble::run( Mesh & mesh )
+DecimateResult MeshDecimatorDouble::run( Mesh & mesh )
 {
     MR_TIMER
     assert( &topology_ == &mesh.topology );
@@ -843,7 +843,7 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettingsDou
         return res;
     }
     MR_WRITER( mesh );
-    MeshDeciamatorDouble md( mesh, settings );
+    MeshDecimatorDouble md( mesh, settings );
     return md.run( mesh );
 }
 

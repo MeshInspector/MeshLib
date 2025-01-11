@@ -21,12 +21,12 @@ class MeshDeciamatorDouble
 {
 public:
     MeshDeciamatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings );
-    DecimateResult run();
+    DecimateResult run( Mesh & mesh );
 
-    double edgeLengthSq( EdgeId e ) const
-    {
-        return ( points_[topology_.dest( e )] - points_[topology_.org( e )] ).lengthSq();
-    };
+    const Vector3d& orgPnt( EdgeId e ) const { return points_[topology_.org( e )]; }
+    const Vector3d& destPnt( EdgeId e ) const { return points_[topology_.dest( e )]; }
+    LineSegm3d edgeSegment( EdgeId e ) const { return { orgPnt( e ), destPnt( e ) }; }
+    double edgeLengthSq( EdgeId e ) const { return edgeSegment( e ).lengthSq(); }
 
 private:
     MeshTopology & topology_;
@@ -487,26 +487,26 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         std::swap( po, pd );
     }
 
-    auto smallShift = [maxBdShiftSq = sqr( settings_.maxBdShift )]( const LineSegm3f & segm, const Vector3d & p )
+    auto smallShift = [maxBdShiftSq = sqr( settings_.maxBdShift )]( const LineSegm3d & segm, const Vector3d & p )
     {
         return ( closestPointOnLineSegm( p, segm ) - p ).lengthSq() <= maxBdShiftSq;
     };
     if ( ( !vl || !vr ) && settings_.maxBdShift < DBL_MAX )
     {
-        if ( !smallShift( mesh_.edgeSegment( edgeToCollapse ), collapsePos ) )
+        if ( !smallShift( edgeSegment( edgeToCollapse ), collapsePos ) )
             return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from collapsing boundary edge
         if ( !vr )
         {
-            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( topology_.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
+            if ( !smallShift( LineSegm3d{ orgPnt( topology_.prevLeftBd( edgeToCollapse ) ), collapsePos }, po ) )
                 return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
-            if ( !smallShift( LineSegm3f{ mesh_.destPnt( topology_.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
+            if ( !smallShift( LineSegm3d{ destPnt( topology_.nextLeftBd( edgeToCollapse ) ), collapsePos }, pd ) )
                 return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
         }
         if ( !vl )
         {
-            if ( !smallShift( LineSegm3f{ mesh_.orgPnt( topology_.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
+            if ( !smallShift( LineSegm3d{ orgPnt( topology_.prevLeftBd( edgeToCollapse.sym() ) ), collapsePos }, pd ) )
                 return { .status =  CollapseStatus::PosFarBd }; // destination of collapsing boundary edge is too far from new boundary segment
-            if ( !smallShift( LineSegm3f{ mesh_.destPnt( topology_.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
+            if ( !smallShift( LineSegm3d{ destPnt( topology_.nextLeftBd( edgeToCollapse.sym() ) ), collapsePos }, po ) )
                 return { .status =  CollapseStatus::PosFarBd }; // origin of collapsing boundary edge is too far from new boundary segment
         }
     }
@@ -542,7 +542,7 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto pDest2 = destPnt( topology.next( e ) );
         if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
@@ -562,8 +562,8 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
     if ( oBdEdge
-        && !smallShift( LineSegm3f{ po, mesh_.destPnt( oBdEdge ) }, collapsePos )
-        && !smallShift( LineSegm3f{ po, mesh_.orgPnt( topology.prevLeftBd( oBdEdge ) ) }, collapsePos ) )
+        && !smallShift( LineSegm3d{ po, destPnt( oBdEdge ) }, collapsePos )
+        && !smallShift( LineSegm3d{ po, orgPnt( topology.prevLeftBd( oBdEdge ) ) }, collapsePos ) )
             return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from both existed boundary edges
     std::sort( originNeis_.begin(), originNeis_.end() );
 
@@ -587,7 +587,7 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto pDest2 = destPnt( topology.next( e ) );
         if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
@@ -607,8 +607,8 @@ auto MeshDeciamatorDouble::canCollapse_( EdgeId edgeToCollapse, const Vector3d &
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
     if ( dBdEdge
-        && !smallShift( LineSegm3f{ pd, mesh_.destPnt( dBdEdge ) }, collapsePos )
-        && !smallShift( LineSegm3f{ pd, mesh_.orgPnt( topology.prevLeftBd( dBdEdge ) ) }, collapsePos ) )
+        && !smallShift( LineSegm3d{ pd, destPnt( dBdEdge ) }, collapsePos )
+        && !smallShift( LineSegm3d{ pd, orgPnt( topology.prevLeftBd( dBdEdge ) ) }, collapsePos ) )
             return { .status =  CollapseStatus::PosFarBd }; // new vertex is too far from both existed boundary edges
 
     if ( vl && vr && oBdEdge && dBdEdge )
@@ -714,9 +714,10 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettingsDouble & settin
         *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
 }
 
-DecimateResult MeshDeciamatorDouble::run()
+DecimateResult MeshDeciamatorDouble::run( Mesh & mesh )
 {
     MR_TIMER
+    assert( &topology_ == &mesh.topology );
 
     if ( settings_.bdVerts )
         pBdVerts_ = settings_.bdVerts;
@@ -730,7 +731,7 @@ DecimateResult MeshDeciamatorDouble::run()
     if ( !initializeQueue_() )
         return res_;
 
-    res_.errorIntroduced = settings_.maxError;
+    res_.errorIntroduced = (float)settings_.maxError;
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : topology_.numValidFaces(), settings_.maxDeletedFaces );
@@ -742,7 +743,7 @@ DecimateResult MeshDeciamatorDouble::run()
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
-            res_.errorIntroduced = std::sqrt( topQE.c );
+            res_.errorIntroduced = (float)std::sqrt( topQE.c );
             break;
         }
 
@@ -818,10 +819,16 @@ DecimateResult MeshDeciamatorDouble::run()
         }
     }
 
+    // write points back in mesh
+    BitSetParallelFor( topology_.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v] = Vector3f( points_[v] );
+    } );
+
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    optionalPackMesh( mesh_, settings_ );
+    optionalPackMesh( mesh, settings_ );
     res_.cancelled = false;
     return res_;
 }
@@ -837,7 +844,7 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettingsDou
     }
     MR_WRITER( mesh );
     MeshDeciamatorDouble md( mesh, settings );
-    return md.run();
+    return md.run( mesh );
 }
 
 DecimateResult decimateMeshDouble( Mesh & mesh, const DecimateSettingsDouble & settings0 )
@@ -858,7 +865,7 @@ DecimateResult decimateMeshDouble( Mesh & mesh, const DecimateSettingsDouble & s
 }
 
 // check if Decimator updates region
-TEST( MRMesh, MeshDecimate )
+TEST( MRMesh, MeshDecimateDouble )
 {
     Mesh meshCylinder = makeCylinderAdvanced(0.5f, 0.5f, 0.0f, 20.0f / 180.0f * PI_F, 1.0f, 16);
 
@@ -868,11 +875,11 @@ TEST( MRMesh, MeshDecimate )
 
     // setup and run decimator
     DecimateSettingsDouble decimateSettings;
-    decimateSettings.maxError = 0.001f;
+    decimateSettings.maxError = 0.001;
     decimateSettings.region = &regionForDecimation;
-    decimateSettings.maxTriangleAspectRatio = 80.0f;
+    decimateSettings.maxTriangleAspectRatio = 80.0;
 
-    auto decimateResults = decimateMesh(meshCylinder, decimateSettings);
+    auto decimateResults = decimateMeshDouble(meshCylinder, decimateSettings);
 
     // compare regions and deleted vertices and faces
     ASSERT_NE(regionSaved, regionForDecimation);

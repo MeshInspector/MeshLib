@@ -101,7 +101,7 @@ struct DecimateSettingsDouble
      * and its origin vertex will get new position (provided as the second argument) after collapse;
      * If the callback returns false, then the collapse is prohibited
      */
-    PreCollapseCallback preCollapse;
+    std::function<bool( EdgeId edgeToCollapse, const Vector3d& newEdgeOrgPos )> preCollapse;
 
     /**
      * \brief The user can provide this optional callback for adjusting error introduced by this

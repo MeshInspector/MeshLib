@@ -851,6 +851,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     MR_TIMER
     assert( settings.subdivideParts > 1 );
     const auto sz = settings.subdivideParts;
+    const auto numIniVerts = mesh.topology.numValidVerts();
     assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
@@ -872,6 +873,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
         /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
+
+        VertBitSet innerVerts;
 
         DecimateResult decimRes;
     };
@@ -927,9 +930,18 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             /// all boundary vertices of subdivision faces, including hole boundaries
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
+        parts[i].innerVerts = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
+
+    VertBitSet seqVerts = mesh.topology.getValidVerts();
+    for ( int i = 0; i < parts.size(); ++i )
+    {
+        spdlog::info( "Part #{}: {} inner vertices", i, parts[i].innerVerts.count() );
+        seqVerts -= parts[i].innerVerts;
+    }
+    spdlog::info( "{} remaining vertices", seqVerts.count() );
 
     mesh.topology.preferEdges( stableEdges );
     if ( settings.progressCallback && !settings.progressCallback( 0.16f ) )
@@ -968,8 +980,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 break;
 
             DecimateSettings subSeqSettings = settings;
-            subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
-            subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+            const auto numPartInnerVerts = parts[i].innerVerts.count();
+            const auto partFraction = float( numPartInnerVerts ) / numIniVerts;
+            subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
+            subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
             if ( settings.minFacesInPart > 0 )
             {
                 int startFaces = (int)parts[i].region.count();

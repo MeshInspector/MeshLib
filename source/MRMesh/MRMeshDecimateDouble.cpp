@@ -20,8 +20,8 @@ using VertCoordsD = Vector<Vector3d, VertId>;
 class MeshDecimatorDouble
 {
 public:
-    MeshDecimatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings );
-    DecimateResult run( Mesh & mesh );
+    MeshDecimatorDouble( MeshTopology & topology, VertCoordsD & points, const DecimateSettingsDouble & settings );
+    DecimateResult run();
 
     const Vector3d& orgPnt( EdgeId e ) const { return points_[topology_.org( e )]; }
     const Vector3d& destPnt( EdgeId e ) const { return points_[topology_.dest( e )]; }
@@ -30,7 +30,7 @@ public:
 
 private:
     MeshTopology & topology_;
-    VertCoordsD points_;
+    VertCoordsD & points_;
     const DecimateSettingsDouble & settings_;
     const double maxErrorSq_;
     Vector<QuadraticForm3d, VertId> myVertForms_;
@@ -119,9 +119,9 @@ private:
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3d & collapsePos );
 };
 
-MeshDecimatorDouble::MeshDecimatorDouble( Mesh & mesh, const DecimateSettingsDouble & settings )
-    : topology_( mesh.topology )
-    , points_( begin( mesh.points ), end( mesh.points ) )
+MeshDecimatorDouble::MeshDecimatorDouble( MeshTopology & topology, VertCoordsD & points, const DecimateSettingsDouble & settings )
+    : topology_( topology )
+    , points_( points )
     , settings_( settings )
     , maxErrorSq_( sqr( settings.maxError ) )
 {
@@ -683,7 +683,7 @@ auto MeshDecimatorDouble::collapse_( EdgeId edgeToCollapse, const Vector3d & col
     return { .v = forceCollapse_( can.e, collapsePos ) };
 }
 
-static void optionalPackMesh( Mesh & mesh, const DecimateSettingsDouble & settings )
+static void optionalPackMesh( MeshTopology & topology, VertCoordsD & points, const DecimateSettingsDouble & settings )
 {
     if ( !settings.packMesh )
         return;
@@ -692,13 +692,29 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettingsDouble & settin
     FaceMap fmap;
     VertMap vmap;
     WholeEdgeMap emap;
-    mesh.pack(
-        settings.region ? &fmap : nullptr,
-        settings.vertForms ? &vmap : nullptr,
-        settings.notFlippable ? &emap : nullptr );
+
+    {
+        MeshTopology packedTopology;
+        VertCoordsD packedPoints;
+        packedPoints.reserve( topology.numValidVerts() );
+        packedTopology.vertReserve( topology.numValidVerts() );
+        packedTopology.faceReserve( topology.numValidFaces() );
+        packedTopology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
+
+        packedTopology.addPart( topology, settings.region ? &fmap : nullptr, &vmap, settings.notFlippable ? &emap : nullptr );
+
+        for ( VertId fromv{0}; fromv < vmap.size(); ++fromv )
+        {
+            VertId v = vmap[fromv];
+            if ( v.valid() )
+                packedPoints[v] = points[fromv];
+        }
+        topology = std::move( packedTopology );
+        points = std::move( packedPoints );
+    }
 
     if ( settings.region )
-        *settings.region = settings.region->getMapping( fmap, mesh.topology.faceSize() );
+        *settings.region = settings.region->getMapping( fmap, topology.faceSize() );
 
     if ( settings.vertForms )
     {
@@ -707,17 +723,16 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettingsDouble & settin
             if ( auto newV = vmap[oldV] )
                 if ( newV < oldV )
                     vertForms[newV] = vertForms[oldV];
-        vertForms.resize( mesh.topology.vertSize() );
+        vertForms.resize( topology.vertSize() );
     }
 
     if ( settings.notFlippable )
-        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, topology.undirectedEdgeSize() );
 }
 
-DecimateResult MeshDecimatorDouble::run( Mesh & mesh )
+DecimateResult MeshDecimatorDouble::run()
 {
     MR_TIMER
-    assert( &topology_ == &mesh.topology );
 
     if ( settings_.bdVerts )
         pBdVerts_ = settings_.bdVerts;
@@ -819,18 +834,33 @@ DecimateResult MeshDecimatorDouble::run( Mesh & mesh )
         }
     }
 
-    // write points back in mesh
-    BitSetParallelFor( topology_.getValidVerts(), [&]( VertId v )
-    {
-        mesh.points[v] = Vector3f( points_[v] );
-    } );
-
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    optionalPackMesh( mesh, settings_ );
+    optionalPackMesh( topology_, points_, settings_ );
     res_.cancelled = false;
     return res_;
+}
+
+static void pointsFromMesh( VertCoordsD & pointsDouble, const Mesh & mesh )
+{
+    MR_TIMER
+    pointsDouble.resizeNoInit( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        pointsDouble[v] = Vector3d( mesh.points[v] );
+    } );
+}
+
+static void pointsToMesh( const VertCoordsD & pointsDouble, Mesh & mesh )
+{
+    MR_TIMER
+    mesh.points.resizeNoInit( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v] = Vector3f( pointsDouble[v] );
+    } );
+    mesh.invalidateCaches();
 }
 
 static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettingsDouble & settings )
@@ -842,9 +872,12 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettingsDou
         res.cancelled = false;
         return res;
     }
-    MR_WRITER( mesh );
-    MeshDecimatorDouble md( mesh, settings );
-    return md.run( mesh );
+    VertCoordsD pointsDouble;
+    pointsFromMesh( pointsDouble, mesh );
+    MeshDecimatorDouble md( mesh.topology, pointsDouble, settings );
+    auto res = md.run();
+    pointsToMesh( pointsDouble, mesh );
+    return res;
 }
 
 DecimateResult decimateMeshDouble( Mesh & mesh, const DecimateSettingsDouble & settings0 )

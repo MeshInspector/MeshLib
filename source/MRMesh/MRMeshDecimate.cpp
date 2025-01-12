@@ -851,6 +851,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     MR_TIMER
     assert( settings.subdivideParts > 1 );
     const auto sz = settings.subdivideParts;
+    const auto numIniVerts = mesh.topology.numValidVerts();
     assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
@@ -872,6 +873,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
         /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
+
+        /// vertices inner for this part, which can be deleted during part decimation;
+        /// filled only if limitedDeletion
+        VertBitSet innerVerts;
 
         DecimateResult decimRes;
     };
@@ -908,6 +913,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
         return res;
 
+    const bool limitedDeletion =
+        settings.maxDeletedVertices < INT_MAX ||
+        settings.maxDeletedFaces < INT_MAX;
+
     // limit each part to region, find boundary vertices
     ParallelFor( parts, [&]( size_t i )
     {
@@ -927,9 +936,20 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             /// all boundary vertices of subdivision faces, including hole boundaries
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
+        if ( limitedDeletion )
+            parts[i].innerVerts = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
+
+    /// these vertices can be deleted only after parallel parts processing
+    VertBitSet seqVerts;
+    if ( limitedDeletion )
+    {
+        seqVerts = mesh.topology.getValidVerts();
+        for ( int i = 0; i < parts.size(); ++i )
+            seqVerts -= parts[i].innerVerts;
+    }
 
     mesh.topology.preferEdges( stableEdges );
     if ( settings.progressCallback && !settings.progressCallback( 0.16f ) )
@@ -968,8 +988,14 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 break;
 
             DecimateSettings subSeqSettings = settings;
-            subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
-            subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+            if ( limitedDeletion )
+            {
+                /// give quota of deletions proportional to the number of inner vertices in the part
+                const auto numPartInnerVerts = parts[i].innerVerts.count();
+                const auto partFraction = float( numPartInnerVerts ) / numIniVerts;
+                subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
+                subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
+            }
             if ( settings.minFacesInPart > 0 )
             {
                 int startFaces = (int)parts[i].region.count();

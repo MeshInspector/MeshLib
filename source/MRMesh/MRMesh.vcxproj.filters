@@ -1251,6 +1251,9 @@
     <ClInclude Include="MRDistanceToMeshOptions.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRRadiusCompensation.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2056,6 +2059,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshTopologyDiff.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRadiusCompensation.cpp">
+      <Filter>Source Files\Gcode</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

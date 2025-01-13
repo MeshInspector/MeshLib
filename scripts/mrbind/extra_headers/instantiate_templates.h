@@ -95,8 +95,8 @@ OBJTYPE(ObjectVoxels)
 // For generic types. `...` is a type that needs to be instantiated.
 #define FORCE_REGISTER_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
 // Specifically for parameter types. `...` is a type that needs to be instantiated.
-// This is needed for some times, for which using them as parameters automatically adjusts them to different types. E.g. for `T *`,
-//   the parameters become `mrmeshpy.output_T` classes. Since this happens only in parameters, pointers
+// This is needed for some types, for which using them as parameters automatically adjusts them to different types. E.g. for pointers to scalars `T *`,
+//   the parameters become `mrmeshpy.output_T` classes. Since this happens only in parameters, scalar pointers must be registered using this macro.
 #define FORCE_REGISTER_PARAM_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) void INST_CAT(_mrbind_inst_,__LINE__)(__VA_ARGS__)
 // Specifically for return types. `...` is a type that needs to be instantiated.
 // This is similar to `FORCE_REGISTER_PARAM_TYPE`. Some types get adjusted only when used as return types.

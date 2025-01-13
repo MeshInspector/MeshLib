@@ -221,16 +221,6 @@ jobs:
       - name: Install all Python versions
         run: scripts/mrbind-pybind11/install_pythons_windows.bat
 
-      - name: Setup python
-        working-directory: C:\vcpkg\installed\x64-windows-meshlib
-        shell: cmd
-        run: |
-          for /f %%x in (scripts\mrbind-pybind11\python_versions.txt) do (
-            py -%%x -m pip install --upgrade pip
-            py -%%x -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
-            py -%%x -m pip install pytest
-          )
-
       - name: Restore CUDA Cache
         uses: actions/cache@v4
         id: cuda-cache

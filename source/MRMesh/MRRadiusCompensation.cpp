@@ -4,26 +4,46 @@
 #include "MRParallelFor.h"
 #include "MRMesh.h"
 #include "MRMakeSphereMesh.h"
+#include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
+#include "MRPositionVertsSmoothly.h"
+#include "MRBitSetParallelFor.h"
+#include "MR2to3.h"
+#include "MRExpandShrink.h"
+#include "MRMeshRelax.h"
+#include "MRMeshDelone.h"
 
 namespace MR
 {
 
-Expected<MR::Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusParams& params )
+Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )
 {
+    const auto& faceRegion = mesh.topology.getFaceIds( params.region );
+    VertBitSet vertRegion = getIncidentVerts( mesh.topology, faceRegion );
+
+    if ( MeshComponents::hasFullySelectedComponent( mesh, vertRegion - mesh.topology.findBoundaryVerts( &vertRegion ) ) )
+        return unexpected( "MeshPart should not contain closed components" );
+
+    MeshPart mp = MeshPart( mesh, params.region );
+
     MeshToDistanceMapParams dmParams;
     if ( params.pixelSize > 0 )
-        dmParams = MeshToDistanceMapParams( params.direction, Vector2f::diagonal( params.pixelSize ), mesh, true );
+        dmParams = MeshToDistanceMapParams( params.direction, Vector2f::diagonal( params.pixelSize ), mp, true );
     else
-        dmParams = MeshToDistanceMapParams( params.direction, Vector2i::diagonal( 250 ), mesh, true );
+        dmParams = MeshToDistanceMapParams( params.direction, Vector2i::diagonal( 200 ), mp, true );
 
+    if ( !reportProgress( params.callback, 0.1f ) )
+        return unexpectedOperationCanceled();
+    
     DistanceMapToWorld wParams = DistanceMapToWorld( dmParams );
 
-    auto dm = computeDistanceMap( mesh, dmParams );
+    auto dm = computeDistanceMap( mp, dmParams, subprogress( params.callback, 0.1f, 0.2f ) );
+    if ( dm.size() == 0 )
+        return unexpectedOperationCanceled();
 
     Vector2f realPixelSize;
     realPixelSize.x = dmParams.xRange.length() / dmParams.resolution.x;
     realPixelSize.y = dmParams.yRange.length() / dmParams.resolution.y;
-
 
     Vector2i pixelsInDiameter;
     pixelsInDiameter.x = int( std::ceil( 2 * params.toolRadius / realPixelSize.x ) ) + 1;
@@ -41,7 +61,6 @@ Expected<MR::Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusPar
         Vector2i( -1,0 ),
         Vector2i( -1,1 )
     };
-
 
     auto getToolSphereCenter = [&] ( int x0, int y0 )->std::optional<Vector3f>
     {
@@ -84,7 +103,7 @@ Expected<MR::Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusPar
     };
 
     std::vector<Vector3f> dmToolCenters( dm.size() );
-    ParallelFor( size_t( 0 ), dm.size(), [&] ( size_t i )
+    bool keepGoing = ParallelFor( size_t( 0 ), dm.size(), [&] ( size_t i )
     {
         auto pos = dm.toPos( i );
         auto toolPos = getToolSphereCenter( pos.x, pos.y );
@@ -92,7 +111,10 @@ Expected<MR::Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusPar
             dmToolCenters[i] = Vector3f::diagonal( FLT_MAX );
         else
             dmToolCenters[i] = *toolPos;
-    } );
+    }, subprogress( params.callback, 0.2f, 0.5f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
 
     const auto radiusSq = sqr( params.toolRadius );
     const auto diameterSq = 4 * radiusSq;
@@ -151,13 +173,66 @@ Expected<MR::Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusPar
         newDm.set( x0, y0, maxVal );
     };
 
-    ParallelFor( size_t( 0 ), dm.size(), [&] ( size_t i )
+    keepGoing = ParallelFor( size_t( 0 ), dm.size(), [&] ( size_t i )
     {
         auto pos = dm.toPos( i );
         compensate( pos.x, pos.y );
-    } );
+    }, subprogress( params.callback, 0.5f, 0.8f ) );
 
-    return distanceMapToMesh( newDm, wParams.xf() );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    MR_WRITER( mesh );
+
+    auto invXf = wParams.xf().inverse();
+    VertBitSet bounds = vertRegion - getInnerVerts( mesh.topology, faceRegion );
+    Contour3f backupBounds( bounds.count() );
+    int i = 0;
+    for ( auto v : vertRegion )
+    {
+        if ( bounds.test( v ) )
+            backupBounds[i++] = mesh.points[v];
+        mesh.points[v] = to3dim( to2dim( invXf( mesh.points[v] ) ) );
+    }
+
+    vertRegion -= bounds;
+    MeshEqualizeTriAreasParams etParams;
+    etParams.region = &vertRegion;
+    etParams.iterations = std::max( int( faceRegion.count() ) / 10, 50 ); // some weird estimation
+    keepGoing = equalizeTriAreas( mesh, etParams, subprogress( params.callback, 0.8f, 0.9f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    DeloneSettings dParams;
+    dParams.region = &faceRegion;
+    dParams.maxAngleChange = PI_F / 6;
+    makeDeloneEdgeFlips( mesh, dParams, etParams.iterations * 20 );
+
+    i = 0;
+    for ( auto v : bounds )
+        mesh.points[v] = backupBounds[i++];
+    
+    if ( !reportProgress( params.callback, 0.85f ) )
+        return unexpectedOperationCanceled();
+    
+    keepGoing = BitSetParallelFor( vertRegion, [&] ( VertId v )
+    {
+        auto pos = to2dim( mesh.points[v] );
+        auto value = newDm.getInterpolated( pos.x, pos.y );
+        if ( !value )
+            return;
+        mesh.points[v] = wParams.toWorld( pos.x, pos.y, *value );
+        vertRegion.reset( v );
+    }, subprogress( params.callback, 0.9f, 1.0f ) );
+    
+    
+    if ( vertRegion.any() )
+        positionVertsSmoothlySharpBd( mesh, vertRegion );
+    
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    return {};
 }
 
 }

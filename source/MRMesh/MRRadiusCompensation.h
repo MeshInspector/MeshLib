@@ -19,11 +19,14 @@ struct CompensateRadiusParams
     /// negative value here means auto detect pixel size
     float pixelSize{ -1.0f };
 
+    /// region of the mesh that will be compensated
+    /// it should not contain closed components
+    const FaceBitSet* region{ nullptr };
+
     ProgressCallback callback;
 };
 
-/// compensate spherical milling tool radius in given mesh making it possible to mill it
-/// returns new mesh with compensated radius and no undercuts in given direction
-[[nodiscard]] MRMESH_API Expected<Mesh> compensateRadius( const Mesh& mesh, const CompensateRadiusParams& params );
+/// compensate spherical milling tool radius in given mesh region making it possible to mill it
+[[nodiscard]] MRMESH_API Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params );
 
 }

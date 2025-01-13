@@ -25,7 +25,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(MESHLIB_PYTHON_SUPPORT "Python support" ON)
-option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library and application" ON)
+option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library" ON)
+option(MESHLIB_BUILD_MESHVIEWER "Build MeshViewer application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MRMESH_PY_LEGACY "Build legacy Python bindings for MRMesh" OFF)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
@@ -211,7 +212,10 @@ IF(MESHLIB_BUILD_MRVIEWER)
 
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+
+  IF(MESHLIB_BUILD_MESHVIEWER)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+  ENDIF()
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)

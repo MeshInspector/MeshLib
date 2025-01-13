@@ -674,19 +674,17 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     return { .v = forceCollapse_( can.e, collapsePos ) };
 }
 
-static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
+static void packMesh( Mesh & mesh, const DecimateSettings & settings,
+    FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr )
 {
-    if ( !settings.packMesh )
-        return;
-
     MR_TIMER
     FaceMap fmap;
+    FaceMap *pFmap = settings.region ? &fmap : outFmap;
     VertMap vmap;
+    VertMap *pVmap = settings.vertForms ? &vmap : outVmap;
     WholeEdgeMap emap;
-    mesh.pack(
-        settings.region ? &fmap : nullptr,
-        settings.vertForms ? &vmap : nullptr,
-        settings.notFlippable ? &emap : nullptr );
+    WholeEdgeMap *pEmap = settings.notFlippable ? &emap : outEmap;
+    mesh.pack( pFmap, pVmap, pEmap );
 
     if ( settings.region )
         *settings.region = settings.region->getMapping( fmap, mesh.topology.faceSize() );
@@ -703,6 +701,13 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
 
     if ( settings.notFlippable )
         *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+
+    if ( outFmap && outFmap != pFmap )
+        *outFmap = std::move( *pFmap );
+    if ( outVmap && outVmap != pVmap )
+        *outVmap = std::move( *pVmap );
+    if ( outEmap && outEmap != pEmap )
+        *outEmap = std::move( *pEmap );
 }
 
 DecimateResult MeshDecimator::run()
@@ -812,7 +817,8 @@ DecimateResult MeshDecimator::run()
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    optionalPackMesh( mesh_, settings_ );
+    if ( settings_.packMesh )
+        packMesh( mesh_, settings_ );
     res_.cancelled = false;
     return res_;
 }
@@ -1067,7 +1073,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     }
     else
     {
-        optionalPackMesh( mesh, seqSettings );
+        if ( seqSettings.packMesh )
+            packMesh( mesh, seqSettings );
         res.cancelled = false;
     }
 

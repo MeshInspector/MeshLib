@@ -69,6 +69,7 @@ private:
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
     void flipEdge_( UndirectedEdgeId ue );
+    void intermediatePack_();
 
     enum class CollapseStatus
     {
@@ -699,8 +700,30 @@ static void packMesh( Mesh & mesh, const DecimateSettings & settings,
         vertForms.resize( mesh.topology.vertSize() );
     }
 
+    auto packedUndirectedEdgeId = [&emap]( UndirectedEdgeId unpackedId )
+    {
+        return emap[unpackedId].undirected();
+    };
+
     if ( settings.notFlippable )
-        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+        *settings.notFlippable = settings.notFlippable->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.edgesToCollapse )
+        *settings.edgesToCollapse = settings.edgesToCollapse->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.twinMap )
+    {
+        UndirectedEdgeHashMap packedTwinMap;
+        packedTwinMap.reserve( settings.twinMap->size() );
+
+        for ( const auto& [key, value] : *settings.twinMap )
+            packedTwinMap[packedUndirectedEdgeId( key )] = packedUndirectedEdgeId( value );
+
+        *settings.twinMap = std::move( packedTwinMap );
+    }
+
+    if ( settings.bdVerts )
+        *settings.bdVerts = settings.bdVerts->getMapping( vmap, mesh.topology.vertSize() );
 
     if ( outFmap && outFmap != pFmap )
         *outFmap = std::move( *pFmap );
@@ -708,6 +731,32 @@ static void packMesh( Mesh & mesh, const DecimateSettings & settings,
         *outVmap = std::move( *pVmap );
     if ( outEmap && outEmap != pEmap )
         *outEmap = std::move( *pEmap );
+}
+
+void MeshDecimator::intermediatePack_()
+{
+    MR_TIMER
+    VertMap vmap;
+    WholeEdgeMap emap;
+    packMesh( mesh_, settings_, nullptr, &vmap, &emap );
+
+    if ( !settings_.vertForms )
+    {
+        assert( pVertForms_ == &myVertForms_ );
+        for ( VertId oldV{ 0 }; oldV < vmap.size(); ++oldV )
+            if ( auto newV = vmap[oldV] )
+                if ( newV < oldV )
+                    myVertForms_[newV] = myVertForms_[oldV];
+        myVertForms_.resize( mesh_.topology.vertSize() );
+    }
+
+    if ( !settings_.bdVerts )
+    {
+        assert( pBdVerts_ == &myBdVerts_ );
+        myBdVerts_ = myBdVerts_.getMapping( vmap, mesh_.topology.vertSize() );
+    }
+
+    regionEdges_ = regionEdges_.getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
 }
 
 DecimateResult MeshDecimator::run()

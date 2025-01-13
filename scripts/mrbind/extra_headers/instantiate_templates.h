@@ -87,15 +87,20 @@ OBJTYPE(ObjectDistanceMap)
 OBJTYPE(ObjectVoxels)
 #undef OBJTYPE
 
-// Those are needed for mrviewerpy:
 
+// For generic types.
 #define FORCE_INSTANTIATE_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
+// Specifically for parameter types.
+#define FORCE_INSTANTIATE_PARAM_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) void INST_CAT(_instantiate_helper, __COUNTER__)(__VA_ARGS__)
+// Those are needed for mrviewerpy:
 FORCE_INSTANTIATE_TYPE( std::vector<MR::DistanceMap> );
 FORCE_INSTANTIATE_TYPE( std::vector<MR::Mesh> );
 FORCE_INSTANTIATE_TYPE( std::vector<std::shared_ptr<MR::Object>> );
 FORCE_INSTANTIATE_TYPE( std::vector<MR::PointCloud> );
 FORCE_INSTANTIATE_TYPE( std::vector<MR::Polyline3> );
+// ---
 #undef FORCE_INSTANTIATE_TYPE
+#undef FORCE_INSTANTIATE_PARAM_TYPE
 
 }
 

@@ -12,12 +12,14 @@
 #include "MRExpandShrink.h"
 #include "MRMeshRelax.h"
 #include "MRMeshDelone.h"
+#include "MRMeshDecimate.h"
 
 namespace MR
 {
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )
 {
+    auto sb0 = subprogress( params.callback, 0.0f, 0.7f );
     const auto& faceRegion = mesh.topology.getFaceIds( params.region );
     VertBitSet vertRegion = getIncidentVerts( mesh.topology, faceRegion );
 
@@ -32,12 +34,12 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
     else
         dmParams = MeshToDistanceMapParams( params.direction, Vector2i::diagonal( 200 ), mp, true );
 
-    if ( !reportProgress( params.callback, 0.1f ) )
+    if ( !reportProgress( sb0, 0.1f ) )
         return unexpectedOperationCanceled();
     
     DistanceMapToWorld wParams = DistanceMapToWorld( dmParams );
 
-    auto dm = computeDistanceMap( mp, dmParams, subprogress( params.callback, 0.1f, 0.2f ) );
+    auto dm = computeDistanceMap( mp, dmParams, subprogress( sb0, 0.1f, 0.2f ) );
     if ( dm.size() == 0 )
         return unexpectedOperationCanceled();
 
@@ -111,7 +113,7 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
             dmToolCenters[i] = Vector3f::diagonal( FLT_MAX );
         else
             dmToolCenters[i] = *toolPos;
-    }, subprogress( params.callback, 0.2f, 0.5f ) );
+    }, subprogress( sb0, 0.2f, 0.5f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
@@ -177,7 +179,7 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
     {
         auto pos = dm.toPos( i );
         compensate( pos.x, pos.y );
-    }, subprogress( params.callback, 0.5f, 0.8f ) );
+    }, subprogress( sb0, 0.5f, 0.8f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
@@ -195,26 +197,43 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
         mesh.points[v] = to3dim( to2dim( invXf( mesh.points[v] ) ) );
     }
 
-    vertRegion -= bounds;
-    MeshEqualizeTriAreasParams etParams;
-    etParams.region = &vertRegion;
-    etParams.iterations = std::max( int( faceRegion.count() ) / 10, 50 ); // some weird estimation
-    keepGoing = equalizeTriAreas( mesh, etParams, subprogress( params.callback, 0.8f, 0.9f ) );
-    if ( !keepGoing )
-        return unexpectedOperationCanceled();
+    {
+        // only fix flipped areas
+        auto sumDirArea = Vector3f( mesh.dirArea( faceRegion ).normalized() ); // we only care about direction
 
-    DeloneSettings dParams;
-    dParams.region = &faceRegion;
-    dParams.maxAngleChange = PI_F / 6;
-    makeDeloneEdgeFlips( mesh, dParams, etParams.iterations * 20 );
+        auto flippedFaces = faceRegion;
+        BitSetParallelFor( flippedFaces, [&] ( FaceId f )
+        {
+            auto dir = mesh.dirDblArea( f ).normalized(); // we only care about direction
+            if ( dot( dir, sumDirArea ) > 0.0f )
+                flippedFaces.reset( f );
+        } );
+        expand( mesh.topology, flippedFaces, 4 );
+        flippedFaces &= faceRegion;
+
+        auto equalizingVertRegion = getInnerVerts( mesh.topology, flippedFaces );
+        assert( ( equalizingVertRegion& bounds ).none() );
+        MeshEqualizeTriAreasParams etParams;
+        etParams.region = &equalizingVertRegion;
+        etParams.iterations = std::max( int( flippedFaces.count() ), 50 ); // some weird estimation
+        keepGoing = equalizeTriAreas( mesh, etParams, subprogress( sb0, 0.8f, 0.9f ) );
+        if ( !keepGoing )
+            return unexpectedOperationCanceled();
+
+        DeloneSettings dParams;
+        dParams.region = &flippedFaces;
+        dParams.maxAngleChange = PI_F / 6;
+        makeDeloneEdgeFlips( mesh, dParams, etParams.iterations * 20 );
+    }
 
     i = 0;
     for ( auto v : bounds )
         mesh.points[v] = backupBounds[i++];
     
-    if ( !reportProgress( params.callback, 0.85f ) )
+    if ( !reportProgress( sb0, 0.85f ) )
         return unexpectedOperationCanceled();
     
+    vertRegion -= bounds;
     keepGoing = BitSetParallelFor( vertRegion, [&] ( VertId v )
     {
         auto pos = to2dim( mesh.points[v] );
@@ -223,13 +242,25 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
             return;
         mesh.points[v] = wParams.toWorld( pos.x, pos.y, *value );
         vertRegion.reset( v );
-    }, subprogress( params.callback, 0.9f, 1.0f ) );
+    }, subprogress( sb0, 0.9f, 1.0f ) );
     
     
     if ( vertRegion.any() )
         positionVertsSmoothlySharpBd( mesh, vertRegion );
     
     if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+
+    auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, faceRegion );
+    RemeshSettings rParams;
+    rParams.finalRelaxIters = 2;
+    rParams.targetEdgeLen = mesh.averageEdgeLength();
+    rParams.region = params.region;
+    rParams.notFlippable = &edgeBounds;
+    rParams.progressCallback = subprogress( params.callback, 0.7f, 1.0f );
+
+    if ( !remesh( mesh, rParams ) )
         return unexpectedOperationCanceled();
 
     return {};

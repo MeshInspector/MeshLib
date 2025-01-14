@@ -92,7 +92,9 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
                 hasPrev = true;
                 continue;
             }
-            sumNorm -= cross( posi - pos0, prevPos - pos0 ).normalized();
+            auto veci = posi - pos0;
+            auto vecPrev = prevPos - pos0;
+            sumNorm -= ( MR::angle( veci, vecPrev ) * ( cross( veci, vecPrev ).normalized() ) );
             prevPos = posi;
         }
         if ( sumNorm == Vector3f() )
@@ -201,8 +203,7 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
         auto flippedFaces = faceRegion;
         BitSetParallelFor( flippedFaces, [&] ( FaceId f )
         {
-            auto dir = mesh.dirDblArea( f ).normalized(); // we only care about direction
-            if ( dot( dir, sumDirArea ) > 0.0f )
+            if ( dot( mesh.normal( f ), sumDirArea ) > 0.0f )
                 flippedFaces.reset( f );
         } );
         expand( mesh.topology, flippedFaces, 4 );

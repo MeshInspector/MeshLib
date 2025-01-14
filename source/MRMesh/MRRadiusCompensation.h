@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
+#include "MRVector2.h"
 #include "MRExpected.h"
 
 namespace MR
@@ -15,9 +16,8 @@ struct CompensateRadiusParams
     ///  radius of spherical tool
     float toolRadius{ 0.0f };
 
-    /// size of pixel in distance map that is used for compensation
-    /// negative value here means auto detect pixel size
-    float pixelSize{ -1.0f };
+    /// resolution of distance map that is used for compensation
+    Vector2i distanceMapResolution = Vector2i( 200, 200 );
 
     /// region of the mesh that will be compensated
     /// it should not contain closed components

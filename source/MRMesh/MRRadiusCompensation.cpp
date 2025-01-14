@@ -29,10 +29,7 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
     MeshPart mp = MeshPart( mesh, params.region );
 
     MeshToDistanceMapParams dmParams;
-    if ( params.pixelSize > 0 )
-        dmParams = MeshToDistanceMapParams( params.direction, Vector2f::diagonal( params.pixelSize ), mp, true );
-    else
-        dmParams = MeshToDistanceMapParams( params.direction, Vector2i::diagonal( 200 ), mp, true );
+    dmParams = MeshToDistanceMapParams( params.direction, params.distanceMapResolution, mp, true );
 
     if ( !reportProgress( sb0, 0.1f ) )
         return unexpectedOperationCanceled();

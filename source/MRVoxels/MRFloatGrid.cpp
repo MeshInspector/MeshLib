@@ -8,6 +8,7 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBox.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -43,16 +44,24 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     ProgressInterrupter interrupter( dummyProgressCb );
     // openvdb::util::NullInterrupter template argument to avoid tbb inconsistency
 
+    // the following piece of code is taken from `openvdb::resampleToMatch` and slightly rewritten to take into account
+    // the specific properties of the usage of OpenVdb in our software
     bool failed = true;
     if ( dest->getGridClass() == openvdb::GRID_LEVEL_SET )
     {
         try {
+            // unlike `openvdb::resampleToMatch`, the size of the voxel for the grid is always 1, the true size of the voxel is stored
+            // in volume wrapper
             dest = openvdb::tools::doLevelSetRebuild( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
             failed = false;
         }
-        catch( ... )
-        {}
+        catch( std::exception& e )
+        {
+            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool" )
+        }
     }
+    // in case of a volume created in "unsigned mode", which is not supported by OpenVdb as level set but still used as such, the result is empty
+    // we detect this case and do resampling
     if ( failed || dest->evalActiveVoxelDim().asVec3I().product() == 0 )
     {
         openvdb::tools::doResampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );

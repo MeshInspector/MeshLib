@@ -929,9 +929,9 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
 
-        /// vertices inner for this part, which can be deleted during part decimation;
+        /// these are inner vertices of this part that can be easily deleted during part decimation;
         /// filled only if limitedDeletion
-        VertBitSet innerVerts;
+        VertBitSet removableVerts;
 
         DecimateResult decimRes;
     };
@@ -992,7 +992,13 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
         if ( limitedDeletion )
-            parts[i].innerVerts = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
+        {
+            // all inner vertices of the part
+            auto innerVerts0 = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
+            // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
+            auto innerFaces = getInnerFaces( mesh.topology, innerVerts0 );
+            parts[i].removableVerts = getInnerVerts( mesh.topology, innerFaces );
+        }
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
@@ -1003,7 +1009,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     {
         seqVerts = mesh.topology.getValidVerts();
         for ( int i = 0; i < parts.size(); ++i )
-            seqVerts -= parts[i].innerVerts;
+            seqVerts -= parts[i].removableVerts;
     }
 
     mesh.topology.preferEdges( stableEdges );
@@ -1045,9 +1051,9 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             DecimateSettings subSeqSettings = settings;
             if ( limitedDeletion )
             {
-                /// give quota of deletions proportional to the number of inner vertices in the part
-                const auto numPartInnerVerts = parts[i].innerVerts.count();
-                const auto partFraction = float( numPartInnerVerts ) / numIniVerts;
+                /// give quota of deletions proportional to the number of removable vertices in the part
+                const auto numPartRemovableVerts = parts[i].removableVerts.count();
+                const auto partFraction = float( numPartRemovableVerts ) / numIniVerts;
                 subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
                 subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
             }

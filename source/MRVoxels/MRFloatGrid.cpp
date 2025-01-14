@@ -47,6 +47,9 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     // the following piece of code is taken from `openvdb::resampleToMatch` and slightly rewritten to take into account
     // the specific properties of the usage of OpenVdb in our software
     bool failed = true;
+
+    // the level set is processed differently due to the potential narrowness of the band near ISO value. It could be just a 1 voxel, in which case
+    // the usual resampling will introduce artifacts and change the topology of ISO surface
     if ( dest->getGridClass() == openvdb::GRID_LEVEL_SET )
     {
         try {
@@ -57,7 +60,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         }
         catch( std::exception& e )
         {
-            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool" )
+            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool" );
         }
     }
     // in case of a volume created in "unsigned mode", which is not supported by OpenVdb as level set but still used as such, the result is empty

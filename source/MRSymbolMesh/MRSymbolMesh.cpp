@@ -282,20 +282,13 @@ Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
 void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
 {
     MR_TIMER
-
-    if ( zOffset <= 0.0f )
-    {
-        spdlog::warn( "addBaseToPlanarMesh zOffset should be > 0, and it is {}", zOffset );
-        zOffset = -zOffset;
-    }
-
     mesh.pack(); // for some hard fonts with duplicated points (if triangulated contours have same points, duplicates are not used)
     // it's important to have all vertices valid:
     // first half is upper points of text and second half is lower points of text
 
     Mesh mesh2 = mesh;
     for ( auto& p : mesh2.points )
-        p.z -= zOffset;
+        p.z += zOffset;
 
     mesh2.topology.flipOrientation();
 
@@ -318,7 +311,7 @@ Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
     {
         return unexpected( std::move( mesh.error() ) );
     }
-    addBaseToPlanarMesh( mesh.value() );
+    addBaseToPlanarMesh( mesh.value(), -1.0f );
     return mesh.value();
 }
 

@@ -53,9 +53,9 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         catch( ... )
         {}
     }
-    if ( failed )
+    if ( failed || dest->evalActiveVoxelDim().asVec3I().product() == 0 )
     {
-        openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
+        openvdb::tools::doResampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
     }
 
     if ( interrupter.getWasInterrupted() )

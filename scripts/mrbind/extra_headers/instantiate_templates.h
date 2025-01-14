@@ -87,15 +87,32 @@ OBJTYPE(ObjectDistanceMap)
 OBJTYPE(ObjectVoxels)
 #undef OBJTYPE
 
-// Those are needed for mrviewerpy:
 
-#define FORCE_INSTANTIATE_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
-FORCE_INSTANTIATE_TYPE( std::vector<MR::DistanceMap> );
-FORCE_INSTANTIATE_TYPE( std::vector<MR::Mesh> );
-FORCE_INSTANTIATE_TYPE( std::vector<std::shared_ptr<MR::Object>> );
-FORCE_INSTANTIATE_TYPE( std::vector<MR::PointCloud> );
-FORCE_INSTANTIATE_TYPE( std::vector<MR::Polyline3> );
-#undef FORCE_INSTANTIATE_TYPE
+// Here you can force type registration for certain standard templates and similar things.
+// The lack of automatic registration in rare cases is not a defect, we do this intentionally to speed up compilation.
+// See `MB_PB11_NO_REGISTER_TYPE_DEPS` for more details.
+
+// For generic types. `...` is a type that needs to be instantiated.
+#define FORCE_REGISTER_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
+// Specifically for parameter types. `...` is a type that needs to be instantiated.
+// This is needed for some types, for which using them as parameters automatically adjusts them to different types. E.g. for pointers to scalars `T *`,
+//   the parameters become `mrmeshpy.output_T` classes. Since this happens only in parameters, scalar pointers must be registered using this macro.
+#define FORCE_REGISTER_PARAM_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) void INST_CAT(_mrbind_inst_,__LINE__)(__VA_ARGS__)
+// Specifically for return types. `...` is a type that needs to be instantiated.
+// This is similar to `FORCE_REGISTER_PARAM_TYPE`. Some types get adjusted only when used as return types.
+#define FORCE_REGISTER_RETURN_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) __VA_ARGS__ INST_CAT(_mrbind_inst_,__LINE__)()
+
+// Those are needed for mrviewerpy:
+FORCE_REGISTER_TYPE( std::vector<MR::DistanceMap> );
+FORCE_REGISTER_TYPE( std::vector<MR::Mesh> );
+FORCE_REGISTER_TYPE( std::vector<std::shared_ptr<MR::Object>> );
+FORCE_REGISTER_TYPE( std::vector<MR::PointCloud> );
+FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
+// ---
+
+#undef FORCE_REGISTER_TYPE
+#undef FORCE_REGISTER_PARAM_TYPE
+#undef FORCE_REGISTER_RETURN_TYPE
 
 }
 

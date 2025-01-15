@@ -186,6 +186,9 @@ struct [[nodiscard]] Mesh
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
     [[nodiscard]] MRMESH_API Vector3d holeDirArea( EdgeId e ) const;
 
+    /// computes unit vector that is both orthogonal to given edge and to the normal of its left triangle, the vector is directed inside left triangle
+    [[nodiscard]] MRMESH_API Vector3f leftTangent( EdgeId e ) const;
+
     /// computes triangular face normal from its vertices
     [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
 
@@ -359,6 +362,7 @@ struct [[nodiscard]] Mesh
     /// org(returned-edge) = org(e-before-split),
     /// dest(e) = dest(e-before-split)
     /// \details left and right faces of given edge if valid are also subdivided on two parts each;
+    /// the split edge will keep both face IDs and their degrees, and the new edge will have new face IDs and new faces are triangular;
     /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
     /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
     MRMESH_API EdgeId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );

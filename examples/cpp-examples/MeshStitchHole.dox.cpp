@@ -11,7 +11,7 @@ int main()
 
     // Unite meshes
     MR::Mesh mesh = std::move( meshARes.value() );
-    mesh.addPart( meshBRes.value() );
+    mesh.addMesh( meshBRes.value() );
 
     // Find holes (expect that there are exactly 2 holes)
     std::vector<MR::EdgeId> edges = mesh.topology.findHoleRepresentiveEdges();

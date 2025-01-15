@@ -27,6 +27,9 @@ struct OpenVdbFloatGrid : openvdb::FloatGrid
 MR_BIND_IGNORE inline openvdb::FloatGrid & ovdb( OpenVdbFloatGrid & v ) { return v; }
 MR_BIND_IGNORE inline const openvdb::FloatGrid & ovdb( const OpenVdbFloatGrid & v ) { return v; }
 
+/// prohibit unnecessary conversion
+MR_BIND_IGNORE inline FloatGrid MakeFloatGrid( const FloatGrid & ) = delete;
+
 /// makes MR::FloatGrid shared pointer taking the contents of the input pointer
 MR_BIND_IGNORE inline FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& p )
 {

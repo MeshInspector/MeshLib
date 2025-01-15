@@ -82,60 +82,26 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
 namespace
 {
 
-std::vector<float> projectAllPoints( const Mesh& refMesh, const std::vector<Vector3f>& points, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
+VertScalars projectAllPoints( const Mesh& refMesh, const VertCoords& testPoints, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
 {
-    PointsToMeshProjector projector;
-    projector.updateMeshData( &refMesh );
-    std::vector<MeshProjectionResult> mpRes( points.size() );
-    projector.findProjections( mpRes, points, xf, refXf, upDistLimitSq, loDistLimitSq );
-    std::vector<float> res( points.size(), std::sqrt( upDistLimitSq ) );
-
-    AffineXf3f fullXf;
-    if ( refXf )
-        fullXf = refXf->inverse();
-    if ( xf )
-        fullXf = fullXf * ( *xf );
-
-    ParallelFor( points, [&] ( size_t i )
-    {
-        const auto& mpResV = mpRes[i];
-        auto& resV = res[i];
-
-        resV = mpResV.distSq;
-        if ( mpResV.mtp.e )
-            resV = refMesh.signedDistance( fullXf( points[i] ), mpResV );
-        else
-            resV = std::sqrt( resV );
-    } );
-    return res;
+    return findSignedDistances( refMesh, testPoints, nullptr,
+        {
+            .loDistLimitSq = loDistLimitSq,
+            .upDistLimitSq = upDistLimitSq,
+            .refXf = refXf,
+            .xf = xf
+        } );
 }
 
 VertScalars projectAllMeshVertices( const Mesh& refMesh, const Mesh& mesh, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
 {
-    PointsToMeshProjector projector;
-    projector.updateMeshData( &refMesh );
-    std::vector<MeshProjectionResult> mpRes( mesh.points.vec_.size() );
-    projector.findProjections( mpRes, mesh.points.vec_, xf, refXf, upDistLimitSq, loDistLimitSq );
-    VertScalars res( mesh.topology.lastValidVert() + 1, std::sqrt( upDistLimitSq ) );
-
-    AffineXf3f fullXf;
-    if ( refXf )
-        fullXf = refXf->inverse();
-    if ( xf )
-        fullXf = fullXf * ( *xf );
-
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
-    {
-        const auto& mpResV = mpRes[v.get()];
-        auto& resV = res[v];
-        
-        resV = mpResV.distSq;
-        if ( mpResV.mtp.e )
-            resV = refMesh.signedDistance( fullXf( mesh.points[v] ), mpResV );
-        else
-            resV = std::sqrt( resV );
-    } );
-    return res;
+    return findSignedDistances( refMesh, mesh,
+        {
+            .loDistLimitSq = loDistLimitSq,
+            .upDistLimitSq = upDistLimitSq,
+            .refXf = refXf,
+            .xf = xf
+        } );
 }
 
 }

@@ -714,7 +714,8 @@ static void packMesh( Mesh & mesh, const DecimateSettings & settings,
 
     auto packedUndirectedEdgeId = [&emap]( UndirectedEdgeId unpackedId )
     {
-        return emap[unpackedId].undirected();
+        auto packedEdgeId = emap[unpackedId];
+        return packedEdgeId ? packedEdgeId.undirected() : UndirectedEdgeId();
     };
 
     if ( settings.notFlippable )
@@ -729,7 +730,14 @@ static void packMesh( Mesh & mesh, const DecimateSettings & settings,
         packedTwinMap.reserve( settings.twinMap->size() );
 
         for ( const auto& [key, value] : *settings.twinMap )
-            packedTwinMap[packedUndirectedEdgeId( key )] = packedUndirectedEdgeId( value );
+        {
+            auto packedKey = packedUndirectedEdgeId( key );
+            auto packedValue = packedUndirectedEdgeId( value );
+            if ( packedKey && packedValue )
+                packedTwinMap[packedKey] = packedValue;
+            else
+                assert( !packedKey && !packedValue );
+        }
 
         *settings.twinMap = std::move( packedTwinMap );
     }
@@ -768,7 +776,13 @@ void MeshDecimator::intermediatePack_()
         myBdVerts_ = myBdVerts_.getMapping( vmap, mesh_.topology.vertSize() );
     }
 
-    regionEdges_ = regionEdges_.getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
+    auto packedUndirectedEdgeId = [&emap]( UndirectedEdgeId unpackedId )
+    {
+        auto packedEdgeId = emap[unpackedId];
+        return packedEdgeId ? packedEdgeId.undirected() : UndirectedEdgeId();
+    };
+
+    regionEdges_ = regionEdges_.getMapping( packedUndirectedEdgeId, mesh_.topology.undirectedEdgeSize() );
 
     // it is faster to recompute queue elements in parallel than sequentially extract and map them from existing queue
     initializeQueue_();

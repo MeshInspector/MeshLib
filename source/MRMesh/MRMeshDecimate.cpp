@@ -777,7 +777,8 @@ void MeshDecimator::intermediatePack_()
                 continue; // this edge was deleted
             const UndirectedEdgeId packedUe = packedE.undirected();
             if ( !presentInQueue_.test_set( packedUe ) )
-                packedElements.push_back( { .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
+                // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104175
+                packedElements.push_back( QueueElement{ .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
         }
 
         assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
@@ -806,7 +807,7 @@ DecimateResult MeshDecimator::run()
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     // intermediate packs shall improve performance of overall decimation
-    int nextPackOnNumFaces = settings_.packMesh && mesh_.topology.numValidFaces() / 2;
+    int nextPackOnNumFaces = settings_.packMesh ? mesh_.topology.numValidFaces() / 2 : 0;
     while ( !queue_.empty() )
     {
         if ( settings_.packMesh && mesh_.topology.numValidFaces() <= nextPackOnNumFaces )

@@ -313,10 +313,6 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86", "arm64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-        exclude: # python 3.8 disabled on x86 macOS since 2024-10-14
-          - platform: "x86"
-            py-version: "3.8"
         include:
           - platform: "x86"
             # On 12.0 x86 `brew` doesn't have binary packages for Clang.
@@ -327,24 +323,6 @@ jobs:
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
             brewpath: /opt/homebrew
-          - py-version: "3.8"
-            py-tag: "cp38"
-            py-cmd: "python3.8"
-          - py-version: "3.9"
-            py-tag: "cp39"
-            py-cmd: "python3.9"
-          - py-version: "3.10"
-            py-tag: "cp310"
-            py-cmd: "python3.10"
-          - py-version: "3.11"
-            py-tag: "cp311"
-            py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-cmd: "python3.12"
-          - py-version: "3.13"
-            py-tag: "cp313"
-            py-cmd: "python3.13"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -353,34 +331,15 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Fix links x86
-        if: ${{ matrix.platform == 'x86' }}
-        run: |
-          find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
-          sudo rm -rf /Library/Frameworks/Python.framework/
-          brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
-
-      - name: Fix links ARM
-        if: ${{ matrix.platform == 'arm64' }}
-        run: |
-          find /opt/homebrew/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
-          rm -rf /Library/Frameworks/Python.framework/
-          brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
 
       - name: Create virtualenv
         run: |
           # Remove from PATH anything with the word `anaconda` in it.
           # Even if Anaconda's Python works, it's probably a good idea to avoid it for consistency (because without this line only one specific Python version gets taken from Anaconda.)
           export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
-          ${{ matrix.py-cmd }} -m venv .venv
+          python3 -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
-
-      - name: Python setup
-        run: |
-          curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
 
       - name: Install thirdparty libs
         run: |
@@ -391,7 +350,6 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: /usr/bin/clang++
@@ -407,18 +365,18 @@ jobs:
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
         run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
+        run: python3 ./../../../scripts/run_python_test_script.py -cmd python3
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
+          python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4

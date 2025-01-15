@@ -203,7 +203,7 @@ jobs:
         shell: cmd
 
       - name: Unit Tests
-        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: py -3.11 scripts\run_unit_test_script.py ${{ matrix.config }}
 
       - name: C Unit Tests
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}

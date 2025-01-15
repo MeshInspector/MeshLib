@@ -1251,6 +1251,9 @@
     <ClInclude Include="MRDistanceToMeshOptions.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeScaleAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
     <ClInclude Include="MRRadiusCompensation.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>

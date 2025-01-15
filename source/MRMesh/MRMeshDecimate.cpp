@@ -762,8 +762,8 @@ void MeshDecimator::intermediatePack_()
         Timer t( "queue" );
 
         const auto c0 = presentInQueue_.count();
-        std::vector<QueueElement> pakedElements;
-        pakedElements.reserve( c0 );
+        std::vector<QueueElement> packedElements;
+        packedElements.reserve( c0 );
 
         presentInQueue_.clear();
         presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
@@ -777,11 +777,11 @@ void MeshDecimator::intermediatePack_()
                 continue; // this edge was deleted
             const UndirectedEdgeId packedUe = packedE.undirected();
             if ( !presentInQueue_.test_set( packedUe ) )
-                pakedElements.push_back( { .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
+                packedElements.push_back( { .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
         }
 
-        assert( pakedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
-        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), pakedElements };
+        assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
+        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), packedElements };
     }
 }
 

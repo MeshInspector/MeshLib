@@ -14,7 +14,7 @@ HOMEBREW_DIR=/opt/homebrew
 
 # ??
 find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
-sudo rm -rf /Library/Frameworks/Python.framework/
+rm -rf /Library/Frameworks/Python.framework/
 
 brew update
 

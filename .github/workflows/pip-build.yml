@@ -332,7 +332,7 @@ jobs:
 
       - name: Python setup
         run: |
-          scripts/mrbind-pybind11/install_pythons_ubuntu.sh
+          scripts/mrbind-pybind11/install_pythons_macos.sh
 
       - name: Create virtualenv
         run: |

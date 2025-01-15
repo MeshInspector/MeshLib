@@ -13,7 +13,7 @@ namespace MR
 class ChangeScaleAction : public HistoryAction
 {
 public:
-    /// Constructor to remember inverted object scale and immediate set new value
+    /// Constructor that performs object scaling, and remembers inverted scale value for undoing
     ChangeScaleAction( const std::string& name, const std::shared_ptr<Object>& obj, float scale ) :
         obj_{ obj },
         name_{ name }

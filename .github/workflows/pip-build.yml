@@ -330,7 +330,9 @@ jobs:
           submodules: true
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Fix links x86
+      - name: Python setup
+        run: |
+          scripts/mrbind-pybind11/install_pythons_ubuntu.sh
 
       - name: Create virtualenv
         run: |

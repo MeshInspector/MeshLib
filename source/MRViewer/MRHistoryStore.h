@@ -22,7 +22,7 @@ public:
 
     /// Adds action in history stack (clears available redo actions)
     /// adds actions to scope block if scope mode is active (do not affect main stack)
-    MRVIEWER_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );
+    MRVIEWER_API virtual void appendAction( std::shared_ptr<HistoryAction> action );
 
     /// Returns current scope ptr
     [[nodiscard]] HistoryActionsVector* getScopeBlockPtr() const { return scopedBlock_; }

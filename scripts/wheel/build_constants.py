@@ -22,13 +22,13 @@ LIB_EXTENSION = {
     'Linux': ".so",
     'Windows': ".pyd",
 }[SYSTEM]
-LIB_DIR_MESHLIB = {
+LIB_DIR = {
     'Darwin': SOURCE_DIR / "build" / "Release" / "bin",
     'Linux': SOURCE_DIR / "build" / "Release" / "bin",
     'Windows': SOURCE_DIR / "source" / "x64" / "Release",
 }[SYSTEM]
-LIB_DIR = {
-    'Darwin': LIB_DIR_MESHLIB / "meshlib",
-    'Linux': LIB_DIR_MESHLIB / "meshlib",
-    'Windows': LIB_DIR_MESHLIB,
+LIB_DIR_MESHLIB = {
+    'Darwin': LIB_DIR / "meshlib",
+    'Linux': LIB_DIR / "meshlib",
+    'Windows': LIB_DIR,
 }[SYSTEM]

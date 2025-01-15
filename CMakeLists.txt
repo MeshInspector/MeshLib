@@ -54,10 +54,6 @@ IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
 ENDIF()
 
-IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
-
 option(MESHLIB_KEEP_CTEST_TARGETS "Keep default CTest targets (Continuous*, Experimental*, Nightly*, etc.)" OFF)
 IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
   set_property(GLOBAL PROPERTY
@@ -160,6 +156,10 @@ ELSE()
   set(MR_RESOURCES_DIR "${MR_ROOT}/Resources")
   set(MR_FONTS_DIR "${MR_ROOT}/Resources/fonts")
   set(MR_CONFIG_DIR "${MR_ROOT}/Resources/cmake")
+ENDIF()
+
+IF(APPLE)
+  include(ConfigureHomebrew)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)

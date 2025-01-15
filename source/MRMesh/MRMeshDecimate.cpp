@@ -757,6 +757,31 @@ void MeshDecimator::intermediatePack_()
     }
 
     regionEdges_ = regionEdges_.getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
+
+    {
+        Timer t( "queue" );
+
+        const auto c0 = presentInQueue_.count();
+        std::vector<QueueElement> pakedElements;
+
+        presentInQueue_.clear();
+        presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+
+        while ( !queue_.empty() )
+        {
+            const auto top = queue_.top();
+            queue_.pop();
+            const EdgeId packedE = emap[top.uedgeId()];
+            if ( !packedE )
+                continue; // this edge was deleted
+            const UndirectedEdgeId packedUe = packedE.undirected();
+            if ( !presentInQueue_.test_set( packedUe ) )
+                pakedElements.push_back( { .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
+        }
+
+        assert( pakedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
+        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), pakedElements };
+    }
 }
 
 DecimateResult MeshDecimator::run()
@@ -779,8 +804,17 @@ DecimateResult MeshDecimator::run()
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
+    // intermediate packs shall improve performance of overall decimation
+    int nextPackOnNumFaces = settings_.packMesh && mesh_.topology.numValidFaces() / 2;
     while ( !queue_.empty() )
     {
+        if ( settings_.packMesh && mesh_.topology.numValidFaces() <= nextPackOnNumFaces )
+        {
+            intermediatePack_();
+            nextPackOnNumFaces = mesh_.topology.numValidFaces() / 2;
+            if ( queue_.empty() )
+                break; // if old queue was filled only with invalid elements
+        }
         const auto topQE = queue_.top();
         const auto ue = topQE.uedgeId();
         assert( presentInQueue_.test( ue ) );

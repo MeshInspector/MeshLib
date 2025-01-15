@@ -18,7 +18,7 @@ HistoryStore::~HistoryStore()
     clear();
 }
 
-void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
+void HistoryStore::appendAction( std::shared_ptr<HistoryAction> action )
 {
     assert( !undoRedoInProgress_ );
     if ( undoRedoInProgress_ )
@@ -27,14 +27,14 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
         return;
     if ( scopedBlock_ )
     {
-        scopedBlock_->push_back( action );
+        scopedBlock_->push_back( std::move( action ) );
         return;
     }
     spdlog::info( "History action append: \"{}\"", action->name() );
     assert( !action->name().empty() );
 
     stack_.resize( firstRedoIndex_ + 1 );
-    stack_[firstRedoIndex_] = action;
+    stack_[firstRedoIndex_] = std::move( action );
     ++firstRedoIndex_;
 
     changedSignal( *this, ChangeType::AppendAction );

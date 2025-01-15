@@ -63,7 +63,8 @@ private:
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
-    bool initializeQueue_();
+    bool initialize_();
+    void initializeQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
@@ -255,7 +256,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float ma
     return resolveMeshDegenerations( mesh, settings );
 }
 
-bool MeshDecimator::initializeQueue_()
+bool MeshDecimator::initialize_()
 {
     MR_TIMER;
 
@@ -306,20 +307,31 @@ bool MeshDecimator::initializeQueue_()
     else if ( settings_.edgesToCollapse )
         regionEdges_ = *settings_.edgesToCollapse;
 
-    EdgeMetricCalc calc( *this );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
-
-    if ( settings_.progressCallback && !settings_.progressCallback( 0.2f ) )
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
-    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize() );
-    for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
         return false;
     return true;
+}
+
+void MeshDecimator::initializeQueue_()
+{
+    MR_TIMER
+
+    // free space occupied by existing queue
+    queue_ = {};
+
+    EdgeMetricCalc calc( *this );
+    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
+
+    presentInQueue_.clear();
+    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    for ( const auto & qe : calc.elements() )
+        presentInQueue_.set( qe.uedgeId() );
+    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -758,32 +770,8 @@ void MeshDecimator::intermediatePack_()
 
     regionEdges_ = regionEdges_.getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
 
-    {
-        Timer t( "queue" );
-
-        const auto c0 = presentInQueue_.count();
-        std::vector<QueueElement> packedElements;
-        packedElements.reserve( c0 );
-
-        presentInQueue_.clear();
-        presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
-
-        while ( !queue_.empty() )
-        {
-            const auto top = queue_.top();
-            queue_.pop();
-            const EdgeId packedE = emap[top.uedgeId()];
-            if ( !packedE )
-                continue; // this edge was deleted
-            const UndirectedEdgeId packedUe = packedE.undirected();
-            if ( !presentInQueue_.test_set( packedUe ) )
-                // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104175
-                packedElements.push_back( QueueElement{ .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
-        }
-
-        assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
-        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), packedElements };
-    }
+    // it is faster to recompute queue elements in parallel than sequentially extract and map them from existing queue
+    initializeQueue_();
 }
 
 DecimateResult MeshDecimator::run()
@@ -799,7 +787,7 @@ DecimateResult MeshDecimator::run()
             myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
     }
 
-    if ( !initializeQueue_() )
+    if ( !initialize_() )
         return res_;
 
     res_.errorIntroduced = settings_.maxError;

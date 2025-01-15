@@ -60,7 +60,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         }
         catch( std::exception& e )
         {
-            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool" );
+            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool: {}", e.what() );
         }
     }
     // in case of a volume created in "unsigned mode", which is not supported by OpenVdb as level set but still used as such, the result is empty

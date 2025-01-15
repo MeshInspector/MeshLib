@@ -763,6 +763,7 @@ void MeshDecimator::intermediatePack_()
 
         const auto c0 = presentInQueue_.count();
         std::vector<QueueElement> pakedElements;
+        pakedElements.reserve( c0 );
 
         presentInQueue_.clear();
         presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );

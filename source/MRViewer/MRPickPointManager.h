@@ -14,7 +14,7 @@ namespace MR
 {
 
 /// PickPointManager allows the user to pick/move/delete several ordered points on one or more visual objects;
-/// mouse events and public methods automatically add history actions for reverting
+/// mouse events and public methods automatically add history actions for reverting (if enabled)
 class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
@@ -29,6 +29,9 @@ public:
 
         /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
+
+        /// Whether to write undo history of all operations including public modifying functions and user actions
+        bool writeHistory = true;
 
         /// This is appended to the names of all undo/redo actions.
         std::string historyNameSuffix;
@@ -146,6 +149,13 @@ private:
 
     /// \return location of just removed point
     PickedPoint removePointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index );
+
+    /// if history writing is enabled, constructs history action and appends it to global store
+    template<class HistoryActionType, typename... Args>
+    void appendHistory_( Args&&... args );
+
+    /// if history writing is enabled, appends given history action to global store
+    void appendHistory_( std::shared_ptr<HistoryAction> action ) const;
 
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;

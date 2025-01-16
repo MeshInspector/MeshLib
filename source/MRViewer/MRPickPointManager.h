@@ -61,6 +61,9 @@ public:
         /// This callback is invoked when a point starts being dragged.
         PickerPointCallBack onPointMoveStart;
 
+        /// This callback is invoked every time after currently dragged point is moved (in between onPointMoveStart and onPointMoveFinish).
+        PickerPointCallBack onPointMove;
+
         /// This callback is invoked when point's dragging is completed.
         PickerPointCallBack onPointMoveFinish;
 

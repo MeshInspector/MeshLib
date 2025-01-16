@@ -501,7 +501,8 @@ bool PickPointManager::onMouseMove_( int, int )
                         params.onPointMoveStart( obj, index );
 
                 } );
-                widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
+
+                widget->setOnMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
                     if ( moveClosedPoint_ )
                     {
@@ -509,6 +510,13 @@ bool PickPointManager::onMouseMove_( int, int )
                         if ( &pointWidget == contour[0].get() )
                             contour.back()->setCurrentPosition( point );
                     }
+                    assert( draggedPointWidget_ == &pointWidget );
+                    if ( params.onPointMove )
+                        params.onPointMove( obj, index );
+                } );
+
+                widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& )
+                {
                     assert( draggedPointWidget_ == &pointWidget );
                     draggedPointWidget_ = nullptr;
                     if ( params.onPointMoveFinish )

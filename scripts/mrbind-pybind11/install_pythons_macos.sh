@@ -12,9 +12,15 @@ PY_VERSIONS="$(cat $SCRIPT_DIR/python_versions.txt | xargs)"
 HOMEBREW_DIR=/opt/homebrew
 [[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
 
+if which sudo >/dev/null 2>/dev/null; then
+    SUDO=sudo
+else
+    SUDO=
+fi
+
 # ??
-find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
-rm -rf /Library/Frameworks/Python.framework/
+$(SUDO) find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
+$(SUDO) rm -rf /Library/Frameworks/Python.framework/
 
 brew update
 
@@ -25,7 +31,7 @@ for ver in $PY_VERSIONS; do
     fi
 
     # ??
-    brew install --force python@$ver
-    brew unlink python@$ver
-    brew link --overwrite python@$ver
+    $(SUDO) brew install --force python@$ver
+    $(SUDO) brew unlink python@$ver
+    $(SUDO) brew link --overwrite python@$ver
 done

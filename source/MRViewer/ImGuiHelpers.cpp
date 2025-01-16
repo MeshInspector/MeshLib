@@ -1117,6 +1117,8 @@ PaletteChanges Palette(
     PaletteChanges changes = PaletteChanges::None;
     float scaledWidth = width * menuScaling;
 
+    const auto& style = ImGui::GetStyle();
+
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
@@ -1305,9 +1307,21 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
-    if ( UI::button( "Save Palette as", Vector2f( scaledWidth, 0 ) ) )
+
+    auto textSize = ImGui::CalcTextSize( "Reset Palette" );
+    float widthButton = ( ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x ) / 2.0f;
+    bool buttonOnOneLine = true;
+    if ( widthButton < textSize.x )
+    {
+        widthButton = -1;
+        buttonOnOneLine = false;
+    }
+
+    if ( UI::button( "Save Palette as", Vector2f( widthButton, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
     UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
+    if ( buttonOnOneLine )
+        ImGui::SameLine();
     ImGui::PopStyleVar();
 
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
@@ -1329,7 +1343,6 @@ PaletteChanges Palette(
         if ( headerFont )
             PopFont();
 
-        const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
         static std::string currentPaletteName;
 
@@ -1413,7 +1426,7 @@ PaletteChanges Palette(
     }
     PopStyleVar( 3 );
 
-    if ( UI::button( "Reset Palette", Vector2f( scaledWidth, 0 ) ) )
+    if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
     {
         presetName = std::string();
         palette = MR::Palette( Palette::DefaultColors );

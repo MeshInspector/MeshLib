@@ -30,6 +30,9 @@ struct FillHoleNicelySettings
     /// Additionally smooth 3 layers of vertices near hole boundary both inside and outside of the hole
     bool naturalSmooth = false;
 
+    /// (If this is set) this function is called in subdivision each time edge (e) is going to split, if it returns false then this split will be skipped
+    std::function<bool( EdgeId e )> beforeEdgeSplit;
+
     /// edge weighting scheme for smoothCurvature mode
     EdgeWeights edgeWeights = EdgeWeights::Cotan;
 

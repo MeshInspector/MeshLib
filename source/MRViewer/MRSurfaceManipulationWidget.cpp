@@ -27,6 +27,7 @@
 #include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MRPartialChangeMeshAction.h"
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRChangeSelectionAction.h"
 
 namespace MR
 {
@@ -157,6 +158,11 @@ void SurfaceManipulationWidget::reset()
 
     resetConnections_();
     mousePressed_ = false;
+}
+
+void SurfaceManipulationWidget::setFixedRegion( const FaceBitSet& region )
+{
+    unchangeableVerts_ = getIncidentVerts( obj_->mesh()->topology, region ) ;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -331,6 +337,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             auto bds = delRegionKeepBd( *newMesh, faces );
             VertBitSet stableVerts = newMesh->topology.getValidVerts();
             stableVerts -= generalEditingRegion_;
+            UndirectedEdgeBitSet unchangeableEdges = getInnerEdges( oldMesh.topology, unchangeableVerts_ );
             for ( const auto & bd : bds )
             {
                 if ( bd.empty() )
@@ -347,11 +354,25 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
+                    .beforeEdgeSplit = [&] ( EdgeId e ) -> bool
+                    {
+                        if ( contains( unchangeableEdges, e.undirected() ) )
+                            return false;
+                        return true;
+                    },
                     .edgeWeights = settings_.edgeWeights
                 };
                 for ( auto e : bd )
                     if ( !newMesh->topology.left( e ) )
                         fillHoleNicely( *newMesh, e, settings );
+            }
+
+            FaceBitSet faceSelection = obj_->getSelectedFaces();
+            faceSelection -= faces;
+            if ( faceSelection.count() != obj_->getSelectedFaces().count() )
+            {
+                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Selection", obj_ );
+                obj_->selectFaces( faceSelection );
             }
 
             VertBitSet newVerts = newMesh->topology.getValidVerts();
@@ -630,6 +651,9 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     for ( auto v : singleEditingRegion_ )
         singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
+    if ( singleEditingRegion_.any() && unchangeableVerts_.any() )
+        singleEditingRegion_ -= unchangeableVerts_;
+
 }
 
 void SurfaceManipulationWidget::abortEdit_()
@@ -687,6 +711,11 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
         if ( settings_.workMode == WorkMode::Laplacian )
         {
             const VertId vert = mesh.getClosestVertex( pOnFace );
+            if ( contains( unchangeableVerts_, vert ) )
+            {
+                badRegion_ = true;
+                return;
+            }
             pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
         }
         visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );

@@ -785,7 +785,34 @@ void MeshDecimator::intermediatePack_()
     regionEdges_ = regionEdges_.getMapping( packedUndirectedEdgeId, mesh_.topology.undirectedEdgeSize() );
 
     // it is faster to recompute queue elements in parallel than sequentially extract and map them from existing queue
-    initializeQueue_();
+    //initializeQueue_();
+
+    {
+        Timer t( "queue" );
+
+        const auto c0 = presentInQueue_.count();
+        std::vector<QueueElement> packedElements;
+        packedElements.reserve( c0 );
+
+        presentInQueue_.clear();
+        presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+
+        while ( !queue_.empty() )
+        {
+            const auto top = queue_.top();
+            queue_.pop();
+            const EdgeId packedE = emap[top.uedgeId()];
+            if ( !packedE )
+                continue; // this edge was deleted
+            const UndirectedEdgeId packedUe = packedE.undirected();
+            if ( !presentInQueue_.test_set( packedUe ) )
+                // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104175
+                packedElements.push_back( QueueElement{ .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
+        }
+
+        assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
+        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), packedElements };
+    }
 }
 
 DecimateResult MeshDecimator::run()

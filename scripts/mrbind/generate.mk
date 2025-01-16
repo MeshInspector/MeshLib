@@ -82,6 +82,12 @@ endif
 # Set to 1 if you're planning to make a wheel from this module.
 FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
+$(info Those modules are for a Python wheel? $(if $(FOR_WHEEL),YES,NO))
+
+# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims?
+BUILD_SHIMS := $(FOR_WHEEL)
+override BUILD_SHIMS := $(filter-out 0,$(BUILD_SHIMS))
+$(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
 
 # Set to 1 if MeshLib was built in debug mode. Ignore this on Windows. By default we're trying to guess this based on the CMake cache.
 # Currently this isn't needed for anything, hence commented out.
@@ -214,7 +220,7 @@ $(if $(PYTHON_VERSIONS),,$(error Unable to guess the Python versions))
 override PYTHON_VERSIONS := $(subst $(comma), ,$(PYTHON_VERSIONS))
 # Sort the versions.
 override PYTHON_VERSIONS := $(call safe_shell,echo $(call quote,$(PYTHON_VERSIONS)) | tr ' ' '\n' | sort -V)
-$(info Targeting Python versions: $(PYTHON_VERSIONS))
+$(info Targeting Python versions: $(PYTHON_VERSIONS)$(if $(BUILD_SHIMS),, (doesn't matter because we're not building shims)))
 
 # Pick a Python version to use the headers from. Normally it doesn't matter which one we use, since defining `Py_LIMITED_API` should make them almost equivalent.
 # Here we use the smallest version from `PYTHON_VERSIONS`.
@@ -504,6 +510,7 @@ PYBIND_SOURCE_DIR := $(makefile_dir)../../thirdparty/pybind11
 PYBIND_NONLIMITEDAPI_CPP := $(PYBIND_SOURCE_DIR)/source/non_limited_api/non_limited_api.cpp
 PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX := pybind11nonlimitedapi_meshlib_
 
+ifneq ($(BUILD_SHIMS),)
 $(foreach v,$(PYTHON_VERSIONS),\
     $(call var,_obj := $(TEMP_OUTPUT_DIR)/$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v.o)\
     $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
@@ -511,6 +518,7 @@ $(foreach v,$(PYTHON_VERSIONS),\
     $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(COMPILER_FLAGS) $(call get_python_cflags,$v) $$< -c -o $$@)\
     $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs $(call get_python_ldflags,$v))\
 )
+endif
 
 # Those are used by `module_snippet` below.
 .PHONY: only-generate

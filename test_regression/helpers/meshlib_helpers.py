@@ -46,6 +46,11 @@ def compare_meshes_similarity(mesh1: mrmeshpy.Mesh, mesh2: mrmeshpy.Mesh,
     :param verts_thresh: vertices difference threshold
     :param skip_volume: skip volume check - for open meshes
     """
+    if isinstance(mesh1, str) or isinstance(mesh1, Path):
+        mesh1 = mrmeshpy.loadMesh(str(mesh1))
+    if isinstance(mesh2, str) or isinstance(mesh2, Path):
+        mesh2 = mrmeshpy.loadMesh(str(mesh2))
+
     with check:
         #  check on meshes relative Hausdorff distance
         rhsdr = relative_hausdorff(mesh1, mesh2)

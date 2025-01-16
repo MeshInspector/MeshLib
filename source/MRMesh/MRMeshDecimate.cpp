@@ -40,8 +40,8 @@ private:
     {
         CollapseOptPos, ///< collapse the edge with target position optimization
         CollapseEnd,    ///< collapse the edge in one of its current vertices
-        Flip            ///< flip the edge inside quadrangle
-        // one more option is available to fit in 2 bits
+        Flip,           ///< flip the edge inside quadrangle
+        Invalid         ///< this edge was already deleted, skip it
     };
 
     struct QueueElement
@@ -784,35 +784,18 @@ void MeshDecimator::intermediatePack_()
 
     regionEdges_ = regionEdges_.getMapping( packedUndirectedEdgeId, mesh_.topology.undirectedEdgeSize() );
 
-    // it is faster to recompute queue elements in parallel than sequentially extract and map them from existing queue
-    //initializeQueue_();
+    presentInQueue_ = presentInQueue_.getMapping( packedUndirectedEdgeId, mesh_.topology.undirectedEdgeSize() );
 
+    ParallelFor( size_t( 0 ), queue_.c.size(), [&]( size_t i )
     {
-        Timer t( "queue" );
-
-        const auto c0 = presentInQueue_.count();
-        std::vector<QueueElement> packedElements;
-        packedElements.reserve( c0 );
-
-        presentInQueue_.clear();
-        presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
-
-        while ( !queue_.empty() )
-        {
-            const auto top = queue_.top();
-            queue_.pop();
-            const EdgeId packedE = emap[top.uedgeId()];
-            if ( !packedE )
-                continue; // this edge was deleted
-            const UndirectedEdgeId packedUe = packedE.undirected();
-            if ( !presentInQueue_.test_set( packedUe ) )
-                // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104175
-                packedElements.push_back( QueueElement{ .c = top.c, .x = { .edgeOp = top.x.edgeOp, .uedgeId = (unsigned int)packedUe } } );
-        }
-
-        assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
-        queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), std::move( packedElements ) };
-    }
+        auto & qe = queue_.c[i];
+        if ( qe.x.edgeOp == EdgeOp::Invalid )
+            return;
+        if ( auto ue = packedUndirectedEdgeId( qe.uedgeId() ) )
+            qe.x.uedgeId = ue;
+        else
+            qe.x.edgeOp = EdgeOp::Invalid;
+    } );
 }
 
 DecimateResult MeshDecimator::run()
@@ -847,9 +830,11 @@ DecimateResult MeshDecimator::run()
                 break; // if old queue was filled only with invalid elements
         }
         const auto topQE = queue_.top();
+        queue_.pop();
+        if ( topQE.x.edgeOp == EdgeOp::Invalid )
+            continue;
         const auto ue = topQE.uedgeId();
         assert( presentInQueue_.test( ue ) );
-        queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
             res_.errorIntroduced = std::sqrt( topQE.c );

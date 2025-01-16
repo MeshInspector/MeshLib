@@ -13,7 +13,7 @@
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
-#include <queue>
+#include "MRPriorityQueue.h"
 
 namespace MR
 {
@@ -56,7 +56,7 @@ private:
         bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
     };
     static_assert( sizeof( QueueElement ) == 8 );
-    std::priority_queue<QueueElement> queue_;
+    PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet presentInQueue_;
     DecimateResult res_;
     std::vector<VertId> originNeis_;
@@ -331,7 +331,7 @@ void MeshDecimator::initializeQueue_()
     presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
     for ( const auto & qe : calc.elements() )
         presentInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -811,7 +811,7 @@ void MeshDecimator::intermediatePack_()
         }
 
         assert( packedElements.size() <= c0 ); // we may have more set bits presentInQueue_ somehow
-        queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), packedElements };
+        queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), std::move( packedElements ) };
     }
 }
 

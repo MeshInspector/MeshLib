@@ -63,7 +63,8 @@ private:
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
-    bool initializeQueue_();
+    bool initialize_();
+    void initializeQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
@@ -254,7 +255,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float ma
     return resolveMeshDegenerations( mesh, settings );
 }
 
-bool MeshDecimator::initializeQueue_()
+bool MeshDecimator::initialize_()
 {
     MR_TIMER;
 
@@ -305,20 +306,31 @@ bool MeshDecimator::initializeQueue_()
     else if ( settings_.edgesToCollapse )
         regionEdges_ = *settings_.edgesToCollapse;
 
-    EdgeMetricCalc calc( *this );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
-
-    if ( settings_.progressCallback && !settings_.progressCallback( 0.2f ) )
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
-    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize() );
-    for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
         return false;
     return true;
+}
+
+void MeshDecimator::initializeQueue_()
+{
+    MR_TIMER
+
+    // free space occupied by existing queue
+    queue_ = {};
+
+    EdgeMetricCalc calc( *this );
+    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
+
+    presentInQueue_.clear();
+    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    for ( const auto & qe : calc.elements() )
+        presentInQueue_.set( qe.uedgeId() );
+    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -674,19 +686,17 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     return { .v = forceCollapse_( can.e, collapsePos ) };
 }
 
-static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
+static void packMesh( Mesh & mesh, const DecimateSettings & settings,
+    FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr )
 {
-    if ( !settings.packMesh )
-        return;
-
     MR_TIMER
     FaceMap fmap;
+    FaceMap *pFmap = settings.region ? &fmap : outFmap;
     VertMap vmap;
+    VertMap *pVmap = settings.vertForms ? &vmap : outVmap;
     WholeEdgeMap emap;
-    mesh.pack(
-        settings.region ? &fmap : nullptr,
-        settings.vertForms ? &vmap : nullptr,
-        settings.notFlippable ? &emap : nullptr );
+    WholeEdgeMap *pEmap = settings.notFlippable ? &emap : outEmap;
+    mesh.pack( pFmap, pVmap, pEmap );
 
     if ( settings.region )
         *settings.region = settings.region->getMapping( fmap, mesh.topology.faceSize() );
@@ -701,8 +711,45 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
         vertForms.resize( mesh.topology.vertSize() );
     }
 
+    auto packedUndirectedEdgeId = [&emap]( UndirectedEdgeId unpackedId )
+    {
+        auto packedEdgeId = emap[unpackedId];
+        return packedEdgeId ? packedEdgeId.undirected() : UndirectedEdgeId();
+    };
+
     if ( settings.notFlippable )
-        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+        *settings.notFlippable = settings.notFlippable->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.edgesToCollapse )
+        *settings.edgesToCollapse = settings.edgesToCollapse->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.twinMap )
+    {
+        UndirectedEdgeHashMap packedTwinMap;
+        packedTwinMap.reserve( settings.twinMap->size() );
+
+        for ( const auto& [key, value] : *settings.twinMap )
+        {
+            auto packedKey = packedUndirectedEdgeId( key );
+            auto packedValue = packedUndirectedEdgeId( value );
+            if ( packedKey && packedValue )
+                packedTwinMap[packedKey] = packedValue;
+            else
+                assert( !packedKey && !packedValue );
+        }
+
+        *settings.twinMap = std::move( packedTwinMap );
+    }
+
+    if ( settings.bdVerts )
+        *settings.bdVerts = settings.bdVerts->getMapping( vmap, mesh.topology.vertSize() );
+
+    if ( outFmap && outFmap != pFmap )
+        *outFmap = std::move( *pFmap );
+    if ( outVmap && outVmap != pVmap )
+        *outVmap = std::move( *pVmap );
+    if ( outEmap && outEmap != pEmap )
+        *outEmap = std::move( *pEmap );
 }
 
 DecimateResult MeshDecimator::run()
@@ -718,7 +765,7 @@ DecimateResult MeshDecimator::run()
             myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
     }
 
-    if ( !initializeQueue_() )
+    if ( !initialize_() )
         return res_;
 
     res_.errorIntroduced = settings_.maxError;
@@ -812,7 +859,8 @@ DecimateResult MeshDecimator::run()
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    optionalPackMesh( mesh_, settings_ );
+    if ( settings_.packMesh )
+        packMesh( mesh_, settings_ );
     res_.cancelled = false;
     return res_;
 }
@@ -1073,7 +1121,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     }
     else
     {
-        optionalPackMesh( mesh, seqSettings );
+        if ( seqSettings.packMesh )
+            packMesh( mesh, seqSettings );
         res.cancelled = false;
     }
 

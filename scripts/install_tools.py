@@ -11,7 +11,7 @@ path_to_sources = ''
 path_to_copyright_header = ''
 path_to_objects = ''
 
-include_extensions = ['.h','.hpp','.cuh','.ipp']
+include_extensions = ['.h','.hpp','.cuh','.ipp','']
 lib_extentions = ['.lib','.pdb']
 includes_src_dst = list()
 includes_src_dst_thirdparty = list()
@@ -32,13 +32,16 @@ def create_directories():
 	os.makedirs(path_to_libs,exist_ok=True)
 	os.makedirs(path_to_app,exist_ok=True)
     
+def same_file_extension(filename,ext):
+	return (not filename.startswith('.')) and (os.path.splitext(filename)[1] == ext)
+
 def append_includes_list(path, thirdparty = False, subfolder = '' ):
 	folder = os.walk(path)
 	for address, dirs, files in folder:
 		for file in files:
 			if (subfolder and subfolder not in address[len(path):]):
 				continue
-			if (any(map(file.endswith, include_extensions))):
+			if (any(map(same_file_extension, [file for ext in include_extensions], include_extensions))):
 				src = os.path.join(address,file)
 				dst = os.path.join(path_to_includes + address[len(path):],file)
 				if not thirdparty:

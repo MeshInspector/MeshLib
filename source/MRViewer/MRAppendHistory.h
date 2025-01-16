@@ -8,7 +8,7 @@
 namespace MR
 {
 
-// This function appends history action to viewers global history store
+/// This function constructs history action and appends it to viewer's global history store
 template<class HistoryActionType, typename... Args>
 void AppendHistory( Args&&... args )
 {
@@ -17,12 +17,11 @@ void AppendHistory( Args&&... args )
         s->appendAction( std::make_shared<HistoryActionType>( std::forward<Args>( args )... ) );
 }
 
-template<class HistoryActionType>
-void AppendHistory( std::shared_ptr<HistoryActionType> action )
+/// This function appends given history action to viewer's global history store
+inline void AppendHistory( std::shared_ptr<HistoryAction> action )
 {
-    static_assert( std::is_base_of_v<HistoryAction, HistoryActionType> );
     if ( const auto & s = HistoryStore::getViewerInstance() )
-        s->appendAction( action );
+        s->appendAction( std::move( action ) );
 }
 
 // if undo history is enabled, creates given action in the constructor;

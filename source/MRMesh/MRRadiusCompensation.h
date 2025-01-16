@@ -17,7 +17,7 @@ struct CompensateRadiusParams
     float toolRadius{ 0.0f };
 
     /// resolution of distance map that is used for compensation
-    Vector2i distanceMapResolution = Vector2i( 200, 200 );
+    Vector2i distanceMapResolution = Vector2i( 100, 100 );
 
     /// region of the mesh that will be compensated
     /// it should not contain closed components

@@ -356,6 +356,8 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
+        if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
+            return false;
         return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
@@ -399,6 +401,9 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
             }
 
         if ( ( pickedIndex == -1 ) || ( pickedObj == nullptr ) )
+            return false;
+
+        if ( params.canRemovePoint && !params.canRemovePoint( obj, pickedIndex ) )
             return false;
 
         if ( isClosedCountour( pickedObj ) )
@@ -515,7 +520,7 @@ bool PickPointManager::onMouseMove_( int, int )
                         params.onPointMove( obj, index );
                 } );
 
-                widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& )
+                widget->setEndMoveCallback( [this, obj = obj, index] ( [[maybe_unused]] SurfacePointWidget & pointWidget, const PickedPoint& )
                 {
                     assert( draggedPointWidget_ == &pointWidget );
                     draggedPointWidget_ = nullptr;

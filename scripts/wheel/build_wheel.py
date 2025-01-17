@@ -38,7 +38,7 @@ def install_packages():
         ["pip", "install", "--upgrade", "pip"]
     )
     subprocess.check_call(
-        ["pip", "install", "--upgrade", *packages]
+        ["pip", "install", "--upgrade", "numpy", *packages]
     )
 
 

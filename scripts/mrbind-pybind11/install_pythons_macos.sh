@@ -31,7 +31,8 @@ for ver in $PY_VERSIONS; do
     fi
 
     # ??
-    $SUDO brew install --force python@$ver
-    $SUDO brew unlink python@$ver
-    $SUDO brew link --overwrite python@$ver
+    # Note that Brew doesn't want to be ran in `sudo`.
+    brew install --force python@$ver
+    brew unlink python@$ver
+    brew link --overwrite python@$ver
 done

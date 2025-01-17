@@ -40,6 +40,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         subset.region = &newFaces;
         subset.newVerts = &newVerts;
         subset.beforeEdgeSplit = settings.beforeEdgeSplit;
+        subset.onEdgeSplit = settings.onEdgeSplit;
 
         const auto lastVert = mesh.topology.lastValidVert();
         VertUVCoords * uvCoords = settings.uvCoords && lastVert < settings.uvCoords->size() ? settings.uvCoords : nullptr;

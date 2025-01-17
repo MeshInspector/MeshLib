@@ -147,8 +147,9 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
+        # This PATH manipulation ensures pybind11-stubgen is found.
         run: |
-          python3 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
+          PATH="/home/user/.local/bin:$PATH" python3 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload Python Stubs
         if: ${{ github.event_name == 'release' && matrix.platform == 'aarch64' }}

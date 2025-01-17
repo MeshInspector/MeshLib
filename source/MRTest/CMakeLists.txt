@@ -20,7 +20,7 @@ IF(APPLE)
     MRViewer
     jsoncpp
     fmt
-    GTest::gtest
+    gtest
     spdlog
     Python::Python
     pybind11nonlimitedapi_stubs

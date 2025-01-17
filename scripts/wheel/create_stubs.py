@@ -22,14 +22,14 @@ def install_packages():
     )
 
 
-def setup_workspace( modules, clear_folder = True ):    
+def setup_workspace( modules, clear_folder = True ):
     if clear_folder and WHEEL_ROOT_DIR.exists():
         shutil.rmtree(WHEEL_ROOT_DIR)
-    
+
     if not WHEEL_ROOT_DIR.exists():
         WHEEL_SRC_DIR.mkdir(parents=True)
 
-    init_file = LIB_DIR / "__init__.py"
+    init_file = LIB_DIR_MESHLIB / "__init__.py"
     if init_file.exists():
         shutil.copy(init_file, WHEEL_SRC_DIR / "__init__.py")
     else:
@@ -37,7 +37,7 @@ def setup_workspace( modules, clear_folder = True ):
 
     print(f"Copying {SYSTEM} files...")
     for module in modules:
-        lib = LIB_DIR / f"{module}{LIB_EXTENSION}"
+        lib = LIB_DIR_MESHLIB / f"{module}{LIB_EXTENSION}"
         print(lib)
         shutil.copy(lib, WHEEL_SRC_DIR)
 

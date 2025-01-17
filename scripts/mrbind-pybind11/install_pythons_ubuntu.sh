@@ -14,7 +14,7 @@ sudo apt -y update && sudo apt -y upgrade && sudo apt -y install software-proper
 sudo add-apt-repository -y ppa:deadsnakes/ppa
 
 # Install the packages.
-sudo apt -y install $(echo $PY_VERSIONS | perl -pe 's/(\S+)/python\1-dev/g')
+sudo apt -y install $(echo $PY_VERSIONS | perl -pe 's/(\S+)/python\1-dev python\1-venv/g')
 
 # Install distutils (needed for pip), but only for Python versions for which it exists.
 for ver in $PY_VERSIONS; do

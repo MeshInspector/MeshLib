@@ -1,0 +1,12 @@
+  - Debug only:
+    - **Debug Configuration: C/C++ → Preprocessor → Preprocessor Definitions**:
+    \n Add: `_ITERATOR_DEBUG_LEVEL=0`
+  - For all configurations:
+    - **General Properties -> C++ Language Standard**:
+    \n Set: `/std:c++20` or later
+    - **C/C++ → General → Additional Include Directories**:
+    \n Add: `C:\meshlib-built\install\include`
+    - **C/C++ → All Options → Additional Options**:
+    \n Add: `/bigobj /utf8`
+    - **Linker → Input → Additional Dependencies**:
+    \n Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`

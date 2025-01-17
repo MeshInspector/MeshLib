@@ -274,11 +274,15 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 # Shared library naming pattern.
 ifneq ($(IS_WINDOWS),)
-SHLIB_NAMING := %.dll
+SHIM_SHLIB_NAMING := %.dll
 else
-SHLIB_NAMING := lib%.so
+ifneq ($(IS_MACOS),)
+# For consistency with the shims that CMake builds.
+SHIM_SHLIB_NAMING := lib%.dylib
+else
+SHIM_SHLIB_NAMING := lib%.so
 endif
-$(info Shared library name pattern: $(SHLIB_NAMING))
+$(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 
 # Enable PCH.
@@ -513,7 +517,7 @@ PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX := pybind11nonlimitedapi_meshlib_
 ifneq ($(BUILD_SHIMS),)
 $(foreach v,$(PYTHON_VERSIONS),\
     $(call var,_obj := $(TEMP_OUTPUT_DIR)/$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v.o)\
-    $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
+    $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHIM_SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
     $(call var,all_outputs += $(_shlib))\
     $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(COMPILER_FLAGS) $(call get_python_cflags,$v) $$< -c -o $$@)\
     $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs $(call get_python_ldflags,$v))\

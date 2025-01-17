@@ -282,6 +282,7 @@ SHIM_SHLIB_NAMING := lib%.dylib
 else
 SHIM_SHLIB_NAMING := lib%.so
 endif
+endif
 $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 

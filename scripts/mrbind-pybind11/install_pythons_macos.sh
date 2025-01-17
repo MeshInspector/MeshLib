@@ -19,8 +19,8 @@ else
 fi
 
 # ??
-$(SUDO) find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
-$(SUDO) rm -rf /Library/Frameworks/Python.framework/
+$SUDO find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
+$SUDO rm -rf /Library/Frameworks/Python.framework/
 
 brew update
 
@@ -31,7 +31,7 @@ for ver in $PY_VERSIONS; do
     fi
 
     # ??
-    $(SUDO) brew install --force python@$ver
-    $(SUDO) brew unlink python@$ver
-    $(SUDO) brew link --overwrite python@$ver
+    $SUDO brew install --force python@$ver
+    $SUDO brew unlink python@$ver
+    $SUDO brew link --overwrite python@$ver
 done

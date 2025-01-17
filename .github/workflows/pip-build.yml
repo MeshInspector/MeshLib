@@ -147,6 +147,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
+        shell: bash
         run: |
           python3.12 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
@@ -283,7 +284,7 @@ jobs:
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_CFLAGS=-I$env:localappdata/Programs/Python/Python@XY@/Include PYTHON_LDFLAGS="-L$env:localappdata/Programs/Python/Python@XY@/libs -lpython@XY@"
+          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_CFLAGS=-I%localappdata%/Programs/Python/Python@XY@/Include PYTHON_LDFLAGS="-L%localappdata%/Programs/Python/Python@XY@/libs -lpython@XY@"
 
       - name: Run Test
         working-directory: source\x64\Release

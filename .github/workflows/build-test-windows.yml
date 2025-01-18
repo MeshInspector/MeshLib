@@ -83,7 +83,8 @@ jobs:
           git fetch  
           git pull --rebase 
           git checkout ${{ inputs.vcpkg_version }}  
-          ./bootstrap-vcpkg.sh  
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4

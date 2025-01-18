@@ -102,9 +102,10 @@ private:
     };
     CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
 
-    /// performs edge collapse after previous successful check by canCollapse_
+    /// performs edge collapse after previous successful check by canCollapse_,
+    /// if one of the edge's vertices remain, then stores (collapseForm) as its new form and updates error of its neighbor edges
     /// \return org( edgeToCollapse ) or invalid id if it was the last edge
-    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 
     struct CollapseRes
     {
@@ -113,7 +114,7 @@ private:
         CollapseStatus status = CollapseStatus::Ok;
     };
     /// canCollapse_ + forceCollapse_
-    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
@@ -642,7 +643,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     return { .e = edgeToCollapse };
 }
 
-VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
+VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm )
 {
     ++res_.vertsDeleted;
 
@@ -667,23 +668,29 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
     if ( !eo )
         return {};
 
-    // update edges around remaining vertex
-    for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+    if ( vo )
     {
-        addInQueueIfMissing_( e.undirected() );
-        if ( mesh_.topology.left( e ) )
-            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        // must be done before computeQueueElement_ in addInQueueIfMissing_
+        (*pVertForms_)[vo] = collapseForm;
+
+        // update edges around remaining vertex
+        for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+        {
+            addInQueueIfMissing_( e.undirected() );
+            if ( mesh_.topology.left( e ) )
+                addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        }
     }
     return vo;
 }
 
-auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm ) -> CollapseRes
 {
     CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
     if ( can.status != CollapseStatus::Ok )
         return { .status = can.status };
     assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
-    return { .v = forceCollapse_( can.e, collapsePos ) };
+    return { .v = forceCollapse_( can.e, collapsePos, collapseForm ) };
 }
 
 static void packMesh( Mesh & mesh, const DecimateSettings & settings,
@@ -845,14 +852,11 @@ DecimateResult MeshDecimator::run()
             if ( twin )
             {
                 const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos );
+                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
                 if ( twinCollapseRes.status != CollapseStatus::Ok )
                     continue;
-                if ( twinCollapseRes.v )
-                    (*pVertForms_)[twinCollapseRes.v] = twinCollapseForm;
             }
-            if ( auto v = forceCollapse_( canCollapseRes.e, collapsePos ) )
-                (*pVertForms_)[v] = collapseForm;
+            forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }
 

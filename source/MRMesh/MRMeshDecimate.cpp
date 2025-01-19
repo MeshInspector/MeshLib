@@ -57,7 +57,7 @@ private:
     };
     static_assert( sizeof( QueueElement ) == 8 );
     std::priority_queue<QueueElement> queue_;
-    UndirectedEdgeBitSet presentInQueue_;
+    UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -126,47 +126,47 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
         .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
 {
-    if ( settings_.notFlippable || settings_.edgesToCollapse || settings_.twinMap || settings_.onEdgeDel )
+    onEdgeDel_ =
+    [
+        this,
+        notFlippable = settings_.notFlippable,
+        edgesToCollapse = settings_.edgesToCollapse,
+        twinMap = settings_.twinMap,
+        onEdgeDel = settings_.onEdgeDel
+    ] ( EdgeId del, EdgeId rem )
     {
-        onEdgeDel_ =
-        [
-            notFlippable = settings_.notFlippable,
-            edgesToCollapse = settings_.edgesToCollapse,
-            twinMap = settings_.twinMap,
-            onEdgeDel = settings_.onEdgeDel
-        ] ( EdgeId del, EdgeId rem )
+        validInQueue_.reset( del );
+
+        if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
+            notFlippable->autoResizeSet( rem.undirected() );
+
+        if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
+            edgesToCollapse->autoResizeSet( rem.undirected() );
+
+        if ( twinMap )
         {
-            if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
-                notFlippable->autoResizeSet( rem.undirected() );
-
-            if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
-                edgesToCollapse->autoResizeSet( rem.undirected() );
-
-            if ( twinMap )
+            auto itDel = twinMap->find( del );
+            if ( itDel != twinMap->end() )
             {
-                auto itDel = twinMap->find( del );
-                if ( itDel != twinMap->end() )
+                auto tgt = itDel->second;
+                auto itTgt = twinMap->find( tgt );
+                assert( itTgt != twinMap->end() );
+                assert( itTgt->second == del.undirected() );
+                twinMap->erase( itDel );
+                if ( rem )
                 {
-                    auto tgt = itDel->second;
-                    auto itTgt = twinMap->find( tgt );
-                    assert( itTgt != twinMap->end() );
-                    assert( itTgt->second == del.undirected() );
-                    twinMap->erase( itDel );
-                    if ( rem )
-                    {
-                        assert( twinMap->count( rem ) == 0 );
-                        (*twinMap)[rem] = tgt;
-                        itTgt->second = rem;
-                    }
-                    else
-                        twinMap->erase( itTgt );
+                    assert( twinMap->count( rem ) == 0 );
+                    (*twinMap)[rem] = tgt;
+                    itTgt->second = rem;
                 }
+                else
+                    twinMap->erase( itTgt );
             }
+        }
 
-            if ( onEdgeDel )
-                onEdgeDel( del, rem );
-        };
-    }
+        if ( onEdgeDel )
+            onEdgeDel( del, rem );
+    };
 }
 
 class MeshDecimator::EdgeMetricCalc 
@@ -327,10 +327,10 @@ void MeshDecimator::initializeQueue_()
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
 
-    presentInQueue_.clear();
-    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    validInQueue_.clear();
+    validInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
     for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId() );
+        validInQueue_.set( qe.uedgeId() );
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
@@ -440,12 +440,12 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
-    if ( presentInQueue_.test( ue ) )
+    if ( validInQueue_.test( ue ) )
         return;
     if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
     {
         queue_.push( *qe );
-        presentInQueue_.set( ue );
+        validInQueue_.set( ue );
     }
 }
 
@@ -783,7 +783,6 @@ DecimateResult MeshDecimator::run()
     {
         const auto topQE = queue_.top();
         const auto ue = topQE.uedgeId();
-        assert( presentInQueue_.test( ue ) );
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -798,19 +797,20 @@ DecimateResult MeshDecimator::run()
             lastProgressFacesDeleted = res_.facesDeleted;
         }
 
-        if ( mesh_.topology.isLoneEdge( ue ) )
+        if ( !validInQueue_.test( ue ) )
         {
             // edge has been deleted by this moment
-            presentInQueue_.reset( ue );
+            assert( mesh_.topology.isLoneEdge( ue ) );
             continue;
         }
+        assert( !mesh_.topology.isLoneEdge( ue ) );
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
         auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, &collapseForm, &collapsePos );
         if ( !qe )
         {
-            presentInQueue_.reset( ue );
+            validInQueue_.reset( ue );
             continue;
         }
 
@@ -820,7 +820,7 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
-        presentInQueue_.reset( ue );
+        validInQueue_.reset( ue );
 
         UndirectedEdgeId twin;
         if ( settings_.twinMap )
@@ -844,7 +844,7 @@ DecimateResult MeshDecimator::run()
                     if ( qe )
                     {
                         queue_.push( *qe );
-                        presentInQueue_.set( ue );
+                        validInQueue_.set( ue );
                     }
                 }
                 continue;

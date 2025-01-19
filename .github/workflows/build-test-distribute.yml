@@ -325,6 +325,16 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
+      - name: Enable GitHub Actions Debug Logging
+        run: |
+          echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+          echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
+
+      - name: Retrieve OIDC Token
+        run: |
+          echo "OIDC URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
+          curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL"
+
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws-creds
         with:

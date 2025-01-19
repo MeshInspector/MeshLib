@@ -325,16 +325,6 @@ jobs:
           pattern: RunnerSysStats*
           merge-multiple: true
 
-      - name: Enable GitHub Actions Debug Logging
-        run: |
-          echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
-          echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
-
-      - name: Retrieve OIDC Token
-        run: |
-          echo "OIDC URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL"
-
       - uses: aws-actions/configure-aws-credentials@v4
         id: aws-creds
         with:
@@ -342,29 +332,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
 
-      - name: Debug OIDC Token
-        run: |
-          echo "OIDC Request URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          echo "OIDC Token: $(curl -H 'Authorization: Bearer $ACTIONS_ID_TOKEN' $ACTIONS_ID_TOKEN_REQUEST_URL)"
-        env:
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ steps.aws-creds.outputs.id-token }}
-          ACTIONS_ID_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
       - name: Debug - Post data to API Gateway
         env:
-          API_URL: "https://8np7tbux24.execute-api.us-east-1.amazonaws.com/v3/log"
         run: |
-          python3 -c "
-          import os
-          import requests
-          data = {'key': 'value'}  # Replace with actual data
-          headers = {
-              'Authorization': f'Bearer {os.getenv('AWS_SESSION_TOKEN')}'
-          }
-          response = requests.post(os.getenv('API_URL'), json=data, headers=headers)
-          print(response.status_code, response.text)
-          "
+          python -m pip install --upgrade pip
+          pip install boto3 requests
+          python3 scripts/devops/post_to_api.py
 
       - name: Collect stats
         env:

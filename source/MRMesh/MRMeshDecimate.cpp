@@ -13,7 +13,7 @@
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
-#include <queue>
+#include "MRPriorityQueue.h"
 
 namespace MR
 {
@@ -56,7 +56,7 @@ private:
         bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
     };
     static_assert( sizeof( QueueElement ) == 8 );
-    std::priority_queue<QueueElement> queue_;
+    PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     DecimateResult res_;
     std::vector<VertId> originNeis_;
@@ -331,7 +331,7 @@ void MeshDecimator::initializeQueue_()
     validInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
     for ( const auto & qe : calc.elements() )
         validInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -779,8 +779,17 @@ DecimateResult MeshDecimator::run()
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
+    // intermediate packs shall improve performance of overall decimation
+    int nextPackOnNumFaces = settings_.packMesh ? mesh_.topology.numValidFaces() / 2 : 0;
     while ( !queue_.empty() )
     {
+        if ( settings_.packMesh && mesh_.topology.numValidFaces() <= nextPackOnNumFaces )
+        {
+            intermediatePack_();
+            nextPackOnNumFaces = mesh_.topology.numValidFaces() / 2;
+            if ( queue_.empty() )
+                break; // if old queue was filled only with invalid elements
+        }
         const auto topQE = queue_.top();
         const auto ue = topQE.uedgeId();
         queue_.pop();

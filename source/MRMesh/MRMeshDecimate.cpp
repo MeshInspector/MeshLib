@@ -801,13 +801,13 @@ DecimateResult MeshDecimator::run()
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     // intermediate packs shall improve performance of overall decimation
-    int nextPackOnNumFaces = mesh_.topology.numValidFaces() / 2;
+    auto nextPackOn = 9 * queue_.size() / 10;
     while ( !queue_.empty() )
     {
-        if ( mesh_.topology.numValidFaces() <= nextPackOnNumFaces )
+        if ( queue_.size() <= nextPackOn )
         {
             packQueue_();
-            nextPackOnNumFaces = mesh_.topology.numValidFaces() / 2;
+            nextPackOn = 9 * queue_.size() / 10;
             if ( queue_.empty() )
                 break; // if old queue was filled only with invalid elements
         }

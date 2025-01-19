@@ -342,6 +342,15 @@ jobs:
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
 
+      - name: Debug OIDC Token
+        run: |
+          echo "OIDC Request URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
+          echo "OIDC Token: $(curl -H 'Authorization: Bearer $ACTIONS_ID_TOKEN' $ACTIONS_ID_TOKEN_REQUEST_URL)"
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ steps.aws-creds.outputs.id-token }}
+          ACTIONS_ID_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
       - name: Debug - Post data to API Gateway
         env:
           API_URL: "https://8np7tbux24.execute-api.us-east-1.amazonaws.com/v3/log"

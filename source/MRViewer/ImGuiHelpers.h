@@ -12,7 +12,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
 #include "MRViewer/MRUnits.h"
-#include <imgui.h>
+#include "MRViewer/MRImGui.h"
 #include <misc/cpp/imgui_stdlib.h>
 #include <algorithm>
 #include <functional>
@@ -177,6 +177,9 @@ MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width )
 /// Structure that contains parameters for State plugin window with custom style
 struct CustomStatePluginWindowParameters
 {
+    // All fields those have explicit initializers, even if they have sane default constructors.
+    // This makes it so that Clangd doens't warn when they aren't initialized in partial aggregate initialization.
+
     /// current collapsed state of window
     /// in/out parameter, owned outside of `BeginCustomStatePlugin` function
     bool* collapsed{ nullptr };
@@ -197,7 +200,7 @@ struct CustomStatePluginWindowParameters
     /// outside owned parameter for windows with resize option
     ImVec2* changedSize{ nullptr };
     /// reaction on press "Help" button
-    std::function<void()> helpBtnFn;
+    std::function<void()> helpBtnFn = nullptr;
     /// if true esc button closes the plugin
     bool closeWithEscape{ true };
 };
@@ -243,9 +246,10 @@ MRVIEWER_API bool Link( const char* label, uint32_t color = MR::Color( 60, 120, 
 enum class PaletteChanges
 {
     None    = 0,
-    Texture = 1, // texture and legend must be updated
-    Ranges  = 2, // uv-coordinates must be recomputed for the same values
-    All = Texture | Ranges // 0b11
+    Reset   = 1, // reset palette
+    Texture = 2, // texture and legend must be updated
+    Ranges  = 4, // uv-coordinates must be recomputed for the same values
+    All = Texture | Ranges | Reset, // 0b111
 };
 MR_MAKE_FLAG_OPERATORS( PaletteChanges )
 

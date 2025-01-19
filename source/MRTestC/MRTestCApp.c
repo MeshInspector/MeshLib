@@ -10,6 +10,7 @@
 #include "MRFixSelfIntersections.h"
 #include "MRExpandShrink.h"
 #include "MRPointCloud.h"
+#include "MRVDBConversions.h"
 
 int main( void )
 {
@@ -38,4 +39,9 @@ int main( void )
     testIncidentFacesFromVerts();
     testIncidentFacesFromEdges();
     testTriangulation();
+    testVDBConversions();
+    testUniformResampling();
+    testResampling();
+    testCropping();
+    testAccessors();
 }

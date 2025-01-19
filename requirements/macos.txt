@@ -13,7 +13,7 @@ libpng
 libsigc++
 libtiff
 libzip
-llvm@13
+llvm@14
 ninja
 opencascade
 openssl@3

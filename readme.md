@@ -48,9 +48,9 @@ For Python users, install via pip:
 pip install meshlib
 ```
 
-For C++, C and C# integration, see the [Installation Guide](https://meshlib.io/documentation/).
+For C++, C and C# integration, see the [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html).
 
-Explore [MeshLib's tutorials and code samples](https://meshlib.io/documentation/) to get started quickly and master advanced features.
+Explore [MeshLib's tutorials](https://meshlib.io/documentation/Tutorials.html) and [code samples](https://meshlib.io/documentation/Examples.html) to get started quickly and master advanced features.
 
 ## **License**
 

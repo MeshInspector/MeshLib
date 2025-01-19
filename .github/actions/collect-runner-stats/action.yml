@@ -1,0 +1,60 @@
+name: Collect runner's stats
+
+inputs:
+  target_os:
+    required: true
+    type: string
+  target_arch:
+    required: true
+    type: string
+  cxx_compiler:
+    required: true
+    type: string
+  build_config:
+    required: true
+    type: string
+
+outputs:
+  job_id:
+    description: "Current job ID"
+    value: ${{ steps.fetch_job_id.outputs.job_id }}
+  cpu_count:
+    description: "Runner's CPU count"
+    value: ${{ steps.collect_stats.outputs.cpu_count }}
+  ram_amount_mb:
+    description: "Runner's RAM amount in megabytes"
+    value: ${{ steps.collect_stats.outputs.ram_amount_mb }}
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch job ID
+      id: fetch_job_id
+      # `shell` must be specified explicitly for composite actions.
+      # To prevent problems with running a unified shell (bash/pwsh) on all OSes, the script is called directly instead.
+      shell: python3 fetch_job_id.py {0}
+      working-directory: ${{ github.action_path }}/../../../scripts/devops
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: ""
+
+    - name: Collect sys stats
+      id: collect_stats
+      # `shell` must be specified explicitly for composite actions.
+      # To prevent problems with running a unified shell (bash/pwsh) on all OSes, the script is called directly instead.
+      shell: python3 collect_runner_sys_stats.py {0}
+      working-directory: ${{ github.action_path }}/../../../scripts/devops
+      env:
+        TARGET_OS: ${{ inputs.target_os }}
+        TARGET_ARCH: ${{ inputs.target_arch }}
+        CXX_COMPILER: ${{ inputs.cxx_compiler }}
+        BUILD_CONFIG: ${{ inputs.build_config }}
+        STATS_FILE: "${{ runner.temp }}/RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
+      run: ""
+
+    - name: Upload sys stats
+      uses: actions/upload-artifact@v4
+      with:
+        name: RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}
+        path: "${{ runner.temp }}/RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
+        retention-days: 1

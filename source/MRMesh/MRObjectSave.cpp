@@ -41,7 +41,7 @@ Mesh mergeToMesh( const Object& object )
             continue;
 
         VertMap vmap;
-        result.addPart( *objMesh->mesh(), nullptr, &vmap );
+        result.addMesh( *objMesh->mesh(), nullptr, &vmap );
 
         const auto xf = objMesh->worldXf();
         for ( const auto v : vmap )
@@ -181,7 +181,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     }
     else
     {
-        return unexpected( "unsupported file extension" );
+        return unexpectedUnsupportedFileExtension();
     }
 }
 

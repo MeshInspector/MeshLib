@@ -59,11 +59,12 @@
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRSceneCache.h"
+#include "MRViewerTitle.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
-#include "MRViewerIO.h"
+#include "MRSaveObjects.h"
 #include "MRProgressBar.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"
@@ -751,10 +752,13 @@ int Viewer::launchInit_( const LaunchParams& params )
             spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
             spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
         }
-        defaultWindowTitle = params.name;
+
+        if ( !windowTitle )
+            windowTitle = std::make_shared<ViewerTitle>();
+
+        windowTitle->setAppName( params.name );
         if ( params.showMRVersionInTitle )
-            defaultWindowTitle += " (" + GetMRVersionString() + ")";
-        glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
+            windowTitle->setVersion( GetMRVersionString() );
 
         glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
         // Register callbacks
@@ -1191,6 +1195,23 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
+/// returns class name of all objects or nullopt if they are of different types
+static std::optional<std::string> commonClassName( const std::vector<std::shared_ptr<Object>>& objs )
+{
+    if ( objs.empty() )
+        return {};
+
+    auto cn = objs[0]->getClassName();
+    if ( objs.size() == 1 )
+        return cn;
+
+    for ( int i = 1; i < objs.size(); ++i )
+        if ( cn != objs[i]->getClassName() )
+            return {};
+
+    return objs[0]->getClassNameInPlural();
+}
+
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
 {
     if ( filesList.empty() )
@@ -1203,10 +1224,14 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             const bool wasEmptyScene = SceneRoot::get().children().empty();
             const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
+            std::string undoName = options.undoPrefix + commonFilesName( result.loadedFiles );
+            if ( auto cn = commonClassName( result.scene->children() ) )
+                undoName += " as " + *cn;
+
             if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
                 // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( options.undoPrefix + commonFilesName( result.loadedFiles ) );
+                AppendHistory<SwapRootAction>( undoName );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
@@ -1218,7 +1243,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
 
-                SCOPED_HISTORY( options.undoPrefix + commonFilesName( result.loadedFiles ) );
+                SCOPED_HISTORY( undoName );
 
                 const auto children = result.scene->children();
                 result.scene->removeAllChildren();
@@ -1954,8 +1979,8 @@ void Viewer::initGlobalBasisAxesObject_()
         }
         basis.transform( rotTramsform );
         cone.transform( rotTramsform * translate );
-        mesh.addPart( basis );
-        mesh.addPart( cone );
+        mesh.addMesh( basis );
+        mesh.addMesh( cone );
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
         std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
@@ -2101,13 +2126,8 @@ void Viewer::makeTitleFromSceneRootPath()
     if ( globalHistoryStore_ && globalHistoryStore_->isSceneModified() )
         sceneFileName += "*";
 
-    if ( !window )
-        return;
-
-    if ( sceneFileName.empty() )
-        glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
-    else
-        glfwSetWindowTitle( window, (defaultWindowTitle + " " + sceneFileName).c_str() );
+    if ( windowTitle )
+        windowTitle->setSceneName( sceneFileName );
 }
 
 ViewportId Viewer::getFirstAvailableViewportId_() const

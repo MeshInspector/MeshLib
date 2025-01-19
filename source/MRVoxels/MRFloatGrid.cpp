@@ -8,6 +8,7 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBox.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -23,14 +24,11 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         return {};
     const openvdb::FloatGrid & grid_ = *grid;
     MR_TIMER;
-    openvdb::FloatGrid::Ptr dest = openvdb::FloatGrid::create();
+    openvdb::FloatGrid::Ptr dest = openvdb::FloatGrid::create( grid->background() );
+    dest->setGridClass( grid->getGridClass() );
     openvdb::Mat4R transform;
     transform.setToScale( openvdb::Vec3R{ voxelScale.x,voxelScale.y,voxelScale.z } );
     dest->setTransform( openvdb::math::Transform::createLinearTransform( transform ) ); // org voxel size is 1.0f
-    // for some reason openvdb does not resample correctly for GRID_LEVEL_SET
-    auto backupClass = grid_.getGridClass();
-    if ( backupClass == openvdb::GRID_LEVEL_SET )
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_FOG_VOLUME );
 
     // just grows to 100% 
     // first grows fast, then slower
@@ -45,16 +43,37 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
 
     ProgressInterrupter interrupter( dummyProgressCb );
     // openvdb::util::NullInterrupter template argument to avoid tbb inconsistency
-    openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
 
-    // restore original grid class
-    if ( backupClass == openvdb::GRID_LEVEL_SET )
-        const_cast< openvdb::FloatGrid& >( grid_ ).setGridClass( openvdb::GRID_LEVEL_SET );
+    // the following piece of code is taken from `openvdb::resampleToMatch` and slightly rewritten to take into account
+    // the specific properties of the usage of OpenVdb in our software
+    bool failed = true;
+
+    // the level set is processed differently due to the potential narrowness of the band near ISO value. It could be just a 1 voxel, in which case
+    // the usual resampling will introduce artifacts and change the topology of ISO surface
+    if ( dest->getGridClass() == openvdb::GRID_LEVEL_SET )
+    {
+        try {
+            // unlike `openvdb::resampleToMatch`, the size of the voxel for the grid is always 1, the true size of the voxel is stored
+            // in volume wrapper
+            dest = openvdb::tools::doLevelSetRebuild( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
+            failed = false;
+        }
+        catch( std::exception& e )
+        {
+            spdlog::warn( "The input grid is classified as a level set, but it has a value type that is not supported by the level set rebuild tool: {}", e.what() );
+        }
+    }
+    // in case of a volume created in "unsigned mode", which is not supported by OpenVdb as level set but still used as such, the result is empty
+    // we detect this case and do resampling
+    if ( failed || dest->evalActiveVoxelDim().asVec3I().product() == 0 )
+    {
+        openvdb::tools::doResampleToMatch<openvdb::tools::BoxSampler, openvdb::util::NullInterrupter>( grid_, *dest, interrupter );
+    }
+
     if ( interrupter.getWasInterrupted() )
         return {};
     // restore normal scale
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
-    dest->setGridClass( grid->getGridClass() );
 
     return MakeFloatGrid( std::move( dest ) );
 }
@@ -111,6 +130,11 @@ void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
         auto coord = minVox + openvdb::Coord{ pos.x,pos.y,pos.z };
         accessor.setValue( coord, value );
     }
+}
+void setValue( FloatGrid& grid, const Vector3i& p, float value )
+{
+    if ( grid )
+        grid->getAccessor().setValue( openvdb::Coord{ p.x,p.y,p.z }, value );
 }
 
 void setLevelSetType( FloatGrid & grid )

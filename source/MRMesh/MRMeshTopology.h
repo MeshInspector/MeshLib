@@ -335,8 +335,9 @@ public:
     /// returns true if the mesh (region) does not have any neighboring holes
     [[nodiscard]] MRMESH_API bool isClosed( const FaceBitSet * region = nullptr ) const;
 
-    /// returns one edge with no valid left face for every boundary in the mesh
-    [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns one edge with no valid left face for every boundary in the mesh;
+    /// if region is given, then returned edges must have valid right faces from the region
+    [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges( const FaceBitSet * region = nullptr ) const;
 
     /// returns the number of hole loops in the mesh;
     /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
@@ -400,7 +401,7 @@ public:
     /// org(returned-edge) = org(e-before-split),
     /// dest(e) = dest(e-before-split)
     /// \details left and right faces of given edge if valid are also subdivided on two parts each;
-    /// the split edge will have the same face IDs, and the new edge will have new face IDs;
+    /// the split edge will keep both face IDs and their degrees, and the new edge will have new face IDs and new faces are triangular;
     /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
     /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
     MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
@@ -512,7 +513,7 @@ public:
     MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
-    friend class MeshDiff;
+    friend class MeshTopologyDiff;
     /// computes from edges_ all remaining fields: \n
     /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_

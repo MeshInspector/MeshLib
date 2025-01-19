@@ -16,18 +16,11 @@ namespace MR
 /// \ingroup DataModelGroup
 /// \{
 
-/// information about loading process and mesh construction from primitives
-struct MeshLoadInfo
-{
-    std::string* warnings = nullptr; ///< any warnings during loading will be appended here
-    ProgressCallback callback;       ///< callback for set progress and stop process
-};
-
 /// loads mesh from given file in new object
-MRMESH_API Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info = {} );
+MRMESH_API Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
-/// loads mesh from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
-MRMESH_API Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadInfo& info = {},
+/// loads data from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
+MRMESH_API Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb = {},
     bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never ObjectPoints
 
 /// loads lines from given file in new object
@@ -51,12 +44,8 @@ MRMESH_API Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::pa
 // check if there are any supported files folder and subfolders
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
-/// loads meshes from given folder in new container object
-MRMESH_API Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path& folder, std::string* loadWarn = nullptr, ProgressCallback callback = {} );
-
 //tries to load scene from every format listed in SceneFormatFilters
-MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 
-    std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+MRMESH_API Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback = {} );
 
 /**
  * \brief loads objects tree from given scene file (zip/mru)
@@ -67,9 +56,9 @@ MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( co
  * if postDecompress is set, it is called after decompression
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path,
-                                                                    FolderCallback postDecompress = {},
-                                                                    ProgressCallback progressCb = {} );
+MRMESH_API Expected<LoadedObject> deserializeObjectTree( const std::filesystem::path& path,
+                                                         const FolderCallback& postDecompress = {},
+                                                         const ProgressCallback& progressCb = {} );
 
 /**
  * \brief loads objects tree from given scene folder
@@ -79,8 +68,12 @@ MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::f
  *
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
-                                                                              ProgressCallback progressCb = {} );
+MRMESH_API Expected<LoadedObject> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                                   const ProgressCallback& progressCb = {} );
+
+
+/// returns filters for all supported file formats for all types of objects
+MRMESH_API IOFilters getAllFilters();
 
 /// \}
 

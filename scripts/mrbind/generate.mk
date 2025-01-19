@@ -11,6 +11,11 @@ override dry_run := $(findstring n,$(single_letter_makeflags))
 # Non-empty if `--trace` is present.
 override tracing := $(filter --trace,$(MAKEFLAGS))
 
+# A space.
+override space := $(call) $(call)
+# A comma.
+override comma := ,
+
 # A newline.
 override define lf :=
 $(call)
@@ -37,6 +42,13 @@ override rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(
 
 # Assign to a variable safely, e.g. `$(call var,foo := 42)`.
 override var = $(eval override $(subst $,$$$$,$1))
+
+# Given a single number $1 = N, returns numbers from 0 to N-1 inclusive, space-separated.
+# This is relatively expensive, so don't call this more than necessary.
+override seq = $(call safe_shell,bash -c $(call quote,echo {0..$(call safe_shell,bash -c 'echo $$(($(strip $1)-1))')}))
+
+# Enable double expansion of prerequisites. `$1_ObjectFiles` below needs this.
+.SECONDEXPANSION:
 
 
 
@@ -168,7 +180,7 @@ EXTRA_LDLAGS :=
 # Flag presets.
 MODE := release
 ifeq ($(MODE),release)
-override EXTRA_CFLAGS += -Oz -flto=thin
+override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),,-s)# No `-s` on macos. It seems to have no effect, and the linker warns about it.
 else ifeq ($(MODE),debug)
 override EXTRA_CFLAGS += -g
@@ -230,19 +242,8 @@ endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
-# Which MeshLib projects to bind.
-INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
-
-# 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
-# Currently defaults to 1 because otherwise we get an incompatibility on Ubuntu x86 20.04 and 22.04 when MeshLib is built in debug mode,
-#   resulting in this error: `ImportError: arg(): could not convert default argument 'settings: MR::MeshBuilder::BuildSettings' in function 'meshFromFacesVerts' into a Python object`.
-# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`.
-BUILD_MRMESHNUMPY := 1
-# Defaults to 0, but only if if `PACKAGE_NAME == meshlib`.
-# BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
-override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
-
 # Enable PCH.
+# Not all modules we build use PCHs even if this is true. But if this is false, PCHs are disabled for all modules.
 ENABLE_PCH := 1
 override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
 
@@ -313,22 +314,51 @@ else
 $(info Build machine: $(nproc_string), $(ram_string); NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))# This can print the wrong `-j` if you override it using `-j` instead of `JOBS=N`.
 endif
 
+# You can change this to something else to rename the module, to have it side-by-side with the legacy one.
+PACKAGE_NAME := meshlib
 
 
 
-# --- End of configuration variables.
+
+# --- The list of modules:
+MODULES :=
+
+MODULES += mrmeshpy
+mrmeshpy_InputProjects := MRMesh MRIOExtras MRSymbolMesh MRVoxels
+mrmeshpy_ExtraMrbindFlags := --allow MR
+mrmeshpy_EnablePch := 1
+mrmeshpy_ExtraInputDirs := $(makefile_dir)extra_headers
+mrmeshpy_NumFragments := $(NUM_FRAGMENTS)
+# Those files are parsed and baked into the final bindings.
+mrmeshpy_ExtraInputFiles := $(makefile_dir)helpers.cpp
+# Those files are compiled as is and linked into the final bindings.
+mrmeshpy_ExtraSourceFiles := $(makefile_dir)aliases.cpp
+
+# Include the `MRCuda` project?
+# Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
+ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
+$(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
+ifneq ($(ENABLE_CUDA),)
+MODULES += mrcudapy
+mrcudapy_InputProjects := MRCuda
+mrcudapy_ExtraMrbindFlags := --allow MR::Cuda
+mrcudapy_DependsOn := $(PACKAGE_NAME).mrmeshpy
+endif
+
+
+
+
+
+# ----------- End of configuration variables.
 
 
 
 
 .DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
 
-
-# You can change this to something else to rename the module, to have it side-by-side with the legacy one.
-PACKAGE_NAME := meshlib
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
-INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,$(INPUT_PROJECTS)) $(makefile_dir)/extra_headers
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)/input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
 ifneq ($(IS_WINDOWS),)
@@ -346,17 +376,9 @@ COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
 # Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)
-LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
-GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp
-
-# Those files are parsed and baked into the final bindings.
-EXTRA_INPUT_SOURCES := $(makefile_dir)helpers.cpp
-# Those files compiled as is and baked into the final bindings.
-EXTRA_GENERATED_SOURCES := $(makefile_dir)aliases.cpp
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -424,26 +446,6 @@ COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem
 endif
 endif
 
-# PCH.
-PCH_IMPORT_FLAG :=
-PCH_OBJECT :=
-ifneq ($(ENABLE_PCH),)
-COMPILED_PCH_FILE := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.gch
-PCH_IMPORT_FLAG := -include$(COMPILED_PCH_FILE:.gch=)
-$(COMPILED_PCH_FILE): $(COMBINED_HEADER_OUTPUT)
-	@echo $(call quote,[Compiling PCH] $@)
-	@$(COMPILER) -o $@ -xc++-header $< $(COMPILER_FLAGS) $(PCH_CODEGEN_FLAGS)
-# PCH object file, if enabled.
-# We strip the include directories from the flags here, because Clang warns that those are unused.
-ifneq ($(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS)),)
-PCH_OBJECT := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.o
-$(PCH_OBJECT): $(COMPILED_PCH_FILE)
-	@echo $(call quote,[Compiling PCH object] $@)
-	@$(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $(COMPILER_FLAGS)))) -c -o $@ $(COMPILED_PCH_FILE)
-endif
-endif
-
-
 # Directories:
 # Temporary output.
 $(TEMP_OUTPUT_DIR):
@@ -452,76 +454,117 @@ $(TEMP_OUTPUT_DIR):
 $(MODULE_OUTPUT_DIR):
 	@mkdir -p $(call quote,$@)
 
-# The single header including all target headers.
-override input_files := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$(INPUT_DIRS),$(INPUT_GLOBS))))
-$(COMBINED_HEADER_OUTPUT): $(input_files) | $(TEMP_OUTPUT_DIR)
-	$(file >$@,#pragma once$(lf))
-	$(foreach f,$(input_files),$(file >>$@,#include "$f"$(lf)))
-ifneq ($(ENABLE_PCH),) # Additional headers to bake into the PCH. The condition is to speed up parsing a bit.
-	$(file >>$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#include <pybind11/pybind11.h>$(lf)#endif)
-endif
-# This version bakes the whole our `core.h` (which includes `<pybind11/pybind11.h>), but for some reason my measurements show it to be a tiny bit slower. Weird.
-# $(file >>$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf)) # Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.
 
-# The generated binding source.
-# Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
+# Those are used by `module_snippet` below.
+override all_outputs :=
 .PHONY: only-generate
-only-generate: $(GENERATED_SOURCE_OUTPUT)
-$(GENERATED_SOURCE_OUTPUT): $(COMBINED_HEADER_OUTPUT) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[Generating] binding.cpp)
-	@$(MRBIND_EXE) $(MRBIND_FLAGS) $(call quote,$<) -o $(call quote,$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
-# The object files for all fragments of the generated source.
-override object_files := $(PCH_OBJECT) $(patsubst %,$(TEMP_OUTPUT_DIR)/binding.%.o,$(call safe_shell,bash -c $(call quote,echo {0..$(call safe_shell,bash -c 'echo $$(($(strip $(NUM_FRAGMENTS))-1))')})))
-$(TEMP_OUTPUT_DIR)/binding.%.o: $(GENERATED_SOURCE_OUTPUT) $(COMPILED_PCH_FILE) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[Compiling] $< (fragment $*))
-	@$(COMPILER) $(call quote,$<) -c -o $(call quote,$@) $(COMPILER_FLAGS) $(PCH_IMPORT_FLAG) -DMB_NUM_FRAGMENTS=$(strip $(NUM_FRAGMENTS)) -DMB_FRAGMENT=$* $(if $(filter 0,$*),-DMB_DEFINE_IMPLEMENTATION)
-# Generate and compile extra files.
+
+# This code segment is repeated for every module. $1 is the module name.
+override define module_snippet =
+# Which directories we search for headers.
+$(call var,_input_dirs := $(addprefix $(makefile_dir)/../../source/,$($1_InputProjects)) $($1_ExtraInputDirs))
+# Input headers.
+$(call var,_input_files := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$(_input_dirs),$(INPUT_GLOBS)))))
+
+# Unset the PCH flag on the module if PCHs are disabled globally.
+$(if $(ENABLE_PCH),,$(call var,$1_EnablePch :=))
+
+# Set the default number of fragments, if not specified.
+$(if $($1_NumFragments),,$(call var,$1_NumFragments := 1))
+
+# Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
+$(call var,$1_CompilerFlagsFixed := $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))
+
+# Produce the one combined header including all our input headers.
+# And if PCH is enabled, this also includes the headers to bake.
+$(call var,$1__CombinedHeaderOutput := $(TEMP_OUTPUT_DIR)/$1.combined.hpp)
+$($1__CombinedHeaderOutput): $(_input_files) | $(TEMP_OUTPUT_DIR)
+	$$(file >$$@,#pragma once$$(lf))
+	$$(foreach f,$(_input_files),$$(file >>$$@,#include "$$f"$$(lf)))
+	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
+	$$(if $($1_EnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))
+	$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)
+	$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))
+	$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)
+
+# Run the parser.
+# Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
+$(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated.cpp)
+only-generate: $($1__ParserSourceOutput)
+$($1__ParserSourceOutput): $($1__CombinedHeaderOutput) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Generating] $($1__ParserSourceOutput))
+	@$(MRBIND_EXE) $(MRBIND_FLAGS) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
+
+# Compile the PCH.
+$(call var,$1__BakedPch :=)
+$(call var,$1__PchImportFlag :=)
+$(call var,$1__PchObject :=)
+$(if $($1_EnablePch),\
+  $(call var,$1__BakedPch := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.gch)\
+  $(call var,$1__PchImportFlag := -include$($1__BakedPch:.gch=))\
+  \
+  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
+)
+# PCH object file, if enabled.
+# We strip the include directories from the flags here, because Clang warns that those are unused.
+$(if $(and $($1_EnablePch),$(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS))),\
+  $(call var,$1__PchObject := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.o)\
+  \
+  $($1__PchObject): $($1__BakedPch) ; @echo $(call quote,[$1] [Compiling PCH object] $($1__PchObject)) && $(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $($1_CompilerFlagsFixed)))) -c -o $$@ $($1__BakedPch)\
+)
+
+# Compile N object files (fragments) from the generated source.
+$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | $(TEMP_OUTPUT_DIR)
+	@echo $$(call quote,[$1] [Compiling] $$< (fragment $$*))
+	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $($1__PchImportFlag) -DMB_NUM_FRAGMENTS=$(strip $($1_NumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
+
+# A list of all object files.
+# NOTE: This is amended later, so we must refer to it lazily.
+$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_NumFragments))))
+
+# Link the module.
+# Have to evaluate `$1_ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
+$(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$1$(PYTHON_MODULE_SUFFIX))
+$(call var,all_outputs += $($1__LinkerOutput))
+$($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
+	@echo $$(call quote,[$1] [Linking] $$@)
+	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects))
+
+# A pretty target.
+.PHONY: $1
+$1: $($1__LinkerOutput)
+
+endef
+$(foreach x,$(MODULES),$(eval $(call module_snippet,$x)))
+
+# This snippet parses and compiles an extra file.
+# $1 is the module name, $2 is the input file name.
 override define extra_file_snippet =
-$(call var,_generated := $(TEMP_OUTPUT_DIR)/binding_extra.$(basename $(notdir $1)).cpp)
+$(call var,_generated := $(TEMP_OUTPUT_DIR)/$1.extra.$(basename $(notdir $2)).cpp)
 $(call var,_object := $(_generated:.cpp=.o))
-$(call var,object_files += $(_object))
+$(call var,$1__ObjectFiles += $(_object))
 only-generate: $(_generated)
-$(_generated): $1 | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[Generating] $(notdir $(_generated)))
-	@$(MRBIND_EXE) $(MRBIND_FLAGS_FOR_EXTRA_INPUTS) $(call quote,$1) -o $(call quote,$(_generated)) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
+$(_generated): $2 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Generating] $(notdir $(_generated)))
+	@$(MRBIND_EXE) $(MRBIND_FLAGS_FOR_EXTRA_INPUTS) $(call quote,$2) -o $(call quote,$(_generated)) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
 $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[Compiling] $(_generated))
-	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+	@echo $(call quote,[$1] [Compiling] $(_generated))
+	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
-# Linking the primary module.
-$(foreach s,$(EXTRA_INPUT_SOURCES),$(eval $(call extra_file_snippet,$s)))
-# Compile extra files that don't need generating.
+$(foreach x,$(MODULES),$(foreach y,$($x_ExtraInputFiles),$(eval $(call extra_file_snippet,$x,$y))))
+
+# This snippet compiles an extra file as is, without passing it through the parser/generator.
+# $1 is the module name, $2 is the input file name.
 override define extra_pregen_file_snippet =
-$(call var,_object := $(TEMP_OUTPUT_DIR)/$(notdir $(1:.cpp=.o)))
-$(call var,object_files += $(_object))
-$(_object): $1 | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[Compiling] $1)
-	@$(COMPILER) $(call quote,$1) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+$(call var,_object := $(TEMP_OUTPUT_DIR)/$1.custom.$(notdir $(1:.cpp=.o)))
+$(call var,$1__ObjectFiles += $(_object))
+$(_object): $2 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Compiling] $2)
+	@$(COMPILER) $(call quote,$2) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
-$(foreach s,$(EXTRA_GENERATED_SOURCES),$(eval $(call extra_pregen_file_snippet,$s)))
-# Linking the primary module.
-$(LINKER_OUTPUT): $(object_files) | $(MODULE_OUTPUT_DIR)
-	@echo $(call quote,[Linking] $@)
-	@$(LINKER) $^ -o $(call quote,$@) $(LINKER_FLAGS)
+$(foreach x,$(MODULES),$(foreach y,$($x_ExtraSourceFiles),$(eval $(call extra_pregen_file_snippet,$x,$y))))
 
 
-
-
-# Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
-ifneq ($(BUILD_MRMESHNUMPY),)
-MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
-else
-MRMESHNUMPY_MODULE :=
-endif
-ifneq ($(MRMESHNUMPY_MODULE),)
-$(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
-	@echo $(call quote,[Compiling] mrmeshnumpy)
-	@$(COMPILER) \
-		-o $@ \
-		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
-		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
-		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(PACKAGE_NAME)
-endif
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
@@ -533,25 +576,28 @@ endif
 ifeq ($(FOR_WHEEL),) # If not on building a wheel, strip the wheel-only part.
 	@gawk -i inplace '/### wheel-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
 endif
-
-ALL_OUTPUTS := $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)
+override all_outputs += $(INIT_SCRIPT)
 
 # Copying modules next to the exe on Windows.
+# I don't think this is actually needed, since we erase them when creating the installer.
+# That was originally done because it's hard to make VS build them directly in the correct directory,
+#   so some of our scripts look for them outside of `meshlib/`. Probably a good idea to fix that and not copy here at all.
 ifneq ($(IS_WINDOWS),)
-ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/__init__.py
+override all_outputs += $(MESHLIB_SHLIB_DIR)/__init__.py
 $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 	@cp $< $@
-ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
-$(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
-	@cp $< $@
-ifneq ($(MRMESHNUMPY_MODULE),)
-ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
-$(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
-	@cp $< $@
+override modules_copied_to_bin_dir := $(patsubst %,,$(MODULES))
+$(foreach m,$(MODULES),\
+	$(call var,_in := $(MODULE_OUTPUT_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,all_outputs += $(_out))\
+	$(eval $(_out): $(_in) ; @cp $(_in) $(_out))\
+)
 endif
-endif
+
+
 
 # All modules.
 .DEFAULT_GOAL := all
 .PHONY: all
-all: $(ALL_OUTPUTS)
+all: $(all_outputs)

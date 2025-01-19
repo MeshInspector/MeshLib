@@ -56,7 +56,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( "findBoundaryVerts", &MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
         def( "deleteFaces", &MeshTopology::deleteFaces, pybind11::arg( "fs" ), pybind11::arg( "keepEdges" ) = nullptr,
             "deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces ant not in keepFaces" ).
-        def( "findHoleRepresentiveEdges", &MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
+        def( "findHoleRepresentiveEdges", &MeshTopology::findHoleRepresentiveEdges, pybind11::arg( "region" ) = nullptr,
+            "returns one edge with no valid left face for every boundary in the mesh" ).
         def( "getTriVerts", ( void( MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "gets 3 vertices of given triangular face;\n"
@@ -327,10 +328,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
             "if region is given, then it must include (f) and new faces will be added there as well\n"
             "\tnew2Old receive mapping from newly appeared triangle to its original triangle (part to full)" ).
 
-        def( "addPartByMask", ( void( Mesh::* )( const Mesh&, const FaceBitSet&, const PartMapping& ) )& Mesh::addPartByMask,
+        def( "addMesh", []( Mesh & to, const Mesh & from ) { to.addMesh( from ); },
+            pybind11::arg( "from" ),
+            "appends another mesh as separate connected component(s) to this" ).
+
+        def( "addMeshPart", ( void ( Mesh::* )( const MeshPart &, const PartMapping & ) ) &Mesh::addMeshPart,
+            pybind11::arg( "from" ), pybind11::arg_v( "map", PartMapping(), "PartMapping()" ),
+            "appends whole or part of another mesh as separate connected component(s) to this" ).
+
+        def( "addPartByMask", []( Mesh & to, const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map )
+            { to.addMeshPart( { from, &fromFaces }, map ); },
             pybind11::arg( "from" ), pybind11::arg( "fromFaces" ) = nullptr, pybind11::arg_v( "map", PartMapping(), "PartMapping()" ),
-            "appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points\n"
-            "copies only portion of (from) specified by fromFaces" ).
+            "appends whole or part of another mesh as separate connected component(s) to this" ).
 
         def( "holePerimiter", &Mesh::holePerimiter, pybind11::arg( "e" ), "computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)" ).
         def( "holeDirArea", &Mesh::holeDirArea, pybind11::arg( "e" ), 
@@ -520,8 +529,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\ta - first EdgeId\n"
         "\tb - second EdgeId\n" );
 
-    m.def( "makeBridge", & makeBridge,
-        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr"),
+    m.def( "makeBridge", []( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+        { return (bool)makeBridge( topology, a, b, outNewFaces ); },
+        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr" ),
         "creates a bridge between two boundary edges a and b (both having no valid left face);\n"
         "bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;\n"
         "return false if bridge cannot be created because otherwise multiple edges appear\n"
@@ -535,7 +545,7 @@ Mesh pythonMergeMeshes( const pybind11::list& meshes )
 {
     Mesh res;
     for ( int i = 0; i < pybind11::len( meshes ); ++i )
-        res.addPart( pybind11::cast<Mesh>( meshes[i] ) );
+        res.addMesh( pybind11::cast<Mesh>( meshes[i] ) );
     return res;
 }
 

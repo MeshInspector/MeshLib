@@ -39,7 +39,9 @@ public:
     ObjectGcode( ProtectedStruct, const ObjectGcode& obj ) : ObjectGcode( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-    virtual std::string getClassName() const override { return "G-code"; }
+
+    std::string getClassName() const override { return "G-code"; }
+    std::string getClassNameInPlural() const override { return "G-codes"; }
 
     // set drawing feedrate as gradient of brightness
     MRMESH_API void switchFeedrateGradient( bool isFeedrateGradientEnabled );

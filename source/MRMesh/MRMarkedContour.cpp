@@ -35,9 +35,10 @@ namespace
 
 } // anonymous namespace
 
-MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
+MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f * normals )
 {
     MR_TIMER
+    assert( !normals || normals->size() == in.contour.size() );
     MarkedContour3f res;
     if ( in.contour.empty() )
         return res;
@@ -45,6 +46,9 @@ MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
     assert( firstLastMarked( in ) );
     res.marks.autoResizeSet( res.contour.size() );
     res.contour.push_back( in.contour.front() );
+    Contour3f resNormals;
+    if ( normals )
+        resNormals.push_back( normals->front() );
 
     for ( size_t i = 0; i + 1 < in.contour.size(); )
     {
@@ -58,13 +62,16 @@ MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
         }
         assert( in.marks.test( i1 ) );
 
-        const int numMidPoints = int( distance / maxStep );
+        const int numMidPoints = int( distance / minStep );
         if ( numMidPoints > 0 )
         {
             const float step = distance / ( numMidPoints + 1 );
             float remDistance = step; //< till next sample point
             auto i2 = i;
             auto p = in.contour[i2];
+            Vector3f n;
+            if ( normals )
+                n = ( *normals )[i2];
             while ( i2 < i1 )
             {
                 auto segmLen = ( in.contour[i2 + 1] - p ).length();
@@ -72,21 +79,28 @@ MarkedContour3f resample( const MarkedContour3f & in, float maxStep )
                 {
                     remDistance -= segmLen;
                     p = in.contour[++i2];
+                    if ( normals )
+                        n = ( *normals )[i2];
                     continue;
                 }
                 const float a = remDistance / segmLen;
-                p = ( 1 - a ) * p + a * in.contour[i2 + 1];
-                res.contour.push_back( p );
+                res.contour.push_back( p = ( 1 - a ) * p + a * in.contour[i2 + 1] );
+                if ( normals )
+                    resNormals.push_back( n = ( ( 1 - a ) * n + a * ( *normals )[i2 + 1] ).normalized() );
                 remDistance = step;
             }
         }
         i = i1;
         res.marks.autoResizeSet( res.contour.size() );
         res.contour.push_back( in.contour[i] );
+        if ( normals )
+            resNormals.push_back( ( *normals )[i] );
     }
 
     assert( firstLastMarked( res ) );
     assert( in.marks.count() == res.marks.count() );
+    if ( normals )
+        *normals = std::move( resNormals );
     return res;
 }
 
@@ -97,7 +111,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
     if ( mc.contour.empty() )
         return mc;
     assert( firstLastMarked( mc ) );
-    const bool closed = mc.contour.size() > 1 && mc.contour.front() == mc.contour.back();
+    const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();
     const auto mz = mc.marks.count();
@@ -182,7 +196,22 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
 
 MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSettings & settings )
 {
-    return makeSpline( resample( markedContour( controlPoints ), settings.samplingStep ), settings.controlStability );
+    MR_TIMER
+    assert( settings.iterations >= 1 );
+    MarkedContour3f res = markedContour( controlPoints );
+    for( int i = 0; i < settings.iterations; ++i )
+    {
+        assert( controlPoints.size() == res.marks.count() );
+        if ( i > 0 )
+        {
+            // restore exact control points positions
+            int n = 0;
+            for ( auto m : res.marks )
+                res.contour[m] = controlPoints[n++];
+        }
+        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability );
+    }
+    return res;
 }
 
 TEST(MRMesh, MarkedContour)

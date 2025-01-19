@@ -47,6 +47,13 @@ struct InSphereSearchSettings
 
     /// iterations stop if next radius is larger than minShrinkage times previous radius
     float minShrinkage = 0.99999f;
+
+    /// minimum cosine of the angle between two unit directions:
+    /// 1) search unit direction (m.inDir),
+    /// 2) unit direction from sphere's center to the other found touch point;
+    /// -1 value means no filtering by this angle;
+    /// the increase of this value helps avoiding too small spheres on noisy surfaces
+    float minAngleCos = -1;
 };
 
 /// found maximal inscribed sphere touching input point with center along given direction

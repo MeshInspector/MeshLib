@@ -32,7 +32,9 @@ public:
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-    virtual std::string getClassName() const override { return "Lines"; }
+
+    std::string getClassName() const override { return "Lines"; }
+    std::string getClassNameInPlural() const override { return "Lines"; }
 
     /// signal about lines changing, triggered in setDirtyFlag
     using LinesChangedSignal = Signal<void( uint32_t mask )>;

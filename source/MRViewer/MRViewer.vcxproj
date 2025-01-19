@@ -38,6 +38,7 @@
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
+    <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
@@ -93,8 +94,9 @@
     <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerEventQueue.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
-    <ClCompile Include="MRViewerIO.cpp" />
+    <ClCompile Include="MRSaveObjects.cpp" />
     <ClCompile Include="MRViewerSettingsPlugin.cpp" />
+    <ClCompile Include="MRViewerTitle.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
     <ClCompile Include="MRRecentFilesStore.cpp" />
     <ClCompile Include="MRRenderLinesObject.cpp" />
@@ -144,6 +146,7 @@
     <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
@@ -171,6 +174,7 @@
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRObjectImGuiLabel.h" />
+    <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRProjectMeshAttributes.h" />
     <ClInclude Include="MRRibbonNotification.h" />
@@ -245,8 +249,9 @@
     <ClInclude Include="MRViewerEventQueue.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
-    <ClInclude Include="MRViewerIO.h" />
+    <ClInclude Include="MRSaveObjects.h" />
     <ClInclude Include="MRViewerSettingsPlugin.h" />
+    <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />

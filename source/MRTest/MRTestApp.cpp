@@ -72,14 +72,20 @@ int main( int argc, char** argv )
         // 2. To allow building them separately, after this executable.
         #if _WIN32
         auto lib = LoadLibraryA( "mrmeshpy.pyd" );
-        #else
-        auto lib = dlopen( ( MR::SystemPath::getExecutablePath().value().parent_path() / "meshlib/mrmeshpy.so" ).c_str(), RTLD_NOW | RTLD_GLOBAL );
-        #endif
         if ( !lib )
         {
-            spdlog::error( "Unable to load the Python module." );
+            spdlog::error( "Unable to load the Python module mrmeshpy.pyd error: {}", GetLastError() );
             std::exit(1);
         }
+        #else //!Windows
+        auto mrmeshpyPath = MR::SystemPath::getExecutablePath().value().parent_path() / "meshlib/mrmeshpy.so";
+        auto lib = dlopen( mrmeshpyPath.c_str(), RTLD_NOW | RTLD_GLOBAL );
+        if ( !lib )
+        {
+            spdlog::error( "Unable to load the Python module {} error: {}", mrmeshpyPath.c_str(), dlerror() );
+            std::exit(1);
+        }
+        #endif
 
         //Test python mrmeshpy
         {

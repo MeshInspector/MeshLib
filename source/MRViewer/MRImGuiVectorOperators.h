@@ -1,9 +1,9 @@
 #pragma once
 
+#include "MRViewer/MRImGui.h"
 #include <concepts>
 #include <type_traits>
 
-#include <imgui.h>
 
 // Utilities.
 namespace MR::ImGuiMath

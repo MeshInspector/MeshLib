@@ -3,7 +3,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRMouse.h"
-#include "imgui.h"
+#include "MRViewer/MRImGui.h"
 
 namespace MR
 {
@@ -46,6 +46,12 @@ public:
     /// Calling `onMouseUp` is not necessary after this
     /// Should be called when closing plugin etc.
     MRVIEWER_API void cancel();
+
+    /// enables or disables adding history to viewer history store by this tool
+    void enableHistory( bool history ) { historyEnabled_ = history; }
+
+    /// returns true if appending history to viewer history store is enabled in this tool
+    bool isHistoryEnabled() const { return historyEnabled_; }
 
 protected:
     /// Transformation mode
@@ -96,6 +102,9 @@ private:
     float angle_ = 0.f;
     float shift_ = 0.f;
     float scale_ = 1.f;
+
+    // only check on real appending history
+    bool historyEnabled_{ true };
 
     std::vector<ImVec2> visualizeVectors_;
 };

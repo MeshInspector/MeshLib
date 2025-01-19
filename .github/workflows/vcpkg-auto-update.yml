@@ -15,10 +15,11 @@ jobs:
         with:
           ref: "master"
 
-      - name: Search for Tag in build-test-windows.yml
+      - name: Search for Tag in .github/workflows/config.yml
         id: extract-tag
         run: |
-          current_vcpkg_tag=$(awk -F": '" '/VCPKG-VERSION/ {print $2}' .github/workflows/build-test-windows.yml | tr -d "'")
+          # TODO: call 'config.yml' for predefined values only
+          current_vcpkg_tag=$(yq eval -r '.on.workflow_call.outputs.vcpkg_version.value' .github/workflows/config.yml)
           echo "current_vcpkg_tag=${current_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "current vcpkg tag: ${current_vcpkg_tag}"
         shell: bash

@@ -65,8 +65,10 @@ Vector3f findEdgeTriIntersectionPoint( const Mesh& edgeMesh, EdgeId edge, const 
 
 void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, VertBitSet& orgs, VertBitSet& dests )
 {
-    faces.set( topology.left( e ) );
-    faces.set( topology.right( e ) );
+    if ( auto l = topology.left( e ) )
+        faces.set( l );
+    if ( auto r = topology.right( e ) )
+        faces.set( r );
     orgs.set( topology.org( e ) );
     dests.set( topology.dest( e ) );
 }
@@ -168,8 +170,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     auto loneCb = subprogress( params.cb, 0.0f, 0.8f );
 
-    FaceMap new2orgSubdivideMapA;
-    FaceMap new2orgSubdivideMapB;
+    FaceHashMap new2orgSubdivideMapA;
+    FaceHashMap new2orgSubdivideMapB;
     std::vector<int> prevLoneContoursIds;
     int iters = 0;
     const int cMaxFixLoneIterations = 100;
@@ -219,20 +221,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, params.rigidB2A );
             auto loneIntsAonB = getOneMeshIntersectionContours( meshA, meshB, loneA, false, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
-            FaceMap new2orgLocalMap;
-            FaceMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
-            subdivideLoneContours( meshA, loneIntsA, mapPointer );
-            if ( new2orgSubdivideMapA.size() < new2orgLocalMap.size() )
-                new2orgSubdivideMapA.resize( new2orgLocalMap.size() );
-            ParallelFor( new2orgLocalMap, [&] ( FaceId i )
-            {
-                if ( !new2orgLocalMap[i] )
-                    return;
-                FaceId refFace = new2orgLocalMap[i];
-                if ( new2orgSubdivideMapA[refFace] )
-                    refFace = new2orgSubdivideMapA[refFace];
-                new2orgSubdivideMapA[i] = refFace;
-            } );
+            subdivideLoneContours( meshA, loneIntsA, &new2orgSubdivideMapA );
         }
         if ( !loneB.empty() && needCutMeshB )
         {
@@ -240,20 +229,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, params.rigidB2A );
             auto loneIntsBonA = getOneMeshIntersectionContours( meshA, meshB, loneB, true, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
-            FaceMap new2orgLocalMap;
-            FaceMap* mapPointer = params.mapper ? &new2orgLocalMap : nullptr;
-            subdivideLoneContours( meshB, loneIntsB, mapPointer );
-            if ( new2orgSubdivideMapB.size() < new2orgLocalMap.size() )
-                new2orgSubdivideMapB.resize( new2orgLocalMap.size() );
-            ParallelFor( new2orgLocalMap, [&] ( FaceId i )
-            {
-                if ( !new2orgLocalMap[i] )
-                    return;
-                FaceId refFace = new2orgLocalMap[i];
-                if ( new2orgSubdivideMapB[refFace] )
-                    refFace = new2orgSubdivideMapB[refFace];
-                new2orgSubdivideMapB[i] = refFace;
-            } );
+            subdivideLoneContours( meshB, loneIntsB, &new2orgSubdivideMapB );
         }
     }
     if ( iters == cMaxFixLoneIterations )
@@ -360,9 +336,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     if ( !( *cut2oldAPtr )[i] )
                         return;
                     FaceId refFace = ( *cut2oldAPtr )[i];
-                    if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
-                        ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
-
+                    auto it = new2orgSubdivideMapA.find( refFace );
+                    if ( it != new2orgSubdivideMapA.end() && it->second )
+                        ( *cut2oldAPtr )[i] = it->second;
                 } );
             }
             result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
@@ -392,8 +368,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 if ( !( *cut2oldBPtr )[i] )
                     return;
                 FaceId refFace = ( *cut2oldBPtr )[i];
-                if ( new2orgSubdivideMapB.size() > refFace && new2orgSubdivideMapB[refFace] )
-                    ( *cut2oldBPtr )[i] = new2orgSubdivideMapB[refFace];
+                auto it = new2orgSubdivideMapB.find( refFace );
+                if ( it != new2orgSubdivideMapB.end() && it->second )
+                    ( *cut2oldBPtr )[i] = it->second;
             } );
         }
         result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );
@@ -637,7 +614,7 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
 
         auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
 
-        meshA.addPartByMask( meshASup, meshASup.topology.getValidFaces(), true, { border }, { border } );
+        meshA.addMeshPart( meshASup, true, { border }, { border } );
     }
 
     auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );

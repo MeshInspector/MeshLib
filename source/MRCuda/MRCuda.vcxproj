@@ -117,7 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />
-    <ClCompile Include="MRCudaContoursDisntaceMap.cpp" />
+    <ClCompile Include="MRCudaContoursDistanceMap.cpp" />
     <ClCompile Include="MRCudaFastWindingNumber.cpp" />
     <ClCompile Include="MRCudaMeshDistanceMap.cpp" />
     <ClCompile Include="MRCudaPointsToDistanceVolume.cpp" />

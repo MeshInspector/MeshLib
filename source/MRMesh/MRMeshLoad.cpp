@@ -135,7 +135,7 @@ Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*
     if ( !readRes.has_value() )
     {
         std::string error = readRes.error();
-        if ( error != "Loading canceled" )
+        if ( error != stringOperationCanceled() )
             error = "Error reading topology from mrmesh - file:\n" + error;
         return unexpected( error );
     }
@@ -147,7 +147,7 @@ Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*
         return unexpected( std::string( "Error reading the number of points from mrmesh-file" ) );
     mesh.points.resize( numPoints );
     if ( !readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), subprogress( settings.callback, 0.5f, 1.f ) ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
 
     if ( !in )
         return unexpected( std::string( "Error reading  points from mrmesh-file" ) );
@@ -337,7 +337,7 @@ Expected<MR::Mesh> fromAnyStl( std::istream& in, const MeshLoadSettings& setting
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in, settings );
-    if ( resBin.has_value() || resBin.error() == "Loading canceled" )
+    if ( resBin.has_value() || resBin.error() == stringOperationCanceled() )
         return resBin;
     in.clear();
     in.seekg( pos );
@@ -426,7 +426,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
         decodedBytes += buffer.size();
 
         if ( !reportProgress( settings.callback , decodedBytes * rStreamSize ) )
-            return unexpected( std::string( "Loading canceled" ) );
+            return unexpectedOperationCanceled();
         if ( !in )
             return unexpected( std::string( "Binary STL read error" ) );
         buffer.swap( nextBuffer );
@@ -450,7 +450,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
     if ( !reportProgress( settings.callback , 1.0f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
     return res;
 }
 
@@ -527,7 +527,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
         {
             const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !settings.callback( progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
         }
     }
 
@@ -597,7 +597,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !reportProgress( settings.callback, progress ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
             continue;
         }
 
@@ -626,7 +626,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
             const auto posCurrent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
             if ( !reportProgress( settings.callback, ( float( posLast ) + ( posCurrent - posLast ) * 0.1f - posStart ) / streamSize ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
             bool isCanceled = false;
             ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurrent, posStart, streamSize, &isCanceled] ( float v )
             {
@@ -642,7 +642,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
             if ( settings.skippedFaceCount )
                 *settings.skippedFaceCount += mySkippedFaceCount;
             if ( settings.callback && ( !settings.callback( float( posCurrent - posStart ) / streamSize ) || isCanceled ) )
-                return unexpected( std::string( "Loading canceled" ) );
+                return unexpectedOperationCanceled();
             gotFaces = true;
         }
     }
@@ -744,7 +744,7 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
 
     auto loader = getMeshLoader( ext );
     if ( !loader.fileLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.fileLoad( file, settings );
 }
@@ -757,7 +757,7 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
 
     auto loader = getMeshLoader( ext );
     if ( !loader.streamLoad )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
 
     return loader.streamLoad( in, settings );
 }

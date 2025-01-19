@@ -37,7 +37,8 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     }
 
     p2vParams.cb = p2vParams.ptNormals ? subprogress( params.progress, 0.4f, 0.65f ) : subprogress( params.progress, 0.0f, 0.5f );
-    const auto box = cloud.getBoundingBox();
+    // fused surface can deviate from original points proportionally to params.sigma value
+    const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( 2 * params.sigma ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
     p2vParams.origin = origin;
     p2vParams.voxelSize = Vector3f::diagonal( params.voxelSize );

@@ -25,7 +25,8 @@ int main( int argc, char* argv[] )
     }
 
     // Save mesh
-    mrMeshSaveToAnySupportedFormat( mesh, "mesh.ply", &errorString );
+    MRSaveSettings saveSettings = mrSaveSettingsNew();
+    mrMeshSaveToAnySupportedFormat( mesh, "mesh.ply", &saveSettings, &errorString);
     if ( errorString )
     {
         fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );

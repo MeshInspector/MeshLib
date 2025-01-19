@@ -3,6 +3,7 @@
 #include "MRNotificationType.h"
 #include "MRAsyncTimer.h"
 #include "MRMesh/MRFlagOperators.h"
+#include "MRMesh/MRBox.h"
 #include <functional>
 #include <chrono>
 
@@ -25,6 +26,13 @@ struct NotificationTags
 MR_MAKE_FLAG_OPERATORS( NotificationTags::Tag )
 
 using NotificationTagMask = unsigned;
+
+/// corner where notifications will appear
+enum class RibbonNotificationCorner
+{
+    LowerLeft,
+    LowerRight
+};
 
 struct RibbonNotification
 {
@@ -57,14 +65,23 @@ class MRVIEWER_CLASS RibbonNotifier
 public:
     // adds new notification for drawing
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
+    
     // main draw function. draw actual notification or history, and history button
-    MRVIEWER_API void draw( float scaling, float scenePosX, float topPanelHeight );
+    // limitFramebuffer - available framebuffer space (usually same as `Viewer::getViewportsBounds()`)
+    MRVIEWER_API void draw( float scaling, const Box2i& limitFramebuffer );
+
+    // set maximum time while history button will be present on screen
+    // negative value means that history button will never be hidden
+    MRVIEWER_API void setHitoryButtonMaxLifeTime( float histBtnMaxLifeTime );
 
     // this value is used as notification `lifeTimeSec` if negative values passed
     float defaultNotificationLifeTimeSeconds = 5.0f;
 
     // this mask is used to control allowed notifications by filtering with tags
     NotificationTagMask allowedTagMask = NotificationTags::Default;
+
+    // position of notifications on screen
+    RibbonNotificationCorner cornerPosition = RibbonNotificationCorner::LowerLeft;
 private:
     struct NotificationWithTimer
     {
@@ -77,17 +94,19 @@ private:
     bool requestRedraw_ = false;
     bool historyMode_ = false;
 
+    float showHistoryBtnMaxTime_{ -1.0f }; // negative value here means that there is no need to hide history button
+    float currentHistoryBtnTimer_{ -1.0f }; // update to validly hide the button
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };
     AsyncRequest asyncRequest_;
 #endif
 
     // draw button to show last notifications
-    void drawHistoryButton_( float scaling, float scenePosX );
+    void drawHistoryButton_( float scaling, const Box2i& limitFramebuffer );
     // draw notification history
-    void drawHistory_( float scaling, float scenePosX, float topPanelHeight );
+    void drawHistory_( float scaling, const Box2i& limitFramebuffer );
     // draw floating notifications
-    void drawFloating_( float scaling, float scenePosX );
+    void drawFloating_( float scaling, const Box2i& limitFramebuffer );
     
     // set this true on open history and on new notification added
     bool scrollDownNeeded_ = false;

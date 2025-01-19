@@ -350,6 +350,10 @@ Vector3d Mesh::dirArea( const FaceBitSet & fs ) const
     [] ( auto a, auto b ) { return a + b; } );
 }
 
+namespace
+{
+
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0) and other three vertices taken from a mesh's triangle
 class FaceVolumeCalc
 {
 public:
@@ -385,17 +389,66 @@ private:
     double volume_{ 0.0 };
 };
 
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0), another vertex at the center of hole,
+/// and other two vertices taken from a hole's edge
+class HoleVolumeCalc
+{
+public:
+    HoleVolumeCalc( const Mesh& mesh, const std::vector<EdgeId>& holeRepresEdges ) : mesh_( mesh ), holeRepresEdges_( holeRepresEdges )
+    {}
+    HoleVolumeCalc( HoleVolumeCalc& x, tbb::split ) : mesh_( x.mesh_ ), holeRepresEdges_( x.holeRepresEdges_ )
+    {}
+    void join( const HoleVolumeCalc& y )
+    {
+        volume_ += y.volume_;
+    }
+
+    double volume() const
+    {
+        return volume_;
+    }
+
+    void operator()( const tbb::blocked_range<size_t>& r )
+    {
+        for ( size_t i = r.begin(); i < r.end(); ++i )
+        {
+            const auto e0 = holeRepresEdges_[i];
+            Vector3d sumBdPos;
+            int countBdVerts = 0;
+            for ( auto e : leftRing( mesh_.topology, e0 ) )
+            {
+                sumBdPos += Vector3d( mesh_.orgPnt( e ) );
+                ++countBdVerts;
+            }
+            Vector3d holeCenter = sumBdPos / double( countBdVerts );
+            for ( auto e : leftRing( mesh_.topology, e0 ) )
+            {
+                volume_ += mixed( holeCenter, Vector3d( mesh_.orgPnt( e ) ), Vector3d( mesh_.destPnt( e ) ) );
+            }
+        }
+    }
+
+private:
+    const Mesh& mesh_;
+    const std::vector<EdgeId>& holeRepresEdges_;
+    double volume_{ 0.0 };
+};
+
+} // anonymous namespace
+
 double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
 {
-    if ( !topology.isClosed( region ) )
-        return DBL_MAX;
-
     MR_TIMER
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
-    FaceVolumeCalc calc( *this, faces );
-    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), calc );
-    return calc.volume() / 6.0;
+    FaceVolumeCalc fcalc( *this, faces );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), fcalc );
+
+    const auto holeRepresEdges = topology.findHoleRepresentiveEdges( region );
+    HoleVolumeCalc hcalc( *this, holeRepresEdges );
+    parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
+
+    return ( fcalc.volume() + hcalc.volume() ) / 6.0;
 }
 
 double Mesh::holePerimiter( EdgeId e0 ) const
@@ -433,6 +486,14 @@ Vector3d Mesh::holeDirArea( EdgeId e0 ) const
         sum += cross( p1 - p0, p2 - p0 );
     }
     return 0.5 * sum;
+}
+
+Vector3f Mesh::leftTangent( EdgeId e ) const
+{
+    assert( topology.left( e ) );
+    const auto lNorm = leftNormal( e );
+    const auto eDir = edgeVector( e ).normalized();
+    return cross( lNorm, eDir );
 }
 
 Vector3f Mesh::dirDblArea( VertId v ) const
@@ -698,7 +759,7 @@ float Mesh::leftCotan( EdgeId e ) const
     return nom / den;
 }
 
-QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
+QuadraticForm3f Mesh::quadraticForm( VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
 {
     QuadraticForm3f qf;
     for ( EdgeId e : orgRing( topology, v ) )
@@ -711,9 +772,20 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const 
         }
         if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
         {
-            // zero-area triangle is treated as no triangle with no penalty at all,
-            // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
-            qf.addDistToPlane( leftNormal( e ) );
+            if ( angleWeigted )
+            {
+                auto d0 = edgeVector( e );
+                auto d1 = edgeVector( topology.next( e ) );
+                auto angle = MR::angle( d0, d1 );
+                static constexpr float INV_PIF = 1 / PI_F;
+                qf.addDistToPlane( leftNormal( e ), angle * INV_PIF );
+            }
+            else
+            {
+                // zero-area triangle is treated as no triangle with no penalty at all,
+                // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
+                qf.addDistToPlane( leftNormal( e ) );
+            }
         }
     }
     return qf;
@@ -925,7 +997,7 @@ VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * regi
     return newv;
 }
 
-void Mesh::addPart( const Mesh & from,
+void Mesh::addMesh( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
@@ -947,18 +1019,19 @@ void Mesh::addPart( const Mesh & from,
     invalidateCaches();
 }
 
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map )
+void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
 {
-    addPartByMask( from, fromFaces, false, {}, {}, map );
+    addMeshPart( from, false, {}, {}, map );
 }
 
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
+void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
+    const auto & fromFaces = from.mesh.topology.getFaceIds( from.region );
+    addPartBy( from.mesh, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
 void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
@@ -1015,7 +1088,7 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
     const auto ecount = 2 * getIncidentEdges( topology, region ).count();
     res.topology.edgeReserve( ecount );
 
-    res.addPartByMask( *this, region, flipOrientation, {}, {}, map );
+    res.addMeshPart( { *this, &region }, flipOrientation, {}, {}, map );
 
     assert( res.topology.faceSize() == fcount );
     assert( res.topology.faceCapacity() == fcount );
@@ -1037,7 +1110,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     packed.topology.vertReserve( topology.numValidVerts() );
     packed.topology.faceReserve( topology.numValidFaces() );
     packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
-    packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
+    packed.addMesh( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
 }
 

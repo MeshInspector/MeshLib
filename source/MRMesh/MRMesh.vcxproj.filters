@@ -171,6 +171,9 @@
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRParallelProgressReporter.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1236,8 +1239,29 @@
     <ClInclude Include="MRMarkedContour.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPartialChangeMeshAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVertCoordsDiff.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTopologyDiff.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDistanceToMeshOptions.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRChangeScaleAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRadiusCompensation.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRParallelProgressReporter.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
     <ClCompile Include="MRObject.cpp">
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
@@ -2032,6 +2056,15 @@
     </ClCompile>
     <ClCompile Include="MRMarkedContour.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVertCoordsDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTopologyDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRadiusCompensation.cpp">
+      <Filter>Source Files\Gcode</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

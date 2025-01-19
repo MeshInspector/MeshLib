@@ -21,8 +21,4 @@ IF(APPLE)
   set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
   set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework OpenGL -framework IOKit") # https://github.com/pybind/pybind11/issues/382
-
-  # TODO: revise
-  set(BUILD_SHARED_LIBS ON)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
 ENDIF() # APPLE

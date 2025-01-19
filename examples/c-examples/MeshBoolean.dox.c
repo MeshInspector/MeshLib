@@ -29,7 +29,7 @@ int main( int argc, char* argv[] )
     MRVector3f xfTranslation = mrVector3fDiagonal( 0.f );
     xfTranslation.x = 0.7f;
     MRAffineXf3f xf = mrAffineXf3fTranslation( &xfTranslation );
-    mrMeshTransform( &sphere2, &xf, NULL );
+    mrMeshTransform( sphere2, &xf, NULL );
 
     // perform the boolean operation
     MRBooleanParameters params = mrBooleanParametersNew();
@@ -42,7 +42,8 @@ int main( int argc, char* argv[] )
     }
 
     // save result to STL file
-    mrMeshSaveToAnySupportedFormat( result.mesh, "out_boolean.stl", &errorString );
+    MRSaveSettings saveSettings = mrSaveSettingsNew();
+    mrMeshSaveToAnySupportedFormat( result.mesh, "out_boolean.stl", &saveSettings, &errorString );
     if ( errorString )
     {
         fprintf( stderr, "Failed to save result: %s", mrStringData( errorString ) );

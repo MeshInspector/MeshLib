@@ -67,3 +67,6 @@
 [submodule "thirdparty/c-blosc"]
 	path = thirdparty/c-blosc
 	url = https://github.com/Blosc/c-blosc.git
+[submodule "thirdparty/fmt"]
+	path = thirdparty/fmt
+	url = https://github.com/fmtlib/fmt.git

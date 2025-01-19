@@ -2,7 +2,6 @@
 #include "MRUIRectAllocator.h"
 #include "MRUITestEngine.h"
 #include "MRImGuiVectorOperators.h"
-#include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"
@@ -1118,6 +1117,8 @@ PaletteChanges Palette(
     PaletteChanges changes = PaletteChanges::None;
     float scaledWidth = width * menuScaling;
 
+    const auto& style = ImGui::GetStyle();
+
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
@@ -1150,7 +1151,7 @@ PaletteChanges Palette(
 
             if ( fixZero )
                 *fixZero = false;
-            changes = PaletteChanges::All;
+            changes = PaletteChanges::Ranges | PaletteChanges::Texture;
             CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
@@ -1204,7 +1205,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::All;
+        changes |= PaletteChanges::Ranges | PaletteChanges::Texture;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1306,9 +1307,21 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
-    if ( UI::button( "Save Palette as", Vector2f( scaledWidth, 0 ) ) )
+
+    auto textSize = ImGui::CalcTextSize( "Reset Palette" );
+    float widthButton = ( ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x ) / 2.0f;
+    bool buttonOnOneLine = true;
+    if ( widthButton < textSize.x )
+    {
+        widthButton = -1;
+        buttonOnOneLine = false;
+    }
+
+    if ( UI::button( "Save Palette as", Vector2f( widthButton, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
     UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
+    if ( buttonOnOneLine )
+        ImGui::SameLine();
     ImGui::PopStyleVar();
 
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
@@ -1330,7 +1343,6 @@ PaletteChanges Palette(
         if ( headerFont )
             PopFont();
 
-        const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
         static std::string currentPaletteName;
 
@@ -1413,6 +1425,14 @@ PaletteChanges Palette(
         ImGui::EndPopup();
     }
     PopStyleVar( 3 );
+
+    if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
+    {
+        presetName = std::string();
+        palette = MR::Palette( Palette::DefaultColors );
+        changes |= ImGui::PaletteChanges::All;
+    }
+    UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );
 
     // for linear texture filter, uv-coordinates depend on texture size
     if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )

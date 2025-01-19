@@ -4,6 +4,9 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSolarRadiation.h"
 
+// Only strictly necessary for the bindings (to make `MR::MeshIntersectionResult` a complete type).
+#include "MRMesh/MRMeshIntersect.h"
+
 namespace MR
 {
 namespace Cuda

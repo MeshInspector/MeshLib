@@ -1,6 +1,6 @@
 #include "MRRibbonSchema.h"
 #include "MRLambdaRibbonItem.h"
-#include "imgui.h"
+#include "MRImGui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRMesh/MRSystemPath.h"

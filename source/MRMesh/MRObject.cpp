@@ -93,7 +93,7 @@ void Object::setXf( const AffineXf3f& xf, ViewportId id )
         return;
     }
     xf_.set( xf, id );
-    propagateWorldXfChangedSignal_();
+    sendWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
@@ -101,7 +101,7 @@ void Object::resetXf( ViewportId id )
 {
     if ( !xf_.reset( id ) )
         return;
-    propagateWorldXfChangedSignal_();
+    sendWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
@@ -260,7 +260,7 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
         std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
         bastards_.push_back( child );
     }
-    child->propagateWorldXfChangedSignal_();
+    child->sendWorldXfChangedSignal_();
     needRedraw_ = true;
     return true;
 }
@@ -301,7 +301,7 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
 
     newChild->parent_ = this;
     children_.insert( it1, newChild );
-    newChild->propagateWorldXfChangedSignal_();
+    newChild->sendWorldXfChangedSignal_();
     needRedraw_ = true;
     return true;
 }
@@ -440,7 +440,7 @@ void Object::serializeFields_( Json::Value& root ) const
 Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
-        return unexpected( std::string( "Loading canceled" ) );
+        return unexpectedOperationCanceled();
     return{};
 }
 
@@ -465,7 +465,7 @@ void Object::deserializeFields_( const Json::Value& root )
         parentLocked_ = json.asBool();
 }
 
- void Object::propagateWorldXfChangedSignal_()
+void Object::sendWorldXfChangedSignal_()
 {
     std::stack<Object*> buf;
     buf.push( this );
@@ -473,12 +473,17 @@ void Object::deserializeFields_( const Json::Value& root )
     while ( !buf.empty() )
     {
         auto obj = buf.top();
-        obj->worldXfChangedSignal();
+        obj->onWorldXfChanged_();
         buf.pop();
 
         for ( auto& child : obj->children_ )
             buf.push( child.get() );
     }
+}
+
+void Object::onWorldXfChanged_()
+{
+    worldXfChangedSignal();
 }
 
 std::shared_ptr<Object> Object::cloneTree() const

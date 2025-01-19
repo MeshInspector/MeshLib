@@ -202,8 +202,12 @@ public:
 
     /// return several info lines that can better describe object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const;
+
     /// return human readable name of subclass
     virtual std::string getClassName() const { return "Object"; }
+
+    /// return human readable name of subclass in plural form
+    virtual std::string getClassNameInPlural() const { return "Objects"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and
@@ -243,7 +247,7 @@ public:
     /// signal about xf changing
     /// triggered in setXf and setWorldXf, it is called for children too
     /// triggered in addChild and addChildBefore, it is called only for children object
-    using XfChangedSignal = Signal<void() >;
+    using XfChangedSignal = Signal<void()>;
     XfChangedSignal worldXfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
@@ -285,7 +289,12 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    MRMESH_API virtual void propagateWorldXfChangedSignal_();
+    // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
+    // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children
+    //   (it doesn't use a true recursion, instead imitiating one, presumably to save stack space, though this is unlikely to be an issue).
+    MRMESH_API void sendWorldXfChangedSignal_();
+    // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
+    MRMESH_API virtual void onWorldXfChanged_();
 };
 
 template <typename T>

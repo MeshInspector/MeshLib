@@ -144,6 +144,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path, const ProgressCa
 
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
+    MR_TIMER
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
 
@@ -165,7 +166,7 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
     {
         auto& gridsRef = *grids;
         if ( grids->size() == 0 )
-            unexpected( std::string( "Nothing to load" ) );
+            return unexpected( std::string( "Nothing to load" ) );
 
         bool anyLoaded = false;
         int size = int( gridsRef.size() );
@@ -178,7 +179,11 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
             if ( !gridsRef[i] )
                 continue;
 
-            OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] ) ) );
+            std::shared_ptr<openvdb::FloatGrid> floatGridPtr = std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] );
+            if ( !floatGridPtr )
+                return unexpected( "Wrong grid type");
+
+            OpenVdbFloatGrid ovfg( std::move( *floatGridPtr ) );
             VdbVolume vdbVolume;
             vdbVolume.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
 
@@ -210,10 +215,10 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
             anyLoaded = true;
         }
         if ( !anyLoaded )
-            unexpected( std::string( "No loaded grids" ) );
+            return unexpected( std::string( "No loaded grids" ) );
     }
     else
-        unexpected( std::string( "Nothing to read" ) );
+        return unexpected( std::string( "Nothing to read" ) );
 
     if ( cb )
         cb( 1.f );
@@ -249,12 +254,13 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
 
     auto loader = getVoxelsLoader( ext );
     if ( !loader )
-        return unexpected( std::string( "unsupported file extension" ) );
+        return unexpectedUnsupportedFileExtension();
     return loader( path, cb );
 }
 
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::vector<VdbVolume>& volumes, const std::filesystem::path& file, const ProgressCallback& callback )
 {
+    MR_TIMER
     std::vector<std::shared_ptr<ObjectVoxels>> res;
     const auto size = volumes.size();
     for ( size_t i = 0; i < size; ++i )
@@ -292,6 +298,7 @@ LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 template <VoxelsLoader voxelsLoader>
 Expected<LoadedObjects> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
 {
+    MR_TIMER
     return voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return toObjectVoxels( volumes, path, subprogress( cb, 1.f / 3.f, 1.f ) ); } )
         .transform( toObjects );
@@ -332,6 +339,7 @@ struct TiffParams
 
 Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
+    MR_TIMER
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
         return unexpected( "Given path is not directory" );

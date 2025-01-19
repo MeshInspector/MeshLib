@@ -17,6 +17,7 @@
 #include "MRMeshIntersect.h"
 #include "MRPolyline.h"
 #include "MRMapEdge.h"
+#include "MRSurfacePath.h"
 
 namespace MR
 {
@@ -109,6 +110,7 @@ private:
     {
         EdgePath newCutEdges; // newly added edges of cut part
         EdgePath newFillEdges; // newly added edges of fill part
+        EdgePath interEdges; // spliced intersection edges
     };
     // connect hole on terrain with cut structure
     ConnectionEdges connect_( std::vector<EdgeLoop>&& hole, MappedMeshContours&& mmc );
@@ -296,9 +298,41 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
         for ( int i = 0; i < res.contours.size(); ++i )
         {
             bool lone = true;
-            auto contourRes = convertMeshTriPointsToClosedContour( result_, noBowtiesMtps[i], {}, &res.map[i] );
+            auto cont = noBowtiesMtps[i];
+            cont.push_back( cont.front() );
+            auto contourRes = convertMeshTriPointsToMeshContour( result_, cont,
+                [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
+            {
+                auto initSMtpIndex = res.filtBowTiesMap[i][startInd];
+                auto initEMtpIndex = res.filtBowTiesMap[i][endInd];
+                auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+                auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+                auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;
+                auto ccwPath = trackSection( result_, start, end, planePoint, true );
+                auto cwPath = trackSection( result_, start, end, planePoint, false );
+                if ( ccwPath.has_value() && cwPath.has_value() )
+                {
+                    auto ccwL = surfacePathLength( result_, *ccwPath );
+                    auto cwL = surfacePathLength( result_, *cwPath );
+                    if ( ccwL < cwL )
+                        return ccwPath;
+                    else
+                        return cwPath;
+                }
+                else if ( ccwPath.has_value() )
+                    return ccwPath;
+                else if ( cwPath.has_value() )
+                    return cwPath;
+                else
+                {
+                    auto locRes = computeGeodesicPath( result_, start, end );
+                    if ( !locRes.has_value() )
+                        return unexpected( toString( locRes.error() ) );
+                    return *locRes;
+                }
+            }, &res.map[i] );
             if ( !contourRes.has_value() )
-                return unexpected( toString( contourRes.error() ) );
+                return unexpected( contourRes.error() );
             res.contours[i] = std::move( *contourRes );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {
@@ -349,7 +383,7 @@ TerrainEmbedder::ConnectionEdges TerrainEmbedder::connect_( std::vector<EdgeLoop
 {
     WholeEdgeMap emap;
     auto faceNum = int( result_.topology.faceSize() );
-    result_.addPart( std::move( cutStructure_ ), nullptr, nullptr, &emap );
+    result_.addMesh( cutStructure_, nullptr, nullptr, &emap );
     if ( params_.outStructFaces )
     {
         params_.outStructFaces->resize( result_.topology.faceSize() );
@@ -408,6 +442,7 @@ TerrainEmbedder::ConnectionEdges TerrainEmbedder::connect_( std::vector<EdgeLoop
                 result_.topology.setOrg( be, {} );
                 result_.topology.splice( be, e );
                 result_.topology.setOrg( e, vert );
+                connectionInfo.interEdges.push_back( be );
             }
             else
             {
@@ -462,6 +497,18 @@ void TerrainEmbedder::fill_( size_t oldVertSize, ConnectionEdges&& connectionInf
         if ( params_.outFillFaces )
             fhParams.outNewFaces = params_.outFillFaces;
 
+        if ( !result_.topology.left( edge ) )
+            fillHole( result_, edge, fhParams );
+        if ( !result_.topology.left( edge.sym() ) )
+            fillHole( result_, edge.sym(), fhParams );
+    }
+
+    // fill missed edges (no intermediate vertex)
+    for ( auto edge : connectionInfo.interEdges )
+    {
+        if ( params_.outFillFaces )
+            fhParams.outNewFaces = params_.outStructFaces;
+    
         if ( !result_.topology.left( edge ) )
             fillHole( result_, edge, fhParams );
         if ( !result_.topology.left( edge.sym() ) )

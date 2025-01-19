@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Text;
 using static MR.DotNet;
 using static MR.DotNet.Box3f;
 using static MR.DotNet.Vector3f;
@@ -61,16 +59,7 @@ namespace MR
 
             /// deallocates a PointCloud object
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern void mrPointCloudFree(IntPtr pc);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern IntPtr mrPointsLoadFromAnySupportedFormat(string filename, IntPtr* errorString);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            unsafe private static extern void mrPointsSaveToAnySupportedFormat(IntPtr pc, string file, IntPtr* errorString);
-
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern void mrLoadIOExtras();
+            private static extern void mrPointCloudFree(IntPtr pc);                
 
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
@@ -91,6 +80,19 @@ namespace MR
             {
                 Dispose(true);
                 GC.SuppressFinalize(this);
+            }
+
+            private void clearManagedResources()
+            {
+                if (validPoints_ is not null)
+                {
+                    validPoints_.Dispose();
+                    validPoints_ = null;
+                }
+
+                points_ = null;
+                normals_ = null;
+                boundingBox_ = null;
             }
 
             protected virtual void Dispose(bool disposing)
@@ -190,37 +192,18 @@ namespace MR
                     return normals_.AsReadOnly();
                 }
             }
-            /// loads point cloud from file of any supported format
-            unsafe public static PointCloud FromAnySupportedFormat(string path)
+
+            /// creates a new PointCloud object from collection of points
+            public static PointCloud FromPoints( IEnumerable<Vector3f> points )
             {
-                mrLoadIOExtras();
-
-                IntPtr errString = new IntPtr();
-                var mesh = mrPointsLoadFromAnySupportedFormat(path, &errString);
-
-                if (errString != IntPtr.Zero)
+                var pc = new PointCloud();
+                foreach (var point in points)
                 {
-                    var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
-                    throw new SystemException(errorMessage);
+                    pc.AddPoint(point);
                 }
-
-                return new PointCloud(mesh);
-            }
-            /// saves point cloud to file of any supported format
-            unsafe public static void ToAnySupportedFormat(PointCloud pc, string path)
-            {
-                mrLoadIOExtras();
-
-                IntPtr errString = new IntPtr();
-                mrPointsSaveToAnySupportedFormat(pc.pc_, path, &errString);
-                if (errString != IntPtr.Zero)
-                {
-                    var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
-                    throw new SystemException(errorMessage);
-                }
-            }
+                return pc;
+            }           
+           
             /// appends a point
             public void AddPoint(Vector3f point)
             {
@@ -228,6 +211,7 @@ namespace MR
                     throw new InvalidOperationException("Normals must be empty");
 
                 mrPointCloudAddPoint(pc_, ref point.vec_);
+                clearManagedResources();
             }
             /// appends a point and a normal
             public void AddPoint(Vector3f point, Vector3f normal)
@@ -236,6 +220,7 @@ namespace MR
                     throw new InvalidOperationException("Points and normals must have the same size");
 
                 mrPointCloudAddPointWithNormal(pc_, ref point.vec_, ref normal.vec_);
+                clearManagedResources();
             }
 
             internal IntPtr pc_;

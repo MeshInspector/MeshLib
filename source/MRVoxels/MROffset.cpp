@@ -39,7 +39,7 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
     if ( params.voxelSize <= 0 )
     {
         assert( false );
-        return unexpected( "wrong voxelSize" );
+        return unexpected( "invalid voxelSize value" );
     }
 
     float voxelSize = params.voxelSize;
@@ -116,7 +116,12 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER;
+    MR_TIMER
+    if ( params.voxelSize <= 0 )
+    {
+        assert( false );
+        return unexpected( "invalid voxelSize value" );
+    }
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
@@ -144,7 +149,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     }
     else
     {
-        const bool funcVolume = !params.fwn && params.memoryEfficient;
+        const bool funcVolume = ( params.signDetectionMode != SignDetectionMode::HoleWindingRule || !params.fwn ) && params.memoryEfficient;
         MeshToDistanceVolumeParams msParams;
         if ( !funcVolume )
             msParams.vol.cb = meshToLSCb;
@@ -154,9 +159,10 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         msParams.vol.origin = origin;
         msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.vol.dimensions = dimensions;
+        msParams.dist.signMode = params.signDetectionMode;
         msParams.dist.maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
         msParams.dist.minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
-        msParams.dist.signMode = params.signDetectionMode;
+        msParams.dist.nullOutsideMinMax = params.signDetectionMode != SignDetectionMode::HoleWindingRule || !params.closeHolesInHoleWindingNumber;
         msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
         msParams.dist.windingNumberBeta = params.windingNumberBeta;
         msParams.fwn = params.fwn;
@@ -272,13 +278,13 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     if ( offset >= 0 )
     {
         // add original mesh to the result with flipping
-        resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
+        resMesh.addMeshPart( mesh, true ); // true = with flipping
     }
     else
     {
         resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
-        resMesh.addPart( mesh );
+        resMesh.addMesh( mesh );
     }
     return res;
 }

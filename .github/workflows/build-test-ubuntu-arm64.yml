@@ -3,21 +3,23 @@ name: Build and test on arm64 ubuntu20 and ubuntu22
 on:
   workflow_call:
     inputs:
-      docker_image_tag:
+      app_version:
         required: true
         type: string
-      app_version:
+      docker_image_tag:
         required: true
         type: string
       full_config_build:
         default: false
         required: false
         type: boolean
-      autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2024-nov-07"
+      internal_build:
         required: false
-        type: string
-      UPLOAD_ARTIFACTS:
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+      upload_test_artifacts:
         required: true
         type: boolean
       mrbind:
@@ -31,6 +33,7 @@ jobs:
     runs-on: [self-hosted, linux-arm64]
     container:
       image: ${{ matrix.docker-image }}
+      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -39,27 +42,23 @@ jobs:
         compiler: [ clang ]
         include:
           - os: ubuntu20
-            docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.docker_image_tag}}
+            docker-image: meshlib/meshlib-ubuntu20-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
             cxx-standard: 20
           - os: ubuntu22
-            docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.docker_image_tag}}
+            docker-image: meshlib/meshlib-ubuntu22-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             cxx-standard: 20
           - os: ubuntu24
-            docker-image: meshlib/meshlib-ubuntu24-arm64:${{inputs.docker_image_tag}}
+            docker-image: meshlib/meshlib-ubuntu24-arm64:${{ inputs.docker_image_tag }}
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
             cxx-standard: 23
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-
-    env:
-      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
-      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
       - name: Work-around possible permission issues
@@ -77,25 +76,19 @@ jobs:
 
       - name: Collect runner's system stats
         continue-on-error: true
-        env:
-          CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/devops/collect_runner_sys_stats.py
-
-      - name: Upload runner's system stats
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/collect-runner-stats
         with:
-          name: RunnerSysStats-ubuntu-arm64-${{ matrix.os }}
-          path: RunnerSysStats-*
-          retention-days: 1
-        continue-on-error: true
+          target_os: ${{ matrix.os }}
+          target_arch: arm64
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
 
       - name: Checkout third-party submodules
         run: |
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory '*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Install thirdparty libs
@@ -104,20 +97,17 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Install mrbind
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         run: scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
-          # FIXME: self-hosted (on vm) runners are unable to process custom PATH correctly
-          #. .venv/bin/activate
-          #echo PATH=$PATH >> $GITHUB_ENV
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements
-        run: |
-          . .venv/bin/activate
-          python3 -m pip install -r ./requirements/python.txt
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -125,8 +115,6 @@ jobs:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
@@ -135,10 +123,22 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
 
       - name: Generate and build MRBind bindings
-        if: ${{inputs.mrbind}}
+        if: ${{ inputs.mrbind }}
         env:
-          CXX: ${{matrix.cxx-compiler}}
+          CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+      
+      - name: Create Python Stubs
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
+        run: python3 ./scripts/wheel/create_stubs.py
+
+      - name: Upload Python Stubs
+        if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"
@@ -161,51 +161,26 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: |
-          . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
-
-      - name: Configure AWS Credentials
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-
-      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
-      - name: Cache autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        id: cache-autotest
-        uses: actions/cache@v4
-        with:
-          path: ./test_data
-          key: ${{inputs.autotest_data_s3_url}}
-
-      - name: Copy autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Python Regression Tests
-        env:
-          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-          MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ fromJSON('[0,1]')[matrix.os == 'ubuntu20' && inputs.mrbind] }}
-          BINDS_V: ${{ fromJSON('[2,3]')[inputs.mrbind || 0] }}
-        if: ${{ env.INTERNAL_BUILD == 'true' }}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: |
-          . ./../../../.venv/bin/activate
-          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}} -bv ${{env.BINDS_V}}
-
-      - name: Copy test artifacts to S3
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
-        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu_arm64//${{matrix.os}}' --recursive
+        if: ${{ inputs.internal_build }}
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          mrbind: ${{ inputs.mrbind }}
+          pytest_args: "--run-cuda=negative"
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: ubuntu_arm64/${{ matrix.os }}
+          ubuntu20_arm_workaround: ${{ inputs.mrbind && matrix.os == 'ubuntu20' }}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Deb
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
-          ./scripts/distribution.sh ${{inputs.app_version}}
+          ./scripts/distribution.sh ${{ inputs.app_version }}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-arm64-dev.deb
 
       - name: Extract Deb
@@ -217,7 +192,7 @@ jobs:
             -S examples/cpp-examples \
             -B cpp-examples-build \
             -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
-            -D CMAKE_CXX_COMPILER=${{matrix.cxx-compiler}}
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
           cmake \
             --build cpp-examples-build \
             --parallel $(nproc)
@@ -228,13 +203,13 @@ jobs:
             -S examples/c-examples \
             -B c-examples-build \
             -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
-            -D CMAKE_C_COMPILER=${{matrix.c-compiler}}
+            -D CMAKE_C_COMPILER=${{ matrix.c-compiler }}
           cmake \
             --build c-examples-build \
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}_arm64

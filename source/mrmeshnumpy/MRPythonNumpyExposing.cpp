@@ -15,14 +15,7 @@
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
-    try
-    {
-        pybind11::module_::import( MR_STR( MRMESHNUMPY_PARENT_MODULE_NAME ) ".mrmeshpy" );
-    }
-    catch ( const pybind11::error_already_set& )
-    {
-        pybind11::module_::import( "mrmeshpy" );
-    }
+    pybind11::module_::import( MR_STR( MRMESHNUMPY_PARENT_MODULE_NAME ) ".mrmeshpy" );
 } )
 
 std::vector<MR::Vector3f> fromNumpyArrayInfo( const pybind11::buffer_info& bufInfo )

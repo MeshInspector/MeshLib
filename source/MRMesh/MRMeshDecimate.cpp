@@ -63,7 +63,8 @@ private:
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
-    bool initializeQueue_();
+    bool initialize_();
+    void initializeQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
@@ -101,9 +102,10 @@ private:
     };
     CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
 
-    /// performs edge collapse after previous successful check by canCollapse_
+    /// performs edge collapse after previous successful check by canCollapse_,
+    /// if one of the edge's vertices remain, then stores (collapseForm) as its new form and updates error of its neighbor edges
     /// \return org( edgeToCollapse ) or invalid id if it was the last edge
-    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 
     struct CollapseRes
     {
@@ -112,7 +114,7 @@ private:
         CollapseStatus status = CollapseStatus::Ok;
     };
     /// canCollapse_ + forceCollapse_
-    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
@@ -203,14 +205,14 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, const UndirectedEdgeBitSet * creases )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
-    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region, creases );
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, angleWeigted, mp.region, creases );
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
 
-Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet * creases )
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
     MR_TIMER;
 
@@ -220,7 +222,7 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer, creases );
+        res[v] = computeFormAtVertex( mp, v, stabilizer, angleWeigted, creases );
     } );
 
     return res;
@@ -254,7 +256,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float ma
     return resolveMeshDegenerations( mesh, settings );
 }
 
-bool MeshDecimator::initializeQueue_()
+bool MeshDecimator::initialize_()
 {
     MR_TIMER;
 
@@ -264,7 +266,7 @@ bool MeshDecimator::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.notFlippable );
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.angleWeightedDistToPlane, settings_.notFlippable );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -305,20 +307,31 @@ bool MeshDecimator::initializeQueue_()
     else if ( settings_.edgesToCollapse )
         regionEdges_ = *settings_.edgesToCollapse;
 
-    EdgeMetricCalc calc( *this );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
-
-    if ( settings_.progressCallback && !settings_.progressCallback( 0.2f ) )
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.15f ) )
         return false;
 
-    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize() );
-    for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    initializeQueue_();
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
         return false;
     return true;
+}
+
+void MeshDecimator::initializeQueue_()
+{
+    MR_TIMER
+
+    // free space occupied by existing queue
+    queue_ = {};
+
+    EdgeMetricCalc calc( *this );
+    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
+
+    presentInQueue_.clear();
+    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    for ( const auto & qe : calc.elements() )
+        presentInQueue_.set( qe.uedgeId() );
+    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -630,7 +643,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     return { .e = edgeToCollapse };
 }
 
-VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
+VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm )
 {
     ++res_.vertsDeleted;
 
@@ -655,38 +668,42 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
     if ( !eo )
         return {};
 
-    // update edges around remaining vertex
-    for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+    if ( vo )
     {
-        addInQueueIfMissing_( e.undirected() );
-        if ( mesh_.topology.left( e ) )
-            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        // must be done before computeQueueElement_ in addInQueueIfMissing_
+        (*pVertForms_)[vo] = collapseForm;
+
+        // update edges around remaining vertex
+        for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+        {
+            addInQueueIfMissing_( e.undirected() );
+            if ( mesh_.topology.left( e ) )
+                addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        }
     }
     return vo;
 }
 
-auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm ) -> CollapseRes
 {
     CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
     if ( can.status != CollapseStatus::Ok )
         return { .status = can.status };
     assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
-    return { .v = forceCollapse_( can.e, collapsePos ) };
+    return { .v = forceCollapse_( can.e, collapsePos, collapseForm ) };
 }
 
-static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
+static void packMesh( Mesh & mesh, const DecimateSettings & settings,
+    FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr )
 {
-    if ( !settings.packMesh )
-        return;
-
     MR_TIMER
     FaceMap fmap;
+    FaceMap *pFmap = settings.region ? &fmap : outFmap;
     VertMap vmap;
+    VertMap *pVmap = settings.vertForms ? &vmap : outVmap;
     WholeEdgeMap emap;
-    mesh.pack(
-        settings.region ? &fmap : nullptr,
-        settings.vertForms ? &vmap : nullptr,
-        settings.notFlippable ? &emap : nullptr );
+    WholeEdgeMap *pEmap = settings.notFlippable ? &emap : outEmap;
+    mesh.pack( pFmap, pVmap, pEmap );
 
     if ( settings.region )
         *settings.region = settings.region->getMapping( fmap, mesh.topology.faceSize() );
@@ -701,8 +718,45 @@ static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
         vertForms.resize( mesh.topology.vertSize() );
     }
 
+    auto packedUndirectedEdgeId = [&emap]( UndirectedEdgeId unpackedId )
+    {
+        auto packedEdgeId = emap[unpackedId];
+        return packedEdgeId ? packedEdgeId.undirected() : UndirectedEdgeId();
+    };
+
     if ( settings.notFlippable )
-        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+        *settings.notFlippable = settings.notFlippable->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.edgesToCollapse )
+        *settings.edgesToCollapse = settings.edgesToCollapse->getMapping( packedUndirectedEdgeId, mesh.topology.undirectedEdgeSize() );
+
+    if ( settings.twinMap )
+    {
+        UndirectedEdgeHashMap packedTwinMap;
+        packedTwinMap.reserve( settings.twinMap->size() );
+
+        for ( const auto& [key, value] : *settings.twinMap )
+        {
+            auto packedKey = packedUndirectedEdgeId( key );
+            auto packedValue = packedUndirectedEdgeId( value );
+            if ( packedKey && packedValue )
+                packedTwinMap[packedKey] = packedValue;
+            else
+                assert( !packedKey && !packedValue );
+        }
+
+        *settings.twinMap = std::move( packedTwinMap );
+    }
+
+    if ( settings.bdVerts )
+        *settings.bdVerts = settings.bdVerts->getMapping( vmap, mesh.topology.vertSize() );
+
+    if ( outFmap && outFmap != pFmap )
+        *outFmap = std::move( *pFmap );
+    if ( outVmap && outVmap != pVmap )
+        *outVmap = std::move( *pVmap );
+    if ( outEmap && outEmap != pEmap )
+        *outEmap = std::move( *pEmap );
 }
 
 DecimateResult MeshDecimator::run()
@@ -718,7 +772,7 @@ DecimateResult MeshDecimator::run()
             myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
     }
 
-    if ( !initializeQueue_() )
+    if ( !initialize_() )
         return res_;
 
     res_.errorIntroduced = settings_.maxError;
@@ -798,21 +852,19 @@ DecimateResult MeshDecimator::run()
             if ( twin )
             {
                 const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos );
+                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
                 if ( twinCollapseRes.status != CollapseStatus::Ok )
                     continue;
-                if ( twinCollapseRes.v )
-                    (*pVertForms_)[twinCollapseRes.v] = twinCollapseForm;
             }
-            if ( auto v = forceCollapse_( canCollapseRes.e, collapsePos ) )
-                (*pVertForms_)[v] = collapseForm;
+            forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }
 
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    optionalPackMesh( mesh_, settings_ );
+    if ( settings_.packMesh )
+        packMesh( mesh_, settings_ );
     res_.cancelled = false;
     return res_;
 }
@@ -851,6 +903,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     MR_TIMER
     assert( settings.subdivideParts > 1 );
     const auto sz = settings.subdivideParts;
+    const auto numIniVerts = mesh.topology.numValidVerts();
     assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
@@ -872,6 +925,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
         /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
+
+        /// these are inner vertices of this part that can be easily deleted during part decimation;
+        /// filled only if limitedDeletion
+        VertBitSet removableVerts;
 
         DecimateResult decimRes;
     };
@@ -908,6 +965,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
         return res;
 
+    const bool limitedDeletion =
+        settings.maxDeletedVertices < INT_MAX ||
+        settings.maxDeletedFaces < INT_MAX;
+
     // limit each part to region, find boundary vertices
     ParallelFor( parts, [&]( size_t i )
     {
@@ -927,9 +988,26 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             /// all boundary vertices of subdivision faces, including hole boundaries
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
+        if ( limitedDeletion )
+        {
+            // all inner vertices of the part
+            auto innerVerts0 = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
+            // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
+            auto innerFaces = getInnerFaces( mesh.topology, innerVerts0 );
+            parts[i].removableVerts = getInnerVerts( mesh.topology, innerFaces );
+        }
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
+
+    /// these vertices can be deleted only after parallel parts processing
+    VertBitSet seqVerts;
+    if ( limitedDeletion )
+    {
+        seqVerts = mesh.topology.getValidVerts();
+        for ( int i = 0; i < parts.size(); ++i )
+            seqVerts -= parts[i].removableVerts;
+    }
 
     mesh.topology.preferEdges( stableEdges );
     if ( settings.progressCallback && !settings.progressCallback( 0.16f ) )
@@ -940,7 +1018,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.vertForms )
         mVertForms = std::move( *settings.vertForms );
     if ( mVertForms.empty() )
-        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer, settings.notFlippable );
+        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer, settings.angleWeightedDistToPlane, settings.notFlippable );
     if ( settings.progressCallback && !settings.progressCallback( 0.2f ) )
         return res;
 
@@ -968,8 +1046,14 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 break;
 
             DecimateSettings subSeqSettings = settings;
-            subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
-            subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+            if ( limitedDeletion )
+            {
+                /// give quota of deletions proportional to the number of removable vertices in the part
+                const auto numPartRemovableVerts = parts[i].removableVerts.count();
+                const auto partFraction = float( numPartRemovableVerts ) / numIniVerts;
+                subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
+                subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
+            }
             if ( settings.minFacesInPart > 0 )
             {
                 int startFaces = (int)parts[i].region.count();
@@ -1041,7 +1125,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     }
     else
     {
-        optionalPackMesh( mesh, seqSettings );
+        if ( seqSettings.packMesh )
+            packMesh( mesh, seqSettings );
         res.cancelled = false;
     }
 

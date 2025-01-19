@@ -126,7 +126,7 @@ void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet
         fromContoursVec.assign( fromContours.begin(), fromContours.end() );
     }
 
-    mesh.addPartByMask( from, fromFaces, flipOrientation, thisContoursVec, fromContoursVec );
+    mesh.addMeshPart( { from, &fromFaces }, flipOrientation, thisContoursVec, fromContoursVec );
 }
 
 void mrMeshFree( MRMesh* mesh_ )

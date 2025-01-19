@@ -332,13 +332,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
 
-
-      - name: Debug - Post data to API Gateway
-        run: |
-          python -m pip install --upgrade pip
-          pip install boto3 requests
-          python3 scripts/devops/post_to_api.py
-
       - name: Collect stats
         env:
           CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}

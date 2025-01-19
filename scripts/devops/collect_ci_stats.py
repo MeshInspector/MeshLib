@@ -5,6 +5,9 @@ import os
 import pprint
 from pathlib import Path
 
+import boto3
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
 import requests
 
 def parse_iso8601(s):
@@ -74,6 +77,23 @@ def fetch_jobs(repo: str, run_id: str):
         'X-GitHub-Api-Version': '2022-11-28',
     })
 
+def sign_api_request(url, method, headers, body, region, service):
+    # Use the credentials from the assumed role
+    session = boto3.Session()
+    credentials = session.get_credentials().get_frozen_credentials()
+
+    request = AWSRequest(
+        method=method,
+        url=url,
+        headers=headers,
+        data=json.dumps(body)
+    )
+
+    # Sign the request with the SigV4Auth class
+    SigV4Auth(credentials, service, region).add_auth(request)
+
+    return request
+
 if __name__ == "__main__":
     branch = os.environ.get('GIT_BRANCH')
     commit = os.environ.get('GIT_COMMIT')
@@ -93,8 +113,26 @@ if __name__ == "__main__":
     }
     pprint.pp(result, indent=2, width=150)
 
-    resp = requests.post("https://api.meshinspector.com/ci-stats/v1/log", json=result, headers={
-        'Authorization': f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}',
-    })
-    if resp.status_code != 200:
-        raise RuntimeError(f'{resp.status_code}: {resp.text}')
+    api_url = "https://8np7tbux24.execute-api.us-east-1.amazonaws.com/v3/log"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    signed_request = sign_api_request(
+        api_url,
+        'POST',
+        headers,
+        result,
+        'us-east-1',
+        'execute-api' # Service name for API Gateway
+    )
+
+    response = requests.post(
+        api_url,
+        headers=dict(signed_request.headers.items()),  # Use signed headers
+        data=signed_request.body
+    )
+
+    if response.status_code != 200:
+        raise RuntimeError(f'{response.status_code}: {response.text}')

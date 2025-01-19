@@ -296,6 +296,21 @@ jobs:
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
 
+      - name: Post data to API Gateway
+        env:
+          API_URL: "https://8np7tbux24.execute-api.us-east-1.amazonaws.com/v3/log"
+        run: |
+          python3 -c "
+          import os
+          import requests
+          data = {'key': 'value'}  # Replace with actual data
+          headers = {
+              'Authorization': f'Bearer {os.getenv('AWS_SESSION_TOKEN')}'
+          }
+          response = requests.post(os.getenv('API_URL'), json=data, headers=headers)
+          print(response.status_code, response.text)
+          "
+
       - name: Collect stats
         env:
           CI_STATS_AUTH_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}

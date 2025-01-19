@@ -13,7 +13,7 @@
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
-#include <queue>
+#include "MRPriorityQueue.h"
 
 namespace MR
 {
@@ -56,7 +56,7 @@ private:
         bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
     };
     static_assert( sizeof( QueueElement ) == 8 );
-    std::priority_queue<QueueElement> queue_;
+    PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     DecimateResult res_;
     std::vector<VertId> originNeis_;
@@ -65,6 +65,7 @@ private:
 
     bool initialize_();
     void initializeQueue_();
+    void packQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
@@ -331,7 +332,27 @@ void MeshDecimator::initializeQueue_()
     validInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
     for ( const auto & qe : calc.elements() )
         validInQueue_.set( qe.uedgeId() );
-    queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+}
+
+void MeshDecimator::packQueue_()
+{
+    MR_TIMER
+
+    Timer t( "erase deleted" );
+    auto & vec = queue_.c;
+    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+
+    t.restart( "errors update" );
+    ParallelFor( vec, [&]( size_t i )
+    {
+        auto& qe = vec[i];
+        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ); n && n->c > qe.c )
+            qe = *n;
+    } );
+
+    t.restart( "make heap" );
+    std::make_heap( vec.begin(), vec.end() );
 }
 
 QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
@@ -779,8 +800,17 @@ DecimateResult MeshDecimator::run()
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
+    // intermediate packs shall improve performance of overall decimation
+    auto nextPackOn = 11 * queue_.size() / 12;
     while ( !queue_.empty() )
     {
+        if ( queue_.size() <= nextPackOn )
+        {
+            packQueue_();
+            nextPackOn = 11 * queue_.size() / 12;
+            if ( queue_.empty() )
+                break; // if old queue was filled only with invalid elements
+        }
         const auto topQE = queue_.top();
         const auto ue = topQE.uedgeId();
         queue_.pop();

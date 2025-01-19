@@ -119,6 +119,9 @@ if __name__ == "__main__":
         'Content-Type': 'application/json',
     }
 
+    if os.environ.get("CI_STATS_AUTH_TOKEN"):
+        headers['Authorization'] = f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}'
+
     signed_request = sign_api_request(
         API_URL,
         'POST',

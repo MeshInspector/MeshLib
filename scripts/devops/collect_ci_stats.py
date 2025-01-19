@@ -117,6 +117,7 @@ if __name__ == "__main__":
 
     headers = {
         'Content-Type': 'application/json',
+        'Authorization': f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}'
     }
 
     if os.environ.get("CI_STATS_AUTH_TOKEN"):

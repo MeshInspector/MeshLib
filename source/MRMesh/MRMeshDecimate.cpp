@@ -67,6 +67,7 @@ private:
 
     bool initialize_();
     void initializeQueue_();
+    std::vector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
@@ -181,42 +182,6 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
     };
 }
 
-class MeshDecimator::EdgeMetricCalc 
-{
-public:
-    EdgeMetricCalc( const MeshDecimator & decimator ) : decimator_( decimator ) { }
-    EdgeMetricCalc( EdgeMetricCalc & x, tbb::split ) : decimator_( x.decimator_ ) { }
-    void join( EdgeMetricCalc & y ) { auto yes = y.takeElements(); elems_.insert( elems_.end(), yes.begin(), yes.end() ); }
-
-    const std::vector<QueueElement> & elements() const { return elems_; }
-    std::vector<QueueElement> takeElements() { return std::move( elems_ ); }
-
-    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
-    {
-        const bool optimizeVertexPos = decimator_.settings_.optimizeVertexPos;
-        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
-        {
-            EdgeId e{ ue };
-            if ( decimator_.regionEdges_.empty() )
-            {
-                if ( decimator_.mesh_.topology.isLoneEdge( e ) )
-                    continue;
-            }
-            else
-            {
-                if ( !decimator_.regionEdges_.test( ue ) )
-                    continue;
-            }
-            if ( auto qe = decimator_.computeQueueElement_( ue, optimizeVertexPos ) )
-                elems_.push_back( *qe );
-        }
-    }
-
-public:
-    const MeshDecimator & decimator_;
-    std::vector<QueueElement> elems_;
-};
-
 QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, bool angleWeigted, const UndirectedEdgeBitSet * creases )
 {
     QuadraticForm3f qf = mp.mesh.quadraticForm( v, angleWeigted, mp.region, creases );
@@ -329,6 +294,49 @@ bool MeshDecimator::initialize_()
     return true;
 }
 
+auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
+{
+    MR_TIMER
+
+    const auto sz = mesh_.topology.undirectedEdgeSize();
+    validInQueue_.clear();
+    validInQueue_.resize( sz, false );
+
+    tbb::enumerable_thread_specific<std::vector<QueueElement>> threadData;
+    BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
+    {
+        if ( regionEdges_.empty() )
+        {
+            if ( mesh_.topology.isLoneEdge( ue ) )
+                return;
+        }
+        else
+        {
+            if ( !regionEdges_.test( ue ) )
+                return;
+        }
+        if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
+        {
+            threadData.local().push_back( *qe );
+            validInQueue_.set( ue );
+        }
+    } );
+
+    size_t queueSize = 0;
+    for ( const auto & v : threadData )
+        queueSize += v.size();
+
+    std::vector<QueueElement> elms;
+    elms.reserve( queueSize );
+    for ( auto & v : threadData )
+    {
+        elms.insert( elms.end(), v.begin(), v.end() );
+        v = {};
+    }
+    assert( elms.size() == queueSize );
+    return elms;
+}
+
 void MeshDecimator::initializeQueue_()
 {
     MR_TIMER
@@ -336,14 +344,7 @@ void MeshDecimator::initializeQueue_()
     // free space occupied by existing queue
     queue_ = {};
 
-    EdgeMetricCalc calc( *this );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
-
-    validInQueue_.clear();
-    validInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
-    for ( const auto & qe : calc.elements() )
-        validInQueue_.set( qe.uedgeId() );
-    queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+    queue_ = PriorityQueue<QueueElement>{ std::less<QueueElement>(), makeQueueElements_() };
 
     outdated_.clear();
     outdated_.resize( mesh_.topology.undirectedEdgeSize(), false );

@@ -1,14 +1,14 @@
 /**
 
-\page ExamplePluginOverview Example Plugin Overview
+\page ExamplePluginOverview C++ Example Plugin Overview
 
 \tableofcontents
 
-# Distribution Example Plugin Description
+# C++ Distribution Example Plugin
 
 ## Introduction
 This page describes what is present in `example_plugin` directory of the Windows distribution archive and how to use it.
-\note Please have a look at [MeshLib setup guide](\ref CppSetupWindows) first.
+\note Please have a look at [MeshLib С++ setup guide](\ref CppSetupWindows) first.
 
 ## Content
 This example contains several files:
@@ -118,8 +118,8 @@ Lets have a closer look at each of these points:
 
 ### Source Code File
 `MyPlugin.cpp` - this file contains two simple tools:
-1. `MyTool() : RibbonMenuItem( "My Tool" )` - shows "Helo World" **modal** window
-2. `MyStateTool() : StatePlugin( "My State Tool" )` - shows "Helo World" **dialog** window
+1. `MyTool() : RibbonMenuItem( "My Tool" )` - shows "Hello World" **modal** window
+2. `MyStateTool() : StatePlugin( "My State Tool" )` - shows "Hello World" **dialog** window
 
 For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 

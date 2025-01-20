@@ -339,19 +339,31 @@ void MeshDecimator::packQueue_()
 {
     MR_TIMER
 
-    Timer t( "erase deleted" );
+    Timer t( "compute" );
     auto & vec = queue_.c;
-    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
-
-    t.restart( "errors update" );
-    ParallelFor( vec, [&]( size_t i )
+    BitSet del( vec.size(), false );
+    BitSetParallelForAll( del, [&]( size_t i )
     {
         auto& qe = vec[i];
-        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ); n && n->c > qe.c )
-            qe = *n;
+        if ( !validInQueue_.test( qe.uedgeId() ) )
+            return;
+        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ) )
+        {
+            if ( n->c > qe.c )
+                qe = *n;
+            return;
+        }
+        del.set( i );
     } );
 
-    t.restart( "make heap" );
+    t.restart( "invalidate" );
+    for ( auto i : del )
+        validInQueue_.reset( vec[i].uedgeId() );
+
+    t.restart( "remove deleted" );
+    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+
+    t.restart( "restore heap" );
     std::make_heap( vec.begin(), vec.end() );
 }
 
@@ -801,13 +813,13 @@ DecimateResult MeshDecimator::run()
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     // intermediate packs shall improve performance of overall decimation
-    auto nextPackOn = 11 * queue_.size() / 12;
+    auto nextPackOn = 15 * queue_.size() / 16;
     while ( !queue_.empty() )
     {
         if ( queue_.size() <= nextPackOn )
         {
             packQueue_();
-            nextPackOn = 11 * queue_.size() / 12;
+            nextPackOn = 15 * queue_.size() / 16;
             if ( queue_.empty() )
                 break; // if old queue was filled only with invalid elements
         }

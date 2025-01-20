@@ -128,7 +128,7 @@ For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 2. Compile it
 3. Copy content of just appeared `x64\Release\` folder to MeshLib or MeshInspector app folder
   - MeshLib: `install\app\Release`
-  - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpeted errors
-\note take `x64\Debug\` if you want to test it in MeshLib degub app folder: `install\app\Debug`
+  - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpected errors
+\note take `x64\Debug\` if you want to test it in MeshLib debug app folder: `install\app\Debug`
 
 */

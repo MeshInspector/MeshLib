@@ -13,9 +13,9 @@ HOMEBREW_DIR=/opt/homebrew
 [[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
 
 if which sudo >/dev/null 2>/dev/null; then
-    SUDO=sudo
+    [[ ${SUDO:=} ]] || SUDO=sudo
 else
-    SUDO=
+    [[ ${SUDO:=} ]] || SUDO=
 fi
 
 # ??

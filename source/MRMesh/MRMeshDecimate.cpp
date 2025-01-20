@@ -59,6 +59,7 @@ private:
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_;
+    int numOutdated_ = 0;
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -66,7 +67,7 @@ private:
 
     bool initialize_();
     void initializeQueue_();
-    void packQueue_();
+    void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
@@ -139,6 +140,8 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
     ] ( EdgeId del, EdgeId rem )
     {
         validInQueue_.reset( del );
+        if ( outdated_.test_set( del, false ) )
+            --numOutdated_;
 
         if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
             notFlippable->autoResizeSet( rem.undirected() );
@@ -338,9 +341,10 @@ void MeshDecimator::initializeQueue_()
 
     outdated_.clear();
     outdated_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    numOutdated_ = 0;
 }
 
-void MeshDecimator::packQueue_()
+void MeshDecimator::updateQueue_()
 {
     MR_TIMER
 
@@ -361,6 +365,7 @@ void MeshDecimator::packQueue_()
             del.set( i );
     } );
     outdated_.reset( 0_ue, outdated_.size() );
+    numOutdated_ = 0;
 
     t.restart( "invalidate" );
     for ( auto i : del )
@@ -492,7 +497,8 @@ void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
     {
         queue_.push( *qe );
         validInQueue_.set( ue );
-        outdated_.reset( ue );
+        if ( outdated_.test_set( ue, false ) )
+            --numOutdated_;
     }
 }
 
@@ -723,8 +729,8 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         // update edges around remaining vertex
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
-            if ( addInQueueIfMissing_( e.undirected() ) )
-                outdated_.set( e.undirected() );
+            if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
+                ++numOutdated_;
             if ( mesh_.topology.left( e ) )
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
         }
@@ -827,14 +833,11 @@ DecimateResult MeshDecimator::run()
     int lastProgressFacesDeleted = 0;
     const int maxFacesDeleted = std::min(
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
-    // intermediate packs shall improve performance of overall decimation
-    auto nextPackOn = 15 * queue_.size() / 16;
     while ( !queue_.empty() )
     {
-        if ( queue_.size() <= nextPackOn )
+        if ( queue_.size() >= 1024 && queue_.size() < 5 * numOutdated_ )
         {
-            packQueue_();
-            nextPackOn = 15 * queue_.size() / 16;
+            updateQueue_();
             if ( queue_.empty() )
                 break; // if old queue was filled only with invalid elements
         }
@@ -874,7 +877,8 @@ DecimateResult MeshDecimator::run()
         if ( qe->c > topQE.c )
         {
             queue_.push( *qe );
-            outdated_.reset( ue );
+            if ( outdated_.test_set( ue, false ) )
+                --numOutdated_;
             continue;
         }
 

@@ -58,8 +58,8 @@ private:
     static_assert( sizeof( QueueElement ) == 8 );
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
-    UndirectedEdgeBitSet outdated_;
-    int numOutdated_ = 0;
+    UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
+    int numOutdated_ = 0; // total number of not lone outdated edges in the queue
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -71,8 +71,14 @@ private:
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
+
+    /// adds given edge in the queue if it was missing there;
+    /// returns true only if the edge was already in queue with probably outdated error
     bool addInQueueIfMissing_( UndirectedEdgeId ue );
+
+    /// adds given edges (currently missing) in queue
     void addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos );
+
     void flipEdge_( UndirectedEdgeId ue );
 
     enum class CollapseStatus
@@ -350,6 +356,7 @@ void MeshDecimator::updateQueue_()
 
     Timer t( "compute" );
     auto & vec = queue_.c;
+    // recompute errors for outdated edges
     BitSet del( vec.size(), false );
     BitSetParallelForAll( del, [&]( size_t i )
     {
@@ -368,13 +375,16 @@ void MeshDecimator::updateQueue_()
     numOutdated_ = 0;
 
     t.restart( "invalidate" );
+    // removed valid flag for outdated edges with failed computeQueueElement_
     for ( auto i : del )
         validInQueue_.reset( vec[i].uedgeId() );
 
     t.restart( "remove deleted" );
+    // remove invalid and deleted edges from the queue
     std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
 
     t.restart( "restore heap" );
+    // sort elements to restore heap property
     std::make_heap( vec.begin(), vec.end() );
 }
 
@@ -730,7 +740,7 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         for ( EdgeId e : orgRing( mesh_.topology, vo ) )
         {
             if ( addInQueueIfMissing_( e.undirected() ) && !outdated_.test_set( e.undirected() ) )
-                ++numOutdated_;
+                ++numOutdated_; // collapse error for of all neighbor edges with vo must increase
             if ( mesh_.topology.left( e ) )
                 addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
         }
@@ -835,6 +845,7 @@ DecimateResult MeshDecimator::run()
         settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     while ( !queue_.empty() )
     {
+        // update queue elements if there is significant portion of outdated edges there
         if ( queue_.size() >= 1024 && queue_.size() < 5 * numOutdated_ )
         {
             updateQueue_();

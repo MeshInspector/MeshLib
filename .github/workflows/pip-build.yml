@@ -388,7 +388,7 @@ jobs:
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+          name: Macos-${{matrix.platform}}
           path: meshlib-*.whl
           retention-days: 1
 
@@ -452,7 +452,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ManyLinux-*
+          name: ManyLinux-${{matrix.platform}}
           merge-multiple: true
 
       - name: Meshlib wheel install
@@ -479,7 +479,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Windows-*
+          name: Windows
           merge-multiple: true
 
       - name: Python setup
@@ -564,7 +564,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Macos-*
+          name: Macos-${{matrix.platform}}
           merge-multiple: true
 
       - name: Meshlib wheel install
@@ -589,7 +589,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: Windows-*
+          pattern: Windows
           merge-multiple: true
 
       - name: Download Wheels Artifacts
@@ -631,7 +631,7 @@ jobs:
       - name: Delete all Windows
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: Windows-*
+          name: Windows
           failOnError: false
 
       - name: Delete all Macos

@@ -83,8 +83,7 @@ MRVOXELS_API Expected<void> toDicom( const VdbVolume& vdbVolume, const std::file
 template <typename T>
 MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
 
-extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<SimpleVolumeMinMax>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
-extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<VdbVolume         >>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
+extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<std::uint16_t>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
 
 } // namespace VoxelsSave
 

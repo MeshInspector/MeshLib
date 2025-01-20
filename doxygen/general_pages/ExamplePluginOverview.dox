@@ -1,0 +1,134 @@
+/**
+
+\page ExamplePluginOverview Example Plugin Overview
+
+\tableofcontents
+
+# Distribution Example Plugin Description
+
+## Introduction
+This page describes what is present in `example_plugin` directory of the Windows distribution archive and how to use it.
+\note Please have a look at [MeshLib setup guide](\ref CppSetupWindows) first.
+
+## Content
+This example contains several files:
+1. `example_plugin.sln` - Visual Studio solution file
+2. `example_plugin.vcxproj` - Visual Studio project file
+3. `MyPlugin.items.json` - tools configuration file
+4. `MyPlugin.ui.json` - tools visualization in MeshLib/MeshInspector viewer
+5. `resource` - directory with icons in four different sizes for menu in viewer
+6. `MyPlugin.cpp` - source code with actual (demo) tools
+
+Lets have a closer look at each of these points:
+
+### Solution File
+`example_plugin.sln` - This can be used to build an example with Visual Studio, it only includes `example_plugin.vcxproj` in it.
+
+### Project File
+`example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox \n
+       - Copy other files to target directory:
+\code{.xml}
+   <ItemGroup>
+    <CopyFileToFolders Include="MyPlugin.items.json">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MyPlugin.ui.json">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <Content Include="resource\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+\endcode
+
+### Tools Configuration File
+`MyPlugin.items.json` - this file contains information about each tool that is present in the plugin:
+ - \b "Name" - name of the tool, should be same as in the code
+ - \b "Tooltip" - tooltip that is shown when user hover tool in UI
+ - \b "Icon" - unicode symbol from [Fontawesome](https://fontawesome.com), it is shown in UI for the tool if there is no actual icon present in `resource` folder
+ - \b "Caption" - optional: label that is displayed instead of name in UI, if not present "Name" is used intead
+ - \b "HelpLink" - optional: link to web page that will be opened if "Help" button is pressed in UI
+ - \b "DropList" - optional: array with other tools that will be available in this tool drop list (see "List" in next section)
+
+\code{.json}
+{
+  "Items": [
+    {
+      "Name": "My Tool",
+      "Tooltip": "Simple button that shows Hello World message",
+      "Icon": "\uE05D"
+    },
+    {
+      "Name": "My State Tool",
+      "Tooltip": "Simple dialog that shows Hello World message",
+      "Icon": "\uE05D"
+    }
+  ]
+}
+\endcode
+
+### Tools Visualization Order File
+`MyPlugin.ui.json` - this file has information about order of the plugin loading, and UI schema for present tools:
+ - \b "Order" - order of loading dll produced by this plugin, it can be used to determine constuction of tools in diferent plugins
+ - \b "LibName" - name of the dll that contains provided tools (in this case it is same dll)
+ - \b "Tabs" - tabs where tools are located in UI, could be new tabs or existing ones (specified plugins with less "Order" number)
+   - \b "Name" - name of the tab
+   - \b "Priority" - optional: tabs are ordered by this number
+   - \b "Groups" - specify groups of tools in single tab, could be new groups or existing ones (specified plugins with less "Order" number)
+       - \b "Name" - name of the group (it is not used now)
+       - \b "List" - list of the tools in this group
+           - \b "Name" - name of the tool, should be same as in the code and in the `items.json` file
+
+\code{.json}
+{
+	"Order": 999,
+	"LibName": "example_plugin",
+	"Tabs": [
+		{
+			"Name": "MyPlugin",
+			"Priority": 20,
+			"Groups": [
+				{
+					"Name": "Primal",
+					"List": [
+						{
+							"Name": "My Tool"
+						},
+						{
+							"Name": "My State Tool"
+						}
+					]
+				}
+			]
+		}
+	]
+}
+\endcode
+
+### Resoure Directory
+`resource` - directory with icons that is used in UI, it should have same structure as in example:
+- resource
+  - icons
+    - X0_5 (16x16 px)
+    - X0_75 (24x24 px)
+    - X1 (32x32 px)
+    - X3 (96x96 px)
+
+\note Icons should have same name as tool in the code, in `items.json` file and in `ui.json` file
+
+### Source Code File
+`MyPlugin.cpp` - this file contains two simple tools:
+1. `MyTool() : RibbonMenuItem( "My Tool" )` - shows "Helo World" **modal** window
+2. `MyStateTool() : StatePlugin( "My State Tool" )` - shows "Helo World" **dialog** window
+
+For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
+
+## Usage
+1. Open solution file with Visual Studio
+2. Compile it
+3. Copy content of just appeared `x64\Release\` folder to MeshLib or MeshInspector app folder
+  - MeshLib: `install\app\Release`
+  - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpeted errors
+\note take `x64\Debug\` if you want to test it in MeshLib degub app folder: `install\app\Debug`
+
+*/

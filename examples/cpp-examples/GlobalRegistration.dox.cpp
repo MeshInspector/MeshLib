@@ -50,7 +50,7 @@ int main( int argc, char* argv[] )
 
         inputs.emplace_back( std::move( *pointCloud ) );
         // you may also set an affine transformation for each input as a second argument
-        objects.emplace_back( MR::MeshOrPoints( inputs.back() ) );
+        objects.push_back( { inputs.back(), {} } );
     }
 
     // you can set various parameters for the global registration; see the documentation for more info

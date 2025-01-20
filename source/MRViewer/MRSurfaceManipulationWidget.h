@@ -49,6 +49,9 @@ public:
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
     /// reset widget state
     MRVIEWER_API void reset();
+    /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
+    /// @note boundary edges can be splitted to improve quality of the patch
+    MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
     MRVIEWER_API void setSettings( const Settings& settings );
@@ -107,6 +110,7 @@ private:
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
+    VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application

@@ -186,7 +186,7 @@ EXTRA_LDLAGS :=
 # Flag presets.
 MODE := release
 ifeq ($(MODE),release)
-override EXTRA_CFLAGS += -Oz -flto=thin
+override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),,-s)# No `-s` on macos. It seems to have no effect, and the linker warns about it.
 else ifeq ($(MODE),debug)
 override EXTRA_CFLAGS += -g

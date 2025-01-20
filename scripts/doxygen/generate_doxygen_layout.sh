@@ -12,6 +12,8 @@ cp ${DOXYGEN_DIR}/layout_templates/base_struct.xml ${DOXYGEN_DIR}/DoxygenLayout$
 if [ "$1" = "Main" ]; then
     sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"mainpage\" visible=\"yes\" title=\"About\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
     sed -e "s|__BEGIN_URL__|@ref |" -e "s|__END_URL__||" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+    # fix complex refs
+    sed -e "s|@ref .*#|@ref |" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 else
     sed -e "s|__MAIN_PAGE_TAB__|<tab type=\"user\" url=\"../index.html\" title=\"About\"/>|"  -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
     sed -e "s|__BEGIN_URL__|../|" -e "s|__END_URL__|${END_URL}|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml

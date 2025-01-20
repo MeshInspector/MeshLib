@@ -15,7 +15,7 @@
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__" title="Examples">
-      <tab type="usergroup" url="__BEGIN_URL__GeneralExamples__END_URL__" title="General Samples">
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#GeneralExamples" title="General Samples">
         <tab type="user" url="__BEGIN_URL__BasedApplication__END_URL__" title="Application Based on MeshLib"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshLoadSave__END_URL__" title="Mesh Load and Save"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExport__END_URL__" title="Export Raw Triangles"/>
@@ -35,7 +35,7 @@
         <tab type="user" url="__BEGIN_URL__ExampleTriangulation__END_URL__" title="Triangulation"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
-      <tab type="usergroup" url="__BEGIN_URL__PythonSpecificExamples__END_URL__" title="Python Specific Samples">
+      <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#PythonSpecificExamples" title="Python Specific Samples">
         <tab type="user" url="__BEGIN_URL__ExampleViewer__END_URL__" title="Viewer"/>
         <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>

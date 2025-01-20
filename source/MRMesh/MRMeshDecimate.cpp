@@ -57,7 +57,7 @@ private:
     };
     static_assert( sizeof( QueueElement ) == 8 );
     std::priority_queue<QueueElement> queue_;
-    UndirectedEdgeBitSet presentInQueue_;
+    UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     DecimateResult res_;
     std::vector<VertId> originNeis_;
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
@@ -102,9 +102,10 @@ private:
     };
     CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
 
-    /// performs edge collapse after previous successful check by canCollapse_
+    /// performs edge collapse after previous successful check by canCollapse_,
+    /// if one of the edge's vertices remain, then stores (collapseForm) as its new form and updates error of its neighbor edges
     /// \return org( edgeToCollapse ) or invalid id if it was the last edge
-    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 
     struct CollapseRes
     {
@@ -113,7 +114,7 @@ private:
         CollapseStatus status = CollapseStatus::Ok;
     };
     /// canCollapse_ + forceCollapse_
-    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+    CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
@@ -125,47 +126,47 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
         .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
 {
-    if ( settings_.notFlippable || settings_.edgesToCollapse || settings_.twinMap || settings_.onEdgeDel )
+    onEdgeDel_ =
+    [
+        this,
+        notFlippable = settings_.notFlippable,
+        edgesToCollapse = settings_.edgesToCollapse,
+        twinMap = settings_.twinMap,
+        onEdgeDel = settings_.onEdgeDel
+    ] ( EdgeId del, EdgeId rem )
     {
-        onEdgeDel_ =
-        [
-            notFlippable = settings_.notFlippable,
-            edgesToCollapse = settings_.edgesToCollapse,
-            twinMap = settings_.twinMap,
-            onEdgeDel = settings_.onEdgeDel
-        ] ( EdgeId del, EdgeId rem )
+        validInQueue_.reset( del );
+
+        if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
+            notFlippable->autoResizeSet( rem.undirected() );
+
+        if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
+            edgesToCollapse->autoResizeSet( rem.undirected() );
+
+        if ( twinMap )
         {
-            if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
-                notFlippable->autoResizeSet( rem.undirected() );
-
-            if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
-                edgesToCollapse->autoResizeSet( rem.undirected() );
-
-            if ( twinMap )
+            auto itDel = twinMap->find( del );
+            if ( itDel != twinMap->end() )
             {
-                auto itDel = twinMap->find( del );
-                if ( itDel != twinMap->end() )
+                auto tgt = itDel->second;
+                auto itTgt = twinMap->find( tgt );
+                assert( itTgt != twinMap->end() );
+                assert( itTgt->second == del.undirected() );
+                twinMap->erase( itDel );
+                if ( rem )
                 {
-                    auto tgt = itDel->second;
-                    auto itTgt = twinMap->find( tgt );
-                    assert( itTgt != twinMap->end() );
-                    assert( itTgt->second == del.undirected() );
-                    twinMap->erase( itDel );
-                    if ( rem )
-                    {
-                        assert( twinMap->count( rem ) == 0 );
-                        (*twinMap)[rem] = tgt;
-                        itTgt->second = rem;
-                    }
-                    else
-                        twinMap->erase( itTgt );
+                    assert( twinMap->count( rem ) == 0 );
+                    (*twinMap)[rem] = tgt;
+                    itTgt->second = rem;
                 }
+                else
+                    twinMap->erase( itTgt );
             }
+        }
 
-            if ( onEdgeDel )
-                onEdgeDel( del, rem );
-        };
-    }
+        if ( onEdgeDel )
+            onEdgeDel( del, rem );
+    };
 }
 
 class MeshDecimator::EdgeMetricCalc 
@@ -326,10 +327,10 @@ void MeshDecimator::initializeQueue_()
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
 
-    presentInQueue_.clear();
-    presentInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
+    validInQueue_.clear();
+    validInQueue_.resize( mesh_.topology.undirectedEdgeSize(), false );
     for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId() );
+        validInQueue_.set( qe.uedgeId() );
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
@@ -439,12 +440,12 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
-    if ( presentInQueue_.test( ue ) )
+    if ( validInQueue_.test( ue ) )
         return;
     if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
     {
         queue_.push( *qe );
-        presentInQueue_.set( ue );
+        validInQueue_.set( ue );
     }
 }
 
@@ -642,7 +643,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     return { .e = edgeToCollapse };
 }
 
-VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
+VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm )
 {
     ++res_.vertsDeleted;
 
@@ -667,23 +668,29 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
     if ( !eo )
         return {};
 
-    // update edges around remaining vertex
-    for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+    if ( vo )
     {
-        addInQueueIfMissing_( e.undirected() );
-        if ( mesh_.topology.left( e ) )
-            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        // must be done before computeQueueElement_ in addInQueueIfMissing_
+        (*pVertForms_)[vo] = collapseForm;
+
+        // update edges around remaining vertex
+        for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+        {
+            addInQueueIfMissing_( e.undirected() );
+            if ( mesh_.topology.left( e ) )
+                addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+        }
     }
     return vo;
 }
 
-auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm ) -> CollapseRes
 {
     CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
     if ( can.status != CollapseStatus::Ok )
         return { .status = can.status };
     assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
-    return { .v = forceCollapse_( can.e, collapsePos ) };
+    return { .v = forceCollapse_( can.e, collapsePos, collapseForm ) };
 }
 
 static void packMesh( Mesh & mesh, const DecimateSettings & settings,
@@ -776,7 +783,6 @@ DecimateResult MeshDecimator::run()
     {
         const auto topQE = queue_.top();
         const auto ue = topQE.uedgeId();
-        assert( presentInQueue_.test( ue ) );
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -791,19 +797,20 @@ DecimateResult MeshDecimator::run()
             lastProgressFacesDeleted = res_.facesDeleted;
         }
 
-        if ( mesh_.topology.isLoneEdge( ue ) )
+        if ( !validInQueue_.test( ue ) )
         {
             // edge has been deleted by this moment
-            presentInQueue_.reset( ue );
+            assert( mesh_.topology.isLoneEdge( ue ) );
             continue;
         }
+        assert( !mesh_.topology.isLoneEdge( ue ) );
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
         auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, &collapseForm, &collapsePos );
         if ( !qe )
         {
-            presentInQueue_.reset( ue );
+            validInQueue_.reset( ue );
             continue;
         }
 
@@ -813,7 +820,7 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
-        presentInQueue_.reset( ue );
+        validInQueue_.reset( ue );
 
         UndirectedEdgeId twin;
         if ( settings_.twinMap )
@@ -837,7 +844,7 @@ DecimateResult MeshDecimator::run()
                     if ( qe )
                     {
                         queue_.push( *qe );
-                        presentInQueue_.set( ue );
+                        validInQueue_.set( ue );
                     }
                 }
                 continue;
@@ -845,14 +852,11 @@ DecimateResult MeshDecimator::run()
             if ( twin )
             {
                 const auto twinCollapseForm = collapseForm_( twin, collapsePos );
-                const auto twinCollapseRes = collapse_( twin, collapsePos );
+                const auto twinCollapseRes = collapse_( twin, collapsePos, twinCollapseForm );
                 if ( twinCollapseRes.status != CollapseStatus::Ok )
                     continue;
-                if ( twinCollapseRes.v )
-                    (*pVertForms_)[twinCollapseRes.v] = twinCollapseForm;
             }
-            if ( auto v = forceCollapse_( canCollapseRes.e, collapsePos ) )
-                (*pVertForms_)[v] = collapseForm;
+            forceCollapse_( canCollapseRes.e, collapsePos, collapseForm );
         }
     }
 

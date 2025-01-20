@@ -348,12 +348,9 @@ void MeshDecimator::packQueue_()
         if ( !validInQueue_.test( qe.uedgeId() ) )
             return;
         if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ) )
-        {
-            if ( n->c > qe.c )
-                qe = *n;
-            return;
-        }
-        del.set( i );
+            qe = *n;
+        else
+            del.set( i );
     } );
 
     t.restart( "invalidate" );

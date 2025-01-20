@@ -452,7 +452,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
+          name: ManyLinux-*
           merge-multiple: true
 
       - name: Meshlib wheel install
@@ -479,7 +479,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Windows-python${{matrix.py-version}}
+          name: Windows-*
           merge-multiple: true
 
       - name: Python setup
@@ -564,7 +564,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+          name: Macos-*
           merge-multiple: true
 
       - name: Meshlib wheel install

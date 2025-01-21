@@ -92,13 +92,24 @@ MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mes
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
-  * \param isoValue amount of offset form given point, note that absolute value is used and isoline in both direction returned
-  * \param searchSettings settings for search geo path
+  * Finds shortest paths between neighbor \p meshTriPoints and build offset contour on surface for MR::cutMesh input
+  * \param offset amount of offset form given point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geodesic path
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
-    float isoValue, SearchPathSettings searchSettings = {} );
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    float offset, SearchPathSettings searchSettings = {} );
+
+/** \ingroup BooleanGroup
+  * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
+  *
+  * Finds shortest paths between neighbor \p meshTriPoints and build offset contour on surface for MR::cutMesh input
+  * \param offsetAtPoint functor that returns amount of offset form arg point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geodesic path
+  */
+[[nodiscard]]
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {});
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same

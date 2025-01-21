@@ -113,6 +113,10 @@ private:
     void setupVolumePart_( int voxelsExpansion );
 };
 
+/// Given voxel mask, separate it into components using mincut algorithm
+/// @param minSize Minimum size of a segment (in voxels)
+MRVOXELS_API Expected<std::vector<Mesh>> segmentVoxelMaskToInstances( const VdbVolume& mask, size_t minSize = 100, ProgressCallback cb = {} );
+
 /// \}
 
 }

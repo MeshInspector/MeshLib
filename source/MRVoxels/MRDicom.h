@@ -40,13 +40,19 @@ using DicomVolumeAsVdb = DicomVolumeT<VdbVolume>;
 /// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume
 template <typename T = SimpleVolumeMinMax>
 MRVOXELS_API std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::path& path,
-                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {}  );
+                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+
+extern template MRVOXELS_API std::vector<Expected<DicomVolumeT<SimpleVolumeMinMax>>> loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+extern template MRVOXELS_API std::vector<Expected<DicomVolumeT<VdbVolume         >>> loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
 
 /// Loads 3D first volumetric data from DICOM files in a folder
 /// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume
 template <typename T = SimpleVolumeMinMax>
 MRVOXELS_API Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path,
                                                     unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+
+extern template MRVOXELS_API Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+extern template MRVOXELS_API Expected<DicomVolumeT<VdbVolume         >> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
 
 /// Loads every subfolder with DICOM volume as new object
 MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path,
@@ -62,6 +68,9 @@ MRVOXELS_API Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const
 template <typename T = SimpleVolumeMinMax>
 MRVOXELS_API Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
+extern template MRVOXELS_API Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb );
+extern template MRVOXELS_API Expected<DicomVolumeT<VdbVolume         >> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb );
+
 } // namespace VoxelsLoad
 
 namespace VoxelsSave
@@ -73,6 +82,8 @@ MRVOXELS_API Expected<void> toDicom( const VdbVolume& vdbVolume, const std::file
 /// which will be saved with "slope" and "intercept" parameters of the output dicom.
 template <typename T>
 MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
+
+extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<std::uint16_t>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
 
 } // namespace VoxelsSave
 

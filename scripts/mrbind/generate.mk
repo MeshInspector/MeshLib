@@ -84,7 +84,8 @@ FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 $(info Those modules are for a Python wheel? $(if $(FOR_WHEEL),YES,NO))
 
-# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims?
+# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims automatically?
+# You can always build them manually via `make shims -B`.
 BUILD_SHIMS := $(FOR_WHEEL)
 override BUILD_SHIMS := $(filter-out 0,$(BUILD_SHIMS))
 $(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
@@ -196,6 +197,7 @@ else ifeq ($(MODE),none)
 else
 $(error Unknown MODE=$(MODE))
 endif
+$(info MODE: $(MODE))
 
 # Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
@@ -505,7 +507,8 @@ override all_outputs :=
 # Things for our patched pybind: --- [
 # Also setting `Py_LIMITED_API` is a part of this, but it's spread all over this makefile.
 COMPILER += -DPYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE='"meshlib"'
-COMPILER += -DPYBIND11_NONLIMITEDAPI_SHIM_PATH_RELATIVE_TO_LIBRARY_DIR=".."
+# Here we use a really jank separator syntax because nvcc chokes on those (considers `-DA=B,C` to mean `-DA=B -DC`).
+COMPILER += -DPYBIND11_NONLIMITEDAPI_SHIM_PATHS_RELATIVE_TO_LIBRARY_DIR='"..|."'
 # Pybind normally sets this to 5 in Python 3.12 and newer, and to 4 before that. But we need the same number everywhere for our modules to work on
 #   multiple different Python versions. We can't set it to 4 (since that's not compatible with the new Python, see https://github.com/pybind/pybind11/pull/4570),
 #   but we can set it to 5 unconditionally (Pybind doesn't do it by default only for ABI compatibility).
@@ -518,14 +521,18 @@ PYBIND_SOURCE_DIR := $(makefile_dir)../../thirdparty/pybind11
 PYBIND_NONLIMITEDAPI_CPP := $(PYBIND_SOURCE_DIR)/source/non_limited_api/non_limited_api.cpp
 PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX := pybind11nonlimitedapi_meshlib_
 
-ifneq ($(BUILD_SHIMS),)
+override shim_outputs :=
 $(foreach v,$(PYTHON_VERSIONS),\
     $(call var,_obj := $(TEMP_OUTPUT_DIR)/$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v.o)\
     $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHIM_SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
-    $(call var,all_outputs += $(_shlib))\
+    $(call var,shim_outputs += $(_shlib))\
     $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(COMPILER_FLAGS) $(call get_python_cflags,$v) $$< -c -o $$@)\
     $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs $(call get_python_ldflags,$v))\
 )
+.PHONY: shims
+shims: $(shim_outputs)
+ifneq ($(BUILD_SHIMS),)
+override all_outputs += $(shim_outputs)
 endif
 
 # Those are used by `module_snippet` below.

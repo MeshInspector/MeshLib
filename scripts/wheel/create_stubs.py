@@ -40,7 +40,7 @@ def setup_workspace( modules, clear_folder = True ):
         lib = LIB_DIR_MESHLIB / f"{module}{LIB_EXTENSION}"
         print(lib)
         shutil.copy(lib, WHEEL_SRC_DIR)
-    for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
+    for pybind_shim in LIB_DIR.glob("*pybind11nonlimitedapi_meshlib_*"):
         print(pybind_shim)
         shutil.copy(pybind_shim, WHEEL_SRC_DIR)
 

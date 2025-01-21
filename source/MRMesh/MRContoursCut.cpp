@@ -562,6 +562,20 @@ OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& m
     return res;
 }
 
+Contours3f extractMeshContours( const OneMeshContours& meshContours )
+{
+    Contours3f res( meshContours.size() );
+    for ( int i = 0; i < res.size(); ++i )
+    {
+        auto& resI = res[i];
+        const auto& imputI = meshContours[i].intersections;
+        resI.resize( imputI.size() );
+        for ( int j = 0; j < resI.size(); ++j )
+            resI[j] = imputI[j].coordinate;
+    }
+    return res;
+}
+
 // finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
 FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
 {

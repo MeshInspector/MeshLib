@@ -462,7 +462,7 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     ctmCompressionMethod( context, CTM_METHOD_MG1 );
     ctmCompressionLevel( context, options.compressionLevel );
 
-    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    const bool saveNormals = cloud.hasNormals();
     CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
 
     VertCoords points;
@@ -490,11 +490,11 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
                 for ( auto v : cloud.validPoints )
                     normals.push_back( applyFloat( normXf, cloud.normals[v] ) );
             }
-        }
-        else
-        {
-            transformNormals( cloud.normals, cloud.validPoints, normXf, normals );
-            assert( cloud.normals.size() == normals.size() );
+            else
+            {
+                transformNormals( cloud.normals, cloud.validPoints, normXf, normals );
+                assert( cloud.normals.size() == normals.size() );
+            }
         }
 
         ctmDefineMesh( context,

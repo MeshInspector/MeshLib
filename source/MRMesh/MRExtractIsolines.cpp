@@ -13,6 +13,7 @@
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRMeshTriPoint.h"
+#include "MRFinally.h"
 #include <atomic>
 
 namespace MR
@@ -241,6 +242,9 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 {
     assert( activeEdges_.empty() || activeEdges_.test( first.undirected() ) );
     IsoLine res;
+#ifndef NDEBUG
+    MR_FINALLY{ assert( isConsistentlyOriented( topology_, res ) ); };
+#endif // !NDEBUG
     auto addCrossedEdge = [&]( EdgeId e )
     {
         if ( !continueTrack )
@@ -470,6 +474,31 @@ Expected<PlaneSection> trackSection( const MeshPart& mp, const MeshTriPoint& sta
         return unexpected( "Looped section" );
     if ( !fromSameTriangle( mp.mesh.topology, MeshTriPoint( res.back() ), MeshTriPoint( end ) ) )
         return unexpected( "Interrupted section" );
+    return res;
+}
+
+bool isConsistentlyOriented( const MeshTopology & topology, const IsoLine & isoline )
+{
+    // works for both open and closed lines
+    for ( int i = 0; i + 1 < isoline.size(); ++i )
+    {
+        auto l0 = topology.left( isoline[i].e );
+        if ( !l0 )
+            return false;
+        auto r1 = topology.right( isoline[i+1].e );
+        if ( l0 != r1 )
+            return false;
+    }
+    return true;
+}
+
+FaceBitSet getCrossedFaces( const MeshTopology & topology, const IsoLine & isoline )
+{
+    assert( isConsistentlyOriented( topology, isoline ) );
+
+    FaceBitSet res;
+    for ( int i = 0; i + 1 < isoline.size(); ++i )
+        res.autoResizeSet( topology.left( isoline[i].e ) );
     return res;
 }
 

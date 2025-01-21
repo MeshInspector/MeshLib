@@ -122,7 +122,7 @@ public:
                 elements.resize( layers_[l].size() );
                 BitSetParallelForAll( elements, [&] ( ICPElementId id )
                 {
-                    elements.set( id, ( leavesPerLayer_[l][id] & leavesPerLayer_[l + 1][nId] ).any() );
+                    elements.set( id, leavesPerLayer_[l][id].intersects( leavesPerLayer_[l + 1][nId] ) );
                 } );
             }
         }

@@ -130,7 +130,7 @@ VertBitSet filterDisjointPoints( const Mesh& mesh, const VertBitSet& selectedPoi
 
     FaceBitSet result( mesh.topology.lastValidFace() + 1, false );
     for ( const auto& component : components )
-        if ( ( component & referenceFaces ).any() )
+        if ( component.intersects( referenceFaces ) )
             result |= component;
 
     return getIncidentVerts( mesh.topology, result ) & selectedPoints;

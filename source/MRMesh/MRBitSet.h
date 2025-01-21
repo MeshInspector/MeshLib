@@ -171,6 +171,15 @@ public:
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     TaggedBitSet & subtract( const TaggedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    bool is_subset_of( const TaggedBitSet& a ) const { return base::is_subset_of( a ); }
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
+    bool is_proper_subset_of( const TaggedBitSet& a ) const { return base::is_proper_subset_of( a ); }
+
+    /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    bool intersects( const TaggedBitSet & a ) const { return base::intersects( a ); }
+
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }

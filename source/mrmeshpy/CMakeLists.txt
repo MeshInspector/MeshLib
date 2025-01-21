@@ -14,12 +14,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
 )
 
-# This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-# to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
-add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"meshlib\")
-
 if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE

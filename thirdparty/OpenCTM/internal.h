@@ -100,10 +100,13 @@ typedef struct {
   // Write() function pointer
   CTMwritefn mWriteFn;
 
+  // Optional function pointer to report compression progress during writing and cancellation
   CTMcompressProgress mCompressProgressFn;
 
+  // The number of bytes already compressed in this saving, before current buffer compression
   size_t mBytesAlreadyCompressed;
 
+  // The total number of bytes to be compressed during this saving
   size_t mTotalBytesToCompress;
 
   // User data (for stream read/write - usually the stream handle)

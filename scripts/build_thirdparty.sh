@@ -137,7 +137,9 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cmake --install .
 
   # build libE57Format separately
-  #CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
+  # work-around for incorrect CMake configuration (fixed in upstream 5eba23d91d46e310d85c0eb26d27531b529cbe4d)
+  E57_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_INSTALL_LIBDIR=${MESHLIB_THIRDPARTY_ROOT_DIR}/lib"
+  CMAKE_OPTIONS="${E57_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else

@@ -10,7 +10,7 @@ PY_VERSIONS="$(cat $SCRIPT_DIR/python_versions.txt | xargs)"
 echo "Python versions: $PY_VERSIONS"
 
 # Add the PPA.
-sudo apt -y update && sudo apt -y upgrade && sudo apt -y install software-properties-common
+sudo apt -y update && sudo apt -y upgrade && sudo apt -y install software-properties-common curl
 sudo add-apt-repository -y ppa:deadsnakes/ppa
 
 # Install the packages.

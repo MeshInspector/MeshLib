@@ -311,7 +311,8 @@ int _ctmStreamWritePackedInts(_CTMcontext * self, CTMint * aData,
                          &outPropsSize,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
-                         lzmaAlgo                 // Algorithm (0 = fast, 1 = normal)
+                         lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
+                         NULL
                         );
 
   // Free temporary array
@@ -478,7 +479,8 @@ int _ctmStreamWritePackedFloats(_CTMcontext * self, CTMfloat * aData,
                          &outPropsSize,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
-                         lzmaAlgo                 // Algorithm (0 = fast, 1 = normal)
+                         lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
+                         NULL
                         );
 
   // Free temporary array

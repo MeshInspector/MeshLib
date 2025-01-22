@@ -108,7 +108,8 @@ MY_STDAPI LzmaCompress(unsigned char *dest, size_t *destLen, const unsigned char
   int pb,         /* 0 <= pb <= 4, default = 2  */
   int fb,         /* 5 <= fb <= 273, default = 32 */
   int numThreads, /* 1 or 2, default = 2 */
-  int algo        /* 0 = fast, 1 = normal, default = 0 for level < 5, 1 for level >= 5 */
+  int algo,       /* 0 = fast, 1 = normal, default = 0 for level < 5, 1 for level >= 5 */
+  ICompressProgress *progress
   );
 
 /*

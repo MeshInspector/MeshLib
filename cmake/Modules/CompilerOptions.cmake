@@ -77,7 +77,6 @@ IF(MR_EMSCRIPTEN)
     "-s LLD_REPORT_UNDEFINED=1"
     "-s USE_WEBGL2=1"
     "-s USE_GLFW=3"
-    #"--use-port=contrib.glfw3"
     "-s USE_ZLIB=1"
     "-s FULL_ES3=1"
     "-s USE_LIBPNG=1"
@@ -90,7 +89,6 @@ IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
     #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --use-port=contrib.glfw3")
   ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
   IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)

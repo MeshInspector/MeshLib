@@ -115,7 +115,6 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
-            EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests

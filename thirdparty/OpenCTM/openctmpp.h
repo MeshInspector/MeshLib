@@ -360,7 +360,7 @@ class CTMexporter {
     /// Wrapper for ctmSaveCustom()
     void SaveCustom(CTMwritefn aWriteFn, void * aUserData)
     {
-      ctmSaveCustom(mContext, aWriteFn, aUserData);
+      ctmSaveCustom(mContext, aWriteFn, NULL, aUserData);
       CheckError();
     }
 

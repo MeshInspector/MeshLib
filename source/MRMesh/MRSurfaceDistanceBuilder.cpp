@@ -27,7 +27,10 @@ static bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float
     // n is the unit vector of field gradient in the triangle
 
     const float clenSq = c.lengthSq();
-    float sqr_cos_b0c = sqr( dot_bc ) / ( blenSq * clenSq );
+    const float bcSq = blenSq * clenSq;
+    if ( bcSq <= 0 )
+        return false; // b and c are too small, so their product can become zero
+    float sqr_cos_b0c = sqr( dot_bc ) / bcSq;
     if ( sqr_cos_b0c <= sqr_cos_n )
         return false; // the direction n is passing vertex c not from inside of triangle 0bc, but from 0c side
 

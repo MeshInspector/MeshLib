@@ -64,6 +64,23 @@ TEST( MRMesh, ExtractPlaneSections )
     res = extractPlaneSections( mesh, plane );
     ASSERT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 11 );
+    EXPECT_EQ( res[0].front(), res[0].back() );
+    EXPECT_EQ( getCrossedFaces( mesh.topology, res[0] ).count(), 10 );
+    for ( const auto& i : res[0] )
+    {
+        Vector3f point = mesh.edgePoint( i );
+        EXPECT_LE( std::abs( plane.distance( point ) ), delta );
+    }
+
+    // make a hole in mesh to extract not closed contour
+    FaceBitSet fs;
+    fs.autoResizeSet( 2_f );
+    mesh.deleteFaces( fs );
+    res = extractPlaneSections( mesh, plane );
+    ASSERT_EQ( res.size(), 1 );
+    EXPECT_EQ( res[0].size(), 10 );
+    EXPECT_NE( res[0].front(), res[0].back() );
+    EXPECT_EQ( getCrossedFaces( mesh.topology, res[0] ).count(), 9 );
     for ( const auto& i : res[0] )
     {
         Vector3f point = mesh.edgePoint( i );

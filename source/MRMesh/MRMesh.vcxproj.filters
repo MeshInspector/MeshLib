@@ -1251,6 +1251,18 @@
     <ClInclude Include="MRDistanceToMeshOptions.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeScaleAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRadiusCompensation.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPriorityQueue.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurfaceLineOffset.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2055,6 +2067,12 @@
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTopologyDiff.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRadiusCompensation.cpp">
+      <Filter>Source Files\Gcode</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSurfaceLineOffset.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>

@@ -14,13 +14,14 @@ namespace MR
 {
 
 /// PickPointManager allows the user to pick/move/delete several ordered points on one or more visual objects;
-/// mouse events and public methods automatically add history actions for reverting
+/// mouse events and public methods automatically add history actions for reverting (if enabled)
 class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseDownListener,
     MouseMoveListener>
 {
 public:
     using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
+    using AllowCallBack = std::function<bool( const std::shared_ptr<MR::VisualObject>& obj, int index )>;
 
     struct Params
     {
@@ -30,7 +31,10 @@ public:
         /// Modifier key for deleting a point using the widget
         int widgetDeletePointMod = GLFW_MOD_SHIFT;
 
-        /// This is appended to the names of all undo/redo actions.
+        /// Whether to write undo history of all operations including public modifying functions and user actions
+        bool writeHistory = true;
+
+        /// This is appended to the names of all undo/redo actions
         std::string historyNameSuffix;
 
         /// Parameters for configuring the surface point widget
@@ -52,16 +56,27 @@ public:
         /// Predicate to additionally filter objects that should be treated as pickable.
         Viewport::PickRenderObjectPredicate pickPredicate;
 
-        /// This callback is invoked after a point is added with its index.
+        /// This callback is invoked before addition of new point (with index=-1) by mouse (but not from API or history),
+        /// the addition is canceled if this callback returns false
+        AllowCallBack canAddPoint;
+
+        /// This callback is invoked after a point is added with its index
         PickerPointCallBack onPointAdd;
 
-        /// This callback is invoked when a point starts being dragged.
+        /// This callback is invoked when a point starts being dragged
         PickerPointCallBack onPointMoveStart;
 
-        /// This callback is invoked when point's dragging is completed.
+        /// This callback is invoked every time after currently dragged point is moved (in between onPointMoveStart and onPointMoveFinish)
+        PickerPointCallBack onPointMove;
+
+        /// This callback is invoked when point's dragging is completed
         PickerPointCallBack onPointMoveFinish;
 
-        /// This callback is invoked when a point is removed with its index before deletion.
+        /// This callback is invoked before removal of some point by mouse (but not from API or history),
+        /// the removal is canceled if this callback returns false
+        AllowCallBack canRemovePoint;
+
+        /// This callback is invoked when a point is removed with its index before deletion
         PickerPointCallBack onPointRemove;
     };
     Params params;
@@ -93,7 +108,7 @@ public:
     /// returns point widget currently dragged by mouse
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
-    /// Add a point to the end of non closed contour connected with obj.
+    /// Add a point to the end of non closed contour connected with obj
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
 
     /// Remove point with pickedIndex index from contour connected with obj.
@@ -146,6 +161,13 @@ private:
 
     /// \return location of just removed point
     PickedPoint removePointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index );
+
+    /// if history writing is enabled, constructs history action and appends it to global store
+    template<class HistoryActionType, typename... Args>
+    void appendHistory_( Args&&... args );
+
+    /// if history writing is enabled, appends given history action to global store
+    void appendHistory_( std::shared_ptr<HistoryAction> action ) const;
 
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;

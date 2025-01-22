@@ -99,8 +99,9 @@ struct DecimateSettings
     bool touchBdVerts = true;
 
     /// if touchNearBdEdges=false or touchBdVerts=false then the algorithm needs to know about all boundary vertices;
-    /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
-    const VertBitSet * bdVerts = nullptr;
+    /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set;
+    /// the algorithm updates this set if it packs the mesh
+    VertBitSet * bdVerts = nullptr;
 
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
     /// if it does not change dihedral angle more than on this value (negative value prohibits any edge flips)

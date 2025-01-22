@@ -18,6 +18,7 @@
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
+    <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
@@ -205,8 +206,10 @@
     <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
+    <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
+    <ClInclude Include="MRRadiusCompensation.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRRigidScaleXf3.h" />
     <ClInclude Include="MRRigidXf3.h" />
@@ -216,6 +219,7 @@
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRStacktrace.h" />
+    <ClInclude Include="MRSurfaceLineOffset.h" />
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRSystemPath.h" />
     <ClInclude Include="MRTiffIO.h" />
@@ -566,12 +570,14 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRRadiusCompensation.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />

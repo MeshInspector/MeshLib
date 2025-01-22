@@ -322,13 +322,13 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::getPointWidget( const std:
 
 bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
-    AppendHistory( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint ) );
+    appendHistory_( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint ) );
     return true;
 }
 
 bool PickPointManager::removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex )
 {
-    AppendHistory( AddRemovePointHistoryAction::removeAndGetUndo( *this, obj, pickedIndex ) );
+    appendHistory_( AddRemovePointHistoryAction::removeAndGetUndo( *this, obj, pickedIndex ) );
     return true;
 }
 
@@ -356,6 +356,8 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
+        if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
+            return false;
         return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
@@ -399,6 +401,9 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
             }
 
         if ( ( pickedIndex == -1 ) || ( pickedObj == nullptr ) )
+            return false;
+
+        if ( params.canRemovePoint && !params.canRemovePoint( obj, pickedIndex ) )
             return false;
 
         if ( isClosedCountour( pickedObj ) )
@@ -484,26 +489,16 @@ bool PickPointManager::onMouseMove_( int, int )
                 // and we do it here because here we know up-today index of the point
                 widget->setStartMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
-                    const bool closedPath = isClosedCountour( obj );
-
-                    if ( closedPath )
+                    moveClosedPoint_ = false;
+                    const auto& contour = pickedPoints_[obj];
+                    if ( isClosedCountour( obj ) )
+                        moveClosedPoint_ = &pointWidget == contour[0].get();
+                    if ( params.writeHistory )
                     {
-                        const auto& contour = pickedPoints_[obj];
-                        if ( &pointWidget == contour[0].get() )
-                        {
-                            SCOPED_HISTORY( "Move Point" + params.historyNameSuffix );
-                            AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
-                            AppendHistory<MovePointHistoryAction>( *this, obj, point, int( contour.size() ) - 1 );
-                            moveClosedPoint_ = true;
-                        }
-                        else
-                        {
-                            AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
-                        }
-                    }
-                    else
-                    {
+                        SCOPED_HISTORY( "Move Point" + params.historyNameSuffix );
                         AppendHistory<MovePointHistoryAction>( *this, obj, point, index );
+                        if ( moveClosedPoint_ )
+                            AppendHistory<MovePointHistoryAction>( *this, obj, point, int( contour.size() ) - 1 );
                     }
                     assert( hoveredPointWidget_ == &pointWidget );
                     draggedPointWidget_ = &pointWidget;
@@ -511,17 +506,22 @@ bool PickPointManager::onMouseMove_( int, int )
                         params.onPointMoveStart( obj, index );
 
                 } );
-                widget->setEndMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
+
+                widget->setOnMoveCallback( [this, obj = obj, index] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
                 {
                     if ( moveClosedPoint_ )
                     {
                         const auto& contour = pickedPoints_[obj];
                         if ( &pointWidget == contour[0].get() )
-                        {
                             contour.back()->setCurrentPosition( point );
-                            moveClosedPoint_ = false;
-                        }
                     }
+                    assert( draggedPointWidget_ == &pointWidget );
+                    if ( params.onPointMove )
+                        params.onPointMove( obj, index );
+                } );
+
+                widget->setEndMoveCallback( [this, obj = obj, index] ( [[maybe_unused]] SurfacePointWidget & pointWidget, const PickedPoint& )
+                {
                     assert( draggedPointWidget_ == &pointWidget );
                     draggedPointWidget_ = nullptr;
                     if ( params.onPointMoveFinish )
@@ -592,12 +592,12 @@ void PickPointManager::swapStateNoHistory_( FullState& s )
 
 void PickPointManager::clear()
 {
-    AppendHistory( SetStateHistoryAction::clearAndGetUndo( *this ) );
+    appendHistory_( SetStateHistoryAction::clearAndGetUndo( *this ) );
 }
 
 void PickPointManager::setFullState( FullState s )
 {
-    AppendHistory( SetStateHistoryAction::setAndGetUndo( *this, std::move( s ) ) );
+    appendHistory_( SetStateHistoryAction::setAndGetUndo( *this, std::move( s ) ) );
 }
 
 PickPointManager::~PickPointManager()
@@ -607,6 +607,19 @@ PickPointManager::~PickPointManager()
         return bool( dynamic_cast<const WidgetHistoryAction *>( action.get() ) );
     } );
     disconnect();
+}
+
+template<class HistoryActionType, typename... Args>
+void PickPointManager::appendHistory_( Args&&... args )
+{
+    if ( params.writeHistory )
+        AppendHistory<HistoryActionType>( std::forward<Args>( args )... );
+}
+
+void PickPointManager::appendHistory_( std::shared_ptr<HistoryAction> action ) const
+{
+    if ( params.writeHistory )
+        AppendHistory( std::move( action ) );
 }
 
 } // namespace MR

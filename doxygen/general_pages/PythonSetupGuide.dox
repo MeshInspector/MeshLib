@@ -17,11 +17,11 @@ The first part of this video shows MeshLib Python Installation process on Window
 Before installing MeshLib SDK for Python, ensure you have the following:
 
 ### Python
- - On \b Windows: MeshLib supports Python versions 3.8 to 3.12.
- - On \b macOS: MeshLib supports Python versions 3.8 to 3.12. Except of Python 3.8 for macOS x64.
- - On \b Linux: MeshLib supports Python versions 3.8 to 3.12 for distributions supporting manylinux_2_31+ (e.g., Ubuntu 20+, Fedora 32+).
+ - On \b Windows: MeshLib supports Python versions 3.8 to 3.13.
+ - On \b macOS: MeshLib supports Python versions 3.8 to 3.13. Except of Python 3.8 for macOS x64.
+ - On \b Linux: MeshLib supports Python versions 3.8 to 3.13 for distributions supporting manylinux_2_31+ (e.g., Ubuntu 20+, Fedora 32+).
 
-For installation via `pip`, MeshLib supports Python versions 3.8 to 3.12 across all platforms.
+For installation via `pip`, MeshLib supports Python versions 3.8 to 3.13 across all platforms.
 
 [Download the supported version of Python](https://www.python.org/downloads/).
 
@@ -38,7 +38,7 @@ pip install meshlib
 
 ## How to use MeshLib Python Modules
 ### Predefined Functions and Example Scripts
-MeshLib provides a set of example scripts available on here. 
+MeshLib provides a set of example scripts that are available [here](\ref Examples).
 These examples are helpful for both developers and testers. 
 Additionally, the Python library allows you to explore all the available functions in `mrmeshpy` using the standard `help(meshlib.mrmeshpy)` command.
 

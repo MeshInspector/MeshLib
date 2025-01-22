@@ -154,7 +154,7 @@ extern "C" {
 #else
   #include <stdint.h>
 #endif
-
+#include <stddef.h> // size_t
 
 /// OpenCTM API version (1.0).
 #define CTM_API_VERSION 0x00000100

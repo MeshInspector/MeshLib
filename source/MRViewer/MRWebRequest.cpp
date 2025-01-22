@@ -486,7 +486,7 @@ Expected<Json::Value> parseResponse( const Json::Value& response )
     std::string error;
     if ( !reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
         return unexpected( "Unknown error." );
-    if ( root["message"].isString() )
+    if ( root.isObject() && root["message"].isString() )
         return unexpected( root["message"].asString() );
     return root;
 }

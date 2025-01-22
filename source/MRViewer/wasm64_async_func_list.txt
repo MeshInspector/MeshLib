@@ -1,7 +1,0 @@
-std::__2::__function::__value_func<void ()>::operator()[abi:ne190106]() const
-std::__2::function<void ()>::operator()() const
-MR::ViewerEventQueue::execute()
-MR::Viewer::mainLoopFunc_()
-MR::Viewer::launch(MR::LaunchParams const&)
-MR::launchDefaultViewer(MR::LaunchParams const&, MR::ViewerSetup const&)
-main

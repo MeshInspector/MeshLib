@@ -32,6 +32,9 @@ ENDIF()
 IF(LINUX)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 ENDIF()
+IF(APPLE)
+  target_link_options(${PROJECT_NAME} PRIVATE -Xlinker -undefined -Xlinker dynamic_lookup)
+ENDIF()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 

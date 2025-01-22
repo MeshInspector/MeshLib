@@ -12,10 +12,14 @@ PY_VERSIONS="$(cat $SCRIPT_DIR/python_versions.txt | xargs)"
 HOMEBREW_DIR=/opt/homebrew
 [[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
 
-if which sudo >/dev/null 2>/dev/null; then
-    [[ ${SUDO:=} ]] || SUDO=sudo
+if [[ ${ENABLE_SUDO:=} == 1 ]]; then
+    SUDO=sudo
+elif [[ ${ENABLE_SUDO:=} == 0 ]]; then
+    SUDO=
+elif which sudo >/dev/null 2>/dev/null; then
+    SUDO=sudo
 else
-    [[ ${SUDO:=} ]] || SUDO=
+    SUDO=
 fi
 
 # ??

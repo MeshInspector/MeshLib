@@ -335,7 +335,7 @@ jobs:
 
       - name: Python setup
         env:
-          SUDO: ${{ fromJSON('["sudo", ""]')[matrix.platform == 'arm64'] }}
+          ENABLE_SUDO: ${{ fromJSON('["1", "0"]')[matrix.platform == 'arm64'] }}
         run: |
           scripts/mrbind-pybind11/install_pythons_macos.sh
 

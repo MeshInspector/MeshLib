@@ -451,7 +451,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
         result.intersectionPoints.emplace_back( isect );
     }
 
-    if ( ( orgVertsA & destVertsA ).any() || ( orgVertsB & destVertsB ).any() )
+    if ( orgVertsA.intersects( destVertsA ) || orgVertsB.intersects( destVertsB ) )
     {
         // in this case we are not able to detect inside outside correctly
         BooleanResultMapper mapper;

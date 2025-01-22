@@ -206,6 +206,7 @@
     <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
+    <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
@@ -218,6 +219,7 @@
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRStacktrace.h" />
+    <ClInclude Include="MRSurfaceLineOffset.h" />
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRSystemPath.h" />
     <ClInclude Include="MRTiffIO.h" />
@@ -575,6 +577,7 @@
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />

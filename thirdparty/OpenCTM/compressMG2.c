@@ -852,6 +852,25 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
   }
   _ctmMakeVertexDeltas(self, intVertices, sortVertices, &grid);
 
+  self->mBytesAlreadyCompressed = 0;
+  self->mTotalBytesToCompress = sizeof(CTMint) * 3 * self->mVertexCount
+      + sizeof(CTMint) * self->mVertexCount
+      + sizeof(CTMint) * 3 * self->mTriangleCount;
+  if(self->mNormals)
+      self->mNormals += sizeof(CTMint) * 3 * self->mVertexCount;
+  map = self->mUVMaps;
+  while(map)
+  {
+    self->mTotalBytesToCompress += sizeof(CTMint) * 2 * self->mVertexCount;
+    map = map->mNext;
+  }
+  map = self->mAttribMaps;
+  while(map)
+  {
+    self->mTotalBytesToCompress += sizeof(CTMint) * 4 * self->mVertexCount;
+    map = map->mNext;
+  }
+
   // Write vertices
 #ifdef __DEBUG_
   printf("Vertices: ");
@@ -863,6 +882,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
     free((void *) sortVertices);
     return CTM_FALSE;
   }
+  self->mBytesAlreadyCompressed += sizeof(CTMint) * 3 * self->mVertexCount;
 
   // Prepare grid indices (deltas)
   gridIndices = (CTMuint *) malloc(sizeof(CTMuint) * self->mVertexCount);
@@ -889,6 +909,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
     free((void *) sortVertices);
     return CTM_FALSE;
   }
+  self->mBytesAlreadyCompressed += sizeof(CTMint) * self->mVertexCount;
 
   // Calculate the result of the compressed -> decompressed vertices, in order
   // to use the same vertex data for calculating nominal normals as the
@@ -911,7 +932,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
   free((void *) gridIndices);
   free((void *) intVertices);
 
-  // Perpare (sort) indices
+  // Prepare (sort) indices
   indices = (CTMuint *) malloc(sizeof(CTMuint) * self->mTriangleCount * 3);
   if(!indices)
   {
@@ -956,6 +977,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
     free((void *) sortVertices);
     return CTM_FALSE;
   }
+  self->mBytesAlreadyCompressed += sizeof(CTMint) * 3 * self->mTriangleCount;
 
   // Free temporary data for the indices
   free((void *) deltaIndices);
@@ -994,6 +1016,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
       free((void *) sortVertices);
       return CTM_FALSE;
     }
+    self->mBytesAlreadyCompressed += sizeof(CTMint) * 3 * self->mVertexCount;
 
     // Free temporary normal data
     free((void *) intNormals);
@@ -1031,6 +1054,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
       free((void *) sortVertices);
       return CTM_FALSE;
     }
+    self->mBytesAlreadyCompressed += sizeof(CTMint) * 2 * self->mVertexCount;
 
     // Free temporary UV coordinate data
     free((void *) intUVCoords);
@@ -1065,6 +1089,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
       free((void *) sortVertices);
       return CTM_FALSE;
     }
+    self->mBytesAlreadyCompressed += sizeof(CTMint) * 4 * self->mVertexCount;
 
     // Free temporary vertex attribute data
     free((void *) intAttribs);

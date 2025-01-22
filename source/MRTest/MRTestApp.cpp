@@ -63,6 +63,19 @@ int main( int argc, char** argv )
 #else
     spdlog::info( "MSVC {}", _MSC_FULL_VER );
 #endif
+
+    // print standard library info
+#ifdef _MSVC_STL_UPDATE
+    // https://github.com/microsoft/STL/wiki/Macro-_MSVC_STL_UPDATE
+    spdlog::info( "Microsoft's STL version {}", _MSVC_STL_UPDATE );
+#endif
+#ifdef __GLIBCXX__
+    spdlog::info( "GNU libstdc++ version {}", __GLIBCXX__ );
+#endif
+#ifdef _LIBCPP_VERSION
+    spdlog::info( "Clang's libc++ version {}", _LIBCPP_VERSION );
+#endif
+
     spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef __EMSCRIPTEN__
     if ( !consumeFlag( "--no-python-tests" ) )

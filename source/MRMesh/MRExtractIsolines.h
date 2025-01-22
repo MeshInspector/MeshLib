@@ -47,6 +47,13 @@ namespace MR
 [[nodiscard]] MRMESH_API Expected<PlaneSection> trackSection( const MeshPart& mp,
     const MeshTriPoint& start, const MeshTriPoint& end, const Vector3f& planePoint, bool ccw );
 
+/// returns true if left(isoline[i].e) == right(isoline[i+1].e) and valid for all i;
+/// all above functions produce consistently oriented lines
+[[nodiscard]] MRMESH_API bool isConsistentlyOriented( const MeshTopology & topology, const IsoLine & isoline );
+
+/// for a consistently oriented isoline, returns all faces it goes inside
+[[nodiscard]] MRMESH_API FaceBitSet getCrossedFaces( const MeshTopology & topology, const IsoLine & isoline );
+
 /// converts PlaneSections in 2D contours by computing coordinate of each point, applying given xf to it, and retaining only x and y
 [[nodiscard]] MRMESH_API Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & section, const AffineXf3f & meshToPlane );
 [[nodiscard]] MRMESH_API Contours2f planeSectionsToContours2f( const Mesh & mesh, const PlaneSections & sections, const AffineXf3f & meshToPlane );

@@ -5,11 +5,12 @@
 
 #include <version>
 #ifndef MR_USE_STD_EXPECTED
-#if __cpp_lib_expected >= 202211
-#define MR_USE_STD_EXPECTED 1
-#else
+// #if __cpp_lib_expected >= 202211
+// Currently not using `std::expected` for simplicity, because:
+// 1. Clang 18 doesn't support libstdc++'s `std::expected`, which is a problem for the Python bindings. This got fixed in Clang 19.
+// 2. `MRMeshDotNet` can't use `std::expected` too.
+// In theory both can be fixed by defining `MR_DOT_NET_BUILD`.
 #define MR_USE_STD_EXPECTED 0
-#endif
 #endif
 
 #if MR_USE_STD_EXPECTED

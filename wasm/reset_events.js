@@ -181,7 +181,7 @@ var updateEvents = function () {
             sx = event.deltaX
         }
         if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
+            getWasmTableEntry(GLFW.active.scrollFunc)(BigInt(GLFW.active.id), sx, sy);
         else
             (function (a1, a2, a3) {
                 dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])

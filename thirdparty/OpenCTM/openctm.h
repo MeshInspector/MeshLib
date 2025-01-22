@@ -264,6 +264,8 @@ typedef CTMuint (CTMCALL * CTMreadfn)(void * aBuf, CTMuint aCount, void * aUserD
 ///         indicates that an error occured).
 typedef CTMuint (CTMCALL * CTMwritefn)(const void * aBuf, CTMuint aCount, void * aUserData);
 
+typedef int (CTMCALL * CTMcompressProgress)(size_t pos, size_t total, void * aUserData);
+
 /// Create a new OpenCTM context. The context is used for all subsequent
 /// OpenCTM function calls. Several contexts can coexist at the same time.
 /// @param[in] aMode An OpenCTM context mode. Set this to CTM_IMPORT if the

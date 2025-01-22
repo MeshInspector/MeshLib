@@ -100,6 +100,8 @@ typedef struct {
   // Write() function pointer
   CTMwritefn mWriteFn;
 
+  CTMcompressProgress mCompressProgressFn;
+
   // User data (for stream read/write - usually the stream handle)
   void * mUserData;
 

@@ -246,6 +246,14 @@ int _ctmStreamReadPackedInts(_CTMcontext * self, CTMint * aData,
   return CTM_TRUE;
 }
 
+static SRes compressProgress(void *p, UInt64 inSize, UInt64 outSize)
+{
+  _CTMcontext * self = (_CTMcontext *)p;
+  return self->mCompressProgressFn(inSize, outSize/*!!!*/, self->mUserData);
+}
+
+static ICompressProgress g_CompressProgress = { compressProgress };
+
 //-----------------------------------------------------------------------------
 // _ctmStreamWritePackedInts() - Compress a binary integer data array, and
 // write it to a stream.
@@ -312,7 +320,7 @@ int _ctmStreamWritePackedInts(_CTMcontext * self, CTMint * aData,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
                          lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
-                         NULL
+                         self->mCompressProgressFn ? &g_CompressProgress : NULL
                         );
 
   // Free temporary array
@@ -480,7 +488,7 @@ int _ctmStreamWritePackedFloats(_CTMcontext * self, CTMfloat * aData,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
                          lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
-                         NULL
+                         self->mCompressProgressFn ? &g_CompressProgress : NULL
                         );
 
   // Free temporary array

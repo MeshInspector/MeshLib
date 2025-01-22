@@ -29,7 +29,9 @@ ENDIF()
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
-string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+IF(LINUX)
+  string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+ENDIF()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 

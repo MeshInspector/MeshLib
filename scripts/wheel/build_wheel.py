@@ -61,7 +61,7 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "thirdparty" / "Noto_Sans" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
     pybind_shims = []
     py_versions = []
-    for pybind_shim in LIB_DIR.glob("*pybind11nonlimitedapi_meshlib_*"):
+    for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
         shutil.copy(pybind_shim, WHEEL_SRC_DIR)
         pybind_shim_name = os.path.basename(pybind_shim)
         pybind_shims.append(pybind_shim_name)

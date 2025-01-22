@@ -2,11 +2,13 @@ import os
 import sys
 import platform
 import argparse
+import shutil
 
 parser = argparse.ArgumentParser(description="Python Test Script")
 
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
 parser.add_argument('-multi-cmd', dest='multi_cmd', action='store_true', help='Repeat tests several times, with python versions taken from `python_versions.txt`. Replaces `-cmd`.')
+parser.add_argument('-create-venv', dest='create_venv', action='store_true', help='Create a venv and install the dependencies in it. Can combine with `-multi-cmd`.')
 parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
 parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
 parser.add_argument("-bv", dest="bindings_vers", type=str,
@@ -53,7 +55,10 @@ if args.cmd:
     python_cmds = [str(args.cmd).strip()]
 elif args.multi_cmd:
     with open(os.path.dirname(os.path.realpath(__file__)) + "/mrbind-pybind11/python_versions.txt") as file:
-        python_cmds = ["python" + line.rstrip() for line in file]
+        if platform.system() == "Windows":
+            python_cmds = ["py -" + line.rstrip() for line in file]
+        else:
+            python_cmds = ["python" + line.rstrip() for line in file]
 
 directory = os.getcwd()
 try:
@@ -90,12 +95,31 @@ else:
 if args.pytest_args:
     pytest_cmd += f' {args.pytest_args}'
 
+venv_failed = 0
 for py_cmd in python_cmds:
     # remove meshlib package if installed to not shadow dynamically attached
     os.system(py_cmd + " -m pip uninstall -y meshlib")
 
-    print(py_cmd + " " + pytest_cmd)
-    res = os.system(py_cmd + " " + pytest_cmd)
+    if args.create_venv:
+        print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
+        if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
+            venv_failed = 1
+        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest numpy"):
+            venv_failed = 1
+        py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
+    else:
+        py_cmd_fixed = py_cmd
+
+    print(py_cmd_fixed + " " + pytest_cmd)
+    res = os.system(py_cmd_fixed + " " + pytest_cmd)
+
+    if args.create_venv:
+        shutil.rmtree("venv_" + py_cmd);
+        print("] --- DELETING VENV")
+
+if venv_failed:
+    print("ERROR: Couldn't create some of the venvs!")
+    sys.exit(2)
 
 if res != 0:
     sys.exit(1)

@@ -379,7 +379,7 @@ jobs:
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -cmd python3
+        run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd -create-venv
 
       - name: Create and fix Wheel
         run: |

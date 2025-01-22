@@ -39,6 +39,4 @@ for ver in $PY_VERSIONS; do
     brew install --force python@$ver
     brew unlink python@$ver
     brew link --overwrite python@$ver
-
-    pip$ver install pytest
 done

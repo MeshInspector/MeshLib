@@ -315,7 +315,13 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
             return 0u;
 
         return outStream.good() ? size : 0;
-    }, &saveData );
+    },
+    [](size_t pos, size_t total, void * /*aUserData*/)
+    {
+        spdlog::info( "CTM compress progress {}/{}", pos, total );
+        return 0;
+    },
+    &saveData );
 
     if ( saveData.wasCanceled )
         return unexpectedOperationCanceled();
@@ -567,7 +573,7 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     }
     saveData.stream = &out;
     saveData.maxSize = aVertexCount * sizeof( Vector3f ) + cloud.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
-    ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
+    ctmSaveCustom( context, []( const void* buf, CTMuint size, void* data )
     {
         SaveData& saveData = *reinterpret_cast< SaveData* >( data );
         std::ostream& outStream = *saveData.stream;
@@ -579,7 +585,13 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
             return 0u;
 
         return outStream.good() ? size : 0;
-    }, &saveData );
+    },
+    [](size_t pos, size_t total, void * /*aUserData*/)
+    {
+        spdlog::info( "CTM compress progress {}/{}", pos, total );
+        return 0;
+    },
+    &saveData );
 
     if ( saveData.wasCanceled )
         return unexpectedOperationCanceled();

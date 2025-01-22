@@ -151,7 +151,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
   printf("COMPRESSION METHOD: MG1\n");
 #endif
 
-  // Perpare (sort) indices
+  // Prepare (sort) indices
   indices = (CTMuint *) malloc(sizeof(CTMuint) * self->mTriangleCount * 3);
   if(!indices)
   {
@@ -166,6 +166,24 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
   // Calculate index deltas (entropy-reduction)
   _ctmMakeIndexDeltas(self, indices);
 
+  self->mBytesAlreadyCompressed = 0;
+  self->mTotalBytesToCompress = sizeof(CTMint) * 3 * self->mTriangleCount
+    + sizeof(CTMfloat) * 3 * self->mVertexCount;
+  if(self->mNormals)
+    self->mTotalBytesToCompress += sizeof(CTMfloat) * 3 * self->mVertexCount;
+  map = self->mUVMaps;
+  while(map)
+  {
+    self->mTotalBytesToCompress += sizeof(CTMfloat) * 2 * self->mVertexCount;
+    map = map->mNext;
+  }
+  map = self->mAttribMaps;
+  while(map)
+  {
+    self->mTotalBytesToCompress += sizeof(CTMfloat) * 4 * self->mVertexCount;
+    map = map->mNext;
+  }
+
   // Write triangle indices
 #ifdef __DEBUG_
   printf("Inidices: ");
@@ -176,6 +194,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
     free((void *) indices);
     return CTM_FALSE;
   }
+  self->mBytesAlreadyCompressed += sizeof(CTMint) * 3 * self->mTriangleCount;
 
   // Free temporary resources
   free((void *) indices);
@@ -189,6 +208,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
   {
     return CTM_FALSE;
   }
+  self->mBytesAlreadyCompressed += sizeof(CTMfloat) * 3 * self->mVertexCount;
 
   // Write normals
   if(self->mNormals)
@@ -199,6 +219,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
     _ctmStreamWrite(self, (void *) "NORM", 4);
     if(!_ctmStreamWritePackedFloats(self, self->mNormals, self->mVertexCount, 3))
       return CTM_FALSE;
+    self->mBytesAlreadyCompressed += sizeof(CTMfloat) * 3 * self->mVertexCount;
   }
 
   // Write UV maps
@@ -213,6 +234,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
     _ctmStreamWriteSTRING(self, map->mFileName);
     if(!_ctmStreamWritePackedFloats(self, map->mValues, self->mVertexCount, 2))
       return CTM_FALSE;
+    self->mBytesAlreadyCompressed += sizeof(CTMfloat) * 2 * self->mVertexCount;
     map = map->mNext;
   }
 
@@ -227,6 +249,7 @@ int _ctmCompressMesh_MG1(_CTMcontext * self)
     _ctmStreamWriteSTRING(self, map->mName);
     if(!_ctmStreamWritePackedFloats(self, map->mValues, self->mVertexCount, 4))
       return CTM_FALSE;
+    self->mBytesAlreadyCompressed += sizeof(CTMfloat) * 4 * self->mVertexCount;
     map = map->mNext;
   }
 

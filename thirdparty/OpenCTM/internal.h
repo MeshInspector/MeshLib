@@ -102,6 +102,10 @@ typedef struct {
 
   CTMcompressProgress mCompressProgressFn;
 
+  size_t mBytesAlreadyCompressed;
+
+  size_t mTotalBytesToCompress;
+
   // User data (for stream read/write - usually the stream handle)
   void * mUserData;
 

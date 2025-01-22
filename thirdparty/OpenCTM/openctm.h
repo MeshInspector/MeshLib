@@ -638,7 +638,7 @@ CTMEXPORT void CTMCALL ctmSave(CTMcontext aContext, const char * aFileName);
 ///            of any type. The user data pointer will be passed to the
 ///            custom stream write function.
 /// @see CTMwritefn.
-CTMEXPORT void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
+CTMEXPORT void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn, CTMcompressProgress aProgressFn,
   void * aUserData);
 
 #ifdef __cplusplus

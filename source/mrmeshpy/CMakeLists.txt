@@ -36,11 +36,14 @@ ELSE()
     spdlog
     fmt
     tbb
-    Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
 ENDIF()
+
+# Don't emit undefined references. We need this because we don't want to link to a specific Python version.
+# The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
+string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
 # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
 IF(NOT WIN32)

@@ -102,8 +102,9 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
-    CFLAGS="${CFLAGS} -pthread"
-    CXXFLAGS="${CFLAGS} -pthread"
+    CFLAGS="${CFLAGS} -pthread -s MEMORY64=1"
+    CXXFLAGS="${CFLAGS} -pthread -s MEMORY64=1"
+    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
   fi
 fi
 
@@ -125,7 +126,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cmake --install .
 
   # build libE57Format separately
-  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
+  #CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else

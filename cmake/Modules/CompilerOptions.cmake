@@ -72,9 +72,12 @@ IF(MR_EMSCRIPTEN)
     "-s EXPORTED_RUNTIME_METHODS=[ccall]"
     "-s ALLOW_MEMORY_GROWTH=1"
     "-s MAXIMUM_MEMORY=4GB"
+    #"-s MAXIMUM_MEMORY=16GB" # wasm-ld: maximum memory [...] cannot be greater than 17179869184
+    "-s MEMORY64=1"
     "-s LLD_REPORT_UNDEFINED=1"
     "-s USE_WEBGL2=1"
     "-s USE_GLFW=3"
+    #"--use-port=contrib.glfw3"
     "-s USE_ZLIB=1"
     "-s FULL_ES3=1"
     "-s USE_LIBPNG=1"
@@ -85,6 +88,9 @@ IF(MR_EMSCRIPTEN)
   ELSE()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
+    #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --use-port=contrib.glfw3")
   ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
   IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)

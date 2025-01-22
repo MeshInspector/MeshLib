@@ -141,7 +141,7 @@ var updateEvents = function () {
         }
         if (!GLFW.active.mouseButtonFunc) return;
         if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+            getWasmTableEntry(GLFW.active.mouseButtonFunc)(BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
         else
             (function (a1, a2, a3, a4) {
                 dynCall_viiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
@@ -155,7 +155,7 @@ var updateEvents = function () {
         if (event.target != Module["canvas"] || !GLFW.active.cursorPosFunc)
             return;
         if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.cursorPosFunc)(GLFW.active.id, Browser.mouseX, Browser.mouseY);
+            getWasmTableEntry(GLFW.active.cursorPosFunc)(BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
         else
             (function (a1, a2, a3) {
                 dynCall_vidd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);

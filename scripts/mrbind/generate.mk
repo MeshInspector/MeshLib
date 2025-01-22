@@ -508,7 +508,7 @@ override all_outputs :=
 # Also setting `Py_LIMITED_API` is a part of this, but it's spread all over this makefile.
 COMPILER += -DPYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE='"meshlib"'
 # Here we use a really jank separator syntax because nvcc chokes on those (considers `-DA=B,C` to mean `-DA=B -DC`).
-COMPILER += -DPYBIND11_NONLIMITEDAPI_SHIM_PATHS_RELATIVE_TO_LIBRARY_DIR='"..|."'
+COMPILER += -DPYBIND11_NONLIMITEDAPI_SHIM_PATHS_RELATIVE_TO_LIBRARY_DIR='"..@."'
 # Pybind normally sets this to 5 in Python 3.12 and newer, and to 4 before that. But we need the same number everywhere for our modules to work on
 #   multiple different Python versions. We can't set it to 4 (since that's not compatible with the new Python, see https://github.com/pybind/pybind11/pull/4570),
 #   but we can set it to 5 unconditionally (Pybind doesn't do it by default only for ABI compatibility).

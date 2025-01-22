@@ -53,7 +53,7 @@ add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
 
 # Search for pybind shims in the parent directory relative to the modules.
 # Can't use a comma as a separator here, because nvcc chokes on it (considers `-DA=B,C` to mean `-DA=B -DC`).
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_SHIM_PATHS_RELATIVE_TO_LIBRARY_DIR=\"..|.\")
+add_compile_definitions(PYBIND11_NONLIMITEDAPI_SHIM_PATHS_RELATIVE_TO_LIBRARY_DIR=\"..@.\")
 
 # This affects the naming of our pybind shims.
 add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"meshlib\")

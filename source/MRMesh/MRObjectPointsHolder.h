@@ -113,10 +113,11 @@ public:
     /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
-    /// returns file extension used to serialize the points
+    /// returns overriden file extension used to serialize the points, nullptr means defaultSavePointsFormat()
     [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
 
-    /// sets file extension used to serialize the points: must be not null and must start from '.'
+    /// overrides file extension used to serialize this object: must start from '.',
+    /// nullptr means serialize in defaultSavePointsFormat()
     MRMESH_API void setSavePointsFormat( const char * newFormat );
 
     /// signal about points selection changing, triggered in selectPoints
@@ -178,9 +179,17 @@ private:
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 
-    // falls back to the PLY format if no CTM format support is available
-    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
-    const char * savePointsFormat_ = ".ctm";
+    const char * savePointsFormat_ = nullptr;
 };
 
-}
+/// returns file extension used to serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// the string starts with '.'
+[[nodiscard]] MRMESH_API const std::string & defaultSavePointsFormat();
+
+/// sets file extension used to serialize serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// must be not null and must start from '.';
+// serialization falls back to the PLY format if given format support is available
+// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+MRMESH_API void setDefaultSavePointsFormat( std::string newFormat );
+
+} //namespace MR

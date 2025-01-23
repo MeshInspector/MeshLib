@@ -217,7 +217,7 @@ void ObjectPointsHolder::setMaxRenderingPoints( int val )
 
 void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
 {
-    if ( !newFormat || *newFormat != '.' )
+    if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
@@ -261,7 +261,7 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [points = points_, savePointsFormat = savePointsFormat_, path, saveSettings]()
+    auto save = [points = points_, savePointsFormat = savePointsFormat_ ? savePointsFormat_ : defaultSavePointsFormat(), path, saveSettings]()
     {
         auto filename = path;
         const auto extension = std::string( "*" ) + savePointsFormat;
@@ -388,4 +388,17 @@ void ObjectPointsHolder::updateRenderDiscretization_()
     renderDiscretizationChangedSignal();
 }
 
+// .PLY format is the most compact among other formats with zero compression costs
+static std::string sDefaultSavePointsFormat = ".ply";
+
+const std::string & defaultSavePointsFormat()
+{
+    return sDefaultSavePointsFormat;
 }
+
+void setDefaultSavePointsFormat( std::string newFormat )
+{
+    sDefaultSavePointsFormat = std::move( newFormat );
+}
+
+} //namespace MR

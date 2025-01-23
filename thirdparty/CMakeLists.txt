@@ -178,6 +178,7 @@ set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
 set(WITH_TESTS OFF CACHE BOOL "")
+set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
 file(GLOB IMGUI_HEADERS "imgui/*.h")

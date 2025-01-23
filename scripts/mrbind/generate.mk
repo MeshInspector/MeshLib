@@ -212,8 +212,13 @@ DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
-# On Windows we detect only one version by default.
+ifneq ($(FOR_WHEEL),)
+# On Windows wheel we use all versions we can find in appdata.
+PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%,3.%,$(filter $(localappdata)/Programs/Python/Python3%,$(wildcard $(localappdata)/Programs/Python/Python3*)))
+else
+# On Windows non-wheel we detect only one version by default, the one in pkg-config.
 PYTHON_VERSIONS := $(patsubst python-%-embed,%,$(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc))))))
+endif
 else
 PYTHON_VERSIONS := $(patsubst python-%-embed,%,$(call safe_shell,pkg-config --list-all | grep -Po 'python-\d.\d+-embed' | sort))
 endif
@@ -236,13 +241,19 @@ override python_min_version_hex := 0x$(call safe_shell,printf "%02x%02x" $(subst
 $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_version_hex)))
 
 # Python compilation flags.
-# By default we guess the flags using pkg-config, in an OS-dependent way.
+# Normally we guess the flags using pkg-config, in an OS-dependent way.
 # You can override this by setting `PYTHON_CFLAGS` and `PYTHON_LDFLAGS`,
 #   the values of which should contain `@X.Y@` which will be replaced with the `X.Y` Python version, or `@XY@` for the two numbers concatenated.
 # Obtain the resulting flags by calling `$(call get_python_cflags,3.10)` (and similarly for ldflags).
 PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
-ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified
+ifneq ($(and $(IS_WINDOWS),$(FOR_WHEEL)),)
+# On Windows wheel, hardcode the flags to point to appdata.
+PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@/Include
+PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@/libs -lpython@XY@
+endif
+
+ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...
 ifneq ($(IS_WINDOWS),)
 # Intentionally using non-debug Python even in Debug builds, to mimic what MeshLib does. Unsure why we do this.
 override get_python_cflags = $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --cflags python-$1-embed)

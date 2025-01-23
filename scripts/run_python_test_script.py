@@ -98,6 +98,9 @@ if args.pytest_args:
 failed = False
 venv_failed = False
 for py_cmd in python_cmds:
+    if platform.system() == "Darwin" and shutil.which(py_cmd) is None:
+        continue; # Skip if no such command. Some python versions are not supported on some macs.
+
     # remove meshlib package if installed to not shadow dynamically attached
     os.system(py_cmd + " -m pip uninstall -y meshlib")
 

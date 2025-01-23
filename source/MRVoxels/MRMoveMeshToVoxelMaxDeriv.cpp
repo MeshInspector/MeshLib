@@ -56,7 +56,7 @@ Vector3f MeshOnVoxelsT<MeshType, VolumeType>::xf( const Vector3f& pt ) const
 { return noXf_ ? pt + xf_.b : xf_( pt ); }
 
 template <typename MeshType, typename VolumeType>
-AffineXf3f MeshOnVoxelsT<MeshType, typename VolumeType>::xfInv() const
+AffineXf3f MeshOnVoxelsT<MeshType, VolumeType>::xfInv() const
 { return xfInv_; }
 
 template <typename MeshType, typename VolumeType>

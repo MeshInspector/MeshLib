@@ -96,7 +96,9 @@
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll</Command>
+      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
+      copy $(PythonDllPath) $(TargetDir)python3.dll
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

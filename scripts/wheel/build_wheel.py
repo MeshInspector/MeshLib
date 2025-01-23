@@ -133,6 +133,9 @@ def build_wheel():
                 # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
                 "--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
                 "--add-path", LIB_DIR,
+                # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
+                # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
+                "--analyze-existing",
                 wheel_file
             ]
         )

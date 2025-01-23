@@ -27,8 +27,4 @@ LIB_DIR = {
     'Linux': SOURCE_DIR / "build" / "Release" / "bin",
     'Windows': SOURCE_DIR / "source" / "x64" / "Release",
 }[SYSTEM]
-LIB_DIR_MESHLIB = {
-    'Darwin': LIB_DIR / "meshlib",
-    'Linux': LIB_DIR / "meshlib",
-    'Windows': LIB_DIR,
-}[SYSTEM]
+LIB_DIR_MESHLIB = LIB_DIR / "meshlib"

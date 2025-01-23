@@ -856,6 +856,7 @@ const std::string & defaultSerializeMeshFormat()
 
 void setDefaultSerializeMeshFormat( std::string newFormat )
 {
+    assert( !newFormat.empty() && newFormat[0] == '.' );
     sDefaultSerializeMeshFormat = std::move( newFormat );
 }
 

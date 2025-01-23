@@ -115,10 +115,12 @@ public:
 
     /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSerializePointsFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
+    [[deprecated]] const char * savePointsFormat() const { return serializeFormat(); }
 
     /// overrides file extension used to serialize point cloud inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializePointsFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
+    [[deprecated]] void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;

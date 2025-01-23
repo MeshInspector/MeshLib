@@ -133,7 +133,7 @@ extern template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<Functi
 /// \note this class is not thread-safe but accessing same volume from different instances is ok
 /// \ingroup SubvoxelMeshCorrection
 template <typename MeshType, typename VolumeType>
-class MeshOnVoxelsT
+class MRVOXELS_CLASS MeshOnVoxelsT
 {
 public:
     MRVOXELS_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VolumeType& volume, const AffineXf3f& volumeXf );

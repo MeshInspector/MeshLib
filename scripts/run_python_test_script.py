@@ -95,7 +95,8 @@ else:
 if args.pytest_args:
     pytest_cmd += f' {args.pytest_args}'
 
-venv_failed = 0
+failed = False
+venv_failed = False
 for py_cmd in python_cmds:
     # remove meshlib package if installed to not shadow dynamically attached
     os.system(py_cmd + " -m pip uninstall -y meshlib")
@@ -103,15 +104,16 @@ for py_cmd in python_cmds:
     if args.create_venv:
         print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
         if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
-            venv_failed = 1
+            venv_failed = True
         if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest numpy"):
-            venv_failed = 1
+            venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:
         py_cmd_fixed = py_cmd
 
     print(py_cmd_fixed + " " + pytest_cmd)
-    res = os.system(py_cmd_fixed + " " + pytest_cmd)
+    if os.system(py_cmd_fixed + " " + pytest_cmd) != 0:
+        failed = True
 
     if args.create_venv:
         shutil.rmtree("venv_" + py_cmd);
@@ -119,7 +121,9 @@ for py_cmd in python_cmds:
 
 if venv_failed:
     print("ERROR: Couldn't create some of the venvs!")
-    sys.exit(2)
 
-if res != 0:
+if failed:
+    print("ERROR: Some tests failed!")
+
+if failed or venv_failed:
     sys.exit(1)

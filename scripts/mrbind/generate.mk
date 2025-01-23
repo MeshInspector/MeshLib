@@ -212,6 +212,7 @@ DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
+override localappdata := $(subst \,/,$(LOCALAPPDATA))
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
 PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%,3.%,$(filter $(localappdata)/Programs/Python/Python3%,$(wildcard $(localappdata)/Programs/Python/Python3*)))
@@ -535,8 +536,8 @@ $(foreach v,$(PYTHON_VERSIONS),\
     $(call var,_obj := $(TEMP_OUTPUT_DIR)/$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v.o)\
     $(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHIM_SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
     $(call var,shim_outputs += $(_shlib))\
-    $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(COMPILER_FLAGS) $(call get_python_cflags,$v) $$< -c -o $$@)\
-    $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $(LINKER_FLAGS) $$^ -o $$@ -lpybind11nonlimitedapi_stubs $(call get_python_ldflags,$v))\
+    $(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(call get_python_cflags,$v) $(COMPILER_FLAGS) $$< -c -o $$@)\
+    $(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $$^ -o $$@ $(call get_python_ldflags,$v) $(LINKER_FLAGS) -lpybind11nonlimitedapi_stubs)\
 )
 .PHONY: shims
 shims: $(shim_outputs)
@@ -564,7 +565,7 @@ $(if $($1_NumFragments),,$(call var,$1_NumFragments := 1))
 $(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
-$(call var,$1_CompilerFlagsFixed := $(COMPILER_FLAGS) $($1_CompilerFlagsPython) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))
+$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))
 
 # Produce the one combined header including all our input headers.
 # And if PCH is enabled, this also includes the headers to bake.

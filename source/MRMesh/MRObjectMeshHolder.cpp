@@ -691,7 +691,7 @@ size_t ObjectMeshHolder::heapBytes() const
 
 void ObjectMeshHolder::setSaveMeshFormat( const char * newFormat )
 {
-    if ( !newFormat || *newFormat != '.' )
+    if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
@@ -844,6 +844,19 @@ void ObjectMeshHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat );
+}
+
+// .PLY format is the most compact among other formats with zero compression costs
+static std::string sDefaultSaveMeshFormat = ".ply";
+
+const std::string & defaultSaveMeshFormat()
+{
+    return sDefaultSaveMeshFormat;
+}
+
+void setDefaultSaveMeshFormat( std::string newFormat )
+{
+    sDefaultSaveMeshFormat = std::move( newFormat );
 }
 
 } //namespace MR

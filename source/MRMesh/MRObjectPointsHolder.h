@@ -113,10 +113,10 @@ public:
     /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
-    /// returns overriden file extension used to serialize the points, nullptr means defaultSavePointsFormat()
+    /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSavePointsFormat()
     [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
 
-    /// overrides file extension used to serialize this object: must start from '.',
+    /// overrides file extension used to serialize point cloud inside this object: must start from '.',
     /// nullptr means serialize in defaultSavePointsFormat()
     MRMESH_API void setSavePointsFormat( const char * newFormat );
 
@@ -179,7 +179,7 @@ private:
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 
-    const char * savePointsFormat_ = nullptr;
+    const char * savePointsFormat_ = nullptr; // means use defaultSavePointsFormat()
 };
 
 /// returns file extension used to serialize ObjectPointsHolder by default (if not overridden in specific object),

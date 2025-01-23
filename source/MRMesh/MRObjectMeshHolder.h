@@ -212,10 +212,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// returns file extension used to serialize the mesh
+    /// returns overriden file extension used to serialize mesh inside this object, nullptr means defaultSaveMeshFormat()
     [[nodiscard]] const char * saveMeshFormat() const { return saveMeshFormat_; }
 
-    /// sets file extension used to serialize the mesh: must be not null and must start from '.'
+    /// overrides file extension used to serialize mesh inside this object: must start from '.',
+    /// nullptr means serialize in defaultSaveMeshFormat()
     MRMESH_API void setSaveMeshFormat( const char * newFormat );
 
     /// signal about face selection changing, triggered in selectFaces
@@ -307,9 +308,17 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-    // falls back to the internal format if no CTM format support is available
-    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
-    const char * saveMeshFormat_ = ".ctm";
+    const char * saveMeshFormat_ = nullptr; // means use defaultSaveMeshFormat()
 };
+
+/// returns file extension used to serialize ObjectMeshHolder by default (if not overridden in specific object),
+/// the string starts with '.'
+[[nodiscard]] MRMESH_API const std::string & defaultSaveMeshFormat();
+
+/// sets file extension used to serialize serialize ObjectMeshHolder by default (if not overridden in specific object),
+/// must be not null and must start from '.';
+// serialization falls back to the PLY format if given format support is available
+// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+MRMESH_API void setDefaultSaveMeshFormat( std::string newFormat );
 
 } // namespace MR

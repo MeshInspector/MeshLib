@@ -215,14 +215,14 @@ void ObjectPointsHolder::setMaxRenderingPoints( int val )
     updateRenderDiscretization_();
 }
 
-void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
+void ObjectPointsHolder::setSerializeFormat( const char * newFormat )
 {
     if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
     }
-    savePointsFormat_ = newFormat;
+    serializeFormat_ = newFormat;
 }
 
 void ObjectPointsHolder::swapBase_( Object& other )
@@ -261,13 +261,13 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [points = points_, savePointsFormat = savePointsFormat_ ? savePointsFormat_ : defaultSavePointsFormat(), path, saveSettings]()
+    auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializePointsFormat(), path, saveSettings]()
     {
         auto filename = path;
-        const auto extension = std::string( "*" ) + savePointsFormat;
+        const auto extension = std::string( "*" ) + serializeFormat;
         if ( auto pointsSaver = PointsSave::getPointsSaver( extension ); pointsSaver.fileSave != nullptr )
         {
-            filename += savePointsFormat;
+            filename += serializeFormat;
             return pointsSaver.fileSave( *points, filename, saveSettings );
         }
         else
@@ -391,12 +391,12 @@ void ObjectPointsHolder::updateRenderDiscretization_()
 // .PLY format is the most compact among other formats with zero compression costs
 static std::string sDefaultSavePointsFormat = ".ply";
 
-const std::string & defaultSavePointsFormat()
+const std::string & defaultSerializePointsFormat()
 {
     return sDefaultSavePointsFormat;
 }
 
-void setDefaultSavePointsFormat( std::string newFormat )
+void setDefaultSerializePointsFormat( std::string newFormat )
 {
     sDefaultSavePointsFormat = std::move( newFormat );
 }

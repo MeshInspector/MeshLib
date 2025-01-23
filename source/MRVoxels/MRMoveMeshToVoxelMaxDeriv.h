@@ -107,29 +107,42 @@ struct MoveMeshToVoxelMaxDerivSettings
 /// of voxels.
 /// \ingroup SubvoxelMeshCorrection
 /// @return Vertices that were moved by the algorithm
+template <typename VolumeType = VdbVolume>
 MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
         Mesh& mesh, const AffineXf3f& meshXf,
-        const VdbVolume& volume, const AffineXf3f& volumeXf,
+        const VolumeType& volume, const AffineXf3f& volumeXf,
         const MoveMeshToVoxelMaxDerivSettings& settings,
         ProgressCallback callback = {}
-    );
+);
 
+extern template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<VdbVolume>( Mesh& mesh, const AffineXf3f& meshXf,
+    const VdbVolume& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
+extern template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<SimpleVolumeMinMax>( Mesh& mesh, const AffineXf3f& meshXf,
+    const SimpleVolumeMinMax& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
+extern template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<FunctionVolume>( Mesh& mesh, const AffineXf3f& meshXf,
+    const FunctionVolume& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
 
 
 /// Helper class to organize mesh and voxels volume access and build point sequences
 /// \note this class is not thread-safe but accessing same volume from different instances is ok
 /// \ingroup SubvoxelMeshCorrection
-template <typename MeshType>
+template <typename MeshType, typename VolumeType>
 class MeshOnVoxelsT
 {
 public:
-    MRVOXELS_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
+    MRVOXELS_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VolumeType& volume, const AffineXf3f& volumeXf );
     MRVOXELS_API MeshOnVoxelsT( const MeshOnVoxelsT& other );
 
     // Access to base data
     MRVOXELS_API MeshType& mesh() const;
 
-    MRVOXELS_API const VdbVolume& volume() const;
+    MRVOXELS_API const VolumeType& volume() const;
 
 
     // Cached number of valid vertices
@@ -200,10 +213,10 @@ public:
 
 private:
     MeshType& mesh_;
-    const VdbVolume& volume_;
+    const VolumeType& volume_;
     float voxelSize_;
-    VoxelsVolumeAccessor<VdbVolume> accessor_;
-    VoxelsVolumeInterpolatedAccessor<VoxelsVolumeAccessor<VdbVolume>> interpolator_;
+    VoxelsVolumeAccessor<VolumeType> accessor_;
+    VoxelsVolumeInterpolatedAccessor<VoxelsVolumeAccessor<VolumeType>> interpolator_;
     AffineXf3f xf_, xfInv_;
     Matrix3f xfNormal_;
     bool noXf_; // Xf is unit or translation
@@ -211,8 +224,12 @@ private:
 };
 
 
-using MeshOnVoxels = MeshOnVoxelsT<Mesh>;
-using MeshOnVoxelsC = MeshOnVoxelsT<const Mesh>;
+using MeshOnVoxelsVdb = MeshOnVoxelsT<Mesh, VdbVolume>;
+using MeshOnVoxelsVdbC = MeshOnVoxelsT<const Mesh, VdbVolume>;
 
+using MeshOnVoxelsSimple = MeshOnVoxelsT<Mesh, SimpleVolumeMinMax>;
+using MeshOnVoxelsSimpleC = MeshOnVoxelsT<const Mesh, SimpleVolumeMinMax>;
 
+using MeshOnVoxelsFunction = MeshOnVoxelsT<Mesh, FunctionVolume>;
+using MeshOnVoxelsFunctionC = MeshOnVoxelsT<const Mesh, FunctionVolume>;
 }

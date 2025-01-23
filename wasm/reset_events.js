@@ -140,12 +140,12 @@ var updateEvents = function () {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
         if (!GLFW.active.mouseButtonFunc) return;
-        if (typeof (dynCall_vidd) == 'undefined')
+        if (typeof (dynCall_vjiii) == 'undefined')
             getWasmTableEntry(GLFW.active.mouseButtonFunc)(BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
         else
             (function (a1, a2, a3, a4) {
-                dynCall_viiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
-            })(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+                dynCall_vjiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
+            })(BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
     }
 
     GLFW.onMousemove = function (event) {
@@ -154,12 +154,12 @@ var updateEvents = function () {
         if (!Browser.calculateMouseEvent(event)) return;
         if (event.target != Module["canvas"] || !GLFW.active.cursorPosFunc)
             return;
-        if (typeof (dynCall_vidd) == 'undefined')
+        if (typeof (dynCall_vjdd) == 'undefined')
             getWasmTableEntry(GLFW.active.cursorPosFunc)(BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
         else
             (function (a1, a2, a3) {
-                dynCall_vidd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);
-            })(GLFW.active.id, Browser.mouseX, Browser.mouseY);
+                dynCall_vjdd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);
+            })(BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
     }
 
     GLFW.onMouseWheel = function (event) {
@@ -180,12 +180,12 @@ var updateEvents = function () {
         } else {
             sx = event.deltaX
         }
-        if (typeof (dynCall_vidd) == 'undefined')
+        if (typeof (dynCall_vjdd) == 'undefined')
             getWasmTableEntry(GLFW.active.scrollFunc)(BigInt(GLFW.active.id), sx, sy);
         else
             (function (a1, a2, a3) {
-                dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
-            })(GLFW.active.id, sx, sy);
+                dynCall_vjdd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
+            })(BigInt(GLFW.active.id), sx, sy);
         preventFunc(event)
     }
 
@@ -219,10 +219,10 @@ var updateEvents = function () {
             win.height = height;
         }
         if (win.windowSizeFunc) {
-            if (typeof (dynCall_viii) == 'undefined')
+            if (typeof (dynCall_vjii) == 'undefined')
                 getWasmTableEntry(win.windowSizeFunc)(win.id, width, height);
             else
-                ((a1, a2, a3) => dynCall_viii.apply(null, [win.windowSizeFunc, a1, a2, a3]))(win.id, width, height);
+                ((a1, a2, a3) => dynCall_vjii.apply(null, [win.windowSizeFunc, a1, a2, a3]))(win.id, width, height);
         }
     }
 }

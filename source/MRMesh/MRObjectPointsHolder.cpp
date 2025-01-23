@@ -389,16 +389,17 @@ void ObjectPointsHolder::updateRenderDiscretization_()
 }
 
 // .PLY format is the most compact among other formats with zero compression costs
-static std::string sDefaultSavePointsFormat = ".ply";
+static std::string sDefaultSerializePointsFormat = ".ply";
 
 const std::string & defaultSerializePointsFormat()
 {
-    return sDefaultSavePointsFormat;
+    return sDefaultSerializePointsFormat;
 }
 
 void setDefaultSerializePointsFormat( std::string newFormat )
 {
-    sDefaultSavePointsFormat = std::move( newFormat );
+    assert( !newFormat.empty() && newFormat[0] == '.' );
+    sDefaultSerializePointsFormat = std::move( newFormat );
 }
 
 } //namespace MR

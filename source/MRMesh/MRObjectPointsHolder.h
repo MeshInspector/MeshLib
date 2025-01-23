@@ -187,7 +187,7 @@ private:
 [[nodiscard]] MRMESH_API const std::string & defaultSerializePointsFormat();
 
 /// sets file extension used to serialize serialize ObjectPointsHolder by default (if not overridden in specific object),
-/// must be not null and must start from '.';
+/// the string must start from '.';
 // serialization falls back to the PLY format if given format support is available
 // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
 MRMESH_API void setDefaultSerializePointsFormat( std::string newFormat );

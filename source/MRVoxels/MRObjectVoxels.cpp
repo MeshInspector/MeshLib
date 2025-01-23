@@ -545,7 +545,7 @@ size_t ObjectVoxels::heapBytes() const
 
 void ObjectVoxels::setSerializeFormat( const char * newFormat )
 {
-    if ( !newFormat || *newFormat != '.' )
+    if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
@@ -625,7 +625,7 @@ Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = std::filesystem::path( path ) += serializeFormat_] ()
+        [this, filename = std::filesystem::path( path ) += serializeFormat_ ? serializeFormat_ : defaultSerializeVoxelsFormat()] ()
     {
         return MR::VoxelsSave::toAnySupportedFormat( vdbVolume_, filename );
     } );
@@ -740,4 +740,17 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     return res;
 }
 
+static std::string sDefaultSerializeVoxelsFormat = ".vdb";
+
+const std::string & defaultSerializeVoxelsFormat()
+{
+    return sDefaultSerializeVoxelsFormat;
 }
+
+void setDefaultSerializeVoxelsFormat( std::string newFormat )
+{
+    assert( !newFormat.empty() && newFormat[0] == '.' );
+    sDefaultSerializeVoxelsFormat = std::move( newFormat );
+}
+
+} //namespace MR

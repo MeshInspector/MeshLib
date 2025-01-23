@@ -847,16 +847,16 @@ void ObjectMeshHolder::setDefaultSceneProperties_()
 }
 
 // .PLY format is the most compact among other formats with zero compression costs
-static std::string sDefaultSaveMeshFormat = ".ply";
+static std::string sDefaultSerializeMeshFormat = ".ply";
 
 const std::string & defaultSerializeMeshFormat()
 {
-    return sDefaultSaveMeshFormat;
+    return sDefaultSerializeMeshFormat;
 }
 
 void setDefaultSerializeMeshFormat( std::string newFormat )
 {
-    sDefaultSaveMeshFormat = std::move( newFormat );
+    sDefaultSerializeMeshFormat = std::move( newFormat );
 }
 
 } //namespace MR

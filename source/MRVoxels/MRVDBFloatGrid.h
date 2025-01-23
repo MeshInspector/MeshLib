@@ -17,7 +17,7 @@ namespace MR
  */
 
 /// this class just hides very complex type of typedef openvdb::FloatGrid
-struct OpenVdbFloatGrid : openvdb::FloatGrid
+struct MRVOXELS_CLASS OpenVdbFloatGrid : openvdb::FloatGrid
 {
     OpenVdbFloatGrid() noexcept = default;
     MR_BIND_IGNORE OpenVdbFloatGrid( openvdb::FloatGrid && in ) : openvdb::FloatGrid( std::move( in ) ) {}

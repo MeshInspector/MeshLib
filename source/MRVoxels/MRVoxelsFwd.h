@@ -21,7 +21,7 @@ namespace MR
 
 class ObjectVoxels;
 
-struct OpenVdbFloatGrid;
+struct MRVOXELS_CLASS OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRVOXELS_CLASS VoxelsVolumeMinMax,

@@ -57,7 +57,10 @@ private:
     const FaceBitSet* region_ = nullptr;
     VertMetric valueInVertex_;
     VertBitSet negativeVerts_;
-    UndirectedEdgeBitSet activeEdges_; // the edges crossed by the iso-line, but not yet extracted
+
+    /// the edges (potentially) crossed by the iso-line, but not yet extracted,
+    /// filled in the beginning of extract() methods, and always null in track() method
+    UndirectedEdgeBitSet activeEdges_;
 };
 
 void Isoliner::findNegativeVerts_()
@@ -240,7 +243,8 @@ EdgeId Isoliner::findNextEdge_( EdgeId e ) const
 
 IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 {
-    assert( activeEdges_.empty() || activeEdges_.test( first.undirected() ) );
+    const bool activeEdgesEmpty = activeEdges_.empty();
+    assert( activeEdgesEmpty || activeEdges_.test( first.undirected() ) );
     IsoLine res;
 #ifndef NDEBUG
     MR_FINALLY{ assert( isConsistentlyOriented( topology_, res ) ); };
@@ -260,8 +264,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     if ( !addCrossedEdge( first ) )
         return res;
     
-    // looks like this assert is excessive for trackSection functions
-    //assert( activeEdges_.test( first.undirected() ) );
+    assert( activeEdgesEmpty || activeEdges_.test( first.undirected() ) );
     activeEdges_.reset( first.undirected() );
 
     bool closed = false;
@@ -273,9 +276,10 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
             closed = true;
             break;
         }
+        if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
+            return res; // the isoline left the region passed in extract( potentiallyCrossedEdges )
         if ( !addCrossedEdge( next ) )
             return res;
-        assert( activeEdges_.empty() || activeEdges_.test( next.undirected() ) );
         activeEdges_.reset( next.undirected() );
     }
 
@@ -291,7 +295,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         while ( auto next = findNextEdge_( back.back().e ) )
         {
             back.push_back( MeshEdgePoint( next, -1 ) );
-            assert( activeEdges_.empty() || activeEdges_.test( next.undirected() ) );
+            assert( activeEdgesEmpty || activeEdges_.test( next.undirected() ) );
             activeEdges_.reset( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );

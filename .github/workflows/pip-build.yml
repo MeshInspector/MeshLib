@@ -298,7 +298,9 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          py -3.11 .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
+          py -3.11 -m venv venv
+          venv\Scripts\Activate
+          python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4

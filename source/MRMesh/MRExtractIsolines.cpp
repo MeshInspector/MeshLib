@@ -298,7 +298,12 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
             break;
         }
         if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
-            return res; // the isoline left the region passed in extract( potentiallyCrossedEdges )
+        {
+            // the isoline left the region passed in extract( potentiallyCrossedEdges )
+            if ( !continueTrack )
+                computePointOnEachEdge_( res );
+            return res;
+        }
         if ( !addCrossedEdge( next ) )
             return res;
         activeEdges_.reset( next.undirected() );
@@ -415,14 +420,14 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
 std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel )
 {
     MR_TIMER
-    auto levelInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
+    auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;
     };
 
     VertBitSet store;
     const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
-    const auto negativeVerts = findNegativeVerts( regionVerts, levelInPoint );
+    const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
 
     FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
     BitSetParallelFor( crossedFaces, [&]( FaceId f )
@@ -443,9 +448,9 @@ std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp,
         auto f = res[i].f;
         EdgeId e0, e1, e2;
         mp.mesh.topology.getTriEdges( f, e0, e1, e2 );
-        const float z0 = levelInPoint( mp.mesh.topology.org( e0 ) );
-        const float z1 = levelInPoint( mp.mesh.topology.org( e1 ) );
-        const float z2 = levelInPoint( mp.mesh.topology.org( e2 ) );
+        const float z0 = valueInPoint( mp.mesh.topology.org( e0 ) );
+        const float z1 = valueInPoint( mp.mesh.topology.org( e1 ) );
+        const float z2 = valueInPoint( mp.mesh.topology.org( e2 ) );
         assert( z0 < 0 || z1 < 0 || z2 < 0 );
         assert( z0 >= 0 || z1 >= 0 || z2 >= 0 );
         LineSegm3f segm;
@@ -463,6 +468,9 @@ std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp,
                 ++n;
             }
         };
+        checkEdge( e0, z0, z1 );
+        checkEdge( e1, z1, z2 );
+        checkEdge( e2, z2, z0 );
         assert( n == 2 );
         res[i].segm = segm;
     } );

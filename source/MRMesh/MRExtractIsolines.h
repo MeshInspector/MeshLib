@@ -2,8 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
-#include "MRLineSegm3.h"
-#include "MRId.h"
 
 namespace MR
 {
@@ -38,12 +36,8 @@ namespace MR
 /// quickly returns true if extractXYPlaneSections produce not-empty set for the same arguments
 [[nodiscard]] MRMESH_API bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel );
 
-struct TriangleSection
-{
-    LineSegm3f segm;
-    FaceId f;
-};
-[[nodiscard]] MRMESH_API std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel );
+[[nodiscard]] MRMESH_API std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
+    std::vector<FaceId> * faces = nullptr );
 
 /// track section of plane set by start point, direction and surface normal in start point 
 /// in given direction while given distance or

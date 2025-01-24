@@ -11,9 +11,10 @@
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
-#include "MRTimer.h"
 #include "MRMeshTriPoint.h"
+#include "MRLineSegm3.h"
 #include "MRFinally.h"
+#include "MRTimer.h"
 #include <atomic>
 
 namespace MR
@@ -417,7 +418,8 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
     return s.hasAnyLine( &potentiallyCrossedEdges );
 }
 
-std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel )
+std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
+    std::vector<FaceId> * faces )
 {
     MR_TIMER
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
@@ -439,13 +441,15 @@ std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp,
             crossedFaces.reset( f );
     } );
 
-    std::vector<TriangleSection> res;
-    res.reserve( crossedFaces.count() );
+    std::vector<FaceId> crossedFacesVec;
+    crossedFacesVec.reserve( crossedFaces.count() );
     for ( auto f : crossedFaces )
-        res.push_back( { .f = f } );
+        crossedFacesVec.push_back( f );
+
+    std::vector<LineSegm3f> res( crossedFacesVec.size() );
     ParallelFor( res, [&]( size_t i )
     {
-        auto f = res[i].f;
+        auto f = crossedFacesVec[i];
         EdgeId e0, e1, e2;
         mp.mesh.topology.getTriEdges( f, e0, e1, e2 );
         const float z0 = valueInPoint( mp.mesh.topology.org( e0 ) );
@@ -472,8 +476,11 @@ std::vector<TriangleSection> findTriangleSectionsByXYPlane( const MeshPart & mp,
         checkEdge( e1, z1, z2 );
         checkEdge( e2, z2, z0 );
         assert( n == 2 );
-        res[i].segm = segm;
+        res[i] = segm;
     } );
+
+    if ( faces )
+        *faces = std::move( crossedFacesVec );
 
     return res;
 }

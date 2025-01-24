@@ -11,15 +11,38 @@
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
-#include "MRTimer.h"
 #include "MRMeshTriPoint.h"
+#include "MRLineSegm3.h"
 #include "MRFinally.h"
+#include "MRTimer.h"
 #include <atomic>
 
 namespace MR
 {
 
+namespace
+{
+
 using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
+
+template<typename V>
+VertBitSet findNegativeVerts( const VertBitSet& vertRegion, V && valueInVertex )
+{
+    VertBitSet negativeVerts( vertRegion.size() );
+    BitSetParallelFor( vertRegion, [&]( VertId v )
+    {
+        if ( valueInVertex( v ) < 0 )
+            negativeVerts.set( v );
+    } );
+    return negativeVerts;
+}
+
+inline MeshEdgePoint toEdgePoint( EdgeId e, float vo, float vd )
+{
+    assert( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) );
+    const float x = vo / ( vo - vd );
+    return MeshEdgePoint( e, x );
+}
 
 class Isoliner
 {
@@ -28,6 +51,7 @@ public:
     Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
         { findNegativeVerts_(); }
+
     /// prepares to find iso-lines crossing the edges in between given edges
     Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const VertBitSet& vertRegion )
         : topology_( topology ), valueInVertex_( valueInVertex )
@@ -37,6 +61,7 @@ public:
     bool hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges = nullptr ) const;
 
     IsoLines extract();
+
     /// potentiallyCrossedEdges shall include all edges crossed by the iso-lines (some other edges there is permitted as well)
     IsoLines extract( UndirectedEdgeBitSet potentiallyCrossedEdges );
 
@@ -51,6 +76,7 @@ private:
     MeshEdgePoint toEdgePoint_( EdgeId e ) const;
     void computePointOnEachEdge_( IsoLine & line ) const;
     EdgeId findNextEdge_( EdgeId e ) const;
+    IsoLines extract_();
 
 private:
     const MeshTopology& topology_;
@@ -58,7 +84,7 @@ private:
     VertMetric valueInVertex_;
     VertBitSet negativeVerts_;
 
-    /// the edges (potentially) crossed by the iso-line, but not yet extracted,
+    /// the edges crossed by the iso-line, but not yet extracted,
     /// filled in the beginning of extract() methods, and always null in track() method
     UndirectedEdgeBitSet activeEdges_;
 };
@@ -71,13 +97,7 @@ void Isoliner::findNegativeVerts_()
 
 void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
 {
-    negativeVerts_.clear();
-    negativeVerts_.resize( vertRegion.size() );
-    BitSetParallelFor( vertRegion, [&]( VertId v )
-    {
-        if ( valueInVertex_( v ) < 0 )
-            negativeVerts_.set( v );
-    } );
+    negativeVerts_ = findNegativeVerts( vertRegion, valueInVertex_ );
 }
 
 IsoLines Isoliner::extract()
@@ -98,6 +118,11 @@ IsoLines Isoliner::extract()
             activeEdges_.set( ue );
     } );
 
+    return extract_();
+}
+
+IsoLines Isoliner::extract_()
+{
     IsoLines res;
     for ( auto ue : activeEdges_ )
     {
@@ -115,19 +140,18 @@ IsoLines Isoliner::extract()
 IsoLines Isoliner::extract( UndirectedEdgeBitSet potentiallyCrossedEdges )
 {
     activeEdges_ = std::move( potentiallyCrossedEdges );
-    IsoLines res;
-    for ( auto ue : activeEdges_ )
+
+    /// filter out the edges not crossed by the iso-line from activeEdges_
+    BitSetParallelFor( activeEdges_, [&]( UndirectedEdgeId ue )
     {
         EdgeId e = ue;
         auto no = negativeVerts_.test( topology_.org( e ) );
         auto nd = negativeVerts_.test( topology_.dest( e ) );
         if ( no == nd )
-            continue;
-        // direct edge from negative to positive values
-        res.push_back( extractOneLine_( no ? e : e.sym() ) );
-    }
-    activeEdges_.clear();
-    return res;
+            activeEdges_.reset( ue );
+    } );
+
+    return extract_();
 }
 
 bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges ) const
@@ -211,9 +235,7 @@ inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e ) const
 {
     float vo = valueInVertex_( topology_.org( e ) );
     float vd = valueInVertex_( topology_.dest( e ) );
-    assert( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) );
-    const float x = vo / ( vo - vd );
-    return MeshEdgePoint( e, x );
+    return MR::toEdgePoint( e, vo, vd );
 }
 
 void Isoliner::computePointOnEachEdge_( IsoLine & line ) const
@@ -277,7 +299,12 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
             break;
         }
         if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
-            return res; // the isoline left the region passed in extract( potentiallyCrossedEdges )
+        {
+            // the isoline left the region passed in extract( potentiallyCrossedEdges )
+            if ( !continueTrack )
+                computePointOnEachEdge_( res );
+            return res;
+        }
         if ( !addCrossedEdge( next ) )
             return res;
         activeEdges_.reset( next.undirected() );
@@ -308,6 +335,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     computePointOnEachEdge_( res );
     return res;
 }
+
+} //anonymous namespace
 
 IsoLines extractIsolines( const MeshTopology& topology,
     const VertMetric & vertValues, const FaceBitSet* region )
@@ -387,6 +416,73 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
         return points[v].z - zLevel;
     }, vertRegion );
     return s.hasAnyLine( &potentiallyCrossedEdges );
+}
+
+std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
+    std::vector<FaceId> * faces )
+{
+    MR_TIMER
+    auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    };
+
+    VertBitSet store;
+    const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
+    const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
+
+    FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
+    BitSetParallelFor( crossedFaces, [&]( FaceId f )
+    {
+        auto vs = mp.mesh.topology.getTriVerts( f );
+        int numNegative = negativeVerts.test( vs[0] ) + negativeVerts.test( vs[1] ) + negativeVerts.test( vs[2] );
+        assert( numNegative >= 0 && numNegative <= 3 );
+        if ( numNegative == 0 || numNegative == 3 )
+            crossedFaces.reset( f );
+    } );
+
+    std::vector<FaceId> crossedFacesVec;
+    crossedFacesVec.reserve( crossedFaces.count() );
+    for ( auto f : crossedFaces )
+        crossedFacesVec.push_back( f );
+
+    std::vector<LineSegm3f> res( crossedFacesVec.size() );
+    ParallelFor( res, [&]( size_t i )
+    {
+        auto f = crossedFacesVec[i];
+        EdgeId e0, e1, e2;
+        mp.mesh.topology.getTriEdges( f, e0, e1, e2 );
+        const float z0 = valueInPoint( mp.mesh.topology.org( e0 ) );
+        const float z1 = valueInPoint( mp.mesh.topology.org( e1 ) );
+        const float z2 = valueInPoint( mp.mesh.topology.org( e2 ) );
+        assert( z0 < 0 || z1 < 0 || z2 < 0 );
+        assert( z0 >= 0 || z1 >= 0 || z2 >= 0 );
+        LineSegm3f segm;
+        int n = 0;
+        auto checkEdge = [&]( EdgeId e, float vo, float vd )
+        {
+            if ( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) )
+            {
+                auto p = mp.mesh.edgePoint( toEdgePoint( e, vo, vd ) );
+                assert( n == 0 || n == 1 );
+                if ( n == 0 )
+                    segm.a = p;
+                else
+                    segm.b = p;
+                ++n;
+            }
+        };
+        checkEdge( e0, z0, z1 );
+        checkEdge( e1, z1, z2 );
+        checkEdge( e2, z2, z0 );
+        assert( n == 2 );
+        res[i] = segm;
+    } );
+
+    if ( faces )
+        *faces = std::move( crossedFacesVec );
+
+    return res;
 }
 
 PlaneSection trackSection( const MeshPart& mp,

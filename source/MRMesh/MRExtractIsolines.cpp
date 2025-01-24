@@ -299,12 +299,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
             break;
         }
         if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
-        {
-            // the isoline left the region passed in extract( potentiallyCrossedEdges )
-            if ( !continueTrack )
-                computePointOnEachEdge_( res );
-            return res;
-        }
+            break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
         if ( !addCrossedEdge( next ) )
             return res;
         activeEdges_.reset( next.undirected() );
@@ -321,8 +316,9 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         back.push_back( MeshEdgePoint( firstSym, -1 ) );
         while ( auto next = findNextEdge_( back.back().e ) )
         {
+            if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
+                break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
             back.push_back( MeshEdgePoint( next, -1 ) );
-            assert( activeEdgesEmpty || activeEdges_.test( next.undirected() ) );
             activeEdges_.reset( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );

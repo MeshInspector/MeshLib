@@ -300,6 +300,7 @@ jobs:
         run: |
           py -3.11 -m venv venv
           venv\Scripts\Activate
+          python -m pip install --upgrade pip
           python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload to Test Artifacts

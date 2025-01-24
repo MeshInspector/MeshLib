@@ -32,7 +32,7 @@ MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::filesystem::pa
 /// this is very convenient for saving intermediate states during algorithm debugging;
 /// ".mrmesh" save mesh format is not space efficient, but guaranties no changes in the topology after loading
 MRMESH_API Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr,
-    const char * saveMeshFormat = ".mrmesh" );
+    const char * serializeFormat = ".mrmesh" );
 
 /// saves an object into json value
 MRMESH_API void serializeToJson( const Vector2i& vec, Json::Value& root );

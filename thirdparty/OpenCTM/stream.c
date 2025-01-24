@@ -246,6 +246,20 @@ int _ctmStreamReadPackedInts(_CTMcontext * self, CTMint * aData,
   return CTM_TRUE;
 }
 
+typedef struct
+{
+    ICompressProgress ifc;
+    _CTMcontext * context;
+} MyCompressProgress;
+
+static SRes compressProgress(void *p, UInt64 inSize, UInt64 outSize)
+{
+  (void)outSize;
+  MyCompressProgress * prg = p;
+  _CTMcontext * self = prg->context;
+  return self->mCompressProgressFn(inSize + self->mBytesAlreadyCompressed, self->mTotalBytesToCompress, self->mUserData);
+}
+
 //-----------------------------------------------------------------------------
 // _ctmStreamWritePackedInts() - Compress a binary integer data array, and
 // write it to a stream.
@@ -303,6 +317,7 @@ int _ctmStreamWritePackedInts(_CTMcontext * self, CTMint * aData,
   // Call LZMA to compress
   outPropsSize = 5;
   lzmaAlgo = (self->mCompressionLevel < 1 ? 0 : 1);
+  MyCompressProgress myCompressProgress = { { compressProgress }, self };
   lzmaRes = LzmaCompress(packed,
                          &bufSize,
                          (const unsigned char *) tmp,
@@ -311,7 +326,8 @@ int _ctmStreamWritePackedInts(_CTMcontext * self, CTMint * aData,
                          &outPropsSize,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
-                         lzmaAlgo                 // Algorithm (0 = fast, 1 = normal)
+                         lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
+                         self->mCompressProgressFn ? &myCompressProgress.ifc : NULL
                         );
 
   // Free temporary array
@@ -470,6 +486,7 @@ int _ctmStreamWritePackedFloats(_CTMcontext * self, CTMfloat * aData,
   // Call LZMA to compress
   outPropsSize = 5;
   lzmaAlgo = (self->mCompressionLevel < 1 ? 0 : 1);
+  MyCompressProgress myCompressProgress = { { compressProgress }, self };
   lzmaRes = LzmaCompress(packed,
                          &bufSize,
                          (const unsigned char *) tmp,
@@ -478,7 +495,8 @@ int _ctmStreamWritePackedFloats(_CTMcontext * self, CTMfloat * aData,
                          &outPropsSize,
                          self->mCompressionLevel, // Level (0-9)
                          0, -1, -1, -1, -1, -1,   // Default values (set by level)
-                         lzmaAlgo                 // Algorithm (0 = fast, 1 = normal)
+                         lzmaAlgo,                // Algorithm (0 = fast, 1 = normal)
+                         self->mCompressProgressFn ? &myCompressProgress.ifc : NULL
                         );
 
   // Free temporary array

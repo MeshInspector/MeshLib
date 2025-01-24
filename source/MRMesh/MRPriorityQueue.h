@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRTimer.h"
 #include <vector>
 #include <algorithm>
@@ -49,7 +50,7 @@ private:
     void onPush_() { std::push_heap( c.begin(), c.end(), pred_ ); };
 
 private:
-    [[no_unique_address]] P pred_;
+    MR_NO_UNIQUE_ADDRESS P pred_;
 };
 
 template <typename T, typename P>

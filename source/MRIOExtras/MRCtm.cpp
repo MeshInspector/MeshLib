@@ -16,10 +16,11 @@
 
 #include <fstream>
 
-namespace
+namespace MR
 {
 
-using namespace MR;
+namespace
+{
 
 class NormalXfMatrix
 {
@@ -40,10 +41,52 @@ private:
     const Matrix3d * pNormXf_ = nullptr;
 };
 
-} // namespace
-
-namespace MR
+class Saver
 {
+public:
+    Saver( CTMcontext context, std::ostream& outStream, const ProgressCallback & cb )
+        : context_( context ), stream_( outStream ), cb_( cb ) {}
+    Expected<void> run();
+
+private:
+    CTMcontext context_;
+    std::ostream& stream_;
+    const ProgressCallback & cb_;
+    float lastProgress_ = 0;
+};
+
+Expected<void> Saver::run()
+{
+    MR_TIMER
+    if ( !stream_ )
+        return unexpected( std::string( "Bad stream before CTM-encoding" ) );
+    ctmSaveCustom( context_, []( const void* buf, CTMuint size, void* data ) -> CTMuint
+    {
+        Saver& self = *reinterpret_cast< Saver* >( data );
+        writeByBlocks( self.stream_, (const char*) buf, size );
+        if ( !self.stream_ || !reportProgress( self.cb_, self.lastProgress_ ) )
+            return 0; // stop
+        return size;
+    },
+    []( size_t pos, size_t total, void* data )
+    {
+        assert( pos < total );
+        Saver& self = *reinterpret_cast< Saver* >( data );
+        self.lastProgress_ = float( pos ) / total;
+        return reportProgress( self.cb_, self.lastProgress_ ) ? 0 : 1;
+    },
+    this );
+
+    if ( !reportProgress( cb_, 1.0f ) )
+        return unexpectedOperationCanceled();
+    if ( !stream_ )
+        return unexpected( std::string( "Error writing in stream during CTM-encoding" ) );
+    if ( auto err = ctmGetError( context_ ); err != CTM_NONE )
+        return unexpected( "Error " + std::to_string( err ) + " during CTM-encoding" );
+    return {};
+}
+
+} // anonymous namespace
 
 namespace MeshLoad
 {
@@ -230,9 +273,6 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         (const CTMfloat *)xfVerts.data(), aVertexCount,
         aIndices.data(), numSaveFaces, nullptr );
 
-    if ( ctmGetError(context) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format" );
-
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( options.colors )
     {
@@ -248,82 +288,10 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
     }
 
-    if ( ctmGetError( context ) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format colors" );
+    if ( ctmGetError(context) != CTM_NONE )
+        return unexpected( "Error encoding in CTM-format" );
 
-    struct SaveData
-    {
-        std::function<bool( float )> callbackFn{};
-        std::ostream* stream;
-        size_t sum{ 0 };
-        size_t blockSize{ 0 };
-        size_t maxSize{ 0 };
-        bool wasCanceled{ false };
-    } saveData;
-    if ( options.progress )
-    {
-        if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
-        {
-            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
-            {
-                // calculate full progress
-                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-                return callback( progress );
-            };
-        }
-        else
-        {
-            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
-            {
-                // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
-                // conversion rules:
-                // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
-                // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
-                // step 3) go to step 1)
-                const float rangeBefore = 0.2f;
-                const float rangeAfter = 0.7f;
-                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-                float newProgress = 0.f;
-                for ( ; newProgress < 98.5f; )
-                {
-                    if ( progress < rangeBefore )
-                    {
-                        newProgress += progress / rangeBefore * rangeAfter * ( 1 - newProgress );
-                        break;
-                    }
-                    else
-                    {
-                        progress = ( progress - rangeBefore ) / ( 1 - rangeBefore );
-                        newProgress += ( 1 - newProgress ) * rangeAfter;
-                    }
-                }
-                return callback( newProgress );
-            };
-        }
-    }
-    saveData.stream = &out;
-    saveData.maxSize = mesh.points.size() * sizeof( Vector3f ) + mesh.topology.getValidFaces().count() * 3 * sizeof( int ) + 150; // 150 - reserve for some ctm specific data
-    ctmSaveCustom( context, []( const void * buf, CTMuint size, void * data )
-    {
-        SaveData& saveData = *reinterpret_cast< SaveData* >( data );
-        std::ostream& outStream = *saveData.stream;
-        saveData.blockSize = size;
-
-        saveData.wasCanceled |= !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
-        saveData.sum += size;
-        if ( saveData.wasCanceled )
-            return 0u;
-
-        return outStream.good() ? size : 0;
-    }, &saveData );
-
-    if ( saveData.wasCanceled )
-        return unexpectedOperationCanceled();
-    if ( !out || ctmGetError(context) != CTM_NONE )
-        return unexpected( std::string( "Error saving in CTM-format" ) );
-
-    reportProgress( options.progress, 1.f );
-    return {};
+    return Saver( context, out, options.progress ).run();
 }
 
 Expected<void> toCtm( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
@@ -508,9 +476,6 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
                        aIndices.data(), 1, saveNormals ? ( const CTMfloat* )cloud.normals.data() : nullptr );
     }
 
-    if ( ctmGetError( context ) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format" );
-
     std::vector<Vector4f> colors4f; // should be alive when save is performed
     if ( options.colors && options.colors->size() >= cloud.points.size() )
     {
@@ -525,69 +490,9 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     }
 
     if ( ctmGetError( context ) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format colors" );
+        return unexpected( "Error encoding in CTM-format" );
 
-    struct SaveData
-    {
-        std::function<bool( float )> callbackFn{};
-        std::ostream* stream;
-        size_t sum{ 0 };
-        size_t blockSize{ 0 };
-        size_t maxSize{ 0 };
-        bool wasCanceled{ false };
-    } saveData;
-    if ( options.progress )
-    {
-        saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
-        {
-            // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
-            // conversion rules:
-            // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
-            // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
-            // step 3) go to step 1)
-            const float rangeBefore = 0.2f;
-            const float rangeAfter = 0.7f;
-            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-            float newProgress = 0.f;
-            for ( ; newProgress < 98.5f; )
-            {
-                if ( progress < rangeBefore )
-                {
-                    newProgress += progress / rangeBefore * rangeAfter * ( 1 - newProgress );
-                    break;
-                }
-                else
-                {
-                    progress = ( progress - rangeBefore ) / ( 1 - rangeBefore );
-                    newProgress += ( 1 - newProgress ) * rangeAfter;
-                }
-            }
-            return callback( newProgress );
-        };
-    }
-    saveData.stream = &out;
-    saveData.maxSize = aVertexCount * sizeof( Vector3f ) + cloud.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
-    ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
-    {
-        SaveData& saveData = *reinterpret_cast< SaveData* >( data );
-        std::ostream& outStream = *saveData.stream;
-        saveData.blockSize = size;
-
-        saveData.wasCanceled |= !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
-        saveData.sum += size;
-        if ( saveData.wasCanceled )
-            return 0u;
-
-        return outStream.good() ? size : 0;
-    }, &saveData );
-
-    if ( saveData.wasCanceled )
-        return unexpectedOperationCanceled();
-    if ( !out || ctmGetError( context ) != CTM_NONE )
-        return unexpected( std::string( "Error saving in CTM-format" ) );
-
-    reportProgress( options.progress, 1.f );
-    return {};
+    return Saver( context, out, options.progress ).run();
 }
 
 Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )

@@ -36,6 +36,11 @@ namespace MR
 /// quickly returns true if extractXYPlaneSections produce not-empty set for the same arguments
 [[nodiscard]] MRMESH_API bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel );
 
+/// finds all intersected triangles by the plane z=zLevel
+/// \return the section's line segment within each such triangle;
+/// \param faces optional output of the same size as return, where for each line segment one can find its triangle's id
+/// \details this function does not build and use AABB currently, but it must be faster than
+/// extractXYPlaneSections function when connecting continuous contours take most of the time
 [[nodiscard]] MRMESH_API std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
     std::vector<FaceId> * faces = nullptr );
 

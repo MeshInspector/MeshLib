@@ -48,8 +48,8 @@ template<typename N>
 class Tracker
 {
 public:
-    Tracker( const MeshTopology & topology, const N & isNegative, EdgeId e, const FaceBitSet* region )
-        : topology_( topology ), isNegative_( isNegative ), region_( region )
+    Tracker( const MeshTopology & topology, N && isNegative, EdgeId e, const FaceBitSet* region )
+        : topology_( topology ), isNegative_( std::move( isNegative ) ), region_( region )
     {
         restart( e );
     }
@@ -84,7 +84,7 @@ public:
 
 private:
     const MeshTopology & topology_;
-    const N & isNegative_;
+    N isNegative_;
     EdgeId e_;
     bool eOrgNeg_ = false;
     const FaceBitSet* region_ = nullptr;

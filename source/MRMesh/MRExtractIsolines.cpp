@@ -44,6 +44,52 @@ inline MeshEdgePoint toEdgePoint( EdgeId e, float vo, float vd )
     return MeshEdgePoint( e, x );
 }
 
+template<typename N>
+class Tracker
+{
+public:
+    Tracker( const MeshTopology & topology, const N & isNegative, EdgeId e, const FaceBitSet* region )
+        : topology_( topology ), isNegative_( isNegative ), region_( region )
+    {
+        restart( e );
+    }
+
+    void restart( EdgeId e )
+    {
+        assert( e );
+        e_ = e;
+        eOrgNeg_ = isNegative_( topology_.org( e_ ) );
+        assert( eOrgNeg_ != isNegative_( topology_.dest( e_ ) ) );
+    }
+
+    EdgeId currEdge() const { return e_; }
+
+    EdgeId findNextEdge()
+    {
+        if ( !topology_.isLeftInRegion( e_, region_ ) )
+            return {};
+        const VertId x = topology_.dest( topology_.next( e_ ) );
+        const bool xNeg = isNegative_( x );
+
+        if ( ( eOrgNeg_ && xNeg ) || ( !eOrgNeg_ && !xNeg ) )
+        {
+            eOrgNeg_ = xNeg;
+            return e_ = topology_.prev( e_.sym() ).sym();
+        }
+        else
+        {
+            return e_ = topology_.next( e_ );
+        }
+    }
+
+private:
+    const MeshTopology & topology_;
+    const N & isNegative_;
+    EdgeId e_;
+    bool eOrgNeg_ = false;
+    const FaceBitSet* region_ = nullptr;
+};
+
 class Isoliner
 {
 public:
@@ -290,7 +336,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     activeEdges_.reset( first.undirected() );
 
     bool closed = false;
-    while ( auto next = findNextEdge_( res.back().e ) )
+    Tracker tracker( topology_, [this]( VertId v ) { return negativeVerts_.test( v ); }, first, region_ );
+    while ( auto next = tracker.findNextEdge() )
     {
         if ( first == next )
         {
@@ -310,11 +357,9 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 
     if ( !closed )
     {
-        auto firstSym = first;
-        firstSym = firstSym.sym(); // go backward
+        tracker.restart( first.sym() ); // go backward
         IsoLine back;
-        back.push_back( MeshEdgePoint( firstSym, -1 ) );
-        while ( auto next = findNextEdge_( back.back().e ) )
+        while ( auto next = tracker.findNextEdge() )
         {
             if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
                 break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
@@ -322,7 +367,6 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
             activeEdges_.reset( next.undirected() );
         }
         std::reverse( back.begin(), back.end() );
-        back.pop_back(); // remove extra copy of firstSym
         for ( auto& i : back )
             i = i.sym(); // make consistent edge orientations of forward and backward passes
         res.insert( res.begin(), back.begin(), back.end() );

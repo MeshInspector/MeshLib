@@ -135,4 +135,17 @@ TEST( MRMesh, ExtractXYPlaneSections )
     EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 6 );
 }
 
+TEST( MRMesh, TrackPlaneSection )
+{
+    Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f::diagonal( -0.5F ) );
+    const MeshTriPoint start{ 10_e, { 0.25f, 0.25f } };
+    const MeshTriPoint end{ 21_e, { 0.25f, 0.25f } };
+    const Vector3f planePoint{ -0.5f, -0.5f, 0.0f };
+    auto res = trackSection( mesh, start, end, planePoint, true );
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_EQ( res->size(), 1 );
+    EXPECT_EQ( (*res)[0].e, 11_e );
+    EXPECT_LT( std::abs( (*res)[0].a - 0.5f ), 1e-6f );
+}
+
 } // namespace MR

@@ -125,7 +125,6 @@ private:
     IsoLine extractOneLine_( EdgeId first, ContinueTrack continueTrack = {} );
     MeshEdgePoint toEdgePoint_( EdgeId e ) const;
     void computePointOnEachEdge_( IsoLine & line ) const;
-    EdgeId findNextEdge_( EdgeId e ) const;
     IsoLines extract_();
 
 private:
@@ -264,7 +263,8 @@ IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack 
         startEdge = testEdge( eOp.e );
         if ( !startEdge )
             startEdge = eOp.e.sym();
-        startEdge = findNextEdge_( startEdge ); // `start` is first
+        tracker_.restart( startEdge );
+        startEdge = tracker_.findNextEdge(); // first edge after (start)
     }
     else
     {
@@ -295,23 +295,6 @@ void Isoliner::computePointOnEachEdge_( IsoLine & line ) const
     {
         line[i] = toEdgePoint_( line[i].e );
     } );
-}
-
-EdgeId Isoliner::findNextEdge_( EdgeId e ) const
-{
-    if ( !topology_.isLeftInRegion( e, region_ ) )
-        return {};
-    VertId o, d, x;
-    topology_.getLeftTriVerts( e, o, d, x );
-    auto no = negativeVerts_.test( o );
-    auto nd = negativeVerts_.test( d );
-    assert( no != nd );
-    auto nx = negativeVerts_.test( x );
-
-    if ( ( no && nx ) || ( nd && !nx ) )
-        return topology_.prev( e.sym() ).sym();
-    else
-        return topology_.next( e );
 }
 
 IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )

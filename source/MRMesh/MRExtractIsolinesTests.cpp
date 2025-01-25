@@ -108,30 +108,31 @@ TEST( MRMesh, ExtractXYPlaneSections )
     EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 8 );
 
     FaceBitSet fs;
-    fs.autoResizeSet( 2_f );
+    fs.autoResizeSet( 5_f );
+    fs.set( 2_f );
     res = extractXYPlaneSections( { mesh, &fs }, testLevel );
     EXPECT_EQ( res.size(), 1 );
-    EXPECT_EQ( res[0].size(), 2 );
+    EXPECT_EQ( res[0].size(), 3 );
     EXPECT_NE( res[0].front(), res[0].back() );
     for ( const auto& i : res[0] )
     {
         Vector3f point = mesh.edgePoint( i );
         EXPECT_LT( std::abs( point.z - testLevel ), 1e-6f );
     }
-    EXPECT_EQ( findTriangleSectionsByXYPlane( { mesh, &fs }, testLevel ).size(), 1 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( { mesh, &fs }, testLevel ).size(), 2 );
 
     // make a hole in mesh to extract not closed contour
     mesh.deleteFaces( fs );
     res = extractXYPlaneSections( mesh, testLevel );
     EXPECT_EQ( res.size(), 1 );
-    EXPECT_EQ( res[0].size(), 8 );
+    EXPECT_EQ( res[0].size(), 7 );
     EXPECT_NE( res[0].front(), res[0].back() );
     for ( const auto& i : res[0] )
     {
         Vector3f point = mesh.edgePoint( i );
         EXPECT_LT( std::abs( point.z - testLevel ), 1e-6f );
     }
-    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 7 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 6 );
 }
 
 } // namespace MR

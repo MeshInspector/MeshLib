@@ -48,10 +48,9 @@ template<typename N>
 class Tracker
 {
 public:
-    Tracker( const MeshTopology & topology, N && isNegative, EdgeId e, const FaceBitSet* region )
+    Tracker( const MeshTopology & topology, N && isNegative, const FaceBitSet* region )
         : topology_( topology ), isNegative_( std::move( isNegative ) ), region_( region )
     {
-        restart( e );
     }
 
     void restart( EdgeId e )
@@ -90,17 +89,22 @@ private:
     const FaceBitSet* region_ = nullptr;
 };
 
+auto isNegative( const VertBitSet & negativeVerts )
+{
+    return [&]( VertId v ) { return negativeVerts.test( v ); };
+}
+
 class Isoliner
 {
 public:
     /// prepares to find iso-lines inside given region (or whole mesh if region==nullptr)
     Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const FaceBitSet* region )
-        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
+        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex ), tracker_( topology_, isNegative( negativeVerts_ ), region_ )
         { findNegativeVerts_(); }
 
     /// prepares to find iso-lines crossing the edges in between given edges
     Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const VertBitSet& vertRegion )
-        : topology_( topology ), valueInVertex_( valueInVertex )
+        : topology_( topology ), valueInVertex_( valueInVertex ), tracker_( topology_, isNegative( negativeVerts_ ), region_ )
         { findNegativeVerts_( vertRegion ); }
 
     /// if \param potentiallyCrossedEdges is given, then only these edges will be checked (otherwise all mesh edges)
@@ -129,6 +133,7 @@ private:
     const FaceBitSet* region_ = nullptr;
     VertMetric valueInVertex_;
     VertBitSet negativeVerts_;
+    Tracker<decltype( isNegative( negativeVerts_) )> tracker_;
 
     /// the edges crossed by the iso-line, but not yet extracted,
     /// filled in the beginning of extract() methods, and always null in track() method
@@ -336,8 +341,8 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     activeEdges_.reset( first.undirected() );
 
     bool closed = false;
-    Tracker tracker( topology_, [this]( VertId v ) { return negativeVerts_.test( v ); }, first, region_ );
-    while ( auto next = tracker.findNextEdge() )
+    tracker_.restart( first );
+    while ( auto next = tracker_.findNextEdge() )
     {
         if ( first == next )
         {
@@ -357,9 +362,9 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 
     if ( !closed )
     {
-        tracker.restart( first.sym() ); // go backward
+        tracker_.restart( first.sym() ); // go backward
         IsoLine back;
-        while ( auto next = tracker.findNextEdge() )
+        while ( auto next = tracker_.findNextEdge() )
         {
             if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
                 break; // the isoline left the region passed in extract( potentiallyCrossedEdges )

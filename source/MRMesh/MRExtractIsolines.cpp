@@ -262,7 +262,10 @@ IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack 
     {
         startEdge = testEdge( eOp.e );
         if ( !startEdge )
-            startEdge = eOp.e.sym();
+        {
+            assert( testEdge( eOp.e.sym() ) );
+            startEdge = eOp.e;
+        }
         tracker_.restart( startEdge );
         startEdge = tracker_.findNextEdge(); // first edge after (start)
     }

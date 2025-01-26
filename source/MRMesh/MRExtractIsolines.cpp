@@ -201,9 +201,12 @@ IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack 
     {
         for ( auto e : orgRing( topology_, v ) )
         {
-            if ( auto se = testEdge( e ) )
+            if ( !topology_.isLeftInRegion( e, region_ ) )
+                continue;
+            auto te = topology_.prev( e.sym() ); // te has face with opposite (v) on left
+            if ( auto se = testEdge( te ) )
             {
-                startEdge = se;
+                startEdge = se; // it has face with opposite (v) on right
                 break;
             }
         }

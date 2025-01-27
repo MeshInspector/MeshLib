@@ -210,7 +210,6 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec[1].e, 17_e );
     EXPECT_LT( std::abs( sec[1].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 8_f );
-    auto x = mesh.triPoint( finish );
     EXPECT_LT( ( Vector3f( -0.25f, 0.5f, 0.0f ) - mesh.triPoint( finish ) ).length(), eps );
 
     // track to the next triangle in the opposite direction

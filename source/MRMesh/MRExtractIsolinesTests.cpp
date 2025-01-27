@@ -224,6 +224,31 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( mesh.topology.left( finish.e ), 5_f );
     EXPECT_LT( ( mesh.triPoint( finish ) - Vector3f( -0.25f, -0.5f, 0.0f ) ).length(), eps );
+
+    // track from vertex
+    const MeshTriPoint startV{ 10_e, { 0.0f, 0.0f } };
+    finish = {};
+    sec = trackSection( mesh, startV, finish, Vector3f( 1, 0, 2 ).normalized(), 1.0f );
+    EXPECT_EQ( sec.size(), 0 );
+    EXPECT_EQ( mesh.topology.left( finish.e ), 5_f );
+    EXPECT_LT( std::abs( ( mesh.triPoint( startV ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+
+    // track from vertex, another direction
+    finish = {};
+    sec = trackSection( mesh, startV, finish, Vector3f( 2, 0, 1 ).normalized(), 1.0f );
+    EXPECT_EQ( sec.size(), 0 );
+    EXPECT_EQ( mesh.topology.left( finish.e ), 4_f );
+    EXPECT_LT( std::abs( ( mesh.triPoint( startV ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+
+    // track from another vertex, with one edge crossing
+    const MeshTriPoint startV2{ 10_e, { 1.0f, 0.0f } };
+    finish = {};
+    sec = trackSection( mesh, startV2, finish, Vector3f( 1, 0, -1 ).normalized(), 1.0f );
+    EXPECT_EQ( sec.size(), 1 );
+    EXPECT_EQ( sec[0].e, 20_e );
+    EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
+    EXPECT_EQ( mesh.topology.left( finish.e ), 4_f );
+    EXPECT_LT( std::abs( ( mesh.triPoint( startV2 ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
 }
 
 } // namespace MR

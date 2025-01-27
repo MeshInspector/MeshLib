@@ -73,6 +73,7 @@
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
+  <!-- This fixes a crash in debug builds with our patched Pybind. -->
   <PropertyGroup Label="Vcpkg">
     <VcpkgAutoLink>false</VcpkgAutoLink>
   </PropertyGroup>

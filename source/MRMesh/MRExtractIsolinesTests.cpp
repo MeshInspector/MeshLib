@@ -173,7 +173,7 @@ TEST( MRMesh, TrackPlaneSection )
 
 TEST( MRMesh, TrackPlaneSectionOnDistance )
 {
-    const Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f::diagonal( -0.5F ) );
+    Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f::diagonal( -0.5F ) );
     const float eps = 1e-6f;
 
     const MeshTriPoint start{ 10_e, { 0.25f, 0.25f } };
@@ -200,6 +200,18 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 3_f );
     EXPECT_LT( std::abs( ( mesh.triPoint( start ) - mesh.triPoint( finish ) ).length() - 0.5f ), eps );
+
+    // ...one triangle further
+    finish = {};
+    sec = trackSection( mesh, start, finish, Vector3f( 0, 1, 0 ), 1.0f );
+    EXPECT_EQ( sec.size(), 2 );
+    EXPECT_EQ( sec[0].e, 15_e );
+    EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
+    EXPECT_EQ( sec[1].e, 17_e );
+    EXPECT_LT( std::abs( sec[1].a - 0.5f ), eps );
+    EXPECT_EQ( mesh.topology.left( finish.e ), 8_f );
+    auto x = mesh.triPoint( finish );
+    EXPECT_LT( ( Vector3f( -0.25f, 0.5f, 0.0f ) - mesh.triPoint( finish ) ).length(), eps );
 
     // track to the next triangle in the opposite direction
     finish = {};
@@ -249,6 +261,20 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 4_f );
     EXPECT_LT( std::abs( ( mesh.triPoint( startV2 ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+
+    // delete triangle on track path, expect finish on hole's edge
+    FaceBitSet fs( 9, false );
+    fs.set( 8_f );
+    mesh.deleteFaces( fs );
+    finish = {};
+    sec = trackSection( mesh, start, finish, Vector3f( 0, 1, 0 ), 1.0f );
+    EXPECT_EQ( sec.size(), 1 );
+    EXPECT_EQ( sec[0].e, 15_e );
+    EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
+    EXPECT_EQ( mesh.topology.left( finish.e ), FaceId{} );
+    auto finishE = finish.onEdge( mesh.topology );
+    EXPECT_EQ( finishE.e, 17_e );
+    EXPECT_LT( std::abs( finishE.a - 0.5f ), eps );
 }
 
 } // namespace MR

@@ -35,6 +35,11 @@ jobs:
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
+        continue-on-error: true
+
+      - name: End Job if Previous was failed
+        if: failure()
+        run: exit 0
 
       - name: Build All Documentation
         working-directory: MeshInspector.github.io

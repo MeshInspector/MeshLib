@@ -34,6 +34,8 @@ VertBitSet findNegativeVerts( const VertBitSet& vertRegion, V && valueInVertex )
     return negativeVerts;
 }
 
+/// given linear function on edge by its values in two vertices with opposite signs,
+/// finds point on edge, where the function is zero
 inline MeshEdgePoint toEdgePoint( EdgeId e, float vo, float vd )
 {
     assert( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) );
@@ -41,6 +43,8 @@ inline MeshEdgePoint toEdgePoint( EdgeId e, float vo, float vd )
     return MeshEdgePoint( e, x );
 }
 
+/// given linear function on edge by value-getter for vertices (which must return values with opposite signs for edge's vertices),
+/// finds point on edge, where the function is zero
 template<class V>
 inline MeshEdgePoint toEdgePoint( const MeshTopology & topology, V && v, EdgeId e )
 {
@@ -49,6 +53,9 @@ inline MeshEdgePoint toEdgePoint( const MeshTopology & topology, V && v, EdgeId 
     return toEdgePoint( e, vo, vd );
 }
 
+/// Given boolean value isNegative defined in all vertices, and a start edge
+/// with one negative and another not negative vertices, sequentially finds
+/// other edges to the left of the current edge with the same property
 template<typename N>
 class Tracker
 {

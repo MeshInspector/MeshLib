@@ -40,6 +40,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <Import Project="$(ProjectDir)\..\source\platform.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(ProjectDir)\..\source\common.props" />
   <ImportGroup Label="ExtensionSettings">

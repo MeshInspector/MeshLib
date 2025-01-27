@@ -134,7 +134,7 @@ var open_files = function (e) {
   }
   e.preventDefault();
   var pointer_size = 4;
-  if (HEAP64 !== 'undefined') 
+  if (typeof HEAPU64 !== 'undefined') 
     pointer_size = 8;
   var filenames = _malloc(e.target.files.length * pointer_size);
   var filenamesArray = [];
@@ -167,10 +167,12 @@ var open_files = function (e) {
     reader.readAsArrayBuffer(file);
     var filename = stringToNewUTF8(path);
     filenamesArray.push(filename);
-    if (typeof GROWABLE_HEAP_U32 !== 'undefined')
+    if (typeof HEAPU64 !== 'undefined')
+      HEAPU64[filenames + i * pointer_size >> 3] = BigInt(filename);
+    else if (typeof GROWABLE_HEAP_U32 !== 'undefined')
       GROWABLE_HEAP_U32()[filenames + i * pointer_size >> 2] = filename;
     else
-      HEAP32[filenames + i * pointer_size >> 2] = filename;
+      HEAPU32[filenames + i * pointer_size >> 2] = filename;
   }
   for (var i = 0; i < count; ++i) {
     save(e.target.files[i]);

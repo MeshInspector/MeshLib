@@ -10,19 +10,19 @@
 namespace MR
 {
 
-template <typename MeshType>
-MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf ):
+template <typename MeshType, typename VolumeType>
+MeshOnVoxelsT<MeshType, VolumeType>::MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VolumeType& volume, const AffineXf3f& volumeXf ) :
     mesh_( mesh ), volume_( volume ),
     voxelSize_( std::min( { volume_.voxelSize.x, volume_.voxelSize.y, volume_.voxelSize.z } ) ),
     accessor_( volume_ ), interpolator_( volume_, accessor_ ),
-    xf_( volumeXf.inverse() * meshXf ),
+    xf_( volumeXf.inverse()* meshXf ),
     xfInv_( xf_.inverse() ), xfNormal_( xfInv_.A.transposed() ),
     noXf_( xf_.A == Matrix3f() ),
     numVerts_( mesh_.topology.numValidVerts() )
 {}
 
-template <typename MeshType>
-MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( const MeshOnVoxelsT& other ) :
+template <typename MeshType, typename VolumeType>
+MeshOnVoxelsT<MeshType, VolumeType>::MeshOnVoxelsT( const MeshOnVoxelsT& other ) :
     mesh_( other.mesh_ ), volume_( other.volume_ ),
     voxelSize_( other.voxelSize_ ),
     accessor_( other.accessor_ ), interpolator_( volume_, accessor_ ), // Note: accessor copy is created here
@@ -31,64 +31,64 @@ MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( const MeshOnVoxelsT& other ) :
 {}
 
 
-template <typename MeshType>
-MeshType& MeshOnVoxelsT<MeshType>::mesh() const
+template <typename MeshType, typename VolumeType>
+MeshType& MeshOnVoxelsT<MeshType, VolumeType>::mesh() const
 { return mesh_; }
 
-template <typename MeshType>
-const VdbVolume& MeshOnVoxelsT<MeshType>::volume() const
+template <typename MeshType, typename VolumeType>
+const VolumeType& MeshOnVoxelsT<MeshType, VolumeType>::volume() const
 { return volume_; }
 
-template <typename MeshType>
-int MeshOnVoxelsT<MeshType>::numVerts() const
+template <typename MeshType, typename VolumeType>
+int MeshOnVoxelsT<MeshType, VolumeType>::numVerts() const
 { return numVerts_; }
 
-template <typename MeshType>
-float MeshOnVoxelsT<MeshType>::voxelSize() const
+template <typename MeshType, typename VolumeType>
+float MeshOnVoxelsT<MeshType, VolumeType>::voxelSize() const
 { return voxelSize_; }
 
-template <typename MeshType>
-AffineXf3f MeshOnVoxelsT<MeshType>::xf() const
+template <typename MeshType, typename VolumeType>
+AffineXf3f MeshOnVoxelsT<MeshType, VolumeType>::xf() const
 { return xf_; }
 
-template <typename MeshType>
-Vector3f MeshOnVoxelsT<MeshType>::xf( const Vector3f& pt ) const
+template <typename MeshType, typename VolumeType>
+Vector3f MeshOnVoxelsT<MeshType, VolumeType>::xf( const Vector3f& pt ) const
 { return noXf_ ? pt + xf_.b : xf_( pt ); }
 
-template <typename MeshType>
-AffineXf3f MeshOnVoxelsT<MeshType>::xfInv() const
+template <typename MeshType, typename VolumeType>
+AffineXf3f MeshOnVoxelsT<MeshType, VolumeType>::xfInv() const
 { return xfInv_; }
 
-template <typename MeshType>
-Vector3f MeshOnVoxelsT<MeshType>::xfInv( const Vector3f& pt ) const
+template <typename MeshType, typename VolumeType>
+Vector3f MeshOnVoxelsT<MeshType, VolumeType>::xfInv( const Vector3f& pt ) const
 { return noXf_ ? pt + xfInv_.b : xfInv_( pt ); }
 
-template <typename MeshType>
-Vector3f MeshOnVoxelsT<MeshType>::point( VertId v ) const
+template <typename MeshType, typename VolumeType>
+Vector3f MeshOnVoxelsT<MeshType, VolumeType>::point( VertId v ) const
 { return xf( mesh_.points[v] ); }
 
-template <typename MeshType>
-float MeshOnVoxelsT<MeshType>::getValue( const Vector3f& pos ) const
+template <typename MeshType, typename VolumeType>
+float MeshOnVoxelsT<MeshType, VolumeType>::getValue( const Vector3f& pos ) const
 { return interpolator_.get( pos ); }
 
-template <typename MeshType>
-Vector3f MeshOnVoxelsT<MeshType>::getOffsetVector( VertId v ) const
+template <typename MeshType, typename VolumeType>
+Vector3f MeshOnVoxelsT<MeshType, VolumeType>::getOffsetVector( VertId v ) const
 { return ( noXf_ ? mesh_.normal( v ) : ( xfNormal_ * mesh_.dirDblArea( v ) ).normalized() ) * voxelSize_; }
 
-template <typename MeshType>
-float MeshOnVoxelsT<MeshType>::pseudoIndex( float index, int count )
+template <typename MeshType, typename VolumeType>
+float MeshOnVoxelsT<MeshType, VolumeType>::pseudoIndex( float index, int count )
 { return index - ( count - 1 ) * 0.5f; }
 
-template <typename MeshType>
-float MeshOnVoxelsT<MeshType>::pseudoIndex( int index, int count )
+template <typename MeshType, typename VolumeType>
+float MeshOnVoxelsT<MeshType, VolumeType>::pseudoIndex( int index, int count )
 { return pseudoIndex( ( float )index, count ); }
 
-template <typename MeshType>
-float MeshOnVoxelsT<MeshType>::indexFromPseudoIndex( float pseudoIndex, int count )
+template <typename MeshType, typename VolumeType>
+float MeshOnVoxelsT<MeshType, VolumeType>::indexFromPseudoIndex( float pseudoIndex, int count )
 { return pseudoIndex + ( count - 1 ) * 0.5f; }
 
-template <typename MeshType>
-void MeshOnVoxelsT<MeshType>::getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const
+template <typename MeshType, typename VolumeType>
+void MeshOnVoxelsT<MeshType, VolumeType>::getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const
 {
     Vector3f p = pos - ( offset * ( ( result.size() - 1 ) * 0.5f ) );
     for ( auto& v : result )
@@ -98,8 +98,8 @@ void MeshOnVoxelsT<MeshType>::getPoints( std::vector<Vector3f>& result, const Ve
     }
 }
 
-template <typename MeshType>
-void MeshOnVoxelsT<MeshType>::getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const
+template <typename MeshType, typename VolumeType>
+void MeshOnVoxelsT<MeshType, VolumeType>::getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const
 {
     Vector3f p = pos - ( offset * ( ( result.size() - 1 ) * 0.5f ) );
     for ( auto& v : result )
@@ -109,16 +109,16 @@ void MeshOnVoxelsT<MeshType>::getValues( std::vector<float>& result, const Vecto
     }
 }
 
-template <typename MeshType>
-void MeshOnVoxelsT<MeshType>::getDerivatives( std::vector<float>& result, const std::vector<float>& values )
+template <typename MeshType, typename VolumeType>
+void MeshOnVoxelsT<MeshType, VolumeType>::getDerivatives( std::vector<float>& result, const std::vector<float>& values )
 {
     assert( result.size() == values.size() - 1 );
     for ( size_t i = 0; i < result.size(); i++ )
         result[i] = values[i + 1] - values[i];
 }
 
-template <typename MeshType>
-PolynomialWrapperf MeshOnVoxelsT<MeshType>::getBestPolynomial( const std::vector<float>& values, size_t degree )
+template <typename MeshType, typename VolumeType>
+PolynomialWrapperf MeshOnVoxelsT<MeshType, VolumeType>::getBestPolynomial( const std::vector<float>& values, size_t degree )
 {
     switch ( degree )
     {
@@ -139,11 +139,14 @@ PolynomialWrapperf MeshOnVoxelsT<MeshType>::getBestPolynomial( const std::vector
     }
 }
 
+template class MeshOnVoxelsT<Mesh, VdbVolume>;
+template class MeshOnVoxelsT<const Mesh, VdbVolume>;
 
+template class MeshOnVoxelsT<Mesh, FunctionVolume>;
+template class MeshOnVoxelsT<const Mesh, FunctionVolume>;
 
-template class MeshOnVoxelsT<Mesh>;
-template class MeshOnVoxelsT<const Mesh>;
-
+template class MeshOnVoxelsT<Mesh, SimpleVolumeMinMax>;
+template class MeshOnVoxelsT<const Mesh, SimpleVolumeMinMax>;
 
 namespace
 {
@@ -163,7 +166,8 @@ struct OneIterSettings
     float outlierThreshold = 1.f;
 };
 
-VertBitSet adjustOneIter( MeshOnVoxels& mv, OneIterSettings s )
+template<typename MeshType, typename VolumeType>
+VertBitSet adjustOneIter( MeshOnVoxelsT<MeshType, VolumeType>& mv, OneIterSettings s )
 {
     MR_TIMER
 
@@ -171,7 +175,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, OneIterSettings s )
     Vector<Vector3f, VertId> shifts( mv.mesh().points.size(), Vector3f{ 0.f, 0.f, 0.f } );
 
     struct ThreadSpecific {
-        MeshOnVoxels mv;            // Volume accessors are copied for thread safety
+        MeshOnVoxelsT<MeshType, VolumeType> mv;            // Volume accessors are copied for thread safety
         std::vector<float> values;  // Pre-allocate working vectors
         std::vector<float> derivatives;
     } threadSpecificExemplar {
@@ -236,12 +240,12 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, OneIterSettings s )
     return correctedPoints;
 }
 
-
 }
 
+template <typename VolumeType>
 Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
     Mesh& mesh, const AffineXf3f& meshXf,
-    const VdbVolume& volume, const AffineXf3f& volumeXf,
+    const VolumeType& volume, const AffineXf3f& volumeXf,
     const MoveMeshToVoxelMaxDerivSettings& settings,
     ProgressCallback callback
 )
@@ -253,7 +257,7 @@ Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
     callback = subprogress( callback, 0.1f, 1.0f );
 
     VertBitSet correctedPoints;
-    MeshOnVoxels mv( mesh, meshXf, volume, volumeXf );
+    MeshOnVoxelsT<Mesh, VolumeType> mv( mesh, meshXf, volume, volumeXf );
     for ( int i = 1; i <= settings.iters; ++i )
     {
         correctedPoints |= adjustOneIter( mv, settings );
@@ -263,5 +267,18 @@ Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
 
     return correctedPoints;
 }
+
+template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<VdbVolume>( Mesh& mesh, const AffineXf3f& meshXf,
+    const VdbVolume& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
+template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<SimpleVolumeMinMax>( Mesh& mesh, const AffineXf3f& meshXf,
+    const SimpleVolumeMinMax& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
+template MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv<FunctionVolume>( Mesh& mesh, const AffineXf3f& meshXf,
+    const FunctionVolume& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback );
 
 } //namespace MR

@@ -167,9 +167,11 @@ void Tracker<N>::track( const MeshTriPoint& start, const ContinueTrack& continue
     {
         if ( !continueTrack( e_ ) )
             break;
-        findNextEdge();
+        if ( !findNextEdge() )
+            break;
+        assert( e_ );
     }
-    while ( e_ && e_ != first );
+    while ( e_ != first );
 }
 
 class Isoliner

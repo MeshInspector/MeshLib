@@ -13,7 +13,6 @@
 #include "MRParallelFor.h"
 #include "MRMeshTriPoint.h"
 #include "MRLineSegm3.h"
-#include "MRFinally.h"
 #include "MRTimer.h"
 #include <atomic>
 
@@ -22,8 +21,6 @@ namespace MR
 
 namespace
 {
-
-using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 
 template<typename V>
 VertBitSet findNegativeVerts( const VertBitSet& vertRegion, V && valueInVertex )
@@ -44,11 +41,19 @@ inline MeshEdgePoint toEdgePoint( EdgeId e, float vo, float vd )
     return MeshEdgePoint( e, x );
 }
 
+template<class V>
+inline MeshEdgePoint toEdgePoint( const MeshTopology & topology, V && v, EdgeId e )
+{
+    float vo = v( topology.org( e ) );
+    float vd = v( topology.dest( e ) );
+    return toEdgePoint( e, vo, vd );
+}
+
 template<typename N>
 class Tracker
 {
 public:
-    Tracker( const MeshTopology & topology, N && isNegative, const FaceBitSet* region )
+    Tracker( const MeshTopology & topology, const N & isNegative, const FaceBitSet* region )
         : topology_( topology ), isNegative_( std::move( isNegative ) ), region_( region )
     {
     }
@@ -81,6 +86,9 @@ public:
         }
     }
 
+    template<class ContinueTrack>
+    void track( const MeshTriPoint& start, const ContinueTrack& continueTrack );
+
 private:
     const MeshTopology & topology_;
     N isNegative_;
@@ -92,6 +100,69 @@ private:
 auto isNegative( const VertBitSet & negativeVerts )
 {
     return [&]( VertId v ) { return negativeVerts.test( v ); };
+}
+
+template<typename N>
+template<class ContinueTrack>
+void Tracker<N>::track( const MeshTriPoint& start, const ContinueTrack& continueTrack )
+{
+    auto testEdge = [&] ( EdgeId e ) -> EdgeId
+    {
+        VertId o = topology_.org( e );
+        VertId d = topology_.dest( e );
+        auto no = isNegative_( o );
+        auto nd = isNegative_( d );
+        return ( nd && !no ) ? e.sym() : EdgeId{};
+    };
+
+    EdgeId first;
+    if ( auto v = start.inVertex( topology_ ) )
+    {
+        for ( auto e : orgRing( topology_, v ) )
+        {
+            if ( !topology_.isLeftInRegion( e, region_ ) )
+                continue;
+            auto te = topology_.prev( e.sym() ); // te has face with opposite (v) on left
+            if ( auto se = testEdge( te ) )
+            {
+                first = se; // it has face with opposite (v) on right
+                break;
+            }
+        }
+    }
+    else if ( auto eOp = start.onEdge( topology_ ) )
+    {
+        first = testEdge( eOp.e );
+        if ( !first )
+        {
+            assert( testEdge( eOp.e.sym() ) );
+            first = eOp.e;
+        }
+        restart( first );
+        first = findNextEdge(); // first edge after (start)
+    }
+    else
+    {
+        for ( auto e : leftRing( topology_, start.e ) )
+        {
+            if ( auto se = testEdge( e ) )
+            {
+                first = se;
+                break;
+            }
+        }
+    }
+    if ( !first )
+        return;
+    
+    restart( first );
+    do
+    {
+        if ( !continueTrack( e_ ) )
+            break;
+        findNextEdge();
+    }
+    while ( e_ && e_ != first );
 }
 
 class Isoliner
@@ -115,15 +186,10 @@ public:
     /// potentiallyCrossedEdges shall include all edges crossed by the iso-lines (some other edges there is permitted as well)
     IsoLines extract( UndirectedEdgeBitSet potentiallyCrossedEdges );
 
-    IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
-
 private:
     void findNegativeVerts_();
     void findNegativeVerts_( const VertBitSet& vertRegion );
-    // if continueTrack is not set extract all
-    // if continueTrack is set - extract until reach it or closed, or border faced
-    IsoLine extractOneLine_( EdgeId first, ContinueTrack continueTrack = {} );
-    MeshEdgePoint toEdgePoint_( EdgeId e ) const;
+    IsoLine extractOneLine_( EdgeId first );
     void computePointOnEachEdge_( IsoLine & line ) const;
     IsoLines extract_();
 
@@ -135,7 +201,7 @@ private:
     Tracker<decltype( isNegative( negativeVerts_) )> tracker_;
 
     /// the edges crossed by the iso-line, but not yet extracted,
-    /// filled in the beginning of extract() methods, and always null in track() method
+    /// filled in the beginning of extract() methods
     UndirectedEdgeBitSet activeEdges_;
 };
 
@@ -235,119 +301,37 @@ bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges 
     return res;
 }
 
-IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack )
-{
-    auto testEdge = [&] ( EdgeId e ) -> EdgeId
-    {
-        VertId o = topology_.org( e );
-        VertId d = topology_.dest( e );
-        auto no = negativeVerts_.test( o );
-        auto nd = negativeVerts_.test( d );
-        return ( nd && !no ) ? e.sym() : EdgeId{};
-    };
-
-    EdgeId startEdge;
-    if ( auto v = start.inVertex( topology_ ) )
-    {
-        for ( auto e : orgRing( topology_, v ) )
-        {
-            if ( !topology_.isLeftInRegion( e, region_ ) )
-                continue;
-            auto te = topology_.prev( e.sym() ); // te has face with opposite (v) on left
-            if ( auto se = testEdge( te ) )
-            {
-                startEdge = se; // it has face with opposite (v) on right
-                break;
-            }
-        }
-    }
-    else if ( auto eOp = start.onEdge( topology_ ) )
-    {
-        startEdge = testEdge( eOp.e );
-        if ( !startEdge )
-        {
-            assert( testEdge( eOp.e.sym() ) );
-            startEdge = eOp.e;
-        }
-        tracker_.restart( startEdge );
-        startEdge = tracker_.findNextEdge(); // first edge after (start)
-    }
-    else
-    {
-        for ( auto e : leftRing( topology_, start.e ) )
-        {
-            if ( auto se = testEdge( e ) )
-            {
-                startEdge = se;
-                break;
-            }
-        }
-    }
-    if ( !startEdge )
-        return {};
-    return extractOneLine_( startEdge, continueTrack );
-}
-
-inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e ) const
-{
-    float vo = valueInVertex_( topology_.org( e ) );
-    float vd = valueInVertex_( topology_.dest( e ) );
-    return MR::toEdgePoint( e, vo, vd );
-}
-
 void Isoliner::computePointOnEachEdge_( IsoLine & line ) const
 {
     ParallelFor( line, [&]( size_t i )
     {
-        line[i] = toEdgePoint_( line[i].e );
+        line[i] = toEdgePoint( topology_, valueInVertex_, line[i].e );
     } );
 }
 
-IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
+IsoLine Isoliner::extractOneLine_( EdgeId first )
 {
-    const bool activeEdgesEmpty = activeEdges_.empty();
-    assert( activeEdgesEmpty || activeEdges_.test( first.undirected() ) );
+    assert( activeEdges_.test( first.undirected() ) );
     IsoLine res;
-#ifndef NDEBUG
-    MR_FINALLY{ assert( isConsistentlyOriented( topology_, res ) ); };
-#endif // !NDEBUG
-    auto addCrossedEdge = [&]( EdgeId e )
-    {
-        if ( !continueTrack )
-        {
-            // exact point will be found in computePointOnEachEdge_ at the end
-            res.push_back( MeshEdgePoint( e, -1 ) );
-            return true;
-        }
-        res.push_back( toEdgePoint_( e ) );
-        return continueTrack( res.back() );
-    };
-
-    if ( !addCrossedEdge( first ) )
-        return res;
-    
-    assert( activeEdgesEmpty || activeEdges_.test( first.undirected() ) );
-    activeEdges_.reset( first.undirected() );
-
     bool closed = false;
+
     tracker_.restart( first );
-    while ( auto next = tracker_.findNextEdge() )
+    EdgeId curr = first;
+    for ( ;; )
     {
-        if ( first == next )
+        if ( !activeEdges_.test_set( curr.undirected(), false ) )
+            break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
+        res.push_back( MeshEdgePoint( curr, -1 ) );
+        curr = tracker_.findNextEdge();
+        if ( !curr )
+            break;
+        if ( first == curr )
         {
-            addCrossedEdge( first );
+            res.push_back( MeshEdgePoint( first, -1 ) );
             closed = true;
             break;
         }
-        if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
-            break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
-        if ( !addCrossedEdge( next ) )
-            return res;
-        activeEdges_.reset( next.undirected() );
     }
-
-    if ( continueTrack )
-        return res;
 
     if ( !closed )
     {
@@ -355,7 +339,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
         IsoLine back;
         while ( auto next = tracker_.findNextEdge() )
         {
-            if ( !activeEdgesEmpty && !activeEdges_.test( next.undirected() ) )
+            if ( !activeEdges_.test( next.undirected() ) )
                 break; // the isoline left the region passed in extract( potentiallyCrossedEdges )
             back.push_back( MeshEdgePoint( next, -1 ) );
             activeEdges_.reset( next.undirected() );
@@ -367,6 +351,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
     }
 
     computePointOnEachEdge_( res );
+    assert( isConsistentlyOriented( topology_, res ) );
     return res;
 }
 
@@ -533,13 +518,17 @@ PlaneSection trackSection( const MeshPart& mp,
     auto startPoint = mp.mesh.triPoint( start );
     auto prevPoint = startPoint;
     auto plane = Plane3f::fromDirAndPt( cross( dir, mp.mesh.pseudonormal( start ) ), prevPoint );
-    VertMetric valueInVertex = [&] ( VertId v )
+    auto valueInVertex = [&] ( VertId v )
     {
         return plane.distance( mp.mesh.points[v] );
     };
-    ContinueTrack continueTrack = [&] ( const MeshEdgePoint& next ) mutable->bool
+
+    PlaneSection res;
+    auto continueTrack = [&] ( EdgeId e )
     {
-        auto point = mp.mesh.edgePoint( next );
+        auto edgePoint = toEdgePoint( mp.mesh.topology, valueInVertex, e );
+        res.push_back( edgePoint );
+        auto point = mp.mesh.edgePoint( edgePoint );
         auto dist = ( point - prevPoint ).length();
         distance -= dist;
         if ( distance < 0.0f )
@@ -548,8 +537,12 @@ PlaneSection trackSection( const MeshPart& mp,
         return true;
     };
 
-    Isoliner s( mp.mesh.topology, valueInVertex, mp.region );
-    auto res = s.track( start, continueTrack );
+    auto isNegative = [&] ( VertId v )
+    {
+        return valueInVertex( v ) < 0;
+    };
+    Tracker t( mp.mesh.topology, isNegative, mp.region );
+    t.track( start, continueTrack );
     if ( res.empty() )
     {
         end = start;
@@ -589,16 +582,23 @@ Expected<PlaneSection> trackSection( const MeshPart& mp, const MeshTriPoint& sta
     auto endPoint = mp.mesh.triPoint( end );
     auto crossDir = cross( startPoint - planePoint, endPoint - planePoint ).normalized();
     auto plane = Plane3f::fromDirAndPt( ccw ? crossDir : -crossDir, planePoint );
-    VertMetric valueInVertex = [&] ( VertId v )
+    auto valueInVertex = [&] ( VertId v )
     {
         return plane.distance( mp.mesh.points[v] );
     };
-    ContinueTrack continueTrack = [&] ( const MeshEdgePoint& next )->bool
+    PlaneSection res;
+    auto continueTrack = [&] ( EdgeId e )
     {
+        auto next = toEdgePoint( mp.mesh.topology, valueInVertex, e );
+        res.push_back( next );
         return !fromSameTriangle( mp.mesh.topology, MeshTriPoint( next ), MeshTriPoint( end ) );
     };
-    Isoliner s( mp.mesh.topology, valueInVertex, mp.region );
-    auto res = s.track( start, continueTrack );
+    auto isNegative = [&] ( VertId v )
+    {
+        return valueInVertex( v ) < 0;
+    };
+    Tracker t( mp.mesh.topology, isNegative, mp.region );
+    t.track( start, continueTrack );
     if ( res.empty() )
     {
         assert( false );

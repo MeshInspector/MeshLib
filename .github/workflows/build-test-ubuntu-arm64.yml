@@ -95,12 +95,6 @@ jobs:
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-
-      - name: Imitation of failure
-        if: ${{ inputs.mrbind && matrix.os == 'ubuntu20' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
-        run: |
-          echo "This step might fail"
-          exit 1
           
       - name: Install mrbind
         if: ${{ inputs.mrbind }}

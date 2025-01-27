@@ -37,6 +37,7 @@
   <PropertyGroup Label="Globals">
     <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python3.lib</PythonLibPath>
     <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
+    <PythonStableDllPath>$(VcpkgCurrentInstalledDir)\bin\python3.dll</PythonStableDllPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

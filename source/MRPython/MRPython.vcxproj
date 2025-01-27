@@ -73,6 +73,9 @@
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgAutoLink>false</VcpkgAutoLink>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -91,13 +94,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
-      copy $(PythonDllPath) $(TargetDir)python3.dll
+      copy $(PythonStableDllPath) $(TargetDir)python3.dll
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

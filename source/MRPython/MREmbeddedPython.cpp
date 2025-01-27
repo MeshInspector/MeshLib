@@ -117,9 +117,7 @@ bool EmbeddedPython::init_()
         return true;
 
     // Initialize our patched pybind11.
-    #ifdef PYBIND11_NONLIMITEDAPI_H_
     pybind11::non_limited_api::EnsureSharedLibraryIsLoaded(true, "meshlib", SystemPath::getExecutableDirectory().value() / "meshlib", {});
-    #endif
 
     PyConfig *config = pybind11::non_limited_api::PyConfig_new();
     MR_FINALLY{ pybind11::non_limited_api::PyConfig_delete( config ); };

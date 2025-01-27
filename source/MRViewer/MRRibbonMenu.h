@@ -171,7 +171,7 @@ protected:
     // returns true if item was actually activated or deactivated with press action
     MRVIEWER_API virtual bool itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, const std::string& requiremetnsHint = {} );
 
-    // returns requirements line for givven tool
+    /// returns requirements line for given tool, empty line means that tool is available
     MRVIEWER_API virtual std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
     MRVIEWER_API virtual void drawActiveBlockingDialog_();

@@ -10,6 +10,8 @@ do
   brew install $req
 done
 
+brew install pybind11
+
 # check and upgrade python3 pip
 python3.10 -m ensurepip --upgrade
 python3.10 -m pip install --upgrade pip

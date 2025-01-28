@@ -292,7 +292,9 @@ jobs:
       release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
 
   update-dev-documentation:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' }}
+    # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
+    # and if this variant failed this job also will fail
+    if: ${{ ( needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' ) && always() }}
     needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:

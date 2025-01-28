@@ -179,7 +179,9 @@ jobs:
           retention-days: 1
 
   update-documentation:
-    if: ${{ github.event_name == 'release' }}
+    # always() need to ignore general fail previous job, because this job depends on one matrix variant (aarch64 && py-version == 3.10),
+    # and if this variant failed this job also will fail
+    if: ${{ ( github.event_name == 'release' ) && always() }}
     needs:
       - manylinux-pip-build
     uses: ./.github/workflows/update-docs.yml

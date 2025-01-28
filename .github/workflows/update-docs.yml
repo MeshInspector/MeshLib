@@ -36,6 +36,12 @@ jobs:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
 
+      # this job can be started even if generation stubs was failed
+      # in this case skipping this job
+      - name: End job if download stubs was failed
+        if: failure()
+        run: exit 0
+
       - name: Build All Documentation
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }}

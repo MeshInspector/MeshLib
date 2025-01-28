@@ -86,6 +86,9 @@
 						},
 						{
 							"Name": "Isometric View"
+						},
+						{
+							"Name": "Invert View"
 						}
 					]
 				},

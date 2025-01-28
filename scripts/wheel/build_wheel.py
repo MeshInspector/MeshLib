@@ -19,6 +19,7 @@ def install_packages():
         "build",
         "setuptools",
         "wheel",
+        "numpy", # Because the modules we're building depend on it.
     ]
 
     platform_specific_packages = {
@@ -38,7 +39,7 @@ def install_packages():
         ["pip", "install", "--upgrade", "pip"]
     )
     subprocess.check_call(
-        ["pip", "install", "--upgrade", "numpy", *packages]
+        ["pip", "install", "--upgrade", *packages]
     )
 
 

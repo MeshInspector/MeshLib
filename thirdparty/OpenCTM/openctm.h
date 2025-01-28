@@ -155,6 +155,7 @@ extern "C" {
   #include <stdint.h>
 #endif
 
+#include <stddef.h> // size_t
 
 /// OpenCTM API version (1.0).
 #define CTM_API_VERSION 0x00000100
@@ -261,8 +262,14 @@ typedef CTMuint (CTMCALL * CTMreadfn)(void * aBuf, CTMuint aCount, void * aUserD
 /// @param[in] aUserData The custom user data that was passed to the
 ///            ctmSaveCustom() function.
 /// @return The number of bytes actually written (if this is less than aCount, it
-///         indicates that an error occured).
+///         indicates that an error occurred).
 typedef CTMuint (CTMCALL * CTMwritefn)(const void * aBuf, CTMuint aCount, void * aUserData);
+
+/// function pointer to report compression progress during writing and cancellation
+/// @param[in] pos The number of bytes compressed so far
+/// @param[in] total The number of bytes to be compressed overall. (pos) gradually increases till (total)
+/// @return (result != 0) means break.
+typedef int (CTMCALL * CTMcompressProgress)(size_t pos, size_t total, void * aUserData);
 
 /// Create a new OpenCTM context. The context is used for all subsequent
 /// OpenCTM function calls. Several contexts can coexist at the same time.
@@ -635,7 +642,7 @@ CTMEXPORT void CTMCALL ctmSave(CTMcontext aContext, const char * aFileName);
 ///            of any type. The user data pointer will be passed to the
 ///            custom stream write function.
 /// @see CTMwritefn.
-CTMEXPORT void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
+CTMEXPORT void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn, CTMcompressProgress aProgressFn,
   void * aUserData);
 
 #ifdef __cplusplus

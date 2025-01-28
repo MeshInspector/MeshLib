@@ -382,7 +382,9 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
-    out <<  "element face " << mesh.topology.numValidFaces() << "\nproperty list uchar int vertex_indices\nend_header\n";
+    const auto fLast = mesh.topology.lastValidFace();
+    const auto numSaveFaces = settings.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
 
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
 #pragma pack(push, 1)
@@ -423,18 +425,24 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
 
     PlyTriangle tri;
-    const float facesNum = float( mesh.topology.getValidFaces().count() );
-    int faceIndex = 0;
-    for ( auto f : mesh.topology.getValidFaces() )
+    int savedFaces = 0;
+    for ( FaceId f{0}; f <= fLast; ++f )
     {
-        VertId vs[3];
-        mesh.topology.getTriVerts( f, vs );
-        for ( int i = 0; i < 3; ++i )
-            tri.v[i] = vertRenumber( vs[i] );
-        out.write( (const char *)&tri, 13 );
-        if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( mesh.topology.hasFace( f ) )
+        {
+            VertId vs[3];
+            mesh.topology.getTriVerts( f, vs );
+            for ( int i = 0; i < 3; ++i )
+                tri.v[i] = vertRenumber( vs[i] );
+        }
+        else if ( !settings.rearrangeTriangles )
+            tri.v[0] = tri.v[1] = tri.v[2] = 0;
+        else
+            continue;
+        out.write( (const char *)&tri, sizeof( PlyTriangle ) );
+        ++savedFaces;
+        if ( settings.progress && !( savedFaces & 0x3FF ) && !settings.progress( float( savedFaces ) / numSaveFaces * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();
-        ++faceIndex;
     }
 
     if ( !out )

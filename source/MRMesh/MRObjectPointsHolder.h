@@ -113,11 +113,14 @@ public:
     /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
-    /// returns file extension used to serialize the points
-    [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
+    /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSerializePointsFormat()
+    [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
+    [[deprecated]] const char * savePointsFormat() const { return serializeFormat(); }
 
-    /// sets file extension used to serialize the points: must be not null and must start from '.'
-    MRMESH_API void setSavePointsFormat( const char * newFormat );
+    /// overrides file extension used to serialize point cloud inside this object: must start from '.',
+    /// nullptr means serialize in defaultSerializePointsFormat()
+    MRMESH_API void setSerializeFormat( const char * newFormat );
+    [[deprecated]] void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;
@@ -178,9 +181,17 @@ private:
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 
-    // falls back to the PLY format if no CTM format support is available
-    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
-    const char * savePointsFormat_ = ".ctm";
+    const char * serializeFormat_ = nullptr; // means use defaultSerializePointsFormat()
 };
 
-}
+/// returns file extension used to serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// the string starts with '.'
+[[nodiscard]] MRMESH_API const std::string & defaultSerializePointsFormat();
+
+/// sets file extension used to serialize serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// the string must start from '.';
+// serialization falls back to the PLY format if given format support is available
+// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+MRMESH_API void setDefaultSerializePointsFormat( std::string newFormat );
+
+} //namespace MR

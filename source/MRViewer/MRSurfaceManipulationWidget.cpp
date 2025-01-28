@@ -28,6 +28,8 @@
 #include "MRMesh/MRPartialChangeMeshAction.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRChangeSelectionAction.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRSceneCache.h"
 
 namespace MR
 {
@@ -255,15 +257,19 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
 {
     if ( button != MouseButton::Left || modifiers != 0 )
         return false;
-
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
-    if ( !obj || obj != obj_ )
+    
+    ObjAndPick objAndPick;
+    if ( ignoreObstruction_ )
+        objAndPick = getViewerInstance().viewport().pickRenderObject( std::array{ static_cast< VisualObject* >( obj_.get() ) } );
+    else
+        objAndPick = getViewerInstance().viewport().pick_render_object();
+    if ( !objAndPick.first || objAndPick.first != obj_ )
         return false;
 
     mousePressed_ = true;
     if ( settings_.workMode == WorkMode::Laplacian )
     {
-        if ( !pick.face.valid() )
+        if ( !objAndPick.second.face.valid() )
             return false;
 
         if ( badRegion_ )
@@ -271,7 +277,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             mousePressed_ = false;
             return false;
         }
-        laplacianPickVert_( pick );
+        laplacianPickVert_( objAndPick.second );
     }
     else
     {
@@ -623,7 +629,22 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     mousePos_ = mousePos;
 
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
-    std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
+    std::vector<ObjAndPick> movedPosPick;
+    if ( ignoreObstruction_ )
+        movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
+    else
+    {
+        auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();
+        std::vector<VisualObject*> visualObjectsP( visualObjectsS.size() );
+        for ( int i = 0; i < visualObjectsS.size(); ++i )
+        {
+            if ( lastStableObjMesh_ && visualObjectsS[i] == obj_ )
+                visualObjectsP[i] = lastStableObjMesh_.get();
+            else
+                visualObjectsP[i] = visualObjectsS[i].get();
+        }
+        movedPosPick = getViewerInstance().viewport().multiPickObjects( visualObjectsP, viewportPoints );
+    }
 
     updateVizualizeSelection_( movedPosPick.empty() ? ObjAndPick() : movedPosPick.back() );
     const auto& mesh = *objMeshPtr->mesh();

@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu20, ubuntu22, ubuntu24, fedora39, emscripten ]
+        distro: [ emscripten ]
         arch: [ x64, arm64 ]
         exclude:
           - distro: fedora39

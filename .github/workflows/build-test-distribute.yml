@@ -51,7 +51,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    if: false
+    if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
@@ -63,7 +63,7 @@ jobs:
     secrets: inherit
 
   ubuntu-arm64-build-test:
-    if: false
+    if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
@@ -76,7 +76,7 @@ jobs:
     secrets: inherit
 
   ubuntu-x64-build-test:
-    if: false
+    if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
@@ -90,7 +90,7 @@ jobs:
     secrets: inherit
 
   fedora-build-test:
-    if: false
+    if: ${{ needs.config.outputs.build_enable_fedora == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-fedora.yml
     with:
@@ -110,7 +110,7 @@ jobs:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   macos-build-test:
-    if: false
+    if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
     needs: [ config ]
     uses: ./.github/workflows/build-test-macos.yml
     with:

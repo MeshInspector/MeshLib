@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ emscripten ]
+        distro: [ ubuntu20, ubuntu22, ubuntu24, fedora39, emscripten ]
         arch: [ x64, arm64 ]
         exclude:
           - distro: fedora39
@@ -40,6 +40,9 @@ jobs:
           - distro: emscripten
             arch: x64
         include:
+          - arch: x64
+            image-suffix: ''
+            os: ubuntu-latest
           - arch: arm64
             image-suffix: '-arm64'
             os: [ self-hosted, linux-arm64 ]

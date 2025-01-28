@@ -290,7 +290,7 @@ jobs:
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
-        run: py scripts\run_unit_test_script.py Release
+        run: source\x64\Release\MRTest.exe
 
       - name: Python Tests
         working-directory: source\x64\Release

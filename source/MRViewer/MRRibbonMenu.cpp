@@ -64,13 +64,23 @@
 #define CONTROL_OR_SUPER GLFW_MOD_SUPER
 #endif
 
-namespace
-{
-constexpr auto cTransformContextName = "TransformContextWindow";
-}
-
 namespace MR
 {
+
+namespace
+{
+
+constexpr auto cTransformContextName = "TransformContextWindow";
+
+auto getItemCaption( const std::string& name )->const std::string&
+{
+    auto it = RibbonSchemaHolder::schema().items.find( name );
+    if ( it == RibbonSchemaHolder::schema().items.end() )
+        return name;
+    return  it->second.caption.empty() ? name : it->second.caption;
+}
+
+} //anonymous namespace
 
 std::shared_ptr<RibbonMenu> RibbonMenu::instance()
 {
@@ -778,13 +788,6 @@ void RibbonMenu::drawActiveList_()
 
         ImVec2 btnSize = ImVec2( 56.0f * scaling, 24.0f * scaling );
         float maxSize = 0.0f;
-        auto getItemCaption = [] ( const std::string& name )->const std::string&
-        {
-            auto it = RibbonSchemaHolder::schema().items.find( name );
-            if ( it == RibbonSchemaHolder::schema().items.end() )
-                return name;
-            return  it->second.caption.empty() ? name : it->second.caption;
-        };
 
         auto sbFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
         if ( sbFont )
@@ -2017,8 +2020,7 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
     auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
     if ( itemIt != RibbonSchemaHolder::schema().items.end() )
     {
-        auto caption = itemIt->second.caption.empty() ? itemIt->first : itemIt->second.caption;
-        shortcutManager_->setShortcut( key, { category, caption,[item = itemIt->second.item, this]()
+        shortcutManager_->setShortcut( key, { category, itemIt->first, [item = itemIt->second.item, this]()
         {
             itemPressed_( item, getRequirements_( item ) );
         } } );
@@ -2091,7 +2093,7 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_O,0 }, { ShortcutManager::Category::View, "Toggle orthographic in current viewport",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_KP_5,0 }, { ShortcutManager::Category::View, "Toggle Orthographic/Perspective View",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
@@ -2137,6 +2139,12 @@ void RibbonMenu::setupShortcuts_()
     }
 
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Top View", { GLFW_KEY_KP_7, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Front View", { GLFW_KEY_KP_1, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Right View", { GLFW_KEY_KP_3, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Bottom View", { GLFW_KEY_KP_7, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Back View", { GLFW_KEY_KP_1, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Left View", { GLFW_KEY_KP_3, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
@@ -2247,7 +2255,8 @@ void RibbonMenu::drawShortcutsWindow_()
         lastCategory = ShortcutManager::Category::Count;// invalid for first one
         for ( int i = 0; i < shortcutList.size(); ++i )
         {
-            const auto& [key, category, text] = shortcutList[i];
+            const auto& [key, category, name] = shortcutList[i];
+            const auto& caption = getItemCaption( name );
 
             if ( !secondColumnStarted && int( category ) >= int( ShortcutManager::Category::Count ) / 2 )
             {
@@ -2269,10 +2278,10 @@ void RibbonMenu::drawShortcutsWindow_()
             auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
             transparentColor.w *= 0.5f;
             ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
-            ImGui::Text( "%s", text.c_str() );
+            ImGui::Text( "%s", caption.c_str() );
             ImGui::PopStyleColor();
 
-            float textSize = ImGui::CalcTextSize( text.c_str() ).x;
+            float textSize = ImGui::CalcTextSize( caption.c_str() ).x;
             ImGui::SameLine( 0, 260 * scaling - textSize );
 
             if ( key.mod & GLFW_MOD_CONTROL )

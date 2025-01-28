@@ -36,7 +36,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 
 # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
 IF(NOT WIN32)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE
+  target_compile_definitions(${PROJECT_NAME} PUBLIC
     _GNU_SOURCE
   )
 ENDIF()

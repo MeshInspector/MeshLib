@@ -40,13 +40,6 @@ ENDIF()
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
-# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
-IF(NOT WIN32)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE
-    _GNU_SOURCE
-  )
-ENDIF()
-
 IF(MESHLIB_BUILD_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRVoxels

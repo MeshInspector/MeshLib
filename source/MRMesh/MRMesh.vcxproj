@@ -396,6 +396,7 @@
     <ClInclude Include="MROnInit.h" />
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
+    <ClInclude Include="MRWasmHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp" />

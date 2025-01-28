@@ -2,6 +2,18 @@ var pointerCounter = 0;
 var mouseState = [0, 0, 0];
 var touchId = [-1, -1];
 var reinterpretEvent = false;
+var pointerSize = 0;
+
+var getPointerSize = function () {
+    if (!pointerSize) {
+        pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
+    }
+    return pointerSize;
+}
+
+var toPointer = function (value) {
+    return getPointerSize() == 8 ? BigInt(value) : value;
+}
 
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
@@ -145,7 +157,7 @@ var updateEvents = function () {
         else if (typeof (dynCall_vjiii) == 'function')
             dynCall_vjiii(GLFW.active.mouseButtonFunc, BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
         else
-            getWasmTableEntry(GLFW.active.mouseButtonFunc)(BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
+            getWasmTableEntry(GLFW.active.mouseButtonFunc)(toPointer(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
     }
 
     GLFW.onMousemove = function (event) {
@@ -159,7 +171,7 @@ var updateEvents = function () {
         else if (typeof (dynCall_vjdd) == 'function')
             dynCall_vjdd(GLFW.active.cursorPosFunc, BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
         else
-            getWasmTableEntry(GLFW.active.cursorPosFunc)(BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
+            getWasmTableEntry(GLFW.active.cursorPosFunc)(toPointer(GLFW.active.id), Browser.mouseX, Browser.mouseY);
     }
 
     GLFW.onMouseWheel = function (event) {
@@ -185,7 +197,7 @@ var updateEvents = function () {
         else if (typeof (dynCall_vjdd) == 'function')
             dynCall_vjdd(GLFW.active.scrollFunc, BigInt(GLFW.active.id), sx, sy)
         else
-            getWasmTableEntry(GLFW.active.scrollFunc)(BigInt(GLFW.active.id), sx, sy);
+            getWasmTableEntry(GLFW.active.scrollFunc)(toPointer(GLFW.active.id), sx, sy);
         preventFunc(event)
     }
 

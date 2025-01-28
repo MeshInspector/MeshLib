@@ -72,9 +72,9 @@ public:
     // get min / max point shifts for (usefull for setup palette)
     MRVIEWER_API Vector2f getMinMax();
 
-    // allow to edit parts of object that are occluded by other objects
-    MRVIEWER_API void ignoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
-    MRVIEWER_API bool isIgnoreOcclusion() const { return ignoreOcclusion_; }
+    // allow the user to edit parts of object that are hidden in the current view by other objects
+    MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
+    MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -156,7 +156,7 @@ private:
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = true;
 
-    // allow to edit parts of object that are occluded by other objects
+    // allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
 };
 

@@ -6,6 +6,10 @@ on:
       docker_image_tag:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   emscripten-build:
@@ -17,6 +21,11 @@ jobs:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
+        full_config_build:
+          - ${{ fromJSON( inputs.full_config_build ) }}
+        exclude:
+          - full_config_build: false
+            config: Multithreaded-64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded

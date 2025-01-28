@@ -1,16 +1,14 @@
-#pragma once
-
 #ifdef __EMSCRIPTEN__
 #include "MRPch/MRWasm.h"
 
-namespace MR
+extern "C"
 {
 
-/// Return the pointer size in bytes
+/// Returns the size of a pointer on the current platform.
 EMSCRIPTEN_KEEPALIVE int emsGetPointerSize()
 {
     return sizeof (void*);
 }
 
-} // namespace MR
+} // extern "C"
 #endif

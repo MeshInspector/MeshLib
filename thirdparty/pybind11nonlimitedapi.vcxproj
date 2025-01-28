@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pybind11\source\non_limited_api\non_limited_api.cpp" />
+    <ClCompile Include="mrbind-pybind11\source\non_limited_api\non_limited_api.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="pybind11nonlimitedapi_stubs.vcxproj">
@@ -77,7 +77,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)mrbind-pybind11\include</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;4297;4457;4191;4548;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
@@ -98,7 +98,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)mrbind-pybind11\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4686;4710;4711;4820;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;4190;4297;4457;4191;4548;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>

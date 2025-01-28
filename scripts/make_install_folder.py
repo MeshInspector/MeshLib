@@ -15,7 +15,7 @@ it.path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__fil
 
 path_to_imgui = os.path.join(os.path.join(it.base_path,'thirdparty'),'imgui')
 path_to_phmap = os.path.join(os.path.join(it.base_path,'thirdparty'),'parallel-hashmap')
-path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdparty'),'pybind11'),'include')
+path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdparty'),'mrbind-pybind11'),'include')
 
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 

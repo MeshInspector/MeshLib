@@ -452,7 +452,7 @@ LINKER_FLAGS += -rtlib=platform
 # Don't generate .lib files.
 LINKER_FLAGS += -Wl,-noimplib
 # Library paths:
-COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/pybind11/include
+COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.
@@ -527,7 +527,7 @@ COMPILER += -DPYBIND11_INTERNALS_VERSION=5
 
 # Build the library files for different Python versions, for our patched Pybind.
 PYBIND_LIBS_OUTPUT_DIR := $(MODULE_OUTPUT_DIR)
-PYBIND_SOURCE_DIR := $(makefile_dir)../../thirdparty/pybind11
+PYBIND_SOURCE_DIR := $(makefile_dir)../../thirdparty/mrbind-pybind11
 PYBIND_NONLIMITEDAPI_CPP := $(PYBIND_SOURCE_DIR)/source/non_limited_api/non_limited_api.cpp
 PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX := pybind11nonlimitedapi_meshlib_
 

@@ -1,3 +1,19 @@
+set(MR_CXX_STANDARD 20 CACHE STRING "Version of the C++ standard used to compile the project")
+IF(DEFINED ENV{MR_USE_CPP_23} AND "$ENV{MR_USE_CPP_23}" STREQUAL "ON")
+  message("MR_USE_CPP_23 variable is deprecated; consider setting MR_CXX_STANDARD to 23")
+  set(MR_CXX_STANDARD 23)
+ENDIF()
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
+# turn on warnings as errors
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
+
+IF(WIN32 AND MINGW)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
+ENDIF()
+
 IF(MR_EMSCRIPTEN)
   # reference: https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
   string(JOIN " " CMAKE_EXE_LINKER_FLAGS

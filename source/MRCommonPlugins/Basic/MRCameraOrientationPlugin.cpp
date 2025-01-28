@@ -41,12 +41,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     float w = ImGui::GetContentRegionAvail().x;
     float p = ImGui::GetStyle().FramePadding.x;
     if ( UI::button( "Get camera", Vector2f( ( w - p ) / 2.f, 0 ) ) )
-    {
-        position_ = Viewer::instanceRef().viewport().getCameraPoint();
-        const auto& quaternion = Viewer::instanceRef().viewport().getParameters().cameraTrackballAngle;
-        direction_ = quaternion.inverse()( Vector3f( 0.f, 0.f, -1.f ) );
-        upDir_ = quaternion.inverse()( Vector3f( 0.f, 1.f, 0.f ) );
-    }
+        getCamera_();
     ImGui::SameLine( 0.f, p );
     if ( UI::button( "Set camera", Vector2f( ( w - p ) / 2.f, 0 ) ) )
     {
@@ -80,12 +75,17 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
+void CameraOrientation::getCamera_()
+{
+    auto & viewport = Viewport::get();
+    position_ = viewport.getCameraPoint();
+    direction_ = -viewport.getBackwardDirection();
+    upDir_ = viewport.getUpDirection();
+}
+
 bool CameraOrientation::onEnable_()
 {
-    position_ = Viewer::instanceRef().viewport().getCameraPoint();
-    const auto& quaternion = Viewer::instanceRef().viewport().getParameters().cameraTrackballAngle;
-    direction_ = quaternion.inverse()( Vector3f( 0.f, 0.f, -1.f ) );
-    upDir_ = quaternion.inverse()( Vector3f( 0.f, 1.f, 0.f ) );
+    getCamera_();
     return true;
 }
 

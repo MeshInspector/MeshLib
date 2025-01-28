@@ -227,13 +227,18 @@ jobs:
           test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
+      - name: Make Install Folder
+        # This condition can have false positives. See all the optional steps below with more specific conditions.
+        if: ${{ inputs.upload_artifacts }}
+        run: python scripts\make_install_folder.py
+
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
-        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
+        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./install/app/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
-        run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
+        run: tar -a -c -f MREDist_DotNet.zip ./install/app/Release
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}

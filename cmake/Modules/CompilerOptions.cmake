@@ -6,19 +6,6 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(MR_PCH_DEFAULT OFF)
-# for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
-  set(MR_PCH_DEFAULT ON)
-#ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-#  set(MR_PCH_DEFAULT ON)
-ENDIF()
-set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
-IF(MR_PCH AND NOT MR_EMSCRIPTEN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-ENDIF()
-message("MR_PCH=${MR_PCH}")
-
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
 # turn on warnings as errors
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
@@ -55,11 +42,4 @@ ENDIF()
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=116090
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
-ENDIF()
-
-# TODO: __aarch64__ ?
-IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
-  message("CMAKE_SYSTEM_PROCESSOR is ${CMAKE_SYSTEM_PROCESSOR}")
-  add_compile_definitions(__ARM_CPU__)
-  message("ARM cpu detected")
 ENDIF()

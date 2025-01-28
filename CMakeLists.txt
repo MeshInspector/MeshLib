@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(EmscriptenCompilerOptions)
-IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
 
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   # print compile time of each translation unit in the CSV format (user time, system time, command)
@@ -69,6 +66,8 @@ IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
 ENDIF()
 
 IF(APPLE)
+  include(ConfigureHomebrew)
+
   # need to hardcode some path to fix wheel (no option to pass path)
   # TODO: revise
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
@@ -183,6 +182,7 @@ IF(MESHLIB_BUILD_MRVIEWER)
 ENDIF()
 
 # MRMesh library is always built
+include(ConfigurePCH)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 

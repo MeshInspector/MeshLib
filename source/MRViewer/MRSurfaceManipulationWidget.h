@@ -56,10 +56,10 @@ public:
     /// set widget settings (mesh change settings)
     MRVIEWER_API void setSettings( const Settings& settings );
     /// get widget settings 
-    MRVIEWER_API const Settings& getSettings() { return settings_; };
+    MRVIEWER_API const Settings& getSettings() { return settings_; }
 
     // mimum radius of editing area.
-    MRVIEWER_API float getMinRadius() { return minRadius_; };
+    MRVIEWER_API float getMinRadius() { return minRadius_; }
 
     // get palette used for visualization point shifts
     Palette& palette() { return *palette_; }
@@ -71,6 +71,10 @@ public:
     MRVIEWER_API void enableDeviationVisualization( bool enable );
     // get min / max point shifts for (usefull for setup palette)
     MRVIEWER_API Vector2f getMinMax();
+
+    // allow to edit parts of object that are occluded by other objects
+    MRVIEWER_API void ignoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
+    MRVIEWER_API bool isIgnoreOcclusion() const { return ignoreOcclusion_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -151,6 +155,10 @@ private:
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = true;
+
+    // allow to edit parts of object that are occluded by other objects
+    bool ignoreOcclusion_ = false;
 };
 
 }
+

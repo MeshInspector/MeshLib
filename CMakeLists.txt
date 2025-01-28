@@ -182,7 +182,6 @@ IF(MESHLIB_BUILD_MRVIEWER)
 ENDIF()
 
 # MRMesh library is always built
-include(ConfigurePCH)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 

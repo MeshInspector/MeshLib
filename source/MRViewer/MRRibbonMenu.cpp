@@ -2091,7 +2091,7 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_O,0 }, { ShortcutManager::Category::View, "Toggle orthographic in current viewport",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_KP_5,0 }, { ShortcutManager::Category::View, "Toggle Orthographic/Perspective View",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
@@ -2137,6 +2137,12 @@ void RibbonMenu::setupShortcuts_()
     }
 
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Top View", { GLFW_KEY_KP_7, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Front View", { GLFW_KEY_KP_1, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Right View", { GLFW_KEY_KP_3, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Bottom View", { GLFW_KEY_KP_7, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Back View", { GLFW_KEY_KP_1, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Left View", { GLFW_KEY_KP_3, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );

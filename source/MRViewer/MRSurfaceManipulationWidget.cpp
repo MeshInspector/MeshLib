@@ -259,8 +259,8 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
         return false;
     
     ObjAndPick objAndPick;
-        objAndPick = getViewerInstance().viewport().pickRenderObject( std::array{ static_cast< VisualObject* >( obj_.get() ) } );
     if ( ignoreOcclusion_ )
+        objAndPick = getViewerInstance().viewport().pickRenderObject( { { static_cast< VisualObject* >( obj_.get() ) } } );
     else
         objAndPick = getViewerInstance().viewport().pick_render_object();
     if ( !objAndPick.first || objAndPick.first != obj_ )
@@ -630,8 +630,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     std::vector<ObjAndPick> movedPosPick;
-        movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
     if ( ignoreOcclusion_ )
+        movedPosPick = getViewerInstance().viewport().multiPickObjects( { { static_cast< VisualObject* >( objMeshPtr.get() ) } }, viewportPoints );
     else
     {
         auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();

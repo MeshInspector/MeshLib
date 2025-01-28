@@ -8,9 +8,8 @@ set -euxo pipefail
 SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 PY_VERSIONS="$(cat $SCRIPT_DIR/python_versions.txt | xargs)"
 
-# This seems to be the default location on Arm Macs, while x86 Macs use `/usr/local`.
-HOMEBREW_DIR=/opt/homebrew
-[[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
+# Should be `/opt/homebrew` on ARM and `/usr/local` on x86.
+[[ ${HOMEBREW_DIR:=} ]] || HOMEBREW_DIR="$(brew --prefix)"
 
 brew update
 

@@ -78,7 +78,7 @@ auto getItemCaption( const std::string& name )->const std::string&
     if ( it == RibbonSchemaHolder::schema().items.end() )
         return name;
     return  it->second.caption.empty() ? name : it->second.caption;
-};
+}
 
 } //anonymous namespace
 

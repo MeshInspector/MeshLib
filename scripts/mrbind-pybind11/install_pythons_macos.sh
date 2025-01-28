@@ -12,20 +12,6 @@ PY_VERSIONS="$(cat $SCRIPT_DIR/python_versions.txt | xargs)"
 HOMEBREW_DIR=/opt/homebrew
 [[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
 
-if [[ ${ENABLE_SUDO:=} == 1 ]]; then
-    SUDO=sudo
-elif [[ ${ENABLE_SUDO:=} == 0 ]]; then
-    SUDO=
-elif which sudo >/dev/null 2>/dev/null; then
-    SUDO=sudo
-else
-    SUDO=
-fi
-
-# ??
-$SUDO find "$HOMEBREW_DIR/bin" -lname '*/Library/Frameworks/Python.framework/*' -delete
-$SUDO rm -rf /Library/Frameworks/Python.framework/
-
 brew update
 
 for ver in $PY_VERSIONS; do

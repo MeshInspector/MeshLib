@@ -105,8 +105,10 @@ jobs:
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
 
       - name: Python setup
+        env:
+          ALLOW_DELETING_EXISTING_PYTHON: 1
         run: |
-          scripts/mrbind-pybind11/install_pythons_ubuntu.sh
+          scripts/mrbind-pybind11/install_all_python_versions_ubuntu.sh
 
       - name: Install thirdparty libs
         # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
@@ -222,7 +224,7 @@ jobs:
         run: C:\vcpkg\vcpkg.exe integrate install
 
       - name: Install all Python versions
-        run: scripts/mrbind-pybind11/install_pythons_windows.bat
+        run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
       - name: Restore CUDA Cache
         uses: actions/cache@v4
@@ -339,7 +341,7 @@ jobs:
         env:
           ENABLE_SUDO: ${{ fromJSON('["1", "0"]')[matrix.platform == 'arm64'] }}
         run: |
-          scripts/mrbind-pybind11/install_pythons_macos.sh
+          scripts/mrbind-pybind11/install_all_python_versions_macos.sh
 
       - name: Create virtualenv
         run: |

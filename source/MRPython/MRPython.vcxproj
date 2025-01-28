@@ -100,6 +100,7 @@
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- Here we copy both python3.dll and python3XY.dll. The former seems to be just a tiny shim for the latter. -->
       <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
       copy $(PythonStableDllPath) $(TargetDir)python3.dll
       </Command>

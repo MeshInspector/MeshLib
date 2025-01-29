@@ -668,6 +668,7 @@
     <ClCompile Include="MRBestFitPolynomial.cpp" />
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
+    <ClCompile Include="MRWasmHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

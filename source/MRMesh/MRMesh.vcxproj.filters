@@ -2075,6 +2075,9 @@
     <ClCompile Include="MRSurfaceLineOffset.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
+    <ClCompile Include="MRWasmHelpers.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

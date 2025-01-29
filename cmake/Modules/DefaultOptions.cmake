@@ -6,6 +6,18 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
+# turn on warnings as errors
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
+
+IF(WIN32 AND MINGW)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
+ENDIF()
+
+IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
+
 IF(MR_EMSCRIPTEN)
   # reference: https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
   string(JOIN " " CMAKE_EXE_LINKER_FLAGS
@@ -23,7 +35,6 @@ IF(MR_EMSCRIPTEN)
   IF(MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web")
   ELSE()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     
     # uncomment to enable source map for debugging in browsers (slow)

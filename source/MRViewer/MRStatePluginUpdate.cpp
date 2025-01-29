@@ -37,10 +37,19 @@ void PluginCloseOnChangeMesh::onPluginEnable_()
     meshChangedConnections_.reserve( meshes.size() );
     meshChanged_ = false;
     for ( auto& mesh : meshes )
-        meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t )
     {
-        meshChanged_ = true;
-    } ) );
+        meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t )
+        {
+            meshChanged_ = true;
+        } ) );
+        if ( reactOnFaceSelectionChanges_() )
+        {
+            meshChangedConnections_.emplace_back( mesh->faceSelectionChangedSignal.connect( [&] ()
+            {
+                meshChanged_ = true;
+            } ) );
+        }
+    }
 }
 
 void PluginCloseOnChangeMesh::onPluginDisable_()

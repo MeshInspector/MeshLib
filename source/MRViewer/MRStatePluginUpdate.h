@@ -40,7 +40,8 @@ private:
 class MRVIEWER_CLASS PluginCloseOnChangeMesh : public virtual IPluginUpdate
 {
 protected:
-    bool reactOnFaceSelectionChanges_{ false }; // plugin can change it to make this helper class also react on face selections updates
+    /// plugin can override it to make this helper class also react on face selections updates
+    virtual bool reactOnFaceSelectionChanges_() const { return false }; 
 
     MRVIEWER_API virtual void onPluginEnable_() override;
     MRVIEWER_API virtual void onPluginDisable_() override;

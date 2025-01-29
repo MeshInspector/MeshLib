@@ -338,7 +338,7 @@ private:
 
         T error = 0;
         for ( auto p : points )
-            error = error + ( cone.projectPoint( p ) - p ).lengthSq();
+            error = error + distanceSq( cone.projectPoint( p ), p );
 
         return error / points.size();
     }

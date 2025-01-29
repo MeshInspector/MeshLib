@@ -183,14 +183,14 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     auto sec = trackSection( mesh, start, finish, Vector3f( 0, 1, 0 ), 0.1f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( finish.e, 10_e );
-    EXPECT_LT( std::abs( ( mesh.triPoint( start ) - mesh.triPoint( finish ) ).length() - 0.1f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( start ), mesh.triPoint( finish ) ) - 0.1f ), eps );
 
     // track within same triangle, another direction
     finish = {};
     sec = trackSection( mesh, start, finish, Vector3f( 0, -1, 0 ), 0.1f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( finish.e, 10_e );
-    EXPECT_LT( std::abs( ( mesh.triPoint( start ) - mesh.triPoint( finish ) ).length() - 0.1f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( start ), mesh.triPoint( finish ) ) - 0.1f ), eps );
 
     // track to the next triangle in same plane
     finish = {};
@@ -199,7 +199,7 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec[0].e, 15_e );
     EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 3_f );
-    EXPECT_LT( std::abs( ( mesh.triPoint( start ) - mesh.triPoint( finish ) ).length() - 0.5f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( start ), mesh.triPoint( finish ) ) - 0.5f ), eps );
 
     // ...one triangle further
     finish = {};
@@ -210,7 +210,7 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec[1].e, 17_e );
     EXPECT_LT( std::abs( sec[1].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 8_f );
-    EXPECT_LT( ( Vector3f( -0.25f, 0.5f, 0.0f ) - mesh.triPoint( finish ) ).length(), eps );
+    EXPECT_LT( distance( Vector3f( -0.25f, 0.5f, 0.0f ), mesh.triPoint( finish ) ), eps );
 
     // track to the next triangle in the opposite direction
     finish = {};
@@ -219,7 +219,7 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec[0].e, 11_e );
     EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 5_f );
-    EXPECT_LT( ( mesh.triPoint( finish ) - Vector3f( -0.25f, -0.5f, 0.0f ) ).length(), eps );
+    EXPECT_LT( distance( mesh.triPoint( finish ), Vector3f( -0.25f, -0.5f, 0.0f ) ), eps );
 
     // track from edge's center
     const MeshTriPoint startE{ 10_e, { 0.5f, 0.0f } };
@@ -227,14 +227,14 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     sec = trackSection( mesh, startE, finish, Vector3f( -1, 1, 0 ).normalized(), 0.25f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( mesh.topology.left( finish.e ), 2_f );
-    EXPECT_LT( ( mesh.triPoint( finish ) - Vector3f( -0.5f, -0.25f, 0.0f ) ).length(), eps );
+    EXPECT_LT( distance( mesh.triPoint( finish ), Vector3f( -0.5f, -0.25f, 0.0f ) ), eps );
 
     // track from edge's center in the opposite direction
     finish = {};
     sec = trackSection( mesh, startE, finish, Vector3f( 1, -1, 0 ).normalized(), 0.25f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( mesh.topology.left( finish.e ), 5_f );
-    EXPECT_LT( ( mesh.triPoint( finish ) - Vector3f( -0.25f, -0.5f, 0.0f ) ).length(), eps );
+    EXPECT_LT( distance( mesh.triPoint( finish ), Vector3f( -0.25f, -0.5f, 0.0f ) ), eps );
 
     // track from vertex
     const MeshTriPoint startV{ 10_e, { 0.0f, 0.0f } };
@@ -242,14 +242,14 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     sec = trackSection( mesh, startV, finish, Vector3f( 1, 0, 2 ).normalized(), 1.0f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( mesh.topology.left( finish.e ), 5_f );
-    EXPECT_LT( std::abs( ( mesh.triPoint( startV ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( startV ), mesh.triPoint( finish ) ) - 1.0f ), eps );
 
     // track from vertex, another direction
     finish = {};
     sec = trackSection( mesh, startV, finish, Vector3f( 2, 0, 1 ).normalized(), 1.0f );
     EXPECT_EQ( sec.size(), 0 );
     EXPECT_EQ( mesh.topology.left( finish.e ), 4_f );
-    EXPECT_LT( std::abs( ( mesh.triPoint( startV ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( startV ), mesh.triPoint( finish ) ) - 1.0f ), eps );
 
     // track from another vertex, with one edge crossing
     const MeshTriPoint startV2{ 10_e, { 1.0f, 0.0f } };
@@ -259,7 +259,7 @@ TEST( MRMesh, TrackPlaneSectionOnDistance )
     EXPECT_EQ( sec[0].e, 20_e );
     EXPECT_LT( std::abs( sec[0].a - 0.5f ), eps );
     EXPECT_EQ( mesh.topology.left( finish.e ), 4_f );
-    EXPECT_LT( std::abs( ( mesh.triPoint( startV2 ) - mesh.triPoint( finish ) ).length() - 1.0f ), eps );
+    EXPECT_LT( std::abs( distance( mesh.triPoint( startV2 ), mesh.triPoint( finish ) ) - 1.0f ), eps );
 
     // delete triangle on track path, expect finish on hole's edge
     FaceBitSet fs( 9, false );

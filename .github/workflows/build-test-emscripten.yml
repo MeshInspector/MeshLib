@@ -20,12 +20,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Singlethreaded, Multithreaded, Multithreaded64Bit]
+        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
           - full_config_build: false
-            config: Multithreaded64Bit
+            config: Multithreaded-64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
@@ -35,8 +35,7 @@ jobs:
             target_name: emscripten
             thirdparty-dir: emscripten
             aws-dir: RMI
-          - config: Multithreaded64Bit
-            full_config_build: true
+          - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
             thirdparty-dir: emscripten-wasm64
             aws-dir: RMI64
@@ -83,7 +82,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
-          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Multithreaded64Bit'] }}
+          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Multithreaded-64Bit'] }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23

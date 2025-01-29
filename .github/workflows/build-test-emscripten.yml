@@ -23,6 +23,9 @@ jobs:
         config: [Singlethreaded, Multithreaded, Multithreaded64Bit]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
+        exclude:
+          - full_config_build: false
+            config: Multithreaded64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
@@ -33,12 +36,10 @@ jobs:
             thirdparty-dir: emscripten
             aws-dir: RMI
           - config: Multithreaded64Bit
+            full_config_build: true
             target_name: emscripten-wasm64
             thirdparty-dir: emscripten-wasm64
             aws-dir: RMI64
-        exclude:
-          - full_config_build: false
-            config: Multithreaded64Bit
 
     steps:
       - name: Work-around possible permission issues

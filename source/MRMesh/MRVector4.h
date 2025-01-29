@@ -129,6 +129,20 @@ inline Vector4<T> operator /( Vector4<T> b, T a )
     { b /= a; return b; }
 
 
+/// squared distance between two points, which is faster to compute than just distance
+template <typename T>
+inline T distanceSq( const Vector4<T> & a, const Vector4<T> & b )
+{
+    return ( a - b ).lengthSq();
+}
+
+/// distance between two points, better use distanceSq for higher performance
+template <typename T>
+inline T distance( const Vector4<T> & a, const Vector4<T> & b )
+{
+    return ( a - b ).length();
+}
+
 /// dot product
 template <typename T>
 inline T dot( const Vector4<T>& a, const Vector4<T>& b )

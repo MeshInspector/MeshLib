@@ -39,7 +39,7 @@ static VertId getFurthestVertexFromPoint( const VertCoords & points, const VertB
     float maxDistSq = 0;
     for ( VertId v : validPoints )
     {
-        const auto distSq = ( points[v] - p ).lengthSq();
+        const auto distSq = distanceSq( points[v], p );
         if ( !res || maxDistSq < distSq )
         {
             res = v;

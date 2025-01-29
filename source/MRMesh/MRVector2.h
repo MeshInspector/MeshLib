@@ -86,6 +86,20 @@ struct Vector2
 /// \related Vector2
 /// \{
 
+/// squared distance between two points, which is faster to compute than just distance
+template <typename T>
+inline T distanceSq( const Vector2<T> & a, const Vector2<T> & b )
+{
+    return ( a - b ).lengthSq();
+}
+
+/// distance between two points, better use distanceSq for higher performance
+template <typename T>
+inline T distance( const Vector2<T> & a, const Vector2<T> & b )
+{
+    return ( a - b ).length();
+}
+
 /// cross product
 template <typename T>
 inline T cross( const Vector2<T> & a, const Vector2<T> & b )

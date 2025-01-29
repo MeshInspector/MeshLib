@@ -30,14 +30,6 @@ IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
     set(CMAKE_CUDA_ARCHITECTURES 52-real 60-real 61-real 70-real 75)
   ENDIF()
 
-  IF(CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
-    set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -use_fast_math")
-  ELSEIF(CMAKE_CUDA_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -ffast-math")
-    # see: https://github.com/llvm/llvm-project/issues/58491
-    set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -Xarch_device -g0")
-  ENDIF()
-
   set(CUDART_LIBRARY CUDA::cudart)
 ELSE()
   # nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
@@ -79,6 +71,14 @@ ELSE()
 ENDIF()
 
 project(MRCuda CXX CUDA)
+
+IF(CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -use_fast_math")
+ELSEIF(CMAKE_CUDA_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -ffast-math")
+  # see: https://github.com/llvm/llvm-project/issues/58491
+  set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -Xarch_device -g0")
+ENDIF()
 
 option(MRCUDA_NO_VOXELS "Disable voxels support" OFF)
 

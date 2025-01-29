@@ -41,7 +41,7 @@ class MRVIEWER_CLASS PluginCloseOnChangeMesh : public virtual IPluginUpdate
 {
 protected:
     /// plugin can override it to make this helper class also react on face selections updates
-    virtual bool reactOnFaceSelectionChanges_() const { return false }; 
+    MRVIEWER_API virtual bool reactOnFaceSelectionChanges_() const { return false; }
 
     MRVIEWER_API virtual void onPluginEnable_() override;
     MRVIEWER_API virtual void onPluginDisable_() override;

@@ -42,7 +42,7 @@ void PluginCloseOnChangeMesh::onPluginEnable_()
         {
             meshChanged_ = true;
         } ) );
-        if ( reactOnFaceSelectionChanges_ )
+        if ( reactOnFaceSelectionChanges_() )
         {
             meshChangedConnections_.emplace_back( mesh->faceSelectionChangedSignal.connect( [&] ()
             {

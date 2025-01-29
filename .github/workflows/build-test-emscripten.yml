@@ -6,6 +6,10 @@ on:
       docker_image_tag:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   emscripten-build:
@@ -16,14 +20,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Singlethreaded, Multithreaded]
+        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
+        full_config_build:
+          - ${{ fromJSON( inputs.full_config_build ) }}
+        exclude:
+          - full_config_build: false
+            config: Multithreaded-64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
+            thirdparty-dir: emscripten-single
             aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
+            thirdparty-dir: emscripten
             aws-dir: RMI
+          - config: Multithreaded-64Bit
+            target_name: emscripten-wasm64
+            thirdparty-dir: emscripten-wasm64
+            aws-dir: RMI64
 
     steps:
       - name: Work-around possible permission issues
@@ -57,11 +72,9 @@ jobs:
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Install thirdparty libs
-        env:
-          MESHLIB_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
         run: |
-          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/lib ./lib
-          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/include ./include
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
 
       - name: Build
         env:
@@ -69,6 +82,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
+          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Multithreaded-64Bit'] }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23

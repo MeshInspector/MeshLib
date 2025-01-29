@@ -43,6 +43,16 @@ RUN mkdir /usr/local/lib/emscripten-single/ && \
     cp -r lib /usr/local/lib/emscripten-single/ && \
     cp -r include /usr/local/lib/emscripten-single/
 
+RUN rm -rf ./lib
+
+ENV MR_EMSCRIPTEN_SINGLE=OFF
+ENV MR_EMSCRIPTEN_WASM64=ON
+RUN ./scripts/build_thirdparty.sh
+
+RUN mkdir /usr/local/lib/emscripten-wasm64/ && \
+    cp -r lib /usr/local/lib/emscripten-wasm64/ && \
+    cp -r include /usr/local/lib/emscripten-wasm64/
+
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \

@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
-IF(APPLE)
-  include(ConfigureHomebrew)
-ENDIF()
+include(DefaultOptions)
 
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
   # print compile time of each translation unit in the CSV format (user time, system time, command)
@@ -68,6 +66,8 @@ IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
 ENDIF()
 
 IF(APPLE)
+  include(ConfigureHomebrew)
+
   # need to hardcode some path to fix wheel (no option to pass path)
   # TODO: revise
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")

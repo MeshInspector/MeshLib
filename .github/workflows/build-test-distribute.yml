@@ -107,7 +107,8 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build: ${{ needs.config.outputs.full_config_build == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}

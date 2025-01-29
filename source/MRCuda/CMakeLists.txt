@@ -24,7 +24,7 @@ IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
     set(CMAKE_CUDA_ARCHITECTURES 52-real 60-real 61-real 70-real 75)
   ENDIF()
 
-  set(CUDART_LIBRARY CUDA::cudart)
+  set(CUDART_LIBRARY CUDA::cudart_static)
 ELSE()
   # nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
   set(CMAKE_CXX_STANDARD 20)

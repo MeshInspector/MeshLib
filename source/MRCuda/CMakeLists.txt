@@ -1,41 +1,61 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-# nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-IF(CMAKE_VERSION VERSION_LESS 3.25.2)
-  # more info: https://gitlab.kitware.com/cmake/cmake/-/issues/23079
-  IF(NOT DEFINED CMAKE_CUDA20_STANDARD_COMPILE_OPTION)
-    set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
-    set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
+IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+  set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+  set(CMAKE_CUDA_STANDARD 20)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+  find_package(CUDAToolkit 12 REQUIRED)
+
+  IF(NOT DEFINED ${CMAKE_CUDA_ARCHITECTURES})
+    set(CMAKE_CUDA_ARCHITECTURES 52 60 61 70 75)
   ENDIF()
+
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -use_fast_math")
+
+  set(CUDART_LIBRARY CUDA::cudart)
+ELSE()
+  # nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
+  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+  IF(CMAKE_VERSION VERSION_LESS 3.25.2)
+    # more info: https://gitlab.kitware.com/cmake/cmake/-/issues/23079
+    IF(NOT DEFINED CMAKE_CUDA20_STANDARD_COMPILE_OPTION)
+      set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
+      set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
+    ENDIF()
+  ENDIF()
+
+  set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")
+  set(CMAKE_CUDA_PATH /usr/local/cuda/)
+  set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
+  set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
+
+  # without it we get "nvcc warning : The -std=c++20 flag is not supported with the configured host compiler. Flag will be ignored."
+  # https://stackoverflow.com/q/77170793/7325599
+  set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+  message("CMAKE_CXX_COMPILER=CMAKE_CUDA_HOST_COMPILER=${CMAKE_CUDA_HOST_COMPILER}")
+
+  find_package(CUDA 12 REQUIRED)
+
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} \
+    --std c++20 \
+    -use_fast_math \
+    -arch=sm_52 \
+    -gencode=arch=compute_52,code=sm_52 \
+    -gencode=arch=compute_60,code=sm_60 \
+    -gencode=arch=compute_61,code=sm_61 \
+    -gencode=arch=compute_70,code=sm_70 \
+    -gencode=arch=compute_75,code=sm_75 \
+    -gencode=arch=compute_75,code=compute_75"
+  )
+  set(CUDA_VERBOSE_BUILD ON)
+
+  set(CUDART_LIBRARY ${CUDA_LIBRARIES})
 ENDIF()
-
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")
-set(CMAKE_CUDA_PATH /usr/local/cuda/)
-set(CUDA_NVCC_EXECUTABLE ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
-set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
-
-# without it we get "nvcc warning : The -std=c++20 flag is not supported with the configured host compiler. Flag will be ignored."
-# https://stackoverflow.com/q/77170793/7325599
-set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-message("CMAKE_CXX_COMPILER=CMAKE_CUDA_HOST_COMPILER=${CMAKE_CUDA_HOST_COMPILER}")
-
-# TODO: migrate to FindCUDAToolkit (CMake 3.17 or later)
-find_package(CUDA 12 REQUIRED)
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} \
-  --std c++20 \
-  -use_fast_math \
-  -arch=sm_52 \
-  -gencode=arch=compute_52,code=sm_52 \
-  -gencode=arch=compute_60,code=sm_60 \
-  -gencode=arch=compute_61,code=sm_61 \
-  -gencode=arch=compute_70,code=sm_70 \
-  -gencode=arch=compute_75,code=sm_75 \
-  -gencode=arch=compute_75,code=compute_75"
-)
-set(CUDA_VERBOSE_BUILD ON)
 
 project(MRCuda CXX CUDA)
 
@@ -67,6 +87,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   spdlog
   fmt
   tbb
+  ${CUDART_LIBRARY}
   ${MRCUDA_OPTIONAL_DEPENDENCIES}
 )
 

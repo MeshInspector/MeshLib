@@ -30,12 +30,10 @@ ELSE()
   set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-  IF(CMAKE_VERSION VERSION_LESS 3.25.2)
-    # more info: https://gitlab.kitware.com/cmake/cmake/-/issues/23079
-    IF(NOT DEFINED CMAKE_CUDA20_STANDARD_COMPILE_OPTION)
-      set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
-      set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
-    ENDIF()
+  # more info: https://gitlab.kitware.com/cmake/cmake/-/issues/23079
+  IF(NOT DEFINED CMAKE_CUDA20_STANDARD_COMPILE_OPTION)
+    set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
+    set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
   ENDIF()
 
   set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda/")

@@ -104,6 +104,7 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=ON
+            -DMRCUDA_OVERRIDE_HOST_COMPILER=ON
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh fedora39 ${{matrix.config}} "${{matrix.compiler}}"

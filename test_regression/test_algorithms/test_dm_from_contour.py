@@ -2,8 +2,13 @@ from module_helper import *
 from pathlib import Path
 from constants import test_files_path
 from helpers.meshlib_helpers import compare_distance_maps
+import pytest
 
 
+@pytest.mark.skipif(
+    "not config.getoption('--run-cuda')=='positive'",
+    reason="Only run when --run-cuda is 'positive'",
+)
 def test_dm_from_contour(tmp_path):
     """
 

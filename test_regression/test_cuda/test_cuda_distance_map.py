@@ -8,7 +8,7 @@ from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
 
 @pytest.mark.skipif(
     "not config.getoption('--run-cuda')=='positive'",
-    reason="Only run when --run-cuda is 'p'",
+    reason="Only run when --run-cuda is 'positive'",
 )
 def test_cuda_mesh_to_dm(cuda_module, tmp_path):
 

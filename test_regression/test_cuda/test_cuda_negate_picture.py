@@ -9,7 +9,7 @@ from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh, com
 
 @pytest.mark.skipif(
     "not config.getoption('--run-cuda')=='positive'",
-    reason="Only run when --run-cuda is 'p'",
+    reason="Only run when --run-cuda is 'positive'",
 )
 def test_cuda_negate_pic(cuda_module, tmp_path):
     input_folder = Path(test_files_path) / "cuda" / "negate_pic"

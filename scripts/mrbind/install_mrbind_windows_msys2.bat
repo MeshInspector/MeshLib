@@ -1,14 +1,16 @@
 @echo off
 
-rem Downloads the source code for MRBind and builds it, at `MeshLib/mrbind/build`.
+rem Builds the MRBind submodule at `MeshLib/mrbind/build`.
 rem Before running this, run `install_deps_windows_msys2.bat`.
 
-rem Push variables, and enable extensions (for `mkdir` to behave like Linux `mkdir -p`).
+rem Push variables.
+setlocal
+rem Push enable extensions (for `mkdir` to behave like Linux `mkdir -p`).
 setlocal enableextensions
 
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
-if "%MRBIND_DIR%" == "" set MRBIND_DIR=%~dp0\..\..\mrbind
+if "%MRBIND_DIR%" == "" set MRBIND_DIR=%~dp0\..\..\thirdparty\mrbind
 
 if "%MRBIND_COMMIT%" == "" set /p MRBIND_COMMIT=<%~dp0\mrbind_commit.txt
 
@@ -20,23 +22,7 @@ if not exist %MSYS2_DIR% (
 ) else (
     echo Found MSYS2 at `%MSYS2_DIR%`.
 
-
-    rem --- Ensure the MRBind source exists. Pull the latest version if already exists.
-    if exist %MRBIND_DIR% (
-        echo Found MRBind sources at `%MRBIND_DIR%`.
-        cd %MRBIND_DIR%
-        git fetch
-    ) else (
-        echo Didn't find MRBind sources at `%MRBIND_DIR%`, cloning...
-
-        rem Create the target directory first.
-        mkdir %MRBIND_DIR%
-
-        git clone https://github.com/MeshInspector/mrbind %MRBIND_DIR%
-        cd %MRBIND_DIR%
-    )
-
-    git checkout %MRBIND_COMMIT%
+    cd %MRBIND_DIR%
 
     rem --- Build MRBind
     rmdir /S /Q build
@@ -46,5 +32,7 @@ if not exist %MSYS2_DIR% (
 rem Restore the original directory.
 popd
 
+rem Pop extensions.
+endlocal
 rem Pop variables.
 endlocal

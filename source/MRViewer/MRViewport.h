@@ -515,8 +515,9 @@ private:
 
     // init basis axis in the corner
     void initBaseAxes();
-    // Drawing basis axes in the corner
-    void drawAxes() const;
+    // Drawing basis axes and view controller cube in the corner
+    void drawAxesAndViewController() const;
+
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
     Matrix4f staticProj_;

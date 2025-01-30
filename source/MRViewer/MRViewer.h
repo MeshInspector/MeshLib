@@ -467,6 +467,7 @@ public:
     std::vector<std::string> commandArgs;
 
     std::shared_ptr<ObjectMesh> basisAxes;
+    std::shared_ptr<ObjectMesh> basisViewController;
     std::shared_ptr<ObjectMesh> globalBasisAxes;
     std::shared_ptr<ObjectMesh> rotationSphere;
     // Stores clipping plane mesh
@@ -641,6 +642,7 @@ private:
 
     void initGlobalBasisAxesObject_();
     void initBasisAxesObject_();
+    void initBasisViewControllerObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
     void initSpaceMouseHandler_();

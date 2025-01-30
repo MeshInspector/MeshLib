@@ -467,7 +467,7 @@ void Viewport::postDraw() const
     draw_clipping_plane();
 
     // important to be last
-    drawAxes();
+    drawAxesAndViewController();
 }
 
 void Viewport::updateSceneBox_()
@@ -620,9 +620,11 @@ void Viewport::initBaseAxes()
     relPoseSide = { axesX + pixSize, axesY + pixSize, 0.5f };
 }
 
-void Viewport::drawAxes() const
+void Viewport::drawAxesAndViewController() const
 {
-    if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
+    bool basisVisible = getViewerInstance().basisAxes->isVisible( id );
+    bool controllerVisible = getViewerInstance().basisViewController->isVisible( id );
+    if ( basisVisible || controllerVisible )
     {
         // compute inverse in double precision to avoid NaN for very small scales
         auto fullInversedM = Matrix4f( ( Matrix4d( staticProj_ ) * Matrix4d( viewM_ ) ).inverse() );
@@ -631,12 +633,23 @@ void Viewport::drawAxes() const
 
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
-        for ( const auto& child : getViewerInstance().basisAxes->children() )
+        if ( basisVisible )
         {
-            if ( auto visualChild = child->asType<VisualObject>() )
-                draw( *visualChild, basisAxesXf, staticProj_ );
+            draw( *getViewerInstance().basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
+        }
+        if ( controllerVisible )
+        {
+            draw( *getViewerInstance().basisViewController, basisAxesXf, staticProj_, DepthFunction::Always );
+            draw( *getViewerInstance().basisViewController, basisAxesXf, staticProj_ );
+        }
+        if ( basisVisible )
+        {
+            draw( *getViewerInstance().basisAxes, basisAxesXf, staticProj_ );
+            for ( const auto& child : getViewerInstance().basisAxes->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf, staticProj_ );
+            }
         }
     }
 }

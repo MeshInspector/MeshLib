@@ -454,6 +454,9 @@
     <ClCompile Include="MROpenObjects.cpp">
       <Filter>IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewportCornerController.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -889,6 +892,9 @@
       <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="MRViewerTitle.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewportCornerController.h">
       <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>

@@ -41,4 +41,15 @@ enum class OffsetMode : int
     Sharpening  ///< create mesh using standard marching cubes with additional sharpening implemented in MeshLib
 };
 
+/// Type of object coloring,
+/// \note that texture are applied over main coloring
+enum class ColoringType
+{
+    SolidColor,   ///< Use one color for whole object
+    PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each primitive
+    FacesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each face (primitive for object mesh)
+    LinesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each line (primitive for object lines)
+    VertsColorMap  ///< Use different color (taken from verts colormap) for each vertex
+};
+
 } //namespace MR

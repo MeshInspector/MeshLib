@@ -26,7 +26,7 @@ WORKDIR "/home/MeshLib"
 COPY . .
 
 # Patch Emscripten
-RUN patch -Np1 -d /emsdk/upstream/emscripten/ -i ./docker/patches/emscripten-fix-memory64-glfw-drop.patch
+RUN patch -Np1 -d /emsdk/upstream/emscripten/ -i /home/MeshLib/docker/patches/emscripten-fix-memory64-glfw-drop.patch
 
 # Build thirdparty
 ENV MR_STATE=DOCKER_BUILD

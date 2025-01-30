@@ -15,7 +15,7 @@ it.path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__fil
 
 path_to_imgui = os.path.join(os.path.join(it.base_path,'thirdparty'),'imgui')
 path_to_phmap = os.path.join(os.path.join(it.base_path,'thirdparty'),'parallel-hashmap')
-path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdparty'),'pybind11'),'include')
+path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdparty'),'mrbind-pybind11'),'include')
 
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
@@ -80,6 +80,8 @@ def copy_lib():
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*.pyd")):
 		os.remove(f)
 	for f in glob.glob(os.path.join(it.path_to_libs, "__init__.py")):
+		os.remove(f)
+	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
 		os.remove(f)
 
 it.prepare_includes_list = prepare_includes_list

@@ -7,9 +7,6 @@
 [submodule "thirdparty/eigen"]
 	path = thirdparty/eigen
 	url = https://gitlab.com/cantonios/eigen.git
-[submodule "thirdparty/pybind11"]
-	path = thirdparty/pybind11
-	url = https://github.com/pybind/pybind11.git
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
@@ -70,3 +67,6 @@
 [submodule "thirdparty/fmt"]
 	path = thirdparty/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "thirdparty/mrbind-pybind11"]
+	path = thirdparty/mrbind-pybind11
+	url = https://github.com/MeshInspector/mrbind-pybind11

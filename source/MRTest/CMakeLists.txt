@@ -20,9 +20,10 @@ IF(APPLE)
     MRViewer
     jsoncpp
     fmt
-    GTest::gtest
+    gtest
     spdlog
     Python::Python
+    pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
 ELSE()
@@ -37,6 +38,7 @@ ELSE()
       gtest
       spdlog
       Python::Python
+      pybind11nonlimitedapi_stubs
       ${CMAKE_DL_LIBS}
     )
   ELSE()

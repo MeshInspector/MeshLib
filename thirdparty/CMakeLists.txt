@@ -172,8 +172,10 @@ ENDIF()
 set(GLAD_INSTALL ON)
 set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
-set(PYBIND11_INSTALL ON)
-add_subdirectory(./pybind11)
+IF(NOT MR_EMSCRIPTEN)
+  set(PYBIND11_INSTALL ON)
+  add_subdirectory(./mrbind-pybind11)
+ENDIF()
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
@@ -187,4 +189,3 @@ install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/i
 install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-

@@ -12,8 +12,6 @@ if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
 if "%MRBIND_DIR%" == "" set MRBIND_DIR=%~dp0\..\..\thirdparty\mrbind
 
-if "%MRBIND_COMMIT%" == "" set /p MRBIND_COMMIT=<%~dp0\mrbind_commit.txt
-
 rem Preserve the current directory. We'll do `popd` at the end...
 pushd .
 

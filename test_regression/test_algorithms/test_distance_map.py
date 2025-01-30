@@ -2,7 +2,7 @@ from module_helper import *
 from pathlib import Path
 from pytest_check import check
 from constants import test_files_path
-from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
+from helpers.meshlib_helpers import compare_meshes_similarity
 
 import pytest
 

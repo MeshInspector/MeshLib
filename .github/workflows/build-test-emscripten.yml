@@ -21,24 +21,23 @@ jobs:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
-        full_config_build:
-          - ${{ fromJSON( inputs.full_config_build ) }}
-        exclude:
-          - full_config_build: false
-            config: Multithreaded-64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
             aws-dir: RMISingle
+            build: true
           - config: Multithreaded
             target_name: emscripten
             thirdparty-dir: emscripten
             aws-dir: RMI
+            build: true
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
             thirdparty-dir: emscripten-wasm64
             aws-dir: RMI64
+            build: ${{ inputs.full_config_build }}
+    if: ${{ matrix.build }}
 
     steps:
       - name: Work-around possible permission issues

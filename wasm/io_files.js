@@ -1,3 +1,16 @@
+var pointerSize = 0;
+
+var getPointerSize = function () {
+    if (!pointerSize) {
+        pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
+    }
+    return pointerSize;
+}
+
+var toPointer = function (value) {
+    return getPointerSize() == 8 ? BigInt(value) : value;
+}
+
 var freeFSCallback = function () {
   Module.ccall('emsFreeFSCallback', 'void', [], []);
 }
@@ -133,7 +146,7 @@ var open_files = function (e) {
     return;
   }
   e.preventDefault();
-  var filenames = _malloc(e.target.files.length * 4);
+  var filenames = _malloc(e.target.files.length * getPointerSize());
   var filenamesArray = [];
   var count = e.target.files.length;
   var written = 0;
@@ -151,7 +164,7 @@ var open_files = function (e) {
       var data = e.target.result;
       FS.writeFile(path, new Uint8Array(data));
       if (++written === count) {
-        Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, filenames]);
+        Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, toPointer(filenames)]);
         for (var i = 0; i < filenamesArray.length; ++i) {
           _free(filenamesArray[i]);
         }
@@ -164,7 +177,9 @@ var open_files = function (e) {
     reader.readAsArrayBuffer(file);
     var filename = stringToNewUTF8(path);
     filenamesArray.push(filename);
-    if (typeof GROWABLE_HEAP_U32 !== 'undefined')
+    if (getPointerSize() == 8)
+      HEAPU64[(filenames + i * 8) / 8] = BigInt(filename);
+    else if (typeof GROWABLE_HEAP_U32 !== 'undefined')
       GROWABLE_HEAP_U32()[filenames + i * 4 >> 2] = filename;
     else
       HEAP32[filenames + i * 4 >> 2] = filename;

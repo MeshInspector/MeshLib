@@ -174,6 +174,8 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
 
+        if ( params.signDetectionMode == SignDetectionMode::HoleWindingRule )
+            mp.mesh.getDipoles(); // prepare all trees before parallel regions
         if ( funcVolume )
         {
             return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );

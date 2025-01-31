@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVoxelsVolumeAccess.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -89,12 +90,14 @@ private:
         const auto z = z_ + (int)layerIndex;
         const auto& dims = indexer_.dims();
         assert( 0 <= z && z < dims.z );
-        auto loc = indexer_.toLoc( Vector3i{ 0, 0, z } );
-        firstLayerVoxelId_[layerIndex] = loc.id;
-        size_t n = 0;
-        for ( loc.pos.y = 0; loc.pos.y < dims.y; ++loc.pos.y )
+        firstLayerVoxelId_[layerIndex] = indexer_.toVoxelId( Vector3i{ 0, 0, z } );
+        ParallelFor( 0, dims.y, [&]( int y )
+        {
+            auto loc = indexer_.toLoc( Vector3i{ 0, y, z } );
+            size_t n = size_t( y ) * dims.x;
             for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
                 layer[n] = accessor_.get( loc );
+        } );
     }
 
 private:

@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRVector.h"
+#include "MRColorTheme.h"
 
 namespace MR
 {
@@ -131,36 +132,95 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
     return outMesh;
 }
 
-FaceColors makeCornerControllerColorMap()
+const FaceColors& getCornerControllerColorMap()
 {
-    const int f2RankOffset = 2 * 6;
-    const int f2RankSize = 12 * 4;
-    const int f3RankOffset = f2RankOffset + f2RankSize;
-    FaceColors colors;
-    colors.resize( f3RankOffset + 8 * 6 );
-    for ( FaceId f( 0 ); f < colors.size(); ++f )
+    static FaceColors colors;
+    if ( colors.empty() )
     {
-        if ( f < f2RankOffset )
+        const int f2RankOffset = 2 * 6;
+        const int f2RankSize = 12 * 4;
+        const int f3RankOffset = f2RankOffset + f2RankSize;
+
+        colors.resize( f3RankOffset + 8 * 6 );
+        for ( FaceId f( 0 ); f < colors.size(); ++f )
         {
-            if ( f < f2RankOffset / 3 )
-                colors[f] = Color::red();
-            else if ( f < f2RankOffset * 2 / 3 )
-                colors[f] = Color::green();
+            if ( f < f2RankOffset )
+            {
+                if ( f < f2RankOffset / 3 )
+                    colors[f] = Color::red();
+                else if ( f < f2RankOffset * 2 / 3 )
+                    colors[f] = Color::green();
+                else
+                    colors[f] = Color::blue();
+            }
+            else if ( f < f3RankOffset )
+            {
+                auto fOff = f - f2RankOffset;
+                if ( fOff < f2RankSize / 3 )
+                    colors[f] = Color( 190, 190, 0 );
+                else if ( fOff < f2RankSize * 2 / 3 )
+                    colors[f] = Color( 0, 190, 190 );
+                else
+                    colors[f] = Color( 190, 0, 190 );
+            }
             else
-                colors[f] = Color::blue();
+                colors[f] = Color( 127, 127, 127 );
         }
-        else if ( f < f3RankOffset )
+    }
+    return colors;
+}
+
+RegionId getCornerControllerRegionByFace( FaceId face )
+{
+    static Face2RegionMap map;
+    if ( map.empty() )
+    {
+        RegionId currentRegion;
+        map.resize( 2 * 6 + 4 * 12 + 6 * 8 );
+        for ( int i = 0; i < 2 * 6; ++i )
         {
-            auto fOff = f - f2RankOffset;
-            if ( fOff < f2RankSize / 3 )
-                colors[f] = Color( 190, 190, 0 );
-            else if ( fOff < f2RankSize * 2 / 3 )
-                colors[f] = Color( 0, 190, 190 );
-            else
-                colors[f] = Color( 190, 0, 190 );
+            if ( i % 2 == 0 )
+                ++currentRegion;
+            map[FaceId( i )] = currentRegion;
         }
-        else
-            colors[f] = Color( 127, 127, 127 );
+        auto f2RankOffset = 2 * 6;
+        for ( int i = 0; i < 4 * 12; ++i )
+        {
+            if ( i % 4 == 0 )
+                ++currentRegion;
+            map[FaceId( f2RankOffset + i )] = currentRegion;
+        }
+        auto f3RankOffset = f2RankOffset + 4 * 12;
+        for ( int i = 0; i < 6 * 8; ++i )
+        {
+            if ( i % 6 == 0 )
+                ++currentRegion;
+            map[FaceId( f3RankOffset + i )] = currentRegion;
+        }
+    }    
+    return map[face];
+}
+
+FaceColors getCornerControllerHoveredColorMap( RegionId rId )
+{
+    auto colors = getCornerControllerColorMap();
+    if ( rId < 6 )
+    {
+        FaceId shift = FaceId( rId * 2 );
+        for ( FaceId f( shift ); f < shift + 2; ++f )
+            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+    }
+    else if ( rId < 6 + 12 )
+    {
+        FaceId shift = FaceId( 2 * 6 + ( rId - 6 ) * 4 );
+        for ( FaceId f( shift ); f < shift + 4; ++f )
+            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+    }
+    else
+    {
+        FaceId shift = FaceId( 2 * 6 + 4 * 12 + ( rId - 6 - 12 ) * 6 );
+        for ( FaceId f( shift ); f < shift + 6; ++f )
+            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
     }
     return colors;
 }

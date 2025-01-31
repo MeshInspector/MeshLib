@@ -5,8 +5,10 @@
 #include "MRViewport.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRQuaternion.h"
-#include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
+#include "MRMesh/MR2to3.h"
+#include "MRViewportCornerController.h"
 
 
 #ifdef __EMSCRIPTEN__
@@ -270,7 +272,7 @@ bool MouseController::preMouseMove_( int x, int y )
     // Own handle (camera control)
 
     if ( currentMode_ == MouseMode::None )
-        return false;
+        return tryViewController_();
 
     auto& viewport = viewer.viewport();
     AffineXf3f xf;
@@ -382,6 +384,65 @@ void MouseController::resetAllIfNeeded_()
         return;
     for ( auto btn : downState_ )
         getViewerInstance().mouseUp( MouseButton( btn ), 0 );
+}
+
+bool MouseController::tryViewController_()
+{
+    auto setHovered = [&] ( RegionId region )
+    {
+        if ( region == viewControllerHoveredRegion_ )
+            return;
+        viewControllerHoveredRegion_ = region;
+        if ( viewControllerHoveredRegion_ )
+        {
+            getViewerInstance().setSceneDirty();
+            getViewerInstance().basisViewController->setFacesColorMap( getCornerControllerHoveredColorMap( viewControllerHoveredRegion_ ) );
+        }
+        else
+        {
+            getViewerInstance().setSceneDirty();
+            getViewerInstance().basisViewController->setFacesColorMap( getCornerControllerColorMap() );
+        }
+    };
+
+    auto hoveredVpId = getViewerInstance().getHoveredViewportId();
+    if ( !hoveredVpId.valid() )
+    {
+        setHovered( {} );
+        return false;
+    }
+    const auto& vp = getViewerInstance().viewport( hoveredVpId );
+    if ( !getViewerInstance().basisViewController->isVisible( vp.id ) )
+    {
+        setHovered( {} );
+        return false;
+    }
+    auto screenPos = to2dim( getViewerInstance().viewportToScreen( to3dim( vp.getAxesPosition() ), vp.id ) );
+
+    if ( distanceSq( Vector2f( currentMousePos_ ), screenPos ) > sqr( vp.getAxesSize() ) )
+    {
+        setHovered( {} );
+        return false;
+    }
+
+    if ( !getViewerInstance().basisViewController->parent() )
+    {
+        // make fictive parent so picker works as expected (we need to make getSharedPtr() work)
+        static std::shared_ptr<Object> fictiveParent = std::make_shared<Object>();
+        fictiveParent->addChild( getViewerInstance().basisViewController );
+    }
+
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getStaticProjectionMatrix() );
+    auto [obj,pick] = vp.pickRenderObject( { { getViewerInstance().basisViewController.get() } }, { .baseRenderParams = &staticRenderParams } );
+    if ( obj != getViewerInstance().basisViewController )
+    {
+        setHovered( {} );
+        return false;
+    }
+
+    setHovered( getCornerControllerRegionByFace( pick.face ) );
+
+    return false;
 }
 
 }

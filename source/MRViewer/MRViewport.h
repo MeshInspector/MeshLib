@@ -77,6 +77,13 @@ public:
     MRVIEWER_API void setAxesPos( const int pixelXoffset = -100, const int pixelYoffset = -100 );
     MRVIEWER_API void setAxesSize( const int axisPixSize = 80 );
 
+    /// returns position of basis axes in viewport space
+    MRVIEWER_API const Vector2f& getAxesPosition() const;
+    MRVIEWER_API float getAxesSize() const;
+
+    /// returns projection matrix that is used for basis axes and view controller rendering
+    const Matrix4f& getStaticProjectionMatrix() const { return staticProj_; }
+
     // Shutdown
     MRVIEWER_API void shut();
 
@@ -170,6 +177,9 @@ public:
         // will be returned as the result, even if there are others within the radius, including closer objects.
         bool exactPickFirst = true;
 
+        // if not nullptr it can override render params for picker
+        const BaseRenderParams* baseRenderParams{ nullptr };
+
         // This will always return `{}`. We need the functions because `= {}`
         //   can't be used directly inside default arguments in the same class.
         // You don't have to use this function.
@@ -229,7 +239,7 @@ public:
     // This function allows to pick several custom viewport space points by GL
     // returns vector of pairs [obj,pick]
     // To hardcode the list of `objects`, use `{{ a, b, c }}`.
-    MRVIEWER_API std::vector<ObjAndPick> multiPickObjects( std::span<VisualObject* const> objects, const std::vector<Vector2f>& viewportPoints ) const;
+    MRVIEWER_API std::vector<ObjAndPick> multiPickObjects( std::span<VisualObject* const> objects, const std::vector<Vector2f>& viewportPoints, const BaseRenderParams* overrideRenderParams = nullptr ) const;
 
     // This function finds all visible objects in given rect (max excluded) in viewport space,
     // maxRenderResolutionSide - this parameter limits render resolution to improve performance
@@ -521,8 +531,8 @@ private:
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
     Matrix4f staticProj_;
-    Vector3f relPoseBase;
-    Vector3f relPoseSide;
+    Vector2f basisAxesPos_;
+    float basisAxesSize_;
 
     // basis axis params
     int pixelXoffset_{ -100 };

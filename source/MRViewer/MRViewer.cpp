@@ -2068,9 +2068,9 @@ void Viewer::initBasisViewControllerObject_()
     std::shared_ptr<Mesh> basisControllerMesh = std::make_shared<Mesh>( makeCornerControllerMesh( 0.8f ) );
     basisViewController = std::make_shared<ObjectMesh>();
     basisViewController->setMesh( basisControllerMesh );
-    basisViewController->setName( "Basis axes mesh" );
+    basisViewController->setName( "Corner View Controller" );
     basisViewController->setFlatShading( true );
-    basisViewController->setFacesColorMap( makeCornerControllerColorMap() );
+    basisViewController->setFacesColorMap( getCornerControllerColorMap() );
     basisViewController->setColoringType( ColoringType::FacesColorMap );
 }
 

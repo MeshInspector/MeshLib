@@ -18,6 +18,12 @@ MRVIEWER_API Mesh makeCornerControllerMesh( float size, float cornerRatio = 0.2f
 /// z side - blue\n
 /// xy - mixed red + green\n
 /// etc.
-MRVIEWER_API FaceColors makeCornerControllerColorMap();
+MRVIEWER_API const FaceColors& getCornerControllerColorMap();
+
+/// returns region id of corner controller by its face
+MRVIEWER_API RegionId getCornerControllerRegionByFace( FaceId face );
+
+/// returns color map with region faces hovered
+MRVIEWER_API FaceColors getCornerControllerHoveredColorMap( RegionId rId );
 
 }

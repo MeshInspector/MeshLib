@@ -33,4 +33,3 @@ source/MRDotNetTest/obj/*
 /lib
 /lib64
 /include
-/mrbind

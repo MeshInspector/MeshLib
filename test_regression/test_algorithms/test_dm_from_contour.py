@@ -4,7 +4,7 @@ from constants import test_files_path
 from helpers.meshlib_helpers import compare_distance_maps
 import pytest
 
-
+@pytest.mark.bindingsV3
 def test_dm_from_contour(tmp_path):
     #  Load input point
     input_folder = Path(test_files_path) / "algorithms" / "lines_to_dm"

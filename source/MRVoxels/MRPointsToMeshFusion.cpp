@@ -53,7 +53,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.lessInside = true;
 
     Expected<Mesh> res;
-    if ( params.createVolumeCallback && ( !params.isCreateVolumeCallbackAvailable || params.isCreateVolumeCallbackAvailable( cloud, p2vParams ) ) )
+    if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
     {
         res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
         {

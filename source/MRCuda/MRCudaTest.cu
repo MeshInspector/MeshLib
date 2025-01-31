@@ -24,7 +24,7 @@ __global__ void negateKernel( uint8_t* imagePtr, const int size )
 void negatePictureKernel( DynamicArray<Color>& data )
 {
     constexpr int maxThreadsPerBlock = 640;
-    int numBlocks = ( int( data.size() ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
+    int numBlocks = int( ( data.size() + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
     // kernel
     negateKernel<<< numBlocks, maxThreadsPerBlock >>>( ( uint8_t* )data.data(), int( data.size() ) );
 }

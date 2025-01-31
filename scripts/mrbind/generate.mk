@@ -149,7 +149,7 @@ $(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exis
 endif
 
 # Source directory of MRBind.
-MRBIND_SOURCE := $(makefile_dir)../../mrbind
+MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
 
 # MRBind executable .
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind

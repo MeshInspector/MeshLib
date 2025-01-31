@@ -77,6 +77,7 @@ private:
     bool preMouseUp_( MouseButton button, int modifier );
     bool preMouseMove_( int x, int y );
     bool mouseScroll_( float delta );
+    void preDraw_();
 
     bool isCursorInside_{ false };
     void cursorEntrance_( bool entered );
@@ -109,7 +110,8 @@ private:
 
     bool scrollActive_{ true };
     RegionId viewControllerHoveredRegion_;
-    bool tryViewController_();
+    bool tryHoverViewController_();
+    bool tryPressViewController_();
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
     std::function<void( float& )> fovModifierCb_;

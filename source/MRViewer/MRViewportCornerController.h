@@ -26,4 +26,7 @@ MRVIEWER_API RegionId getCornerControllerRegionByFace( FaceId face );
 /// returns color map with region faces hovered
 MRVIEWER_API FaceColors getCornerControllerHoveredColorMap( RegionId rId );
 
+/// setup camera for selected viewport by corner controller region
+MRVIEWER_API void updateCurrentViewByControllerRegion( RegionId rId );
+
 }

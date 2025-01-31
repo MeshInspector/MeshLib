@@ -4,6 +4,8 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRVector.h"
 #include "MRColorTheme.h"
+#include "MRViewer.h"
+#include "MRViewport.h"
 
 namespace MR
 {
@@ -223,6 +225,102 @@ FaceColors getCornerControllerHoveredColorMap( RegionId rId )
             colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
     }
     return colors;
+}
+
+void updateCurrentViewByControllerRegion( RegionId rId )
+{
+    Viewport& vp = getViewerInstance().viewport();
+    switch ( int( rId ) )
+    {
+    // sides
+    case 0: //from  -x
+        vp.cameraLookAlong( { 1,0,0 }, { 0,0,1 } );
+        break;
+    case 1: //from  x
+        vp.cameraLookAlong( { -1,0,0 }, { 0,0,1 } );
+        break;
+    case 2: //from  -y
+        vp.cameraLookAlong( { 0,1,0 }, { 0,0,1 } );
+        break;
+    case 3: //from  y
+        vp.cameraLookAlong( { 0,-1,0 }, { 0,0,1 } );
+        break;
+    case 4: //from  -z
+        vp.cameraLookAlong( { 0,0,1 }, { 0,1,0 } );
+        break;
+    case 5: //from  z
+        vp.cameraLookAlong( { 0,0,-1 }, { 0,1,0 } );
+        break;
+
+    // 2 rank corners
+    case 6 + 0: //from  -x -y
+        vp.cameraLookAlong( { 1,1,0 }, { 0,0,1 } );
+        break;
+    case 6 + 1: //from  -x y
+        vp.cameraLookAlong( { 1,-1,0 }, { 0,0,1 } );
+        break;
+    case 6 + 2: //from  x -y
+        vp.cameraLookAlong( { -1,1,0 }, { 0,0,1 } );
+        break;
+    case 6 + 3: //from  x y
+        vp.cameraLookAlong( { -1,-1,0 }, { 0,0,1 } );
+        break;
+    case 6 + 4: //from  -y -z
+        vp.cameraLookAlong( { 0,1,1 }, { 0,-1,1 } );
+        break;
+    case 6 + 5: //from  -y z
+        vp.cameraLookAlong( { 0,1,-1 }, { 0,1,1 } );
+        break;
+    case 6 + 6: //from  y -z
+        vp.cameraLookAlong( { 0,-1,1 }, { 0,1,1 } );
+        break;
+    case 6 + 7: //from  y z
+        vp.cameraLookAlong( { 0,-1,-1 }, { 0,-1,1 } );
+        break;
+    case 6 + 8: //from  -z -x
+        vp.cameraLookAlong( { 1,0,1 }, { -1,0,1 } );
+        break;
+    case 6 + 9: //from  -z x
+        vp.cameraLookAlong( { -1,0,1 }, { 1,0,1 } );
+        break;
+    case 6 + 10: //from  z -x
+        vp.cameraLookAlong( { 1,0,-1 }, { 1,0,1 } );
+        break;
+    case 6 + 11: //from  z x
+        vp.cameraLookAlong( { -1,0,-1 }, { -1,0,1 } );
+        break;
+
+    // 3 rank corners
+    case 6 + 12 + 0: //from -x -y -z
+        vp.cameraLookAlong( { 1,1,1 }, { -1,-1,2 } );
+        break;
+    case 6 + 12 + 1: //from x -y -z
+        vp.cameraLookAlong( { -1,1,1 }, { 1,-1,2 } );
+        break;
+    case 6 + 12 + 2: //from -x y -z
+        vp.cameraLookAlong( { 1,-1,1 }, { -1,1,2 } );
+        break;
+    case 6 + 12 + 3: //from x y -z
+        vp.cameraLookAlong( { -1,-1,1 }, { 1,1,2 } );
+        break;
+    case 6 + 12 + 4: //from -x -y z
+        vp.cameraLookAlong( { 1,1,-1 }, { 1,1,2 } );
+        break;
+    case 6 + 12 + 5: //from x -y z
+        vp.cameraLookAlong( { -1,1,-1 }, { -1,1,2 } );
+        break;
+    case 6 + 12 + 6: //from -x y z
+        vp.cameraLookAlong( { 1,-1,-1 }, { 1,-1,2 } );
+        break;
+    case 6 + 12 + 7: //from x y z
+        vp.cameraLookAlong( { -1,-1,-1 }, { -1,-1,2 } );
+        break;
+
+    default:
+        return;
+    }
+
+    vp.preciseFitDataToScreenBorder( { 0.9f } );
 }
 
 }

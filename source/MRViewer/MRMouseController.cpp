@@ -120,6 +120,7 @@ void MouseController::connect()
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
     viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
+    viewer.preDrawSignal.connect( MAKE_SLOT( &MouseController::preDraw_ ) );
 }
 
 void MouseController::cursorEntrance_( bool entered )
@@ -191,7 +192,11 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
     if ( modIt == map_.end() )
         modIt = map_.find( mouseAndModToKey( { btn,mod & ~GLFW_MOD_ALT } ) );
     if ( modIt == map_.end() )
+    {
+        if ( btn == MouseButton::Left && mod == 0 && tryPressViewController_() )
+            return true;
         return false;
+    }
 
     currentMode_ = modIt->second;
     if ( currentMode_ == MouseMode::Rotation || currentMode_ == MouseMode::Roll )
@@ -272,7 +277,7 @@ bool MouseController::preMouseMove_( int x, int y )
     // Own handle (camera control)
 
     if ( currentMode_ == MouseMode::None )
-        return tryViewController_();
+        return false;
 
     auto& viewport = viewer.viewport();
     AffineXf3f xf;
@@ -378,6 +383,11 @@ bool MouseController::mouseScroll_( float delta )
     return true;
 }
 
+void MouseController::preDraw_()
+{
+    tryHoverViewController_();
+}
+
 void MouseController::resetAllIfNeeded_()
 {
     if ( !dropOldEventsOnNew_ )
@@ -386,7 +396,7 @@ void MouseController::resetAllIfNeeded_()
         getViewerInstance().mouseUp( MouseButton( btn ), 0 );
 }
 
-bool MouseController::tryViewController_()
+bool MouseController::tryHoverViewController_()
 {
     auto setHovered = [&] ( RegionId region )
     {
@@ -442,7 +452,25 @@ bool MouseController::tryViewController_()
 
     setHovered( getCornerControllerRegionByFace( pick.face ) );
 
-    return false;
+    return true;
+}
+
+bool MouseController::tryPressViewController_()
+{
+    if ( !viewControllerHoveredRegion_ )
+        return false;
+
+    // validate pick just in case
+    const auto& vp = getViewerInstance().viewport();
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getStaticProjectionMatrix() );
+    auto [obj, pick] = vp.pickRenderObject( { { getViewerInstance().basisViewController.get() } }, { .baseRenderParams = &staticRenderParams } );
+    if ( obj != getViewerInstance().basisViewController )
+        return false;
+    
+    auto region = getCornerControllerRegionByFace( pick.face );
+    updateCurrentViewByControllerRegion( region );
+
+    return true;
 }
 
 }

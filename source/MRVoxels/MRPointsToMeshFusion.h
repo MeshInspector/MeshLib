@@ -34,6 +34,9 @@ struct PointsToMeshParameters
 
     /// Callback for volume creation. If null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
     std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
+
+    /// Callback for checking whether it's possible to use the volume creation function
+    std::function<bool ( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> isCreateVolumeCallbackAvailable;
 };
 
 /// makes mesh from points with normals by constructing intermediate volume with signed distances

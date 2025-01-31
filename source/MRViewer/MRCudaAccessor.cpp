@@ -3,6 +3,8 @@
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRAABBTreePoints.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRAABBTreeMaker.h"
 #include "MRMesh/MRDipole.h"
 
@@ -129,6 +131,19 @@ size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
 size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
 {
     return fastWindingNumberMeshMemory( mesh ) + mesh.topology.faceSize() * sizeof( float );
+}
+
+size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )
+{
+    const auto& tree = pointCloud.getAABBTree();
+    const auto& nodes = tree.nodes();
+
+    return
+        nodes.size() * sizeof( AABBTreePoints::Node )
+        + tree.orderedPoints().size() * sizeof( AABBTreePoints::Point )
+        + ( ptNormals ? ptNormals->size() : pointCloud.normals.size() ) * sizeof( Vector3f )
+        + size_t( dims.x ) * dims.y * dims.z * sizeof( float )
+    ;
 }
 
 CudaAccessor& CudaAccessor::instance_()

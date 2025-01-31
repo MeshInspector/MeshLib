@@ -45,7 +45,7 @@ cudaError_t computeMeshDistanceMapKernel(
     float3 yStep = params.yRange / float( params.resolution.y );
 
     // kernel
-    kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, size, xStep, yStep );
+    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, size, xStep, yStep );
 
     return cudaGetLastError();
 }

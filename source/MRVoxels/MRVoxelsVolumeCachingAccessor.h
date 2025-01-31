@@ -93,10 +93,11 @@ private:
         firstLayerVoxelId_[layerIndex] = indexer_.toVoxelId( Vector3i{ 0, 0, z } );
         ParallelFor( 0, dims.y, [&]( int y )
         {
+            auto accessor = accessor_; // only for OpenVDB accessor, which is not thread-safe
             auto loc = indexer_.toLoc( Vector3i{ 0, y, z } );
             size_t n = size_t( y ) * dims.x;
             for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
-                layer[n] = accessor_.get( loc );
+                layer[n] = accessor.get( loc );
         } );
     }
 

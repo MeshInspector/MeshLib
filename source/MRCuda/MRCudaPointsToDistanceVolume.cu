@@ -88,7 +88,7 @@ namespace Cuda
         constexpr int maxThreadsPerBlock = 640;
         const size_t size = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
 
-        auto numBlocks = (unsigned int)( ( size_t( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+        auto numBlocks = (unsigned int)( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
         kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, points, normals, volume, params );
         return ( cudaGetLastError() == cudaSuccess );
     }

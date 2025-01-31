@@ -133,7 +133,7 @@ void contoursDistanceMapProjectionKernel(
     const size_t size )
 {
     constexpr int maxThreadsPerBlock = 640;
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
+    int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
 
     // kernel
     kernel<<< numBlocks, maxThreadsPerBlock >>>(

@@ -60,6 +60,7 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
+#include "MRViewportCornerController.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -126,7 +127,6 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
-#include "MRViewportCornerController.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {

@@ -93,16 +93,16 @@ void Viewport::setupProjMatrix_()
     }
 }
 
-void Viewport::setupStaticProjMatrix_()
+void Viewport::setupAxesProjMatrix_()
 {
     float h = 1.0f;// ( cameraEye - cameraCenter ).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
-    staticProj_( 0, 0 ) = 1.f / d; staticProj_( 0, 1 ) = 0.f; staticProj_( 0, 2 ) = 0.f; staticProj_( 0, 3 ) = 0.f;
-    staticProj_( 1, 0 ) = 0.f; staticProj_( 1, 1 ) = 1.f / h; staticProj_( 1, 2 ) = 0.f; staticProj_( 1, 3 ) = 0.f;
-    staticProj_( 2, 0 ) = 0.f; staticProj_( 2, 1 ) = 0.f;
-    staticProj_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
-    staticProj_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
-    staticProj_( 3, 0 ) = 0.f; staticProj_( 3, 1 ) = 0.f; staticProj_( 3, 2 ) = 0.f; staticProj_( 3, 3 ) = 1.f;
+    axesProjMat_( 0, 0 ) = 1.f / d; axesProjMat_( 0, 1 ) = 0.f; axesProjMat_( 0, 2 ) = 0.f; axesProjMat_( 0, 3 ) = 0.f;
+    axesProjMat_( 1, 0 ) = 0.f; axesProjMat_( 1, 1 ) = 1.f / h; axesProjMat_( 1, 2 ) = 0.f; axesProjMat_( 1, 3 ) = 0.f;
+    axesProjMat_( 2, 0 ) = 0.f; axesProjMat_( 2, 1 ) = 0.f;
+    axesProjMat_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
+    axesProjMat_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
+    axesProjMat_( 3, 0 ) = 0.f; axesProjMat_( 3, 1 ) = 0.f; axesProjMat_( 3, 2 ) = 0.f; axesProjMat_( 3, 3 ) = 1.f;
 }
 
 // ================================================================

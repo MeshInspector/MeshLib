@@ -84,7 +84,7 @@ void Viewport::init()
     updateSceneBox_();
     setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
     setupProjMatrix_();
-    setupStaticProjMatrix_();
+    setupAxesProjMatrix_();
 }
 
 void Viewport::shut()
@@ -450,7 +450,7 @@ void Viewport::setupView()
 {
     setupViewMatrix_();
     setupProjMatrix_();
-    setupStaticProjMatrix_();
+    setupAxesProjMatrix_();
 }
 
 void Viewport::preDraw()
@@ -637,7 +637,7 @@ void Viewport::drawAxesAndViewController() const
     if ( basisVisible || controllerVisible )
     {
         // compute inverse in double precision to avoid NaN for very small scales
-        auto fullInversedM = Matrix4f( ( Matrix4d( staticProj_ ) * Matrix4d( viewM_ ) ).inverse() );
+        auto fullInversedM = Matrix4f( ( Matrix4d( axesProjMat_ ) * Matrix4d( viewM_ ) ).inverse() );
         auto pos = to3dim( basisAxesPos_ ); pos.z = 0.5f;
         auto transBase = fullInversedM( viewportSpaceToClipSpace( pos ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( pos + to3dim( Vector2f::diagonal( basisAxesSize_ ) ) ) );
@@ -647,21 +647,21 @@ void Viewport::drawAxesAndViewController() const
         if ( basisVisible )
         {
             getViewerInstance().basisAxes->setXf( basisAxesXf, id );
-            draw( *getViewerInstance().basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
+            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_, DepthFunction::Always );
         }
         if ( controllerVisible )
         {
             getViewerInstance().basisViewController->setXf( basisAxesXf, id );
-            draw( *getViewerInstance().basisViewController, basisAxesXf, staticProj_, DepthFunction::Always );
-            draw( *getViewerInstance().basisViewController, basisAxesXf, staticProj_ );
+            draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_ );
         }
         if ( basisVisible )
         {
-            draw( *getViewerInstance().basisAxes, basisAxesXf, staticProj_ );
+            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_ );
             for ( const auto& child : getViewerInstance().basisAxes->children() )
             {
                 if ( auto visualChild = child->asType<VisualObject>() )
-                    draw( *visualChild, basisAxesXf, staticProj_ );
+                    draw( *visualChild, basisAxesXf, axesProjMat_ );
             }
         }
     }

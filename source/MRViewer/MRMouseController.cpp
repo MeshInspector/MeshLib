@@ -442,7 +442,7 @@ bool MouseController::tryHoverViewController_()
         fictiveParent->addChild( getViewerInstance().basisViewController );
     }
 
-    auto staticRenderParams = vp.getBaseRenderParams( vp.getStaticProjectionMatrix() );
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
     auto [obj,pick] = vp.pickRenderObject( { { getViewerInstance().basisViewController.get() } }, { .baseRenderParams = &staticRenderParams } );
     if ( obj != getViewerInstance().basisViewController )
     {
@@ -462,7 +462,7 @@ bool MouseController::tryPressViewController_()
 
     // validate pick just in case
     const auto& vp = getViewerInstance().viewport();
-    auto staticRenderParams = vp.getBaseRenderParams( vp.getStaticProjectionMatrix() );
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
     auto [obj, pick] = vp.pickRenderObject( { { getViewerInstance().basisViewController.get() } }, { .baseRenderParams = &staticRenderParams } );
     if ( obj != getViewerInstance().basisViewController )
         return false;

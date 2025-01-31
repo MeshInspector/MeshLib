@@ -82,7 +82,7 @@ public:
     MRVIEWER_API float getAxesSize() const;
 
     /// returns projection matrix that is used for basis axes and view controller rendering
-    const Matrix4f& getStaticProjectionMatrix() const { return staticProj_; }
+    const Matrix4f& getAxesProjectionMatrix() const { return axesProjMat_; }
 
     // Shutdown
     MRVIEWER_API void shut();
@@ -503,7 +503,7 @@ private:
     // initializes proj matrix based on camera angle and viewport rectangle size
     void setupProjMatrix_();
     // initializes proj matrix for static view objects (like corner axes)
-    void setupStaticProjMatrix_();
+    void setupAxesProjMatrix_();
 
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
@@ -530,7 +530,7 @@ private:
 
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
-    Matrix4f staticProj_;
+    Matrix4f axesProjMat_;
     Vector2f basisAxesPos_;
     float basisAxesSize_;
 

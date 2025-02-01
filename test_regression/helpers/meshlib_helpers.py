@@ -178,7 +178,7 @@ def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
             val_a = voxels_a.voxelSize.__getattribute__(dim)
             val_b = voxels_b.voxelSize.__getattribute__(dim)
             # dcm format sometimes has very small difference in voxel sizes, so we need to check it with threshold
-            assert (val_a - val_b) / val_a < 0.00001, (
+            assert val_a == pytest.approx(val_b), (
                     f"{test_report}Voxel sizes are differs for dimension {dim}, \n"
                     f"voxel_a:{val_a}\nvoxel_b:{val_b}\n")
         assert voxels_a.min == pytest.approx(voxels_b.min), (

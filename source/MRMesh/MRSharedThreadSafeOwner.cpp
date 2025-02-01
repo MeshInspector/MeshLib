@@ -23,15 +23,16 @@ void SharedThreadSafeOwner<T>::reset()
 template<typename T>
 void SharedThreadSafeOwner<T>::update( const std::function<void(T&)> & updater )
 {
-    assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    assert( !construction_ ); // one thread constructs the object, and this thread updates it
     auto myPtr = atomic_exchange( &obj_, {} );
     if ( !myPtr )
         return;
     assert( myPtr.use_count() >= 1 );
-    if ( myPtr.use_count() > 1 )
+    if ( myPtr.use_count() > 1 ) // create the copy if we was not the unique owner
         myPtr.reset( new T( *myPtr ) );
     assert( myPtr.use_count() == 1 );
-    updater( const_cast<T&>( *myPtr ) );
+    updater( *myPtr );
+    assert( !construction_ ); // one thread constructs the object, and this thread updates it
     atomic_store( &obj_, std::move( myPtr ) );
 }
 
@@ -43,15 +44,21 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
     /// and will cooperatively construct owned object
     for (;;)
     {
-        if ( auto p = obj_.get() ) // fast path to avoid increasing shared pointers when everything is ready
+        if ( auto p = obj_.get() ) // fastest path avoiding increasing/decreasing reference counter when everything is ready
             return *p;
-        if ( auto p = atomic_load( &obj_ ) )
+        if ( auto p = atomic_load( &obj_ ) ) // fast path, which insures that the thread does not use old register-cached value
             return *p;
-        std::shared_ptr<TaskGroup> construction;
-        bool firstConstructor = atomic_compare_exchange_strong( &construction_, &construction, std::make_shared<TaskGroup>() );
-        if ( firstConstructor )
-            construction = atomic_load( &construction_ );
-        assert( construction );
+
+
+        bool firstConstructor = false; // true only the thread starting the creation
+        auto construction = atomic_load( &construction_ );
+        if ( !construction )
+        {
+            firstConstructor = atomic_compare_exchange_strong( &construction_, &construction, std::make_shared<TaskGroup>() );
+            if ( firstConstructor )
+                construction = atomic_load( &construction_ );
+            assert( construction );
+        }
 
         if ( auto p = atomic_load( &obj_ ) ) // already constructed while we setup construction
         {
@@ -69,14 +76,13 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
             {
                construction->run( [&]
                {
-                   atomic_store( &obj_, std::make_shared<const T>( creator() ) );
+                   atomic_store( &obj_, std::make_shared<T>( creator() ) );
                    assert( construction == atomic_load( &construction_ ) );
                    atomic_store( &construction_, {} );
                } );
             } );
         }
         construction->wait();
-        // several iterations are necessary only if the object was reset immediately after construction
     }
 }
 

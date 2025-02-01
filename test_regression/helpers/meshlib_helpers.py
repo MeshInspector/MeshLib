@@ -1,9 +1,10 @@
+import pytest
+
 from constants import DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.file_helpers import get_reference_files_list
 from module_helper import *
 from pytest_check import check
 from pathlib import Path
-
 
 
 def relative_hausdorff(mesh1: mrmeshpy.Mesh or mrmeshpy.PointCloud or Path or str,
@@ -168,21 +169,22 @@ def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
     test_report = f"Testname is {testname}\n" if testname else ""
     # load voxels if required
     if isinstance(voxels_a, str) or isinstance(voxels_a, Path):
-        voxels_a = mrmeshpy.loadVoxelsRaw(Path(voxels_a))
+        # voxels_a = mrmeshpy.loadVoxelsRaw(Path(voxels_a))
+        voxels_a = mrmeshpy.loadVoxels(voxels_a)[0]
     if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
-        voxels_b = mrmeshpy.loadVoxelsRaw(Path(voxels_b))
+        voxels_b = mrmeshpy.loadVoxels(voxels_b)[0]
     with check:
         for dim in ["x", "y", "z"]:
             val_a = voxels_a.voxelSize.__getattribute__(dim)
             val_b = voxels_b.voxelSize.__getattribute__(dim)
             # dcm format sometimes has very small difference in voxel sizes, so we need to check it with threshold
-            assert (val_a - val_b) / val_a < 0.00001, (
+            assert val_a == pytest.approx(val_b), (
                     f"{test_report}Voxel sizes are differs for dimension {dim}, \n"
                     f"voxel_a:{val_a}\nvoxel_b:{val_b}\n")
-        assert voxels_a.min == voxels_b.min, (
+        assert voxels_a.min == pytest.approx(voxels_b.min), (
             f"{test_report}voxels.min of voxels are differs, \n"
             f"voxel_a:{voxels_a.min}\nvoxel_b:{voxels_b.min}\n")
-        assert voxels_a.max == voxels_b.max, (
+        assert voxels_a.max == pytest.approx(voxels_b.max), (
             f"{test_report}voxels.min of voxels are differs, \n"
             f"voxel_a:{voxels_a.max}\nvoxel_b:{voxels_b.max}\n")
         assert voxels_a.dims == voxels_b.dims, (

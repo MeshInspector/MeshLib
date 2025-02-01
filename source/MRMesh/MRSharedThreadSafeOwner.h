@@ -19,6 +19,13 @@ template<typename T>
 class SharedThreadSafeOwner
 {
 public:
+    MRMESH_API SharedThreadSafeOwner();
+    MRMESH_API SharedThreadSafeOwner( const SharedThreadSafeOwner& );
+    MRMESH_API SharedThreadSafeOwner& operator =( const SharedThreadSafeOwner& );
+    MRMESH_API SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept;
+    MRMESH_API SharedThreadSafeOwner& operator =( SharedThreadSafeOwner&& b ) noexcept;
+    MRMESH_API ~SharedThreadSafeOwner();
+
     /// deletes owned object
     MRMESH_API void reset();
 

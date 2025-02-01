@@ -14,6 +14,40 @@ struct TaskGroup : tbb::task_group
 {};
 
 template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner() = default;
+
+template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner( const SharedThreadSafeOwner& b ) : obj_( b.obj_.load() )
+{ 
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( const SharedThreadSafeOwner& b ) 
+{
+    if ( this != &b )
+        obj_.store( b.obj_.load() );
+    return *this; 
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>::SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept
+{
+    assert( this != &b );
+    obj_.store( b.obj_.load() );
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( SharedThreadSafeOwner&& b ) noexcept
+{
+    if ( this != &b )
+        obj_.store( b.obj_.load() );
+    return *this;
+}
+
+template<typename T>
+SharedThreadSafeOwner<T>::~SharedThreadSafeOwner() = default;
+
+template<typename T>
 void SharedThreadSafeOwner<T>::reset()
 {
     assert( !construction_.load() ); // one thread constructs the object, and this thread resets it
@@ -38,6 +72,7 @@ void SharedThreadSafeOwner<T>::update( const std::function<void(T&)> & updater )
 template<typename T>
 const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
 {
+    assert( creator );
     /// if many parallel threads call this function simultaneously, they will join one task_group
     /// and will cooperatively construct owned object
     for (;;)
@@ -47,10 +82,10 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
         auto myPtr = obj_.load();
         if ( myPtr )
             return *myPtr;
-        assert( creator );
         std::shared_ptr<TaskGroup> construction;
         bool firstConstructor = construction_.compare_exchange_strong( construction, std::make_shared<TaskGroup>() );
-        construction = construction_.load();
+        if ( firstConstructor )
+            construction = construction_.load();
         assert( construction );
 
         myPtr = obj_.load();

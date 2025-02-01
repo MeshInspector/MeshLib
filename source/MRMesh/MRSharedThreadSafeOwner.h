@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include <atomic>
 #include <functional>
 #include <memory>
 
@@ -19,21 +18,14 @@ template<typename T>
 class SharedThreadSafeOwner
 {
 public:
-    MRMESH_API SharedThreadSafeOwner();
-    MRMESH_API SharedThreadSafeOwner( const SharedThreadSafeOwner& );
-    MRMESH_API SharedThreadSafeOwner& operator =( const SharedThreadSafeOwner& );
-    MRMESH_API SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept;
-    MRMESH_API SharedThreadSafeOwner& operator =( SharedThreadSafeOwner&& b ) noexcept;
-    MRMESH_API ~SharedThreadSafeOwner();
-
     /// deletes owned object
     MRMESH_API void reset();
 
     /// returns existing owned object and does not create new one
-    const T* get() { return obj_.load().get(); }
+    const T* get() { return obj_.get(); }
 
     /// returns existing owned object and does not create new one
-    std::shared_ptr<const T> getPtr() { return obj_.load(); }
+    std::shared_ptr<const T> getPtr() { return obj_; }
 
     /// returns existing owned object or creates new one using creator function
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
@@ -45,10 +37,10 @@ public:
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 private:
-    std::atomic<std::shared_ptr<const T>> obj_;
+    std::shared_ptr<const T> obj_;
 
     /// not-null during creation of owned object only
-    std::atomic<std::shared_ptr<TaskGroup>> construction_;
+    std::shared_ptr<TaskGroup> construction_;
 };
 
 /// \}

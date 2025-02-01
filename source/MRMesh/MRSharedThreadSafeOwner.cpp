@@ -14,51 +14,17 @@ struct TaskGroup : tbb::task_group
 {};
 
 template<typename T>
-SharedThreadSafeOwner<T>::SharedThreadSafeOwner() = default;
-
-template<typename T>
-SharedThreadSafeOwner<T>::SharedThreadSafeOwner( const SharedThreadSafeOwner& b ) : obj_( b.obj_.load() )
-{ 
-}
-
-template<typename T>
-SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( const SharedThreadSafeOwner& b ) 
-{
-    if ( this != &b )
-        obj_.store( b.obj_.load() );
-    return *this; 
-}
-
-template<typename T>
-SharedThreadSafeOwner<T>::SharedThreadSafeOwner( SharedThreadSafeOwner&& b ) noexcept
-{
-    assert( this != &b );
-    obj_.store( b.obj_.load() );
-}
-
-template<typename T>
-SharedThreadSafeOwner<T>& SharedThreadSafeOwner<T>::operator =( SharedThreadSafeOwner&& b ) noexcept
-{
-    if ( this != &b )
-        obj_.store( b.obj_.load() );
-    return *this;
-}
-
-template<typename T>
-SharedThreadSafeOwner<T>::~SharedThreadSafeOwner() = default;
-
-template<typename T>
 void SharedThreadSafeOwner<T>::reset()
 {
-    assert( !construction_.load() ); // one thread constructs the object, and this thread resets it
-    obj_.store( {} );
+    assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    obj_.reset();
 }
 
 template<typename T>
 void SharedThreadSafeOwner<T>::update( const std::function<void(T&)> & updater )
 {
-    assert( !construction_.load() ); // one thread constructs the object, and this thread resets it
-    auto myPtr = obj_.exchange( {} );
+    assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    auto myPtr = atomic_exchange( &obj_, {} );
     if ( !myPtr )
         return;
     assert( myPtr.use_count() >= 1 );
@@ -66,7 +32,7 @@ void SharedThreadSafeOwner<T>::update( const std::function<void(T&)> & updater )
         myPtr.reset( new T( *myPtr ) );
     assert( myPtr.use_count() == 1 );
     updater( const_cast<T&>( *myPtr ) );
-    obj_.exchange( std::move( myPtr ) );
+    atomic_store( &obj_, std::move( myPtr ) );
 }
 
 template<typename T>
@@ -77,23 +43,21 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
     /// and will cooperatively construct owned object
     for (;;)
     {
-        //if ( obj_ ) // fast path to avoid increasing shared pointers when everything is ready
-        //    return *obj_;
-        auto myPtr = obj_.load();
-        if ( myPtr )
-            return *myPtr;
+        if ( auto p = obj_.get() ) // fast path to avoid increasing shared pointers when everything is ready
+            return *p;
+        if ( auto p = atomic_load( &obj_ ) )
+            return *p;
         std::shared_ptr<TaskGroup> construction;
-        bool firstConstructor = construction_.compare_exchange_strong( construction, std::make_shared<TaskGroup>() );
+        bool firstConstructor = atomic_compare_exchange_strong( &construction_, &construction, std::make_shared<TaskGroup>() );
         if ( firstConstructor )
-            construction = construction_.load();
+            construction = atomic_load( &construction_ );
         assert( construction );
 
-        myPtr = obj_.load();
-        if ( myPtr ) // already constructed while we setup construction
+        if ( auto p = atomic_load( &obj_ ) ) // already constructed while we setup construction
         {
             if ( firstConstructor )
-                construction_.store( {} );
-            return *myPtr;
+                atomic_store( &construction_, {} );
+            return *p;
         }
 
         if ( firstConstructor )
@@ -105,9 +69,9 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
             {
                construction->run( [&]
                {
-                   obj_.store( std::make_shared<const T>( creator() ) );
-                   assert( construction == construction_.load() );
-                   construction_.store( {} );
+                   atomic_store( &obj_, std::make_shared<const T>( creator() ) );
+                   assert( construction == atomic_load( &construction_ ) );
+                   atomic_store( &construction_, {} );
                } );
             } );
         }
@@ -119,7 +83,7 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
 template<typename T>
 size_t SharedThreadSafeOwner<T>::heapBytes() const
 {
-    auto myPtr = obj_.load();
+    auto myPtr = atomic_load( &obj_ );
     return MR::heapBytes( myPtr );
 }
 

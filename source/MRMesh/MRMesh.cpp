@@ -1138,7 +1138,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+        AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
     }
     else
     {

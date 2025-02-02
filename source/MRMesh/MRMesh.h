@@ -5,7 +5,7 @@
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
 #include "MRLineSegm.h"
-#include "MRUniqueThreadSafeOwner.h"
+#include "MRSharedThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
 #include "MRProgressCallback.h"
@@ -490,9 +490,9 @@ struct [[nodiscard]] Mesh
     MRMESH_API void mirror( const Plane3f& plane );
 
 private:
-    mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
-    mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
-    mutable UniqueThreadSafeOwner<Dipoles> dipolesOwner_;
+    mutable SharedThreadSafeOwner<AABBTree> AABBTreeOwner_;
+    mutable SharedThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
+    mutable SharedThreadSafeOwner<Dipoles> dipolesOwner_;
 };
 
 } //namespace MR

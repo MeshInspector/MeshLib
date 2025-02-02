@@ -80,6 +80,7 @@ private:
     AABBTreePoints( const AABBTreePoints & ) = default;
     AABBTreePoints & operator =( const AABBTreePoints & ) = default;
     friend class UniqueThreadSafeOwner<AABBTreePoints>;
+    friend class SharedThreadSafeOwner<AABBTreePoints>;
 };
 
 /// \}

@@ -513,6 +513,7 @@ MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion
 )
 
 template<typename T> class UniqueThreadSafeOwner;
+template<typename T> class SharedThreadSafeOwner;
 
 class PolylineTopology;
 

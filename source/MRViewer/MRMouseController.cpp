@@ -115,6 +115,8 @@ void MouseController::connect()
     downState_.resize( 3 );
     auto& viewer = getViewerInstance();
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::preMouseDown_ ), boost::signals2::at_front );
+    // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
+    viewer.mouseDownSignal.connect( 5, MAKE_SLOT( &MouseController::cornerControllerMouseDown_ ) );
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
     viewer.mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
@@ -162,6 +164,13 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
     return false;
 }
 
+bool MouseController::cornerControllerMouseDown_( MouseButton btn, int mod )
+{
+    if ( btn == MouseButton::Left && mod == 0 && tryPressViewController_() )
+        return true;
+    return false;
+}
+
 bool MouseController::mouseDown_( MouseButton btn, int mod )
 {
     auto& viewer = getViewerInstance();
@@ -192,11 +201,7 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
     if ( modIt == map_.end() )
         modIt = map_.find( mouseAndModToKey( { btn,mod & ~GLFW_MOD_ALT } ) );
     if ( modIt == map_.end() )
-    {
-        if ( btn == MouseButton::Left && mod == 0 && tryPressViewController_() )
-            return true;
         return false;
-    }
 
     currentMode_ = modIt->second;
     if ( currentMode_ == MouseMode::Rotation || currentMode_ == MouseMode::Roll )

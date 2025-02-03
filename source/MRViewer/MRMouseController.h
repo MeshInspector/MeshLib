@@ -73,6 +73,7 @@ public:
 
 private:
     bool preMouseDown_( MouseButton button, int modifier );
+    bool cornerControllerMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
     bool preMouseUp_( MouseButton button, int modifier );
     bool preMouseMove_( int x, int y );

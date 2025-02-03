@@ -4,8 +4,15 @@
 #include "MRAABBTreePoints.h"
 #include "MRDipole.h"
 #include "MRHeapBytes.h"
+#include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 #include <cassert>
+
+#if _GLIBCXX_RELEASE >= 14
+MR_SUPPRESS_WARNING_PUSH
+// atomic_load, atomic_store, atomic_exchange, atomic_compare_exchange are deprecated in C++20
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+#endif
 
 namespace MR
 {
@@ -100,3 +107,7 @@ template class SharedThreadSafeOwner<AABBTreePoints>;
 template class SharedThreadSafeOwner<Dipoles>;
 
 } //namespace MR
+
+#if _GLIBCXX_RELEASE >= 14
+MR_SUPPRESS_WARNING_POP
+#endif

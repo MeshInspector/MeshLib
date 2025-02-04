@@ -77,6 +77,7 @@ runs:
         -s ${{ inputs.smoke }}
         -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
+        -k run_code_sample
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}
@@ -87,9 +88,9 @@ runs:
       run: >
         python3 ../../../scripts/run_python_test_script.py
         -d '../test_regression'
-        -s ${{ inputs.smoke }}
         -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
+        -k run_code_sample
 
     - name: Copy test artifacts to S3
       if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}

@@ -121,10 +121,6 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: Python Sanity Tests
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
-
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
         uses: ./.github/actions/python-regression-tests

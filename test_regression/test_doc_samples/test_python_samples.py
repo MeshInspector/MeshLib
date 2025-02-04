@@ -82,7 +82,7 @@ def run_code_sample(code_path: str, args: list):
                              #     id="GlobalRegistration.dox.py",
                              #     marks=pytest.mark.bindingsV3),
                          ])
-@pytest.mark.parametrize("i", range(1, 1000))
+@pytest.mark.parametrize("i", range(1, 10000))
 @pytest.mark.smoke
 def test_python_doc_samples(tmp_path, doc_case, i):
     """

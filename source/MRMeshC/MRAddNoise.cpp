@@ -6,8 +6,8 @@
 
 using namespace MR;
 
-REGISTER_AUTO_CAST( Mesh );
-REGISTER_AUTO_CAST( VertBitSet );
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST2( std::string, MRString )
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,

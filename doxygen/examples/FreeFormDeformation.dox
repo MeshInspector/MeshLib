@@ -13,6 +13,9 @@ Example of using Free Form deformation of the mesh
 
 \include FreeFormDeformation.dox.py
 
+- <b class="tab-title">C</b>
+\include FreeFormDeformation.dox.c
+
 </div>
 
  */

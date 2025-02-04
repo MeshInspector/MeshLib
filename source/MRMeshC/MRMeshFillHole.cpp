@@ -72,3 +72,18 @@ void mrFillHoles( MRMesh* mesh_, const MREdgeId* as_, size_t asNum, const MRFill
 
     fillHoles( mesh, asVec, params );
 }
+
+void mrBuildCylinderBetweenTwoHoles( MRMesh* mesh_, MREdgeId a_, MREdgeId b_, const MRStitchHolesParams* params_ )
+{
+    ARG( mesh ); ARG_VAL( a ); ARG_VAL( b );
+
+    StitchHolesParams params;
+    if ( params_ )
+    {
+        if ( params_->metric )
+            params.metric = auto_cast( *params_->metric );
+        params.outNewFaces = auto_cast( params_->outNewFaces );
+    }
+
+    buildCylinderBetweenTwoHoles( mesh, a, b, params );
+}

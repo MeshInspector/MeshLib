@@ -13,6 +13,7 @@ class FreeFormDeformer
 public:
     // Only set mesh ref
     MRMESH_API FreeFormDeformer( VertCoords& coords, const VertBitSet& valid );
+    MRMESH_API FreeFormDeformer( Mesh& mesh, const VertBitSet* region = nullptr );
     // Parallel calculates all points normed positions
     // sets ref grid by initialBox, if initialBox is invalid use mesh bounding box instead 
     MRMESH_API void init( const Vector3i& resolution = Vector3i::diagonal( 2 ), const Box3f& initialBox = Box3f() );

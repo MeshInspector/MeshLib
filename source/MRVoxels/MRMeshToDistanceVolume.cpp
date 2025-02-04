@@ -67,7 +67,13 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
 {
+    MR_TIMER
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
+
+    // prepare all trees before returned function will be called from parallel threads
+    mp.mesh.getAABBTree();
+    if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
+        mp.mesh.getDipoles();
 
     return FunctionVolume
     {

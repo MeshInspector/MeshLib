@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRPolylineTopology.h"
-#include "MRUniqueThreadSafeOwner.h"
+#include "MRSharedThreadSafeOwner.h"
 #include "MRPlane3.h"
 #include "MRLineSegm.h"
 #include "MREdgePoint.h"
@@ -168,7 +168,7 @@ public:
     }
 
 private:
-    mutable UniqueThreadSafeOwner<AABBTreePolyline<V>> AABBTreeOwner_;
+    mutable SharedThreadSafeOwner<AABBTreePolyline<V>> AABBTreeOwner_;
 };
 
 template<typename V>

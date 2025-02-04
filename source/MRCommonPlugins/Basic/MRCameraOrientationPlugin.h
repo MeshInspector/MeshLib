@@ -26,7 +26,8 @@ private:
 
     void drawCameraPresets_( float scaling );
 
-    inline void autofit_();
+    void autofit_();
+    void getCamera_();
 };
 
 }

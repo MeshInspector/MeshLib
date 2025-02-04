@@ -51,8 +51,28 @@ jobs:
       dockerfile: ${{ matrix.distro }}Dockerfile
       image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
     steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
+
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
 
       - name: Checkout
         uses: actions/checkout@v4

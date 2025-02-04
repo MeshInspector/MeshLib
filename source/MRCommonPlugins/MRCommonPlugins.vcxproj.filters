@@ -72,6 +72,9 @@
     <ClCompile Include="Basic\MRObjectInfo.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
+    <ClCompile Include="ViewerButtons\MRInvertView.cpp">
+      <Filter>ViewerButtons</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

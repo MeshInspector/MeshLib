@@ -59,18 +59,18 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [mesh = mesh_, saveMeshFormat = saveMeshFormat_, path, saveSettings]()
+    auto save = [mesh = mesh_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()
     {
         auto filename = path;
-        const auto extension = std::string( "*" ) + saveMeshFormat;
+        const auto extension = std::string( "*" ) + serializeFormat;
         if ( auto meshSaver = MeshSave::getMeshSaver( extension ); meshSaver.fileSave != nullptr )
         {
-            filename += saveMeshFormat;
+            filename += serializeFormat;
             return meshSaver.fileSave( *mesh, filename, saveSettings );
         }
         else
         {
-            filename += ".mrmesh";
+            filename += ".ply";
             return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
         }
     };
@@ -689,14 +689,14 @@ size_t ObjectMeshHolder::heapBytes() const
         + MR::heapBytes( mesh_ );
 }
 
-void ObjectMeshHolder::setSaveMeshFormat( const char * newFormat )
+void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
 {
-    if ( !newFormat || *newFormat != '.' )
+    if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
     }
-    saveMeshFormat_ = newFormat;
+    serializeFormat_ = newFormat;
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const
@@ -844,6 +844,20 @@ void ObjectMeshHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat );
+}
+
+// .PLY format is the most compact among other formats with zero compression costs
+static std::string sDefaultSerializeMeshFormat = ".ply";
+
+const std::string & defaultSerializeMeshFormat()
+{
+    return sDefaultSerializeMeshFormat;
+}
+
+void setDefaultSerializeMeshFormat( std::string newFormat )
+{
+    assert( !newFormat.empty() && newFormat[0] == '.' );
+    sDefaultSerializeMeshFormat = std::move( newFormat );
 }
 
 } //namespace MR

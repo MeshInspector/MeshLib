@@ -7,6 +7,7 @@
 #include "MRPositionedText.h"
 #include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -14,17 +15,6 @@ namespace MR
 /// \defgroup VisualObjectGroup Visual Object group
 /// \ingroup DataModelGroup
 /// \{
-
-/// Type of mesh coloring,
-/// \note that texture are applied over main coloring
-enum class ColoringType
-{
-    SolidColor,   ///< Use simple color for whole mesh
-    PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each ptimitive
-    FacesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each face (primitive for object mesh)
-    LinesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each line (primitive for object lines)
-    VertsColorMap  ///< Use different color (taken from verts colormap) for each vert
-};
 
 // Note! Must use `MRMESH_CLASS` on this enum and all enums that extend this one,
 // otherwise you'll get silent wrong behavior on Mac.

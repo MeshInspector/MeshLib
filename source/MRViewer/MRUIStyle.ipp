@@ -211,11 +211,11 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
     auto fixedMin = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMax );
 
-    if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )
-    {
-        // Without this flag the value changes slightly when you release the mouse.
-        flags |= ImGuiSliderFlags_NoRoundToFormat;
-    }
+    // This flag is absolutely necessary when `if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )`.
+    //     Otherwise the value changes slightly when you release the mouse.
+    // We also decided to add it unconditionally, to allow users to set fully custom values ignoring the rounding.
+    //     It's slightly bad to not see the changes in the UI, but it's unclear how to fix that.
+    flags |= ImGuiSliderFlags_NoRoundToFormat;
 
     // Guess the precision.
     if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )
@@ -285,11 +285,11 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
     auto fixedStep = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, step );
     auto fixedStepFast = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, stepFast );
 
-    if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )
-    {
-        // Without this flag the value changes slightly when you release the mouse.
-        flags |= ImGuiSliderFlags_NoRoundToFormat;
-    }
+    // This flag is absolutely necessary when `if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )`.
+    //     Otherwise the value changes slightly when you release the mouse.
+    // We also decided to add it unconditionally, to allow users to set fully custom values ignoring the rounding.
+    //     It's slightly bad to not see the changes in the UI, but it's unclear how to fix that.
+    flags |= ImGuiSliderFlags_NoRoundToFormat;
 
     // Guess the precision.
     if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )

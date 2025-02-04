@@ -13,7 +13,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.app_version }}
       full_config_build:
         description:
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       docker_image_tag:
         description:
         value: ${{ jobs.prepare-config.outputs.docker-image-tag }}

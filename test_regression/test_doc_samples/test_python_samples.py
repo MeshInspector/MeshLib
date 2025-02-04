@@ -46,44 +46,45 @@ def run_code_sample(code_path: str, args: list):
                                            'output_files': ['filledMesh.stl']}, id="MeshFillHole.dox.py"),
                              pytest.param({'sample': "MeshICP.dox.py", 'input_files': ['meshA.stl', 'meshB.stl'],
                                            'output_files': ['meshA_icp.stl']}, id="MeshICP.dox.py"),
-                             pytest.param({'sample': "MeshLoadSave.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': ['mesh.ply']}, id="MeshLoadSave.dox.py"),
-                             pytest.param({'sample': "MeshModification.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': []}, id="MeshModification.dox.py"),
-                             pytest.param({'sample': "MeshOffset.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': ['offsetMesh.stl']}, id="MeshOffset.dox.py"),
-                             pytest.param({'sample': "MeshStitchHole.dox.py",
-                                           'input_files': ['meshAwithHole.stl', 'meshBwithHole.stl'],
-                                           'output_files': ['stitchedMesh.stl']}, id="MeshStitchHole.dox.py"),
-                             pytest.param({'sample': "NoiseDenoiseExample.dox.py", 'input_files': ['mesh.stl'],
-                                           'output_files': ['noised_mesh.stl', 'denoised_mesh.stl']},
-                                          id="NoiseDenoiseExample.dox.py",
-                                          marks=pytest.mark.bindingsV3),
-                             pytest.param({'sample': "Numpy.dox.py", 'input_files': [], 'output_files': []},
-                                          id="Numpy.dox.py"),
-                             pytest.param(
-                                 {'sample': "NumpyTriangulation.dox.py", 'input_files': [], 'output_files': []},
-                                 id="NumpyTriangulation.dox.py"),
-                             pytest.param(
-                                 {'sample': "Triangulation_v2.dox.py", 'input_files': [], 'output_files': []},
-                                 id="Triangulation_v2.dox.py",
-                                 marks=pytest.mark.bindingsV2),
-                             pytest.param(
-                                 {'sample': "Triangulation_v3.dox.py", 'input_files': [], 'output_files': []},
-                                 id="Triangulation_v3.dox.py",
-                                 marks=pytest.mark.bindingsV3),
-                             pytest.param(
-                                 {'sample': "GlobalRegistration.dox.py",
-                                  'input_files': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
-                                  'output_files': ["out.ply"],
-                                  'args': ["cloud0.ply", "cloud1.ply", "cloud2.ply", "out.ply"],
-                                  'verify': 'points'
-                                  },
-                                 id="GlobalRegistration.dox.py",
-                                 marks=pytest.mark.bindingsV3),
+                             # pytest.param({'sample': "MeshLoadSave.dox.py", 'input_files': ['mesh.stl'],
+                             #               'output_files': ['mesh.ply']}, id="MeshLoadSave.dox.py"),
+                             # pytest.param({'sample': "MeshModification.dox.py", 'input_files': ['mesh.stl'],
+                             #               'output_files': []}, id="MeshModification.dox.py"),
+                             # pytest.param({'sample': "MeshOffset.dox.py", 'input_files': ['mesh.stl'],
+                             #               'output_files': ['offsetMesh.stl']}, id="MeshOffset.dox.py"),
+                             # pytest.param({'sample': "MeshStitchHole.dox.py",
+                             #               'input_files': ['meshAwithHole.stl', 'meshBwithHole.stl'],
+                             #               'output_files': ['stitchedMesh.stl']}, id="MeshStitchHole.dox.py"),
+                             # pytest.param({'sample': "NoiseDenoiseExample.dox.py", 'input_files': ['mesh.stl'],
+                             #               'output_files': ['noised_mesh.stl', 'denoised_mesh.stl']},
+                             #              id="NoiseDenoiseExample.dox.py",
+                             #              marks=pytest.mark.bindingsV3),
+                             # pytest.param({'sample': "Numpy.dox.py", 'input_files': [], 'output_files': []},
+                             #              id="Numpy.dox.py"),
+                             # pytest.param(
+                             #     {'sample': "NumpyTriangulation.dox.py", 'input_files': [], 'output_files': []},
+                             #     id="NumpyTriangulation.dox.py"),
+                             # pytest.param(
+                             #     {'sample': "Triangulation_v2.dox.py", 'input_files': [], 'output_files': []},
+                             #     id="Triangulation_v2.dox.py",
+                             #     marks=pytest.mark.bindingsV2),
+                             # pytest.param(
+                             #     {'sample': "Triangulation_v3.dox.py", 'input_files': [], 'output_files': []},
+                             #     id="Triangulation_v3.dox.py",
+                             #     marks=pytest.mark.bindingsV3),
+                             # pytest.param(
+                             #     {'sample': "GlobalRegistration.dox.py",
+                             #      'input_files': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
+                             #      'output_files': ["out.ply"],
+                             #      'args': ["cloud0.ply", "cloud1.ply", "cloud2.ply", "out.ply"],
+                             #      'verify': 'points'
+                             #      },
+                             #     id="GlobalRegistration.dox.py",
+                             #     marks=pytest.mark.bindingsV3),
                          ])
+@pytest.mark.parametrize("i", range(1, 1000))
 @pytest.mark.smoke
-def test_python_doc_samples(tmp_path, doc_case):
+def test_python_doc_samples(tmp_path, doc_case, i):
     """
     Test copies python files from examples to tmp_path, and executes them.
     """

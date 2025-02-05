@@ -14,6 +14,8 @@
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
 #include "MRPriorityQueue.h"
+#include "MRMakeSphereMesh.h"
+#include "MRBuffer.h"
 
 namespace MR
 {
@@ -945,7 +947,6 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & 
         res.cancelled = false;
         return res;
     }
-    MR_WRITER( mesh );
     MeshDecimator md( mesh, settings );
     return md.run();
 }
@@ -981,7 +982,6 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
     }
 
-    MR_WRITER( mesh );
     if ( settings.progressCallback && !settings.progressCallback( 0 ) )
         return res;
 
@@ -1033,8 +1033,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     const bool limitedDeletion =
-        settings.maxDeletedVertices < INT_MAX ||
-        settings.maxDeletedFaces < INT_MAX;
+        settings.maxDeletedVertices < mesh.topology.numValidVerts() ||
+        settings.maxDeletedFaces < mesh.topology.numValidFaces();
 
     // limit each part to region, find boundary vertices
     ParallelFor( parts, [&]( size_t i )
@@ -1222,10 +1222,11 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         settings.maxDeletedFaces = int( settings.region ? settings.region->count() : mesh.topology.numValidFaces() ) / 2;
     }
 
-    if ( settings.subdivideParts > 1 )
-        return decimateMeshParallelInplace( mesh, settings );
-    else
-        return decimateMeshSerial( mesh, settings );
+    mesh.invalidateCaches(); // free memory occupied by trees before running the algorithm, which makes them invalid anyway
+    auto res = ( settings.subdivideParts > 1 ) ?
+        decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
+    assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
+    return res;
 }
 
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
@@ -1243,8 +1244,6 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         assert( false );
         return false;
     }
-
-    MR_WRITER( mesh );
 
     SubdivideSettings subs;
     subs.maxEdgeLen = settings.targetEdgeLen;
@@ -1336,6 +1335,22 @@ TEST( MRMesh, MeshDecimate )
     ASSERT_NE(regionSaved, regionForDecimation);
     ASSERT_GT(decimateResults.vertsDeleted, 0);
     ASSERT_GT(decimateResults.facesDeleted, 0);
+}
+
+TEST( MRMesh, MeshDecimateParallel )
+{
+    const int cNumVerts = 400;
+    auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
+    mesh.packOptimally();
+    DecimateSettings settings
+    {
+        .maxError = 1000000, // no actual limit
+        .maxDeletedVertices = cNumVerts - 1, // also no limit, but tests limitedDeletion mode
+        .subdivideParts = 8
+    };
+    decimateMesh( mesh, settings );
+    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
+    ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
 }
 
 } //namespace MR

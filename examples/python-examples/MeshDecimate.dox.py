@@ -16,7 +16,7 @@ settings.maxError = 1000000 # Maximum error when decimation stops
 
 # Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
 # Recommended to set to number of CPU cores or more available for the best performance
-settings.subdivideParts = 64
+#settings.subdivideParts = 64
 
 # Decimate mesh
 mrmeshpy.decimateMesh(mesh, settings)

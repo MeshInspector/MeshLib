@@ -14,6 +14,8 @@
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
 #include "MRPriorityQueue.h"
+#include "MRMakeSphereMesh.h"
+#include "MRBuffer.h"
 
 namespace MR
 {
@@ -1336,6 +1338,24 @@ TEST( MRMesh, MeshDecimate )
     ASSERT_NE(regionSaved, regionForDecimation);
     ASSERT_GT(decimateResults.vertsDeleted, 0);
     ASSERT_GT(decimateResults.facesDeleted, 0);
+}
+
+TEST( MRMesh, MeshDecimateParallel )
+{
+    auto mesh0 = makeSphere( { .numMeshVertices = 2500 } );
+    mesh0.packOptimally();
+    DecimateSettings settings
+    {
+        .maxError = 1000000,
+        .maxDeletedFaces = 1000000,
+        .subdivideParts = 64
+    };
+
+    for ( int i = 0; i < 10000; ++i )
+    {
+        auto mesh = mesh0;
+        decimateMesh( mesh, settings );
+    }
 }
 
 } //namespace MR

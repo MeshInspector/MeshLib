@@ -2,9 +2,9 @@ import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
 #mesh = mrmeshpy.loadMesh("mesh.stl")
-sphereParams = mrmesh.SphereParams()
+sphereParams = mrmeshpy.SphereParams()
 sphereParams.numMeshVertices = 2500
-mesh = mrmesh.makeSphere(sphereParams)
+mesh = mrmeshpy.makeSphere(sphereParams)
 
 # Repack mesh optimally.
 # It's not necessary but highly recommended to achieve the best performance in parallel processing

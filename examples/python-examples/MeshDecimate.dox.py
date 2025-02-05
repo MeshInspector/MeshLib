@@ -1,7 +1,10 @@
 import meshlib.mrmeshpy as mrmeshpy
 
 # Load mesh
-mesh = mrmeshpy.loadMesh("mesh.stl")
+#mesh = mrmeshpy.loadMesh("mesh.stl")
+sphereParams = mrmesh.SphereParams()
+sphereParams.numMeshVertices = 2500
+mesh = mrmesh.makeSphere(sphereParams)
 
 # Repack mesh optimally.
 # It's not necessary but highly recommended to achieve the best performance in parallel processing
@@ -16,7 +19,7 @@ settings.maxError = 1000000 # Maximum error when decimation stops
 
 # Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
 # Recommended to set to number of CPU cores or more available for the best performance
-#settings.subdivideParts = 64
+settings.subdivideParts = 64
 
 # Decimate mesh
 mrmeshpy.decimateMesh(mesh, settings)

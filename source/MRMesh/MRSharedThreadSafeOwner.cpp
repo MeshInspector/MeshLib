@@ -24,7 +24,7 @@ template<typename T>
 void SharedThreadSafeOwner<T>::reset()
 {
     assert( !construction_ ); // one thread constructs the object, and this thread resets it
-    obj_.reset();
+    atomic_store( &obj_, {} );
 }
 
 template<typename T>

@@ -34,14 +34,24 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(NOT MRVOXELS_NO_TIFF)
-  list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
+  IF(WIN32)
+    find_package(tiff REQUIRED)
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
+  ELSE()
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
+  ENDIF()
 ENDIF()
 
 IF(BUILD_TESTING)
   IF(APPLE)
     list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
   ELSE()
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+    IF(WIN32)
+      find_package(GTest REQUIRED)
+      list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
+    ELSE()
+      list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+    ENDIF()
   ENDIF()
 ENDIF()
 
@@ -62,6 +72,17 @@ ELSEIF(APPLE)
     fmt
     spdlog
     tbb
+    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  )
+ELSEIF(WIN32)
+  find_package(OpenVDB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    OpenVDB::openvdb
+    fmt::fmt
+    spdlog::spdlog
+    JsonCpp::JsonCpp
+    TBB::tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSE()

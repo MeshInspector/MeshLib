@@ -10,17 +10,15 @@ file(GLOB DETAIL_HEADERS "detail/*.h" "detail/*.hpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS} ${DETAIL_HEADERS})
 
-target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-strict-aliasing")
+IF (NOT MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-strict-aliasing")
+ENDIF()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MRIOExtras
   MRVoxels
 )
-
-IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESHC_EXPORT)
-ENDIF()
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(

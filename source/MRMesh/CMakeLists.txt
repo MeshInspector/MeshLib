@@ -28,11 +28,17 @@ set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MR_EMSCRIPTEN)
   IF(NOT MRMESH_NO_TIFF)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
+    IF(MSVC)
+      find_package(tiff REQUIRED)
+      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
+    ELSE()
+      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
+    ENDIF()
   ENDIF()
 
   IF(NOT MRMESH_NO_GTEST)
-    IF(APPLE)
+    IF(APPLE OR MSVC)
+      find_package(GTest REQUIRED)
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
     ELSE()
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
@@ -50,7 +56,6 @@ ENDIF()
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED)
   find_package(TBB REQUIRED)
-  pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
@@ -100,6 +105,25 @@ IF(APPLE OR MR_EMSCRIPTEN)
       ${MRMESH_OPTIONAL_DEPENDENCIES}
     )
   ENDIF()
+ELSEIF(WIN32)
+  find_package(tl-expected REQUIRED)
+  find_package(libzip REQUIRED)
+  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
+    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
+  )
+  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
+    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
+  )
+  target_link_libraries(${PROJECT_NAME} PUBLIC
+    tl::expected
+    fmt::fmt
+    spdlog::spdlog
+    libzip::zip
+    Boost::boost
+    JsonCpp::JsonCpp
+    TBB::tbb
+    ${MRMESH_OPTIONAL_DEPENDENCIES}
+  )
 ELSE()
   find_package(tl-expected REQUIRED)
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE

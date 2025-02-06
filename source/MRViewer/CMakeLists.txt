@@ -36,6 +36,9 @@ IF(NOT MRVIEWER_NO_VOXELS)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
   IF(APPLE)
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
+  ELSEIF(WIN32)
+    find_package(OpenVDB REQUIRED)
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
   ELSE()
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
   ENDIF()
@@ -64,57 +67,78 @@ IF(MR_EMSCRIPTEN)
     glfw
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSE() # NOT MR_EMSCRIPTEN
-  IF(APPLE)
-    set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
-      COMPILE_FLAGS "-x objective-c++"
-      SKIP_PRECOMPILE_HEADERS ON
-    )
-    find_library(APPKIT_LIBRARY AppKit REQUIRED)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      _GNU_SOURCE
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      GTest::gtest
-      fmt
-      tbb
-      spdlog
-      jsoncpp
-      cpr
-      imgui
-      glad
-      glfw
-      hidapi
-      clip
-      ${APPKIT_LIBRARY}
-      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-    )
-  ELSE() # NOT APPLE and NOT EMPSCRIPTEN
-    find_package(GDCM CONFIG REQUIRED)
+ELSEIF(APPLE)
+  set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
+    COMPILE_FLAGS "-x objective-c++"
+    SKIP_PRECOMPILE_HEADERS ON
+  )
+  find_library(APPKIT_LIBRARY AppKit REQUIRED)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    GTest::gtest
+    fmt
+    tbb
+    spdlog
+    jsoncpp
+    cpr
+    imgui
+    glad
+    glfw
+    hidapi
+    clip
+    ${APPKIT_LIBRARY}
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+ELSEIF(WIN32)
+  find_package(GDCM CONFIG REQUIRED)
+  find_package(GTest REQUIRED)
+  find_package(cpr REQUIRED)
+  find_package(glad REQUIRED)
+  find_package(hidapi REQUIRED)
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      gtest
-      dl
-      cpr
-      imgui
-      glad
-      glfw
-      hidapi-hidraw
-      jsoncpp
-      spdlog
-      fmt
-      tbb
-      clip
-      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-    )
-  ENDIF() # APPLE
-ENDIF() # MR_EMSCRIPTEN
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    GTest::gtest
+    cpr::cpr
+    imgui
+    glad::glad
+    glfw
+    hidapi::hidapi
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    fmt::fmt
+    TBB::tbb
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32
+  find_package(GDCM CONFIG REQUIRED)
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    gtest
+    dl
+    cpr
+    imgui
+    glad
+    glfw
+    hidapi-hidraw
+    jsoncpp
+    spdlog
+    fmt
+    tbb
+    clip
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+ENDIF() # APPLE
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")

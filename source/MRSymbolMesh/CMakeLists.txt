@@ -36,6 +36,14 @@ ELSEIF(APPLE)
     fmt
     spdlog
   )
+ELSEIF(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    Freetype::Freetype
+    fmt::fmt
+    spdlog::spdlog
+    JsonCpp::JsonCpp
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh

@@ -6,7 +6,7 @@
 #include <map>
 
 #if defined( _WIN32 )
-#include <libloaderapi.h>
+#include <windows.h>
 #elif !defined( __EMSCRIPTEN__ )
 #include <dlfcn.h>
 #include <unistd.h>

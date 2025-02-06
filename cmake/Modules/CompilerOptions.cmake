@@ -8,7 +8,7 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION
 #  set(MR_PCH_DEFAULT ON)
 ENDIF()
 set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
-IF(MR_PCH AND NOT MR_EMSCRIPTEN)
+IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 ENDIF()
 message("MR_PCH=${MR_PCH}")
@@ -21,6 +21,76 @@ ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
+ENDIF()
+
+# Warnings and misc compiler settings.
+IF(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /DImDrawIdx=unsigned /D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING /D_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING /D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+
+  # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX /external:W0 /external:env:INCLUDE")
+
+  # Following warnings are silenced:
+  # !! NOTE: Sync this list with `common.props` !!
+  #   warning C4061: enumerator V in switch of enum E is not explicitly handled by a case label
+  #   warning C4250: 'class1': inherits 'class2' via dominance
+  #   warning C4324: structure was padded due to alignment specifier
+  #   warning C4365: conversion from 'unsigned int' to 'int', signed/unsigned mismatch
+  #   warning C4371: layout of class may have changed from a previous version of the compiler due to better packing of member
+  #   warning C4388: '<': signed/unsigned mismatch
+  #   warning C4435: Object layout under /vd2 will change due to virtual base
+  #   warning C4514: unreferenced inline function has been removed
+  #   warning C4582: constructor is not implicitly called
+  #   warning C4583: destructor is not implicitly called
+  #   warning C4599: command line argument number N does not match precompiled header
+  #   warning C4605: 'MACRO' specified on current command line, but was not specified when precompiled header was built
+  #   warning C4623: default constructor was implicitly defined as deleted
+  #   warning C4625: copy constructor was implicitly defined as deleted
+  #   warning C4626: assignment operator was implicitly defined as deleted
+  #   warning C4866: compiler may not enforce left-to-right evaluation order for call to
+  #   warning C4668: MACRO is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+  #   warning C4686: possible change in behavior, change in UDT return calling convention
+  #   warning C4710: function not inlined
+  #   warning C4711: function selected for automatic inline expansion
+  #   warning C4820: N bytes padding added after data member
+  #   warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
+  #   warning C5026: move constructor was implicitly defined as deleted
+  #   warning C5027: move assignment operator was implicitly defined as deleted
+  #   warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
+  #   warning C5039: pointer or reference to potentially throwing function passed to 'extern "C"' function under -EHc. Undefined behavior may occur if this function throws an exception.
+  #   warning C5045: Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+  #   warning C5104: found 'L#x' in macro replacement list, did you mean 'L""#x'?
+  #   warning C5105: macro expansion producing 'defined' has undefined behavior
+  #   warning C5219: implicit conversion from 'int' to 'float', possible loss of data
+  #   warning C5243: using incomplete class can cause potential one definition rule violation due to ABI limitation
+  #   warning C5246: the initialization of a subobject should be wrapped in braces
+  #   warning C5262: implicit fall-through occurs here; are you missing a break statement? Use [[fallthrough]] when a break statement is intentionally omitted between cases
+  #   warning C5264: 'const' variable is not used
+  #   warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
+  # !! NOTE: Sync this list with `common.props` !!
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
+ELSE()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+ENDIF()
+
+# Some macros.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
+
+IF(WIN32)
+  IF(MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
+  ELSE()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+  ENDIF()
+ENDIF()
+
+IF(NOT MR_EMSCRIPTEN_SINGLETHREAD AND NOT MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
+
+IF(MSVC)
+  add_definitions(-DUNICODE -D_UNICODE)
+  add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 ENDIF()
 
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
@@ -62,3 +132,47 @@ ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
 ENDIF()
+
+
+IF(MR_EMSCRIPTEN)
+  # reference: https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
+  string(JOIN " " CMAKE_EXE_LINKER_FLAGS
+    "${CMAKE_EXE_LINKER_FLAGS}"
+    "-s EXPORTED_RUNTIME_METHODS=[ccall]"
+    "-s ALLOW_MEMORY_GROWTH=1"
+    "-s LLD_REPORT_UNDEFINED=1"
+    "-s USE_WEBGL2=1"
+    "-s USE_GLFW=3"
+    "-s USE_ZLIB=1"
+    "-s FULL_ES3=1"
+    "-s USE_LIBPNG=1"
+  )
+
+  IF(MR_EMSCRIPTEN_SINGLETHREAD)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web")
+  ELSE()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
+
+    # uncomment to enable source map for debugging in browsers (slow)
+    #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")
+
+    IF(MR_EMSCRIPTEN_WASM64)
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1") # required for correct platform detection
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MEMORY64=1 -s MAXIMUM_MEMORY=16GB") # wasm-ld: maximum memory [...] cannot be greater than 17179869184
+    ELSE()
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MAXIMUM_MEMORY=4GB")
+    ENDIF()
+  ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
+
+  IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ASYNCIFY -Wno-limited-postlink-optimizations")
+    add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
+  ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
+
+  add_compile_definitions(SPDLOG_FMT_EXTERNAL)
+  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
+
+  # FIXME: comment required
+  add_compile_definitions(EIGEN_STACK_ALLOCATION_LIMIT=0)
+ENDIF() # MR_EMSCRIPTEN

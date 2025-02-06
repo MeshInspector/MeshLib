@@ -1,5 +1,9 @@
 #include "MRLog.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace MR
 {
 

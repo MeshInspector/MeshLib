@@ -3,6 +3,7 @@
 #ifndef __EMSCRIPTEN__
     #ifdef _WIN32
         #include <MRMesh/MRFinally.h>
+        #include <windows.h>
     #else
         #include <clip/clip.h>
     #endif

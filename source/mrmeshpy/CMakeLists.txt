@@ -51,6 +51,11 @@ IF(MESHLIB_BUILD_VOXELS)
       MRVoxels
       OpenVDB
     )
+  ELSEIF(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      OpenVDB::openvdb
+    )
   ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRVoxels

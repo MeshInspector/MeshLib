@@ -25,6 +25,16 @@ IF(APPLE)
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+ELSEIF(WIN32)
+  find_package(TBB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRPython
+    spdlog::spdlog
+    TBB::tbb
+    pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh

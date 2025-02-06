@@ -18,10 +18,22 @@
     #include <gtkmm.h>
   #endif
 #else
-#define GLFW_EXPOSE_NATIVE_WIN32
+#  define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #ifndef __EMSCRIPTEN__
-#include <GLFW/glfw3native.h>
+#  include <GLFW/glfw3native.h>
+#endif
+
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#  include <windows.h>
+#  include <shlobj.h>
+#  include <commdlg.h>
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -509,7 +521,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     }
     return {};
 }
-    
+
 void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder )
 {
     assert( callback );

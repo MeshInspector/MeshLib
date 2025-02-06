@@ -24,6 +24,27 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
+  ELSEIF(MSVC)
+    find_package(Boost COMPONENTS REQUIRED)
+    find_package(TBB REQUIRED)
+    include_directories(${JSONCPP_INCLUDE_DIRS})
+
+    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+
+    IF(APPLE)
+      # fix Boost.Stacktrace
+      target_compile_definitions(${PROJECT_NAME} PRIVATE
+        _GNU_SOURCE
+      )
+    ENDIF()
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      Boost::boost
+      JsonCpp::JsonCpp
+      TBB::tbb
+    )
   ELSE()
     find_package(Boost COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)

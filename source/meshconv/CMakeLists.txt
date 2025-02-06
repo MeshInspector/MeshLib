@@ -11,14 +11,26 @@ ENDIF()
 
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  MRIOExtras
-  fmt
-  spdlog
-  Boost::boost
-  tbb
-)
+IF(WIN32)
+  find_package(TBB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    fmt::fmt
+    spdlog::spdlog
+    Boost::boost
+    TBB::tbb
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    fmt
+    spdlog
+    Boost::boost
+    tbb
+  )
+ENDIF()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_BIN_DIR}")
 

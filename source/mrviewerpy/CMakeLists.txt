@@ -27,6 +27,18 @@ if(APPLE)
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+ELSEIF(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRViewer
+    MRMesh
+    MRPython
+    fmt::fmt
+    glfw
+    spdlog::spdlog
+    TBB::tbb
+    pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
@@ -50,6 +62,12 @@ IF(MESHLIB_BUILD_VOXELS)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRVoxels
       OpenVDB
+    )
+  ELSEIF(WIN32)
+    find_package(OpenVDB REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      OpenVDB::openvdb
     )
   ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE

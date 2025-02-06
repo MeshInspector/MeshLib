@@ -580,7 +580,7 @@ std::string valueToString( T value, const VarUnitToStringParams& params )
     }, params );
 }
 
-#define MR_X(T) template std::string valueToString<T>( T value, const VarUnitToStringParams& params );
+#define MR_X(T, unused) template std::string valueToString<T>( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
 #undef MR_X
 
@@ -649,7 +649,7 @@ int guessPrecision( T min, T max )
     }
 }
 
-#define MR_X(T) \
+#define MR_X(T, unused) \
     template int guessPrecision( T value ); \
     template int guessPrecision( T min, T max );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
@@ -730,7 +730,7 @@ std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& para
     }, params );
 }
 
-#define MR_X(T) template std::string valueToImGuiFormatString<T>( T value, const VarUnitToStringParams& params );
+#define MR_X(T, unused) template std::string valueToImGuiFormatString<T>( T value, const VarUnitToStringParams& params );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
 #undef MR_X
 

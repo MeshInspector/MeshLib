@@ -32,9 +32,6 @@ struct DicomVolumeT
     AffineXf3f xf;
 };
 
-using DicomVolume = DicomVolumeT<SimpleVolumeMinMax>;
-using DicomVolumeAsVdb = DicomVolumeT<VdbVolume>;
-
 
 /// Loads 3D all volumetric data from DICOM files in a folder
 /// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume

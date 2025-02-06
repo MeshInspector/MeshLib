@@ -21,6 +21,7 @@
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
     <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MREdgePaths.h" />
     <ClInclude Include="MRExpandShrink.h" />
     <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
@@ -98,6 +99,7 @@
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />

@@ -29,6 +29,12 @@
       "HelpLink": "https://meshinspector.com/inappvideo/openrawvoxels"
     },
     {
+      "Name": "Voxel Operations",
+      "Tooltip": "Logical and mathematical operations with ObjectVoxels.",
+      "Icon": "\uF15C",
+      "HelpLink": "https://meshinspector.com/inappvideo/voxelsoperations"
+    },
+    {
       "Name": "Open Voxels From TIFF",
       "Tooltip": "Load voxels from a set of TIFF images",
       "Icon": "\uF1C5",

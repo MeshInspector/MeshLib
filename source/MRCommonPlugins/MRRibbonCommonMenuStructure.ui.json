@@ -158,6 +158,14 @@
 							"Name": "Open Voxels From TIFF"
 						}
 					]
+				},
+				{
+					"Name": "Basic",
+					"List": [
+						{
+							"Name": "Voxel Operations"
+						}
+					]
 				}
 			]
 		},

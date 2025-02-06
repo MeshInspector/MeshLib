@@ -46,12 +46,12 @@ public:
     struct Settings
     {
         WorkMode workMode = WorkMode::Add;
-        float radius = 1.f; /// radius of editing region
-        float relaxForce = 0.2f; /// speed of relaxing, typical values (0 - 0.5]
-        float editForce = 1.f; /// the force of changing mesh
-        float sharpness = 50.f; /// effect of force on points far from center editing area. [0 - 100]
-        float relaxForceAfterEdit = 0.25f; ///  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
-        EdgeWeights edgeWeights = EdgeWeights::Cotan; /// edge weights for Laplacian and Patch
+        float radius = 1.f; ///< radius of editing region
+        float relaxForce = 0.2f; ///< speed of relaxing, typical values (0 - 0.5]
+        float editForce = 1.f; ///< the force of changing mesh
+        float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
+        float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
+        EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
     };
 
     /// initialize widget according ObjectMesh

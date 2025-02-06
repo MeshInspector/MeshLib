@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         build_system = os.environ.get('BUILD_SYSTEM').lower()
         if not build_system:
-            build_system = "msbuild" if compiler_id.starts_with("msvc") else "cmake"
+            build_system = "msbuild" if compiler_id.startswith("msvc") else "cmake"
 
         results = {
             'target_os': os.environ.get('TARGET_OS'),

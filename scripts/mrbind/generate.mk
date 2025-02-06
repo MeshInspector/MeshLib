@@ -439,13 +439,15 @@ LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
 
+# Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
+#   because the header override with it being constexpr is in this resource directory.
+# We certainly need this on Windows and MacOS. It's not strictly necessary on Ubuntu, but is needed on Arch, so better make it unconditional.
+COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
+
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
 COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
 LINKER_FLAGS += --target=x86_64-pc-windows-msvc
-# Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
-#   because the header override with it being constexpr is in this resource directory.
-COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # This seems to be undocumented?! MSYS2 CLANG64 needs it to successfully cross-compile, because the default `-rtlib=compiler-rt` causes it to choke.
 # For some reason MIGNW64 and UCRT64 correctly guess the right default.
 LINKER_FLAGS += -rtlib=platform
@@ -478,8 +480,6 @@ COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
 LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 ifneq ($(IS_MACOS),)
-# Hmm.
-COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # Our dependencies are here.
 COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
 # Boost.stacktrace complains otherwise.

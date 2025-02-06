@@ -5,13 +5,22 @@ project(cmake-c-examples C)
 find_package(MeshLib CONFIG REQUIRED)
 
 set(EXAMPLES
+  FreeFormDeformation
   GlobalRegistration
+  LaplacianDeformation
   MeshBoolean
   MeshDecimate
+  MeshExport
+  MeshExtrude
   MeshFillHole
+  MeshICP
   MeshLoadSave
+  MeshModification
   MeshOffset
   MeshResolveDegenerations
+  MeshStitchHole
+  NoiseDenoise
+  Triangulation
 )
 
 foreach(TARGET ${EXAMPLES})
@@ -20,3 +29,5 @@ foreach(TARGET ${EXAMPLES})
   target_link_libraries(${TARGET} PRIVATE MeshLib::MRMeshC)
   target_link_directories(${TARGET} PRIVATE ${MESHLIB_THIRDPARTY_LIB_DIR})
 endforeach()
+# Triangulation requires the math library
+target_link_libraries(Triangulation PRIVATE m)

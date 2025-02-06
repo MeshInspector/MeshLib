@@ -50,7 +50,7 @@ typedef struct MRVector3i
 } MRVector3i;
 
 /// (a, a, a)
-MRMESHC_API MRVector3i mrVector3iDiagonal( float a );
+MRMESHC_API MRVector3i mrVector3iDiagonal( int a );
 
 /// (1, 0, 0)
 MRMESHC_API MRVector3i mrVector3iPlusX( void );

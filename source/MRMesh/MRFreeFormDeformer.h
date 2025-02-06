@@ -7,20 +7,21 @@
 
 namespace MR
 {
-// Class for deforming mesh using trilinear interpolation
+// Class for deforming mesh using Bernstein interpolation
 class FreeFormDeformer
 {
 public:
     // Only set mesh ref
     MRMESH_API FreeFormDeformer( VertCoords& coords, const VertBitSet& valid );
-    // Parallel calculates all points normed positions
-    // sets ref grid by initialBox, if initialBox is invalid use mesh bounding box instead 
+    MRMESH_API FreeFormDeformer( Mesh& mesh, const VertBitSet* region = nullptr );
+    // Calculates all points' normalized positions in parallel
+    // sets ref grid by initialBox, if initialBox is invalid uses mesh bounding box instead
     MRMESH_API void init( const Vector3i& resolution = Vector3i::diagonal( 2 ), const Box3f& initialBox = Box3f() );
     // Updates ref grid point position
     MRMESH_API void setRefGridPointPosition( const Vector3i& coordOfPointInGrid, const Vector3f& newPos );
     // Gets ref grid point position
     MRMESH_API const Vector3f& getRefGridPointPosition( const Vector3i& coordOfPointInGrid ) const;
-    // Parallel apply updated grid to all mesh points
+    // Apply updated grid to all mesh points in parallel
     // ensure updating render object after using it
     MRMESH_API void apply() const;
     // Apply updated grid to given point

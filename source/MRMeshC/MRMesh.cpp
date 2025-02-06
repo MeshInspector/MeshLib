@@ -23,6 +23,7 @@ REGISTER_AUTO_CAST( ThreeVertIds )
 REGISTER_AUTO_CAST( Triangle3f )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_AUTO_CAST( VertId )
 REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_VECTOR( EdgePath )
 
@@ -191,4 +192,22 @@ double mrMeshVolume( const MRMesh* mesh_, const MRFaceBitSet* region_ )
 {
     ARG( mesh ); ARG_PTR( region );
     return mesh.volume( region );
+}
+
+void mrMeshInvalidateCaches( MRMesh* mesh_, bool pointsChanged )
+{
+    ARG( mesh );
+    mesh.invalidateCaches( pointsChanged );
+}
+
+void mrMeshAddMesh( MRMesh* mesh_, const MRMesh* from_ )
+{
+    ARG( mesh ); ARG( from );
+    mesh.addMesh( from );
+}
+
+MRVector3f mrMeshNormalFromVert( const MRMesh* mesh_, MRVertId v_ )
+{
+    ARG( mesh ); ARG_VAL( v );
+    RETURN( mesh.normal( v ) );
 }

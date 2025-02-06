@@ -75,6 +75,9 @@
     <ClCompile Include="ViewerButtons\MRInvertView.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
+    <ClCompile Include="Voxels\MRVoxelOperations.cpp">
+      <Filter>Voxels</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -97,6 +100,9 @@
       <Filter>ViewerButtons</Filter>
     </ClInclude>
     <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h">
+      <Filter>Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="Voxels\MRVoxelOperations.h">
       <Filter>Voxels</Filter>
     </ClInclude>
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h">
@@ -737,6 +743,18 @@
     </Image>
     <Image Include="resource\icons\X3\Rotator.png">
       <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Voxel Operations.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Voxel Operations.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Voxel Operations.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Voxel Operations.png">
+      <Filter>resource\icons\X0_75</Filter>
     </Image>
   </ItemGroup>
 </Project>

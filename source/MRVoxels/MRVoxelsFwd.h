@@ -42,9 +42,12 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS VoxelsVolu
     ( SimpleVolumeU16, VoxelsVolume<std::vector<uint16_t>> )
 )
 
+namespace VoxelsLoad
+{
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS DicomVolumeT,
     ( DicomVolume, DicomVolumeT<SimpleVolumeMinMax> )
     ( DicomVolumeAsVdb, DicomVolumeT<VdbVolume> )
 )
+} // namespace VoxelsLoad
 
 } // namespace MR

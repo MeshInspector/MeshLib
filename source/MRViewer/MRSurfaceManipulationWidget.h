@@ -69,6 +69,10 @@ public:
     MRVIEWER_API void updateUVs();
     // enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
+    // Calculate mesh deviations as a vertex shift (if disabled, calculate as the distance to the original mesh)
+    MRVIEWER_API void calcDeviationAsShift( bool enable );
+    MRVIEWER_API bool deviationAsShift() const { return deviationAsShift_; }
+    MRVIEWER_API bool canCalcDeviationAsShift() const { return canCalcDeviationAsShift_; }
     // get min / max point shifts for (usefull for setup palette)
     MRVIEWER_API Vector2f getMinMax();
 
@@ -103,6 +107,7 @@ private:
 
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
+    void updateValueChangesByShift_( const VertBitSet& region );
     void updateValueChangesByDistance_( const VertBitSet& region );
     void createLastStableObjMesh_();
     void removeLastStableObjMesh_();
@@ -155,6 +160,8 @@ private:
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = true;
+    bool deviationAsShift_ = false;
+    bool canCalcDeviationAsShift_ = true;
 
     // allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;

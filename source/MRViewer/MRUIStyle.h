@@ -179,6 +179,14 @@ bool checkbox( const char* label, Getter get, Setter set )
     set( value );
     return ret;
 }
+template <typename Getter, typename Setter>
+bool checkboxValid( const char* label, Getter get, Setter set, bool valid )
+{
+    bool value = get();
+    bool ret = checkboxValid( label, &value, valid );
+    set( value );
+    return ret;
+}
 
 /// Draw a checkbox toggling one or more bits in the mask.
 template <typename T>

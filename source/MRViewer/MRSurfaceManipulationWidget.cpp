@@ -145,6 +145,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 
     mousePressed_ = false;
     mousePos_ = { -1, -1 };
+
+    canCalcDeviationAsShift_ = true;
 }
 
 void SurfaceManipulationWidget::reset()
@@ -225,6 +227,11 @@ void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
     enableDeviationTexture_ = enable;
     updateTexture();
     updateUVs();
+}
+
+void SurfaceManipulationWidget::calcDeviationAsShift( bool enable )
+{
+    deviationAsShift_ = enable && canCalcDeviationAsShift_;
 }
 
 Vector2f SurfaceManipulationWidget::getMinMax()
@@ -505,6 +512,8 @@ void SurfaceManipulationWidget::initConnections_()
     connectionsInitialized_ = true;
     meshChangedConnection_ = obj_->meshChangedSignal.connect( [&] ( uint32_t )
     {
+        canCalcDeviationAsShift_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+        deviationAsShift_ &= canCalcDeviationAsShift_;
         if ( ownMeshChangedSignal_ )
         {
             ownMeshChangedSignal_ = false;
@@ -788,6 +797,14 @@ void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
 }
 
 void SurfaceManipulationWidget::updateValueChanges_( const VertBitSet& region )
+{
+    if ( deviationAsShift_ )
+        updateValueChangesByShift_( region );
+    else
+        updateValueChangesByDistance_( region );
+}
+
+void SurfaceManipulationWidget::updateValueChangesByShift_( const VertBitSet& region )
 {
     const auto& oldPoints = lastStableObjMesh_->mesh()->points;
     const auto& points = obj_->mesh()->points;

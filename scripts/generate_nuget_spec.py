@@ -63,8 +63,8 @@ for address, dirs, files in folder:
 	for file in files:
 		if file.startswith('nunit'):
 			continue
-            
-		if (file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System') and not file.startswith('MRDotNet')):
+
+		if file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System') and not file.startswith('MRDotNet') and not file.startswith('pybind11nonlimitedapi_meshlib_'):
 			anyDllIsFound = True
 			src = os.path.join(address,file)
 			print(src)
@@ -89,14 +89,14 @@ for address, dirs, files in folder:
 
 if not anyDllIsFound:
     raise Exception("No DLLs found")
-    
+
 fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')
 fTargets.close()
 
 f.write('\t\t<file src="./MeshLib.targets" target="build/"></file>\n')
 
-            
+
 f.write('\t</files>\n')
 f.write('</package>\n')
 f.close()

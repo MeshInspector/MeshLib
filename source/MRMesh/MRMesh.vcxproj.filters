@@ -1263,6 +1263,9 @@
     <ClInclude Include="MRSurfaceLineOffset.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="MROutliersPoints.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2074,6 +2077,9 @@
     </ClCompile>
     <ClCompile Include="MRSurfaceLineOffset.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MROutliersPoints.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

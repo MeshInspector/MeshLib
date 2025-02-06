@@ -66,6 +66,19 @@ RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig
 
+# install gcc-14 and use it as default gcc compiler
+RUN apt update && apt install -y \
+    software-properties-common \
+    build-essential \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt update \
+    && apt install -y gcc-14 g++-14 \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 \
+    && update-alternatives --set gcc /usr/bin/gcc-14 \
+    && update-alternatives --set g++ /usr/bin/g++-14 \
+    && apt clean && rm -rf /var/lib/apt/lists/*
+
 # install aws cli
 RUN ARCH=$(uname -m) && \
     case $ARCH in \

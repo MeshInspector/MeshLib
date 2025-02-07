@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         config: [ "Debug", "Release" ]
-        cmake: [ true, false ]
+        build_system: [ MSBuild, CMake ]
         runner: [ windows-2022, windows-2019 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
@@ -42,10 +42,10 @@ jobs:
             config: "Debug"
           - full_config_build: false
             runner: windows-2019
-            cmake: true
+            build_system: CMake
           - full_config_build: false
             config: Release
-            cmake: true
+            build_system: CMake
         include:
           - runner: windows-2022
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
@@ -79,6 +79,7 @@ jobs:
           target_arch: x64
           cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
+          build_system: ${{ matrix.build_system }}
 
       - name: Checkout Vcpkg ${{ inputs.vcpkg_version }}
         working-directory: C:\vcpkg
@@ -144,17 +145,17 @@ jobs:
         run: py -3 scripts\check_vcxproj.py source\
 
       - name: Add msbuild to PATH
-        if: ${{ !matrix.cmake }}
+        if: ${{ matrix.build_system == 'MSBuild' }}
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
-        if:   ${{ !matrix.cmake && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore Dependencies
-        if:   ${{ !matrix.cmake && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: codebeltnet/dotnet-restore@v2
         with:
           projects: 'source/**/*.csproj'
@@ -176,21 +177,21 @@ jobs:
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
 
       - name: Build (msbuild)
-        if: ${{ !matrix.cmake }}
+        if: ${{ matrix.build_system == 'MSBuild' }}
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build (cmake)
-        if: ${{ matrix.cmake }}
+        if: ${{ matrix.build_system == 'CMake' }}
         run: \
           cmake -B source\x64\${{matrix.config}} -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
           cmake --build source\x64\${{matrix.config}} -j$env:NUMBER_OF_PROCESSORS
 
       - name: Build .NET
-        if:   ${{ !matrix.cmake && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build .NET examples
-        if:   ${{ !matrix.cmake && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build MRBind
@@ -249,15 +250,15 @@ jobs:
           del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && !matrix.cmake }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && !matrix.cmake }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && !matrix.cmake }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -265,7 +266,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && !matrix.cmake }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

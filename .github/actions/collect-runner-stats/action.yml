@@ -13,6 +13,10 @@ inputs:
   build_config:
     required: true
     type: string
+  build_system:
+    required: false
+    type: string
+    default: ''
 
 outputs:
   job_id:
@@ -49,6 +53,7 @@ runs:
         TARGET_ARCH: ${{ inputs.target_arch }}
         CXX_COMPILER: ${{ inputs.cxx_compiler }}
         BUILD_CONFIG: ${{ inputs.build_config }}
+        BUILD_SYSTEM: ${{ inputs.build_system }}
         STATS_FILE: "${{ runner.temp }}/RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"
       run: ""
 

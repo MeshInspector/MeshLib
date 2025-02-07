@@ -49,6 +49,7 @@ def parse_job(job: dict):
             'runner_group_name': job['runner_group_name'],
             'runner_cpu_count':  runner_stats['cpu_count'],
             'runner_ram_mb':     runner_stats['ram_mb'],
+            'build_system':      runner_stats['build_system'],
         }
     except:
         print("Something went wrong while parsing the job/runner info. Debug info:")

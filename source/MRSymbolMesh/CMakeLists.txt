@@ -16,9 +16,6 @@ ELSE()
 
   find_package(fmt REQUIRED)
   find_package(spdlog REQUIRED)
-
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
@@ -29,6 +26,8 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
   )
 ELSEIF(APPLE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype
@@ -45,6 +44,8 @@ ELSEIF(WIN32)
     JsonCpp::JsonCpp
   )
 ELSE()
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype

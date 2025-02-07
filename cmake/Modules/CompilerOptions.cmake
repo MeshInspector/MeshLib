@@ -13,10 +13,6 @@ IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 
-IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
-ENDIF()
-
 # make link to fail if there are unresolved symbols (GCC and Clang)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
@@ -157,12 +153,12 @@ IF(MR_EMSCRIPTEN)
     #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")
 
     IF(MR_EMSCRIPTEN_WASM64)
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1") # required for correct platform detection
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MEMORY64=1 -s MAXIMUM_MEMORY=16GB") # wasm-ld: maximum memory [...] cannot be greater than 17179869184
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MAXIMUM_MEMORY=16GB") # wasm-ld: maximum memory [...] cannot be greater than 17179869184
     ELSE()
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MAXIMUM_MEMORY=4GB")
     ENDIF()
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
   ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
   IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)

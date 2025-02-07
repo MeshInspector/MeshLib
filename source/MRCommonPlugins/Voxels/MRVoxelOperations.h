@@ -1,6 +1,7 @@
 #pragma once
+#ifndef MESHLIB_NO_VOXELS
 #include "MRMesh/MRMeshFwd.h"
-#include "MRPlugins/exports.h"
+#include "MRCommonPlugins/exports.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRSceneStateCheck.h"
 #include "MRViewer/MRStatePluginUpdate.h"
@@ -43,3 +44,4 @@ private:
 };
 
 }
+#endif

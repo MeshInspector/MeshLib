@@ -1,3 +1,4 @@
+#ifndef MESHLIB_NO_VOXELS
 #include "MRVoxelOperations.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
@@ -208,3 +209,5 @@ void VoxelOperations::doOperation_(Operation op)
 MR_REGISTER_RIBBON_ITEM(VoxelOperations)
 
 } //namespace MR
+
+#endif

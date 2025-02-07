@@ -340,7 +340,7 @@ template <detail::Units::Scalar T>
 [[nodiscard]] MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
 
 #define MR_X(T, unused) extern template MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
@@ -377,7 +377,7 @@ requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTrai
 #define MR_X(T, unused) \
     extern template MRVIEWER_API int guessPrecision( T value ); \
     extern template MRVIEWER_API int guessPrecision( T min, T max );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 // Generates a printf-style format string for `value`, for use with ImGui widgets.
@@ -397,7 +397,7 @@ template <detail::Units::Scalar T>
 [[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
 
 #define MR_X(T, unused) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 }

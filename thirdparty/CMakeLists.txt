@@ -137,6 +137,7 @@ ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)
   set(CLIP_X11_WITH_PNG OFF)
+  set(BUILD_SHARED_LIBS ON)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip)
   file(GLOB CLIP_HEADERS "clip/*.h")

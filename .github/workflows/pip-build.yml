@@ -615,34 +615,3 @@ jobs:
     if: ${{ github.event_name == 'release' }}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
-
-  delete-artifacts:
-    timeout-minutes: 5
-    runs-on: ubuntu-20.04
-    needs: upload-to-release
-    if: always()
-    steps:
-      - name: Delete all ManyLinux
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: ManyLinux-*
-          failOnError: false
-
-      - name: Delete Python Stubs
-        if: ${{ github.event_name == 'release' }}
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: PythonStubs
-          failOnError: false
-
-      - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: Windows
-          failOnError: false
-
-      - name: Delete all Macos
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: Macos-*
-          failOnError: false

@@ -4,6 +4,8 @@ set(MR_PCH_DEFAULT OFF)
 # for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
   set(MR_PCH_DEFAULT ON)
+ELSEIF(MSVC)
+  set(MR_PCH_DEFAULT ON)
 #ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 #  set(MR_PCH_DEFAULT ON)
 ENDIF()

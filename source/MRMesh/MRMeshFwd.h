@@ -350,6 +350,18 @@ template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;
 template <typename T> using Box3 = Box<Vector3<T>>;
 
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
+    ( Ball1f,  Ball<float>     )
+    ( Ball1d,  Ball<double>    )
+    ( Ball2f,  Ball<Vector2<float>>     )
+    ( Ball2d,  Ball<Vector2<double>>    )
+    ( Ball3f,  Ball<Vector3<float>>     )
+    ( Ball3d,  Ball<Vector3<double>>    )
+)
+template <typename T> using Ball1 = Ball<T>;
+template <typename T> using Ball2 = Ball<Vector2<T>>;
+template <typename T> using Ball3 = Ball<Vector3<T>>;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct), QuadraticForm,
     ( QuadraticForm2f, QuadraticForm<Vector2<float>>  )
     ( QuadraticForm2d, QuadraticForm<Vector2<double>> )

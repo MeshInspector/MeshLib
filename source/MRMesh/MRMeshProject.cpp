@@ -2,6 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
+#include "MRBall.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -112,7 +113,7 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
     const auto & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )

@@ -56,18 +56,12 @@ struct MeshProjectionResult
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
-struct Ball
-{
-    Vector3f center;
-    float radiusSq = 0;
-};
-
 /// this callback is invoked on every triangle at least partially in the ball, and allows to change the ball
-using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball & ball )>;
+using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball3f & ball )>;
 
 /// enumerates all triangles within the ball until callback returns Stop;
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
-MRMESH_API void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
+MRMESH_API void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
 
 struct SignedDistanceToMeshResult
 {

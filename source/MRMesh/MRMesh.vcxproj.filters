@@ -1269,6 +1269,9 @@
     <ClInclude Include="MRBall.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointsInBox.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2085,6 +2088,9 @@
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRSharedThreadSafeOwner.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsInBox.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>

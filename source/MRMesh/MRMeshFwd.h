@@ -652,6 +652,12 @@ constexpr inline T sqr( T x ) noexcept { return x * x; }
 template <typename T>
 constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
+template <typename T>
+constexpr inline T distance( T x, T y ) noexcept { return x >= y ? x - y : y - x; }
+
+template <typename T>
+constexpr inline T distanceSq( T x, T y ) noexcept { return sqr( x - y ); }
+
 template<typename...>
 inline constexpr bool dependent_false = false;
 

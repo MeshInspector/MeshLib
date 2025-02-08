@@ -104,7 +104,7 @@ void findNeighborsInBall( const PointCloud& pointCloud, VertId v, float radius, 
 {
     neighbors.clear();
     const auto& points = pointCloud.points;
-    findPointsInBall( pointCloud, points[v], radius, [&]( VertId vid, const Vector3f& )
+    findPointsInBall( pointCloud, { points[v], sqr( radius ) }, [&]( VertId vid, const Vector3f& )
     {
         if ( vid != v )
             neighbors.push_back( vid );

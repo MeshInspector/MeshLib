@@ -24,10 +24,10 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 
     VertNormals normals;
     normals.resizeNoInit( pointCloud.points.size() );
-    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&, radiusSq = sqr( radius )]( VertId vid )
     {
         PointAccumulator accum;
-        findPointsInBall( pointCloud, pointCloud.points[vid], radius, [&]( VertId, const Vector3f& coord )
+        findPointsInBall( pointCloud, { pointCloud.points[vid], radiusSq }, [&]( VertId, const Vector3f& coord )
         {
             accum.addPoint( Vector3d( coord ) );
         } );
@@ -183,9 +183,9 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
 bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius, const ProgressCallback & progress )
 {
     return orientNormalsCore( pointCloud, normals,
-        [&]( VertId base, auto callback )
+        [&, radiusSq = sqr( radius )]( VertId base, auto callback )
         {
-            findPointsInBall( pointCloud, pointCloud.points[base], radius,
+            findPointsInBall( pointCloud, { pointCloud.points[base], radiusSq },
                 [&]( VertId v, const Vector3f& )
                 {
                     if ( v == base )

@@ -16,6 +16,12 @@ struct Ball
 
     V center; ///< ball's center
     T radiusSq = 0; ///< ball's squared radius
+
+    /// returns true if given point is strictly inside the ball (not on its spherical surface)
+    bool inside( const V & pt ) const { return distanceSq( pt, center ) < radiusSq; }
+
+    /// returns true if given point is strictly outside the ball (not on its spherical surface)
+    bool outside( const V & pt ) const { return distanceSq( pt, center ) > radiusSq; }
 };
 
 } //namespace MR

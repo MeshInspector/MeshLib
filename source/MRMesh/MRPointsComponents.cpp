@@ -192,6 +192,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
 
     VertBitSet bdVerts;
     ProgressCallback subPc = subprogress( pc, 0.f, 1.0f );
+    const auto maxDistSq = sqr( maxDist );
     if ( numThreads > 1 )
     {
         bdVerts.resize( numVerts );
@@ -201,7 +202,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
         {
             if ( !contains( vertsRegion, v0 ) )
                 return;
-            findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
+            findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], maxDistSq },
                 [&] ( VertId v1, const Vector3f& )
             {
                 if ( v0 < v1 && contains( vertsRegion, v1 ) )
@@ -223,7 +224,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
     const int counterDivider = int( lastPassVerts->count() ) / 100;
     for ( auto v0 : *lastPassVerts )
     {
-        findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
+        findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], maxDistSq },
             [&] ( VertId v1, const Vector3f& )
         {
             if ( v0 < v1 && contains( vertsRegion, v1 ) )

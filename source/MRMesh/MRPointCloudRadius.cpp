@@ -58,14 +58,14 @@ bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilat
 {
     auto regionCopy = region;
 
-    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    const auto res =  BitSetParallelForAll( region, [&, dilationSq = sqr( dilation )] ( VertId testVertex )
     {
         if ( regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? (*xf)( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
-        findPointsInBall( pointCloud, point, dilation, [&] ( VertId v, const Vector3f& )
+        findPointsInBall( pointCloud, { point, dilationSq }, [&] ( VertId v, const Vector3f& )
         {
             if ( regionCopy.test( testVertex ) )
                 return;
@@ -86,14 +86,14 @@ bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosio
 {
     auto regionCopy = region;
 
-    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    const auto res =  BitSetParallelForAll( region, [&, erosionSq = sqr( erosion )] ( VertId testVertex )
     {
         if ( !regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? ( *xf )( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
-        findPointsInBall( pointCloud, point, erosion, [&] ( VertId v, const Vector3f& )
+        findPointsInBall( pointCloud, { point, erosionSq }, [&] ( VertId v, const Vector3f& )
         {
             if ( !regionCopy.test( testVertex ) )
                 return;

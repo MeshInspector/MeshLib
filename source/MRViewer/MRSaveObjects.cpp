@@ -109,14 +109,13 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
             c = ( char )tolower( c );
 
         auto saver = VoxelsSave::getVoxelsSaver( utf8string( ext ) );
-        VdbVolume vol;
+        VdbVolume vol = objVoxels->vdbVolume(); // no voxels are copied, only "wrapping" structure
         // if the format supports units, rescale from UI scaling to meters
         if ( saver.supportsUnits )
         {
             float scaleFactor = 1.f;
             if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
                 scaleFactor = getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
-            vol = objVoxels->vdbVolume(); // no voxels are copied, only "wrapping" structure
             vol.voxelSize *= scaleFactor;
         }
 

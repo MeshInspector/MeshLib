@@ -872,9 +872,9 @@ Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::
     for ( size_t i = 0; i < loaded.size(); ++i )
     {
         if ( auto obj = loaded[i].and_then( [] ( const DicomVolumeAsVdb& vdb ) { return createObjectVoxels( vdb ); } ) )
-            res.objs.push_back( *obj );
+            res.objs.push_back( std::move( *obj ) );
         else
-            res.warnings += "Failed to load some voxel objects\n";
+            res.warnings += fmt::format( "Failed to load some voxel objects: {}\n", obj.error() );
     }
 
     return res;

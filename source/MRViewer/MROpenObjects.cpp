@@ -158,11 +158,12 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             else
             {
                 nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                    [&, dicomScaleFactor]( LoadedObjectVoxels && ld ) -> loadObjResultType
+                    [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
                     {
                         // dicom is always opened in meters, and we can use this information to convert them properly
-                        ld.obj->applyScale( dicomScaleFactor );
-                        return LoadedObjects{ .objs = { ld.obj } };
+                        for ( auto& obj : objs.objs )
+                            obj->applyScale( dicomScaleFactor );
+                        return objs;
                     } );
             }
             #endif

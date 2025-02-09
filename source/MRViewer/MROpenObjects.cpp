@@ -163,7 +163,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                         // dicom is always opened in meters, and we can use this information to convert them properly
                         for ( auto& obj : objs.objs )
                             obj->applyScale( dicomScaleFactor );
-                        return objs;
+                        return std::move( objs );
                     } );
             }
             #endif

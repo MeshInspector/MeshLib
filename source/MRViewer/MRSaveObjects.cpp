@@ -1,4 +1,5 @@
 #include "MRSaveObjects.h"
+#include "MRUnitSettings.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -21,7 +22,6 @@
 #endif
 
 #include "MRPch/MRSpdlog.h"
-#include "MRUnitSettings.h"
 
 namespace MR
 {
@@ -113,10 +113,8 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         // if the format supports units, rescale from UI scaling to meters
         if ( saver.supportsUnits )
         {
-            float scaleFactor = 1.f;
             if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
-                scaleFactor = getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
-            vol.voxelSize *= scaleFactor;
+                vol.voxelSize *= getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
         }
 
         result = saver( vol, filename, settings.callback );

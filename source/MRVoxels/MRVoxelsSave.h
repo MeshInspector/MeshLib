@@ -73,11 +73,8 @@ struct VoxelsSaver
             func( func )
     {}
 
-    Expected<void> operator()( const VdbVolume& vol, const std::filesystem::path& path, ProgressCallback cb ) const
-    { return func( vol, path, cb ); }
-
-    explicit operator bool() const
-    { return static_cast<bool>( func ); }
+    operator Func() const
+    { return func; }
 
     bool supportsUnits = false;
     Func func = nullptr;

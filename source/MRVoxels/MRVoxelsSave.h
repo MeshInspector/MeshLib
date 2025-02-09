@@ -64,7 +64,24 @@ MRVOXELS_API Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, co
 /// \}
 
 #ifndef MR_PARSING_FOR_PB11_BINDINGS
-using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
+struct VoxelsSaver
+{
+    using Func = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
+
+    VoxelsSaver( Func func = nullptr, bool supportsScaling = false ):
+            supportsUnits( supportsScaling ),
+            func( func )
+    {}
+
+    Expected<void> operator()( const VdbVolume& vol, const std::filesystem::path& path, ProgressCallback cb ) const
+    { return func( vol, path, cb ); }
+
+    operator bool() const
+    { return func; }
+
+    bool supportsUnits = false;
+    Func func = nullptr;
+};
 
 MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRVOXELS_API, VoxelsSaver )
 #endif

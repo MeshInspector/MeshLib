@@ -994,7 +994,7 @@ template Expected<void> toDicom<uint16_t>( const SimpleVolumeU16& volume, const 
 MR_ON_INIT
 {
     static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
-    MR::VoxelsSave::setVoxelsSaver( filter, MR::VoxelsSave::toDicom );
+    MR::VoxelsSave::setVoxelsSaver( filter, VoxelsSaver( MR::VoxelsSave::toDicom, true ) );
     /* additionally register the general saver as an object saver for this format */
     MR::ObjectSave::setObjectSaver( filter, MR::saveObjectVoxelsToFile );
 

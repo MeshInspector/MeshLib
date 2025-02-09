@@ -262,27 +262,30 @@ Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::file
     return saver( vdbVolume, file, callback );
 }
 
-template <VoxelsSaver voxelsSaver>
-Expected<void> toVoxels( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
+auto getVoxelsObjectSaver( const VoxelsSaver& voxelsSaver )
 {
-    const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
-    if ( objVoxels.empty() )
-        return voxelsSaver( {}, path, callback );
-    else if ( objVoxels.size() > 1 )
-        return unexpected( "Multiple voxel grids in the given object" );
+    return [voxelsSaver] ( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
+        -> Expected<void>
+    {
+        const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
+        if ( objVoxels.empty() )
+            return voxelsSaver( {}, path, callback );
+        else if ( objVoxels.size() > 1 )
+            return unexpected( "Multiple voxel grids in the given object" );
 
-    const auto& objVoxel = objVoxels.front();
-    if ( !objVoxel )
-        return voxelsSaver( {}, path, callback );
+        const auto& objVoxel = objVoxels.front();
+        if ( !objVoxel )
+            return voxelsSaver( {}, path, callback );
 
-    return voxelsSaver( objVoxel->vdbVolume(), path, callback );
+        return voxelsSaver( objVoxel->vdbVolume(), path, callback );
+    };
 }
 
 #define MR_ADD_VOXELS_SAVER( filter, saver )                   \
 MR_ON_INIT {                                                   \
     MR::VoxelsSave::setVoxelsSaver( filter, saver );           \
     /* additionally register the saver as an object saver */   \
-    MR::ObjectSave::setObjectSaver( filter, toVoxels<saver> ); \
+    MR::ObjectSave::setObjectSaver( filter, getVoxelsObjectSaver( saver ) ); \
 };
 
 MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
@@ -388,7 +391,7 @@ Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSet
 
 Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    return VoxelsSave::toVoxels<VoxelsSave::toAnySupportedFormat>( object, path, callback );
+    return VoxelsSave::getVoxelsObjectSaver( VoxelsSave::toAnySupportedFormat )( object, path, callback );
 }
 
 } // namespace MR

@@ -308,7 +308,7 @@ MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader ); 
 namespace ObjectSave
 {
 
-using ObjectSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const ProgressCallback& );
+using ObjectSaver = std::function<Expected<void>( const Object&, const std::filesystem::path&, const ProgressCallback& )>;
 
 MR_FORMAT_REGISTRY_DECL( ObjectSaver )
 

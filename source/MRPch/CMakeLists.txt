@@ -31,13 +31,6 @@ IF(MR_PCH)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    IF(APPLE)
-      # fix Boost.Stacktrace
-      target_compile_definitions(${PROJECT_NAME} PRIVATE
-        _GNU_SOURCE
-      )
-    ENDIF()
-
     target_link_libraries(${PROJECT_NAME} PRIVATE
       fmt::fmt
       spdlog::spdlog

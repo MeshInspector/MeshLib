@@ -83,7 +83,7 @@ private:
     DistanceMap compensatedDm_;
 
     // tolerance of distance map height for "touching" compensations
-    static constexpr float cDMTolearance = 1e-6f;
+    static constexpr float cDMTolearance = 1e-5f;
 };
 
 Expected<void> RadiusCompensator::init()
@@ -147,6 +147,7 @@ Expected<void> RadiusCompensator::compensateDistanceMap()
     auto sb = subprogress( params_.callback, 0.2f, 0.5f );
     compensatedDm_ = DistanceMap( dm_.resX(), dm_.resY() );
     size_t i = 0;
+    const float cTolerance = params_.toolRadius * cDMTolearance;
     for ( auto [cost, cId] : costs_ )
     {
         if ( ( ++i % 1024 == 0 ) && !reportProgress( sb, float( i ) / costs_.size() ) )
@@ -173,10 +174,10 @@ Expected<void> RadiusCompensator::compensateDistanceMap()
         iteratePixelsInRadius_( pixelCoord, [&] ( const Vector2i& pixeli )->bool
         {
             auto realValue = dm_.getValue( pixeli.x, pixeli.y );
-            auto& value = compensatedDm_.getValue( pixeli.x, pixeli.y );
-            auto compValue = calcCompensatedHeightAtPixel_( pixeli, toolCenter );
-            if ( compValue > value && compValue + std::abs( realValue * cDMTolearance ) >= realValue )
-                value = compValue;
+            auto& compValue = compensatedDm_.getValue( pixeli.x, pixeli.y );
+            auto newCompValue = calcCompensatedHeightAtPixel_( pixeli, toolCenter );
+            if ( newCompValue > compValue && newCompValue + cTolerance >= realValue )
+                compValue = std::max( newCompValue, realValue );
             return true;
         } );
     }
@@ -399,13 +400,14 @@ float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
     double sumVolume = 0.0;
     double sumArea = 0.0;
     auto toolPixel = Vector2i( to2dim( toDmXf_( toolCenter ) ) );
+    const float cTolerance = cDMTolearance * params_.toolRadius;
     iteratePixelsInRadius_( toolPixel, [&] ( const Vector2i& pixelCoord )->bool
     {
         auto value = dm_.getValue( pixelCoord.x, pixelCoord.y );
         auto height = calcCompensatedHeightAtPixel_( pixelCoord, toolCenter );
-        if ( height + std::abs( value * cDMTolearance ) >= value )
+        if ( height + cTolerance >= value )
         {
-            sumVolume += ( height + std::abs( value * cDMTolearance ) - value );
+            sumVolume += std::max( height - value, 0.0f );
             sumArea += 1.0;
         }
         return true;

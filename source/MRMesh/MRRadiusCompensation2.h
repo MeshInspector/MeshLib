@@ -21,4 +21,6 @@ struct SphericalMillingCutter
 
 [[nodiscard]] MRMESH_API VertBitSet findVerticesInsideTool( const Mesh& mesh, const SphericalMillingCutter& tool );
 
+[[nodiscard]] MRMESH_API VertCoords compensateRadius2( const Mesh& mesh, float toolRadius );
+
 } //namespace MR

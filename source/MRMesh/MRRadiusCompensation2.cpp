@@ -55,46 +55,53 @@ VertCoords compensateRadius2( const Mesh& mesh, float toolRadius )
 {
     MR_TIMER
 
-    const auto & tree = mesh.getAABBTreePoints();
-    auto meshBox = tree.getBoundingBox();
     VertCoords res = mesh.points;
-    if ( !meshBox.valid() )
-        return res;
-
     VertCoords sumShifts( mesh.points.size() );
     Vector<int, VertId> numShifts( mesh.points.size() );
 
-    for ( auto v : mesh.topology.getValidVerts() )
+    for ( int i = 0; i < 50; ++i )
     {
-        auto p = mesh.points[v];
-        auto n = mesh.pseudonormal( v );
-        SphericalMillingCutter tool
-        {
-            .center = p - toolRadius * n,
-            .radius = toolRadius
-        };
-        Box3f toolBox = getToolBox( tool, meshBox );
-        findPointsInBox( tree, toolBox, [&]( VertId vi, const Vector3f& p )
-        {
-            Vector3f delta = p - tool.center;
-            if ( p.z < tool.center.z )
-                delta.z = 0;
+        AABBTreePoints tree( res, &mesh.topology.getValidVerts() );
+        const auto meshBox = tree.getBoundingBox();
+        if ( !meshBox.valid() )
+            return res;
 
-            auto distSq = delta.lengthSq();
-            if ( distSq <= 0 || distSq >= sqr( toolRadius ) )
-                return;
-            auto dist = std::sqrt( distSq );
-            Vector3f shift = delta / dist * ( toolRadius - dist );
-            sumShifts[vi] += shift;
-            ++numShifts[vi];
+        for ( auto v : mesh.topology.getValidVerts() )
+        {
+            auto p = mesh.points[v];
+            auto n = mesh.pseudonormal( v );
+            SphericalMillingCutter tool
+            {
+                .center = p - toolRadius * n,
+                .radius = toolRadius
+            };
+            Box3f toolBox = getToolBox( tool, meshBox );
+            findPointsInBox( tree, toolBox, [&]( VertId vi, const Vector3f& p )
+            {
+                Vector3f delta = p - tool.center;
+                if ( p.z < tool.center.z )
+                    delta.z = 0;
+
+                auto distSq = delta.lengthSq();
+                if ( distSq <= 0 || distSq >= sqr( toolRadius ) )
+                    return;
+                auto dist = std::sqrt( distSq );
+                Vector3f shift = delta / dist * ( toolRadius - dist );
+                sumShifts[vi] += shift;
+                ++numShifts[vi];
+            } );
+        }
+
+        BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+        {
+            if ( numShifts[v] > 0 )
+            {
+                res[v] += sumShifts[v] / float( numShifts[v] );
+                sumShifts[v] = Vector3f{};
+                numShifts[v] = 0;
+            }
         } );
     }
-
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
-    {
-        if ( numShifts[v] > 0 )
-            res[v] += sumShifts[v] / float( numShifts[v] );
-    } );
 
     return res;
 }

@@ -2,28 +2,30 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(imgui)
 
+set(IMGUI_ROOT "../../thirdparty/imgui")
+
 file(GLOB IMGUI_SOURCES
-  "../../thirdparty/imgui/*.cpp"
-  "../../thirdparty/imgui/misc/freetype/*.cpp"
-  "../../thirdparty/imgui/misc/cpp/*.cpp"
-  "../../thirdparty/imgui/backends/imgui_impl_opengl3.cpp"
-  "../../thirdparty/imgui/backends/imgui_impl_glfw.cpp"
+  "${IMGUI_ROOT}/*.cpp"
+  "${IMGUI_ROOT}/misc/freetype/*.cpp"
+  "${IMGUI_ROOT}/misc/cpp/*.cpp"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp"
+  "${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp"
   "*.cpp"
 )
 
 file(GLOB IMGUI_HEADERS
-  "../../thirdparty/imgui/*.h"
-  "../../thirdparty/imgui/misc/freetype/*.h"
-  "../../thirdparty/imgui/backends/imgui_impl_opengl3.h"
-  "../../thirdparty/imgui/backends/imgui_impl_glfw.h"
-  "../../thirdparty/imgui/backends/imgui_impl_opengl3_loader.h"
+  "${IMGUI_ROOT}/*.h"
+  "${IMGUI_ROOT}/misc/freetype/*.h"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.h"
+  "${IMGUI_ROOT}/backends/imgui_impl_glfw.h"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3_loader.h"
   "*.h"
 )
 
 add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE "..")
-target_include_directories(${PROJECT_NAME} PRIVATE "../../thirdparty/imgui")
+target_include_directories(${PROJECT_NAME} PRIVATE "${IMGUI_ROOT}")
 target_include_directories(${PROJECT_NAME} PRIVATE "../../thirdparty/parallel-hashmap")
 
 # Don't emit warnings.

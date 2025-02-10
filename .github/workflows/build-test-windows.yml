@@ -173,15 +173,17 @@ jobs:
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
 
-      - name: Build (msbuild)
-        if: ${{ matrix.build_system == 'MSBuild' }}
-        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
-
-      - name: Build (cmake)
-        if: ${{ matrix.build_system == 'CMake' }}
-        run: \
-          cmake -B source\x64\${{matrix.config}} -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
-          cmake --build source\x64\${{matrix.config}} -j$env:NUMBER_OF_PROCESSORS
+      - name: Build
+        run: |
+          if ( ${{ fromJSON('["$false", "$true"]')[matrix.build_system == 'CMake'] }} )
+          {
+              cmake -B source\x64\${{matrix.config}} -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+              cmake --build source\x64\${{matrix.config}} -j$env:NUMBER_OF_PROCESSORS
+          }
+          else
+          {
+              msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+          }
 
       - name: Build .NET
         if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}

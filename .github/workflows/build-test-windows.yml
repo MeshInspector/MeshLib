@@ -181,7 +181,7 @@ jobs:
         run: |
           if ( ${{ fromJSON('["$false", "$true"]')[matrix.build_system == 'CMake'] }} )
           {
-              cmd /c "call ""${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat"" -arch=amd64 & cmake -B source\x64\${{matrix.config}} -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} & cmake --build source\x64\${{matrix.config}} -j$env:NUMBER_OF_PROCESSORS"
+              cmd /c "call ""${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat"" -arch=amd64 & cmake -B source\x64\${{matrix.config}}Build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} & cmake --build source\x64\${{matrix.config}} -j$env:NUMBER_OF_PROCESSORS & mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}"
           }
           else
           {

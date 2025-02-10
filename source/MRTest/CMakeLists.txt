@@ -27,7 +27,34 @@ IF(APPLE)
     ${CMAKE_DL_LIBS}
   )
 ELSE()
-  IF(NOT MR_EMSCRIPTEN)
+  IF(MR_EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      gtest
+      zip
+      jsoncpp
+      -Wl,--whole-archive
+      MRMesh
+      MRIOExtras
+      MRViewer
+      -Wl,--no-whole-archive
+    )
+  ELSEIF(WIN32)
+    find_package(GTest REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRMesh
+      MRIOExtras
+      MRPython
+      MRViewer
+      JsonCpp::JsonCpp
+      fmt::fmt
+      GTest::gtest
+      spdlog::spdlog
+      Python::Python
+      pybind11nonlimitedapi_stubs
+      ${CMAKE_DL_LIBS}
+    )
+  ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
@@ -40,18 +67,6 @@ ELSE()
       Python::Python
       pybind11nonlimitedapi_stubs
       ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      gtest
-      zip
-      jsoncpp
-      -Wl,--whole-archive
-      MRMesh
-      MRIOExtras
-      MRViewer
-      -Wl,--no-whole-archive
     )
   ENDIF()
 ENDIF()

@@ -24,7 +24,7 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
-  ELSEIF(MSVC)
+  ELSEIF(WIN32)
     find_package(Boost COMPONENTS REQUIRED)
     include_directories(${jsoncpp_INCLUDE_DIRS})
 

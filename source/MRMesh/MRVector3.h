@@ -114,6 +114,20 @@ inline Vector3<T> operator -( const Vector3<T> & a ) { return Vector3<T>( -a.x, 
 template <typename T>
 inline const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
 
+/// squared distance between two points, which is faster to compute than just distance
+template <typename T>
+inline T distanceSq( const Vector3<T> & a, const Vector3<T> & b )
+{
+    return ( a - b ).lengthSq();
+}
+
+/// distance between two points, better use distanceSq for higher performance
+template <typename T>
+inline T distance( const Vector3<T> & a, const Vector3<T> & b )
+{
+    return ( a - b ).length();
+}
+
 /// cross product
 template <typename T>
 inline Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b )

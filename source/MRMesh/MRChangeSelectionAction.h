@@ -43,7 +43,7 @@ public:
         if ( !objMesh_ )
             return;
         auto tmp = objMesh_->getSelectedFaces();
-        objMesh_->selectFaces( selection_ );
+        objMesh_->selectFaces( std::move( selection_ ) );
         selection_ = std::move( tmp );
     }
 
@@ -183,7 +183,7 @@ public:
         if ( !objPoints_ )
             return;
         auto tmp = objPoints_->getSelectedPoints();
-        objPoints_->selectPoints( selection_ );
+        objPoints_->selectPoints( std::move( selection_ ) );
         selection_ = std::move( tmp );
     }
 

@@ -18,7 +18,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
     const auto r = double( radius );
     const auto rr = sqr( r );
     neis.clear();
-    findPointsInBall( cloud, cloud.points[v], 2 * radius,
+    findPointsInBall( cloud, { cloud.points[v], sqr( 2 * radius ) },
         [&neis, v]( VertId n, const Vector3f& )
         {
             if ( v != n )

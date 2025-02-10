@@ -145,6 +145,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 
     mousePressed_ = false;
     mousePos_ = { -1, -1 };
+
+    sameValidVerticesAsInOriginMesh_ = true;
 }
 
 void SurfaceManipulationWidget::reset()
@@ -225,6 +227,15 @@ void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
     enableDeviationTexture_ = enable;
     updateTexture();
     updateUVs();
+}
+
+void SurfaceManipulationWidget::setDeviationCalculationMethod( DeviationCalculationMethod method )
+{
+    if ( sameValidVerticesAsInOriginMesh_ )
+        deviationCalculationMethod_ = method;
+    else
+        deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
+    updateValueChanges_( obj_->mesh()->topology.getValidVerts() );
 }
 
 Vector2f SurfaceManipulationWidget::getMinMax()
@@ -361,7 +372,11 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
-                    .onEdgeSplit = [&] ( EdgeId e1, EdgeId e ) 
+                    .edgeWeights = settings_.edgeWeights
+                };
+                if ( unchangeableVerts_.any() )
+                {
+                    settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
                     {
                         if ( unchangeableFaces.test( newMesh->topology.left( e ) ) )
                         {
@@ -374,9 +389,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                             unchangeableFaces.autoResizeSet( newMesh->topology.right( e1 ) );
                         }
                         unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
-                    },
-                    .edgeWeights = settings_.edgeWeights
-                };
+                    };
+                }
                 for ( auto e : bd )
                     if ( !newMesh->topology.left( e ) )
                         fillHoleNicely( *newMesh, e, settings );
@@ -408,8 +422,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             if ( meshAttribs )
                 emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
 
-            reallocData_( obj_->mesh()->topology.lastValidVert() + 1);
-            updateValueChangesByDistance_( newVerts );
+            reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
+            sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+            setDeviationCalculationMethod( deviationCalculationMethod_ );
             obj_->setDirtyFlags( DIRTY_ALL );
 
             // otherwise whole surface becomes red after patch and before mouse move
@@ -426,7 +441,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         params.force = settings_.relaxForceAfterEdit;
         params.iterations = 5;
         relax( *obj_->varMesh(), params );
-        updateValueChangesByDistance_( generalEditingRegion_ );
+        updateValueChanges_( generalEditingRegion_ );
         obj_->setDirtyFlags( DIRTY_POSITION );
     }
 
@@ -512,7 +527,8 @@ void SurfaceManipulationWidget::initConnections_()
         }
         abortEdit_();
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
-        updateValueChangesByDistance_( obj_->mesh()->topology.getValidVerts() );
+        sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
+        setDeviationCalculationMethod( deviationCalculationMethod_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
     } );
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -789,23 +805,55 @@ void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
 
 void SurfaceManipulationWidget::updateValueChanges_( const VertBitSet& region )
 {
-    const auto& oldPoints = lastStableObjMesh_->mesh()->points;
-    const auto& points = obj_->mesh()->points;
+    switch ( deviationCalculationMethod_ )
+    {
+    case DeviationCalculationMethod::PointToPoint:
+        updateValueChangesPointToPoint_( region );
+        break;
+    case DeviationCalculationMethod::PointToPlane:
+        updateValueChangesPointToPlane_( region );
+        break;
+    case DeviationCalculationMethod::ExactDistance:
+    default:
+        updateValueChangesExactDistance_( region );
+    }
+}
+
+void SurfaceManipulationWidget::updateValueChangesPointToPoint_( const VertBitSet& region )
+{
+    const auto& oldPoints = originalMesh_->points;
     const auto& mesh = *obj_->mesh();
+    const auto& points = mesh.points;
     BitSetParallelFor( region, [&] ( VertId v )
     {
         const Vector3f shift = points[v] - oldPoints[v];
         const float sign = dot( shift, mesh.normal( v ) ) >= 0.f ? 1.f : -1.f;
-        valueChanges_[v] = lastStableValueChanges_[v] + shift.length() * sign;
+        valueChanges_[v] = shift.length() * sign;
     } );
 
     updateRegionUVs_( region );
 }
 
-void SurfaceManipulationWidget::updateValueChangesByDistance_( const VertBitSet& region )
+void SurfaceManipulationWidget::updateValueChangesPointToPlane_( const VertBitSet& region )
 {
-    const auto& mesh = obj_->mesh();
-    const auto& meshVerts = mesh->points;
+    const auto& oldMesh = *originalMesh_;
+    const auto& oldPoints = oldMesh.points;
+    const auto& mesh = *obj_->mesh();
+    const auto& points = mesh.points;
+    BitSetParallelFor( region, [&] ( VertId v )
+    {
+        const Plane3f plane = Plane3f::fromDirAndPt( oldMesh.normal( v ), oldPoints[v] );
+        const float shift = plane.distance( points[v] );
+        valueChanges_[v] = shift;
+    } );
+
+    updateRegionUVs_( region );
+}
+
+void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitSet& region )
+{
+    const auto& mesh = *obj_->mesh();
+    const auto& meshVerts = mesh.points;
 
     std::vector<MeshProjectionResult> projResults( meshVerts.size() );
     BitSetParallelFor( region, [&] ( VertId v )
@@ -833,9 +881,9 @@ void SurfaceManipulationWidget::updateValueChangesByDistance_( const VertBitSet&
     BitSetParallelFor( unknownSign_, [&] ( VertId v )
     {
         float sumNeis = 0;
-        for ( EdgeId e : orgRing( mesh->topology, v ) )
+        for ( EdgeId e : orgRing( mesh.topology, v ) )
         {
-            auto d = mesh->topology.dest( e );
+            auto d = mesh.topology.dest( e );
             if ( !unknownSign_.test( d ) )
                 sumNeis += valueChanges_[d];
         }

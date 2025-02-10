@@ -60,6 +60,7 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
+#include "MRViewportCornerController.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -1006,6 +1007,7 @@ void Viewer::launchShut()
 void Viewer::init_()
 {
     initBasisAxesObject_();
+    initBasisViewControllerObject_();
     initClippingPlaneObject_();
     initRotationCenterObject_();
     initGlobalBasisAxesObject_();
@@ -2017,7 +2019,7 @@ void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner
     const float size = 0.8f;
-    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size ) );
+    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.1f ) );
     basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
@@ -2042,7 +2044,7 @@ void Viewer::initBasisAxesObject_()
     addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), false );
     addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), false );
 
-    basisAxes->setFacesColorMap( colorMap );
+    basisAxes->setFacesColorMap( std::move( colorMap ) );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
     updateBasisAxes_ = ColorTheme::instance().onChanged( [this] ()
@@ -2059,6 +2061,17 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, false );
         }
     } );
+}
+
+void Viewer::initBasisViewControllerObject_()
+{
+    std::shared_ptr<Mesh> basisControllerMesh = std::make_shared<Mesh>( makeCornerControllerMesh( 0.8f ) );
+    basisViewController = std::make_shared<ObjectMesh>();
+    basisViewController->setMesh( basisControllerMesh );
+    basisViewController->setName( "Corner View Controller" );
+    basisViewController->setFlatShading( true );
+    basisViewController->setFacesColorMap( getCornerControllerColorMap() );
+    basisViewController->setColoringType( ColoringType::FacesColorMap );
 }
 
 void Viewer::initClippingPlaneObject_()

@@ -203,7 +203,7 @@ jobs:
         shell: cmd
 
       - name: Unit Tests
-        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
@@ -226,6 +226,12 @@ jobs:
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
+
+      - name: Delete unwanted files
+        shell: cmd
+        run: |
+          del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
+          del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}

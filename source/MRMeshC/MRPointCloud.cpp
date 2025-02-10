@@ -89,3 +89,15 @@ void mrPointCloudFree( MRPointCloud* pc_ )
     ARG_PTR( pc );
     delete pc;
 }
+
+void mrPointCloudInvalidateCaches( MRPointCloud* pc_ )
+{
+    ARG( pc );
+    pc.invalidateCaches();
+}
+
+void mrPointCloudSetValidPoints( MRPointCloud* pc_, const MRVertBitSet* validPoints_ )
+{
+    ARG( pc ); ARG( validPoints );
+    pc.validPoints = validPoints;
+}

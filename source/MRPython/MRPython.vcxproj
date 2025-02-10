@@ -16,6 +16,9 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
+      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>
@@ -70,6 +73,10 @@
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
+  <!-- This fixes a crash in debug builds with our patched Pybind. -->
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgAutoLink>false</VcpkgAutoLink>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -88,12 +95,15 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll</Command>
+      <!-- Here we copy both python3.dll and python3XY.dll. The former seems to be just a tiny shim for the latter. -->
+      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
+      copy $(PythonStableDllPath) $(TargetDir)python3.dll
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -118,7 +128,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmt.lib;spdlog.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>

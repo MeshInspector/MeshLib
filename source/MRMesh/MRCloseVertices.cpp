@@ -17,12 +17,13 @@ std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & po
 
     VertMap res;
     res.resizeNoInit( points.size() );
+    const auto closeDistSq = sqr( closeDist );
     if ( !ParallelFor( points, [&]( VertId v )
     {
         VertId smallestCloseVert = v;
         if ( !valid || valid->test( v ) )
         {
-            findPointsInBall( tree, points[v], closeDist, [&]( VertId cv, const Vector3f& )
+            findPointsInBall( tree, { points[v], closeDistSq }, [&]( VertId cv, const Vector3f& )
             {
                 if ( cv == v )
                     return;
@@ -47,7 +48,7 @@ std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & po
 
         // find another closest
         smallestCloseVert = v;
-        findPointsInBall( tree, points[v], closeDist, [&]( VertId cv, const Vector3f& )
+        findPointsInBall( tree, { points[v], closeDistSq }, [&]( VertId cv, const Vector3f& )
         {
             if ( cv == v )
                 return;

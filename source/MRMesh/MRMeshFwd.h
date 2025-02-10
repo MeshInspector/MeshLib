@@ -51,7 +51,18 @@
 // #endif
 
 
+#if defined(__GNUC__) && __GNUC__ == 13
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Warray-bounds"
+  #pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
 #include <array>
+
+#if defined(__GNUC__) && __GNUC__ == 13
+  #pragma GCC diagnostic pop
+#endif
+
 #include <vector>
 #include <string>
 #include <parallel_hashmap/phmap_fwd_decl.h>
@@ -339,6 +350,18 @@ template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;
 template <typename T> using Box3 = Box<Vector3<T>>;
 
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
+    ( Ball1f,  Ball<float>     )
+    ( Ball1d,  Ball<double>    )
+    ( Ball2f,  Ball<Vector2<float>>     )
+    ( Ball2d,  Ball<Vector2<double>>    )
+    ( Ball3f,  Ball<Vector3<float>>     )
+    ( Ball3d,  Ball<Vector3<double>>    )
+)
+template <typename T> using Ball1 = Ball<T>;
+template <typename T> using Ball2 = Ball<Vector2<T>>;
+template <typename T> using Ball3 = Ball<Vector3<T>>;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct), QuadraticForm,
     ( QuadraticForm2f, QuadraticForm<Vector2<float>>  )
     ( QuadraticForm2d, QuadraticForm<Vector2<double>> )
@@ -513,6 +536,7 @@ MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion
 )
 
 template<typename T> class UniqueThreadSafeOwner;
+template<typename T> class SharedThreadSafeOwner;
 
 class PolylineTopology;
 
@@ -627,6 +651,12 @@ constexpr inline T sqr( T x ) noexcept { return x * x; }
 
 template <typename T>
 constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
+
+template <typename T>
+constexpr inline T distance( T x, T y ) noexcept { return x >= y ? x - y : y - x; }
+
+template <typename T>
+constexpr inline T distanceSq( T x, T y ) noexcept { return sqr( x - y ); }
 
 template<typename...>
 inline constexpr bool dependent_false = false;

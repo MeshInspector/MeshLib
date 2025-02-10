@@ -1,7 +1,13 @@
-# to force update thirdparty touch this line 
+# to force update thirdparty touch this line
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+IF(MR_EMSCRIPTEN_WASM64)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MEMORY64=1")
+ENDIF()
 
 project(MeshLib_thirdparty CXX)
 
@@ -166,12 +172,15 @@ ENDIF()
 set(GLAD_INSTALL ON)
 set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
-set(PYBIND11_INSTALL ON)
-add_subdirectory(./pybind11)
+IF(NOT MR_EMSCRIPTEN)
+  set(PYBIND11_INSTALL ON)
+  add_subdirectory(./mrbind-pybind11)
+ENDIF()
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
 set(WITH_TESTS OFF CACHE BOOL "")
+set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
 file(GLOB IMGUI_HEADERS "imgui/*.h")
@@ -180,4 +189,3 @@ install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/i
 install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-

@@ -174,6 +174,12 @@ FreeFormDeformer::FreeFormDeformer( VertCoords& coords, const VertBitSet& valid 
 {
 }
 
+FreeFormDeformer::FreeFormDeformer( Mesh& mesh, const VertBitSet* region )
+    : coords_( mesh.points )
+    , validPoints_( mesh.topology.getVertIds( region ) )
+{
+}
+
 void FreeFormDeformer::init( const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const Box3f& initialBox /*= Box3f() */ )
 {
     assert( resolution.x > 1 && resolution.y > 1 && resolution.z > 1 );

@@ -114,6 +114,7 @@
     <ClCompile Include="MRSetupViewer.cpp" />
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
+    <ClCompile Include="MRViewportCornerController.cpp" />
     <ClCompile Include="MRViewportDraw.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
@@ -259,6 +260,7 @@
     <ClInclude Include="MRSetupViewer.h" />
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />
+    <ClInclude Include="MRViewportCornerController.h" />
     <ClInclude Include="MRViewportGL.h" />
     <ClInclude Include="MRViewportParametersAction.h" />
     <ClInclude Include="MRVolumeShader.h" />

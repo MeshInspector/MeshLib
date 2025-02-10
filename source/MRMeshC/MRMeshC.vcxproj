@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBooleanOperation.h" />
@@ -20,15 +21,18 @@
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
     <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MREdgePaths.h" />
     <ClInclude Include="MRExpandShrink.h" />
     <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRFloatGrid.h" />
+    <ClInclude Include="MRFreeFormDeformer.h" />
     <ClInclude Include="MRGridSampling.h" />
     <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRId.h" />
     <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIOExtras.h" />
+    <ClInclude Include="MRLaplacian.h" />
     <ClInclude Include="MRMakeSphereMesh.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMeshBoolean.h" />
@@ -36,6 +40,7 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshFixer.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMesh.h" />
@@ -48,12 +53,15 @@
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshProject.h" />
+    <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
+    <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="MRMeshTriPoint.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMultiwayICP.h" />
+    <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRPointCloudTriangulation.h" />
@@ -63,11 +71,13 @@
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
     <ClInclude Include="MRRegionBoundary.h" />
+    <ClInclude Include="MRRelaxParams.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRTorus.h" />
+    <ClInclude Include="MRUniformSampling.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVector.h" />
     <ClInclude Include="MRVector3.h" />
@@ -79,6 +89,7 @@
     <ClInclude Include="MRVoxelsSave.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
@@ -88,14 +99,17 @@
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
+    <ClCompile Include="MRFreeFormDeformer.cpp" />
     <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRId.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRIOExtras.cpp" />
+    <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMakeSphereMesh.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRMesh.cpp" />
@@ -104,6 +118,7 @@
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshFixer.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
@@ -112,12 +127,15 @@
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshProject.cpp" />
+    <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
+    <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMultiwayICP.cpp" />
+    <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MROffset.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />
     <ClCompile Include="MRPointCloudTriangulation.cpp" />
@@ -127,10 +145,12 @@
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
     <ClCompile Include="MRRegionBoundary.cpp" />
+    <ClCompile Include="MRRelaxParams.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRTriPoint.cpp" />
     <ClCompile Include="MRTorus.cpp" />
+    <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVector.cpp" />
     <ClCompile Include="MRVector3.cpp" />

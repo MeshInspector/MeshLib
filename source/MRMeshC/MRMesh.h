@@ -101,4 +101,15 @@ MRMESHC_API MRTriangulation* mrMeshGetTriangulation( const MRMesh* mesh );
 /// NOTE: this is a shortcut for mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) )
 MRMESHC_API MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh );
 
+/// invalidates caches (aabb-trees) after any change in mesh geometry or topology
+/// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
+MRMESHC_API void mrMeshInvalidateCaches( MRMesh* mesh, bool pointsChanged );
+
+/// appends another mesh as separate connected component(s) to this
+// TODO: outFmap, outVmap, outEmap, rearrangeTriangles
+MRMESHC_API void mrMeshAddMesh( MRMesh* mesh, const MRMesh* from );
+
+/// computes normal in a vertex using sum of directed areas of neighboring triangles
+MRMESHC_API MRVector3f mrMeshNormalFromVert( const MRMesh* mesh, MRVertId v );
+
 MR_EXTERN_C_END

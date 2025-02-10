@@ -87,6 +87,13 @@ public:
     /// </summary>
     /// <param name="mesh">input mesh</param>
     [[nodiscard]] MRVIEWER_API static size_t selfIntersectionsMemory( const Mesh& mesh );
+
+    /// \brief returns amount of required GPU memory for Cuda::pointsToDistanceVolume
+    /// \param pointCloud - input point cloud
+    /// \param dims - dimensions of the volume
+    /// \param ptNormals - (optional) point normals
+    [[nodiscard]] MRVIEWER_API static size_t pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals );
+
 private:
     CudaAccessor() = default;
     ~CudaAccessor() = default;

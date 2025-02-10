@@ -41,9 +41,6 @@ jobs:
             runner: windows-2022
             config: "Debug"
           - full_config_build: false
-            runner: windows-2019
-            build_system: CMake
-          - full_config_build: false
             config: Release
             build_system: CMake
         include:

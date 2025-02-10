@@ -215,7 +215,7 @@ Expected<void> RadiusCompensator::applyCompensation()
     MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug0.mrmesh" );
 
     // fix inverted faces (undercuts on original mesh)
-    for ( ;;) // repeat untill no flipped faces left
+    for ( int iFlipped = 0; iFlipped < 10; ++iFlipped ) // repeat until no flipped faces left, 10 - max iters
     {
         // only fix flipped areas
         auto sumDirArea = Vector3f( mesh_.dirArea( faceRegion_ ).normalized() ); // we only care about direction

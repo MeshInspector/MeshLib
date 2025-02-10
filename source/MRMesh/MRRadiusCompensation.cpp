@@ -15,6 +15,7 @@
 #include "MRMeshDecimate.h"
 #include "MRPch/MRTBB.h"
 #include "MRTimer.h"
+#include "MRMeshSave.h"
 
 namespace MR
 {
@@ -32,7 +33,7 @@ public:
     // prepares raw distance map
     Expected<void> init();
 
-    // finds tool locations for each pixel and summary compensation volume for each
+    // finds tool locations for each pixel and summary compensation cost for each
     Expected<void> calcCompensations();
 
     // creates compensation distance map
@@ -61,8 +62,8 @@ private:
     // if callback returns false iterations stops
     void iteratePixelsInRadius_( const Vector2i& pixelCoord, const std::function<bool( const Vector2i& )>& callback );
 
-    // calculates summary compensation volume for given tool location
-    float sumCompensationVolume_( const Vector3f& toolCenter );
+    // calculates summary compensation cost for given tool location
+    float sumCompensationCost_( const Vector3f& toolCenter );
 
     Mesh& mesh_;
     CompensateRadiusParams params_;
@@ -77,9 +78,13 @@ private:
     Vector2i pixelsInRadius_;
 
     std::vector<Vector3f> toolCenters_; // per pixel
-    std::vector<std::pair<float,int>> volumes_; // <voulme, id> per pixel (this array will be sorted, thats why we need id as value and not only as key)
+    // cost is (approx compensation Volume)/(approx compensation Projected Area) - less is better
+    std::vector<std::pair<float,int>> costs_; // <cost, id> per pixel (this array will be sorted, thats why we need id as value and not only as key)
 
     DistanceMap compensatedDm_;
+
+    // tolerance of distance map height for "touching" compensations
+    static constexpr float cDMTolearance = 1e-6f;
 };
 
 Expected<void> RadiusCompensator::init()
@@ -113,20 +118,20 @@ Expected<void> RadiusCompensator::calcCompensations()
 {
     MR_TIMER;
     toolCenters_.resize( dm_.size(), Vector3f::diagonal( FLT_MAX ) );
-    volumes_.resize( dm_.size(), std::make_pair( -1.0f, -1 ) );
+    costs_.resize( dm_.size(), std::make_pair( -1.0f, -1 ) );
     bool keepGoing = ParallelFor( size_t( 0 ), dm_.size(), [&] ( size_t i )
     {
         auto pixelCoord = dm_.toPos( i );
         auto& toolCenter = toolCenters_[i];
         toolCenter = findToolCenterAtPixel_(pixelCoord);
         if ( toolCenter.x != FLT_MAX )
-            volumes_[i] = std::make_pair( sumCompensationVolume_( toolCenter ), int( i ) );
+            costs_[i] = std::make_pair( sumCompensationCost_( toolCenter ), int( i ) );
     }, subprogress( params_.callback, 0.05f, 0.15f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
-    tbb::parallel_sort( volumes_.begin(), volumes_.end(), [] ( const auto& l, const auto& r )
+    tbb::parallel_sort( costs_.begin(), costs_.end(), [] ( const auto& l, const auto& r )
     {
         return l.first < r.first;
     } );
@@ -143,12 +148,12 @@ Expected<void> RadiusCompensator::compensateDistanceMap()
     auto sb = subprogress( params_.callback, 0.2f, 0.5f );
     compensatedDm_ = DistanceMap( dm_.resX(), dm_.resY() );
     size_t i = 0;
-    for ( auto [volume, cId] : volumes_ )
+    for ( auto [cost, cId] : costs_ )
     {
-        if ( ( ++i % 1024 == 0 ) && !reportProgress( sb, float( i ) / volumes_.size() ) )
+        if ( ( ++i % 1024 == 0 ) && !reportProgress( sb, float( i ) / costs_.size() ) )
             return unexpectedOperationCanceled();
 
-        if ( cId < 0 || volume < 0.0f )
+        if ( cId < 0 || cost < 0.0f )
             continue;
 
         const auto& toolCenter = toolCenters_[cId];
@@ -171,7 +176,7 @@ Expected<void> RadiusCompensator::compensateDistanceMap()
             auto realValue = dm_.getValue( pixeli.x, pixeli.y );
             auto& value = compensatedDm_.getValue( pixeli.x, pixeli.y );
             auto compValue = calcCompensatedHeightAtPixel_( pixeli, toolCenter );
-            if ( compValue > value && compValue >= realValue )
+            if ( compValue > value && compValue + std::abs( realValue * cDMTolearance ) >= realValue )
                 value = compValue;
             return true;
         } );
@@ -207,7 +212,10 @@ Expected<void> RadiusCompensator::applyCompensation()
         mesh_.points[v] = to3dim( to2dim( toDmXf_( mesh_.points[v] ) ) );
     }
 
+    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug0.mrmesh" );
+
     // fix inverted faces (undercuts on original mesh)
+    for ( ;;) // repeat untill no flipped faces left
     {
         // only fix flipped areas
         auto sumDirArea = Vector3f( mesh_.dirArea( faceRegion_ ).normalized() ); // we only care about direction
@@ -220,6 +228,9 @@ Expected<void> RadiusCompensator::applyCompensation()
         } );
         expand( mesh_.topology, flippedFaces, 4 );
         flippedFaces &= *faceRegion_;
+
+        if ( flippedFaces.none() )
+            break;
 
         auto equalizingVertRegion = getInnerVerts( mesh_.topology, flippedFaces );
         assert( ( equalizingVertRegion & bounds ).none() );
@@ -236,6 +247,7 @@ Expected<void> RadiusCompensator::applyCompensation()
         makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
 
+    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug1.mrmesh" );
     i = 0;
     for ( auto v : bounds )
         mesh_.points[v] = backupBounds[i++];
@@ -254,10 +266,11 @@ Expected<void> RadiusCompensator::applyCompensation()
         vertRegion_.reset( v );
     }, subprogress( params_.callback, 0.65f, 0.8f ) );
 
-
+    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug2.mrmesh" );
     if ( vertRegion_.any() )
         positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
 
+    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug3.mrmesh" );
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -270,7 +283,7 @@ Expected<void> RadiusCompensator::postprocessMesh()
     auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh_.topology, *faceRegion_ );
     RemeshSettings rParams;
     rParams.finalRelaxIters = 2;
-    rParams.targetEdgeLen = mesh_.averageEdgeLength();
+    rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
     rParams.progressCallback = subprogress( params_.callback, 0.8f, 1.0f );
@@ -387,19 +400,23 @@ void RadiusCompensator::iteratePixelsInRadius_( const Vector2i& pixelCoord, cons
     }
 }
 
-float RadiusCompensator::sumCompensationVolume_( const Vector3f& toolCenter )
+float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
 {
-    float sumVolume = 0.0f;
+    double sumVolume = 0.0;
+    double sumArea = 0.0;
     auto toolPixel = Vector2i( to2dim( toDmXf_( toolCenter ) ) );
     iteratePixelsInRadius_( toolPixel, [&] ( const Vector2i& pixelCoord )->bool
     {
         auto value = dm_.getValue( pixelCoord.x, pixelCoord.y );
         auto height = calcCompensatedHeightAtPixel_( pixelCoord, toolCenter );
-        if ( height > value )
-            sumVolume += ( height - value );
+        if ( height + std::abs( value * cDMTolearance ) >= value )
+        {
+            sumVolume += ( height + std::abs( value * cDMTolearance ) - value );
+            sumArea += 1.0;
+        }
         return true;
     } );
-    return sumVolume;
+    return sumArea == 0.0 ? -1.0f : float( sumVolume / sumArea );
 }
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )

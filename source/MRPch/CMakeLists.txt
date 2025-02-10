@@ -26,7 +26,7 @@ IF(MR_PCH)
     )
   ELSEIF(MSVC)
     find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${JSONCPP_INCLUDE_DIRS})
+    include_directories(${jsoncpp_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
@@ -39,7 +39,7 @@ IF(MR_PCH)
     )
   ELSE()
     find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${JSONCPP_INCLUDE_DIRS})
+    include_directories(${jsoncpp_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 

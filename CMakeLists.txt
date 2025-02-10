@@ -130,7 +130,7 @@ IF(NOT MR_EMSCRIPTEN)
     pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
   ENDIF()
 
-  include_directories(${JSONCPP_INCLUDE_DIRS})
+  include_directories(${jsoncpp_INCLUDE_DIRS})
 
   find_package(fmt)
   find_package(spdlog REQUIRED)

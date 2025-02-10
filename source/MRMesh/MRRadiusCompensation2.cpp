@@ -51,7 +51,7 @@ VertBitSet findVerticesInsideTool( const Mesh& mesh, const SphericalMillingCutte
     return res;
 }
 
-VertCoords compensateRadius2( const Mesh& mesh, float toolRadius )
+VertCoords compensateRadius2( const Mesh& mesh, const CompensateRadiusParams2 & params )
 {
     MR_TIMER
 
@@ -59,7 +59,7 @@ VertCoords compensateRadius2( const Mesh& mesh, float toolRadius )
     VertCoords sumShifts( mesh.points.size() );
     Vector<int, VertId> numShifts( mesh.points.size() );
 
-    for ( int i = 0; i < 50; ++i )
+    for ( int i = 0; i < params.numIters; ++i )
     {
         AABBTreePoints tree( res, &mesh.topology.getValidVerts() );
         const auto meshBox = tree.getBoundingBox();
@@ -72,8 +72,8 @@ VertCoords compensateRadius2( const Mesh& mesh, float toolRadius )
             auto n = mesh.pseudonormal( v );
             SphericalMillingCutter tool
             {
-                .center = p - toolRadius * n,
-                .radius = toolRadius
+                .center = p - params.toolRadius * n,
+                .radius = params.toolRadius
             };
             Box3f toolBox = getToolBox( tool, meshBox );
             findPointsInBox( tree, toolBox, [&]( VertId vi, const Vector3f& p )
@@ -83,10 +83,10 @@ VertCoords compensateRadius2( const Mesh& mesh, float toolRadius )
                     delta.z = 0;
 
                 auto distSq = delta.lengthSq();
-                if ( distSq <= 0 || distSq >= sqr( toolRadius ) )
+                if ( distSq <= 0 || distSq >= sqr( tool.radius ) )
                     return;
                 auto dist = std::sqrt( distSq );
-                Vector3f shift = delta / dist * ( toolRadius - dist );
+                Vector3f shift = delta / dist * ( tool.radius - dist );
                 sumShifts[vi] += shift;
                 ++numShifts[vi];
             } );

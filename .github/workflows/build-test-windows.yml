@@ -173,6 +173,10 @@ jobs:
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
 
+      - name: Install Ninja for CMake
+        if: ${{ matrix.build_system == 'CMake' }}
+        uses: seanmiddleditch/gha-setup-ninja@master
+
       - name: Build
         run: |
           if ( ${{ fromJSON('["$false", "$true"]')[matrix.build_system == 'CMake'] }} )

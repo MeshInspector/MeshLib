@@ -17,7 +17,7 @@
 #include <hidapi/hidapi_darwin.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>
+#include "MRPch/MRWinapi.h"
 #include <hidapi/hidapi_winapi.h>
 #endif
 

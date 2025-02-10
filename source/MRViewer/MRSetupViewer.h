@@ -4,17 +4,7 @@
 #include <string>
 #include <filesystem>
 
-#ifdef _WIN32
-#  ifndef NOMINMAX
-#    define NOMINMAX
-#  endif
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-   // For `HMODULE`. Even though some sources say it's `void *`, on MSVC it's apparently not one (but points to a special struct).
-   // So we'd either need to cast back and forth to `void *`, or include the proper definition for it.
-#  include <windows.h>
-#endif
+#include "MRPch/MRWinapi.h"
 
 namespace MR
 {

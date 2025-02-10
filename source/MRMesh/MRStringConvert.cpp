@@ -3,12 +3,7 @@
 #include <locale>
 #include "MRPch/MRSpdlog.h"
 
-#ifdef _WIN32
-#  ifndef NOMINMAX
-#    define NOMINMAX
-#  endif
-#  include <windows.h>
-#endif
+#include "MRPch/MRWinapi.h"
 
 namespace MR
 {

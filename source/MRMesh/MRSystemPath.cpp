@@ -6,7 +6,7 @@
 #include <map>
 
 #if defined( _WIN32 )
-#include <windows.h>
+#include "MRPch/MRWinapi.h"
 #elif !defined( __EMSCRIPTEN__ )
 #include <dlfcn.h>
 #include <unistd.h>

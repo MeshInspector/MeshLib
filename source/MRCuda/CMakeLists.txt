@@ -9,13 +9,15 @@ IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
     #   the single-argument version of `static_assert` doesn't compile (which is a C++17 feature).
     # Setting C++17 does work though.
     set(CMAKE_CUDA_STANDARD 17)
+
+    # Right now we only seem have the old Cuda 11 in VS 2019 in CI.
+    find_package(CUDAToolkit 11 REQUIRED)
   ELSE()
     set(CMAKE_CUDA_STANDARD 20)
+    find_package(CUDAToolkit 12 REQUIRED)
   ENDIF()
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-  # Right now we only seem have the old Cuda 11 in VS 2019 in CI.
-  find_package(CUDAToolkit 11 REQUIRED)
 
   IF(NOT DEFINED CMAKE_CUDA_COMPILER)
     set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})

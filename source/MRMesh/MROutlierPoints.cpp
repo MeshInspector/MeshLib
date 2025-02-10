@@ -1,4 +1,4 @@
-#include "MROutliersPoints.h"
+#include "MROutlierPoints.h"
 #include "MRPointCloud.h"
 #include "MRProgressCallback.h"
 #include "MRBitSetParallelFor.h"
@@ -9,7 +9,7 @@
 namespace MR
 {
 
-std::string FindOutliers::prepare( const PointCloud& pointCloud, float radius, OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
+std::string OutliersDetector::prepare( const PointCloud& pointCloud, float radius, OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
 {
     validPoints_ = pointCloud.validPoints;
 
@@ -123,16 +123,16 @@ std::string FindOutliers::prepare( const PointCloud& pointCloud, float radius, O
     return {};
 }
 
-void FindOutliers::setParams( const OutlierParams& params )
+void OutliersDetector::setParams( const OutlierParams& params )
 {
     params_ = params;
 }
 
-Expected<VertBitSet> FindOutliers::find( OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
+Expected<VertBitSet> OutliersDetector::find( OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
 {
     mask &= maskCached_;
     if ( !mask )
-        return {};
+        return "Nothing to look for";
 
     int maxTaskCount = 0;
     for ( int i = 0; i < 4; ++i )
@@ -172,22 +172,21 @@ Expected<VertBitSet> FindOutliers::find( OutlierTypeMask mask, ProgressCallback 
     return result;
 }
 
-Expected<VertBitSet> FindOutliers::findSmallComponents( ProgressCallback progress /*= {}*/ )
+Expected<VertBitSet> OutliersDetector::findSmallComponents( ProgressCallback progress /*= {}*/ )
 {
     auto largeComponentsRes = PointCloudComponents::getLargeComponentsUnion( unionFindStructure_, validPoints_, params_.maxClusterSize + 1, progress );
-    
 
     if ( !largeComponentsRes.has_value() )
         return unexpected( largeComponentsRes.error() );
     return validPoints_ - *largeComponentsRes;
 }
 
-Expected<VertBitSet> FindOutliers::findWeaklyConnected( ProgressCallback progress /*= {}*/ )
+Expected<VertBitSet> OutliersDetector::findWeaklyConnected( ProgressCallback progress /*= {}*/ )
 {
     VertBitSet result( validPoints_.find_last() + 1 );
     const bool continued = BitSetParallelFor( validPoints_, [&] ( VertId v )
     {
-        if ( weaklyConnectedStat_[int( v )] <= params_.numNeigbors )
+        if ( weaklyConnectedStat_[int( v )] <= params_.maxNeighbors )
             result.set( v );
     }, progress );
     if ( !continued )
@@ -195,7 +194,7 @@ Expected<VertBitSet> FindOutliers::findWeaklyConnected( ProgressCallback progres
     return result;
 }
 
-Expected<VertBitSet> FindOutliers::findFarSurface( ProgressCallback progress /*= {}*/ )
+Expected<VertBitSet> OutliersDetector::findFarSurface( ProgressCallback progress /*= {}*/ )
 {
     VertBitSet result( validPoints_.find_last() + 1 );
     const float realMinHeight = params_.minHeight * radius_;
@@ -209,7 +208,7 @@ Expected<VertBitSet> FindOutliers::findFarSurface( ProgressCallback progress /*=
     return result;
 }
 
-Expected<VertBitSet> FindOutliers::findAwayNormal( ProgressCallback progress /*= {}*/ )
+Expected<VertBitSet> OutliersDetector::findAwayNormal( ProgressCallback progress /*= {}*/ )
 {
     VertBitSet result( validPoints_.find_last() + 1 );
     const bool continued = BitSetParallelFor( validPoints_, [&] ( VertId v )

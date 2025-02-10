@@ -15,7 +15,6 @@
 #include "MRMeshDecimate.h"
 #include "MRPch/MRTBB.h"
 #include "MRTimer.h"
-#include "MRMeshSave.h"
 
 namespace MR
 {
@@ -212,8 +211,6 @@ Expected<void> RadiusCompensator::applyCompensation()
         mesh_.points[v] = to3dim( to2dim( toDmXf_( mesh_.points[v] ) ) );
     }
 
-    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug0.mrmesh" );
-
     // fix inverted faces (undercuts on original mesh)
     for ( int iFlipped = 0; iFlipped < 10; ++iFlipped ) // repeat until no flipped faces left, 10 - max iters
     {
@@ -247,7 +244,6 @@ Expected<void> RadiusCompensator::applyCompensation()
         makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
 
-    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug1.mrmesh" );
     i = 0;
     for ( auto v : bounds )
         mesh_.points[v] = backupBounds[i++];
@@ -266,11 +262,9 @@ Expected<void> RadiusCompensator::applyCompensation()
         vertRegion_.reset( v );
     }, subprogress( params_.callback, 0.65f, 0.8f ) );
 
-    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug2.mrmesh" );
     if ( vertRegion_.any() )
         positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
 
-    MeshSave::toAnySupportedFormat( mesh_, "C:\\WORK\\MODELS\\Radius_compensation\\RadiusCompensation\\RadiusCompensation\\#11 result\\debug3.mrmesh" );
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 

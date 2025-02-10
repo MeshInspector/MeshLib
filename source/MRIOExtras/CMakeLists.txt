@@ -152,7 +152,6 @@ ELSEIF(APPLE)
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(WIN32)
-  find_package(TBB REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt::fmt

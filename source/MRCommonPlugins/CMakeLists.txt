@@ -34,7 +34,6 @@ IF(MR_EMSCRIPTEN)
     spdlog
   )
 ELSEIF(WIN32)
-  find_package(TBB REQUIRED)
   find_package(glad REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE

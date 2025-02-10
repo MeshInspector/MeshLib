@@ -18,11 +18,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(fmt REQUIRED)
-  find_package(spdlog REQUIRED)
-ENDIF()
-
 set(MRVOXELS_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MRVOXELS_NO_DICOM)
@@ -62,8 +57,6 @@ IF(MR_EMSCRIPTEN)
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSEIF(APPLE)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     OpenVDB
@@ -85,8 +78,6 @@ ELSEIF(WIN32)
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     openvdb

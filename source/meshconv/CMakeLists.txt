@@ -12,7 +12,6 @@ ENDIF()
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
 IF(WIN32)
-  find_package(TBB REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras

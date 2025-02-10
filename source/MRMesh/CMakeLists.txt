@@ -55,7 +55,6 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED)
-  find_package(TBB REQUIRED)
   include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")

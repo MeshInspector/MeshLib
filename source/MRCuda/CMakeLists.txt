@@ -109,7 +109,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 
 IF(WIN32)
-  find_package(TBB REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog::spdlog

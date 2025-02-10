@@ -13,9 +13,6 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
   find_package(Freetype REQUIRED)
-
-  find_package(fmt REQUIRED)
-  find_package(spdlog REQUIRED)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
@@ -26,8 +23,6 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
   )
 ELSEIF(APPLE)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype
@@ -44,8 +39,6 @@ ELSEIF(WIN32)
     JsonCpp::JsonCpp
   )
 ELSE()
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype

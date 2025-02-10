@@ -14,7 +14,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
 )
 
-if(APPLE)
+IF(WIN32)
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    SUFFIX ".pyd"
+  )
+
+  # We build directly in `bin`, then copy to `bin/meshlib`, to prevent Vcpkg from polluting `bin/meshlib` with the dependency DLLs.
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
+  )
+ENDIF()
+
+IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer

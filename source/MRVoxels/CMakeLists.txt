@@ -89,10 +89,6 @@ ELSE()
   )
 ENDIF()
 
-IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MRVOXELS_EXPORT)
-ENDIF()
-
 IF(MR_PCH)
   # TODO: compare performance
   #target_precompile_headers(${PROJECT_NAME} PRIVATE

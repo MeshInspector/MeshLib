@@ -48,10 +48,6 @@ ELSE()
   )
 ENDIF()
 
-IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MRSYMBOLMESH_EXPORT)
-ENDIF()
-
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}

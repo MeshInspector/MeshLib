@@ -13,7 +13,7 @@ namespace MR
 Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 {
     Mesh outMesh;
-    outMesh.points.resize( 4 * 6 + 2 * 12 + 8 ); // 4x6 - verts on each side, 2x12 - verts on 2-rank corners, 8 - verts on 3-rank corners
+    outMesh.points.resize( 4 * 6 + 2 * 12 * 2 + 8 * 3 ); // 4x6 - verts on each side, 2x12 - verts on 2-rank corners (x2 to have disconnected edges), 8 - verts on 3-rank corners (x3 to have disconnected corners)
     Triangulation t;
     t.resize( 2 * 6 + 4 * 12 + 6 * 8 ); // 2x6 - faces on each side, 4x12 - faces on 2-rank corners, 6x8 - faces on 3-rank corners
 
@@ -41,7 +41,7 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 
     int vOffset = 4 * 6;
     int fOffset = 2 * 6;
-    // 2x12 - verts on 2-rank corners
+    // 2x12 - verts on 2-rank corners (x2 to have disconnected edges)
     for ( int i = 0; i < 12; ++i )
     {
         int baseSide = i / 4; // 0 - (xy,x-y,-xy,-x-y), 1 - (yz,y-z,-yz,-y-z), 2 - (zx,z-x,-zx,-z-x)
@@ -51,12 +51,15 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
         int signsId2 = signsId % 2;
         float sign = signsId1 * 2.0f - 1.0f;
         float sign2 = signsId2 * 2.0f - 1.0f;
-        for ( int j = 0; j < 2; ++j )
+        for ( int k = 0; k < 2; ++k )
         {
-            auto& pt = outMesh.points[VertId( vOffset + i * 2 + j )];
-            pt[baseSide] = sign * 0.5f * size;
-            pt[baseSide2] = sign2 * 0.5f * size;
-            pt[( baseSide2 + 1 ) % 3] = ( ( j % 2 ) * 2.0f - 1.0f ) * ( ( 0.5f - cornerRatio ) * size );
+            for ( int j = 0; j < 2; ++j )
+            {
+                auto& pt = outMesh.points[VertId( vOffset + i * 4 + k * 2 + j )];
+                pt[baseSide] = sign * 0.5f * size;
+                pt[baseSide2] = sign2 * 0.5f * size;
+                pt[( baseSide2 + 1 ) % 3] = ( ( j % 2 ) * 2.0f - 1.0f ) * ( ( 0.5f - cornerRatio ) * size );
+            }
         }
         // add faces
         for ( int j = 0; j < 2; ++j )
@@ -83,32 +86,42 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
             }
             if ( j != 0 )
                 std::swap( v0, v1 );
-            t[FaceId( fOffset + i * 4 + j * 2 + 0 )] = { VertId( vOffset + i * 2 ), v1, v0 };
-            t[FaceId( fOffset + i * 4 + j * 2 + 1 )] = { VertId( vOffset + i * 2 ),inversed ? v0 : VertId( vOffset + i * 2 + 1 ),inversed ? VertId( vOffset + i * 2 + 1 ) : v1 };
+            VertId edgeVert0 = VertId( vOffset + i * 4 + j * 2 );
+            VertId edgeVert1 = edgeVert0 + 1;
+            t[FaceId( fOffset + i * 4 + j * 2 + 0 )] = { edgeVert0, v1, v0 };
+            t[FaceId( fOffset + i * 4 + j * 2 + 1 )] = { edgeVert0,inversed ? v0 : edgeVert1,inversed ? edgeVert1 : v1 };
         }
     }
 
-    int vOffset2 = 12 * 2;
+    int vOffset2 = 12 * 2 * 2;
     int fOffset2 = 12 * 4;
     // 8 - verts on 3-rank corners
     for ( int i = 0; i < 8; ++i )
     {
         Vector3i sign = Vector3i();
-        auto centerV = VertId( vOffset + vOffset2 + i );
-        auto& pt = outMesh.points[centerV];
-        for ( int j = 0; j < 3; ++j )
+        auto centerV = VertId( vOffset + vOffset2 + i * 3 );
+        for ( int k = 0; k < 3; ++k )
         {
-            sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
-            pt[j] = ( sign[j] * 2.0f - 1.0f ) * 0.5f * size;
+            auto& pt = outMesh.points[centerV + k];
+            for ( int j = 0; j < 3; ++j )
+            {
+                sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
+                pt[j] = ( sign[j] * 2.0f - 1.0f ) * 0.5f * size;
+            }
         }
         // add faces
-        std::array<VertId, 6> ringVerts;
-        for ( int j = 0; j < 6; ++j )
+        std::array<VertId, 9> ringVerts;
+        for ( int j = 0; j < 9; ++j )
         {
-            int mainAxis = j / 2;
+            int mainAxis = j / 3;
             int nextAxis = ( mainAxis + 1 ) % 3;
             int otherAxis = ( mainAxis + 2 ) % 3;
-            if ( j % 2 == 0 )
+            if ( j % 3 == 0 )
+            {
+                // lower corner vert
+                ringVerts[j] = VertId( vOffset + 2 * ( otherAxis * 8 + sign[otherAxis] * 4 + sign[mainAxis] * 2 + 1 ) + sign[nextAxis] );
+            }
+            else if ( j % 3 == 1 )
             {
                 // inner vert
                 ringVerts[j] = VertId( mainAxis * 8 + sign[mainAxis] * 4 );
@@ -116,17 +129,18 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
             }
             else
             {
-                // middle vert
-                ringVerts[j] = VertId( vOffset + mainAxis * 8 + sign[mainAxis] * 4 + sign[nextAxis] * 2 + sign[otherAxis] );
+                // upper corner vert
+                ringVerts[j] = VertId( vOffset + 2 * ( mainAxis * 8 + sign[mainAxis] * 4 + sign[nextAxis] * 2 ) + sign[otherAxis] );
             }
         }
         for ( int j = 0; j < 6; ++j )
         {
-            VertId nextV = ringVerts[j];
-            VertId next2V = ringVerts[( j + 1 ) % 6];
+            int ind = ( j / 2 ) * 3 + ( j % 2 );
+            VertId nextV = ringVerts[ind];
+            VertId next2V = ringVerts[ind + 1];
             if ( ( sign[0] + sign[1] + sign[2] ) % 2 == 0 )
                 std::swap( nextV, next2V );
-            t[FaceId( fOffset + fOffset2 + i * 6 + j )] = { VertId( centerV ), nextV, next2V };
+            t[FaceId( fOffset + fOffset2 + i * 6 + j )] = { VertId( centerV + j / 2 ), nextV, next2V };
         }
     }
 

@@ -2070,6 +2070,7 @@ void Viewer::initBasisViewControllerObject_()
     basisViewController->setMesh( basisControllerMesh );
     basisViewController->setName( "Corner View Controller" );
     basisViewController->setFlatShading( true );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
     basisViewController->setFacesColorMap( getCornerControllerColorMap() );
     basisViewController->setColoringType( ColoringType::FacesColorMap );
 }

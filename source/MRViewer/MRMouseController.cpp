@@ -390,7 +390,8 @@ bool MouseController::mouseScroll_( float delta )
 
 void MouseController::preDraw_()
 {
-    tryHoverViewController_();
+    if ( downState_.none() )
+        tryHoverViewController_();
 }
 
 void MouseController::resetAllIfNeeded_()
@@ -411,12 +412,12 @@ bool MouseController::tryHoverViewController_()
         if ( viewControllerHoveredRegion_ )
         {
             getViewerInstance().setSceneDirty();
-            getViewerInstance().basisViewController->setFacesColorMap( getCornerControllerHoveredColorMap( viewControllerHoveredRegion_ ) );
+            getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerHoveredTextureMap( viewControllerHoveredRegion_ ) );
         }
         else
         {
             getViewerInstance().setSceneDirty();
-            getViewerInstance().basisViewController->setFacesColorMap( getCornerControllerColorMap() );
+            getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
         }
     };
 

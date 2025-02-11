@@ -6,6 +6,10 @@
 #include "MRColorTheme.h"
 #include "MRViewer.h"
 #include "MRViewport.h"
+#include "MRMesh/MRSystemPath.h"
+#include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRVector.h"
+#include "MRMesh/MRImageLoad.h"
 
 namespace MR
 {
@@ -95,19 +99,19 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 
     int vOffset2 = 12 * 2 * 2;
     int fOffset2 = 12 * 4;
-    // 8 - verts on 3-rank corners
+    // 8 - verts on 3-rank corners (x3 to have disconnected corners)
     for ( int i = 0; i < 8; ++i )
     {
         Vector3i sign = Vector3i();
+        for ( int j = 0; j < 3; ++j )
+            sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
+
         auto centerV = VertId( vOffset + vOffset2 + i * 3 );
         for ( int k = 0; k < 3; ++k )
         {
             auto& pt = outMesh.points[centerV + k];
             for ( int j = 0; j < 3; ++j )
-            {
-                sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
                 pt[j] = ( sign[j] * 2.0f - 1.0f ) * 0.5f * size;
-            }
         }
         // add faces
         std::array<VertId, 9> ringVerts;
@@ -148,42 +152,156 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
     return outMesh;
 }
 
-const FaceColors& getCornerControllerColorMap()
+VertUVCoords makeCornerControllerUVCoords( float cornerRatio /*= 0.2f */ )
 {
-    static FaceColors colors;
-    if ( colors.empty() )
+    VertUVCoords uvs( 4 * 6 + 2 * 12 * 2 + 8 * 3 ); // 4x6 - verts on each side, 2x12 - verts on 2-rank corners (x2 to have disconnected edges), 8 - verts on 3-rank corners (x3 to have disconnected corners);
+    VertId vOffset = VertId( 4 * 6 );
+    VertId vOffset2 = VertId( 2 * 12 * 2 );
+
+    constexpr std::array<UVCoord, 4 * 6> cBaseUvs
+    {
+        UVCoord( 1.0f,2.f / 3.f ),UVCoord( 1.0f,1.0f ),UVCoord( 0.5f,2.f / 3.f ),UVCoord( 0.5f,1.0f ),//-+ -- ++ +-
+        UVCoord( 0.0f,2.f / 3.f ),UVCoord( 0.5f,2.f / 3.f ),UVCoord( 0.0f,1.0f ),UVCoord( 0.5f,1.0f ),//++ -+ +- --
+        
+        UVCoord( 0.0f,0.0f ),UVCoord( 0.5f,0.0f ),UVCoord( 0.0f,1.f / 3.f ),UVCoord( 0.5f,1.f / 3.f ),//++ -+ +- --
+        UVCoord( 1.0f,0.0f ),UVCoord( 1.0f,1.f / 3.f ),UVCoord( 0.5f,0.0f ),UVCoord( 0.5f,1.f / 3.f ),//-+ -- ++ +-
+
+        UVCoord( 1.0f,1.f / 3.f ),UVCoord( 1.0f,2.f / 3.f ),UVCoord( 0.5f,1.f / 3.f ),UVCoord( 0.5f,2.f / 3.f ),//-+ -- ++ +-
+        UVCoord( 0.0f,1.f / 3.f ),UVCoord( 0.5f,1.f / 3.f ),UVCoord( 0.0f,2.f / 3.f ),UVCoord( 0.5f,2.f / 3.f ),//++ -+ +- --
+    };
+
+    constexpr std::array<bool, 2 * 4 * 6> cBaseSign
+    {
+        false,true,  false,false,  true,true,   true,false, //-+ -- ++ +-
+        true,true,   false,true,   true,false,  false,false,//++ -+ +- --
+
+        true,true,   false,true,   true,false,  false,false,//++ -+ +- --
+        false,true,  false,false,  true,true,   true,false, //-+ -- ++ +-
+
+        false,true,  false,false,  true,true,   true,false, //-+ -- ++ +-
+        true,true,   false,true,   true,false,  false,false,//++ -+ +- --
+    };
+
+    // 4x6 - verts on each side
+    for ( int i = 0; i < 6; ++i )
+    {
+        const UVCoord* cornerUVs = &cBaseUvs[i * 4];
+
+        for ( int j = 0; j < 4; ++j )
+        {
+            auto& uv = uvs[VertId( i * 4 + j )];
+            uv = cornerUVs[j];
+
+            auto sign0 = ( cBaseSign[i * 8 + j * 2] ? 1.0f : -1.0f );
+            auto sign1 = ( cBaseSign[i * 8 + j * 2 + 1] ? 1.0f : -1.0f );
+            uv.x += sign0 * 0.5f * cornerRatio;
+            uv.y += sign1 * ( 1.f / 3.f ) * cornerRatio;
+        }
+    }
+
+    // 2x12 - verts on 2-rank corners (x2 to have disconnected edges)
+    for ( int i = 0; i < 12; ++i )
+    {
+        int baseSide = i / 4; // 0 - (xy,x-y,-xy,-x-y), 1 - (yz,y-z,-yz,-y-z), 2 - (zx,z-x,-zx,-z-x)
+        int baseSide2 = ( baseSide + 1 ) % 3;
+        int signsId = i % 4;
+        int signsId1 = signsId / 2;
+        int signsId2 = signsId % 2;
+        // add faces
+        for ( int j = 0; j < 2; ++j )
+        {
+            auto faceBaseSide = j == 0 ? baseSide : baseSide2;
+            auto faceSign = j == 0 ? signsId1 : signsId2;
+            auto otherSign = j == 0 ? signsId2 : signsId1;
+
+            VertId baseVert = VertId( faceBaseSide * 8 + faceSign * 4 );
+            VertId v0, v1;
+
+            bool inversed = false;
+            if ( j == 0 )
+            {
+                inversed = faceSign != otherSign;
+                v0 = baseVert + ( ( 3 * otherSign + 2 * faceSign ) % 4 );
+                v1 = baseVert + 1 + 1 * otherSign + ( inversed ? -1 : 1 ) * faceSign;
+            }
+            else
+            {
+                inversed = faceSign == otherSign;
+                v0 = baseVert + ( inversed ? -1 : 1 ) * faceSign + 3 * otherSign;
+                v1 = baseVert + ( ( 2 + 2 * faceSign + 3 * otherSign ) % 4 );
+            }
+            if ( signsId1 != signsId2 )
+                std::swap( v0, v1 );
+            VertId edgeVert0 = VertId( vOffset + i * 4 + j * 2 );
+            VertId edgeVert1 = edgeVert0 + 1;
+            uvs[edgeVert0] = cBaseUvs[v0];
+            uvs[edgeVert1] = cBaseUvs[v1];
+
+            auto updateCoord = ( baseSide == 0 || ( baseSide == 2 && j == 0 ) ) ? 1 : 0;
+            uvs[edgeVert0][updateCoord] += ( cBaseSign[2 * v0 + int( updateCoord )] ? 1.0f : -1.0f ) * ( updateCoord == 0 ? 0.5f : 1.f / 3.f ) * cornerRatio;
+            uvs[edgeVert1][updateCoord] += ( cBaseSign[2 * v1 + int( updateCoord )] ? 1.0f : -1.0f ) * ( updateCoord == 0 ? 0.5f : 1.f / 3.f ) * cornerRatio;
+        }
+    }
+
+    // 8 - verts on 3-rank corners (x3 to have disconnected corners)
+    for ( int i = 0; i < 8; ++i )
+    {
+        Vector3i sign = Vector3i();
+        auto centerV = VertId( vOffset + vOffset2 + i * 3 );
+        for ( int j = 0; j < 3; ++j )
+            sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
+        for ( int j = 0; j < 3; ++j )
+        {
+            int mainAxis = j;
+            int nextAxis = ( mainAxis + 1 ) % 3;
+            int otherAxis = ( mainAxis + 2 ) % 3;
+            //if ( sign[mainAxis] > 0 )
+            //    std::swap( nextAxis, otherAxis );
+
+            auto innerV = VertId( mainAxis * 8 + sign[mainAxis] * 4 );
+            innerV += ( sign[mainAxis] == 0 ? 2 : 1 ) * sign[nextAxis] + ( sign[mainAxis] == 0 ? 1 : 2 ) * sign[otherAxis];
+            uvs[centerV + j] = cBaseUvs[innerV];
+        }
+    }
+
+    return uvs;
+}
+
+Vector<MR::MeshTexture, TextureId> loadCornerControllerTextures()
+{
+    Vector<MR::MeshTexture, TextureId> res;
+    res.resize( TextureId( 3 ) );
+
+    auto path = SystemPath::getResourcesDirectory() / "resource" / "textures";
+    const std::array<std::filesystem::path, 3> cTexturePaths = {
+        path / "controller_cube_default.png",
+        path / "controller_cube_sides.png",
+        path / "controller_cube_edges.png"
+    };
+    for ( int i = 0; i < 3; ++i )
+    {
+        auto loaded = ImageLoad::fromAnySupportedFormat( cTexturePaths[i] );
+        if ( !loaded.has_value() )
+            return {};
+        res[TextureId( i )].pixels = std::move( loaded->pixels );
+        res[TextureId( i )].resolution = loaded->resolution;
+        res[TextureId( i )].filter = FilterType::Linear;
+    }
+    return res;
+}
+
+const TexturePerFace& getCornerControllerTexureMap()
+{
+    static TexturePerFace textures;
+    if ( textures.empty() )
     {
         const int f2RankOffset = 2 * 6;
         const int f2RankSize = 12 * 4;
         const int f3RankOffset = f2RankOffset + f2RankSize;
 
-        colors.resize( f3RankOffset + 8 * 6 );
-        for ( FaceId f( 0 ); f < colors.size(); ++f )
-        {
-            if ( f < f2RankOffset )
-            {
-                if ( f < f2RankOffset / 3 )
-                    colors[f] = Color::red();
-                else if ( f < f2RankOffset * 2 / 3 )
-                    colors[f] = Color::green();
-                else
-                    colors[f] = Color::blue();
-            }
-            else if ( f < f3RankOffset )
-            {
-                auto fOff = f - f2RankOffset;
-                if ( fOff < f2RankSize / 3 )
-                    colors[f] = Color( 190, 190, 0 );
-                else if ( fOff < f2RankSize * 2 / 3 )
-                    colors[f] = Color( 0, 190, 190 );
-                else
-                    colors[f] = Color( 190, 0, 190 );
-            }
-            else
-                colors[f] = Color( 127, 127, 127 );
-        }
+        textures.resize( f3RankOffset + 8 * 6, TextureId( 0 ) );
     }
-    return colors;
+    return textures;
 }
 
 RegionId getCornerControllerRegionByFace( FaceId face )
@@ -217,28 +335,56 @@ RegionId getCornerControllerRegionByFace( FaceId face )
     return map[face];
 }
 
-FaceColors getCornerControllerHoveredColorMap( RegionId rId )
+TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId )
 {
-    auto colors = getCornerControllerColorMap();
+    auto textures = getCornerControllerTexureMap();
+    const int fOffset = 2 * 6;
+    const int fOffset2 = 4 * 12;
     if ( rId < 6 )
     {
         FaceId shift = FaceId( rId * 2 );
         for ( FaceId f( shift ); f < shift + 2; ++f )
-            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+            textures[f] = TextureId( 1 );
+
+        // hover edges
+        int baseInd = rId / 2;
+        int otherInd = ( baseInd + 2 ) % 3;
+        textures[FaceId( fOffset + baseInd * 16 + ( rId % 2 ) * 8 + 0 )] = TextureId( 1 );
+        textures[FaceId( fOffset + baseInd * 16 + ( rId % 2 ) * 8 + 1 )] = TextureId( 1 );
+        textures[FaceId( fOffset + baseInd * 16 + ( rId % 2 ) * 8 + 4 )] = TextureId( 1 );
+        textures[FaceId( fOffset + baseInd * 16 + ( rId % 2 ) * 8 + 5 )] = TextureId( 1 );
+        textures[FaceId( fOffset + otherInd * 16 + 0 + ( rId % 2 ) * 4 + 2 )] = TextureId( 1 );
+        textures[FaceId( fOffset + otherInd * 16 + 0 + ( rId % 2 ) * 4 + 3 )] = TextureId( 1 );
+        textures[FaceId( fOffset + otherInd * 16 + 8 + ( rId % 2 ) * 4 + 2 )] = TextureId( 1 );
+        textures[FaceId( fOffset + otherInd * 16 + 8 + ( rId % 2 ) * 4 + 3 )] = TextureId( 1 );
+
+        // hover corners
+        for ( int i = 0; i < 8; ++i )
+        {
+            Vector3i sign = Vector3i();
+            for ( int j = 0; j < 3; ++j )
+                sign[j] = bool( i & ( 1 << j ) ) ? 1 : 0;
+
+            if ( sign[baseInd] != ( rId % 2 ) )
+                continue;
+
+            textures[FaceId( fOffset + fOffset2 + i * 6 + baseInd * 2 + 0 )] = TextureId( 1 );
+            textures[FaceId( fOffset + fOffset2 + i * 6 + baseInd * 2 + 1 )] = TextureId( 1 );
+        }
     }
     else if ( rId < 6 + 12 )
     {
-        FaceId shift = FaceId( 2 * 6 + ( rId - 6 ) * 4 );
+        FaceId shift = FaceId( fOffset + ( rId - 6 ) * 4 );
         for ( FaceId f( shift ); f < shift + 4; ++f )
-            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+            textures[f] = TextureId( 2 );
     }
     else
     {
-        FaceId shift = FaceId( 2 * 6 + 4 * 12 + ( rId - 6 - 12 ) * 6 );
+        FaceId shift = FaceId( fOffset + fOffset2 + ( rId - 6 - 12 ) * 6 );
         for ( FaceId f( shift ); f < shift + 6; ++f )
-            colors[f] = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+            textures[f] = TextureId( 2 );
     }
-    return colors;
+    return textures;
 }
 
 void updateCurrentViewByControllerRegion( RegionId rId )

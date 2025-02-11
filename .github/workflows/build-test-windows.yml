@@ -253,10 +253,11 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Delete unwanted files
+        # Those files should not exist when using CMake.
         shell: cmd
         run: |
-          del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
-          del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}

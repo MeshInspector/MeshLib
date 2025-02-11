@@ -10,7 +10,7 @@
 #endif
 
 #ifdef _WIN32
-#   ifdef MRMESHC_EXPORT
+#   ifdef MRMeshC_EXPORTS
 #       define MRMESHC_API __declspec( dllexport )
 #   else
 #       define MRMESHC_API __declspec( dllimport )

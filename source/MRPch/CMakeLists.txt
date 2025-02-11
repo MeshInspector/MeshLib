@@ -24,20 +24,23 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
-  ELSE()
+  ELSEIF(WIN32)
     find_package(Boost COMPONENTS REQUIRED)
-    find_package(TBB REQUIRED)
-    pkg_check_modules(JSONCPP jsoncpp)
-    include_directories(${JSONCPP_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    IF(APPLE)
-      # fix Boost.Stacktrace
-      target_compile_definitions(${PROJECT_NAME} PRIVATE
-        _GNU_SOURCE
-      )
-    ENDIF()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      Boost::boost
+      JsonCpp::JsonCpp
+      TBB::tbb
+    )
+  ELSE()
+    find_package(Boost COMPONENTS REQUIRED)
+    include_directories(${jsoncpp_INCLUDE_DIRS})
+
+    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       fmt
@@ -60,6 +63,7 @@ IF(MR_PCH)
   )
 
   # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
+  # Also needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       _GNU_SOURCE

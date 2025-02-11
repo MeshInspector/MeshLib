@@ -4,10 +4,20 @@ IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
   set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-  set(CMAKE_CUDA_STANDARD 20)
+  IF(WIN32)
+    # For some reason setting C++20 on Windows appears to be ignored, so that even
+    #   the single-argument version of `static_assert` doesn't compile (which is a C++17 feature).
+    # Setting C++17 does work though.
+    set(CMAKE_CUDA_STANDARD 17)
+
+    # Right now we only seem have the old Cuda 11 in VS 2019 in CI.
+    find_package(CUDAToolkit 11 REQUIRED)
+  ELSE()
+    set(CMAKE_CUDA_STANDARD 20)
+    find_package(CUDAToolkit 12 REQUIRED)
+  ENDIF()
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-  find_package(CUDAToolkit 12 REQUIRED)
 
   IF(NOT DEFINED CMAKE_CUDA_COMPILER)
     set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
@@ -97,14 +107,26 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  spdlog
-  fmt
-  tbb
-  ${CUDART_LIBRARY}
-  ${MRCUDA_OPTIONAL_DEPENDENCIES}
-)
+
+IF(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    spdlog::spdlog
+    fmt::fmt
+    TBB::tbb
+    ${CUDART_LIBRARY}
+    ${MRCUDA_OPTIONAL_DEPENDENCIES}
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    spdlog
+    fmt
+    tbb
+    ${CUDART_LIBRARY}
+    ${MRCUDA_OPTIONAL_DEPENDENCIES}
+  )
+ENDIF()
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(

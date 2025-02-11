@@ -36,3 +36,21 @@
 #else
 #define MR_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
+
+
+// Are we using the old buggy MSVC preprocessor?
+#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
+#define MR_LEGACY_MSVC_PREPROCESSOR 1
+#else
+#define MR_LEGACY_MSVC_PREPROCESSOR 0
+#endif
+
+// `MR_TRIM_LEADING_COMMA(,a,b,c)` returns `a,b,c`.
+#if MR_LEGACY_MSVC_PREPROCESSOR
+#define MR_TRIM_LEADING_COMMA(...) DETAIL_MR_TRIM_LEADING_COMMA_ DETAIL_MR_TRIM_LEADING_COMMA_DEFER(__VA_ARGS__)
+#define DETAIL_MR_TRIM_LEADING_COMMA_DEFER
+#else
+#define MR_TRIM_LEADING_COMMA(...) DETAIL_MR_TRIM_LEADING_COMMA_(__VA_ARGS__)
+#endif
+#define DETAIL_MR_TRIM_LEADING_COMMA_(x, ...) DETAIL_MR_TRIM_LEADING_COMMA_EMPTY(x) __VA_ARGS__
+#define DETAIL_MR_TRIM_LEADING_COMMA_EMPTY()

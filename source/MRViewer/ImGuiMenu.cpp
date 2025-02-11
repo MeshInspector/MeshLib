@@ -99,6 +99,8 @@
 #include <fmt/chrono.h>
 #endif
 
+#include "MRPch/MRWinapi.h"
+
 #include <bitset>
 
 namespace

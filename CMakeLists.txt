@@ -128,9 +128,8 @@ IF(NOT MR_EMSCRIPTEN)
   ELSE()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
+    include_directories(${jsoncpp_INCLUDE_DIRS})
   ENDIF()
-
-  include_directories(${jsoncpp_INCLUDE_DIRS})
 
   find_package(fmt)
   find_package(spdlog REQUIRED)

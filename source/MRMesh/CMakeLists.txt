@@ -55,7 +55,6 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF()
@@ -68,6 +67,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 
   IF(APPLE)
     find_library(COCOA_LIBRARY Cocoa ONLY)
+    include_directories(${jsoncpp_INCLUDE_DIRS})
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
     target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
       ${MRMESH_OPTIONAL_INCLUDE_DIRS}
@@ -125,6 +125,7 @@ ELSEIF(WIN32)
   )
 ELSE()
   find_package(tl-expected REQUIRED)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
     ${MRMESH_OPTIONAL_INCLUDE_DIRS}
   )

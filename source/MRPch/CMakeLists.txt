@@ -26,7 +26,6 @@ IF(MR_PCH)
     )
   ELSEIF(WIN32)
     find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 

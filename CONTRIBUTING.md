@@ -29,7 +29,8 @@
 
 * Naming style:
 
-  * Namespaces, types: `FooBar`.
+  * Namespaces, types: `FooBar`.<br/>
+    `namespace detail` is an exception, use it for things intended for internal use.
 
   * Functions, variables: `fooBar`.
 

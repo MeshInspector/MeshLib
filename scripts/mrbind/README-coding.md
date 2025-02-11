@@ -166,7 +166,7 @@ struct A
 
 This is better than making `template <typename T> A operator+(A, A) {...}` a free function, because you would have to `MR_BIND_TEMPLATE(...)` that free function, while the `friend` can be instantiated automatically by us.
 
-This is a good practice in C++ anyway, because the friends can only be reaced via ADL, meaning the compiler has to search through less functions.
+This is a good practice in C++ anyway, because the friends can only be reached via ADL, meaning the compiler has to search through less functions.
 
 ## Missing bindings for `std::` classes and more
 

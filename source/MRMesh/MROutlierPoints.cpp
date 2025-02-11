@@ -56,7 +56,7 @@ Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float ra
             int count = 0;
             PointAccumulator plane;
             Vector3f normalSum;
-            findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], radius_,
+            findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], sqr( radius_ ) },
                               [&] ( VertId v1, const Vector3f& )
             {
                 if ( !contains( validPoints_, v1 ) )
@@ -106,7 +106,7 @@ Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float ra
         const int counterDivider = std::max( lastPassVertsCount / 100, 1 );
         for ( auto v0 : *lastPassVerts )
         {
-            findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], radius_,
+            findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], sqr( radius_ ) },
                               [&] ( VertId v1, const Vector3f& )
             {
                 if ( v0 < v1 && contains( validPoints_, v1 ) )

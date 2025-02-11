@@ -59,6 +59,9 @@ public:
     /// @param mask mask of the types of outliers you are looking for
     MRMESH_API Expected<VertBitSet> find( OutlierTypeMask mask, ProgressCallback progress = {} ); // unite and calculate actual outliers
 
+    /// Get statistics on the number of neighbors for each point
+    MRMESH_API const std::vector<uint8_t>& getWeaklyConnectedStat() { return weaklyConnectedStat_; }
+
 private:
     Expected<VertBitSet> findSmallComponents( ProgressCallback progress = {} );
     Expected<VertBitSet> findWeaklyConnected( ProgressCallback progress = {} );

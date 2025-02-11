@@ -9,23 +9,23 @@
 namespace MR
 {
 
-std::string OutliersDetector::prepare( const PointCloud& pointCloud, float radius, OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
+Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float radius, OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
 {
     validPoints_ = pointCloud.validPoints;
 
     if ( !validPoints_.any() )
-        return "Empty Point Cloud.";
+        return unexpected( "Empty Point Cloud" );
 
-    if ( !( mask & OutlierType::All ) )
-        return {};
+    if ( !bool( mask & OutlierTypeMask::All ) )
+        return unexpected( "Nothing to look for" );
 
     maskCached_ = mask;
     radius_ = radius;
 
-    const bool calcSmallComponentsCached = mask & OutlierType::SmallComponents;
-    const bool calcWeaklyConnectedCached = mask & OutlierType::WeaklyConnected;
-    const bool calcFarSurfaceCached = mask & OutlierType::FarSurface;
-    const bool calcBadNormalCached = mask & OutlierType::AwayNormal;
+    const bool calcSmallComponentsCached = bool( mask & OutlierTypeMask::SmallComponents );
+    const bool calcWeaklyConnectedCached = bool( mask & OutlierTypeMask::WeaklyConnected );
+    const bool calcFarSurfaceCached = bool( mask & OutlierTypeMask::FarSurface );
+    const bool calcBadNormalCached = bool( mask & OutlierTypeMask::AwayNormal );
 
 
     const VertBitSet* lastPassVerts = &validPoints_;
@@ -94,7 +94,7 @@ std::string OutliersDetector::prepare( const PointCloud& pointCloud, float radiu
         }, subProgress );
 
         if ( !continued )
-            return stringOperationCanceled();
+            return unexpectedOperationCanceled();
         subProgress = subprogress( progress, 0.4f, 1.f );
     }
 
@@ -116,7 +116,7 @@ std::string OutliersDetector::prepare( const PointCloud& pointCloud, float radiu
             } );
             ++counterProcessedVerts;
             if ( !reportProgress( subProgress, counterProcessedVerts / counterMax, counterProcessedVerts, counterDivider ) )
-                return stringOperationCanceled();
+                return unexpectedOperationCanceled();
         }
     }
 
@@ -131,37 +131,37 @@ void OutliersDetector::setParams( const OutlierParams& params )
 Expected<VertBitSet> OutliersDetector::find( OutlierTypeMask mask, ProgressCallback progress /*= {}*/ )
 {
     mask &= maskCached_;
-    if ( !mask )
-        return "Nothing to look for";
+    if ( !bool( mask ) )
+        return unexpected( "Nothing to look for" );
 
     int maxTaskCount = 0;
     for ( int i = 0; i < 4; ++i )
-        if ( ( 1 << i ) & mask )
+        if ( bool( OutlierTypeMask( 1 << i ) & mask ) )
             ++maxTaskCount;
 
     VertBitSet result;
-    if ( mask & OutlierType::SmallComponents )
+    if ( bool( mask & OutlierTypeMask::SmallComponents ) )
     {
         auto res = findSmallComponents( subprogress( progress, 0.f, 1.f / maxTaskCount ) );
         if ( !res.has_value() )
             return unexpected( res.error() );
         result |= *res;
     }
-    if ( mask & OutlierType::WeaklyConnected )
+    if ( bool( mask & OutlierTypeMask::WeaklyConnected ) )
     {
         auto res = findWeaklyConnected();
         if ( !res.has_value() )
             return unexpected( res.error() );
         result |= *res;
     }
-    if ( mask & OutlierType::FarSurface )
+    if ( bool( mask & OutlierTypeMask::FarSurface ) )
     {
         auto res = findFarSurface();
         if ( !res.has_value() )
             return unexpected( res.error() );
         result |= *res;
     }
-    if ( mask & OutlierType::AwayNormal )
+    if ( bool( mask & OutlierTypeMask::AwayNormal ) )
     {
         auto res = findAwayNormal();
         if ( !res.has_value() )
@@ -219,6 +219,16 @@ Expected<VertBitSet> OutliersDetector::findAwayNormal( ProgressCallback progress
     if ( !continued )
         return unexpectedOperationCanceled();
     return result;
+}
+
+Expected<VertBitSet> findOutliers( const PointCloud& pc, const FindOutliersParams& params )
+{
+    OutliersDetector finder;
+    auto res = finder.prepare( pc, params.radius, params.mask, subprogress( params.progress, 0.f, 0.8f ) );
+    if ( !res.has_value() )
+        return unexpected( res.error() );
+    finder.setParams( params.finderParams );
+    return finder.find( params.mask, subprogress( params.progress, 0.8f, 1.f ) );
 }
 
 }

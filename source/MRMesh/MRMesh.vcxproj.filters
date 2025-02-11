@@ -1272,7 +1272,7 @@
     <ClInclude Include="MRPointsInBox.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MROutliersPoints.h">
+    <ClInclude Include="MROutlierPoints.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2096,7 +2096,7 @@
     <ClCompile Include="MRPointsInBox.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MROutliersPoints.cpp">
+    <ClCompile Include="MROutlierPoints.cpp">
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>

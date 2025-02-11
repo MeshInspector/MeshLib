@@ -1,4 +1,4 @@
-#include "MRPointsInBall.h"
+#include "MRPointsInBox.h"
 #include "MRPointCloud.h"
 #include "MRMesh.h"
 #include "MRAABBTreePoints.h"
@@ -6,19 +6,19 @@
 namespace MR
 {
 
-void findPointsInBall( const PointCloud& pointCloud, const Ball3f& ball,
+void findPointsInBox( const PointCloud& pointCloud, const Box3f& box,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
-    findPointsInBall( pointCloud.getAABBTree(), ball, foundCallback, xf );
+    findPointsInBox( pointCloud.getAABBTree(), box, foundCallback, xf );
 }
 
-void findPointsInBall( const Mesh& mesh, const Ball3f& ball,
+void findPointsInBox( const Mesh& mesh, const Box3f& box,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
-    findPointsInBall( mesh.getAABBTreePoints(), ball, foundCallback, xf );
+    findPointsInBox( mesh.getAABBTreePoints(), box, foundCallback, xf );
 }
 
-void findPointsInBall( const AABBTreePoints& tree, const Ball3f& ball,
+void findPointsInBox( const AABBTreePoints& tree, const Box3f& box,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
     if ( !foundCallback )
@@ -38,9 +38,8 @@ void findPointsInBall( const AABBTreePoints& tree, const Ball3f& ball,
 
     auto addSubTask = [&]( NodeId n )
     {
-        const auto & box = tree.nodes()[n].box;
-        float distSq = xf ? transformed( box, *xf ).getDistanceSq( ball.center ) : box.getDistanceSq( ball.center );
-        if ( distSq <= ball.radiusSq )
+        const auto & nodeBox = tree.nodes()[n].box;
+        if ( xf ? transformed( nodeBox, *xf ).intersects( box ) : nodeBox.intersects( box ) )
             subtasks[stackSize++] = n;
     };
 
@@ -57,7 +56,7 @@ void findPointsInBall( const AABBTreePoints& tree, const Ball3f& ball,
             for ( int i = first; i < last; ++i )
             {
                 auto coord = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;
-                if ( !ball.outside( coord ) )
+                if ( box.contains( coord ) )
                     foundCallback( orderedPoints[i].id, coord );
             }
             continue;

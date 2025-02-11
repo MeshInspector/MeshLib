@@ -41,11 +41,11 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             };
         }
         newPoints = pointCloud.points;
-        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumPos;
             int count = 0;
-            findPointsInBall( pointCloud, pointCloud.points[v], radius,
+            findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
                 [&] ( VertId newV, const Vector3f& position )
             {
                 if ( newV != v )
@@ -107,11 +107,11 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             };
         }
         newPoints = pointCloud.points;
-        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumPos;
             int count = 0;
-            findPointsInBall( pointCloud, pointCloud.points[v], radius,
+            findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
                 [&] ( VertId nv, const Vector3f& position )
             {
                 if ( nv != v && zone.test( nv ) )
@@ -126,11 +126,11 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         }, internalCb1 );
         if ( !keepGoing )
             break;
-        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumForces;
             int count = 0;
-            findPointsInBall( pointCloud, pointCloud.points[v], radius,
+            findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
                 [&] ( VertId nv, const Vector3f& )
             {
                 if ( nv != v && zone.test( nv ) )
@@ -186,12 +186,12 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             };
         }
         newPoints = pointCloud.points;
-        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
         {
             PointAccumulator accum;
             std::vector<std::pair<VertId, double>> weightedNeighbors;
 
-            findPointsInBall( pointCloud, pointCloud.points[v], radius,
+            findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
                 [&] ( VertId newV, const Vector3f& position )
             {
                 double w = 1.0;

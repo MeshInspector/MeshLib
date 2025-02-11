@@ -18,6 +18,7 @@
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
+    <ClInclude Include="MRBall.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
@@ -153,6 +154,7 @@
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
     <ClInclude Include="MRPointsComponents.h" />
+    <ClInclude Include="MRPointsInBox.h" />
     <ClInclude Include="MRPointsProject.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
@@ -521,6 +523,7 @@
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />
+    <ClCompile Include="MRPointsInBox.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />

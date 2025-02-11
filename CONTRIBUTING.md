@@ -58,3 +58,20 @@ CMake automatically defines `MRFoo_EXPORTS` when building each project, this is 
 ## Python bindings
 
 We parse our headers to automatically generate Python bindings, so you need to follow some additional rules when writing the headers. Consult [the bindings manual](./scripts/mrbind/README-coding.md) for that.
+
+## Misc
+
+### Flag enums
+
+Flag enums should look like this:
+```cpp
+enum class MyFlags
+{
+    A = 1 << 0,
+    B = 1 << 1,
+    C = 1 << 2,
+};
+MR_MAKE_FLAG_OPERATORS( MyFlags )
+```
+
+The macro generates all the appropriate operators. Don't forget to include `<MRMesh/MRFlagOperators.h>`.

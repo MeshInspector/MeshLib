@@ -1,60 +1,59 @@
-## Exposing function and classes to Python
-You can find full documentation about exposing on [pybind11 official page](https://pybind11.readthedocs.io/en/stable/basics.html), in this topic we just show code style recommendations:
-1. Provide comments to the exposed functions and classes (copy them from the C++ code)
-2. Provide the argument names and default values as in the C++ code
-3. Use `MR::decorateExpected` if you expose a function that returns an `MR::Expected` value
-4. For default arguments that have a C++ type use `pybind11::arg_v( arg_name, arg_value, "PythonArgValue" )` to get correct autocompletion
-5. If an exposed class is used (as an argument or return type) by other classes and functions, consider declaring it with `MR_ADD_PYTHON_CUSTOM_CLASS` and `MR_PYTHON_CUSTOM_CLASS` macros
-6. Add tests to the `test_python` folder for the exposed functions
+## Code style
 
-Example:
-```c++
-// example class for exposing
-class A
-{
-public:
-    // example field 1
-    int a;
-    // example field 2
-    float b;
-    // example empty function
-    void doSomething( int exampleArgA, int exampleArgB = 1 ){}
-}
+* Indentation is 4 spaces. Braces on a separate line.
 
-// if a.a is not zero
-MR::Expected<MR::Mesh> foo(const A& a)
-{
-    if (a.a != 0) return MR::Mesh{};
-    return unexpected( "a is zero" );
-}
+  ```cpp
+  int foo()
+  {
+  ⸱⸱⸱⸱return 42;
+  }
+  ```
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, A, ::A )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, classA, [] ( pybind11::module_& m )
-{
-    MR_PYTHON_CUSTOM_CLASS( A ).doc() =
-        "example class for exposing";
-    MR_PYTHON_CUSTOM_CLASS( A ).
-        def( pybind11::init<>() ).
-        def_readwrite( "a", &A::a, "example field 1" ).
-        def_readwrite( "b", &A::b, "example field 2" ).
-        def( "doSomething", &A::doSomething, pybind11::arg( "exampleArgA" ), pybind11::arg( "exampleArgB" ) = 1, " example empty function" );
+* Namespaces are not indented and should have a comment at the closing brace:
 
-    m.def( "foo", MR::decorateExpected( &foo ), pybind11::arg( a ), "if a.a is not zero" );
-} )
-```
+  ```cpp
+  namespace MR
+  {
+  void foo() {}
+  } // namespace MR
+  ```
 
-```python
-from helper import *
-import pytest
+* Add spaces inside non-empty `(...)` and `{...}`:
 
+  ```cpp
+  int x = ( a + b ) / blah( c, d ) * foo();
+  ```
+  ```cpp
+  int foo() { return 42; }
+  ```
 
-def test_a_exposing():
-    a = mrmresh.A()
-    a.a = 1
-    a.doSomething(0)
-    resMesh = mrmesh.foo(a)
-    # usually here some assertions are placed about computation results
-    assert (True)
-```
+* Naming style:
 
-You can find examples in `source/mrmeshpy` and `source/mrmeshnumpy`
+  * Namespaces, types: `FooBar`.
+
+  * Functions, variables: `fooBar`.
+
+  * Macros: `MR_FOO_BAR`
+
+  * We never use `foo_bar`.
+
+  * Non-public members (functions, variables, etc) should be suffixed with `_`, e.g. `fooBar_`.
+
+  * Constant variables should be prefixed with `c`, e.g. `cFooBar`.
+
+  * Enum constants are usually named `FooBar`, but some enums use other conventions.
+
+## Export macros
+
+Each project (`source/MRFoo/`) normally has its own `exports.h` that declares following macros:
+
+* `MRFOO_API` — use it on all public functions in the headers.
+* `MRFOO_CLASS` — sometimes you need to use this on classes and enums.
+
+  If you're applying `typeid` to a class (or enum!) declared in a header, that class/enum **must** be marked `MRFOO_CLASS`, or on Arm Macs `typeid(...)` will return different IDs for it in different shared libraries, causing all sorts of issues.
+
+CMake automatically defines `MRFoo_EXPORTS` when building each project, this is used in `exports.h`.
+
+## Python bindings
+
+We parse our headers to automatically generate Python bindings, so you need to follow some additional rules when writing the headers. Consult [the bindings manual](./scripts/mrbind/README-coding.md) for that.

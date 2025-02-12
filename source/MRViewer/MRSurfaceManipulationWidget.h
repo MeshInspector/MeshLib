@@ -171,7 +171,7 @@ private:
     bool appendHistoryAction_ = false;
 
     std::shared_ptr<Palette> palette_;
-    bool enableDeviationTexture_ = true;
+    bool enableDeviationTexture_ = false;
     DeviationCalculationMethod deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
     bool sameValidVerticesAsInOriginMesh_ = true;
 

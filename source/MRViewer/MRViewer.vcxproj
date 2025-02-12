@@ -391,6 +391,9 @@
     <Image Include="resource\object_icons\X3\PointObject.png" />
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png" />
     <Image Include="resource\object_icons\X3\SphereObject.png" />
+    <Image Include="resource\textures\controller_cube_default.png" />
+    <Image Include="resource\textures\controller_cube_edges.png" />
+    <Image Include="resource\textures\controller_cube_sides.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">

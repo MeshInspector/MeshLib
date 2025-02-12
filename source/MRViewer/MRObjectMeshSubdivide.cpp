@@ -6,6 +6,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRTimer.h>
 #include <MRMesh/MRChangeMeshAction.h>
+#include <MRMesh/MRPartialChangeMeshAction.h>
 #include <MRMesh/MRChangeVertsColorMapAction.h>
 #include <MRMesh/MRChangeColoringActions.h>
 #include <MRMesh/MRChangeSelectionAction.h>
@@ -95,7 +96,7 @@ void ObjectMeshSubdivideResult::assingWithHistory( const std::shared_ptr<ObjectM
     MR_TIMER
 
     SCOPED_HISTORY( "Subdivide Mesh" );
-    AppendHistory( std::make_shared<ChangeMeshAction>( "mesh", target, std::make_shared<Mesh>( std::move( mesh ) ) ) );
+    AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", target, setNew, std::make_shared<Mesh>( std::move( mesh ) ) ) );
     AppendHistory( std::make_shared<ChangeMeshUVCoordsAction>( "uv", target, std::move( uvCoords ) ) );
     AppendHistory( std::make_shared<ChangeVertsColorMapAction>( "color map", target, std::move( colorMap ) ) );
     AppendHistory( std::make_shared<ChangeMeshTexturePerFaceAction>( "texture per face", target, std::move( texturePerFace ) ) );

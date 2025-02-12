@@ -17,7 +17,7 @@ GLuint compileShader( const std::string& vertSource, const std::string& fragSour
     }
 
     // create program
-    GL_EXEC( GLuint id = glCreateProgram() );
+    GLuint id = GL_EXEC( glCreateProgram() );
     if ( id == 0 )
     {
         spdlog::warn( "Cannot create shader" );

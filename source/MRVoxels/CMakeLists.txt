@@ -18,14 +18,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(fmt REQUIRED)
-  find_package(spdlog REQUIRED)
-
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
-ENDIF()
-
 set(MRVOXELS_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MRVOXELS_NO_DICOM)
@@ -34,14 +26,24 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(NOT MRVOXELS_NO_TIFF)
-  list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
+  IF(WIN32)
+    find_package(tiff REQUIRED)
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
+  ELSE()
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
+  ENDIF()
 ENDIF()
 
 IF(BUILD_TESTING)
   IF(APPLE)
     list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
   ELSE()
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+    IF(WIN32)
+      find_package(GTest REQUIRED)
+      list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
+    ELSE()
+      list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+    ENDIF()
   ENDIF()
 ENDIF()
 
@@ -64,6 +66,17 @@ ELSEIF(APPLE)
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
+ELSEIF(WIN32)
+  find_package(OpenVDB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    OpenVDB::openvdb
+    fmt::fmt
+    spdlog::spdlog
+    JsonCpp::JsonCpp
+    TBB::tbb
+    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
@@ -74,10 +87,6 @@ ELSE()
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
-ENDIF()
-
-IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MRVOXELS_EXPORT)
 ENDIF()
 
 IF(MR_PCH)

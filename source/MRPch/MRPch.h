@@ -42,7 +42,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
-#include <Commdlg.h>
+#include <commdlg.h>
 #endif
 
 #ifndef __EMSCRIPTEN__

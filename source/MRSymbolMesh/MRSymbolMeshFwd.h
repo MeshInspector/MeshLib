@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#   ifdef MRSYMBOLMESH_EXPORT
+#   ifdef MRSymbolMesh_EXPORTS
 #       define MRSYMBOLMESH_API __declspec(dllexport)
 #   else
 #       define MRSYMBOLMESH_API __declspec(dllimport)

@@ -5,7 +5,7 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
-#include <windows.h>
+#include "MRPch/MRWinapi.h"
 #include <GLFW/glfw3.h>
 #include <functional>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#   ifdef MRPYTHON_EXPORT
+#   ifdef MRPython_EXPORTS
 #       define MRPYTHON_API __declspec(dllexport)
 #   else
 #       define MRPYTHON_API __declspec(dllimport)

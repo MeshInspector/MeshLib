@@ -3,7 +3,7 @@
 #include "config.h"
 
 #ifdef _WIN32
-#   ifdef MRVOXELS_EXPORT
+#   ifdef MRVoxels_EXPORTS
 #       define MRVOXELS_API __declspec(dllexport)
 #   else
 #       define MRVOXELS_API __declspec(dllimport)

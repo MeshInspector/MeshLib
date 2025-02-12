@@ -69,7 +69,7 @@
 #include <functional>
 
 #ifdef _WIN32
-#   ifdef MRMESH_EXPORT
+#   ifdef MRMesh_EXPORTS
 #       define MRMESH_API __declspec(dllexport)
 #   else
 #       define MRMESH_API __declspec(dllimport)
@@ -690,6 +690,7 @@ struct VertDuplication;
 #       define MR_UNREACHABLE __builtin_unreachable();
 #       define MR_UNREACHABLE_NO_RETURN __builtin_unreachable();
 #   else
+#       include <cassert>
 #       define MR_UNREACHABLE { assert( false ); return {}; }
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif

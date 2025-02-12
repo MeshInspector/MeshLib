@@ -80,6 +80,11 @@ IF(WIN32)
   ELSE()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
   ENDIF()
+
+  IF(${CMAKE_GENERATOR} MATCHES "^Visual Studio")
+    # enable parallel build
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+  ENDIF()
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN_SINGLETHREAD AND NOT MSVC)

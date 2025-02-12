@@ -13,7 +13,8 @@ IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
     # Right now we only seem have the old Cuda 11 in VS 2019 in CI.
     find_package(CUDAToolkit 11 REQUIRED)
 
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler")
+    # For our VS2022 CI:
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
   ELSE()
     set(CMAKE_CUDA_STANDARD 20)
     find_package(CUDAToolkit 12 REQUIRED)

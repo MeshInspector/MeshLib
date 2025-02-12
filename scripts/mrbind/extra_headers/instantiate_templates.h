@@ -37,14 +37,7 @@ namespace MR
     template T dot( const Vector2<T> & a, const Vector2<T> & b ); \
     template T sqr( const Vector2<T> & a ); \
     template Vector2<T> mult( const Vector2<T>& a, const Vector2<T>& b ); \
-    template T angle( const Vector2<T> & a, const Vector2<T> & b ); \
-    template bool operator ==( const Vector2<T> & a, const Vector2<T> & b ); \
-    template bool operator !=( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator *( T a, const Vector2<T> & b ); \
-    template Vector2<T> operator *( const Vector2<T> & b, T a ); \
-    template Vector2<T> operator /( Vector2<T> b, T a ); \
+    template T angle( const Vector2<T> & a, const Vector2<T> & b );
 
 VEC3(float, 1)
 VEC3(double, 1)

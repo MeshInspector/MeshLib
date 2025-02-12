@@ -457,6 +457,9 @@
     <ClCompile Include="MRViewportCornerController.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRObjectMeshSubdivide.cpp">
+      <Filter>History</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -896,6 +899,9 @@
     </ClInclude>
     <ClInclude Include="MRViewportCornerController.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectMeshSubdivide.h">
+      <Filter>History</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

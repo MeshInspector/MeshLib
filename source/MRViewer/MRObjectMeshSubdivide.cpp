@@ -1,9 +1,14 @@
 #include "MRObjectMeshSubdivide.h"
-#include "MRMeshSubdivide.h"
-#include "MRMeshAttributesToUpdate.h"
-#include "MRMeshSubdivideCallbacks.h"
-#include "MRObjectMesh.h"
-#include "MRTimer.h"
+#include "MRAppendHistory.h"
+#include <MRMesh/MRMeshSubdivide.h>
+#include <MRMesh/MRMeshAttributesToUpdate.h>
+#include <MRMesh/MRMeshSubdivideCallbacks.h>
+#include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRTimer.h>
+#include <MRMesh/MRChangeMeshAction.h>
+#include <MRMesh/MRChangeVertsColorMapAction.h>
+#include <MRMesh/MRChangeColoringActions.h>
+#include <MRMesh/MRChangeSelectionAction.h>
 
 namespace MR
 {
@@ -83,6 +88,21 @@ void ObjectMeshSubdivideResult::assingNoHistory( ObjectMesh & target )
     target.selectFaces( std::move( selFaces ) );
     target.selectEdges( std::move( selEdges ) );
     target.setCreases( std::move( creases ) );
+}
+
+void ObjectMeshSubdivideResult::assingWithHistory( const std::shared_ptr<ObjectMesh> & target )
+{
+    MR_TIMER
+
+    SCOPED_HISTORY( "Subdivide Mesh" );
+    AppendHistory( std::make_shared<ChangeMeshAction>( "mesh", target, std::make_shared<Mesh>( std::move( mesh ) ) ) );
+    AppendHistory( std::make_shared<ChangeMeshUVCoordsAction>( "uv", target, std::move( uvCoords ) ) );
+    AppendHistory( std::make_shared<ChangeVertsColorMapAction>( "color map", target, std::move( colorMap ) ) );
+    AppendHistory( std::make_shared<ChangeMeshTexturePerFaceAction>( "texture per face", target, std::move( texturePerFace ) ) );
+    AppendHistory( std::make_shared<ChangeFacesColorMapAction>( "face color map", target, std::move( faceColors ) ) );
+    AppendHistory( std::make_shared<ChangeMeshFaceSelectionAction>( "face selection", target, std::move( selFaces ) ) );
+    AppendHistory( std::make_shared<ChangeMeshEdgeSelectionAction>( "edge selection", target, std::move( selEdges ) ) );
+    AppendHistory( std::make_shared<ChangeMeshCreasesAction>( "creases", target, std::move( creases ) ) );
 }
 
 } //namespace MR

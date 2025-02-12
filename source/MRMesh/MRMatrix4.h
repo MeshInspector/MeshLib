@@ -110,17 +110,35 @@ struct Matrix4
     /// converts 3d-vector b in 4d-vector (b,1), multiplies matrix on it,
     /// and assuming the result is in homogeneous coordinates returns it as 3d-vector
     Vector3<T> operator ()( const Vector3<T> & b ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
+
+
+    /// x = a * b
+    friend Vector4<T> operator *( const Matrix4<T> & a, const Vector4<T> & b )
+    {
+        return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ), dot( a.w, b ) };
+    }
+
+    /// product of two matrices
+    friend Matrix4<T> operator *( const Matrix4<T> & a, const Matrix4<T> & b )
+    {
+        Matrix4<T> res;
+        for ( int i = 0; i < 4; ++i )
+            for ( int j = 0; j < 4; ++j )
+                res[i][j] = dot( a[i], b.col(j) );
+        return res;
+    }
+
+    friend bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
+    friend bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b ) { return !( a == b ); }
+    friend Matrix4<T> operator +( const Matrix4<T> & a, const Matrix4<T> & b ) { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
+    friend Matrix4<T> operator -( const Matrix4<T> & a, const Matrix4<T> & b ) { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
+    friend Matrix4<T> operator *( T a, const Matrix4<T> & b ) { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    friend Matrix4<T> operator *( const Matrix4<T> & b, T a ) { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
+    friend Matrix4<T> operator /( Matrix4<T> b, T a ) { b /= a; return b; }
 };
 
 /// \related Matrix4
 /// \{
-
-/// x = a * b
-template <typename T>
-inline Vector4<T> operator *( const Matrix4<T> & a, const Vector4<T> & b )
-{
-    return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ), dot( a.w, b ) };
-}
 
 /// double-dot product: x = a : b
 template <typename T>
@@ -135,51 +153,12 @@ inline Vector3<T> Matrix4<T>::operator ()( const Vector3<T> & b ) const MR_REQUI
     return ( *this * Vector4<T>{ b.x, b.y, b.z, T(1) } ).proj3d();
 }
 
-/// product of two matrices
-template <typename T>
-inline Matrix4<T> operator *( const Matrix4<T> & a, const Matrix4<T> & b )
-{
-    Matrix4<T> res;
-    for ( int i = 0; i < 4; ++i )
-        for ( int j = 0; j < 4; ++j )
-            res[i][j] = dot( a[i], b.col(j) );
-    return res;
-}
-
 /// x = a * b^T
 template <typename T>
 inline Matrix4<T> outer( const Vector4<T> & a, const Vector4<T> & b )
 {
     return { a.x * b, a.y * b, a.z * b, a.w * b };
 }
-
-template <typename T>
-inline bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b )
-    { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
-
-template <typename T>
-inline bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b )
-    { return !( a == b ); }
-
-template <typename T>
-inline Matrix4<T> operator +( const Matrix4<T> & a, const Matrix4<T> & b )
-    { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
-
-template <typename T>
-inline Matrix4<T> operator -( const Matrix4<T> & a, const Matrix4<T> & b )
-    { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
-
-template <typename T>
-inline Matrix4<T> operator *( T a, const Matrix4<T> & b )
-    { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
-
-template <typename T>
-inline Matrix4<T> operator *( const Matrix4<T> & b, T a )
-    { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
-
-template <typename T>
-inline Matrix4<T> operator /( Matrix4<T> b, T a )
-    { b /= a; return b; }
 
 template <typename T>
 Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept

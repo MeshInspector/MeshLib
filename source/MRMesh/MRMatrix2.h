@@ -75,17 +75,33 @@ struct Matrix2
         else
             return *this *= ( 1 / b );
     }
+
+
+    friend Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
+    {
+        return { dot( a.x, b ), dot( a.y, b ) };
+    }
+
+    friend Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
+    {
+        Matrix2<T> res;
+        for ( int i = 0; i < 2; ++i )
+            for ( int j = 0; j < 2; ++j )
+                res[i][j] = dot( a[i], b.col(j) );
+        return res;
+    }
+
+    friend bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    friend bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b ) { return !( a == b ); }
+    friend Matrix2<T> operator +( const Matrix2<T> & a, const Matrix2<T> & b ) { return { a.x + b.x, a.y + b.y }; }
+    friend Matrix2<T> operator -( const Matrix2<T> & a, const Matrix2<T> & b ) { return { a.x - b.x, a.y - b.y }; }
+    friend Matrix2<T> operator *( T a, const Matrix2<T> & b ) { return { a * b.x, a * b.y }; }
+    friend Matrix2<T> operator *( const Matrix2<T> & b, T a ) { return { a * b.x, a * b.y }; }
+    friend Matrix2<T> operator /( Matrix2<T> b, T a ) { b /= a; return b; }
 };
 
 /// \related Matrix2
 /// \{
-
-/// x = a * b
-template <typename T>
-inline Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
-{
-    return { dot( a.x, b ), dot( a.y, b ) };
-}
 
 /// double-dot product: x = a : b
 template <typename T>
@@ -94,51 +110,12 @@ inline T dot( const Matrix2<T> & a, const Matrix2<T> & b )
     return dot( a.x, b.x ) + dot( a.y, b.y );
 }
 
-/// product of two matrices
-template <typename T>
-inline Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
-{
-    Matrix2<T> res;
-    for ( int i = 0; i < 2; ++i )
-        for ( int j = 0; j < 2; ++j )
-            res[i][j] = dot( a[i], b.col(j) );
-    return res;
-}
-
 /// x = a * b^T
 template <typename T>
 inline Matrix2<T> outer( const Vector2<T> & a, const Vector2<T> & b )
 {
     return { a.x * b, a.y * b };
 }
-
-template <typename T>
-inline bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return a.x == b.x && a.y == b.y; }
-
-template <typename T>
-inline bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return !( a == b ); }
-
-template <typename T>
-inline Matrix2<T> operator +( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return { a.x + b.x, a.y + b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator -( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return { a.x - b.x, a.y - b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator *( T a, const Matrix2<T> & b )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator *( const Matrix2<T> & b, T a )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator /( Matrix2<T> b, T a )
-    { b /= a; return b; }
 
 template <typename T>
 constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )

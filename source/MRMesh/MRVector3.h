@@ -3,6 +3,7 @@
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
+#include "MRPch/MRBindingMacros.h"
 #include <algorithm>
 #include <cmath>
 #if MR_HAS_REQUIRES
@@ -85,34 +86,35 @@ struct Vector3
     {
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z );
     }
+
+    [[nodiscard]] friend bool operator ==( const Vector3<T> & a, const Vector3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    [[nodiscard]] friend bool operator !=( const Vector3<T> & a, const Vector3<T> & b ) { return !( a == b ); }
+    [[nodiscard]] friend constexpr Vector3<T> operator +( const Vector3<T> & a, const Vector3<T> & b ) { return { T( a.x + b.x ), T( a.y + b.y ), T( a.z + b.z ) }; }
+    [[nodiscard]] friend Vector3<T> operator -( const Vector3<T> & a, const Vector3<T> & b ) { return { T( a.x - b.x ), T( a.y - b.y ), T( a.z - b.z ) }; }
+    [[nodiscard]] friend Vector3<T> operator *( T a, const Vector3<T> & b ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
+    [[nodiscard]] friend Vector3<T> operator *( const Vector3<T> & b, T a ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
+    [[nodiscard]] friend Vector3<T> operator /( Vector3<T> b, T a ) { b /= a; return b; }
+
+    friend Vector3<T> & operator +=( Vector3<T> & a, const Vector3<T> & b ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
+    friend Vector3<T> & operator -=( Vector3<T> & a, const Vector3<T> & b ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
+    friend Vector3<T> & operator *=( Vector3<T> & a, T b ) { a.x *= b; a.y *= b; a.z *= b; return a; }
+
+    friend Vector3<T> & operator /=( Vector3<T> & a, T b )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; a.z /= b; return a; }
+        else
+            return a *= ( 1 / b );
+    }
+
+    friend Vector3<T> operator -( const Vector3<T> & a ) { return Vector3<T>( -a.x, -a.y, -a.z ); }
+
+    friend const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
 };
 
 /// \related Vector3
 /// \{
 
-template <typename T>
-inline Vector3<T> & operator +=( Vector3<T> & a, const Vector3<T> & b ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
-
-template <typename T>
-inline Vector3<T> & operator -=( Vector3<T> & a, const Vector3<T> & b ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
-
-template <typename T>
-inline Vector3<T> & operator *=( Vector3<T> & a, T b ) { a.x *= b; a.y *= b; a.z *= b; return a; }
-
-template <typename T>
-inline Vector3<T> & operator /=( Vector3<T> & a, T b )
-{
-    if constexpr ( std::is_integral_v<T> )
-        { a.x /= b; a.y /= b; a.z /= b; return a; }
-    else
-        return a *= ( 1 / b );
-}
-
-template <typename T>
-inline Vector3<T> operator -( const Vector3<T> & a ) { return Vector3<T>( -a.x, -a.y, -a.z ); }
-
-template <typename T>
-inline const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
 
 /// squared distance between two points, which is faster to compute than just distance
 template <typename T>
@@ -205,34 +207,6 @@ inline std::pair<Vector3<T>, Vector3<T>> Vector3<T>::perpendicular() const MR_RE
     return res;
 }
 
-template <typename T>
-[[nodiscard]] inline bool operator ==( const Vector3<T> & a, const Vector3<T> & b )
-    { return a.x == b.x && a.y == b.y && a.z == b.z; }
-
-template <typename T>
-[[nodiscard]] inline bool operator !=( const Vector3<T> & a, const Vector3<T> & b )
-    { return !( a == b ); }
-
-template <typename T>
-[[nodiscard]] inline constexpr Vector3<T> operator +( const Vector3<T> & a, const Vector3<T> & b )
-    { return { T( a.x + b.x ), T( a.y + b.y ), T( a.z + b.z ) }; }
-
-template <typename T>
-[[nodiscard]] inline Vector3<T> operator -( const Vector3<T> & a, const Vector3<T> & b )
-    { return { T( a.x - b.x ), T( a.y - b.y ), T( a.z - b.z ) }; }
-
-template <typename T>
-[[nodiscard]] inline Vector3<T> operator *( T a, const Vector3<T> & b )
-    { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
-
-template <typename T>
-[[nodiscard]] inline Vector3<T> operator *( const Vector3<T> & b, T a )
-    { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
-
-template <typename T>
-[[nodiscard]] inline Vector3<T> operator /( Vector3<T> b, T a )
-    { b /= a; return b; }
-
 /// returns a point on unit sphere given two angles
 template <typename T>
 Vector3<T> unitVector3( T azimuth, T altitude )
@@ -246,15 +220,18 @@ Vector3<T> unitVector3( T azimuth, T altitude )
     };
 }
 
-template <typename T>
-inline auto begin( const Vector3<T> & v ) { return &v[0]; }
-template <typename T>
-inline auto begin( Vector3<T> & v ) { return &v[0]; }
+
+// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-inline auto end( const Vector3<T> & v ) { return &v[3]; }
+MR_BIND_IGNORE inline auto begin( const Vector3<T> & v ) { return &v[0]; }
 template <typename T>
-inline auto end( Vector3<T> & v ) { return &v[3]; }
+MR_BIND_IGNORE inline auto begin( Vector3<T> & v ) { return &v[0]; }
+
+template <typename T>
+MR_BIND_IGNORE inline auto end( const Vector3<T> & v ) { return &v[3]; }
+template <typename T>
+MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 
 /// \}
 

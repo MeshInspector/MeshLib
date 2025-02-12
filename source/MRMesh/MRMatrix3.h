@@ -90,17 +90,35 @@ struct Matrix3
         else
             return *this *= ( 1 / b );
     }
+
+    /// x = a * b
+    friend Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b )
+    {
+        return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
+    }
+
+    /// product of two matrices
+    friend Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )
+    {
+        Matrix3<T> res;
+        for ( int i = 0; i < 3; ++i )
+            for ( int j = 0; j < 3; ++j )
+                res[i][j] = dot( a[i], b.col(j) );
+        return res;
+    }
+
+    friend bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    friend bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b ) { return !( a == b ); }
+    friend Matrix3<T> operator +( const Matrix3<T> & a, const Matrix3<T> & b ) { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
+    friend Matrix3<T> operator -( const Matrix3<T> & a, const Matrix3<T> & b ) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
+    friend Matrix3<T> operator *( T a, const Matrix3<T> & b ) { return { a * b.x, a * b.y, a * b.z }; }
+    friend Matrix3<T> operator *( const Matrix3<T> & b, T a ) { return { a * b.x, a * b.y, a * b.z }; }
+    friend Matrix3<T> operator /( Matrix3<T> b, T a ) { b /= a; return b; }
+
 };
 
 /// \related Matrix3
 /// \{
-
-/// x = a * b
-template <typename T>
-inline Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b )
-{
-    return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
-}
 
 /// double-dot product: x = a : b
 template <typename T>
@@ -109,51 +127,12 @@ inline T dot( const Matrix3<T> & a, const Matrix3<T> & b )
     return dot( a.x, b.x ) + dot( a.y, b.y ) + dot( a.z, b.z );
 }
 
-/// product of two matrices
-template <typename T>
-inline Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )
-{
-    Matrix3<T> res;
-    for ( int i = 0; i < 3; ++i )
-        for ( int j = 0; j < 3; ++j )
-            res[i][j] = dot( a[i], b.col(j) );
-    return res;
-}
-
 /// x = a * b^T
 template <typename T>
 inline Matrix3<T> outer( const Vector3<T> & a, const Vector3<T> & b )
 {
     return { a.x * b, a.y * b, a.z * b };
 }
-
-template <typename T>
-inline bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b )
-    { return a.x == b.x && a.y == b.y && a.z == b.z; }
-
-template <typename T>
-inline bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b )
-    { return !( a == b ); }
-
-template <typename T>
-inline Matrix3<T> operator +( const Matrix3<T> & a, const Matrix3<T> & b )
-    { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
-
-template <typename T>
-inline Matrix3<T> operator -( const Matrix3<T> & a, const Matrix3<T> & b )
-    { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
-
-template <typename T>
-inline Matrix3<T> operator *( T a, const Matrix3<T> & b )
-    { return { a * b.x, a * b.y, a * b.z }; }
-
-template <typename T>
-inline Matrix3<T> operator *( const Matrix3<T> & b, T a )
-    { return { a * b.x, a * b.y, a * b.z }; }
-
-template <typename T>
-inline Matrix3<T> operator /( Matrix3<T> b, T a )
-    { b /= a; return b; }
 
 template <typename T>
 constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & axis, T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )

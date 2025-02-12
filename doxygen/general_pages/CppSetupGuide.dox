@@ -64,7 +64,7 @@ git checkout 2024.10.21
 \code{.cmd}
 bootstrap-vcpkg.bat
 \endcode
-   6. **Integrate ** `vcpkg` **with Visual Studio (requires Administrator access)**:
+   6. **Integrate** `vcpkg` **with Visual Studio (requires Administrator access)**:
 \code{.cmd}
 vcpkg integrate install
 \endcode
@@ -90,6 +90,33 @@ cd vcpkg
  4. **Build and Run**:
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
+
+#### Using the CMake build system
+
+MeshLib can also be built with CMake. The supported generators are: Ninja, NMake, and jom.
+
+\note Visual Studio Code uses the Visual Studio generator by default, but it is unsupported. You can change the generator in the CMake Tools extension's settings.
+
+ 1. **Open the CMake settings pane**
+  - Visual Studio: Project - CMake Settings
+  - Visual Studio Code: Settings - Extensions - CMake Tools (choose workspace settings if you want to set them for the current project only)
+  - CLion: File - Settings - Build, Execution, Deployment - CMake
+ 2. **Add** `vcpkg` **toolchain and target triplet options**
+  - Visual Studio:
+   - set **CMake toolchain file** to `<path to vcpkg>\scripts\buildsystems\vcpkg.cmake`
+   - add to **CMake command arguments**: `-DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
+  - Visual Studio Code: add to **CMake Configure Arguments**:
+   - `-DCMAKE_TOOLCHAIN_FILE=<path to vcpkg>\scripts\buildsystems\vcpkg.cmake`
+   - `-DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
+  - CLion: add to **CMake options**: `-DCMAKE_TOOLCHAIN_FILE=<path to vcpkg>\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
+ 3. (optional) **Delete CMake cache and reconfigure to apply the changes**
+  - Visual Studio: Project - Delete Cache and Reconfigure
+  - Visual Studio Code: Command Palette - CMake: Delete Cache and Reconfigure
+  - CLion: Tools - CMake - Reset Cache and Reload Project
+ 4. **Build MeshLib**
+  - Visual Studio: Build - Build All
+  - Visual Studio Code: Command Palette - CMake: Build
+  - CLion: Build - Build Project
 
 \subsection CppSetupLinux Linux (Ubuntu/Fedora)
 

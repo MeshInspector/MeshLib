@@ -93,7 +93,7 @@ cd vcpkg
 
 #### Using the CMake build system
 
-MeshLib can also be build with CMake. The supported generators are: Ninja, NMake, and jom.
+MeshLib can also be built with CMake. The supported generators are: Ninja, NMake, and jom.
 
 \note Visual Studio Code uses the Visual Studio generator by default, but it is unsupported. You can change the generator in the CMake Tools extension's settings.
 

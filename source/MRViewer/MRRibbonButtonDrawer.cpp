@@ -266,7 +266,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     int colorChanged = customParam.pushColorsCb ?
         customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
-        pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
+        pushRibbonButtonColors( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
     pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
@@ -386,7 +386,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 {
     ImGui::BeginGroup();
 
-    int colorChanged = pushRibbonButtonColors_( true, false, params.forceHovered, params.rootType );
+    int colorChanged = pushRibbonButtonColors( true, false, params.forceHovered, params.rootType );
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
@@ -446,7 +446,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
     ImGui::EndGroup();
 }
 
-bool RibbonButtonDrawer::drawTabArrawButton( const char* icon, const ImVec2& size, float iconSize )
+bool RibbonButtonDrawer::drawTabArrowButton( const char* icon, const ImVec2& size, float iconSize )
 {
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
@@ -524,7 +524,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
 
     bool dropBtnEnabled = !item.item->dropItems().empty();
 
-    int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.forceHovered, params.rootType );
+    int pushedColors = pushRibbonButtonColors( dropBtnEnabled, menuOpened, params.forceHovered, params.rootType );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     bool comboPressed = ( ImGui::Button( name.c_str(), itemSize ) || UI::TestEngine::createButton( name ) ) && dropBtnEnabled;
 
@@ -695,7 +695,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 }
 
 
-int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const
+int RibbonButtonDrawer::pushRibbonButtonColors( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const
 {
     if ( active )
     {

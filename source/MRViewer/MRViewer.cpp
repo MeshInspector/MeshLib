@@ -2025,8 +2025,12 @@ void Viewer::initGlobalBasisAxesObject_()
 void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner
-    const float size = 0.8f;
-    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.1f ) );
+    const float cubeSzie = 0.8f;
+    const float size = 1.0f;
+    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.03f, 0.0f ) );
+    const Vector3f translation = Vector3f::diagonal( -cubeSzie * 0.5f );
+    basisAxesMesh->transform( AffineXf3f::translation( translation ) );
+
     basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
@@ -2047,11 +2051,12 @@ void Viewer::initBasisAxesObject_()
     }
     const float labelPos = size + 0.2f;
 
-    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX(), true );
-    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), true );
-    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), true );
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() + translation, true );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() + translation, true );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() + translation, true );
 
     basisAxes->setFacesColorMap( std::move( colorMap ) );
+    basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
     colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
@@ -2084,15 +2089,14 @@ void Viewer::initBasisViewControllerObject_()
         basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
     }
     basisViewController->setFlatShading( true );
-    basisViewController->setAmbientStrength( 0.01f );
-    basisViewController->setSpecularStrength( 0.01f );
+    basisViewController->setAmbientStrength( 0.04f );
 
     colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !basisViewController )
             return;
 
-        const Color& color = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ThirdpartyBackground );
+        const Color& color = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
         basisViewController->setFrontColor( color, true );
         basisViewController->setFrontColor( color, false );
     } ) );

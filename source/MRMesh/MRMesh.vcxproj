@@ -144,6 +144,7 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MROffsetContours.h" />
+    <ClInclude Include="MROutlierPoints.h" />
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
     <ClInclude Include="MRParallel.h" />
@@ -401,6 +402,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />

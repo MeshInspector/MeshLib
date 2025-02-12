@@ -1272,6 +1272,9 @@
     <ClInclude Include="MRPointsInBox.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MROutlierPoints.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2092,6 +2095,9 @@
     </ClCompile>
     <ClCompile Include="MRPointsInBox.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MROutlierPoints.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

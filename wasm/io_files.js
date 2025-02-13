@@ -91,7 +91,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   name_selector.focus();
   name_selector.select();
   name_selector.addEventListener('keydown', function(ev) {
-    if (ev.key == 'Enter') {
+    if (ev.key == 'Enter' && name_selector.value) {
       ev.preventDefault();
       btn_save.click();
     }

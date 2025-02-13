@@ -567,6 +567,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         }
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
+    ImGui::SetNextWindowSizeConstraints( ImVec2(), ImVec2( -1, 200 * scaling_ ) );
     ImGui::Begin( nameWindow.c_str(), NULL, window_flags );
     if ( menuOpened )
     {

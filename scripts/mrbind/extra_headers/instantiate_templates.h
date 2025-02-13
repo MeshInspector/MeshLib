@@ -43,6 +43,10 @@ namespace MR
     INST_IF(isFloatingPoint)( \
         template Vector3<T> unitVector3( T azimuth, T altitude ); \
     ) \
+    template Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b ); \
+    template Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b ); \
+    template Matrix3<T> operator *( T a, const Matrix3<T> & b ); \
+    template Matrix3<T> operator *( const Matrix3<T> & b, T a ); \
 
 #define VEC2(T) \
     template struct Vector2<T>; \
@@ -58,6 +62,10 @@ namespace MR
     template Vector2<T> operator *( T a, const Vector2<T> & b ); \
     template Vector2<T> operator *( const Vector2<T> & b, T a ); \
     template Vector2<T> operator /( Vector2<T> b, T a ); \
+    template Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b ); \
+    template Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b ); \
+    template Matrix2<T> operator *( T a, const Matrix2<T> & b ); \
+    template Matrix2<T> operator *( const Matrix2<T> & b, T a ); \
 
 VEC3(float, 1)
 VEC3(double, 1)

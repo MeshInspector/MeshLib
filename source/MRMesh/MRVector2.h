@@ -2,6 +2,7 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cmath>
 #include <algorithm>
 
@@ -81,6 +82,14 @@ struct Vector2
     {
         return std::isfinite( x ) && std::isfinite( y );
     }
+
+    friend bool operator ==( const Vector2<T> & a, const Vector2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    friend bool operator !=( const Vector2<T> & a, const Vector2<T> & b ) { return !( a == b ); }
+    friend Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ) { return { a.x + b.x, a.y + b.y }; }
+    friend Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ) { return { a.x - b.x, a.y - b.y }; }
+    friend Vector2<T> operator *( T a, const Vector2<T> & b ) { return { a * b.x, a * b.y }; }
+    friend Vector2<T> operator *( const Vector2<T> & b, T a ) { return { a * b.x, a * b.y }; }
+    friend Vector2<T> operator /( Vector2<T> b, T a ) { b /= a; return b; }
 };
 
 /// \related Vector2
@@ -154,43 +163,18 @@ inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORT
         return Vector2( 0, 1 );
 }
 
-template <typename T>
-inline bool operator ==( const Vector2<T> & a, const Vector2<T> & b )
-    { return a.x == b.x && a.y == b.y; }
+
+// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-inline bool operator !=( const Vector2<T> & a, const Vector2<T> & b )
-    { return !( a == b ); }
+MR_BIND_IGNORE inline auto begin( const Vector2<T> & v ) { return &v[0]; }
+template <typename T>
+MR_BIND_IGNORE inline auto begin( Vector2<T> & v ) { return &v[0]; }
 
 template <typename T>
-inline Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b )
-    { return { a.x + b.x, a.y + b.y }; }
-
+MR_BIND_IGNORE inline auto end( const Vector2<T> & v ) { return &v[2]; }
 template <typename T>
-inline Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b )
-    { return { a.x - b.x, a.y - b.y }; }
-
-template <typename T>
-inline Vector2<T> operator *( T a, const Vector2<T> & b )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Vector2<T> operator *( const Vector2<T> & b, T a )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Vector2<T> operator /( Vector2<T> b, T a )
-    { b /= a; return b; }
-
-template <typename T>
-inline auto begin( const Vector2<T> & v ) { return &v[0]; }
-template <typename T>
-inline auto begin( Vector2<T> & v ) { return &v[0]; }
-
-template <typename T>
-inline auto end( const Vector2<T> & v ) { return &v[2]; }
-template <typename T>
-inline auto end( Vector2<T> & v ) { return &v[2]; }
+MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
 
 /// \}
 

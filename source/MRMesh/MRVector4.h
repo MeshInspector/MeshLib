@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector3.h"
 
 namespace MR
@@ -83,51 +84,44 @@ struct Vector4
     {
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z ) && std::isfinite( w );
     }
+
+
+    friend bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
+    {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    }
+
+    friend bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
+    {
+        return !( a == b );
+    }
+
+    friend Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b )
+    {
+        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+    }
+
+    friend Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b )
+    {
+        return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+    }
+
+    friend Vector4<T> operator *( T a, const Vector4<T> & b )
+    {
+        return {a * b.x, a * b.y, a * b.z, a * b.w};
+    }
+
+    friend Vector4<T> operator *( const Vector4<T> & b, T a )
+    {
+        return {a * b.x, a * b.y, a * b.z, a * b.w};
+    }
+
+    friend Vector4<T> operator /( Vector4<T> b, T a )
+        { b /= a; return b; }
 };
 
 /// \related Vector4
 /// \{
-
-template <typename T>
-inline bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-
-template <typename T>
-inline bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return !( a == b );
-}
-
-template <typename T>
-inline Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator *( T a, const Vector4<T> & b )
-{
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator *( const Vector4<T> & b, T a )
-{
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator /( Vector4<T> b, T a )
-    { b /= a; return b; }
-
 
 /// squared distance between two points, which is faster to compute than just distance
 template <typename T>
@@ -172,15 +166,17 @@ inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
 }
 
 
-template <typename T>
-inline auto begin( const Vector4<T> & v ) { return &v[0]; }
-template <typename T>
-inline auto begin( Vector4<T> & v ) { return &v[0]; }
+// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-inline auto end( const Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE auto begin( const Vector4<T> & v ) { return &v[0]; }
 template <typename T>
-inline auto end( Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE auto begin( Vector4<T> & v ) { return &v[0]; }
+
+template <typename T>
+MR_BIND_IGNORE auto end( const Vector4<T> & v ) { return &v[4]; }
+template <typename T>
+MR_BIND_IGNORE auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}
 

@@ -11,9 +11,11 @@
 #include "MRMeshTrimWithPlane.h"
 #include "MRPlane3.h"
 #include "MRGTest.h"
-#include <limits>
 #include "MRMeshSave.h"
 #include "MRFillContour.h"
+#include "MRObjectMesh.h"
+#include "MRMeshFillHole.h"
+#include <limits>
 
 namespace MR
 {
@@ -174,6 +176,122 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     
     // add patch surface to original mesh
     mesh.addMeshPart( patchMesh, false, paths, newPaths );
+    return {};
+}
+
+Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeContours )
+{
+    MR_TIMER
+
+    if ( !obj.varMesh() )
+        return unexpected( "No mesh in object: " + obj.name() );
+
+    auto& mesh = *obj.varMesh();
+    auto& tp = mesh.topology;
+
+    for ( auto& loop : holeContours )
+    {
+        // if not closed, add edge to enclose
+        if ( loop.empty() )
+            continue;
+        if ( tp.org( loop.front() ) == tp.dest( loop.back() ) )
+            continue;
+        auto newEdge = makeBridgeEdge( tp, loop.back().sym(), tp.prev( loop.front() ) );
+        if ( !newEdge )
+            continue;
+        loop.emplace_back( newEdge );
+    }
+
+    EdgePath holesEdges;
+    for ( const auto& path : holeContours )
+    {
+        if ( path.empty() )
+            continue;
+        auto cutSuccess = !tp.right( path.front() ).valid();
+        if ( !cutSuccess )
+            return unexpected( "Cannot cut object: " + obj.name() );
+        holesEdges.push_back( path.front().sym() );
+    }
+
+    const auto fsz0 = tp.faceSize();
+    if ( !holesEdges.empty() )
+    {
+        auto fillSuccess = fillContours2D( mesh, holesEdges );
+        if ( !fillSuccess.has_value() )
+        {
+            return unexpected( "Cannot fill object: " + obj.name() + ". Error: " + fillSuccess.error() );
+        }
+    }
+
+    const auto fsz = tp.faceSize();
+    {
+        auto selFaces = obj.getSelectedFaces();
+        selFaces.resize( fsz );
+        selFaces.set( FaceId{ fsz0 }, fsz - fsz0, true );
+        obj.selectFaces( tp.getValidFaces() & selFaces );
+    }
+
+    {
+        auto selEdges = obj.getSelectedEdges();
+        tp.excludeLoneEdges( selEdges );
+        obj.selectEdges( std::move( selEdges ) );
+    }
+
+    {
+        auto creases = obj.creases();
+        tp.excludeLoneEdges( creases );
+        obj.setCreases( std::move( creases ) );
+    }
+
+    auto fcm = obj.getFacesColorMap();
+    auto tpf = obj.getTexturePerFace();
+    if ( fcm.empty() && tpf.empty() )
+        return {};
+    if ( !fcm.empty() )
+        fcm.resize( fsz );
+    if ( !tpf.empty() )
+        tpf.resize( fsz );
+    for ( FaceId f = FaceId{ fsz0 }; f < fsz; ++f )
+    {
+        VertId v[3];
+        tp.getTriVerts( f, v );
+        float sumNeighColorWeight = 0;
+        Vector4f sum;
+        FaceId maxAreaF;
+        float maxArea = 0.0f;
+        for ( size_t i = 0; i < 3; ++i )
+        {
+            for ( auto e : orgRing( tp, v[i] ) )
+            {
+                const auto tmpFace = tp.left( e );
+                if ( tmpFace >= fsz0 )
+                    continue;
+
+                const float area = mesh.area( tmpFace );
+                if ( !tpf.empty() )
+                {
+                    if ( area > maxArea )
+                    {
+                        maxArea = area;
+                        maxAreaF = tmpFace;
+                    }
+                }
+                if ( !fcm.empty() )
+                {
+                    const auto& color = fcm[tmpFace];
+                    sum += Vector4f( color ) * area;
+                    sumNeighColorWeight += area;
+                }
+            }
+        }
+        if ( !fcm.empty() )
+            fcm[f] = Color( sum / float( sumNeighColorWeight ) );
+        if ( !tpf.empty() )
+            tpf[f] = tpf[maxAreaF];
+    }
+
+    obj.setFacesColorMap( std::move( fcm ) );
+    obj.setTexturePerFace( std::move( tpf ) );
     return {};
 }
 

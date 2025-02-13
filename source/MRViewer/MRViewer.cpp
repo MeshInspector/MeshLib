@@ -2089,16 +2089,21 @@ void Viewer::initBasisViewControllerObject_()
         basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
     }
     basisViewController->setFlatShading( true );
-    basisViewController->setAmbientStrength( 0.04f );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+    basisViewController->setEdgeWidth( 0.2f );
 
     colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !basisViewController )
             return;
 
-        const Color& color = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
-        basisViewController->setFrontColor( color, true );
-        basisViewController->setFrontColor( color, false );
+        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
+        basisViewController->setFrontColor( colorBg, true );
+        basisViewController->setFrontColor( colorBg, false );
+        basisViewController->setBordersColor( colorBorder );
     } ) );
 }
 

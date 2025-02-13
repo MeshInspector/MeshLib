@@ -189,6 +189,18 @@ Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeConto
     auto& mesh = *obj.varMesh();
     auto& tp = mesh.topology;
 
+    // take first edge from each contour and check that it is a hole boundary
+    EdgePath holesEdges;
+    for ( const auto& path : holeContours )
+    {
+        if ( path.empty() )
+            continue;
+        for ( auto e : path )
+            if ( tp.right( e ).valid() )
+                return unexpected( "Not hole contour given to fillPlanarHole: " + obj.name() );
+        holesEdges.push_back( path.front().sym() );
+    }
+
     for ( auto& loop : holeContours )
     {
         // if not closed, add edge to enclose
@@ -200,17 +212,6 @@ Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeConto
         if ( !newEdge )
             continue;
         loop.emplace_back( newEdge );
-    }
-
-    EdgePath holesEdges;
-    for ( const auto& path : holeContours )
-    {
-        if ( path.empty() )
-            continue;
-        auto cutSuccess = !tp.right( path.front() ).valid();
-        if ( !cutSuccess )
-            return unexpected( "Cannot cut object: " + obj.name() );
-        holesEdges.push_back( path.front().sym() );
     }
 
     const auto fsz0 = tp.faceSize();

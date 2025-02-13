@@ -53,7 +53,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   name_selector.setAttribute('id', 'download_name');
   name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor + ';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
 
-  name_selector.value = defaultName;
+  name_selector.value = defaultName || "Unnamed";
 
   var ext_label = document.createElement('label');
   ext_label.setAttribute('style', 'width: 59px;height: 20px;font-size: 14px;position: absolute;color:' + textColor + ';top: 131px;left: 38px;');
@@ -87,6 +87,15 @@ var download_file_dialog_popup = function (defaultName, extensions) {
 
   removeKeyboardEvents();
   document.body.appendChild(overlay);
+
+  name_selector.focus();
+  name_selector.select();
+  name_selector.addEventListener('keydown', function(ev) {
+    if (ev.key == 'Enter') {
+      ev.preventDefault();
+      btn_save.click();
+    }
+  });
 }
 
 var open_directory_dialog_popup = function () {

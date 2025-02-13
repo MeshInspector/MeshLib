@@ -528,6 +528,8 @@ bool SaveObjectMenuItem::action()
             // if filename is not the same as object name, then use it as a prefix
             const auto prefix = ( stem == objs[0]->name() ) ? std::string{} : ( stem + "_" );
             const auto ext = utf8string( savePath0.extension() );
+            if ( ext.empty() )
+                return [] { showError( "File name is not set" ); };
 
             std::vector<std::filesystem::path> savePaths;
             std::unordered_set<std::string> usedNames;
@@ -664,6 +666,9 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
     {
+        if ( savePath.extension().empty() )
+            return [] { showError( "File name is not set" ); };
+
         auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
         return[savePath, res]()

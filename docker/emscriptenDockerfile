@@ -1,6 +1,7 @@
 FROM emscripten/emsdk:3.1.73-arm64
 
 # Update and install req
+# install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
@@ -14,7 +15,7 @@ Pin-Priority: 1001\
 ' | tee /etc/apt/preferences.d/mozilla-firefox \
  && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config xvfb ninja-build \
+        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

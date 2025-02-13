@@ -77,7 +77,11 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   btn_save.setAttribute('value', 'Save');
   btn_save.setAttribute('style', 'position: absolute;width: 100px;height: 28px;top: 194px;left: 50%;transform: translate(-50%, -50%);border-radius: 4px;color: #fff;font-size: 14px;font-weight: 600;border: none;');
   btn_save.setAttribute('class', 'button');
-  btn_save.setAttribute('onclick', 'Module.ccall(\'emsSaveFile\', \'number\', [\'string\'], [document.getElementById(\'download_name\').value + document.getElementById(\'download_ext\').value]),addKeyboardEvents(),document.getElementById(\'show_download_dialog\').remove()');
+  btn_save.onclick = function() {
+    Module.ccall('emsSaveFile', 'number', ['string'], [document.getElementById('download_name').value + document.getElementById('download_ext').value]);
+    addKeyboardEvents();
+    document.getElementById('show_download_dialog').remove();
+  };
 
   popup.appendChild(name_label);
   popup.appendChild(name_selector);

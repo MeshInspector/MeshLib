@@ -92,6 +92,7 @@ jobs:
       - name: Test
         timeout-minutes: 5
         run: |
+          pkill -9 firefox || true
           Xvfb -ac :99 -screen 0 1280x1024x16 > /dev/null 2>&1 &
           export DISPLAY=:99
           emrun ./build/Release/bin/MRTest.html

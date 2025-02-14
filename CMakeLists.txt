@@ -14,6 +14,7 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+add_compile_definitions(USE_CMAKE_CONFIGURE_FILE)
 
 include(CompilerOptions)
 

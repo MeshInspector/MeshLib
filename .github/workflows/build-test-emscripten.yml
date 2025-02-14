@@ -94,4 +94,12 @@ jobs:
         run: |
           emrun --list-browsers
           which firefox
-          emrun --browser=/usr/bin/firefox --browser-args="-headless" --kill-exit ./build/Release/bin/MRTest.html
+          export MOZ_WEBRENDER_FORCE_DISABLED=1
+          export MOZ_WEBRENDER=0
+          export MOZ_DISABLE_RDD_SANDBOX=1
+          export MOZ_DISABLE_GPU_SANDBOX=1
+
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            emrun --browser=firefox --browser-args="--headless" --kill-exit \
+            ./build/Release/bin/MRTest.html
+

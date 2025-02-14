@@ -41,34 +41,7 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
     RibbonSchemaHolder::SearchResult res;
     res.item = &sIt->second;
-
-    // find corresponding tab
-    for ( int t = 0; t < schema.tabsOrder.size(); ++t )
-    {
-        if ( schema.tabsOrder[t].experimental && !getViewerInstance().experimentalFeatures )
-            continue;
-        auto gpIt = schema.tabsMap.find( schema.tabsOrder[t].name );
-        if ( gpIt == schema.tabsMap.end() )
-            continue;
-        for ( const auto& gp : gpIt->second )
-        {
-            auto itmesIt = schema.groupsMap.find( schema.tabsOrder[t].name + gp );
-            if ( itmesIt == schema.groupsMap.end() )
-                continue;
-            for ( const auto& itemName : itmesIt->second )
-            {
-                if ( item->name() == itemName )
-                {
-                    res.tabIndex = t;
-                    break;
-                }
-            }
-            if ( res.tabIndex != -1 )
-                break;
-        }
-        if ( res.tabIndex != -1 )
-            break;
-    }
+    res.tabIndex = RibbonSchemaHolder::findItemTab( item );
 
     if ( recentItems_.size() < 10 )
         recentItems_.insert( recentItems_.begin(), std::move( res ) );

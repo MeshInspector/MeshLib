@@ -18,10 +18,16 @@
     #include <gtkmm.h>
   #endif
 #else
-#define GLFW_EXPOSE_NATIVE_WIN32
+#  define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #ifndef __EMSCRIPTEN__
-#include <GLFW/glfw3native.h>
+#  include <GLFW/glfw3native.h>
+#endif
+
+#ifdef _WIN32
+#  include "MRPch/MRWinapi.h"
+#  include <shlobj.h>
+#  include <commdlg.h>
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -509,7 +515,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     }
     return {};
 }
-    
+
 void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder )
 {
     assert( callback );
@@ -602,7 +608,7 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     std::string accumFilter = webAccumFilter( params.filters );
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 )), params.fileName.c_str(), accumFilter.c_str() );
+    EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 ) ), params.fileName.c_str(), accumFilter.c_str() );
 #pragma clang diagnostic pop
 #endif
 }

@@ -3,6 +3,8 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRViewerEventsListener.h"
 
+#include <thread>
+
 namespace MR
 {
 

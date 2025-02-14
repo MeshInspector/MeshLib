@@ -21,6 +21,7 @@
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCube.h" />
     <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MREdgePaths.h" />
     <ClInclude Include="MRExpandShrink.h" />
     <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
@@ -98,6 +99,7 @@
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />
@@ -206,7 +208,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMESHC_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMeshC_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
@@ -233,7 +235,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMESHC_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMeshC_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>

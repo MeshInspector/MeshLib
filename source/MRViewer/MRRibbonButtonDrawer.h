@@ -85,7 +85,7 @@ public:
     MRVIEWER_API void drawButtonIcon( const MenuItemInfo& item, const DrawButtonParams& params ) const;
 
     /// draw custom styled button
-    MRVIEWER_API bool drawTabArrawButton( const char* icon, const ImVec2& size, float iconSize );
+    MRVIEWER_API bool drawTabArrowButton( const char* icon, const ImVec2& size, float iconSize );
 
     /// if set color then instead of multicolored icons will be drawn with this color
     MRVIEWER_API void setMonochrome( const std::optional<Color>& color );
@@ -99,13 +99,14 @@ public:
     void setShortcutManager( const ShortcutManager* shortcutManager ) { shortcutManager_ = shortcutManager; };
     void setScaling( float scaling ) { scaling_ = scaling; };
 
+    /// returns num of pushed colors
+    /// requires to pop it afterwards
+    MRVIEWER_API int pushRibbonButtonColors( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const;
+
 private:
     void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const;
     void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem ) const;
     void drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const;
-
-    // returns num of pushed colors
-    int pushRibbonButtonColors_( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const;
 
     std::function<void( std::shared_ptr<RibbonMenuItem>, const std::string& )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, const std::string& ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };

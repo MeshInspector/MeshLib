@@ -38,6 +38,7 @@
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
+    <ClCompile Include="MRObjectMeshSubdivide.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRProjectMeshAttributes.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRObjectImGuiLabel.h" />
+    <ClInclude Include="MRObjectMeshSubdivide.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRProjectMeshAttributes.h" />
@@ -389,6 +391,9 @@
     <Image Include="resource\object_icons\X3\PointObject.png" />
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png" />
     <Image Include="resource\object_icons\X3\SphereObject.png" />
+    <Image Include="resource\textures\controller_cube_default.png" />
+    <Image Include="resource\textures\controller_cube_edges.png" />
+    <Image Include="resource\textures\controller_cube_sides.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">
@@ -448,7 +453,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRVIEWER_EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRViewer_EXPORTS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
@@ -475,7 +480,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRVIEWER_EXPORT;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRViewer_EXPORTS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>

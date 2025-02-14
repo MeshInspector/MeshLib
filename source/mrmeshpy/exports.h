@@ -1,6 +1,6 @@
 #pragma once
 #ifdef _WIN32
-#   ifdef MRMESHPY_EXPORT
+#   ifdef mrmeshpy_EXPORTS
 #       define MRMESHPY_API __declspec(dllexport)
 #   else
 #       define MRMESHPY_API __declspec(dllimport)

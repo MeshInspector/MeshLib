@@ -454,7 +454,7 @@ Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std
 
     std::vector<Mesh> res;
     auto t = simpleMask; // temporary volume for segmentation
-    std::fill( t.data.begin(), t.data.end(), 0 );
+    std::fill( t.data.begin(), t.data.end(), 0.f );
     for ( size_t i = 0; i < seeds.size(); ++i )
     {
         reportProgress( cb, (float)i / seeds.size() );
@@ -466,7 +466,7 @@ Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std
         if ( !maybeSegm )
             return unexpected( maybeSegm.error() );
 
-        std::fill( t.data.begin(), t.data.end(), 0 );
+        std::fill( t.data.begin(), t.data.end(), 0.f );
         for ( auto j : *maybeSegm )
             t.data[static_cast<size_t>( j )] = 1.f;
 

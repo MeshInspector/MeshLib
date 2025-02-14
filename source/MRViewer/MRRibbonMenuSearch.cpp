@@ -171,6 +171,33 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             dbParams.forcePressed = dbParams.forceHovered &&
                 ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
             const bool pluginActive = foundItem.item->item->isActive();
+            const float tabBtnWidth = 76 * params.scaling;
+            const float tabBtnPadding = 8 * params.scaling;
+            if ( foundItem.tabIndex != -1 )
+            {
+                auto storePos = ImGui::GetCursorPos();
+                auto numColors = params.btnDrawer.pushRibbonButtonColors( true, false, false, dbParams.rootType );
+
+                auto name = "##" + RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name + "##" + foundItem.item->item->name();
+
+                if ( ImGui::Button( name.c_str(), ImVec2( tabBtnWidth, dbParams.itemSize.y ) ) )
+                    params.changeTabFunc( foundItem.tabIndex );
+
+                auto textSize = ImGui::CalcTextSize( RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+
+                ImGui::SetCursorPosX( storePos.x + ( tabBtnWidth - textSize.x ) * 0.5f );
+                ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );
+                ImGui::Text( "%s", RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+
+                ImGui::SetCursorPosX( storePos.x + tabBtnWidth + 0.5f * tabBtnPadding - params.scaling );
+                ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );
+                ImGui::Text( ":" );
+
+                if ( numColors > 0 )
+                    ImGui::PopStyleColor( numColors );
+                ImGui::SetCursorPosY( storePos.y );
+            }
+            ImGui::SetCursorPosX( tabBtnWidth + tabBtnPadding );
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
             {

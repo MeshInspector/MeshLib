@@ -9,8 +9,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
 #ifdef _WIN32
+#include "MRPch/MRWinapi.h"
 #include <shlobj.h>
-#include <windows.h>
 #include <psapi.h>
 #endif
 
@@ -38,7 +38,7 @@ Json::Value GetSystemInfoJson()
         GL_EXEC();
         int curSamples = 0;
         GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
-        
+
         glInfo["MSAA"] = std::to_string( curSamples );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
@@ -47,7 +47,7 @@ Json::Value GetSystemInfoJson()
 
         int cudaRTVersion = CudaAccessor::getCudaRuntimeVersion();
         int cudaMaxDriverVersion = CudaAccessor::getCudaMaxDriverSupportedVersion();
-        glInfo["CUDA Versions"] = cudaRTVersion != 0 && cudaMaxDriverVersion != 0 ? 
+        glInfo["CUDA Versions"] = cudaRTVersion != 0 && cudaMaxDriverVersion != 0 ?
             fmt::format( "{}.{}/{}.{}", cudaRTVersion / 1000, ( cudaRTVersion % 1000 ) / 10, cudaMaxDriverVersion / 1000, ( cudaMaxDriverVersion % 1000 ) / 10 )
             : "n/a";
 

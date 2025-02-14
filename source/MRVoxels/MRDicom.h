@@ -32,9 +32,6 @@ struct DicomVolumeT
     AffineXf3f xf;
 };
 
-using DicomVolume = DicomVolumeT<SimpleVolumeMinMax>;
-using DicomVolumeAsVdb = DicomVolumeT<VdbVolume>;
-
 /// Loads full volume from single DICOM file (not a slice file) as SimpleVolumeMinMax
 MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 

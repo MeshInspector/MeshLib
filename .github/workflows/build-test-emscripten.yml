@@ -92,4 +92,6 @@ jobs:
       - name: Test
         timeout-minutes: 5
         run: |
-          emrun --no_browser --port 6931 ./build/Release/bin/MRTest.html
+          emrun --list-browsers
+          which firefox
+          emrun --browser=/usr/bin/firefox --browser-args="-headless" --kill-exit ./build/Release/bin/MRTest.html

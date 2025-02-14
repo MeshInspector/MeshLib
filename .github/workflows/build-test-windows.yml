@@ -60,7 +60,7 @@ jobs:
 
     env:
       BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
-      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      PYTEST_C_SHARP_ARGS: ${{ fromJSON('["", "--run-c-sharp-samples"]')[matrix.build_system == 'MSBuild'] }} --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
       - name: Checkout

@@ -78,16 +78,16 @@ jobs:
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
 
-      - name: Clean Vcpkg Directory  
-        working-directory: C:\vcpkg  
-        run: git clean -ffdx  
+      - name: Clean Vcpkg Directory
+        working-directory: C:\vcpkg
+        run: git clean -ffdx
 
-      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}  
-        working-directory: C:\vcpkg  
-        run: |  
-          git fetch  
-          git pull --rebase 
-          git checkout ${{ inputs.vcpkg_version }}  
+      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}
+        working-directory: C:\vcpkg
+        run: |
+          git fetch
+          git pull --rebase
+          git checkout ${{ inputs.vcpkg_version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -234,7 +234,7 @@ jobs:
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
-        if:   matrix.runner == 'windows-2022'
+        if: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests

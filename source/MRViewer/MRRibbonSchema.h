@@ -87,6 +87,9 @@ public:
     MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
         std::vector<SearchResultWeight>* weights = nullptr );
 
+    /// returns item tab index in schema.tabsOrder or -1 if no tab found (e.g. scene fast access panel or header access panel)
+    MRVIEWER_API static int findItemTab( const std::shared_ptr<RibbonMenuItem>& item );
+
 private:
     RibbonSchemaHolder() = default;
 };

@@ -643,7 +643,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
         return unexpectedOperationCanceled();
 
     if ( files.empty() )
-        return unexpected( "loadDicomFolderAsVdb: there is no dcm file" );
+        return unexpected( "loadSingleDicomFolder: there is no dcm file" );
 
     T data;
     data.voxelSize = Vector3f();
@@ -662,7 +662,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
-        return unexpected( "loadDicomFolderAsVdb: error loading first file \"" + utf8string( files.front() ) + "\"" );
+        return unexpected( "loadSingleDicomFolder: error loading first file \"" + utf8string( files.front() ) + "\"" );
     data.min = firstRes.min;
     data.max = firstRes.max;
 
@@ -746,7 +746,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
-        return unexpected( "loadDicomFolderAsVdb: path is not directory" );
+        return unexpected( "extractDCMSeries: path is not directory" );
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
@@ -808,12 +808,6 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
         return unexpected( std::move( seriesMap.error() ) );
 
     return loadSingleDicomFolder<T>( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
-}
-
-std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
-                                                     unsigned maxNumThreads, const ProgressCallback& cb )
-{
-    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
@@ -881,44 +875,56 @@ Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::
 }
 
 template <typename T>
-Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    auto vol = [] {
-        if constexpr ( std::convertible_to<T, VdbVolume> )
-            return VdbVolume{};
-        else
-            return SimpleVolumeMinMax{};
-    }();
+    T vol{};
     vol.voxelSize = Vector3f();
     vol.dims.z = 1;
-    auto fileRes = loadSingleFile( path, vol, 0 );
+    auto fileRes = loadSingleFile( file, vol, 0 );
     if ( !fileRes.success )
-        return unexpected( "loadDicomFileAsVdb: error load file: " + utf8string( path ) );
+        return unexpected( "loadDicomFile: error load file: " + utf8string( file ) );
     vol.max = fileRes.max;
     vol.min = fileRes.min;
 
     DicomVolumeT<T> res;
     res.vol = std::move( vol );
-    res.name = utf8string( path.stem() );
+    res.name = utf8string( file.stem() );
     return res;
 }
 
+Expected<DicomVolume> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomFolder<SimpleVolumeMinMax>( path, maxNumThreads, cb );
+}
 
-template MRVOXELS_API Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template MRVOXELS_API Expected<DicomVolumeT<VdbVolume>> loadDicomFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+Expected<DicomVolumeAsVdb> loadDicomFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomFolder<VdbVolume>( path, maxNumThreads, cb );
+}
 
-template MRVOXELS_API Expected<DicomVolume> loadDicomFile<SimpleVolumeMinMax>( const std::filesystem::path& path, const ProgressCallback& cb );
-template MRVOXELS_API Expected<DicomVolumeAsVdb> loadDicomFile<VdbVolume>( const std::filesystem::path& path, const ProgressCallback& cb );
+Expected<DicomVolume> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
+{
+    return loadDicomFile<SimpleVolumeMinMax>( file, cb );
+}
 
-template MRVOXELS_API std::vector<Expected<DicomVolumeT<SimpleVolumeMinMax>>>
-    loadDicomsFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template MRVOXELS_API std::vector<Expected<DicomVolumeT<VdbVolume>>>
-    loadDicomsFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+Expected<DicomVolumeAsVdb> loadDicomFileAsVdb( const std::filesystem::path& file, const ProgressCallback& cb )
+{
+    return loadDicomFile<VdbVolume>( file, cb );
+}
 
+std::vector<Expected<DicomVolume>>      loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomsFolder<SimpleVolumeMinMax>( path, maxNumThreads, cb );
+}
+
+std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
+}
 
 } // namespace VoxelsLoad
 

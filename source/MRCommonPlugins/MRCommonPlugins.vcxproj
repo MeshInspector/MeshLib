@@ -50,7 +50,7 @@
     <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
     <ClInclude Include="ViewerButtons\MRSceneControlMenuItems.h" />
     <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h" />
-    <ClCompile Include="Voxels\MRVoxelOperations.h" />
+    <ClInclude Include="Voxels\MRVoxelOperations.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">

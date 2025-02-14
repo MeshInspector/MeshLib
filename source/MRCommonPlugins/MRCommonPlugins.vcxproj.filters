@@ -78,6 +78,7 @@
     <ClCompile Include="Voxels\MRVoxelOperations.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="Voxels\MRVoxelOperations.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -102,14 +103,14 @@
     <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h">
       <Filter>Voxels</Filter>
     </ClInclude>
-    <ClInclude Include="Voxels\MRVoxelOperations.h">
-      <Filter>Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h">
       <Filter>Basic</Filter>
     </ClInclude>
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h">
       <Filter>ViewerButtons</Filter>
+    </ClInclude>
+    <ClInclude Include="Voxels\MRVoxelOperations.h">
+      <Filter>Voxels</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

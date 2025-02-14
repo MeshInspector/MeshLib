@@ -5,13 +5,12 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRSceneStateCheck.h"
 #include "MRViewer/MRStatePluginUpdate.h"
-#include "MRVoxels/MRVoxelsFwd.h"
-#include "MRInspector/MRRibbonItemAccessCheck.h"
+#include "MRVoxels/MRObjectVoxels.h"
 
 namespace MR
 {
 
-class VoxelOperations : public StatePlugin, public AccessCheckMixin<SceneStateExactCheck<2, ObjectVoxels>>,
+class VoxelOperations : public StatePlugin, public SceneStateExactCheck<2, ObjectVoxels>,
     public PluginCloseOnSelectedObjectRemove
 {
 public:

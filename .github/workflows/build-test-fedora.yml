@@ -116,6 +116,7 @@ jobs:
           path: time_log/
 
       - name: Run Start-and-Exit Tests
+        timeout-minutes: 3
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests

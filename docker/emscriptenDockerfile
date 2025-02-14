@@ -15,7 +15,7 @@ Pin-Priority: 1001\
 ' | tee /etc/apt/preferences.d/mozilla-firefox \
  && add-apt-repository -y ppa:mozillateam/ppa \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 \
+        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 libpci3 libegl1 libgl1-mesa-glx \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

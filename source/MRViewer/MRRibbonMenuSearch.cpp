@@ -30,8 +30,9 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
         return;
     }
 
-    auto sIt = RibbonSchemaHolder::schema().items.find( item->name() );
-    if ( sIt == RibbonSchemaHolder::schema().items.end() )
+    const auto& schema = RibbonSchemaHolder::schema();
+    auto sIt = schema.items.find( item->name() );
+    if ( sIt == schema.items.end() )
     {
         // no need to assert here, we could fall int this function from LambdaRibbonItem that is not present in scheme
         //assert( false );
@@ -40,6 +41,35 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
     RibbonSchemaHolder::SearchResult res;
     res.item = &sIt->second;
+
+    // find corresponding tab
+    for ( int t = 0; t < schema.tabsOrder.size(); ++t )
+    {
+        if ( schema.tabsOrder[t].experimental && !getViewerInstance().experimentalFeatures )
+            continue;
+        auto gpIt = schema.tabsMap.find( schema.tabsOrder[t].name );
+        if ( gpIt == schema.tabsMap.end() )
+            continue;
+        for ( const auto& gp : gpIt->second )
+        {
+            auto itmesIt = schema.groupsMap.find( schema.tabsOrder[t].name + gp );
+            if ( itmesIt == schema.groupsMap.end() )
+                continue;
+            for ( const auto& itemName : itmesIt->second )
+            {
+                if ( item->name() == itemName )
+                {
+                    res.tabIndex = t;
+                    break;
+                }
+            }
+            if ( res.tabIndex != -1 )
+                break;
+        }
+        if ( res.tabIndex != -1 )
+            break;
+    }
+
     if ( recentItems_.size() < 10 )
         recentItems_.insert( recentItems_.begin(), std::move( res ) );
     else
@@ -146,7 +176,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
-            if ( captionCount_ == i )
+            if ( captionCount_ == i && !searchLine_.empty() )
             {
                 if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
                 {

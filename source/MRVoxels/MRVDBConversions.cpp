@@ -336,11 +336,10 @@ void putSimpleVolumeInDenseGrid(
 void makeVdbTopologyDense( openvdb::FloatGrid& grid, const Box3i& rect )
 {
     MR_TIMER
-    auto& tree = grid.tree();
-    for ( int z = rect.min.x; z <= rect.max.z; ++z )
-        for ( int y = rect.min.y; y <= rect.max.y; ++y )
-            for ( int x = rect.min.x; x <= rect.max.x; ++x )
-                tree.touchLeaf( toVdb( Vector3i{ x, y, z } ) );
+    openvdb::CoordBBox box;
+    box.min() = toVdb( rect.min );
+    box.max() = toVdb( rect.max );
+    grid.denseFill( box, 0, true );
 }
 
 void makeVdbTopologyDense( VdbVolume& volume )

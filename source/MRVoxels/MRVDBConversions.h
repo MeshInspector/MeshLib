@@ -85,7 +85,8 @@ MRVOXELS_API void putSimpleVolumeInDenseGrid(
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
     );
 
-/// Make \p volume dense without setting any values
+/// Make \p volume dense, setting all values to zero and activating it
+/// (using `touchLeaf` not to set values can lead to unsafe changing of activated states of voxels in parallel)
 MRVOXELS_API void makeVdbTopologyDense( VdbVolume& volume );
 
 // make SimpleVolume from VdbVolume

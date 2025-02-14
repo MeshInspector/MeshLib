@@ -59,6 +59,7 @@ ELSE()
     glfw
     imgui
     jsoncpp
+    openvdb
     spdlog
     fmt
   )

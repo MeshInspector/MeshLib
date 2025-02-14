@@ -29,8 +29,8 @@
       "HelpLink": "https://meshinspector.com/inappvideo/openrawvoxels"
     },
     {
-      "Name": "Voxel Operations",
-      "Tooltip": "Logical and mathematical operations with ObjectVoxels.",
+      "Name": "Binary Operations",
+      "Tooltip": "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference, Max, Min, Sum, Multiply, Divide, Replace.",
       "Icon": "\uF15C",
       "HelpLink": "https://meshinspector.com/inappvideo/voxelsoperations"
     },

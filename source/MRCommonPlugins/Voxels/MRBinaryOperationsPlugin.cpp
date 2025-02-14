@@ -1,5 +1,5 @@
 #ifndef MESHLIB_NO_VOXELS
-#include "MRVoxelOperations.h"
+#include "MRBinaryOperationsPlugin.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRRibbonMenu.h"
@@ -18,8 +18,8 @@
 namespace MR
 {
 
-VoxelOperations::VoxelOperations() :
-    StatePlugin("Voxel Operations")
+BinaryOperations::BinaryOperations() :
+    StatePlugin( "Binary Operations" )
 {
 }
 
@@ -30,8 +30,8 @@ const std::string operationNames[] = {
     "Max",
     "Min",
     "Sum",
-    "Mul",
-    "Div",
+    "Multiply",
+    "Divide",
     "Replace"
 };
 
@@ -47,7 +47,7 @@ const std::string operationTooltips[] = {
     "Copy the active voxels of B into A"
 };
 
-void VoxelOperations::drawDialog(float menuScaling, ImGuiContext*)
+void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 {
     auto menuWidth = 200 * menuScaling;
     if (!ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling }))
@@ -73,7 +73,7 @@ void VoxelOperations::drawDialog(float menuScaling, ImGuiContext*)
     ImGui::EndCustomStatePlugin();
 }
 
-bool VoxelOperations::onEnable_()
+bool BinaryOperations::onEnable_()
 {
     auto objs = getAllObjectsInTree<ObjectVoxels>(&SceneRoot::get(), ObjectSelectivityType::Selected);
     obj1_ = objs[0];
@@ -81,14 +81,14 @@ bool VoxelOperations::onEnable_()
     return true;
 }
 
-bool VoxelOperations::onDisable_()
+bool BinaryOperations::onDisable_()
 {
     obj1_.reset();
     obj2_.reset();
     return true;
 }
 
-void VoxelOperations::doOperation_(Operation op)
+void BinaryOperations::doOperation_(Operation op)
 {
     ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [&, this, op]()->std::function<void()>
     {
@@ -126,13 +126,13 @@ void VoxelOperations::doOperation_(Operation op)
 
         switch (op)
         {
-        case MR::VoxelOperations::Operation::Union:
+        case MR::BinaryOperations::Operation::Union:
             resGrid = openvdb::tools::csgUnionCopy(ovdb(grid1), ovdb(grid2));
             break;
-        case MR::VoxelOperations::Operation::Intersection:
+        case MR::BinaryOperations::Operation::Intersection:
             resGrid = openvdb::tools::csgIntersectionCopy(ovdb(grid1), ovdb(grid2));
             break;
-        case MR::VoxelOperations::Operation::Difference:
+        case MR::BinaryOperations::Operation::Difference:
             resGrid = openvdb::tools::csgDifferenceCopy(ovdb(grid1), ovdb(grid2));
             break;
         default:
@@ -145,28 +145,28 @@ void VoxelOperations::doOperation_(Operation op)
                     return cancelRes;
                 switch (op)
                 {
-                case MR::VoxelOperations::Operation::Max:
+                case MR::BinaryOperations::Operation::Max:
                     openvdb::tools::compMax( *resGrid, *copy2 );
                     resIso = std::max( iso1, iso2 );
                     break;
-                case MR::VoxelOperations::Operation::Min:
+                case MR::BinaryOperations::Operation::Min:
                     openvdb::tools::compMin( *resGrid, *copy2 );
                     resIso = std::min( iso1, iso2 );
                     break;
-                case MR::VoxelOperations::Operation::Sum:
+                case MR::BinaryOperations::Operation::Sum:
                     openvdb::tools::compSum( *resGrid, *copy2 );
                     resIso = iso1 + iso2;
                     break;
-                case MR::VoxelOperations::Operation::Mul:
+                case MR::BinaryOperations::Operation::Mul:
                     openvdb::tools::compMul( *resGrid, *copy2 );
                     resIso = iso1 * iso2;
                     break;
-                case MR::VoxelOperations::Operation::Div:
+                case MR::BinaryOperations::Operation::Div:
                     openvdb::tools::compDiv( *resGrid, *copy2 );
                     if ( iso2 != 0 )
                         resIso = iso1 / iso2;
                     break;
-                case MR::VoxelOperations::Operation::Replace:
+                case MR::BinaryOperations::Operation::Replace:
                     openvdb::tools::compReplace( *resGrid, *copy2 );
                     resIso = iso2;
                     break;
@@ -206,7 +206,7 @@ void VoxelOperations::doOperation_(Operation op)
     });
 }
 
-MR_REGISTER_RIBBON_ITEM(VoxelOperations)
+MR_REGISTER_RIBBON_ITEM(BinaryOperations)
 
 } //namespace MR
 

@@ -75,10 +75,9 @@
     <ClCompile Include="ViewerButtons\MRInvertView.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
-    <ClCompile Include="Voxels\MRVoxelOperations.cpp">
+    <ClCompile Include="Voxels\MRBinaryOperationsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
-    <ClCompile Include="Voxels\MRVoxelOperations.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -109,7 +108,7 @@
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h">
       <Filter>ViewerButtons</Filter>
     </ClInclude>
-    <ClInclude Include="Voxels\MRVoxelOperations.h">
+    <ClInclude Include="Voxels\MRBinaryOperationsPlugin.h">
       <Filter>Voxels</Filter>
     </ClInclude>
   </ItemGroup>
@@ -745,17 +744,9 @@
     <Image Include="resource\icons\X3\Rotator.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
-    <Image Include="resource\icons\X3\Voxel Operations.png">
-      <Filter>resource\icons\X3</Filter>
-    </Image>
-    <Image Include="resource\icons\X1\Voxel Operations.png">
-      <Filter>resource\icons\X1</Filter>
-    </Image>
-    <Image Include="resource\icons\X0_5\Voxel Operations.png">
-      <Filter>resource\icons\X0_5</Filter>
-    </Image>
-    <Image Include="resource\icons\X0_75\Voxel Operations.png">
-      <Filter>resource\icons\X0_75</Filter>
-    </Image>
+    <Image Include="resource\icons\X0_5\Binary Operations.png" />
+    <Image Include="resource\icons\X0_75\Binary Operations.png" />
+    <Image Include="resource\icons\X1\Binary Operations.png" />
+    <Image Include="resource\icons\X3\Binary Operations.png" />
   </ItemGroup>
 </Project>

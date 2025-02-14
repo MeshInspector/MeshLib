@@ -10,11 +10,11 @@
 namespace MR
 {
 
-class VoxelOperations : public StatePlugin, public SceneStateExactCheck<2, ObjectVoxels>,
+class BinaryOperations : public StatePlugin, public SceneStateExactCheck<2, ObjectVoxels>,
     public PluginCloseOnSelectedObjectRemove
 {
 public:
-    VoxelOperations();
+    BinaryOperations();
 
     virtual void drawDialog(float menuScaling, ImGuiContext*) override;
 

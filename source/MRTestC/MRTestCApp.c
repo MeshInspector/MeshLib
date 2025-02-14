@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include "MRBitSet.h"
+#include "MRBox.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
 #include "MRMeshCollidePrecise.h"
@@ -15,6 +17,7 @@
 int main( void )
 {
     testArea();
+    testBox();
     testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();
@@ -44,4 +47,5 @@ int main( void )
     testResampling();
     testCropping();
     testAccessors();
+    printf("Tests finished\n");
 }

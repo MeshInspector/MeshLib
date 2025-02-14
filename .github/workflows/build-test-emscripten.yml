@@ -99,7 +99,7 @@ jobs:
           export MOZ_DISABLE_RDD_SANDBOX=1
           export MOZ_DISABLE_GPU_SANDBOX=1
 
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+          xvfb-run --auto-servernum \
+            --server-args="-screen 0 1280x1024x24 +extension RANDR +extension RENDER +extension GLX" \
             emrun --browser=firefox --browser-args="--headless" --kill-exit \
-            ./build/Release/bin/MRTest.html
-
+              ./build/Release/bin/MRTest.html

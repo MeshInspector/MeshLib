@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:4.0.2-arm64
+FROM emscripten/emsdk:4.0.3-arm64
 
 # Update and install req
 # install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
@@ -27,7 +27,7 @@ WORKDIR "/home/MeshLib"
 COPY . .
 
 # Patch Emscripten
-RUN patch -Np1 -d /emsdk/upstream/emscripten/ -i /home/MeshLib/docker/patches/emscripten-fix-memory64-glfw-drop.patch
+RUN patch -Np1 -d /emsdk/upstream/emscripten/ -i /home/MeshLib/docker/patches/Wasm64-Fix-GLFW-drag-and-drop-under-wasm64.patch
 
 # Build thirdparty
 ENV MR_STATE=DOCKER_BUILD

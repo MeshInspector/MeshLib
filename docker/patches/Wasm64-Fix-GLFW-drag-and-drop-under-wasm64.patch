@@ -1,6 +1,20 @@
+From fe6a321a5faf8b8c03593ca032e035e30e1ae572 Mon Sep 17 00:00:00 2001
+From: Sam Clegg <sbc@chromium.org>
+Date: Fri, 14 Feb 2025 15:25:51 -0800
+Subject: [PATCH] [Wasm64] Fix GLFW drag and drop under wasm64 (#23676)
+
+Verified by running interactive64.test_glfw_dropfile locally.
+
+Fixes: #23505
+---
+ src/lib/libglfw.js | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lib/libglfw.js b/src/lib/libglfw.js
+index ca6ccce45a1db..a24b032a111a2 100644
 --- a/src/lib/libglfw.js
 +++ b/src/lib/libglfw.js
-@@ -836,7 +836,7 @@
+@@ -836,7 +836,7 @@ var LibraryGLFW = {
        event.preventDefault();
  
  #if FILESYSTEM
@@ -9,7 +23,7 @@
        var filenamesArray = [];
        var count = event.dataTransfer.files.length;
  
-@@ -858,7 +858,7 @@
+@@ -858,7 +858,7 @@ var LibraryGLFW = {
            var data = e.target.result;
            FS.writeFile(path, new Uint8Array(data));
            if (++written === count) {
@@ -18,12 +32,12 @@
  
              for (var i = 0; i < filenamesArray.length; ++i) {
                _free(filenamesArray[i]);
-@@ -870,7 +870,7 @@
+@@ -870,7 +870,7 @@ var LibraryGLFW = {
  
          var filename = stringToNewUTF8(path);
          filenamesArray.push(filename);
 -        {{{ makeSetValue('filenames + i*4', '0', 'filename', POINTER_TYPE) }}};
-+        {{{ makeSetValue(MEMORY64 ? 'filenames + i*8' : 'filenames + i*4', '0', 'filename', POINTER_TYPE) }}};
++        {{{ makeSetValue('filenames', `i*${POINTER_SIZE}` , 'filename', POINTER_TYPE) }}};
        }
  
        for (var i = 0; i < count; ++i) {

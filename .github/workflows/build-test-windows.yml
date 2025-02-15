@@ -187,7 +187,7 @@ jobs:
       - name: Build
         shell: cmd
         run: |
-          if ${{ fromJSON('["$false", "$true"]')[matrix.build_system == 'CMake'] && '1==1' || '1==0' }} (
+          if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
             if errorlevel 1 exit 1
             cmake -B source\x64\${{matrix.config}}Build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}

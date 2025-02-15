@@ -1,3 +1,4 @@
+#error break build
 #ifndef MESHLIB_NO_VOXELS
 #include "MRBinaryOperationsPlugin.h"
 #include "MRViewer/ImGuiHelpers.h"

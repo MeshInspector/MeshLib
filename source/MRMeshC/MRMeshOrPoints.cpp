@@ -32,20 +32,20 @@ void mrMeshOrPointsFree( MRMeshOrPoints* mp_ )
 
 MRMeshOrPointsXf* mrMeshOrPointsXfNew( const MRMeshOrPoints* obj_, const MRAffineXf3f* xf_ )
 {
-    ARG( obj ); ARG( xf );
-    RETURN_NEW( MeshOrPointsXf { obj, xf } );
+    ARG( obj ); ARG_PTR( xf );
+    RETURN_NEW( MeshOrPointsXf { obj, xf ? *xf : AffineXf3f{} } );
 }
 
 MRMeshOrPointsXf* mrMeshOrPointsXfFromMesh( const MRMesh* mesh_, const MRAffineXf3f* xf_ )
 {
-    ARG( mesh ); ARG( xf );
-    RETURN_NEW( MeshOrPointsXf { { mesh }, xf } );
+    ARG( mesh ); ARG_PTR( xf );
+    RETURN_NEW( MeshOrPointsXf { { mesh }, xf ? *xf : AffineXf3f{} } );
 }
 
 MRMeshOrPointsXf* mrMeshOrPointsXfFromPointCloud( const MRPointCloud* pc_, const MRAffineXf3f* xf_ )
 {
-    ARG( pc ); ARG( xf );
-    RETURN_NEW( MeshOrPointsXf { { pc }, xf } );
+    ARG( pc ); ARG_PTR( xf );
+    RETURN_NEW( MeshOrPointsXf { { pc }, xf ? *xf : AffineXf3f{} } );
 }
 
 void mrMeshOrPointsXfFree( MRMeshOrPointsXf* mp_ )

@@ -1,6 +1,6 @@
 #pragma once
 #ifdef _WIN32
-#   ifdef MRCUDA_EXPORT
+#   ifdef MRCuda_EXPORTS
 #       define MRCUDA_API __declspec(dllexport)
 #   else
 #       define MRCUDA_API __declspec(dllimport)

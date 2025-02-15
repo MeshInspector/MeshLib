@@ -37,6 +37,7 @@
     <ClCompile Include="ViewerButtons\MRSceneControlMenuItems.cpp" />
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp" />
     <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp" />
+    <ClCompile Include="Voxels\MRBinaryOperationsPlugin.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -49,6 +50,7 @@
     <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
     <ClInclude Include="ViewerButtons\MRSceneControlMenuItems.h" />
     <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h" />
+    <ClInclude Include="Voxels\MRBinaryOperationsPlugin.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">
@@ -84,6 +86,7 @@
     <Image Include="resource\icons\X0_5\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X0_5\Rotator.png" />
     <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png" />
+    <Image Include="resource\icons\X0_5\Binary Operations.png" />
     <Image Include="resource\icons\X0_75\Active Plugins List.png" />
     <Image Include="resource\icons\X0_75\BestFit Circle.png" />
     <Image Include="resource\icons\X0_75\BestFit Cone.png" />
@@ -97,6 +100,7 @@
     <Image Include="resource\icons\X0_75\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X0_75\Rotator.png" />
     <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png" />
+    <Image Include="resource\icons\X0_75\Binary Operations.png" />
     <Image Include="resource\icons\X1\Active Plugins List.png" />
     <Image Include="resource\icons\X1\BestFit Circle.png" />
     <Image Include="resource\icons\X1\BestFit Cone.png" />
@@ -110,6 +114,7 @@
     <Image Include="resource\icons\X1\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X1\Rotator.png" />
     <Image Include="resource\icons\X1\Show_Hide Global Basis.png" />
+    <Image Include="resource\icons\X1\Binary Operations.png" />
     <Image Include="resource\icons\X3\Active Plugins List.png" />
     <Image Include="resource\icons\X3\BestFit Circle.png" />
     <Image Include="resource\icons\X3\BestFit Cone.png" />
@@ -118,6 +123,7 @@
     <Image Include="resource\icons\X3\BestFit Plane.png" />
     <Image Include="resource\icons\X3\BestFit Point.png" />
     <Image Include="resource\icons\X3\BestFit Sphere.png" />
+    <Image Include="resource\icons\X3\Binary Operations.png" />
     <Image Include="resource\icons\X0_5\Add custom theme.png" />
     <Image Include="resource\icons\X0_5\Back View.png" />
     <Image Include="resource\icons\X0_5\Bottom View.png" />
@@ -318,7 +324,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRCOMMONPLUGINS_EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCommonPlugins_EXPORTS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
@@ -345,7 +351,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRCOMMONPLUGINS_EXPORT;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCommonPlugins_EXPORTS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>

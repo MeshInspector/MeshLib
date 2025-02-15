@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#   ifdef MRIOEXTRAS_EXPORT
+#   ifdef MRIOExtras_EXPORTS
 #       define MRIOEXTRAS_API __declspec(dllexport)
 #   else
 #       define MRIOEXTRAS_API __declspec(dllimport)

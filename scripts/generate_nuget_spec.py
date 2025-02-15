@@ -13,7 +13,7 @@ print('\n')
 path_to_license = os.path.join(base_path, 'LICENSE')
 shutil.copy(path_to_license, path_to_license + '.txt')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC', 'c-sharp-examples']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
 
@@ -63,8 +63,8 @@ for address, dirs, files in folder:
 	for file in files:
 		if file.startswith('nunit'):
 			continue
-            
-		if (file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System') and not file.startswith('MRDotNet')):
+
+		if file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System') and not file.startswith('MRDotNet') and not file.startswith('pybind11nonlimitedapi_meshlib_'):
 			anyDllIsFound = True
 			src = os.path.join(address,file)
 			print(src)
@@ -89,14 +89,14 @@ for address, dirs, files in folder:
 
 if not anyDllIsFound:
     raise Exception("No DLLs found")
-    
+
 fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')
 fTargets.close()
 
 f.write('\t\t<file src="./MeshLib.targets" target="build/"></file>\n')
 
-            
+
 f.write('\t</files>\n')
 f.write('</package>\n')
 f.close()

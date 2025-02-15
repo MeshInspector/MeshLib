@@ -13,6 +13,9 @@
 
 \include NoiseDenoiseExample.dox.py
 
+- <b class="tab-title">C</b>
+\include NoiseDenoise.dox.c
+
 </div>
 
  */

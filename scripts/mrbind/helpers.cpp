@@ -96,7 +96,7 @@ namespace MR::Extra
     {
         Mesh res;
         for ( const auto& m : meshes )
-            res.addPart( *m );
+            res.addMesh( *m );
         return res;
     }
 

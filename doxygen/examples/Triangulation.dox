@@ -14,6 +14,9 @@ Simple triangulation
 
 \include Triangulation_v3.dox.py
 
+- <b class="tab-title">C</b>
+\include Triangulation.dox.c
+
 </div>
 
  */

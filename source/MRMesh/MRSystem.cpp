@@ -19,7 +19,7 @@
 #include <cpuid.h>
 #endif
 #ifdef __MINGW32__
-#include <windows.h>
+#include "MRPch/MRWinapi.h"
 #endif
 
 #else //not Windows

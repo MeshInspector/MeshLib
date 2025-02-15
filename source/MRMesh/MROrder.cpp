@@ -135,7 +135,7 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
             numThreads *= 2;
             target = ( target + 1 ) / 2;
         }
-        orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
+        orderFacePoints( { begin( facePoints ), facePoints.size() }, numThreads );
     }
 
     tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),

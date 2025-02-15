@@ -32,6 +32,7 @@ private:
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;
     friend class UniqueThreadSafeOwner<AABBTree>;
+    friend class SharedThreadSafeOwner<AABBTree>;
 };
 
 } // namespace MR

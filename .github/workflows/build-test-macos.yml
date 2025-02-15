@@ -119,6 +119,7 @@ jobs:
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}
+        timeout-minutes: 3
         run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests

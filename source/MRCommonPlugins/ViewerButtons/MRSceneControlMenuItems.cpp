@@ -198,7 +198,7 @@ bool SetViewPresetMenuItem::action()
         Quaternionf( Vector3f::plusX(),  -PI2_F ),        // Front
         Quaternionf(),                                    // Top
         Quaternionf(), // unused
-        Quaternionf( Vector3f::plusX(),   PI_F ),         // Bottom
+        Quaternionf( Vector3f::plusY(),  PI_F ),         // Bottom
         Quaternionf( Vector3f(-1, 1, 1 ), 2 * PI_F / 3 ), // Left
         Quaternionf( Vector3f( 0, 1, 1 ), PI_F ),         // Back
         Quaternionf( Vector3f(-1,-1,-1 ), 2 * PI_F / 3 )  // Right

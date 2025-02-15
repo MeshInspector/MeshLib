@@ -58,6 +58,10 @@ if __name__ == "__main__":
         if cxx_compiler:
             compiler_id = get_compiler_id(cxx_compiler)
 
+        build_system = os.environ.get('BUILD_SYSTEM').lower()
+        if not build_system:
+            build_system = "msbuild" if compiler_id.startswith("msvc") else "cmake"
+
         results = {
             'target_os': os.environ.get('TARGET_OS'),
             'target_arch': os.environ.get('TARGET_ARCH'),
@@ -65,6 +69,7 @@ if __name__ == "__main__":
             'build_config': os.environ.get('BUILD_CONFIG').lower(),
             'cpu_count': cpu_count,
             'ram_mb': ram_amount,
+            'build_system': build_system,
         }
         with open(os.environ['STATS_FILE'], 'w') as f:
             json.dump(results, f)

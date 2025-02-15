@@ -116,5 +116,11 @@
       copy $(TargetDir)$(TargetName).dll $(TargetDir)meshlib\$(TargetName).dll
       </Command>
     </PostBuildEvent>
+    <ClCompile>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SyncCThrow</ExceptionHandling>
+    </ClCompile>
+    <ClCompile>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SyncCThrow</ExceptionHandling>
+    </ClCompile>
   </ItemDefinitionGroup>
 </Project>

@@ -581,7 +581,7 @@ void RibbonMenu::drawHeaderPannel_()
     {
         ImGui::SetCursorPosX( cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrowButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             tabPanelScroll_ -= cTopPanelScrollStep * menuScaling;
             if ( tabPanelScroll_ < 0.0f )
@@ -668,7 +668,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImGui::SameLine();
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrowButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             if ( !needFwdBtn )
                 tabPanelScroll_ += tabsWindowPosX * menuScaling;//size of back btn

@@ -24,7 +24,7 @@ void GlBuffer::del()
 }
 
 void GlBuffer::bind( GLenum target )
-{ 
+{
     assert( valid() );
     GL_EXEC( glBindBuffer( target, bufferID_ ) );
 }
@@ -81,7 +81,7 @@ void GlTexture2DArray::texImage_( const Settings& settings, const char* arr )
 
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
 {
-    GL_EXEC( GLint id = glGetAttribLocation( settings.program_shader, settings.name ) );
+    GLint id = GL_EXEC( glGetAttribLocation( settings.program_shader, settings.name ) );
     if ( id < 0 )
         return id;
     if ( settings.arrSize == 0 && !settings.forceUse )
@@ -93,7 +93,7 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
 
     settings.buf.loadDataOpt( GL_ARRAY_BUFFER, settings.refresh, settings.arr, settings.arrSize );
 
-    // GL_FLOAT is left here consciously 
+    // GL_FLOAT is left here consciously
     if ( settings.isColor )
     {
         GL_EXEC( glVertexAttribPointer( id, settings.baseTypeElementsNumber, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0 ) );

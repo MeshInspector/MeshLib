@@ -223,6 +223,7 @@ jobs:
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests
+        timeout-minutes: 3
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd

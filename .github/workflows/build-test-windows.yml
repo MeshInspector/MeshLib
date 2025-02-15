@@ -196,10 +196,10 @@ jobs:
             if errorlevel 1 exit 1
             mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
-         ) else (
+          ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
             if errorlevel 1 exit 1
-         )
+          )
 
       - name: Build .NET
         if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}

@@ -1,0 +1,12 @@
+IF(DEFINED ENV{VCPKG_ROOT})
+    option(MESHLIB_ENABLE_VCPKG "Enable the vcpkg package manager" ON)
+    set(MESHLIB_VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "vcpkg root directory")
+ELSE()
+    option(MESHLIB_ENABLE_VCPKG "Enable the vcpkg package manager" OFF)
+    set(MESHLIB_VCPKG_ROOT "" CACHE PATH "vcpkg root directory")
+ENDIF()
+
+IF(MESHLIB_ENABLE_VCPKG)
+    set(CMAKE_TOOLCHAIN_FILE "${MESHLIB_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+    set(VCPKG_TARGET_TRIPLET "x64-windows-meshlib")
+ENDIF()

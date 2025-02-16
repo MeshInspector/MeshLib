@@ -59,7 +59,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
+      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -78,16 +78,16 @@ jobs:
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
 
-      - name: Clean Vcpkg Directory  
-        working-directory: C:\vcpkg  
-        run: git clean -ffdx  
+      - name: Clean Vcpkg Directory
+        working-directory: C:\vcpkg
+        run: git clean -ffdx
 
-      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}  
-        working-directory: C:\vcpkg  
-        run: |  
-          git fetch  
-          git pull --rebase 
-          git checkout ${{ inputs.vcpkg_version }}  
+      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}
+        working-directory: C:\vcpkg
+        run: |
+          git fetch
+          git pull --rebase
+          git checkout ${{ inputs.vcpkg_version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -153,13 +153,13 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
-        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore Dependencies
-        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         uses: codebeltnet/dotnet-restore@v2
         with:
           projects: 'source/**/*.csproj'
@@ -202,11 +202,11 @@ jobs:
           )
 
       - name: Build .NET
-        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
 
       - name: Build .NET examples
-        if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if:   ${{ env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build MRBind
@@ -241,7 +241,7 @@ jobs:
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
-        if:   matrix.runner == 'windows-2022'
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests
@@ -271,7 +271,7 @@ jobs:
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
@@ -283,7 +283,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

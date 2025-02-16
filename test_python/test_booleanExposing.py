@@ -19,6 +19,7 @@ def test_boolean_exposing():
     bOperation = mrmesh.BooleanOperation.Intersection
     bResMapper = mrmesh.BooleanResultMapper()
     bResult = mrmesh.boolean(meshA, meshB, bOperation, None, bResMapper)
+    assert bResult.valid(), bResult.errorString
 
     bResMesh = bResult.mesh
 

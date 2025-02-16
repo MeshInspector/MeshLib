@@ -185,15 +185,21 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build
+        shell: cmd
         run: |
-          if ( ${{ fromJSON('["$false", "$true"]')[matrix.build_system == 'CMake'] }} )
-          {
-              cmd /c "call ""${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat"" -arch=amd64 & cmake -B source\x64\${{matrix.config}}Build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} & cmake --build source\x64\${{matrix.config}}Build -j & mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}"
-          }
-          else
-          {
-              msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
-          }
+          if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+            if errorlevel 1 exit 1
+            cmake -B source\x64\${{matrix.config}}Build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            if errorlevel 1 exit 1
+            cmake --build source\x64\${{matrix.config}}Build -j
+            if errorlevel 1 exit 1
+            mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}
+            if errorlevel 1 exit 1
+          ) else (
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+            if errorlevel 1 exit 1
+          )
 
       - name: Build .NET
         if:   ${{ matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}

@@ -2027,7 +2027,10 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
     }
 #ifndef __EMSCRIPTEN__
     else
+    {
+        spdlog::error( "Ribbon item not found: {}", itemName );
         assert( !"item not found" );
+    }
 #endif
 }
 

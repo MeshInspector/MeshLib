@@ -318,6 +318,9 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     vol.max = fileRes.max;
     vol.min = fileRes.min;
 
+    if constexpr ( std::same_as<T, VdbVolume> )
+        openvdb::tools::changeBackground( vol.data->tree(), vol.min );
+
     DicomVolumeT<T> res;
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );

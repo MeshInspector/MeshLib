@@ -312,13 +312,23 @@ int RibbonSchemaHolder::findItemTab( const std::shared_ptr<RibbonMenuItem>& item
 void RibbonSchemaLoader::loadSchema() const
 {
     auto files = getStructureFiles_( ".items.json" );
+    if ( files.empty() )
+        spdlog::error( "No Ribbon Items files found" );
     for ( const auto& file : files )
+    {
+        spdlog::info( "Reading {}", utf8string( file ) );
         readItemsJson_( file );
+    }
 
     files = getStructureFiles_( ".ui.json" );
+    if ( files.empty() )
+        spdlog::error( "No Ribbon UI files found" );
     sortFilesByOrder_( files );
     for ( const auto& file : files )
+    {
+        spdlog::info( "Reading {}", utf8string( file ) );
         readUIJson_( file );
+    }
 
 
     auto& tabsOrder = RibbonSchemaHolder::schema().tabsOrder;

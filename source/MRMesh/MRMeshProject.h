@@ -24,6 +24,21 @@ struct MeshProjectionResult
     float distSq = 0;
 };
 
+struct MeshProjectionTransforms
+{
+    const AffineXf3f* rigidXfPoint{ nullptr }; ///< this xf is applied to point to move it into projection space
+    const AffineXf3f* nonRigidXfTree{ nullptr }; ///< this xf is applied to AABB tree to move it into projection space
+};
+
+/// <summary>
+/// Creates structure with simplified transforms for projection functions, with `rigidXfPoint` applied to point, and `nonRigidXfTree` applied to tree
+/// </summary>
+/// <param name="storageXf">this argument will hold modified transfrom</param>
+/// <param name="pointXf">transform of point of projection</param>
+/// <param name="treeXf">transform of point of tree</param>
+/// <returns>structure with simplified transforms</returns>
+MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf );
+
 /**
  * \brief computes the closest point on mesh (or its region) to given point
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point

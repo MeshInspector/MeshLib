@@ -1,0 +1,81 @@
+/**
+
+\page FileFormatSupport File Format Support
+
+\tableofcontents
+
+# File Formats: Input and Output in MeshLib
+
+MeshLib is a comprehensive 3D processing library designed for developers, researchers, and 3D enthusiasts. It facilitates the reading, writing, conversion, and manipulation of 3D models across various file formats. MeshLib not only handles geometry but also supports additional information such as textures and colors where applicable.
+
+## Supported File Formats
+
+The tables below categorize MeshLib's supported file formats based on their type and capabilities regarding import, texture support, color support, and export.
+
+### Mesh Formats
+
+| **Format** | **Import** | **Texture Support** | **Color Support** | **Export** |
+| --- | --- | --- | --- | --- |
+| **STL** | Yes | No | No | Yes |
+| **OBJ** | Yes | Yes | Yes | Yes |
+| **OFF** | Yes | No | No | Yes |
+| **DXF** | Yes | No | No | Yes |
+| **STEP** | Yes | No | Yes | No |
+| **STP** | Yes | No | Yes | No |
+| **CTM** | Yes | No | Yes | Yes |
+| **3MF** | Yes | Yes | Yes | No |
+| **MODEL** | Yes | No | No | No |
+| **PLY** | Yes | No | Yes | Yes |
+| **GLTF** | Yes | Yes | Yes | Yes |
+
+> Note: STEP (.STP) files are converted into mesh representations within MeshLib.
+> 
+
+### Point Cloud Formats
+
+| **Format** | **Import** | **Color Support** | **Export** |
+| --- | --- | --- | --- |
+| **ASC** | Yes | Yes | Yes |
+| **CSV** | Yes | No | No |
+| **E57** | Yes | Yes | No |
+| **LAS** | Yes | Yes | No |
+| **LAZ** | Yes | Yes | No |
+| **PTS** | Yes | Yes | No |
+| **XYZ** | Yes | No | No |
+| **TXT** | Yes | No | No |
+| **PLY** | Yes | Yes | Yes |
+
+### Voxel Formats
+
+| **Format** | **Import** | **Export** |
+| --- | --- | --- |
+| **DICOM (.DCM)** | Yes | Yes |
+| **RAW** | Yes | Yes |
+| **TIFF (.TIF, .TIFF)** | Yes | No |
+| **VDB** | Yes | Yes |
+
+### Polyline Formats
+
+| **Format** | **Import** | **Export** |
+| --- | --- | --- |
+| **DXF** | Yes | Yes |
+| **GAV** | Yes | Yes |
+| **PTS** | Yes | Yes |
+
+### Distance Map Formats
+
+| **Format** | **Import** | **Export** |
+| --- | --- | --- |
+| **PNG** | Yes | No |
+| **JPEG** | Yes | No |
+
+### G-Code Format
+
+| **Format** | **Import** | **Export** |
+| --- | --- | --- |
+| **GCODE** | Yes | No |
+| **NC** | Yes | No |
+
+With MeshLib’s flexible file format support, users can seamlessly integrate 3D models into various workflows for further processing and analysis.
+
+*/

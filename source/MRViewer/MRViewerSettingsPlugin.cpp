@@ -387,7 +387,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         UI::setTooltipIfHovered( "Show important messages about errors or warnings that could happen.", menuScaling );
     }
 
-    drawMruInnerFormats_( menuScaling );
+    drawMruInnerFormats_( menuWidth, menuScaling );
 
 #if 0 // Hide unimplemented settings
 #ifndef __EMSCRIPTEN__
@@ -1169,7 +1169,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
         viewer->setTouchpadParameters( touchpadParameters_ );
 }
 
-void ViewerSettingsPlugin::drawMruInnerFormats_( float menuScaling )
+void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScaling )
 {
     drawSeparator_( "MRU Inner Formats", menuScaling );
 
@@ -1198,6 +1198,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuScaling )
     else // format == ".vdb"
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Vdb;
 
+    ImGui::PushItemWidth( menuWidth * 0.5f );
     if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshExtNames ) )
     {
         switch ( mruFormatParameters_.meshFormat )
@@ -1245,6 +1246,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuScaling )
         }
         setDefaultSerializeVoxelsFormat( format );
     }
+    ImGui::PopItemWidth();
 }
 
 void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling )

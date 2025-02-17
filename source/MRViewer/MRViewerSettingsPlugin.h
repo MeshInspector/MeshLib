@@ -89,7 +89,7 @@ private:
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_( float menuScaling );
 
-    void drawMruInnerFormats_( float menuScaling );
+    void drawMruInnerFormats_( float menuWidth, float menuScaling );
 
     void drawGlobalSettings_( float buttonWidth, float menuScaling );
     void drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling );

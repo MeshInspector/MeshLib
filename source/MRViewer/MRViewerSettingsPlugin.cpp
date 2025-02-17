@@ -1173,9 +1173,16 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
 {
     drawSeparator_( "MRU Inner Formats", menuScaling );
 
-    const std::vector<std::string> meshExtNames = { "CTM", "PLY", "MRMESH" };
-    const std::vector<std::string> pointsExtNames = { "CTM", "PLY" };
-    const std::vector<std::string> voxelsExtNames = { "VDB", "RAW" };
+    const std::vector<std::string> meshFormatNames = { "CTM", "PLY", "MRMESH" };
+    const std::vector<std::string> pointsFormatNames = { meshFormatNames[0], meshFormatNames[1] };
+    const std::vector<std::string> voxelsFormatNames = { "VDB", "RAW" };
+
+    const std::vector<std::string> meshFormatTooltips = { "Slowest, high memory consumption, but best compression (typically) format",
+                                                    "Fast and still relatively small format",
+                                                    "Largest by size, but fastest to load / save and without any losses" };
+    const std::vector<std::string> pointsFormatTooltips = { meshFormatTooltips[0], meshFormatTooltips[1] };
+    const std::vector<std::string> voxelsFormatTooltips = { "Fast and efficient format for sparse data",
+                                                            "Simplest but high disk space consumption format" };
 
     std::string format = defaultSerializeMeshFormat();
     if ( format == ".ctm" )
@@ -1198,7 +1205,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Vdb;
 
     ImGui::PushItemWidth( menuWidth * 0.5f );
-    if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshExtNames ) )
+    if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshFormatNames, true, meshFormatTooltips ) )
     {
         switch ( mruFormatParameters_.meshFormat )
         {
@@ -1216,7 +1223,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         setDefaultSerializeMeshFormat( format );
     }
 
-    if ( UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsExtNames ) )
+    if ( UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.pointsFormat )
         {
@@ -1231,7 +1238,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         setDefaultSerializePointsFormat( format );
     }
     
-    if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsExtNames ) )
+    if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
         {

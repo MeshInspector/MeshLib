@@ -27,6 +27,8 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRUnitSettings.h"
 #include "MRShowModal.h"
+#include "MRMesh/MRObjectPointsHolder.h"
+#include "MRVoxels/MRObjectVoxels.h"
 
 namespace
 {
@@ -384,6 +386,9 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         } );
         UI::setTooltipIfHovered( "Show important messages about errors or warnings that could happen.", menuScaling );
     }
+
+    drawMruInnerFormats_( menuScaling );
+
 #if 0 // Hide unimplemented settings
 #ifndef __EMSCRIPTEN__
     drawSeparator_( "Files and Folders", menuScaling );
@@ -1162,6 +1167,84 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     ImGui::PopStyleVar();
     if ( updateSettings )
         viewer->setTouchpadParameters( touchpadParameters_ );
+}
+
+void ViewerSettingsPlugin::drawMruInnerFormats_( float menuScaling )
+{
+    drawSeparator_( "MRU Inner Formats", menuScaling );
+
+    bool updateSettings = false;
+    const std::vector<std::string> meshExtNames = { "CTM", "PLY", "MRMESH" };
+    const std::vector<std::string> pointsExtNames = { "CTM", "PLY" };
+    const std::vector<std::string> voxelsExtNames = { "VDB", "RAW" };
+
+    std::string format = defaultSerializeMeshFormat();
+    if ( format == ".ctm" )
+        mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ctm;
+    else if ( format == ".mrmesh" )
+        mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Mrmesh;
+    else // format == ".ply"
+        mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ply;
+
+    format = defaultSerializePointsFormat();
+    if ( format == ".ctm" )
+        mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ctm;
+    else // format == ".ply"
+        mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
+
+    format = defaultSerializeVoxelsFormat();
+    if ( format == ".raw" )
+        mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
+    else // format == ".vdb"
+        mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Vdb;
+
+    if ( UI::combo( "Mesh Format", ( int* )&mruFormatParameters_.meshFormat, meshExtNames ) )
+    {
+        switch ( mruFormatParameters_.meshFormat )
+        {
+        case MruFormatParameters::MeshFormat::Ctm:
+            format = ".ctm";
+            break;
+        case MruFormatParameters::MeshFormat::Mrmesh:
+            format = ".mrmesh";
+            break;
+        case MruFormatParameters::MeshFormat::Ply:
+        default:
+            format = ".ply";
+            break;
+        }
+        setDefaultSerializeMeshFormat( format );
+    }
+
+    if ( updateSettings |= UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsExtNames ) )
+    {
+        switch ( mruFormatParameters_.pointsFormat )
+        {
+        case MruFormatParameters::PointsFormat::Ctm:
+            format = ".ctm";
+            break;
+        case MruFormatParameters::PointsFormat::Ply:
+        default:
+            format = ".ply";
+            break;
+        }
+        setDefaultSerializePointsFormat( format );
+    }
+    
+    if ( updateSettings |= UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsExtNames ) )
+    {
+        switch ( mruFormatParameters_.voxelsFormat )
+        {
+        case MruFormatParameters::VoxelsFormat::Raw:
+            format = ".raw";
+            break;
+        case MruFormatParameters::VoxelsFormat::Vdb:
+        default:
+            format = ".vdb";
+            break;
+        }
+        setDefaultSerializeVoxelsFormat( format );
+    }
 }
 
 void ViewerSettingsPlugin::drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling )

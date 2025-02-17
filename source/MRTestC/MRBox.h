@@ -1,5 +1,6 @@
 #pragma once
 #include "TestMacros.h"
-#include "MRMeshC/MRbox.h"
 
-void testBox( void );
+void testBoxf( void );
+void testBoxfInvalid( void );
+void testBoxi( void );

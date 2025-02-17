@@ -17,7 +17,9 @@
 int main( void )
 {
     testArea();
-    testBox();
+    testBoxi();
+    testBoxf();
+    testBoxfInvalid();
     testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();

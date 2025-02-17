@@ -34,8 +34,8 @@ struct MeshProjectionTransforms
 /// Creates structure with simplified transforms for projection functions, with `rigidXfPoint` applied to point, and `nonRigidXfTree` applied to tree
 /// </summary>
 /// <param name="storageXf">this argument will hold modified transfrom</param>
-/// <param name="pointXf">transform of point of projection</param>
-/// <param name="treeXf">transform of point of tree</param>
+/// <param name="pointXf">transform for points to be projected</param>
+/// <param name="treeXf">transform for tree's boxes</param>
 /// <returns>structure with simplified transforms</returns>
 MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf );
 

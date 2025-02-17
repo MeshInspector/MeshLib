@@ -655,25 +655,11 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
                 assert( false );
                 continue;
             }
-            auto listSize = int( list.size() );
-            if ( listSize == 0 )
-            {
-                spdlog::warn( "\"List\" array is empty in group: \"{}\", in tab: \"{}\"", groupName.asString(), tabName.asString() );
-                assert( false );
-                continue;
-            }
             MenuItemsList items;
             readMenuItemsList( list, items );
-            if ( items.empty() )
-            {
-#ifndef __EMSCRIPTEN__
-                spdlog::warn( "\"List\" array has no valid items in group: \"{}\", in tab: \"{}\"", groupName.asString(), tabName.asString() );
-                assert( false );
-#endif
-                continue;
-            }
-            auto& groupsMapRef = RibbonSchemaHolder::schema().groupsMap[tabName.asString() + groupName.asString()];
-            if ( groupsMapRef.empty() )
+            auto [it, inserted] = RibbonSchemaHolder::schema().groupsMap.insert( { tabName.asString() + groupName.asString(), MenuItemsList{} } );
+            auto& groupsMapRef = it->second;
+            if ( inserted )
             {
                 groupsMapRef = std::move( items );
                 newGroupsVec.push_back( groupName.asString() );

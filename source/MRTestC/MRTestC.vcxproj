@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRBitSet.c" />
+    <ClCompile Include="MRBox.c" />
     <ClCompile Include="MRExpandShrink.c" />
     <ClCompile Include="MRFixSelfIntersections.c" />
     <ClCompile Include="MRMesh.c" />
@@ -33,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBitSet.h" />
+    <ClInclude Include="MRBox.h" />
     <ClInclude Include="MRExpandShrink.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRMesh.h" />

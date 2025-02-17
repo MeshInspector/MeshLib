@@ -20,6 +20,7 @@ int main( void )
     testBoxi();
     testBoxf();
     testBoxfInvalid();
+    testBoxiInvalid();
     testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();

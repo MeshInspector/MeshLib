@@ -13,6 +13,12 @@ IF(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND NOT MESHLIB_DISABLE_VCPKG)
             set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
         ENDIF()
     ENDIF()
+
+    IF(DEFINED CMAKE_TOOLCHAIN_FILE)
+        get_filename_component(VCPKG_ROOT ${CMAKE_TOOLCHAIN_FILE} DIRECTORY)
+        get_filename_component(VCPKG_ROOT "${VCPKG_ROOT}/../../" ABSOLUTE)
+        message(STATUS "Found vcpkg: ${VCPKG_ROOT}")
+    ENDIF()
 ENDIF()
 
 IF(WIN32)

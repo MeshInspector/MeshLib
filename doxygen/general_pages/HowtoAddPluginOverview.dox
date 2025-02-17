@@ -1,0 +1,52 @@
+/**
+
+\page HowtoAddPluginOverview How to Add Plugin
+
+\tableofcontents
+
+# Add Your Own Plugin to MeshInspector/MeshLib
+
+## What Is a Plugin?
+
+With both MeshLib and MeshInspector, a plugin is a separately compiled module that extends their functionality without modifying the core library. This modular approach enables developers to add new tools or features tailored to specific project requirements, to both MeshLib as a library and MeshInspector as a standalone app.
+
+### Why One Might Need a MeshLib Plugin
+
+- Integration with existing MeshLib-based projects. Add custom 3D processing features to enhance specialized workflows.
+- Extending the MeshInspector application. Introduce additional functionalities (e.g., new inspection or repair tools) to complement the existing toolset.
+
+### Additional Resources
+
+For more info, visit:
+
+- \ref FirstPluginTutorial "Plugin Creation Outline" with a step-by-step guide on setting up a plugin project, including compiling the plugin, configuring Visual Studio, and verifying functionality within MeshLib or MeshInspector
+- \ref ExamplePluginOverview "Plugin Example" with a full-fledged sample of a C++ plugin with Visual Studio project files, source code for basic tools, and instructions on deploying the plugin in MeshLib or MeshInspector.
+
+## **How to Add the Plugin to MeshLib or MeshInspector**
+
+Once you have compiled your plugin, follow these steps:
+
+### MeshLib
+
+- Locate your plugin’s x64\\Release (or x64\\Debug) output folder.
+- Copy all files from this folder into the corresponding MeshLib install folder (e.g., install\\app\\Release or install\\app\\Debug).
+- Ensure the MeshLib version used to build your plugin matches the installed version in install\\app.
+
+### MeshInspector
+
+- Locate your plugin’s x64\\Release (or x64\\Debug) output folder.
+- Copy all files from this folder into the C:\\Program Files\\MeshInspector\\MeshInspector folder (or your MeshInspector installation folder).
+- Confirm that the MeshLib version used by MeshInspector matches the one used to compile your plugin.
+
+# Final reminder
+
+MeshLib and MeshInspector rely on a specific SDK version. Verify that the version used during plugin compilation is the same as:
+
+- With MeshLib, the version you have installed, keep track of it. Save it for your info. Also, depending on how you have installed MeshLib, there are two ways to find out what your version is.
+1. If MeshLib is installed via Python, the installation process keeps track of the version. Try these commands: **pip list** that displays all installed Python packages or **pip show \<package_name\>** (in our case, it is the name is **meshlib**) that displays more detailed information on a specific package.
+2. If using the provided archive: Look for the **mr.version** file. This file is typically located in **install\\app\\Debug** and **install\\app\\Release**
+- With MeshInspector, launch MeshInspector, go to Home → About, and note the MeshInspector Version displayed.
+
+It is recommended to use the latest version of both MeshLib and MeshInspector to avoid mismatches and potential errors.
+
+*/

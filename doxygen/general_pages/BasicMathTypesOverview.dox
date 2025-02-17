@@ -1,0 +1,172 @@
+/**
+
+\page BasicMathTypesOverview Basic Math Types Overview
+
+\tableofcontents
+
+# Vectors, matrices, and transformations
+
+## Vectors and matrices
+
+MeshLib has its own types for representing small vectors and matrices (of dimensions 2, 3, 4):
+
+* The vector types are: `MR::Vector2f`, `MR::Vector3f`, `MR::Vector4f`, defined in `<MRMesh/MRVector[2|3|4].h>` respectively.
+
+  `f` in <code>MR::Vector\[2|3|4\]<b>f</b></code> stands for <code><b>f</b>loat</code>. Use `…d` for `double`, `…i` for `int`, or pass an arbitrary type to the `MR::Vector[2|3|4]<T>` templates.
+
+* Similarly, the matrices are: `MR::Matrix2f`, `MR::Matrix3f`, `MR::Matrix4f`, defined in `<MRMesh/MRMatrix[2|3|4].h>` respectively.
+
+  They support the same type suffixes, and are similarly templated.
+
+  The matrices are **row-major**, meaning each row is contiguous, and `matrix[i]` refers to the `i`th row.
+
+Vectors and matrices overload the common operators, including `+` for vectors, and `*` for matrix-matrix and matrix-vector multiplication.
+
+We use the "matrix · vector" convention (OpenGL-style), rather than "vector · matrix" (DirectX-style). The `*` operator isn't overloaded for the latter case at all.
+
+### Vectors
+
+Construction:
+
+* `MR::Vector3f()` zeroes the vector.
+* `MR::Vector3f(x, y, z)` — elementwise.
+
+Element access is `vec[i]` or `vec.x`, `vec.y`, `vec.z`, `vec.w`.
+
+Overloaded operators:
+
+* `+`, `-` add and subtract two vectors elementwise. Unary versions are also provided.
+
+* `*` and `/` can only be applied to a vector and a scalar. To multiply or divide two vectors elementwise use `MR::mult(v1, v2)` and `MR::div(v1, v2)`.
+
+Various vector products:
+
+* `MR::dot(v1, v2)`
+* `MR::cross(v1, v2)` — for 2D vectors this returns a single number, the Z component of `(x1,y1,0)✕(x2,y2,0)`.
+* `MR::outer(v1, v2)`
+* `MR::mixed(v1, v2, v3)`
+
+Some other operations:
+
+* `v1.length()`, `v1.lengthSq()` — normal and squared length.
+* `MR::distance(v1, v2)`, `MR::distanceSq(v1, v2)` — normal and squared distance.
+* `v1.normalized()` — returns the vector scaled to length 1 (does nothing if the length was 0).
+* `v1.perpendicular()` — returns one orthogonal vector in 2D, or a pair of two orthogonal vectors in 3D.
+* `MR::angle(v1, v2)` — the angle between two vectors, in range `[0;𝜋)` (this angle is between directed vectors, not lines).
+
+### Matrices
+
+Construction:
+
+* `MR::Matrix3f()` constructs an identity matrix by default, or you can be explicit with `MR::Matrix3f::identity()`.
+
+* `MR::Matrix3f(v1, v2, v3)` constructs the matrix from **row** vectors, same as `MR::Matrix3f::fromRows(v1, v2, v3)`.  Use `MR::Matrix3f::fromColumns(v1, v2, v3)` to construct from columns.
+
+Element access:
+
+* `mat[i]` and `mat.x`, `mat.y`, `mat.z`, `mat.w` return the row vectors.
+
+* `mat.col(i)` returns column vectors (read-only).
+
+Overloaded operators:
+
+* `*` — matrices can be multiplied by each other and by vectors.
+
+* `+`, `-` — elementwise between two matrices.
+
+* `*`, `/` — scale the matrix by a scalar.
+
+Some basic operations:
+
+* `m1.inverse()` — returns an inverted copy, doesn't modify the source matrix.
+* `m1.transposed()` — similarly returns a transposed copy, doesn't modify the source matrix.
+* `m1.det()` — determinant.
+* `m1.trace()`
+* `m1.norm()`, `m1.normSq()` — the norm, regular and squared.
+
+Predefined matrices:
+
+* `MR::Matrix3f::identity()`
+* `MR::Matrix3f::scale(s)` — scale, either uniform or not (if `s` is scalar and vector respectively).
+* `MR::Matrix3f::rotation(axis, angle)` — rotation around an axis (the axis doesn't need to be normalized, the angle is in radians).
+
+  `MR::Matrix3f::rotation(dir1, dir2)` — shortest rotation from one direction to another (neither needs to be normalized).
+
+Interpolation:
+
+* `MR::slerp(m1, m2, t)` — quaternion-based [Slerp](https://en.wikipedia.org/wiki/Slerp) interpolation between two matrices. (`t == 0` produces `m1`, `t == 1` produces `m2`.)<br/>
+  This function is defined in `<MRMesh/MRQuaternion.h>`.
+
+## Affine transformations
+
+Most transformations in MeshLib are represented using a matrix-vector pair — `MR::AffineXf3f`, defined in `<MRMesh/MRAffineXf.h>`.
+
+This this pair, the vector holds the translation (offset) and the matrix holds rotation (and also scale and shear).
+
+Those work in 2 and 3 dimensions, and like everythine else above are templated.
+
+`MR::AffineXf3f` are very similar to 4x4 matrices widely used in computer graphics, but without the last row, which is assumed to be `(0,0,0,1)` (since it's not useful if you're not computing perspective projection matrices). It can be converted to and from `MR::Matrix4f`, more on that below.
+
+Etymology:
+
+> "XF" is an abbreviation of "transform".<br/>
+> "X" can means "cross-" (as in "xing" = "crossing") or in this case "trans-" (as in "xfer" = "transfer").<br/>
+> "F" in this case is short for "-form".
+
+Construction:
+
+* `MR::AffineXf3f()` is identity transformation (an identity matrix and a zero vector).
+
+* `MR::AffineXf3f::linear(mat)` constructs from a matrix only and zeroes the vector.
+* `MR::AffineXf3f::translation(vec)` constructs from a vector only and uses an identity matrix.
+* `MR::AffineXf3f::xfAround(mat, point)` sets the matrix as is, and sets the vector so that the `point` doesn't change when transformed by the resulting XF.
+
+Element access:
+
+* `xf.A` is the matrix (rotation, scale and shear).
+* `xf.b` is the vector (translation).
+
+Combining and applying transformations:
+
+* `xf1 * xf2` combines two transformations, like matrix multiplication.
+
+  Note that we're using "matrix · vector" convention (OpenGL-style), rather than "vector · matrix" (DirectX-style). This means that adding `... * xf` on the right acts in local space, while adding `xf * ...` on the left acts in world space.
+
+* `xf1( v1 )` applies the transformation to a vector, like multiplying a matrix by a vector. Same as `xf1.A * v1 + xf1.b`.
+
+Some common operations:
+
+* `xf1.inverse()` inverts the transformation, like inverting a matrix.
+
+* `MR::slerp(xf1, xf2, t)` is a quaternion-based [Slerp](https://en.wikipedia.org/wiki/Slerp) interpolation between two transformations. (`t == 0` produces `xf1`, `t == 1` produces `xf2`.)<br/>
+  This function is defined in `<MRMesh/MRQuaternion.h>`.
+
+Conversion to and from matrices:
+
+* `MR::AffineXf3f` can be converted to and from `MR::Matrix4f` (directly, without calling any functions).
+
+  When converting to a matrix, the last row is set to `(0,0,0,1)` and the rest is copied as is. The opposite conversion checks that the last row is `(0,0,0,1)` before discarding it.
+
+### Object transformations
+
+If you're using `MR::Object` to hold data (and the classes derived from it, such as `MR::ObjectMesh`), each `MR::Object` holds its own `MR::AffineXf3f`.
+
+`obj.xf()` returns the current XF, and `obj.setXf(...)` sets a new one.
+
+If you have an object hierarchy, the XF of each object is relative to its `parent()` object. An object's XF maps points from the coordinate system of that object to the coordinate system of its parent.
+
+`obj.worldXf()` returns the combined XF of this object and all parents, as if by `... * obj.parent()->parent()->xf() * obj.parent()->xf() * obj.xf()`.
+
+`obj.setWorldXf(...)` acts like `obj.setXf(...)`, but multiplies the incoming XF by `parent()->worldXf().inverse()` so that the resulting `obj.worldXf()` produces the XF you specified.
+
+## Other types
+
+MeshLib supports some other types not documented here:
+
+* Quaternions — `MR::Quaternionf` defined in `<MRMesh/MRQuaternion.h>`.
+
+* Symmetric matrices — `MR::SymMatrix[2,3,4]f` defined in `<MRMesh/MRSymMatrix[2,3,4].h>`.
+
+Consult the respective headers for details.
+
+*/

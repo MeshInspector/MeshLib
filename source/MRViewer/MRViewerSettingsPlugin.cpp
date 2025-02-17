@@ -1173,7 +1173,6 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
 {
     drawSeparator_( "MRU Inner Formats", menuScaling );
 
-    bool updateSettings = false;
     const std::vector<std::string> meshExtNames = { "CTM", "PLY", "MRMESH" };
     const std::vector<std::string> pointsExtNames = { "CTM", "PLY" };
     const std::vector<std::string> voxelsExtNames = { "VDB", "RAW" };
@@ -1217,7 +1216,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         setDefaultSerializeMeshFormat( format );
     }
 
-    if ( updateSettings |= UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsExtNames ) )
+    if ( UI::combo( "Points Format", ( int* )&mruFormatParameters_.pointsFormat, pointsExtNames ) )
     {
         switch ( mruFormatParameters_.pointsFormat )
         {
@@ -1232,7 +1231,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         setDefaultSerializePointsFormat( format );
     }
     
-    if ( updateSettings |= UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsExtNames ) )
+    if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsExtNames ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )
         {

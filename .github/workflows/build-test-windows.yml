@@ -186,11 +186,13 @@ jobs:
 
       - name: Build
         shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
             if errorlevel 1 exit 1
-            cmake -B source\x64\${{matrix.config}}Build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            cmake -B source\x64\${{matrix.config}}Build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
             if errorlevel 1 exit 1
             cmake --build source\x64\${{matrix.config}}Build -j
             if errorlevel 1 exit 1

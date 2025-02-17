@@ -87,34 +87,13 @@ cd vcpkg
 ..\MeshLib\thirdparty\install.bat
 \endcode
   - This script automates the installation of necessary third-party dependencies.
- 4. **Build and Run**:
+ 4. **Build and Run Visual Studio Solution**
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
-
-#### Using the CMake build system
-
-MeshLib can also be built with CMake. The supported generators are: Ninja (recommended), Visual Studio, NMake, and jom.
-
- 1. **Open the CMake settings pane**
-  - Visual Studio: Project - CMake Settings
-  - Visual Studio Code: Settings - Extensions - CMake Tools (choose workspace settings if you want to set them for the current project only)
-  - CLion: File - Settings - Build, Execution, Deployment - CMake
- 2. **Add** `vcpkg` **toolchain and target triplet options**
-  - Visual Studio:
-   - set **CMake toolchain file** to `<path to vcpkg>\scripts\buildsystems\vcpkg.cmake`
-   - add to **CMake command arguments**: `-DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
-  - Visual Studio Code: add to **CMake Configure Arguments**:
-   - `-DCMAKE_TOOLCHAIN_FILE=<path to vcpkg>\scripts\buildsystems\vcpkg.cmake`
-   - `-DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
-  - CLion: add to **CMake options**: `-DCMAKE_TOOLCHAIN_FILE=<path to vcpkg>\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib`
- 3. (optional) **Delete CMake cache and reconfigure to apply the changes**
-  - Visual Studio: Project - Delete Cache and Reconfigure
-  - Visual Studio Code: Command Palette - CMake: Delete Cache and Reconfigure
-  - CLion: Tools - CMake - Reset Cache and Reload Project
- 4. **Build MeshLib**
-  - Visual Studio: Build - Build All
-  - Visual Studio Code: Command Palette - CMake: Build
-  - CLion: Build - Build Project
+ 5. **Build and Run CMake Project**
+  - Make sure you have the "C++ CMake tools for Windows" component installed.
+  - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
+  - Build the project and run the application.
 
 \subsection CppSetupLinux Linux (Ubuntu/Fedora)
 

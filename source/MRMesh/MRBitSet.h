@@ -284,24 +284,24 @@ private:
 };
 
 template <typename T>
-MR_BIND_IGNORE [[nodiscard]] inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
+[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
     { return *a == *b; }
 
 template <typename T>
-MR_BIND_IGNORE [[nodiscard]] inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
+[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
     { return *a != *b; }
 
 
-MR_BIND_IGNORE [[nodiscard]] inline auto begin( const BitSet & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )
     { return SetBitIteratorT<BitSet>(a); }
-MR_BIND_IGNORE [[nodiscard]] inline auto end( const BitSet & )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( const BitSet & )
     { return SetBitIteratorT<BitSet>(); }
 
 template <typename T>
-MR_BIND_IGNORE [[nodiscard]] inline auto begin( const TaggedBitSet<T> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( const TaggedBitSet<T> & a )
     { return SetBitIteratorT<TaggedBitSet<T>>(a); }
 template <typename T>
-MR_BIND_IGNORE [[nodiscard]] inline auto end( const TaggedBitSet<T> & )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( const TaggedBitSet<T> & )
     { return SetBitIteratorT<TaggedBitSet<T>>(); }
 
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits

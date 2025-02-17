@@ -15,7 +15,6 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
-add_compile_definitions(USE_CMAKE_CONFIGURE_FILE)
 
 include(CompilerOptions)
 
@@ -136,7 +135,9 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 IF(NOT MR_EMSCRIPTEN)
   IF(MSVC)
-    find_package(JsonCpp REQUIRED)
+    IF(NOT TARGET JsonCpp::JsonCpp)
+      find_package(JsonCpp REQUIRED)
+    ENDIF()
   ELSE()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)

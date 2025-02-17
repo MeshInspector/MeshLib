@@ -15,6 +15,16 @@ IF(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND NOT MESHLIB_DISABLE_VCPKG)
     ENDIF()
 ENDIF()
 
-IF(NOT DEFINED VCPKG_TARGET_TRIPLET)
-    set(VCPKG_TARGET_TRIPLET "x64-windows-meshlib")
+IF(WIN32)
+    IF(MESHLIB_DISABLE_VCPKG)
+        message(WARNING "vcpkg is disabled explicitly")
+    ELSEIF(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+        message(FATAL_ERROR "vcpkg not found")
+    ENDIF()
+
+    IF(NOT DEFINED VCPKG_TARGET_TRIPLET)
+        set(VCPKG_TARGET_TRIPLET "x64-windows-meshlib")
+    ENDIF()
+ELSE()
+    # TODO: triplet for Linux and macOS
 ENDIF()

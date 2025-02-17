@@ -748,5 +748,17 @@
     <Image Include="resource\icons\X0_75\Binary Operations.png" />
     <Image Include="resource\icons\X1\Binary Operations.png" />
     <Image Include="resource\icons\X3\Binary Operations.png" />
+    <Image Include="resource\icons\X0_5\Invert View.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Invert View.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Invert View.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Invert View.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

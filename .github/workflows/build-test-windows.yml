@@ -39,7 +39,10 @@ jobs:
         exclude:
           - full_config_build: false
             runner: windows-2022
-            config: "Debug"
+            config: Debug
+          - full_config_build: false
+            runner: windows-2022
+            build_system: MSBuild
           - full_config_build: false
             config: Release
             build_system: CMake

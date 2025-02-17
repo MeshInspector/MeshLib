@@ -1,6 +1,6 @@
 #include "TestMacros.h"
 
-#include "MRMeshC/MRbox.h"
+#include "MRMeshC/MRBox.h"
 
 void testBoxf(void)
 {

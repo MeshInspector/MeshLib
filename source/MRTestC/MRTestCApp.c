@@ -1,14 +1,18 @@
 #include <stdio.h>
+#include "MRAddNoise.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRMeshDecimate.h"
+#include "MRMeshExtrude.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshNormals.h"
+#include "MRMeshOffset.h"
 #include "MRMeshComponents.h"
 #include "MRMeshBuilder.h"
+#include "MRMeshSubdivide.h"
 #include "MRFixSelfIntersections.h"
 #include "MRExpandShrink.h"
 #include "MRPointCloud.h"
@@ -16,13 +20,23 @@
 
 int main( void )
 {
+    testAddNoise();
     testArea();
     testBoxi();
     testBoxf();
     testBoxfInvalid();
     testBoxiInvalid();
     testBitSet();
+    testDegenerateBandNonEmpty();
     testMeshBoolean();
+    testMeshOffset();
+    testOffsetMesh();
+    testDoubleOffsetMesh();
+    testMcOffsetMesh();
+    testSharpOffsetMesh();
+    testGeneralOffsetMesh();
+    testThickenMesh();
+    testMeshSubdivide();
     testBooleanMultipleEdgePropogationSort();
     testBooleanMapper();
     testMeshCollidePrecise();

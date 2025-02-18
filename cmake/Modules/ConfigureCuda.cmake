@@ -56,7 +56,12 @@ ELSE()
   set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
   message("CMAKE_CXX_COMPILER=CMAKE_CUDA_HOST_COMPILER=${CMAKE_CUDA_HOST_COMPILER}")
 
-  find_package(CUDA 12 REQUIRED)
+  IF(WIN32)
+    # For our CI:
+    find_package(CUDA 11 REQUIRED)
+  ELSE()
+    find_package(CUDA 12 REQUIRED)
+  ENDIF()
 
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} \
     --std c++20 \

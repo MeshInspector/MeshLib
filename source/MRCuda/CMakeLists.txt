@@ -31,24 +31,26 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 
 IF(WIN32)
-  target_link_libraries(${PROJECT_NAME} PUBLIC
+  target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog::spdlog
     fmt::fmt
     TBB::tbb
-    ${CUDART_LIBRARY}
     ${MRCUDA_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PUBLIC
+  target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
     fmt
     tbb
-    ${CUDART_LIBRARY}
     ${MRCUDA_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
+  ${CUDART_LIBRARY}
+)
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(

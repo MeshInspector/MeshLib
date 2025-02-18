@@ -142,7 +142,7 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrx.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -151,11 +151,11 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Extract Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrx.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrx.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -167,7 +167,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrx.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
         run: |
           cmake \
             -S examples/c-examples \
@@ -179,7 +179,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' && matrx.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

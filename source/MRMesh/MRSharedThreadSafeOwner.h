@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <functional>
 #include <memory>
 
@@ -16,7 +17,7 @@ struct TaskGroup;
 /// allowing access to stored instance from parallel threads;
 /// if one object updates its T-instance, then it makes a copy of T-instance first and become the only object in new group
 template<typename T>
-class SharedThreadSafeOwner
+class MR_BIND_IGNORE SharedThreadSafeOwner
 {
 public:
     /// stops owning T-instance

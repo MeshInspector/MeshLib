@@ -329,7 +329,28 @@ void RibbonSchemaLoader::loadSchema() const
         spdlog::info( "Reading {}", utf8string( file ) );
         readUIJson_( file );
     }
+    spdlog::info( "Reading Ribbon Schema done" );
 
+    {
+        // eliminate empty groups
+        auto& groupsMap = RibbonSchemaHolder::schema().groupsMap;
+        for ( auto it = groupsMap.begin(); it != groupsMap.end(); )
+        {
+            if ( it->second.empty() )
+            {
+                spdlog::info( "Empty group {} eliminated", it->first );
+                it = groupsMap.erase( it );
+            }
+            else
+                ++it;
+        }
+
+        // eliminate references on not-existing groups
+        for ( auto & [tabName, groups] : RibbonSchemaHolder::schema().tabsMap )
+        {
+            std::erase_if( groups, [&]( const std::string & groupName ) { return !groupsMap.contains( tabName + groupName ); } );
+        }
+    }
 
     auto& tabsOrder = RibbonSchemaHolder::schema().tabsOrder;
     std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )

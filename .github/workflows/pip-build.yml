@@ -47,7 +47,7 @@ jobs:
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
       - uses: actions-ecosystem/action-get-latest-tag@v1
-        #if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' }}
         id: get-latest-tag
 
   manylinux-pip-build:
@@ -582,7 +582,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   upload-to-release:
-    #if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event_name == 'release' }}
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -612,7 +612,7 @@ jobs:
         run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
   post-release-test:
-    #if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event_name == 'release' }}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
@@ -629,7 +629,7 @@ jobs:
           failOnError: false
 
       - name: Delete Python Stubs
-        #if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' }}
         uses: geekyeggo/delete-artifact@v5
         with:
           name: PythonStubs

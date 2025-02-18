@@ -28,8 +28,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **PLY** | Yes | No | Yes | Yes |
 | **GLTF** | Yes | Yes | Yes | Yes |
 
-> Note: STEP (.STP) files are converted into mesh representations within MeshLib.
-> 
+\note STEP (.STP) files are converted into mesh representations within MeshLib.
 
 ### Point Cloud Formats
 

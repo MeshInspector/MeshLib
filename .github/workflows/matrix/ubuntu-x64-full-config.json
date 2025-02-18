@@ -94,10 +94,28 @@
       "os": "ubuntu24",
       "config": "Release",
       "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-13",
+      "c-compiler": "/usr/bin/gcc-13",
+      "cxx-standard": 23,
+      "build_mrcuda": "ON"
+    },
+    {
+      "os": "ubuntu24",
+      "config": "Debug",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-13",
+      "c-compiler": "/usr/bin/gcc-13",
+      "cxx-standard": 23,
+      "build_mrcuda": "ON"
+    },
+    {
+      "os": "ubuntu24",
+      "config": "Release",
+      "compiler": "GCC",
       "cxx-compiler": "/usr/bin/g++-14",
       "c-compiler": "/usr/bin/gcc-14",
       "cxx-standard": 23,
-      "build_mrcuda": "ON"
+      "build_mrcuda": "OFF"
     },
     {
       "os": "ubuntu24",
@@ -106,7 +124,7 @@
       "cxx-compiler": "/usr/bin/g++-14",
       "c-compiler": "/usr/bin/gcc-14",
       "cxx-standard": 23,
-      "build_mrcuda": "ON"
+      "build_mrcuda": "OFF"
     }
   ]
 }

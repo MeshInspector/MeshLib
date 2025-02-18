@@ -162,6 +162,11 @@
 				{
 					"Name": "Basic",
 					"List": [
+					]
+				},
+				{
+					"Name": "Binary",
+					"List": [
 						{
 							"Name": "Binary Operations"
 						}

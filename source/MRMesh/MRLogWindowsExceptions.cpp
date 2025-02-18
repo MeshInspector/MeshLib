@@ -4,7 +4,7 @@
 #include "MRSystem.h"
 #include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
-#include <windows.h>
+#include "MRPch/MRWinapi.h"
 
 namespace MR
 {

@@ -1,3 +1,16 @@
+var pointerSize = 0;
+
+var getPointerSize = function () {
+    if (!pointerSize) {
+        pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
+    }
+    return pointerSize;
+}
+
+var toPointer = function (value) {
+    return getPointerSize() == 8 ? BigInt(value) : value;
+}
+
 var freeFSCallback = function () {
   Module.ccall('emsFreeFSCallback', 'void', [], []);
 }
@@ -53,7 +66,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   name_selector.setAttribute('id', 'download_name');
   name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor + ';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
 
-  name_selector.value = defaultName;
+  name_selector.value = defaultName || "Unnamed";
 
   var ext_label = document.createElement('label');
   ext_label.setAttribute('style', 'width: 59px;height: 20px;font-size: 14px;position: absolute;color:' + textColor + ';top: 131px;left: 38px;');
@@ -77,7 +90,11 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   btn_save.setAttribute('value', 'Save');
   btn_save.setAttribute('style', 'position: absolute;width: 100px;height: 28px;top: 194px;left: 50%;transform: translate(-50%, -50%);border-radius: 4px;color: #fff;font-size: 14px;font-weight: 600;border: none;');
   btn_save.setAttribute('class', 'button');
-  btn_save.setAttribute('onclick', 'Module.ccall(\'emsSaveFile\', \'number\', [\'string\'], [document.getElementById(\'download_name\').value + document.getElementById(\'download_ext\').value]),addKeyboardEvents(),document.getElementById(\'show_download_dialog\').remove()');
+  btn_save.onclick = function() {
+    Module.ccall('emsSaveFile', 'number', ['string'], [document.getElementById('download_name').value + document.getElementById('download_ext').value]);
+    addKeyboardEvents();
+    document.getElementById('show_download_dialog').remove();
+  };
 
   popup.appendChild(name_label);
   popup.appendChild(name_selector);
@@ -87,6 +104,15 @@ var download_file_dialog_popup = function (defaultName, extensions) {
 
   removeKeyboardEvents();
   document.body.appendChild(overlay);
+
+  name_selector.focus();
+  name_selector.select();
+  name_selector.addEventListener('keydown', function(ev) {
+    if (ev.key == 'Enter' && name_selector.value) {
+      ev.preventDefault();
+      btn_save.click();
+    }
+  });
 }
 
 var open_directory_dialog_popup = function () {
@@ -133,7 +159,7 @@ var open_files = function (e) {
     return;
   }
   e.preventDefault();
-  var filenames = _malloc(e.target.files.length * 4);
+  var filenames = _malloc(e.target.files.length * getPointerSize());
   var filenamesArray = [];
   var count = e.target.files.length;
   var written = 0;
@@ -151,7 +177,7 @@ var open_files = function (e) {
       var data = e.target.result;
       FS.writeFile(path, new Uint8Array(data));
       if (++written === count) {
-        Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, filenames]);
+        Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, toPointer(filenames)]);
         for (var i = 0; i < filenamesArray.length; ++i) {
           _free(filenamesArray[i]);
         }
@@ -164,7 +190,9 @@ var open_files = function (e) {
     reader.readAsArrayBuffer(file);
     var filename = stringToNewUTF8(path);
     filenamesArray.push(filename);
-    if (typeof GROWABLE_HEAP_U32 !== 'undefined')
+    if (getPointerSize() == 8)
+      HEAPU64[(filenames + i * 8) / 8] = BigInt(filename);
+    else if (typeof GROWABLE_HEAP_U32 !== 'undefined')
       GROWABLE_HEAP_U32()[filenames + i * 4 >> 2] = filename;
     else
       HEAP32[filenames + i * 4 >> 2] = filename;

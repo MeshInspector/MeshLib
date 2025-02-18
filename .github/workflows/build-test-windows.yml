@@ -32,13 +32,21 @@ jobs:
       fail-fast: false
       matrix:
         config: [ "Debug", "Release" ]
+        build_system: [ MSBuild, CMake ]
         runner: [ windows-2022, windows-2019 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             runner: windows-2022
-            config: "Debug"
+            build_system: MSBuild
+          - full_config_build: false
+            runner: windows-2019
+            build_system: CMake
+          - full_config_build: false
+            runner: windows-2022
+            build_system: CMake
+            config: "Release"
         include:
           - runner: windows-2022
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
@@ -55,7 +63,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
+      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -72,12 +80,20 @@ jobs:
           target_arch: x64
           cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
+          build_system: ${{ matrix.build_system }}
 
-      - name: Checkout Vcpkg ${{ inputs.vcpkg_version }}
+      - name: Clean Vcpkg Directory
+        working-directory: C:\vcpkg
+        run: git clean -ffdx
+
+      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
+          git pull --rebase
           git checkout ${{ inputs.vcpkg_version }}
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
@@ -137,6 +153,7 @@ jobs:
         run: py -3 scripts\check_vcxproj.py source\
 
       - name: Add msbuild to PATH
+        if: ${{ matrix.build_system == 'MSBuild' }}
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
@@ -167,8 +184,28 @@ jobs:
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
 
+      - name: Install Ninja for CMake
+        if: ${{ matrix.build_system == 'CMake' }}
+        uses: seanmiddleditch/gha-setup-ninja@master
+
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+            if errorlevel 1 exit 1
+            cmake -B source\x64\${{matrix.config}}Build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            if errorlevel 1 exit 1
+            cmake --build source\x64\${{matrix.config}}Build -j
+            if errorlevel 1 exit 1
+            mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}
+            if errorlevel 1 exit 1
+          ) else (
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+            if errorlevel 1 exit 1
+          )
 
       - name: Build .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -198,6 +235,7 @@ jobs:
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests
+        timeout-minutes: 3
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
@@ -209,7 +247,7 @@ jobs:
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
-        if:   matrix.runner == 'windows-2022'
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests
@@ -228,21 +266,22 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Delete unwanted files
+        # Those files should not exist when using CMake.
         shell: cmd
         run: |
-          del /S /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
-          del /S /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -250,7 +289,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

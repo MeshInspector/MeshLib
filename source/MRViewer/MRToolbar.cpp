@@ -9,7 +9,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRVector2.h"
-#include "imgui/imgui_internal.h"
+#include "imgui_internal.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
 

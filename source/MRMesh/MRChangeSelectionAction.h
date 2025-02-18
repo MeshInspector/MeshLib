@@ -133,6 +133,17 @@ public:
         creases_ = objMesh_->creases();
     }
 
+    /// use this constructor to remember object's current creases and immediate set new creases
+    ChangeMeshCreasesAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh, UndirectedEdgeBitSet&& newCreases ) :
+        name_{ name },
+        objMesh_{ objMesh }
+    {
+        if( !objMesh_ )
+            return;
+        creases_ = objMesh_->creases();
+        objMesh_->setCreases( std::move( newCreases ) );
+    }
+
     virtual std::string name() const override { return name_; }
 
     virtual void action( Type ) override

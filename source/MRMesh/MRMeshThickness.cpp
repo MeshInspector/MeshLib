@@ -5,6 +5,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRClosestPointInTriangle.h"
+#include "MRBall.h"
 #include "MRTimer.h"
 #include <cfloat>
 
@@ -177,8 +178,8 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .mtp = isec.mtp, .distSq = sqr( res.radius ) };
     }
 
-    findTrisInBall( mesh, Ball{ res.center, res.oppositeTouchPoint.distSq },
-        [&]( MeshProjectionResult candidate, Ball & ball )
+    findTrisInBall( mesh, Ball3f{ res.center, res.oppositeTouchPoint.distSq },
+        [&]( MeshProjectionResult candidate, Ball3f & ball )
         {
             auto preRadius = res.radius;
             if ( !processCandidate( candidate ) )
@@ -204,7 +205,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
                         break;
                 }
             }
-            ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
+            ball = Ball3f{ res.center, res.oppositeTouchPoint.distSq };
             return Processing::Continue;
         }, m.notIncidentFaces );
 

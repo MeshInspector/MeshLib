@@ -18,6 +18,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPointsHolder.h"
+#include "MRVoxels/MRObjectVoxels.h"
 
 namespace
 {
@@ -58,6 +60,9 @@ const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is
 const std::string cGlobalBasisKey = "globalBasis";
 const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
 const std::string cGlobalBasisScaleKey = "globalBasusScale";
+const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
+const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
+const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 }
 
 namespace Defaults
@@ -180,6 +185,10 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     // lastExtentions_.clear();
 
     SceneSettings::reset();
+
+    setDefaultSerializeMeshFormat( ".ply" );
+    setDefaultSerializePointsFormat( ".ply" );
+    setDefaultSerializeVoxelsFormat( ".vdb" );
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -484,6 +493,17 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( int p = loadInt( cUnitsPrecisionAngle, -1 ); p >= 0 )
             UnitSettings::setUiAnglePrecision( p );
     }
+
+    // Save Scene inner formats
+    {
+        std::string format;
+        format = loadString( cMruInnerMeshFormat, ".ply" );
+        setDefaultSerializeMeshFormat( format );
+        format = loadString( cMruInnerPointsFormat, ".ply" );
+        setDefaultSerializePointsFormat( format );
+        format = loadString( cMruInnerVoxelsFormat, ".vdb" );
+        setDefaultSerializeVoxelsFormat( format );
+    }
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -617,6 +637,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         saveString( cUnitsDegreesMode, std::string( toString( UnitSettings::getDegreesMode() ) ) );
         saveInt( cUnitsPrecisionLen, UnitSettings::getUiLengthPrecision() );
         saveInt( cUnitsPrecisionAngle, UnitSettings::getUiAnglePrecision() );
+    }
+
+    // Save Scene inner formats
+    {
+        saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
+        saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
+        saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
     }
 }
 

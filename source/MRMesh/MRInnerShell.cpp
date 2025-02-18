@@ -78,7 +78,7 @@ FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, con
     std::vector<EdgePoint> splitEdges;
     splitEdges.reserve( ues.count() );
     for ( EdgeId e : ues )
-        splitEdges.emplace_back( e, 0 );
+        splitEdges.emplace_back( e, 0.f );
 
     // find split-point on each edge
     ParallelFor( splitEdges, [&]( size_t i )

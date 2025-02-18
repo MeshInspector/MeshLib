@@ -361,14 +361,14 @@ MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::DicomVolumeAsVdb )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxelsDicom, [] ( pybind11::module_& m )
 {
-    m.def( "loadDicomFolderAsVdb", MR::decorateExpected( &MR::VoxelsLoad::loadDicomFolder<VdbVolume> ),
+    m.def( "loadDicomFolderAsVdb", MR::decorateExpected( &MR::VoxelsLoad::loadDicomFolderAsVdb ),
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads first volumetric data from DICOM file(s)" );
 
     m.def( "loadDicomsFolderAsVdb",
         [] ( const std::filesystem::path& p, unsigned maxNumThreads, const ProgressCallback& cb)
     {
-        auto res = MR::VoxelsLoad::loadDicomsFolder<VdbVolume>( p, maxNumThreads, cb );
+        auto res = MR::VoxelsLoad::loadDicomsFolderAsVdb( p, maxNumThreads, cb );
         std::vector<MR::VoxelsLoad::DicomVolumeAsVdb> resVec;
         std::string accumError;
         for ( auto& r : res )

@@ -2,9 +2,8 @@
 #include <codecvt>
 #include <locale>
 #include "MRPch/MRSpdlog.h"
-#ifdef _WIN32
-#include "windows.h"
-#endif
+
+#include "MRPch/MRWinapi.h"
 
 namespace MR
 {

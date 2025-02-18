@@ -90,12 +90,12 @@ void Viewport::drawLines( const std::vector<LineSegm3f>& lines, const std::vecto
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), 0.0f ) );
 
-    GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
+    GLint colorsId = GL_EXEC( glGetAttribLocation( shader, "color" ) );
     lineColorBuffer.loadData( GL_ARRAY_BUFFER, colors );
     GL_EXEC( glVertexAttribPointer( colorsId, 4, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
-    GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
+    GLint positionId = GL_EXEC( glGetAttribLocation( shader, "position" ) );
     lineBuffer.loadData( GL_ARRAY_BUFFER, lines );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
@@ -141,12 +141,12 @@ void Viewport::drawPoints( const std::vector<Vector3f>& points, const std::vecto
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), 0.0f ) );
 
-    GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
+    GLint colorsId = GL_EXEC( glGetAttribLocation( shader, "color" ) );
     pointColorBuffer.loadData( GL_ARRAY_BUFFER, colors );
     GL_EXEC( glVertexAttribPointer( colorsId, 4, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
-    GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
+    GLint positionId = GL_EXEC( glGetAttribLocation( shader, "position" ) );
     pointBuffer.loadData( GL_ARRAY_BUFFER, points );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
@@ -212,12 +212,12 @@ void Viewport::drawTris( const std::vector<Triangle3f>& tris, const std::vector<
 
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &params.lightPos.x ) );
 
-    GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
+    GLint colorsId = GL_EXEC( glGetAttribLocation( shader, "color" ) );
     quadColorBuffer.loadData( GL_ARRAY_BUFFER, colors );
     GL_EXEC( glVertexAttribPointer( colorsId, 4, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
-    GL_EXEC( GLint normalId = glGetAttribLocation( shader, "normal" ) );
+    GLint normalId = GL_EXEC( glGetAttribLocation( shader, "normal" ) );
     Buffer<Vector3f> normals( tris.size() * 3 );
     for ( int i = 0; i < tris.size(); ++i )
     {
@@ -228,7 +228,7 @@ void Viewport::drawTris( const std::vector<Triangle3f>& tris, const std::vector<
     GL_EXEC( glVertexAttribPointer( normalId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( normalId ) );
 
-    GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
+    GLint positionId = GL_EXEC( glGetAttribLocation( shader, "position" ) );
     quadBuffer.loadData( GL_ARRAY_BUFFER, tris );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );

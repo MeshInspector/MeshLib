@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MeshViewer CXX)
 
-add_executable(${PROJECT_NAME} MRViewerApp.cpp)
+add_executable(${PROJECT_NAME} WIN32 MRViewerApp.cpp)
 
 file(GLOB PNGS "*.png")
 file(COPY ${PNGS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

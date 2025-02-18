@@ -36,7 +36,7 @@ namespace MR::MrbindDetail
         IsSignal<T>::value
     > {};
 
-    // Recurse into `tl::Expected`.
+    // Recurse into `Expected`.
     template <typename T, typename U>
     struct IgnoreTypeInBindings<Expected<T, U>> : std::bool_constant<IgnoreTypeInBindings<T>::value || IgnoreTypeInBindings<U>::value> {};
 

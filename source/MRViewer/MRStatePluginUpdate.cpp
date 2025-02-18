@@ -6,7 +6,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 namespace MR
 {

@@ -33,7 +33,24 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     spdlog
   )
-ELSE() # NOT MR_EMSCRIPTEN
+ELSEIF(WIN32)
+  find_package(glad REQUIRED)
+  find_package(OpenVDB REQUIRED)
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    TBB::tbb
+    MRMesh
+    MRIOExtras
+    MRViewer
+    glad::glad
+    glfw
+    imgui
+    JsonCpp::JsonCpp
+    OpenVDB::openvdb
+    spdlog::spdlog
+    fmt::fmt
+  )
+ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
     MRMesh
@@ -44,10 +61,11 @@ ELSE() # NOT MR_EMSCRIPTEN
     glfw
     imgui
     jsoncpp
+    openvdb
     spdlog
     fmt
   )
-ENDIF() # MR_EMSCRIPTEN
+ENDIF()
 
 IF(MESHLIB_BUILD_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE

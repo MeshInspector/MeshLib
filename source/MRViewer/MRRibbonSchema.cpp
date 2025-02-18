@@ -14,6 +14,35 @@
 namespace MR
 {
 
+void RibbonSchema::eliminateEmptyGroups()
+{
+    // eliminate empty groups
+    for ( auto it = groupsMap.begin(); it != groupsMap.end(); )
+    {
+        if ( it->second.empty() )
+        {
+            spdlog::info( "Empty group {} eliminated", it->first );
+            it = groupsMap.erase( it );
+        }
+        else
+            ++it;
+    }
+
+    // eliminate references on not-existing groups
+    for ( auto & [tabName, groups] : tabsMap )
+    {
+        std::erase_if( groups, [this, &tabName = tabName]( const std::string & groupName ) { return !groupsMap.contains( tabName + groupName ); } );
+    }
+}
+
+void RibbonSchema::sortTabsByPriority()
+{
+    std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )
+    {
+        return a.priority < b.priority;
+    } );
+}
+
 RibbonSchema& RibbonSchemaHolder::schema()
 {
     static RibbonSchema schemaInst;
@@ -331,32 +360,8 @@ void RibbonSchemaLoader::loadSchema() const
     }
     spdlog::info( "Reading Ribbon Schema done" );
 
-    {
-        // eliminate empty groups
-        auto& groupsMap = RibbonSchemaHolder::schema().groupsMap;
-        for ( auto it = groupsMap.begin(); it != groupsMap.end(); )
-        {
-            if ( it->second.empty() )
-            {
-                spdlog::info( "Empty group {} eliminated", it->first );
-                it = groupsMap.erase( it );
-            }
-            else
-                ++it;
-        }
-
-        // eliminate references on not-existing groups
-        for ( auto & [tabName, groups] : RibbonSchemaHolder::schema().tabsMap )
-        {
-            std::erase_if( groups, [&]( const std::string & groupName ) { return !groupsMap.contains( tabName + groupName ); } );
-        }
-    }
-
-    auto& tabsOrder = RibbonSchemaHolder::schema().tabsOrder;
-    std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )
-    {
-        return a.priority < b.priority;
-    } );
+    RibbonSchemaHolder::schema().eliminateEmptyGroups();
+    RibbonSchemaHolder::schema().sortTabsByPriority();
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )

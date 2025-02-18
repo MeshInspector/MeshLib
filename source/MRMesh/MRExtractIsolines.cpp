@@ -227,6 +227,7 @@ void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
 
 IsoLines Isoliner::extract()
 {
+    MR_TIMER
     activeEdges_.clear();
     activeEdges_.resize( topology_.undirectedEdgeSize() );
     BitSetParallelForAll( activeEdges_, [&]( UndirectedEdgeId ue )
@@ -447,7 +448,7 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
 }
 
 std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
-    std::vector<FaceId> * faces )
+    std::vector<FaceId> * faces, UseAABBTree u )
 {
     MR_TIMER
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
@@ -455,19 +456,31 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
         return points[v].z - zLevel;
     };
 
-    VertBitSet store;
-    const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
-    const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
+    FaceBitSet crossedFaces; // the faces crossing given zLevel
 
-    FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
-    BitSetParallelFor( crossedFaces, [&]( FaceId f )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
     {
-        auto vs = mp.mesh.topology.getTriVerts( f );
-        int numNegative = negativeVerts.test( vs[0] ) + negativeVerts.test( vs[1] ) + negativeVerts.test( vs[2] );
-        assert( numNegative >= 0 && numNegative <= 3 );
-        if ( numNegative == 0 || numNegative == 3 )
-            crossedFaces.reset( f );
-    } );
+        // brute force checking all region triangles
+        VertBitSet store;
+        const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
+        const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
+
+        crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
+        BitSetParallelFor( crossedFaces, [&]( FaceId f )
+        {
+            auto vs = mp.mesh.topology.getTriVerts( f );
+            int numNegative = negativeVerts.test( vs[0] ) + negativeVerts.test( vs[1] ) + negativeVerts.test( vs[2] );
+            assert( numNegative >= 0 && numNegative <= 3 );
+            if ( numNegative == 0 || numNegative == 3 )
+                crossedFaces.reset( f );
+        } );
+    }
+    else
+    {
+        // optimized check using AABB tree
+        crossedFaces.resize( mp.mesh.topology.faceSize() );
+        xyPlaneMeshIntersect( mp, zLevel, &crossedFaces, nullptr, nullptr );
+    }
 
     std::vector<FaceId> crossedFacesVec;
     crossedFacesVec.reserve( crossedFaces.count() );

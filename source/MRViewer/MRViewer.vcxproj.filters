@@ -906,6 +906,9 @@
     <ClInclude Include="MRObjectMeshSubdivide.h">
       <Filter>History</Filter>
     </ClInclude>
+    <ClInclude Include="MRMruFormatParameters.h">
+      <Filter>IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

@@ -648,6 +648,11 @@ void Viewport::drawAxesAndViewController() const
         {
             getViewerInstance().basisAxes->setXf( basisAxesXf, id );
             draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            for ( const auto& child : getViewerInstance().basisAxes->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            }
         }
         if ( controllerVisible )
         {

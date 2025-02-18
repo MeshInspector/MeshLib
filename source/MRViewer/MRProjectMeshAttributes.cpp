@@ -20,6 +20,7 @@ namespace MR
 std::optional<MeshAttributes> projectMeshAttributes(
     const ObjectMesh& objectMesh,
     const MeshPart& mp,
+    const AffineXf3f* newMeshXf,
     ProgressCallback cb )
 {
     const auto& newMesh = mp.mesh;
@@ -61,6 +62,11 @@ std::optional<MeshAttributes> projectMeshAttributes(
             newAttribute.texturePerFace[id] = oldTexturePerFace[res.proj.face];
     };
 
+    AffineXf3f storeXf;
+    ProjectAttributeParams params;
+    auto treeWXf = objectMesh.worldXf();
+    params.xfs = createProjectionTransforms( storeXf, newMeshXf, &treeWXf );
+
     if ( hasVertAttribs )
     {
         auto vertFunc = [&] ( VertId id, const MeshProjectionResult& res, VertId v1, VertId v2, VertId v3 )
@@ -79,12 +85,14 @@ std::optional<MeshAttributes> projectMeshAttributes(
             mvp.region = &vertRegion;
         }
 
-        if ( !projectVertAttribute( mvp, *objectMesh.mesh(), vertFunc, subprogress( cb, 0.0f, hasVertAttribs ? 0.5f : 1.0f ) ) )
+        params.progressCb = subprogress( cb, 0.0f, hasVertAttribs ? 0.5f : 1.0f );
+        if ( !projectVertAttribute( mvp, *objectMesh.mesh(), vertFunc, params ) )
             return {};
 
     }
 
-    if ( hasFaceAttribs && !projectFaceAttribute( mp, *objectMesh.mesh(), faceFunc, subprogress( cb, hasVertAttribs ? 0.0f : 0.5f, 1.0f ) ) )
+    params.progressCb = subprogress( cb, hasVertAttribs ? 0.0f : 0.5f, 1.0f );
+    if ( hasFaceAttribs && !projectFaceAttribute( mp, *objectMesh.mesh(), faceFunc, params ) )
         return {};
 
     return newAttribute;

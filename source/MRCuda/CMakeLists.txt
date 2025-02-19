@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-include(ConfigureCuda)
-
 project(MRCuda CXX CUDA)
 
 include(ConfigureCudaForThisProject)

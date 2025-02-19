@@ -606,7 +606,7 @@ jobs:
           merge-multiple: true
 
       - name: Install twine
-        run: python3 -m pip install --upgrade pip twine
+        run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to Production PyPi
         run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing

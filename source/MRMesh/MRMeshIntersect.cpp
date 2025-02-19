@@ -390,6 +390,7 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
 void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs )
 {
+    MR_TIMER
     assert( fs || ues || vs );
 
     const auto& m = meshPart.mesh;

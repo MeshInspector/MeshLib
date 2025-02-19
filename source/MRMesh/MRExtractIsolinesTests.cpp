@@ -105,7 +105,8 @@ TEST( MRMesh, ExtractXYPlaneSections )
         Vector3f point = mesh.edgePoint( i );
         EXPECT_LT( std::abs( point.z - testLevel ), 1e-6f );
     }
-    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 8 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::No ).size(), 8 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::Yes ).size(), 8 );
 
     FaceBitSet fs;
     fs.autoResizeSet( 5_f );
@@ -119,7 +120,8 @@ TEST( MRMesh, ExtractXYPlaneSections )
         Vector3f point = mesh.edgePoint( i );
         EXPECT_LT( std::abs( point.z - testLevel ), 1e-6f );
     }
-    EXPECT_EQ( findTriangleSectionsByXYPlane( { mesh, &fs }, testLevel ).size(), 2 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( { mesh, &fs }, testLevel, nullptr, UseAABBTree::No ).size(), 2 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( { mesh, &fs }, testLevel, nullptr, UseAABBTree::Yes ).size(), 2 );
 
     // make a hole in mesh to extract not closed contour
     mesh.deleteFaces( fs );
@@ -132,7 +134,8 @@ TEST( MRMesh, ExtractXYPlaneSections )
         Vector3f point = mesh.edgePoint( i );
         EXPECT_LT( std::abs( point.z - testLevel ), 1e-6f );
     }
-    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel ).size(), 6 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::No ).size(), 6 );
+    EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::Yes ).size(), 6 );
 }
 
 TEST( MRMesh, TrackPlaneSection )

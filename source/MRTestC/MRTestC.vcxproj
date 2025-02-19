@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAddNoise.c" />
     <ClCompile Include="MRBitSet.c" />
     <ClCompile Include="MRBox.c" />
     <ClCompile Include="MRExpandShrink.c" />
@@ -21,8 +22,11 @@
     <ClCompile Include="MRMeshCollidePrecise.c" />
     <ClCompile Include="MRMeshComponents.c" />
     <ClCompile Include="MRMeshDecimate.c" />
+    <ClCompile Include="MRMeshExtrude.c" />
     <ClCompile Include="MRMeshFillHole.c" />
     <ClCompile Include="MRMeshNormals.c" />
+    <ClCompile Include="MRMeshOffset.c" />
+    <ClCompile Include="MRMeshSubdivide.c" />
     <ClCompile Include="MRPointCloud.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
@@ -33,6 +37,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBox.h" />
     <ClInclude Include="MRExpandShrink.h" />
@@ -43,8 +48,11 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />
+    <ClInclude Include="MRMeshOffset.h" />
+    <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestMacros.h" />

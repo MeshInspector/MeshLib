@@ -17,7 +17,7 @@ void testOffsetMesh(void)
     MRMesh* mesh = mrMakeCube(&size, &base);
     MRMeshPart inputMeshPart = { .mesh = mesh, .region = NULL };
     MROffsetParameters params = mrOffsetParametersNew();
-    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000000.f);
+    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000.f);
     float offset = 0.1f;
     MRMesh* outputMesh = mrOffsetMesh(inputMeshPart, offset, &params, &errorString);
     TEST_ASSERT(errorString == NULL);
@@ -33,7 +33,7 @@ void testDoubleOffsetMesh(void)
     MRMesh* mesh = mrMakeCube(&size, &base);
     MRMeshPart inputMeshPart = { .mesh = mesh, .region = NULL };
     MROffsetParameters params = mrOffsetParametersNew();
-    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000000.f);
+    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000.f);
     float offset = 0.1f;
     float offset2 = -0.2f;
     MRMesh* outputMesh = mrDoubleOffsetMesh(inputMeshPart, offset, offset2, &params, &errorString);
@@ -50,7 +50,7 @@ void testMcOffsetMesh(void)
     MRMesh* mesh = mrMakeCube(&size, &base);
     MRMeshPart inputMeshPart = { .mesh = mesh, .region = NULL };
     MROffsetParameters params = mrOffsetParametersNew();
-    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000000.f);
+    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000.f);
     float offset = 0.1f;
     MRMesh* outputMesh = mrMcOffsetMesh(inputMeshPart, offset, &params, &errorString);
     TEST_ASSERT(errorString == NULL);
@@ -66,7 +66,7 @@ void testSharpOffsetMesh(void)
     MRMesh* mesh = mrMakeCube(&size, &base);
     MRMeshPart inputMeshPart = { .mesh = mesh, .region = NULL };
     MROffsetParameters params = mrOffsetParametersNew();
-    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000000.f);
+    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000.f);
     MRGeneralOffsetParameters generalParams = mrGeneralOffsetParametersNew();
     generalParams.mode = MRGeneralOffsetParametersModeStandard;
     float offset = 0.1f;
@@ -84,7 +84,7 @@ void testGeneralOffsetMesh(void)
     MRMesh* mesh = mrMakeCube(&size, &base);
     MRMeshPart inputMeshPart = { .mesh = mesh, .region = NULL };
     MROffsetParameters params = mrOffsetParametersNew();
-    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000000.f);
+    params.voxelSize = mrSuggestVoxelSize(inputMeshPart, 10000.f);
     MRGeneralOffsetParameters generalParams = mrGeneralOffsetParametersNew();
     generalParams.mode = MRGeneralOffsetParametersModeStandard;
     float offset = 0.1f;

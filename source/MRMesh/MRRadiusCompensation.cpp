@@ -25,6 +25,8 @@ public:
     RadiusCompensator( Mesh& mesh, const CompensateRadiusParams& params ):
         mesh_{ mesh }, params_{ params }
     {
+        if ( params.projectToOriginalMesh_ )
+            meshCpy_ = mesh;
         params_.direction = params_.direction.normalized();
         radiusSq_ = sqr( params_.toolRadius );
     }
@@ -65,6 +67,7 @@ private:
     float sumCompensationCost_( const Vector3f& toolCenter );
 
     Mesh& mesh_;
+    Mesh meshCpy_;
     CompensateRadiusParams params_;
     const FaceBitSet* faceRegion_{ nullptr };
     VertBitSet vertRegion_;
@@ -290,9 +293,28 @@ Expected<void> RadiusCompensator::postprocessMesh()
     rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.85f, 1.0f );
+    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh_ ? 0.92f : 1.0f );
     
     if ( !remesh( mesh_, rParams ) )
+        return unexpectedOperationCanceled();
+
+    if ( !params_.projectToOriginalMesh_ )
+        return {};
+
+    auto verts = getInnerVerts( mesh_.topology, *faceRegion_ );
+    auto keepGoing = BitSetParallelFor( verts, [&] ( VertId v )
+    {
+        auto proj = findSignedDistance( mesh_.points[v], meshCpy_ );
+        if ( !proj )
+            return;
+        if ( proj->dist >= 0.0f )
+            return;
+        mesh_.points[v] = proj->proj.point;
+    }, subprogress( params_.callback, 0.92f,  1.0f ) );
+
+    mesh_.invalidateCaches();
+
+    if ( !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};

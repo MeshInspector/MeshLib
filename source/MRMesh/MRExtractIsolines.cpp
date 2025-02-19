@@ -451,13 +451,12 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
     std::vector<FaceId> * faces, UseAABBTree u )
 {
     MR_TIMER
-    Timer t("0");
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;
     };
 
-    FaceBitSet crossedFaces; // the faces crossing given zLevel
+    std::vector<FaceId> crossedFacesVec; // the faces crossing given zLevel
 
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
     {
@@ -466,7 +465,7 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
         const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
         const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
 
-        crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
+        FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
         BitSetParallelFor( crossedFaces, [&]( FaceId f )
         {
             auto vs = mp.mesh.topology.getTriVerts( f );
@@ -475,28 +474,18 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
             if ( numNegative == 0 || numNegative == 3 )
                 crossedFaces.reset( f );
         } );
+
+        crossedFacesVec.reserve( crossedFaces.count() );
+        for ( auto f : crossedFaces )
+            crossedFacesVec.push_back( f );
     }
     else
     {
         // optimized check using AABB tree
-        Timer tt("crossedFaces.resize");
-        crossedFaces.resize( mp.mesh.topology.faceSize() );
-        tt.finish();
-        xyPlaneMeshIntersect( mp, zLevel, &crossedFaces, nullptr, nullptr );
+        xyPlaneMeshIntersect( mp, zLevel, nullptr, nullptr, nullptr, &crossedFacesVec );
     }
 
-    t.restart( "1" );
-    std::vector<FaceId> crossedFacesVec;
-    const auto cnt = crossedFaces.count();
-    t.restart( "1a" );
-    crossedFacesVec.reserve( cnt );
-    t.restart( "1b" );
-    for ( auto f : crossedFaces )
-        crossedFacesVec.push_back( f );
-
-    t.restart( "2" );
     std::vector<LineSegm3f> res( crossedFacesVec.size() );
-    t.restart( "3" );
     ParallelFor( res, [&]( size_t i )
     {
         auto vs = mp.mesh.topology.getTriVerts( crossedFacesVec[i] );

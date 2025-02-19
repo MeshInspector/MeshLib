@@ -60,7 +60,11 @@ ELSE()
     # For our CI:
     find_package(CUDA 11 REQUIRED)
   ELSE()
-    find_package(CUDA 12 REQUIRED)
+    find_package(CUDA 12)
+    IF(NOT CUDA)
+      # Why do we need this? A mystery!
+      find_package(CUDA 12.1 REQUIRED)
+    ENDIF()
   ENDIF()
 
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} \

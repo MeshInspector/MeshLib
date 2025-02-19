@@ -5,13 +5,13 @@
 #include <tgmath.h>
 #include <time.h>
 
-#define RUN_TEST( func )                                    \
-    printf( "%s ...\n", #func );                            \
-    {                                                       \
-        time_t ts = time( NULL );                           \
-        func();                                             \
-        time_t duration_s = time( NULL ) - ts;              \
-        printf( "%s done (~ %d s)\n", #func, duration_s );  \
+#define RUN_TEST( func )                                         \
+    printf( "%s ...\n", #func );                                 \
+    {                                                            \
+        time_t ts = time( NULL );                                \
+        func();                                                  \
+        time_t duration_s = time( NULL ) - ts;                   \
+        printf( "%s done (~ %d s)\n", #func, (int)duration_s );  \
     }
 
 #define TEST_ASSERT( ... )  \

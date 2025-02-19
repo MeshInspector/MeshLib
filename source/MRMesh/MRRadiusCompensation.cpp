@@ -240,7 +240,7 @@ Expected<void> RadiusCompensator::applyCompensation()
             return unexpectedOperationCanceled();
 
         DeloneSettings dParams;
-        dParams.region = &flippedFaces;
+        dParams.region = faceRegion_;
         dParams.maxAngleChange = PI_F / 6;
         makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
@@ -262,10 +262,10 @@ Expected<void> RadiusCompensator::applyCompensation()
         mesh_.points[v] = toWorldXf_( Vector3f( pos.x, pos.y, *value ) );
         vertRegion_.reset( v );
     }, subprogress( params_.callback, 0.65f, 0.8f ) );
-
+    
     if ( vertRegion_.any() )
         positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
-
+    
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -275,14 +275,23 @@ Expected<void> RadiusCompensator::applyCompensation()
 Expected<void> RadiusCompensator::postprocessMesh()
 {
     MR_TIMER;
+
+    DeloneSettings dParams;
+    dParams.region = faceRegion_;
+    dParams.maxAngleChange = PI_F / 3;
+    makeDeloneEdgeFlips( mesh_, dParams, int( faceRegion_->count() ) );
+
+    if ( !reportProgress( params_.callback, 0.85f ) )
+        return unexpectedOperationCanceled();
+
     auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh_.topology, *faceRegion_ );
     RemeshSettings rParams;
     rParams.finalRelaxIters = 2;
     rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.8f, 1.0f );
-
+    rParams.progressCallback = subprogress( params_.callback, 0.85f, 1.0f );
+    
     if ( !remesh( mesh_, rParams ) )
         return unexpectedOperationCanceled();
 

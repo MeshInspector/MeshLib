@@ -451,6 +451,7 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
     std::vector<FaceId> * faces, UseAABBTree u )
 {
     MR_TIMER
+    Timer t("0");
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;
@@ -478,46 +479,71 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
     else
     {
         // optimized check using AABB tree
+        Timer tt("crossedFaces.resize");
         crossedFaces.resize( mp.mesh.topology.faceSize() );
+        tt.finish();
         xyPlaneMeshIntersect( mp, zLevel, &crossedFaces, nullptr, nullptr );
     }
 
+    t.restart( "1" );
     std::vector<FaceId> crossedFacesVec;
-    crossedFacesVec.reserve( crossedFaces.count() );
+    const auto cnt = crossedFaces.count();
+    t.restart( "1a" );
+    crossedFacesVec.reserve( cnt );
+    t.restart( "1b" );
     for ( auto f : crossedFaces )
         crossedFacesVec.push_back( f );
 
+    t.restart( "2" );
     std::vector<LineSegm3f> res( crossedFacesVec.size() );
+    t.restart( "3" );
     ParallelFor( res, [&]( size_t i )
     {
-        auto f = crossedFacesVec[i];
-        VertId v0, v1, v2;
-        mp.mesh.topology.getTriVerts( f, v0, v1, v2 );
-        const float z0 = valueInPoint( v0 );
-        const float z1 = valueInPoint( v1 );
-        const float z2 = valueInPoint( v2 );
-        assert( z0 < 0 || z1 < 0 || z2 < 0 );
-        assert( z0 >= 0 || z1 >= 0 || z2 >= 0 );
-        LineSegm3f segm;
-        int n = 0;
-        auto checkEdge = [&]( VertId vo, VertId vd, float zo, float zd )
+        auto vs = mp.mesh.topology.getTriVerts( crossedFacesVec[i] );
+        float zs[3];
+        int bs[3];
+        for ( int j = 0; j < 3; ++j )
         {
-            if ( ( zo < 0 && 0 <= zd ) || ( zd < 0 && 0 <= zo ) )
-            {
-                const float x = zo / ( zo - zd );
-                auto p = x * mp.mesh.points[vd] + ( 1 - x ) * mp.mesh.points[vo];
-                assert( n == 0 || n == 1 );
-                if ( n == 0 )
-                    segm.a = p;
-                else
-                    segm.b = p;
-                ++n;
-            }
-        };
-        checkEdge( v0, v1, z0, z1 );
-        checkEdge( v1, v2, z1, z2 );
-        checkEdge( v2, v0, z2, z0 );
-        assert( n == 2 );
+            zs[j] = valueInPoint( vs[j] );
+            bs[j] = int( zs[j] < 0 );
+        }
+        assert( bs[0] || bs[1] || bs[2] );
+        assert( !bs[0] || !bs[1] || !bs[2] );
+
+        // rotate vertices so that isoline intersects segments rvs[0]-rvs[1] and rvs[1]-rvs[2]
+        VertId rvs[3];
+        float rzs[3];
+        if ( ( bs[2] ^ bs[0] ) == 0 )
+        {
+            rvs[0] = vs[0]; rvs[1] = vs[1]; rvs[2] = vs[2];
+            rzs[0] = zs[0]; rzs[1] = zs[1]; rzs[2] = zs[2];
+        }
+        else if ( ( bs[0] ^ bs[1] ) == 0 )
+        {
+            rvs[0] = vs[1]; rvs[1] = vs[2]; rvs[2] = vs[0];
+            rzs[0] = zs[1]; rzs[1] = zs[2]; rzs[2] = zs[0];
+        }
+        else if ( ( bs[1] ^ bs[2] ) == 0 )
+        {
+            rvs[0] = vs[2]; rvs[1] = vs[0]; rvs[2] = vs[1];
+            rzs[0] = zs[2]; rzs[1] = zs[0]; rzs[2] = zs[1];
+        }
+        else
+        {
+            assert( false );
+        }
+
+        LineSegm3f segm;
+        {
+            assert ( ( rzs[0] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[0] ) );
+            const float x = rzs[0] / ( rzs[0] - rzs[1] );
+            segm.a = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[0]];
+        }
+        {
+            assert ( ( rzs[2] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[2] ) );
+            const float x = rzs[2] / ( rzs[2] - rzs[1] );
+            segm.b = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[2]];
+        }
         res[i] = segm;
     } );
 

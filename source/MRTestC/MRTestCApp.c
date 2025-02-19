@@ -28,8 +28,8 @@ int main( void )
     testBoxiInvalid();
     testBitSet();
     testDegenerateBandNonEmpty();
+    testDegenerateBandEmpty();
     testMeshBoolean();
-    testMeshOffset();
     testOffsetMesh();
     testDoubleOffsetMesh();
     testMcOffsetMesh();

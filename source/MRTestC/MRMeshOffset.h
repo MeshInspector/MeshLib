@@ -1,6 +1,5 @@
 #pragma once
 
-void testMeshOffset( void );
 void testOffsetMesh( void );
 void testDoubleOffsetMesh( void );
 void testMcOffsetMesh( void );

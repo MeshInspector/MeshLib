@@ -491,20 +491,21 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
     ParallelFor( res, [&]( size_t i )
     {
         auto f = crossedFacesVec[i];
-        EdgeId e0, e1, e2;
-        mp.mesh.topology.getTriEdges( f, e0, e1, e2 );
-        const float z0 = valueInPoint( mp.mesh.topology.org( e0 ) );
-        const float z1 = valueInPoint( mp.mesh.topology.org( e1 ) );
-        const float z2 = valueInPoint( mp.mesh.topology.org( e2 ) );
+        VertId v0, v1, v2;
+        mp.mesh.topology.getTriVerts( f, v0, v1, v2 );
+        const float z0 = valueInPoint( v0 );
+        const float z1 = valueInPoint( v1 );
+        const float z2 = valueInPoint( v2 );
         assert( z0 < 0 || z1 < 0 || z2 < 0 );
         assert( z0 >= 0 || z1 >= 0 || z2 >= 0 );
         LineSegm3f segm;
         int n = 0;
-        auto checkEdge = [&]( EdgeId e, float vo, float vd )
+        auto checkEdge = [&]( VertId vo, VertId vd, float zo, float zd )
         {
-            if ( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) )
+            if ( ( zo < 0 && 0 <= zd ) || ( zd < 0 && 0 <= zo ) )
             {
-                auto p = mp.mesh.edgePoint( toEdgePoint( e, vo, vd ) );
+                const float x = zo / ( zo - zd );
+                auto p = x * mp.mesh.points[vd] + ( 1 - x ) * mp.mesh.points[vo];
                 assert( n == 0 || n == 1 );
                 if ( n == 0 )
                     segm.a = p;
@@ -513,9 +514,9 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
                 ++n;
             }
         };
-        checkEdge( e0, z0, z1 );
-        checkEdge( e1, z1, z2 );
-        checkEdge( e2, z2, z0 );
+        checkEdge( v0, v1, z0, z1 );
+        checkEdge( v1, v2, z1, z2 );
+        checkEdge( v2, v0, z2, z0 );
         assert( n == 2 );
         res[i] = segm;
     } );

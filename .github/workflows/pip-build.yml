@@ -8,16 +8,13 @@ name: Build Pip Wheels
 on:
   release:
     types: [ published ]
-    inputs:
-      docker_image_tag:
-        default: "latest"
-        required: false
-        type: string
   # This is the manual run from the UI.
   workflow_dispatch:
     inputs:
       docker_image_tag:
-        default: "latest"
+        # Empty string means the same thing as "latest", but we use an empty string here to ensure this works,
+        #   because `types: [published]` can't have any inputs, so there we are forced to use an empty string, so it needs to work.
+        default: ""
         required: false
         type: string
   # This is the `uses:` call from other `.yml` files.
@@ -55,7 +52,7 @@ jobs:
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag || 'latest'}}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false

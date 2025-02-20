@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(MRCuda CXX CUDA)
 
-include(ConfigureCudaForThisProject)
+include(CudaCompilerOptions)
 
 option(MRCUDA_NO_VOXELS "Disable voxels support" OFF)
 

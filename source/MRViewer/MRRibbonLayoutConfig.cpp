@@ -16,7 +16,7 @@ RibbonConfig createRibbonConfigFromJson( const Json::Value& root )
         config.menuUIConfig = RibbonMenuUIConfig();
         auto& menuConfig = *config.menuUIConfig;
         if ( layout["drawTabs"].isBool() )
-            menuConfig.topLayout = layout["drawTabs"].asBool() ? RibbonTopPanelLayoutMode::RibbonWithTabs : RibbonTopPanelLayoutMode::Ribbon;
+            menuConfig.topLayout = layout["drawTabs"].asBool() ? RibbonTopPanelLayoutMode::RibbonWithTabs : RibbonTopPanelLayoutMode::RibbonNoTabs;
         if ( layout["centerRibbonItems"].isBool() )
             menuConfig.centerRibbonItems = layout["centerRibbonItems"].asBool();
         if ( layout["drawToolbar"].isBool() )

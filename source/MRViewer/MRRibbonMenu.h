@@ -19,8 +19,8 @@ class Object;
 
 enum class RibbonTopPanelLayoutMode
 {
-    None, ///< no top panel at all (toolbar is also forced hidden is mode)
-    Ribbon, ///< show ribbon on first tab, without tabs panel
+    None, ///< no top panel at all (toolbar is also forced hidden in this mode)
+    RibbonNoTabs, ///< show only icons from the first tab, without tabs panel
     RibbonWithTabs ///< both ribbon toolbar and tabs
 };
 

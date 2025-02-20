@@ -98,11 +98,16 @@ public:
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
+    /// returns per-vertex colors of the object
+    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
+    /// sets per-vertex colors of the object
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    /// swaps per-vertex colors of the object with given argument
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
     const FaceColors& getFacesColorMap() const { return facesColorMap_; }
-    virtual void setFacesColorMap( FaceColors facesColorMap )
-    { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
-    virtual void updateFacesColorMap( FaceColors& updated )
-    { std::swap( facesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void setFacesColorMap( FaceColors facesColorMap ) { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void updateFacesColorMap( FaceColors& updated ) { std::swap( facesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     MRMESH_API virtual void setEdgeWidth( float edgeWidth );
     float getEdgeWidth() const { return edgeWidth_; }
@@ -148,7 +153,8 @@ public:
     /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
     MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} );
 
-    MRMESH_API void copyColors( const VisualObject& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} ) override;
+    /// copies vertex colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} );
 
     // ancillary texture can be used to have custom features visualization without affecting real one
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
@@ -297,6 +303,7 @@ protected:
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;
 
+    VertColors vertsColorMap_;
     FaceColors facesColorMap_;
     float edgeWidth_{ 0.5f };
     float pointSize_{ 5.f };

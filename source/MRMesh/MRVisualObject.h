@@ -233,21 +233,11 @@ public:
     /// sets the object as can/cannot be picked (by mouse) in all of given viewports
     MRMESH_API virtual void setPickable( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
-    /// returns per-vertex colors of the object
-    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
-    /// sets per-vertex colors of the object
-    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
-    /// swaps per-vertex colors of the object with given argument
-    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
-
     /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
 
     /// sets coloring mode of the object with given argument
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
-
-    /// copies point colors from given source object \param src using given map \param thisToSrc
-    MRMESH_API virtual void copyColors( const VisualObject & src, const VertMap & thisToSrc, const FaceMap& thisToSrcFaces = {} );
 
     /// returns the current shininess visual value
     float getShininess() const { return shininess_; }
@@ -332,7 +322,6 @@ protected:
 
     /// Main coloring options
     ColoringType coloringType_{ColoringType::SolidColor};
-    VertColors vertsColorMap_;
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;

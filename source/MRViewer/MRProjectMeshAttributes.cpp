@@ -112,7 +112,7 @@ void emplaceMeshAttributes(
     }
     if ( !newAttribute.colorMap.empty() )
     {
-        Historian<ChangeVertsColorMapAction> htpf( "setVertsColorMap", objectMesh, std::move( newAttribute.colorMap ) );
+        Historian<ChangeVertsColorMapAction<ObjectMesh>> htpf( "setVertsColorMap", objectMesh, std::move( newAttribute.colorMap ) );
     }
     if ( !newAttribute.faceColors.empty() )
     {

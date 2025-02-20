@@ -47,11 +47,16 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}
 
+    /// returns per-vertex colors of the object
+    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
+    /// sets per-vertex colors of the object
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    /// swaps per-vertex colors of the object with given argument
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
     const UndirectedEdgeColors& getLinesColorMap() const { return linesColorMap_; }
-    virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap )
-    { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
-    virtual void updateLinesColorMap( UndirectedEdgeColors& updated )
-    { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap ) { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void updateLinesColorMap( UndirectedEdgeColors& updated ) { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
     [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
     /// get all visualize properties masks
@@ -100,6 +105,7 @@ protected:
     mutable std::optional<float> totalLength_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
+    VertColors vertsColorMap_;
     UndirectedEdgeColors linesColorMap_;
 
     ViewportMask showPoints_;

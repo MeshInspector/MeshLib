@@ -64,6 +64,16 @@ public:
 
     [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
 
+    /// returns per-point colors of the object
+    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
+    /// sets per-point colors of the object
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    /// swaps per-point colors of the object with given argument
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
+    /// copies point colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyColors( const ObjectPointsHolder & src, const VertMap & thisToSrc, const FaceMap& thisToSrcFaces = {} );
+
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
@@ -135,6 +145,7 @@ protected:
     mutable std::optional<size_t> numSelectedPoints_;
     ViewportProperty<Color> selectedVerticesColor_;
     ViewportMask showSelectedVertices_ = ViewportMask::all();
+    VertColors vertsColorMap_;
 
     /// swaps signals, used in `swap` function to return back signals after `swapBase_`
     /// pls call Parent::swapSignals_ first when overriding this function

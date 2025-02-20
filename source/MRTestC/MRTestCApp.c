@@ -11,6 +11,7 @@
 #include "MRMeshNormals.h"
 #include "MRMeshOffset.h"
 #include "MRMeshComponents.h"
+#include "MRMeshTopology.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshSubdivide.h"
 #include "MRFixSelfIntersections.h"
@@ -64,5 +65,16 @@ int main( void )
     testResampling();
     testCropping();
     testAccessors();
+
+   //MRMeshToplogy
+    test_mrMeshTopologyPack();
+    test_mrMeshTopologyGetValidVerts();
+    test_mrMeshTopologyGetValidFaces();
+    test_mrMeshTopologyFindHoleRepresentiveEdges();
+    test_mrMeshTopologyGetLeftTriVerts();
+    test_mrMeshTopologyFindNumHoles();
+    test_mrMeshTopologyFaceSize();
+    test_mrMeshTopologyGetTriangulation();
+
     printf("Tests finished\n");
 }

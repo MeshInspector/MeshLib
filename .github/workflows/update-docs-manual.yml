@@ -18,50 +18,18 @@ on:
         default: "MeshLib/dev"
   
 jobs:
-  # NOTE: all output values are strings
-  # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
-  config:
-    uses: ./.github/workflows/config.yml
-    
-  debug-config:
-    needs: config
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print config
-        run: |
-          echo << EOF
-          ${{ toJSON( needs.config.outputs ) }}
-          EOF
-
-  prepare-image:
-    needs: config
-    uses: ./.github/workflows/prepare-images.yml
-    with:
-      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
-      need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
-      need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
-      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
-    secrets: inherit
-
   create-stubs:
-    needs: [ config, prepare-image ]
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:
-      image: ${{ matrix.docker-image }}
+      image: meshlib/meshlib-ubuntu22-arm64:latest
       options: --user root
     strategy:
       fail-fast: false
-      matrix:
-        os: [ ubuntu22 ]
-        config: [ Release ]
-        compiler: [ clang ]
-        include:
-          - os: ubuntu22
-            docker-image: meshlib/meshlib-ubuntu22-arm64:${{ needs.config.outputs.docker_image_tag }}
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
+    env:
+      CONFIG: Release
+      CXX-COMPILER: /usr/bin/clang++-14
+      CXX-STANDARD: 20
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -108,20 +76,19 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          MR_VERSION: ${{ needs.config.outputs.app_version }}
+          MESHLIB_BUILD_RELEASE: ON
+          MESHLIB_BUILD_DEBUG: OFF
+          CMAKE_CXX_COMPILER: ${{ CXX-COMPILER }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
+            -DMR_CXX_STANDARD=${{ CXX-STANDARD }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=OFF
 
       - name: Generate and build MRBind bindings
         env:
-          CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          CXX: $CXX-COMPILER
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{CONFIG}}/bin
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py

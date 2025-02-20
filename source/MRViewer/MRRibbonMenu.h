@@ -17,12 +17,24 @@ namespace MR
 
 class Object;
 
-
-enum class RibbonLayoutMode
+enum class RibbonTopPanelLayoutMode
 {
-    None, // no menu present
-    SceneTree, // only scene tree is present
-    All // both scene tree and top panel are present
+    None, ///< no top panel at all (toolbar is also forced hidden is mode)
+    Ribbon, ///< show ribbon on first tab, without tabs panel
+    RibbonWithTabs ///< both ribbon toolbar and tabs
+};
+
+struct RibbonMenuUIConfig 
+{
+    RibbonTopPanelLayoutMode topLayout{ RibbonTopPanelLayoutMode::RibbonWithTabs }; ///< how to show top panel
+    bool centerRibbonItems{ false }; ///< if true - items on selected tab will be centered to have equal spacing from left and right (ignored top panel is hidden)
+
+    bool drawScenePanel{ true }; ///< if false - panel with scene tree, information and transform will be hidden
+    bool drawToolbar{ true }; ///< if false - toolbar will be hidden (ignored if top panel is hidden)
+    bool drawViewportTags{ true }; ///< if false - window with viewport label and id will be hidden
+    bool drawNotifications{ true }; ///< if false - no notifications are drawn on screen
+
+    bool operator==( const RibbonMenuUIConfig& ) const = default;
 };
 
 // Class to control and render ribbon-style menu
@@ -134,10 +146,9 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
-    /// returns current layout mode of menu (find more in RibbonLayoutMode comments)
-    RibbonLayoutMode getLayoutMode() const { return layoutMode_; }
-    /// sets new layout mode for menu, will be applied in next frame (find more in RibbonLayoutMode comments)
-    MRVIEWER_API virtual void setLayoutMode( RibbonLayoutMode mode );
+    /// returns current menu ui configuration (find more in RibbonMenuUIConfig comments)
+    const RibbonMenuUIConfig& getMenuUIConfig() const { return menuUIConfig_; }
+    MRVIEWER_API virtual void setMenuUIConfig( const RibbonMenuUIConfig& newConfig );
 
     // ======== selected objects options drawing
     bool drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected );
@@ -234,8 +245,6 @@ protected:
     // this function changes internal sizes of topPanel when it is enabled or disabled
     MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
 
-    RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
-
     RibbonMenuSearch searcher_;
 private:
     void changeTab_( int newTab );
@@ -267,6 +276,8 @@ private:
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };
     float transformHeight_{ 0.f };
+
+    RibbonMenuUIConfig menuUIConfig_;
 
     // how long blocking window will blink in seconds
     float blockingHighlightTimer_{ 0.0f };

@@ -35,6 +35,7 @@ void EmbeddedPython::shutdown()
         return; // Nothing to do.
 
     { // Tell the thread to stop.
+        std::unique_lock guard( self.cvMutex_ );
         self.stopInterpreterThread_ = true;
         self.cv_.notify_all();
     }
@@ -202,7 +203,7 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                 static bool initOk = init_();
                 if ( !initOk )
                 {
-                    spdlog::error( "Failied to initialize Python." );
+                    spdlog::error( "Failed to initialize Python." );
                 }
                 else
                 {

@@ -112,8 +112,10 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 /// \param fs  triangles crossed or touched by the plane
 /// \param ues edges of these triangles
 /// \param vs  vertices of these triangles
+/// \param fsVec triangles crossed or touched by the plane in unspecified order
 MRMESH_API void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
-    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs );
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs,
+    std::vector<FaceId> * fsVec = nullptr );
 
 /// \}
 

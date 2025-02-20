@@ -740,9 +740,9 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
     // NOTE: std::ifstream::get appends a null character
     std::array<char, std::size( cDicomMagicNumber ) + 1> buf;
     if ( !ifs.seekg( cDicomMagicNumberOffset, std::ios::beg ) || !ifs.get( buf.data(), buf.size(), '\0' ) )
-        return false;
+        return DicomStatusEnum::Invalid;
     if ( std::strncmp( buf.data(), cDicomMagicNumber.data(), cDicomMagicNumber.size() ) != 0 )
-        return false;
+        return DicomStatusEnum::Invalid;
     ifs.seekg( 0, std::ios::beg );
     assert( ifs );
 #endif

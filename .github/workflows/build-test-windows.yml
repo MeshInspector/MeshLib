@@ -193,15 +193,16 @@ jobs:
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
+        # Need `-host_arch=amd64` to avoid `fatal error C1060: compiler is out of heap space` in MI release builds on VS2022. Adding it here for consistency.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
             if errorlevel 1 exit 1
             cmake -B source\x64\${{matrix.config}}Build -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
             if errorlevel 1 exit 1
             cmake --build source\x64\${{matrix.config}}Build -j
             if errorlevel 1 exit 1
-            mv source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}
+            move source\x64\${{matrix.config}}Build\bin source\x64\${{matrix.config}}
             if errorlevel 1 exit 1
           ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
@@ -231,8 +232,9 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # Need `-host_arch=amd64` to avoid `fatal error C1060: compiler is out of heap space` in MI release builds on VS2022. Adding it here for consistency.
         run: |
-          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests

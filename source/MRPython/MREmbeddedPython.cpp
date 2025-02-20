@@ -35,10 +35,12 @@ void EmbeddedPython::shutdown()
         return; // Nothing to do.
 
     { // Tell the thread to stop.
+        spdlog::debug( "EmbeddedPython: shutdown, waiting for lock" );
+        std::unique_lock guard( self.cvMutex_ );
         self.stopInterpreterThread_ = true;
         self.cv_.notify_all();
     }
-
+    spdlog::debug( "EmbeddedPython: shutdown, join python thread" );
     self.interpreterThread_.join();
 }
 
@@ -181,19 +183,12 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
 
             while ( true )
             {
-                { // Wait for source code.
-                    bool stop = false;
+                { // Wait for python code.
                     cv_.wait( guard, [&]
                     {
-                        if ( stopInterpreterThread_ )
-                        {
-                            stop = true;
-                            return true;
-                        }
-
-                        return state_ == State::running;
+                        return stopInterpreterThread_ || state_ == State::running;
                     } );
-                    if ( stop )
+                    if ( stopInterpreterThread_ )
                         break;
                 }
 
@@ -202,7 +197,7 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                 static bool initOk = init_();
                 if ( !initOk )
                 {
-                    spdlog::error( "Failied to initialize Python." );
+                    spdlog::error( "Failed to initialize Python." );
                 }
                 else
                 {

@@ -14,6 +14,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MREmbeddedPython
     spdlog
     Python::Python
     pybind11nonlimitedapi_stubs
@@ -22,6 +23,7 @@ IF(APPLE)
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MREmbeddedPython
     Python::Python
     spdlog::spdlog
     pybind11nonlimitedapi_stubs

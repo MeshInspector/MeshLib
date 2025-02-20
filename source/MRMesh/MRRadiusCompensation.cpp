@@ -25,7 +25,7 @@ public:
     RadiusCompensator( Mesh& mesh, const CompensateRadiusParams& params ):
         mesh_{ mesh }, params_{ params }
     {
-        if ( params.projectToOriginalMesh_ )
+        if ( params.projectToOriginalMesh )
             meshCpy_ = mesh;
         params_.direction = params_.direction.normalized();
         radiusSq_ = sqr( params_.toolRadius );
@@ -293,12 +293,12 @@ Expected<void> RadiusCompensator::postprocessMesh()
     rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh_ ? 0.92f : 1.0f );
+    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh ? 0.92f : 1.0f );
     
     if ( !remesh( mesh_, rParams ) )
         return unexpectedOperationCanceled();
 
-    if ( !params_.projectToOriginalMesh_ )
+    if ( !params_.projectToOriginalMesh )
         return {};
 
     auto verts = getInnerVerts( mesh_.topology, *faceRegion_ );

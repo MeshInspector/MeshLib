@@ -97,8 +97,8 @@ EdgeId PolylineTopology::makeEdge()
 
 EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
 {
-    assert( a < int( edgePerVertex_.size() ) );
-    assert( b < int( edgePerVertex_.size() ) );
+    assert( a.valid() && a < int( edgePerVertex_.size() ) );
+    assert( b.valid() && b < int( edgePerVertex_.size() ) );
     if ( a == b )
         return {};
 

@@ -30,6 +30,7 @@
     <ClCompile Include="MRPointCloud.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
+    <ClCompile Include="TestFunctions.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -55,6 +56,7 @@
     <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVDBConversions.h" />
+    <ClInclude Include="TestFunctions.h" />
     <ClInclude Include="TestMacros.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -1,17 +1,19 @@
 #pragma once
 
+#include "TestFunctions.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <tgmath.h>
-#include <time.h>
 
-#define RUN_TEST( func )                                         \
-    printf( "%s ...\n", #func );                                 \
-    {                                                            \
-        time_t ts = time( NULL );                                \
-        func();                                                  \
-        time_t duration_s = time( NULL ) - ts;                   \
-        printf( "%s done (~ %d s)\n", #func, (int)duration_s );  \
+#define RUN_TEST( func )                      \
+    printf( "%s ...\n", #func );              \
+    {                                         \
+        struct timespec ts1 = timespec_now(); \
+        func();                               \
+        struct timespec ts2 = timespec_now(); \
+        struct timespec duration = timespec_get_duration( &ts1, &ts2 );          \
+        printf( "%s done (%.3f s)\n", #func, timespec_to_seconds( &duration ) ); \
     }
 
 #define TEST_ASSERT( ... )  \

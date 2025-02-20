@@ -1,10 +1,4 @@
-get_property(MESHLIB_ALREADY_CONFIGURED_CUDA GLOBAL PROPERTY MESHLIB_ALREADY_CONFIGURED_CUDA)
-
-IF(NOT MESHLIB_ALREADY_CONFIGURED_CUDA)
-  # We try to prevent double inclusion because that seems to break Cuda detection on old CMake.
-  # We use a "global property" instead of a plain variable to make it persist across subdirectories.
-  set_property(GLOBAL PROPERTY MESHLIB_ALREADY_CONFIGURED_CUDA 1)
-
+IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
   IF(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
     set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
     set(CMAKE_CXX_STANDARD_REQUIRED ON)

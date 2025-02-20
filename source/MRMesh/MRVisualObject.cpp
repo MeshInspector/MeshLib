@@ -231,25 +231,6 @@ void VisualObject::setColoringType( ColoringType coloringType )
     }
 }
 
-void VisualObject::copyColors( const VisualObject & src, const VertMap & thisToSrc, const FaceMap& )
-{
-    MR_TIMER
-
-    setColoringType( src.getColoringType() );
-
-    const auto& srcColorMap = src.getVertsColorMap();
-    if ( srcColorMap.empty() )
-        return;
-
-    VertColors colorMap;
-    colorMap.resizeNoInit( thisToSrc.size() );
-    ParallelFor( colorMap, [&]( VertId id )
-    {
-        colorMap[id] = srcColorMap[thisToSrc[id]];
-    } );
-    setVertsColorMap( std::move( colorMap ) );
-}
-
 std::shared_ptr<Object> VisualObject::clone() const
 {
     return std::make_shared<VisualObject>( ProtectedStruct{}, *this );
@@ -413,7 +394,6 @@ Box3f VisualObject::getWorldBox( ViewportId id ) const
 size_t VisualObject::heapBytes() const
 {
     return Object::heapBytes()
-        + vertsColorMap_.heapBytes()
         + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
 }

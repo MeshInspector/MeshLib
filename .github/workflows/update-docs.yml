@@ -32,6 +32,7 @@ jobs:
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib

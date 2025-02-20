@@ -78,17 +78,17 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
-          CMAKE_CXX_COMPILER: ${{ CXX-COMPILER }}
+          CMAKE_CXX_COMPILER: ${{ env.CXX-COMPILER }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_CXX_STANDARD=${{ CXX-STANDARD }}
+            -DMR_CXX_STANDARD=${{ env.CXX-STANDARD }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=OFF
 
       - name: Generate and build MRBind bindings
         env:
-          CXX: $CXX-COMPILER
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{CONFIG}}/bin
+          CXX: ${{ env.CXX-COMPILER }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py

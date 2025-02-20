@@ -98,7 +98,7 @@ jobs:
           echo
           
           emrun \
-            --browser=/usr/lib/firefox \
+            --browser=/usr/bin/firefox \
             --browser-args="--headless" \
             --safe-firefox-profile \
             --kill-exit \

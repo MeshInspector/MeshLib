@@ -74,11 +74,11 @@ private:
     // This seems to be the safest option, I had issues otherwise. We need everything Python-related to happen in the same thread,
     // and we also need to not finalize-and-recreate the interpreter while the program runs because that breaks our generated bindings
     // (which may or may not be possible to fix in the bindings, but it's easier not to, and the manual even advises that
-    // some modules can break if you recreate the interpeter: https://docs.python.org/3/c-api/init.html#c.Py_FinalizeEx).
+    // some modules can break if you recreate the interpreter: https://docs.python.org/3/c-api/init.html#c.Py_FinalizeEx).
 
     std::thread interpreterThread_;
 
-    std::atomic_bool stopInterpreterThread_ = false;
+    bool stopInterpreterThread_ = false;
 };
 
 } //namespace MR

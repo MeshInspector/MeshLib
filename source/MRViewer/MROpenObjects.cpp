@@ -35,6 +35,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::vector<FilePathNode> files;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             bool dicomFolder = false;
+            VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatus::Invalid;
         #endif
 
         bool empty() const
@@ -69,8 +70,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     continue;
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatus::Invalid ) // unsupported will be reported later
                 {
+                    node.dicomStatus = dicomStatus;
                     node.dicomFolder = true;
                     node.files.clear();
                 }
@@ -96,9 +98,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         }
     };
     clearEmptySubfolders( filesTree );
-
-    if ( filesTree.empty() )
-        return unexpected( std::string( "Error: folder is empty." ) );
 
     using loadObjResultType = Expected<LoadedObjects>;
     struct NodeAndResult
@@ -137,6 +136,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     res.obj->setName( utf8string( folder.stem() ) );
     createFolderObj( filesTree, res.obj.get() );
 
+    if ( nodes.empty() )
+    {
+        if ( dicomOnly )
+            return unexpected( "Could not find any DICOM files." );
+        else
+            return unexpected( "Error: folder is empty." );
+    }
+
     auto pseudoRoot = std::make_shared<Object>();
     pseudoRoot->addChild( res.obj );
 
@@ -157,14 +164,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             else
             {
-                nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                    [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
-                    {
-                        // dicom is always opened in meters, and we can use this information to convert them properly
-                        for ( auto& obj : objs.objs )
-                            obj->applyScale( dicomScaleFactor );
-                        return std::move( objs );
-                    } );
+                if ( nodeAndRes.node.dicomStatus != VoxelsLoad::DicomStatus::Ok )
+                    nodeAndRes.result = loadObjResultType( unexpected( "Unsupported DICOM folder" ) );
+                else
+                    nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
+                        [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
+                        {
+                            // dicom is always opened in meters, and we can use this information to convert them properly
+                            for ( auto& obj : objs.objs )
+                                obj->applyScale( dicomScaleFactor );
+                            return std::move( objs );
+                        } );
             }
             #endif
             completed += 1;

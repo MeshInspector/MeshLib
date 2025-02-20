@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#pragma warning( disable: 4305 ) // truncation from double to float
+
 TEST( MRMesh, PolylineTrimWithPlane )
 {
     const auto direction = MR::Vector3f { 0.9682972431, -0.0004187558079, -0.249800697 };

@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 
-void test_mrMeshTopologyPack(void)
+void testMrMeshTopologyPack(void)
 {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
@@ -16,7 +16,7 @@ void test_mrMeshTopologyPack(void)
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyGetValidVerts(void)
+void testMrMeshTopologyGetValidVerts(void)
 {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
@@ -28,7 +28,7 @@ void test_mrMeshTopologyGetValidVerts(void)
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyGetValidFaces(void)
+void testMrMeshTopologyGetValidFaces(void)
 {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
@@ -40,7 +40,7 @@ void test_mrMeshTopologyGetValidFaces(void)
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyFindHoleRepresentiveEdges( void ) {
+void testMrMeshTopologyFindHoleRepresentiveEdges( void ) {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
     MRMesh* mesh = mrMakeCube(&size, &base);
@@ -51,7 +51,7 @@ void test_mrMeshTopologyFindHoleRepresentiveEdges( void ) {
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyGetLeftTriVerts( void ) {
+void testMrMeshTopologyGetLeftTriVerts( void ) {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
     MRMesh* mesh = mrMakeCube(&size, &base);
@@ -64,7 +64,7 @@ void test_mrMeshTopologyGetLeftTriVerts( void ) {
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyFindNumHoles( void ) {
+void testMrMeshTopologyFindNumHoles( void ) {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
     MRMesh* mesh = mrMakeCube(&size, &base);
@@ -76,7 +76,7 @@ void test_mrMeshTopologyFindNumHoles( void ) {
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyFaceSize(void) {
+void testMrMeshTopologyFaceSize(void) {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
     MRMesh* mesh = mrMakeCube(&size, &base);
@@ -88,7 +88,7 @@ void test_mrMeshTopologyFaceSize(void) {
     mrMeshFree(mesh);
 }
 
-void test_mrMeshTopologyGetTriangulation(void) {
+void testMrMeshTopologyGetTriangulation(void) {
     MRVector3f size = mrVector3fDiagonal(1.0f);
     MRVector3f base = mrVector3fDiagonal(-0.5f);
     MRMesh* mesh = mrMakeCube(&size, &base);

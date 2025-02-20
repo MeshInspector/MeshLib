@@ -66,15 +66,15 @@ int main( void )
     RUN_TEST( testResampling )
     RUN_TEST( testCropping )
     RUN_TEST( testAccessors )
-     //MRMeshToplogy
-    RUN_TEST( test_mrMeshTopologyPack )
-    RUN_TEST( test_mrMeshTopologyGetValidVerts )
-    RUN_TEST( test_mrMeshTopologyGetValidFaces )
-    RUN_TEST( test_mrMeshTopologyFindHoleRepresentiveEdges )
-    RUN_TEST( test_mrMeshTopologyGetLeftTriVerts )
-    RUN_TEST( test_mrMeshTopologyFindNumHoles )
-    RUN_TEST( test_mrMeshTopologyFaceSize )
-    RUN_TEST( test_mrMeshTopologyGetTriangulation )
+     //MRMeshTopology
+    RUN_TEST( testMrMeshTopologyPack )
+    RUN_TEST( testMrMeshTopologyGetValidVerts )
+    RUN_TEST( testMrMeshTopologyGetValidFaces )
+    RUN_TEST( testMrMeshTopologyFindHoleRepresentiveEdges )
+    RUN_TEST( testMrMeshTopologyGetLeftTriVerts )
+    RUN_TEST( testMrMeshTopologyFindNumHoles )
+    RUN_TEST( testMrMeshTopologyFaceSize )
+    RUN_TEST( testMrMeshTopologyGetTriangulation )
       
     printf("Tests finished\n");
 }

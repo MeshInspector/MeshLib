@@ -1,10 +1,10 @@
 #pragma once
 
-void test_mrMeshTopologyPack( void );
-void test_mrMeshTopologyGetValidVerts( void );
-void test_mrMeshTopologyGetValidFaces( void );
-void test_mrMeshTopologyFindHoleRepresentiveEdges( void );
-void test_mrMeshTopologyGetLeftTriVerts( void );
-void test_mrMeshTopologyFindNumHoles( void );
-void test_mrMeshTopologyFaceSize( void );
-void test_mrMeshTopologyGetTriangulation( void );
+void testMrMeshTopologyPack( void );
+void testMrMeshTopologyGetValidVerts( void );
+void testMrMeshTopologyGetValidFaces( void );
+void testMrMeshTopologyFindHoleRepresentiveEdges( void );
+void testMrMeshTopologyGetLeftTriVerts( void );
+void testMrMeshTopologyFindNumHoles( void );
+void testMrMeshTopologyFaceSize( void );
+void testMrMeshTopologyGetTriangulation( void );

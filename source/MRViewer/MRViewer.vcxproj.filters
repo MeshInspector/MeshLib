@@ -463,6 +463,9 @@
     <ClCompile Include="MRObjectMeshSubdivide.cpp">
       <Filter>History</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonLayoutConfig.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -908,6 +911,9 @@
     </ClInclude>
     <ClInclude Include="MRMruFormatParameters.h">
       <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonLayoutConfig.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

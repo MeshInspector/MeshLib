@@ -61,6 +61,11 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     steps:
+      - name: Fail on first run
+        if: ${{ matrix.os == 'ubuntu24' && github.run_number == 1 }}
+        run:
+          exit 1
+
       - name: Work-around possible permission issues
         shell: bash
         run: |

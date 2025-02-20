@@ -38,22 +38,17 @@ jobs:
           path: MeshLib/scripts/wheel/meshlib/meshlib
 
       - name: Check for Python Stubs
-        id: check_py_stubs
         run: |
-          if [ -d MeshLib/scripts/wheel/meshlib/meshlib ] ; then
-            echo "py_stubs=true" >> $GITHUB_OUTPUT
-          else
+          if [ ! -d MeshLib/scripts/wheel/meshlib/meshlib ] ; then
             echo "Failed to get Python stub files, aborting"
-            echo "py_stubs=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
       - name: Build All Documentation
-        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }}
 
       - name: Commit and push changes
-        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
         working-directory: MeshInspector.github.io
         run: |
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"

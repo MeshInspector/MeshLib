@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "TestMacros.h"
 #include "MRAddNoise.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
@@ -21,60 +22,59 @@
 
 int main( void )
 {
-    testAddNoise();
-    testArea();
-    testBoxi();
-    testBoxf();
-    testBoxfInvalid();
-    testBoxiInvalid();
-    testBitSet();
-    testDegenerateBandNonEmpty();
-    testDegenerateBandEmpty();
-    testMeshBoolean();
-    testOffsetMesh();
-    testDoubleOffsetMesh();
-    testMcOffsetMesh();
-    testSharpOffsetMesh();
-    testGeneralOffsetMesh();
-    testThickenMesh();
-    testMeshSubdivide();
-    testBooleanMultipleEdgePropogationSort();
-    testBooleanMapper();
-    testMeshCollidePrecise();
-    testMeshDecimate();
-    testMeshFillHole();
-    testMeshFillHoleNicely();
-    testMeshNormals();
-    testComponentsMap();
-    testLargeRegions();
-    testUniteCloseVertices();
-    testLargeComponents();
-    testLargestComponent();
-    testGetComponent();
-    testFixSelfIntersections();
-    testRightBoundary();
-    testFindHoleComplicatingFaces();
-    testExpandShrink();
-    testExpandShrinkVerts();
-    testShortEdges();
-    testIncidentFacesFromVerts();
-    testIncidentFacesFromEdges();
-    testTriangulation();
-    testVDBConversions();
-    testUniformResampling();
-    testResampling();
-    testCropping();
-    testAccessors();
-
-   //MRMeshToplogy
-    test_mrMeshTopologyPack();
-    test_mrMeshTopologyGetValidVerts();
-    test_mrMeshTopologyGetValidFaces();
-    test_mrMeshTopologyFindHoleRepresentiveEdges();
-    test_mrMeshTopologyGetLeftTriVerts();
-    test_mrMeshTopologyFindNumHoles();
-    test_mrMeshTopologyFaceSize();
-    test_mrMeshTopologyGetTriangulation();
-
+    RUN_TEST( testAddNoise )
+    RUN_TEST( testArea )
+    RUN_TEST( testBoxi )
+    RUN_TEST( testBoxf )
+    RUN_TEST( testBoxfInvalid )
+    RUN_TEST( testBoxiInvalid )
+    RUN_TEST( testBitSet )
+    RUN_TEST( testDegenerateBandNonEmpty )
+    RUN_TEST( testDegenerateBandEmpty )
+    RUN_TEST( testMeshBoolean )
+    RUN_TEST( testOffsetMesh )
+    RUN_TEST( testDoubleOffsetMesh )
+    RUN_TEST( testMcOffsetMesh )
+    RUN_TEST( testSharpOffsetMesh )
+    RUN_TEST( testGeneralOffsetMesh )
+    RUN_TEST( testThickenMesh )
+    RUN_TEST( testMeshSubdivide )
+    RUN_TEST( testBooleanMultipleEdgePropogationSort )
+    RUN_TEST( testBooleanMapper )
+    RUN_TEST( testMeshCollidePrecise )
+    RUN_TEST( testMeshDecimate )
+    RUN_TEST( testMeshFillHole )
+    RUN_TEST( testMeshFillHoleNicely )
+    RUN_TEST( testMeshNormals )
+    RUN_TEST( testComponentsMap )
+    RUN_TEST( testLargeRegions )
+    RUN_TEST( testUniteCloseVertices )
+    RUN_TEST( testLargeComponents )
+    RUN_TEST( testLargestComponent )
+    RUN_TEST( testGetComponent )
+    RUN_TEST( testFixSelfIntersections )
+    RUN_TEST( testRightBoundary )
+    RUN_TEST( testFindHoleComplicatingFaces )
+    RUN_TEST( testExpandShrink )
+    RUN_TEST( testExpandShrinkVerts )
+    RUN_TEST( testShortEdges )
+    RUN_TEST( testIncidentFacesFromVerts )
+    RUN_TEST( testIncidentFacesFromEdges )
+    RUN_TEST( testTriangulation )
+    RUN_TEST( testVDBConversions )
+    RUN_TEST( testUniformResampling )
+    RUN_TEST( testResampling )
+    RUN_TEST( testCropping )
+    RUN_TEST( testAccessors )
+     //MRMeshToplogy
+    RUN_TEST( test_mrMeshTopologyPack )
+    RUN_TEST( test_mrMeshTopologyGetValidVerts )
+    RUN_TEST( test_mrMeshTopologyGetValidFaces )
+    RUN_TEST( test_mrMeshTopologyFindHoleRepresentiveEdges )
+    RUN_TEST( test_mrMeshTopologyGetLeftTriVerts )
+    RUN_TEST( test_mrMeshTopologyFindNumHoles )
+    RUN_TEST( test_mrMeshTopologyFaceSize )
+    RUN_TEST( test_mrMeshTopologyGetTriangulation )
+      
     printf("Tests finished\n");
 }

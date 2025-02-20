@@ -27,10 +27,10 @@
     <ClCompile Include="MRMeshNormals.c" />
     <ClCompile Include="MRMeshOffset.c" />
     <ClCompile Include="MRMeshSubdivide.c" />
-    <ClCompile Include="MRMeshTopology.c" />
     <ClCompile Include="MRPointCloud.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
+    <ClCompile Include="TestFunctions.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -57,6 +57,7 @@
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVDBConversions.h" />
+    <ClInclude Include="TestFunctions.h" />
     <ClInclude Include="TestMacros.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -96,7 +97,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SILENCE_NONCONFORMING_TGMATH_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
@@ -114,7 +115,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SILENCE_NONCONFORMING_TGMATH_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>

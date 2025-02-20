@@ -81,6 +81,7 @@
     <Image Include="resource\icons\X0_5\BestFit Plane.png" />
     <Image Include="resource\icons\X0_5\BestFit Point.png" />
     <Image Include="resource\icons\X0_5\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_5\Invert View.png" />
     <Image Include="resource\icons\X0_5\Object Info.png" />
     <Image Include="resource\icons\X0_5\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X0_5\Ribbon Scene Show all.png" />
@@ -95,6 +96,7 @@
     <Image Include="resource\icons\X0_75\BestFit Plane.png" />
     <Image Include="resource\icons\X0_75\BestFit Point.png" />
     <Image Include="resource\icons\X0_75\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_75\Invert View.png" />
     <Image Include="resource\icons\X0_75\Object Info.png" />
     <Image Include="resource\icons\X0_75\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X0_75\Ribbon Scene Show all.png" />
@@ -109,6 +111,7 @@
     <Image Include="resource\icons\X1\BestFit Plane.png" />
     <Image Include="resource\icons\X1\BestFit Point.png" />
     <Image Include="resource\icons\X1\BestFit Sphere.png" />
+    <Image Include="resource\icons\X1\Invert View.png" />
     <Image Include="resource\icons\X1\Object Info.png" />
     <Image Include="resource\icons\X1\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X1\Ribbon Scene Show all.png" />
@@ -252,6 +255,7 @@
     <Image Include="resource\icons\X3\Fit selected primitives.png" />
     <Image Include="resource\icons\X3\Front View.png" />
     <Image Include="resource\icons\X3\Horizontal Viewports.png" />
+    <Image Include="resource\icons\X3\Invert View.png" />
     <Image Include="resource\icons\X3\Isometric View.png" />
     <Image Include="resource\icons\X3\Left View.png" />
     <Image Include="resource\icons\X3\Move object.png" />

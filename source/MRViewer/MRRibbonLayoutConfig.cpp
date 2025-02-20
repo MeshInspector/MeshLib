@@ -3,6 +3,7 @@
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

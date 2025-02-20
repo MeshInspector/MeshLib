@@ -23,6 +23,7 @@ IF(APPLE)
     fmt
     gtest
     spdlog
+    Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
@@ -65,6 +66,7 @@ ELSE()
       fmt
       gtest
       spdlog
+      Python::Python
       pybind11nonlimitedapi_stubs
       ${CMAKE_DL_LIBS}
     )

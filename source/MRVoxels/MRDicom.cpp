@@ -7,7 +7,7 @@
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxelsLoad.h"
 #include "MRVoxelsSave.h"
-
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
@@ -318,6 +318,9 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     vol.max = fileRes.max;
     vol.min = fileRes.min;
 
+    if constexpr ( std::same_as<T, VdbVolume> )
+        openvdb::tools::changeBackground( vol.data->tree(), vol.min );
+
     DicomVolumeT<T> res;
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );
@@ -343,7 +346,11 @@ LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>
     tbb::task_arena limitedArena( maxNumThreads );
     std::atomic<int> numLoadedSlices = 0;
     const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
-    makeVdbTopologyDense( data );
+
+    // do not call `touchLeaf` for all voxels, because it does not activate touched voxels as `denseFill` do
+    // note that changing active state in parallel in general is not safe, so you should have valid state before parallel modification of the grid
+    // note that first layer is already loaded
+    data.data->denseFill( toVdbBox( Box3i( Vector3i( 0, 0, 1 ), data.dims - Vector3i::diagonal( 1 ) ) ), data.min, true );
 
     limitedArena.execute( [&]
     {

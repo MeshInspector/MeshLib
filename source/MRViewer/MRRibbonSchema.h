@@ -51,6 +51,12 @@ struct RibbonSchema
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
     MenuItemsList sceneButtonsList;
+
+    /// deletes empty groups (and references on them from tabs)
+    MRVIEWER_API void eliminateEmptyGroups();
+
+    /// re-order items in tabsOrder according to their priority, the order of items having same priority is preserved
+    MRVIEWER_API void sortTabsByPriority();
 };
 
 // This class holds static ribbon schema,

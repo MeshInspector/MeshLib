@@ -70,7 +70,11 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
     {
         if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
         {
-            ribbonMenu->setLayoutMode( show ? MR::RibbonLayoutMode::SceneTree : MR::RibbonLayoutMode::None );
+            auto config = MR::RibbonMenuUIConfig();
+            config.topLayout = MR::RibbonTopPanelLayoutMode::None;
+            config.drawToolbar = false;
+            config.drawScenePanel = show;
+            ribbonMenu->setMenuUIConfig( config );
             viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         }
     } );
@@ -98,7 +102,7 @@ public:
     void setupBasePlugins( Viewer* viewer ) const override
     {
         auto menu = std::make_shared<RibbonMenu>();
-        menu->setLayoutMode( RibbonLayoutMode::None ); // no scene tree by default
+        menu->setMenuUIConfig( { .topLayout = RibbonTopPanelLayoutMode::None,.drawScenePanel = false,.drawToolbar = false } ); // no scene tree by default
         viewer->setMenuPlugin( menu );
     }
     void setupExtendedLibraries() const override {}

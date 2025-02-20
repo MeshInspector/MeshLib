@@ -26,7 +26,7 @@ struct CompensateRadiusParams
     FaceBitSet* region{ nullptr };
 
     /// if this flag is set result mesh is back projected to original one to compensate possible precision issues
-    bool projectToOriginalMesh_{ true };
+    bool projectToOriginalMesh{ true };
 
     /// this value will be used for post-process re-meshing
     /// value less or equal to zero will use average mesh edge length

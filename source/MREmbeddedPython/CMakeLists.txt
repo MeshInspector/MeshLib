@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(MRPython CXX)
+project(MREmbeddedPython CXX)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -15,12 +15,14 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
+    Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    Python::Python
     spdlog::spdlog
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
@@ -37,24 +39,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
 IF(NOT WIN32)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     _GNU_SOURCE
-  )
-ENDIF()
-
-IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-  # Copy Python DLLs into the bin directory.
-  # We always copy the Release ones (pybind11 wants to use Release DLLs even in Debug mode).
-  # By default only the `python311[_d].dll` gets copied, but we also need `python3.dll` and the non-debug `python311.dll` in Debug mode as said above.
-  file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ENDIF()
-
-IF(WIN32)
-  # Copy Windows-specific `__init__.py`. Since we also need to rename the file, we can't use `file(COPY ...)`.
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
-    COMMAND ${CMAKE_COMMAND} -E copy "${PROJECT_SOURCE_DIR}/../../test_python/helper/win_init.py" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E copy "${PROJECT_SOURCE_DIR}/../../test_python/helper/win_init.py" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib/__init__.py"
-    COMMAND_ERROR_IS_FATAL ANY
   )
 ENDIF()
 

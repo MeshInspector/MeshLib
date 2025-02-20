@@ -49,8 +49,10 @@ public:
 
     /// returns per-vertex colors of the object
     const VertColors& getVertsColorMap() const { return vertsColorMap_; }
+
     /// sets per-vertex colors of the object
     virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
     /// swaps per-vertex colors of the object with given argument
     virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
 

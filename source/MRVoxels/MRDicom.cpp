@@ -676,7 +676,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
         ++fCounter;
         auto filePath = entry.path();
         std::string uid;
-        if ( entry.is_regular_file( ec ) && isDicomFile( filePath, &uid ) == DicomStatusEnum::Ok )
+        if ( entry.is_regular_file( ec ) && isDicomFile( filePath, &uid ) )
             seriesMap[uid].push_back( filePath );
         if ( !reportProgress( cb, float( fCounter ) / float( filesNum ) ) )
             return unexpectedOperationCanceled();
@@ -819,7 +819,7 @@ bool isDicomFolder( const std::filesystem::path& dirPath )
         {
             const auto& path = entry.path();
             const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) == DicomStatusEnum::Ok )
+            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
                 return true;
         }
     }

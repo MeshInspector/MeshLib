@@ -33,8 +33,11 @@ struct DicomStatus
         reason( rs )
     {}
 
-    // implicit by design
-    operator DicomStatusEnum() const { return status; }
+    explicit operator bool() const
+    { return status == DicomStatusEnum::Ok; }
+
+    bool operator==( DicomStatusEnum s ) const
+    { return status == s; }
 
     DicomStatusEnum status = DicomStatusEnum::Invalid;
     std::string reason;     // if status is Unsupported, specify reason why

@@ -8,14 +8,6 @@ on:
         required: false
         type: string
         default: "MeshLib/dev"
-  # for test
-  pull_request:
-    branches: [ master ]
-    inputs:
-      output_folder:
-        required: false
-        type: string
-        default: "MeshLib/dev"
   
 jobs:
   create-stubs:

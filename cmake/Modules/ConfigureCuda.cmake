@@ -57,14 +57,9 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
     message("CMAKE_CXX_COMPILER=CMAKE_CUDA_HOST_COMPILER=${CMAKE_CUDA_HOST_COMPILER}")
 
-    IF(WIN32)
-      # For our CI:
-      find_package(CUDA 11 REQUIRED)
-    ELSE()
-      # If the following line gives you this error:  Could NOT find CUDA (missing: CUDA_NVCC_EXECUTABLE) (found suitable version "12.1", minimum required is "12")
-      # That's because you ran this file twice. Make sure it runs at most once.
-      find_package(CUDA 12 REQUIRED)
-    ENDIF()
+    # If the following line gives you this error:  Could NOT find CUDA (missing: CUDA_NVCC_EXECUTABLE) (found suitable version "12.1", minimum required is "12")
+    # That's because you ran this file twice. Make sure it runs at most once.
+    find_package(CUDA 12 REQUIRED)
 
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} \
       --std c++20 \

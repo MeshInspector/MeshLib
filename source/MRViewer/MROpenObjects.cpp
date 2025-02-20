@@ -35,7 +35,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::vector<FilePathNode> files;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             bool dicomFolder = false;
-            VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatus::Invalid;
+            VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
         #endif
 
         bool empty() const
@@ -70,7 +70,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     continue;
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatus::Invalid ) // unsupported will be reported later
+                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
                 {
                     node.dicomStatus = dicomStatus;
                     node.dicomFolder = true;
@@ -164,8 +164,8 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             else
             {
-                if ( nodeAndRes.node.dicomStatus != VoxelsLoad::DicomStatus::Ok )
-                    nodeAndRes.result = loadObjResultType( unexpected( "Unsupported DICOM folder" ) );
+                if ( nodeAndRes.node.dicomStatus != VoxelsLoad::DicomStatusEnum::Ok )
+                    nodeAndRes.result = loadObjResultType( unexpected( fmt::format( "Unsupported DICOM folder: {}", nodeAndRes.node.dicomStatus.reason ) ) );
                 else
                     nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
                         [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType

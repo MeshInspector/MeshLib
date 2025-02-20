@@ -18,11 +18,26 @@ namespace VoxelsLoad
 {
 
 
-enum class DicomStatus : int
+enum class DicomStatusEnum : int
 {
     Ok = 0,         // valid DICOM and we can open it
     Invalid,        // not a valid DICOM
-    Unsupported,    // a valid DICOM, but we do not support it (e.g. some strange MediaStorages)
+    Unsupported,    // a valid DICOM, but we do not support it (e.g. some MediaStorages)
+};
+
+struct DicomStatus
+{
+    // implicit by design
+    DicomStatus( DicomStatusEnum st, std::string_view rs = "" ):
+        status( st ),
+        reason( rs )
+    {}
+
+    // implicit by design
+    operator DicomStatusEnum() const { return status; }
+
+    DicomStatusEnum status = DicomStatusEnum::Invalid;
+    std::string reason;     // if status is Unsupported, specify reason why
 };
 
 /// check if file is a valid DICOM dataset file

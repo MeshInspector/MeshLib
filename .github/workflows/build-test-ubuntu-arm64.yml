@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Fail on first run
-        if: ${{ matrix.os == 'ubuntu24' && github.run_number == 1 }}
+        if: ${{ matrix.os == 'ubuntu24' && github.run_number == '1' }}
         run:
           exit 1
 

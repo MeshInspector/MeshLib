@@ -86,6 +86,9 @@ MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = 
 /// this is called typically in preparation for 3D space sampling with voxelSize step, and subdivision is important for making leaves of AABB tree not too big compared with voxelSize
 [[nodiscard]] MRMESH_API Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb = {} );
 
+/// returns the data of subdivided mesh given ObjectMesh (which remains unchanged) and subdivision parameters
+[[nodiscard]] MRMESH_API ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh& obj, const SubdivideSettings& subs );
+
 /// \}
 
 } //namespace MR

@@ -7,13 +7,13 @@
 namespace MR
 {
 
-EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* new2Old, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     if ( polyline.topology.numValidVerts() == 0 )
         return {};
 
-    if ( new2Old )
-        *new2Old = {};
+    if ( newPositiveEdges )
+        *newPositiveEdges = {};
 
     EdgeBitSet sectionEdges;
     const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
@@ -44,8 +44,8 @@ EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBi
         }
     }
 
-    if ( new2Old )
-        *new2Old = std::move( sectionEdges );
+    if ( newPositiveEdges )
+        *newPositiveEdges = std::move( sectionEdges );
 
     return visited;
 }

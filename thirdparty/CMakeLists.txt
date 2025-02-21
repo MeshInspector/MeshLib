@@ -80,8 +80,8 @@ ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
 
-#option(PHMAP_INSTALL "" ON)
-#add_subdirectory(./parallel-hashmap)
+option(PHMAP_INSTALL "" ON)
+add_subdirectory(./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
   set(GDCM_BUILD_APPLICATIONS OFF)
@@ -150,8 +150,8 @@ ELSE() # not MR_EMSCRIPTEN
   file(GLOB CLIP_HEADERS "clip/*.h")
   install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 
-  #set(E57_XML_PARSER TinyXML2 CACHE STRING "")
-  #add_subdirectory(./libE57Format)
+  set(E57_XML_PARSER TinyXML2 CACHE STRING "")
+  add_subdirectory(./libE57Format)
 ENDIF()
 
 find_package(glad)
@@ -166,8 +166,8 @@ IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(./mrbind-pybind11)
 ENDIF()
 
-#set(TINYGLTF_INSTALL ON)
-#add_subdirectory(./tinygltf)
+set(TINYGLTF_INSTALL ON)
+add_subdirectory(./tinygltf)
 
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")

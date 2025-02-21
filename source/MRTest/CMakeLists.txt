@@ -17,6 +17,7 @@ IF(APPLE)
     MRMesh
     MRIOExtras
     MRPython
+    MREmbeddedPython
     MRViewer
     jsoncpp
     fmt
@@ -45,6 +46,7 @@ ELSE()
       MRMesh
       MRIOExtras
       MRPython
+      MREmbeddedPython
       MRViewer
       JsonCpp::JsonCpp
       fmt::fmt
@@ -58,6 +60,7 @@ ELSE()
       MRMesh
       MRIOExtras
       MRPython
+      MREmbeddedPython
       MRViewer
       jsoncpp
       fmt

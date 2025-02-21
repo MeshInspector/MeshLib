@@ -252,6 +252,7 @@ ENDIF()
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_PYTHON_SUPPORT)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRPython ./MRPython)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbeddedPython ./MREmbeddedPython)
 
     IF(MESHLIB_BUILD_PYTHON_MODULES)
       add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)

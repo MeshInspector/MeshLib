@@ -1,12 +1,12 @@
 #include "MREmbeddedPython.h"
-#include "MRPython.h"
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRUnifiedPythonStream.h"
+#include "MRPython/MRPython.h"
+#include "MRPython/MRUnifiedPythonStream.h"
 
 #include <pybind11/embed.h>
 

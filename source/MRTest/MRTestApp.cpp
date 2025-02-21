@@ -12,7 +12,7 @@
 
 #ifndef __EMSCRIPTEN__
 #include "MRPython/MRPython.h"
-#include "MRPython/MREmbeddedPython.h"
+#include "MREmbeddedPython/MREmbeddedPython.h"
 #endif
 
 #if !defined(__EMSCRIPTEN__) && !defined(_WIN32)

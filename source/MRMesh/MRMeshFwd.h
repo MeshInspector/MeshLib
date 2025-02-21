@@ -574,6 +574,7 @@ class SceneRootObject;
 class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
+struct ObjectMeshData;
 class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectLinesHolder;

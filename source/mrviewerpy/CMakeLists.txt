@@ -55,10 +55,10 @@ ELSE()
     MRViewer
     MRMesh
     MRPython
-    fmt
+    fmt::fmt
     glfw
-    spdlog
-    tbb
+    spdlog::spdlog
+    TBB::tbb
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
@@ -81,9 +81,10 @@ IF(MESHLIB_BUILD_VOXELS)
       OpenVDB::openvdb
     )
   ELSE()
+    find_package(OpenVDB REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRVoxels
-      openvdb
+      OpenVDB::openvdb
     )
   ENDIF()
 ELSE()

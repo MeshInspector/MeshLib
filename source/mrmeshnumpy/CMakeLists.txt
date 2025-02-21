@@ -49,8 +49,8 @@ ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRPython
-    spdlog
-    tbb
+    spdlog::spdlog
+    TBB::tbb
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )

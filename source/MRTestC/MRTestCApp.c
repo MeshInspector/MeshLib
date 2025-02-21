@@ -1,5 +1,4 @@
 #include "TestMacros.h"
-
 #include "MRAddNoise.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
@@ -12,6 +11,7 @@
 #include "MRMeshNormals.h"
 #include "MRMeshOffset.h"
 #include "MRMeshComponents.h"
+#include "MRMeshTopology.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshSubdivide.h"
 #include "MRFixSelfIntersections.h"
@@ -65,5 +65,15 @@ int main( void )
     RUN_TEST( testResampling )
     RUN_TEST( testCropping )
     RUN_TEST( testAccessors )
+     //MRMeshTopology
+    RUN_TEST( testMrMeshTopologyPack )
+    RUN_TEST( testMrMeshTopologyGetValidVerts )
+    RUN_TEST( testMrMeshTopologyGetValidFaces )
+    RUN_TEST( testMrMeshTopologyFindHoleRepresentiveEdges )
+    RUN_TEST( testMrMeshTopologyGetLeftTriVerts )
+    RUN_TEST( testMrMeshTopologyFindNumHoles )
+    RUN_TEST( testMrMeshTopologyFaceSize )
+    RUN_TEST( testMrMeshTopologyGetTriangulation )
+      
     printf("Tests finished\n");
 }

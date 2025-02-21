@@ -27,6 +27,7 @@
     <ClCompile Include="MRMeshNormals.c" />
     <ClCompile Include="MRMeshOffset.c" />
     <ClCompile Include="MRMeshSubdivide.c" />
+    <ClCompile Include="MRMeshTopology.c" />
     <ClCompile Include="MRPointCloud.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
@@ -54,6 +55,7 @@
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOffset.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
+    <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestFunctions.h" />

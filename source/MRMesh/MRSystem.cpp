@@ -276,7 +276,17 @@ std::string GetMRVersionString()
 void OpenLink( const std::string& url )
 {
 #ifdef _WIN32
-    ShellExecuteA( NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL );
+    INT_PTR code = ( INT_PTR )ShellExecuteA( NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL );
+    if ( code <= 32 )
+    {
+        // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutea
+        // value greater then 32 is OK, less value means error
+        spdlog::error( "Error opening link {}, error code {}: {}", url, code, GetLastError() );
+    }
+    else
+    {
+        spdlog::info( "Opening link {}, return code {}", url, code );
+    }
 #else
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push

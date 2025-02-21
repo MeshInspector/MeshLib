@@ -143,6 +143,7 @@
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
+    <ClInclude Include="MRObjectMeshData.h" />
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MROutlierPoints.h" />
     <ClInclude Include="MRParabola.h" />
@@ -402,6 +403,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

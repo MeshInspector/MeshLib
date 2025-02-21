@@ -51,15 +51,15 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id 
 
 Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
 {
-    if ( ancillary_ || !mesh_ )
+    if ( ancillary_ || !data_.mesh )
         return {};
 
     SaveSettings saveSettings;
     saveSettings.saveValidOnly = false;
     saveSettings.rearrangeTriangles = false;
-    if ( !vertsColorMap_.empty() )
-        saveSettings.colors = &vertsColorMap_;
-    auto save = [mesh = mesh_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()
+    if ( !data_.vertColors.empty() )
+        saveSettings.colors = &data_.vertColors;
+    auto save = [mesh = data_.mesh, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()
     {
         auto filename = path;
         const auto extension = std::string( "*" ) + serializeFormat;
@@ -103,7 +103,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     default:
         root["ColoringType"] = "Solid";
     }
-    serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
+    serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
 
     // texture
     if ( !textures_.empty() )
@@ -114,9 +114,9 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
 
     // texture id per face id
-    serializeToJson( texturePerFace_.vec_, root["TexturePerFace"] );
+    serializeToJson( data_.texturePerFace.vec_, root["TexturePerFace"] );
 
-    serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
+    serializeToJson( data_.uvCoordinates.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // vertices
@@ -126,16 +126,16 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 
     serializeToJson( Vector4f( faceSelectionColor_.get() ), root["Colors"]["Selection"]["Diffuse"] );
 
-    serializeToJson( selectedTriangles_, root["SelectionFaceBitSet"] );
-    if ( mesh_ )
+    serializeToJson( data_.selectedFaces, root["SelectionFaceBitSet"] );
+    if ( data_.mesh )
     {
-        serializeViaVerticesToJson( selectedEdges_, mesh_->topology, root["SelectionEdgeBitSet"] );
-        serializeViaVerticesToJson( creases_, mesh_->topology, root["MeshCreasesUndirEdgeBitSet"] );
+        serializeViaVerticesToJson( data_.selectedEdges, data_.mesh->topology, root["SelectionEdgeBitSet"] );
+        serializeViaVerticesToJson( data_.creases, data_.mesh->topology, root["MeshCreasesUndirEdgeBitSet"] );
     }
     else
     {
-        serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
-        serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
+        serializeToJson( data_.selectedEdges, root["SelectionEdgeBitSet"] );
+        serializeToJson( data_.creases, root["MeshCreasesUndirEdgeBitSet"] );
     }
 
     root["PointSize"] = pointSize_;
@@ -178,7 +178,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         else if ( stype == "PerFace" )
             setColoringType( ColoringType::FacesColorMap );
     }
-    deserializeFromJson( root["FaceColors"], facesColorMap_.vec_ );
+    deserializeFromJson( root["FaceColors"], data_.faceColors.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -202,10 +202,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     if ( root["TexturePerFace"].isObject() )
-        deserializeFromJson( root["TexturePerFace"], texturePerFace_.vec_ );
+        deserializeFromJson( root["TexturePerFace"], data_.texturePerFace.vec_ );
 
     if ( root["UVCoordinates"].isObject() )
-        deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
+        deserializeFromJson( root["UVCoordinates"], data_.uvCoordinates.vec_ );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
@@ -216,23 +216,23 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["Colors"]["Borders"], resVec );
     bordersColor_.set( Color( resVec ) );
 
-    deserializeFromJson( root["SelectionFaceBitSet"], selectedTriangles_ );
+    deserializeFromJson( root["SelectionFaceBitSet"], data_.selectedFaces );
 
-    if ( mesh_ )
+    if ( data_.mesh )
     {
-        selectedTriangles_ &= mesh_->topology.getValidFaces();
+        data_.selectedFaces &= data_.mesh->topology.getValidFaces();
 
-        const auto notLoneEdges = mesh_->topology.findNotLoneUndirectedEdges();
-        deserializeViaVerticesFromJson( root["SelectionEdgeBitSet"], selectedEdges_, mesh_->topology );
-        selectedEdges_ &= notLoneEdges;
+        const auto notLoneEdges = data_.mesh->topology.findNotLoneUndirectedEdges();
+        deserializeViaVerticesFromJson( root["SelectionEdgeBitSet"], data_.selectedEdges, data_.mesh->topology );
+        data_.selectedEdges &= notLoneEdges;
 
-        deserializeViaVerticesFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_, mesh_->topology );
-        creases_ &= notLoneEdges;
+        deserializeViaVerticesFromJson( root["MeshCreasesUndirEdgeBitSet"], data_.creases, data_.mesh->topology );
+        data_.creases &= notLoneEdges;
     }
     else
     {
-        deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
-        deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
+        deserializeFromJson( root["SelectionEdgeBitSet"], data_.selectedEdges );
+        deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], data_.creases );
     }
 
     if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
@@ -244,7 +244,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 
 Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    vertsColorMap_.clear();
+    data_.vertColors.clear();
     auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
     std::error_code ec;
     if ( !is_regular_file( modelPath, ec ) )
@@ -253,19 +253,19 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
         if ( modelPath.empty() )
             return unexpected( "No mesh file found: " + utf8string( path ) );
     }
-    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &data_.vertColors, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
-    mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
+    data_.mesh = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
 }
 
 Box3f ObjectMeshHolder::computeBoundingBox_() const
 {
-    if ( !mesh_ )
+    if ( !data_.mesh )
         return Box3f();
-    return mesh_->computeBoundingBox();
+    return data_.mesh->computeBoundingBox();
 }
 
 bool ObjectMeshHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
@@ -447,13 +447,13 @@ void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& t
     } );
     setVertsColorMap( std::move( colorMap ) );
 
-    if ( !facesColorMap_.empty() && mesh_ )
+    if ( !data_.faceColors.empty() && data_.mesh )
     {
-        const auto& validFace = mesh_->topology.getValidFaces();
+        const auto& validFace = data_.mesh->topology.getValidFaces();
         FaceColors faceColors;
         faceColors.resizeNoInit( validFace.size() );
 
-        Color color = facesColorMap_[thisToSrcFaces[validFace.backId()]];
+        Color color = data_.faceColors[thisToSrcFaces[validFace.backId()]];
         bool differentColor = false;
 
         for ( const auto& faceId : validFace )
@@ -461,7 +461,7 @@ void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& t
             if ( !thisToSrcFaces[faceId].valid() )
                 continue;
 
-            auto& newColor = facesColorMap_[thisToSrcFaces[faceId]];
+            auto& newColor = data_.faceColors[thisToSrcFaces[faceId]];
             faceColors[faceId] = newColor;
             if ( color != newColor )
                 differentColor = true;
@@ -495,7 +495,7 @@ uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewpo
     }
     if ( ( flatShading & viewportMask ) != viewportMask )
     {
-        if ( !creases_.any() )
+        if ( !data_.creases.any() )
         {
             res |= ( dirty_ & DIRTY_VERTS_RENDER_NORMAL );
         }
@@ -523,10 +523,10 @@ void ObjectMeshHolder::resetDirtyExeptMask( uint32_t mask ) const
 
 void ObjectMeshHolder::applyScale( float scaleFactor )
 {
-    if ( !mesh_ )
+    if ( !data_.mesh )
         return;
 
-    auto& points = mesh_->points;
+    auto& points = data_.mesh->points;
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
         [&] ( const tbb::blocked_range<int>& range )
@@ -541,28 +541,28 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
 
 bool ObjectMeshHolder::hasVisualRepresentation() const
 {
-    return mesh_ && numUndirectedEdges() > 0;
+    return data_.mesh && numUndirectedEdges() > 0;
 }
 
 std::shared_ptr<Object> ObjectMeshHolder::clone() const
 {
     auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
+    if ( data_.mesh )
+        res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
     return res;
 }
 
 std::shared_ptr<Object> ObjectMeshHolder::shallowClone() const
 {
     auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
+    if ( data_.mesh )
+        res->data_.mesh = data_.mesh;
     return res;
 }
 
 void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
-    selectedTriangles_ = std::move( newSelection );
+    data_.selectedFaces = std::move( newSelection );
     numSelectedFaces_.reset();
     selectedArea_.reset();
     faceSelectionChangedSignal();
@@ -571,7 +571,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 
 void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
 {
-    selectedEdges_ = std::move( newSelection );
+    data_.selectedEdges = std::move( newSelection );
     numSelectedEdges_.reset();
     edgeSelectionChangedSignal();
     dirty_ |= DIRTY_EDGES_SELECTION;
@@ -580,14 +580,14 @@ void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
 bool ObjectMeshHolder::isMeshClosed() const
 {
     if ( !meshIsClosed_ )
-        meshIsClosed_ = mesh_ && mesh_->topology.isClosed();
+        meshIsClosed_ = data_.mesh && data_.mesh->topology.isClosed();
 
     return *meshIsClosed_;
 }
 
 Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
 {
-    if ( !mesh_ )
+    if ( !data_.mesh )
         return {};
     bool isDef = true;
     const auto worldXf = this->worldXf( id, &isDef );
@@ -596,7 +596,7 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = mesh_->computeBoundingBox( &worldXf );
+    const auto box = data_.mesh->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }
@@ -605,10 +605,10 @@ size_t ObjectMeshHolder::numSelectedFaces() const
 {
     if ( !numSelectedFaces_ )
     {
-        numSelectedFaces_ = selectedTriangles_.count();
+        numSelectedFaces_ = data_.selectedFaces.count();
 #ifndef NDEBUG
         // check that there are no selected invalid faces
-        assert( !mesh_ || !( selectedTriangles_ - mesh_->topology.getValidFaces() ).any() );
+        assert( !data_.mesh || !( data_.selectedFaces - data_.mesh->topology.getValidFaces() ).any() );
 #endif
     }
 
@@ -619,10 +619,10 @@ size_t ObjectMeshHolder::numSelectedEdges() const
 {
     if ( !numSelectedEdges_ )
     {
-        numSelectedEdges_ = selectedEdges_.count();
+        numSelectedEdges_ = data_.selectedEdges.count();
 #ifndef NDEBUG
         // check that there are no selected invalid edges
-        assert( !mesh_ || !( selectedEdges_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || !( data_.selectedEdges - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
 #endif
     }
 
@@ -633,10 +633,10 @@ size_t ObjectMeshHolder::numCreaseEdges() const
 {
     if ( !numCreaseEdges_ )
     {
-        numCreaseEdges_ = creases_.count();
+        numCreaseEdges_ = data_.creases.count();
 #ifndef NDEBUG
         // check that there are no invalid edges among creases
-        assert( !mesh_ || !( creases_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || !( data_.creases - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
 #endif
     }
 
@@ -646,7 +646,7 @@ size_t ObjectMeshHolder::numCreaseEdges() const
 double ObjectMeshHolder::totalArea() const
 {
     if ( !totalArea_ )
-        totalArea_ = mesh_ ? mesh_->area() : 0.0;
+        totalArea_ = data_.mesh ? data_.mesh->area() : 0.0;
 
     return *totalArea_;
 }
@@ -654,7 +654,7 @@ double ObjectMeshHolder::totalArea() const
 double ObjectMeshHolder::selectedArea() const
 {
     if ( !selectedArea_ )
-        selectedArea_ = mesh_ ? mesh_->area( &selectedTriangles_ ) : 0.0;
+        selectedArea_ = data_.mesh ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
 
     return *selectedArea_;
 }
@@ -662,7 +662,7 @@ double ObjectMeshHolder::selectedArea() const
 double ObjectMeshHolder::volume() const
 {
     if ( !volume_ )
-        volume_ = mesh_ ? mesh_->volume() : 0.0;
+        volume_ = data_.mesh ? data_.mesh->volume() : 0.0;
 
     return *volume_;
 }
@@ -670,7 +670,7 @@ double ObjectMeshHolder::volume() const
 float ObjectMeshHolder::avgEdgeLen() const
 {
     if ( !avgEdgeLen_ )
-        avgEdgeLen_ = mesh_ ? mesh_->averageEdgeLength() : 0;
+        avgEdgeLen_ = data_.mesh ? data_.mesh->averageEdgeLength() : 0;
 
     return *avgEdgeLen_;
 }
@@ -678,16 +678,10 @@ float ObjectMeshHolder::avgEdgeLen() const
 size_t ObjectMeshHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
-        + selectedTriangles_.heapBytes()
-        + selectedEdges_.heapBytes()
-        + creases_.heapBytes()
+        + data_.heapBytes()
         + MR::heapBytes( textures_ )
         + ancillaryTexture_.heapBytes()
-        + uvCoordinates_.heapBytes()
-        + ancillaryUVCoordinates_.heapBytes()
-        + vertsColorMap_.heapBytes()
-        + facesColorMap_.heapBytes()
-        + MR::heapBytes( mesh_ );
+        + ancillaryUVCoordinates_.heapBytes();
 }
 
 void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
@@ -703,29 +697,29 @@ void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
 size_t ObjectMeshHolder::numUndirectedEdges() const
 {
     if ( !numUndirectedEdges_ )
-        numUndirectedEdges_ = mesh_ ? mesh_->topology.computeNotLoneUndirectedEdges() : 0;
+        numUndirectedEdges_ = data_.mesh ? data_.mesh->topology.computeNotLoneUndirectedEdges() : 0;
     return *numUndirectedEdges_;
 }
 
 size_t ObjectMeshHolder::numHoles() const
 {
     if ( !numHoles_ )
-        numHoles_ = mesh_ ? mesh_->topology.findNumHoles() : 0;
+        numHoles_ = data_.mesh ? data_.mesh->topology.findNumHoles() : 0;
     return *numHoles_;
 }
 
 size_t ObjectMeshHolder::numComponents() const
 {
     if ( !numComponents_ )
-        numComponents_ = mesh_ ? MeshComponents::getNumComponents( *mesh_ ) : 0;
+        numComponents_ = data_.mesh ? MeshComponents::getNumComponents( *data_.mesh ) : 0;
     return *numComponents_;
 }
 
 size_t ObjectMeshHolder::numHandles() const
 {
-    if ( !mesh_ )
+    if ( !data_.mesh )
         return 0;
-    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)numHoles() + mesh_->topology.numValidVerts() - (int)numUndirectedEdges();
+    int EulerCharacteristic = data_.mesh->topology.numValidFaces() + (int)numHoles() + data_.mesh->topology.numValidVerts() - (int)numUndirectedEdges();
     return numComponents() - EulerCharacteristic / 2;
 }
 
@@ -754,19 +748,19 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         selectedArea_.reset();
         volume_.reset();
         avgEdgeLen_.reset();
-        if ( invalidateCaches && mesh_ )
-            mesh_->invalidateCaches();
+        if ( invalidateCaches && data_.mesh )
+            data_.mesh->invalidateCaches();
     }
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
 {
-    if ( creases == creases_ )
+    if ( creases == data_.creases )
         return;
-    creases_ = std::move( creases );
+    data_.creases = std::move( creases );
     numCreaseEdges_.reset();
     creasesChangedSignal();
-    if ( creases_.any() )
+    if ( data_.creases.any() )
     {
         dirty_ |= DIRTY_CORNERS_RENDER_NORMAL;
     }

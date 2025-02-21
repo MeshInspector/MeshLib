@@ -154,9 +154,12 @@ ELSE() # not MR_EMSCRIPTEN
   #add_subdirectory(./libE57Format)
 ENDIF()
 
-#set(GLAD_INSTALL ON)
-#set(GLAD_REPRODUCIBLE ON)
-#add_subdirectory(./glad)
+find_package(glad)
+IF(NOT glad_FOUND)
+  set(GLAD_INSTALL ON)
+  set(GLAD_REPRODUCIBLE ON)
+  add_subdirectory(./glad)
+ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)

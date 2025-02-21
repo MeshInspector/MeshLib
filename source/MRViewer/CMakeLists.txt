@@ -45,6 +45,7 @@ IF(NOT MRVIEWER_NO_VOXELS)
 ENDIF()
 
 IF(NOT MRVIEWER_NO_GTK)
+  find_package(PkgConfig REQUIRED)
   pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtkmm)
 ENDIF()
@@ -112,22 +113,26 @@ ELSEIF(WIN32)
   )
 ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32
   find_package(GDCM CONFIG REQUIRED)
+  find_package(GTest REQUIRED)
+  find_package(cpr REQUIRED)
+  find_package(glad REQUIRED)
+  find_package(hidapi REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
     MRSymbolMesh
-    gtest
+    GTest::gtest
     dl
-    cpr
+    cpr::cpr
     imgui
-    glad
+    glad::glad
     glfw
-    hidapi-hidraw
-    jsoncpp
-    spdlog
-    fmt
-    tbb
+    hidapi::hidapi
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    fmt::fmt
+    TBB::tbb
     clip
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )

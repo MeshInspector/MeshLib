@@ -44,7 +44,7 @@ ELSE()
     Freetype::Freetype
     fmt::fmt
     spdlog::spdlog
-    PkgConfig::jsoncpp
+    JsonCpp::JsonCpp
   )
 ENDIF()
 

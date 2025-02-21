@@ -5,9 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(meshconv CXX)
 
 find_package(Boost COMPONENTS program_options REQUIRED)
-IF(Boost_PROGRAM_OPTIONS_FOUND)
-  link_libraries(${Boost_PROGRAM_OPTIONS_LIBRARY})
-ENDIF()
 
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
@@ -17,17 +14,17 @@ IF(WIN32)
     MRIOExtras
     fmt::fmt
     spdlog::spdlog
-    Boost::boost
+    Boost::program_options
     TBB::tbb
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
-    fmt
-    spdlog
-    Boost::boost
-    tbb
+    fmt::fmt
+    spdlog::spdlog
+    Boost::program_options
+    TBB::tbb
   )
 ENDIF()
 

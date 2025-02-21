@@ -28,21 +28,13 @@ set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MR_EMSCRIPTEN)
   IF(NOT MRMESH_NO_TIFF)
-    IF(WIN32)
-      find_package(tiff REQUIRED)
-      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-    ELSE()
-      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
-    ENDIF()
+    find_package(TIFF REQUIRED)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
   ENDIF()
 
   IF(NOT MRMESH_NO_GTEST)
-    IF(APPLE OR WIN32)
-      find_package(GTest REQUIRED)
-      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
-    ELSE()
-      list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
-    ENDIF()
+    find_package(GTest REQUIRED)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
   ENDIF()
 ENDIF()
 
@@ -125,22 +117,24 @@ ELSEIF(WIN32)
   )
 ELSE()
   find_package(tl-expected REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
+  find_package(libzip REQUIRED)
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
     ${MRMESH_OPTIONAL_INCLUDE_DIRS}
   )
   target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
     ${MRMESH_OPTIONAL_LIBRARY_DIRS}
   )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tl::expected
-    fmt
-    spdlog
-    zip
-    Boost::boost
-    dl
-    jsoncpp
-    tbb
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      Boost::boost
+      JsonCpp::JsonCpp
+      tl::expected
+    PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      libzip::zip
+      TBB::tbb
+      dl
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

@@ -43,11 +43,11 @@ IF(MR_PCH)
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
+      fmt::fmt
+      spdlog::spdlog
       Boost::boost
-      jsoncpp
-      tbb
+      JsonCpp::JsonCpp
+      TBB::tbb
     )
   ENDIF()
 

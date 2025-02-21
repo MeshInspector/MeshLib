@@ -1275,6 +1275,9 @@
     <ClInclude Include="MRObjectMeshData.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeMeshDataAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

@@ -13,6 +13,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRBuffer.h"
+#include "MRObjectMesh.h"
+#include "MRMeshSubdivideCallbacks.h"
 #include <queue>
 
 namespace MR
@@ -247,6 +249,62 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
         return unexpectedOperationCanceled();
 
     return subMesh;
+}
+
+ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh& obj, const SubdivideSettings& subs )
+{
+    MR_TIMER
+
+    ObjectMeshData res = obj.data();
+    if ( !res.mesh )
+    {
+        assert( false );
+        return res;
+    }
+    // clone mesh as well
+    res.mesh = std::make_shared<Mesh>( *res.mesh );
+
+    auto notFlippable = res.selectedEdges | res.creases;
+
+    MeshAttributesToUpdate meshParams;
+    if ( !res.uvCoordinates.empty() )
+        meshParams.uvCoords = &res.uvCoordinates;
+    if ( !res.vertColors.empty() )
+        meshParams.colorMap = &res.vertColors;
+    if ( !res.texturePerFace.empty() )
+        meshParams.texturePerFace = &res.texturePerFace;
+    if ( !res.faceColors.empty() )
+        meshParams.faceColors = &res.faceColors;
+
+    auto updateAttributesCb = meshOnEdgeSplitAttribute( *res.mesh, meshParams );
+
+    auto subs1 = subs;
+    subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+    {
+        if ( res.selectedEdges.test( e.undirected() ) )
+        {
+            res.selectedEdges.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+        if ( res.creases.test( e.undirected() ) )
+        {
+            res.creases.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+
+        updateAttributesCb( e1, e );
+        if ( subs.onEdgeSplit )
+            subs.onEdgeSplit( e1, e );
+    };
+    assert( !subs1.notFlippable );
+    subs1.notFlippable = &notFlippable;
+
+    assert( !subs1.region );
+    if ( res.selectedFaces.any() )
+        subs1.region = &res.selectedFaces;
+
+    subdivideMesh( *res.mesh, subs1 );
+    return res;
 }
 
 TEST(MRMesh, SubdivideMesh)

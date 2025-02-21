@@ -1,4 +1,3 @@
-// #include <stdio.h>
 #include "TestMacros.h"
 #include "MRAddNoise.h"
 #include "MRBitSet.h"

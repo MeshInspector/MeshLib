@@ -22,18 +22,18 @@ MR_ADD_CLASS_FACTORY( ObjectMesh )
 MeshIntersectionResult ObjectMesh::worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region ) const
 {
     MeshIntersectionResult res;
-    if ( !mesh_ )
+    if ( !data_.mesh )
         return res;
     const AffineXf3f rayToMeshXf = worldXf().inverse();
-    res = rayMeshIntersect( { *mesh_, region }, transformed( worldRay, rayToMeshXf ) );
+    res = rayMeshIntersect( { *data_.mesh, region }, transformed( worldRay, rayToMeshXf ) );
     return res;
 }
 
 void ObjectMesh::setMesh( std::shared_ptr< Mesh > mesh )
 {
-    if ( mesh == mesh_ )
+    if ( mesh == data_.mesh )
         return;
-    mesh_ = std::move(mesh);
+    data_.mesh = std::move(mesh);
     selectFaces({});
     selectEdges({});
     setCreases({});
@@ -42,9 +42,9 @@ void ObjectMesh::setMesh( std::shared_ptr< Mesh > mesh )
 
 std::shared_ptr< Mesh > ObjectMesh::updateMesh( std::shared_ptr< Mesh > mesh )
 {
-    if ( mesh != mesh_ )
+    if ( mesh != data_.mesh )
     {
-        mesh_.swap( mesh );
+        data_.mesh.swap( mesh );
         setDirtyFlags( DIRTY_ALL );
     }
     return mesh;
@@ -54,58 +54,58 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 {
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
 
-    if ( mesh_ )
+    if ( data_.mesh )
     {
         res.push_back( "components: " + std::to_string( numComponents() ) );
         res.push_back( "handles: " + std::to_string( numHandles() ) );
 
-        if ( mesh_->points.size() != mesh_->topology.vertSize() ||
-             mesh_->points.capacity() != mesh_->topology.vertCapacity() )
+        if ( data_.mesh->points.size() != data_.mesh->topology.vertSize() ||
+             data_.mesh->points.capacity() != data_.mesh->topology.vertCapacity() )
         {
-            res.push_back( "points: " + std::to_string( mesh_->points.size() ) + " size" );
-            if ( mesh_->points.size() < mesh_->points.capacity() )
-                res.back() += " / " + std::to_string( mesh_->points.capacity() ) + " capacity";
+            res.push_back( "points: " + std::to_string( data_.mesh->points.size() ) + " size" );
+            if ( data_.mesh->points.size() < data_.mesh->points.capacity() )
+                res.back() += " / " + std::to_string( data_.mesh->points.capacity() ) + " capacity";
         }
 
-        res.push_back( "vertices: " + std::to_string( mesh_->topology.numValidVerts() ) );
-        if( mesh_->topology.numValidVerts() < mesh_->topology.vertSize() )
-            res.back() += " / " + std::to_string( mesh_->topology.vertSize() ) + " size";
-        if( mesh_->topology.vertSize() < mesh_->topology.vertCapacity() )
-            res.back() += " / " + std::to_string( mesh_->topology.vertCapacity() ) + " capacity";
+        res.push_back( "vertices: " + std::to_string( data_.mesh->topology.numValidVerts() ) );
+        if( data_.mesh->topology.numValidVerts() < data_.mesh->topology.vertSize() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.vertSize() ) + " size";
+        if( data_.mesh->topology.vertSize() < data_.mesh->topology.vertCapacity() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.vertCapacity() ) + " capacity";
 
-        res.push_back( "triangles: " + std::to_string( mesh_->topology.numValidFaces() ) );
+        res.push_back( "triangles: " + std::to_string( data_.mesh->topology.numValidFaces() ) );
         const auto nFacesSelected = numSelectedFaces();
         if( nFacesSelected )
             res.back() += " / " + std::to_string( nFacesSelected ) + " selected";
-        if( mesh_->topology.numValidFaces() < mesh_->topology.faceSize() )
-            res.back() += " / " + std::to_string( mesh_->topology.faceSize() ) + " size";
-        if( mesh_->topology.faceSize() < mesh_->topology.faceCapacity() )
-            res.back() += " / " + std::to_string( mesh_->topology.faceCapacity() ) + " capacity";
+        if( data_.mesh->topology.numValidFaces() < data_.mesh->topology.faceSize() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.faceSize() ) + " size";
+        if( data_.mesh->topology.faceSize() < data_.mesh->topology.faceCapacity() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.faceCapacity() ) + " capacity";
 
         res.push_back( "edges: " + std::to_string( numUndirectedEdges() ) );
         if( auto nEdgesSelected = numSelectedEdges() )
             res.back() += " / " + std::to_string( nEdgesSelected ) + " selected";
         if( auto nCreaseEdges = numCreaseEdges() )
             res.back() += " / " + std::to_string( nCreaseEdges ) + " creases";
-        if( numUndirectedEdges() < mesh_->topology.undirectedEdgeSize() )
-            res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeSize() ) + " size";
-        if( mesh_->topology.undirectedEdgeSize() < mesh_->topology.undirectedEdgeCapacity() )
-            res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeCapacity() ) + " capacity";
+        if( numUndirectedEdges() < data_.mesh->topology.undirectedEdgeSize() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.undirectedEdgeSize() ) + " size";
+        if( data_.mesh->topology.undirectedEdgeSize() < data_.mesh->topology.undirectedEdgeCapacity() )
+            res.back() += " / " + std::to_string( data_.mesh->topology.undirectedEdgeCapacity() ) + " capacity";
 
         for ( TextureId i = TextureId{ 0 }; i < textures_.size(); ++i )
             res.push_back( "texture " + std::to_string( i ) + ": " + std::to_string( textures_[i].resolution.x) + " x " + std::to_string(textures_[i].resolution.y));
 
-        if ( !uvCoordinates_.empty() )
+        if ( !data_.uvCoordinates.empty() )
         {
-            res.push_back( "uv-coords: " + std::to_string( uvCoordinates_.size() ) );
-            if ( uvCoordinates_.size() < uvCoordinates_.capacity() )
-                res.back() += " / " + std::to_string( uvCoordinates_.capacity() ) + " capacity";
+            res.push_back( "uv-coords: " + std::to_string( data_.uvCoordinates.size() ) );
+            if ( data_.uvCoordinates.size() < data_.uvCoordinates.capacity() )
+                res.back() += " / " + std::to_string( data_.uvCoordinates.capacity() ) + " capacity";
         }
-        if ( !vertsColorMap_.empty() )
+        if ( !data_.vertColors.empty() )
         {
-            res.push_back( "colors: " + std::to_string( vertsColorMap_.size() ) );
-            if ( vertsColorMap_.size() < vertsColorMap_.capacity() )
-                res.back() += " / " + std::to_string( vertsColorMap_.capacity() ) + " capacity";
+            res.push_back( "colors: " + std::to_string( data_.vertColors.size() ) );
+            if ( data_.vertColors.size() < data_.vertColors.capacity() )
+                res.back() += " / " + std::to_string( data_.vertColors.capacity() ) + " capacity";
         }
 
         res.push_back( "holes: " + std::to_string( numHoles() ) );
@@ -120,9 +120,9 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         boundingBoxToInfoLines_( res );
 
         size_t treesSize = 0;
-        if ( auto tree = mesh_->getAABBTreeNotCreate() )
+        if ( auto tree = data_.mesh->getAABBTreeNotCreate() )
             treesSize += tree->heapBytes();
-        if ( auto tree = mesh_->getAABBTreePointsNotCreate() )
+        if ( auto tree = data_.mesh->getAABBTreePointsNotCreate() )
             treesSize += tree->heapBytes();
         if ( treesSize > 0 )
             res.push_back( "AABB trees: " + bytesString( treesSize ) );
@@ -135,16 +135,16 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 std::shared_ptr<Object> ObjectMesh::clone() const
 {
     auto res = std::make_shared<ObjectMesh>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
+    if ( data_.mesh )
+        res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
     return res;
 }
 
 std::shared_ptr<Object> ObjectMesh::shallowClone() const
 {
     auto res = std::make_shared<ObjectMesh>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
+    if ( data_.mesh )
+        res->data_.mesh = data_.mesh;
     return res;
 }
 
@@ -153,7 +153,7 @@ void ObjectMesh::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
-        if ( mesh_ )
+        if ( data_.mesh )
         {
             meshChangedSignal( mask );
         }

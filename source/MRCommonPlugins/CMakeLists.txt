@@ -51,19 +51,20 @@ ELSEIF(WIN32)
     fmt::fmt
   )
 ELSE()
+  find_package(glad REQUIRED)
+
   target_link_libraries(${PROJECT_NAME} PRIVATE
-    tbb
+    TBB::tbb
     MRMesh
     MRIOExtras
     MRViewer
     clip
-    glad
+    glad::glad
     glfw
     imgui
-    jsoncpp
-    openvdb
-    spdlog
-    fmt
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    fmt::fmt
   )
 ENDIF()
 

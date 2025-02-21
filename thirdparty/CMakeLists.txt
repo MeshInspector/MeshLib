@@ -35,7 +35,7 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 #imgui build
-#add_subdirectory(../source/imgui ./imgui)
+add_subdirectory(../source/imgui ./imgui)
 
 IF(APPLE OR MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)

@@ -54,15 +54,16 @@ ELSE()
       ${CMAKE_DL_LIBS}
     )
   ELSE()
+    find_package(GTest REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
       MRPython
       MRViewer
-      jsoncpp
-      fmt
-      gtest
-      spdlog
+      JsonCpp::JsonCpp
+      fmt::fmt
+      GTest::gtest
+      spdlog::spdlog
       Python::Python
       pybind11nonlimitedapi_stubs
       ${CMAKE_DL_LIBS}

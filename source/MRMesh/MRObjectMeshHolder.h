@@ -99,6 +99,15 @@ public:
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
+    /// provides read-only access to whole ObjectMeshData
+    const ObjectMeshData& data() const { return data_; }
+
+    /// sets whole new ObjectMeshData
+    virtual void setData( ObjectMeshData && data ) { data_ = std::move( data ); dirty_ |= DIRTY_ALL; }
+
+    /// swaps whole ObjectMeshData with given argument
+    virtual void updateData( ObjectMeshData& data ) { std::swap( data_, data ); dirty_ |= DIRTY_ALL; }
+
     /// returns per-vertex colors of the object
     const VertColors& getVertsColorMap() const { return data_.vertColors; }
 

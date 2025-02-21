@@ -1,4 +1,6 @@
 #include "TestFunctions.h"
+#include <MRMeshC/MRCube.h>
+#include <MRMeshC/MRMesh.h>
 
 #define NSECS ( 1000 * 1000 * 1000 )
 
@@ -28,4 +30,12 @@ struct timespec timespec_get_duration( const struct timespec* before, const stru
 double timespec_to_seconds( const struct timespec* ts )
 {
     return (double)ts->tv_sec + (double)ts->tv_nsec / NSECS;
+}
+
+MRMesh* createCube(void)
+{
+    MRVector3f size = mrVector3fDiagonal(1.0f);
+    MRVector3f base = mrVector3fDiagonal(-0.5f);
+    MRMesh* mesh = mrMakeCube(&size, &base);
+    return mesh;
 }

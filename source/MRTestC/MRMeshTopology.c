@@ -1,4 +1,5 @@
 #include "TestMacros.h"
+#include "TestFunctions.h"
 #include <MRMeshC/MRMeshTopology.h>
 #include <MRMeshC/MRCube.h>
 #include <MRMeshC/MRMesh.h>
@@ -7,9 +8,7 @@
 
 void testMrMeshTopologyPack(void)
 {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
     mrMeshTopologyPack(topology);
@@ -18,9 +17,7 @@ void testMrMeshTopologyPack(void)
 
 void testMrMeshTopologyGetValidVerts(void)
 {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
     const MRVertBitSet* verts = mrMeshTopologyGetValidVerts(topology);
@@ -30,9 +27,7 @@ void testMrMeshTopologyGetValidVerts(void)
 
 void testMrMeshTopologyGetValidFaces(void)
 {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
     const MRFaceBitSet* faces = mrMeshTopologyGetValidFaces(topology);
@@ -41,9 +36,7 @@ void testMrMeshTopologyGetValidFaces(void)
 }
 
 void testMrMeshTopologyFindHoleRepresentiveEdges( void ) {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
     MREdgePath* holes = mrMeshTopologyFindHoleRepresentiveEdges(topology);
@@ -52,9 +45,7 @@ void testMrMeshTopologyFindHoleRepresentiveEdges( void ) {
 }
 
 void testMrMeshTopologyGetLeftTriVerts( void ) {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
 
@@ -65,9 +56,7 @@ void testMrMeshTopologyGetLeftTriVerts( void ) {
 }
 
 void testMrMeshTopologyFindNumHoles( void ) {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
     TEST_ASSERT(mesh != NULL);
 
@@ -77,9 +66,7 @@ void testMrMeshTopologyFindNumHoles( void ) {
 }
 
 void testMrMeshTopologyFaceSize(void) {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
 
@@ -89,9 +76,7 @@ void testMrMeshTopologyFaceSize(void) {
 }
 
 void testMrMeshTopologyGetTriangulation(void) {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
+    MRMesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MRMeshTopology* topology = mrMeshTopologyRef(mesh);
 

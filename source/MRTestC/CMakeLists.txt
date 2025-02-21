@@ -4,7 +4,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # On Mac, strip `-stdlib=libc++` from linker flags to avoid the `unused flag` warning. Unused because this is a C project.
 IF (APPLE)
-  string(REPLACE "-stdlib=libc++" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+  string(REPLACE "-stdlib=libc++" "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 ENDIF()
 
 project(MRTestC C)

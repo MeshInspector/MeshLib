@@ -48,6 +48,8 @@ TEST( MRMesh, TrimPolylineWithPlane )
 
     polyline = {};
     polyline.addFromPoints( points.data(), points.size(), false );
+    otherPart = {};
+    trimWithPlane( polyline, plane, params );
 
     EXPECT_TRUE( polyline.topology.isClosed() );
     pointsOnPlane.clear();
@@ -56,7 +58,7 @@ TEST( MRMesh, TrimPolylineWithPlane )
         if ( polyline.points[v].x == 1.f )
             pointsOnPlane.push_back( v );
     }
-    EXPECT_EQ( pointsOnPlane.size(), 1 );
+    EXPECT_EQ( pointsOnPlane.size(), 2 );
     EXPECT_TRUE( polyline.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
 
     EXPECT_FALSE( otherPart.topology.isClosed() );
@@ -66,7 +68,7 @@ TEST( MRMesh, TrimPolylineWithPlane )
         if ( otherPart.points[v].x == 1.f )
             pointsOnPlane.push_back( v );
     }
-    EXPECT_EQ( pointsOnPlane.size(), 1 );
+    EXPECT_EQ( pointsOnPlane.size(), 2 );
     EXPECT_TRUE( otherPart.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
 }
 

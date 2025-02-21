@@ -9,8 +9,8 @@ namespace MR
 /// \param plane Input plane to cut polyline with
 /// \param newPositiveEdges new edges with origin on the plane and oriented to the positive direction
 /// \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
-MRMESH_API EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges = nullptr, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
-[[deprecated]] MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
+MRMESH_API EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges = {}, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = {} );
+[[deprecated]] MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = {} );
 
 struct DividePolylineParameters
 {

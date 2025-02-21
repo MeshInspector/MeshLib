@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRBitSet.h"
 
 namespace MR
 {
@@ -11,10 +10,7 @@ namespace MR
 /// \param newPositiveEdges new edges with origin on the plane and oriented to the positive direction
 /// \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
 MRMESH_API EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges = nullptr, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
-[[deprecated]] inline EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr )
-{
-    subdivideWithPlane( polyline, plane, nullptr, onEdgeSplitCallback );
-}
+[[deprecated]] MRMESH_API EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 struct DividePolylineParameters
 {
@@ -39,10 +35,7 @@ struct DividePolylineParameters
 /// \param plane Input plane to cut polyline with
 /// \param params parameters of the function, containing optional output
 MRMESH_API void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} );
-[[deprecated]] inline void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} )
-{
-    trimWithPlane( polyline, plane, params );
-}
+[[deprecated]] MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} );
 
 /// This function cuts polyline with a plane
 /// \return Edge segments that are closer to the plane than \param eps

@@ -2,7 +2,6 @@
 #include "MRPolyline.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRPlane3.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -48,6 +47,11 @@ EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBi
         *newPositiveEdges = std::move( sectionEdges );
 
     return visited;
+}
+
+EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback /*= nullptr */ )
+{
+    return subdivideWithPlane( polyline, plane, nullptr, onEdgeSplitCallback );
 }
 
 UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges, std::vector<VertPair>* cutSegments )
@@ -142,6 +146,11 @@ void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolyl
     polyline = std::move( res );
 }
 
+void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params /*= {} */ )
+{
+    trimWithPlane( polyline, plane, params );
+}
+
 std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps )
 {
     std::vector<EdgeSegment> result;
@@ -210,68 +219,5 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
 
     return result;
 }
-
-
-TEST( MRMesh, TrimPolylineWithPlane )
-{
-    Polyline3 polyline;
-
-    std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {2.f, 2.f, 2.f}, {0.f, 4.f, 0.f} };
-    polyline.addFromPoints( points.data(), points.size(), true );
-
-    Plane3f plane( { 1.f, 0.f, 0.f }, 1.f );
-
-    Polyline3 otherPart;
-    DividePolylineParameters params;
-    params.closeLineAfterCut = true;
-    params.otherPart = &otherPart;
-    trimWithPlane( polyline, plane, params );
-
-    EXPECT_TRUE( polyline.topology.isClosed() );
-    std::vector<VertId> pointsOnPlane( 2 );
-    for ( VertId v : polyline.topology.getValidVerts() )
-    {
-        if ( polyline.points[v].x == 1.f )
-            pointsOnPlane.push_back( v );
-    }
-    EXPECT_EQ( pointsOnPlane.size(), 2 );
-    EXPECT_TRUE( polyline.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
-
-    EXPECT_TRUE( otherPart.topology.isClosed() );
-    pointsOnPlane.clear();
-    for ( VertId v : polyline.topology.getValidVerts() )
-    {
-        if ( otherPart.points[v].x == 1.f )
-            pointsOnPlane.push_back( v );
-    }
-    EXPECT_EQ( pointsOnPlane.size(), 2 );
-    EXPECT_TRUE( otherPart.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
-
-
-
-    polyline = {};
-    polyline.addFromPoints( points.data(), points.size(), false );
-
-    EXPECT_TRUE( polyline.topology.isClosed() );
-    pointsOnPlane.clear();
-    for ( VertId v : polyline.topology.getValidVerts() )
-    {
-        if ( polyline.points[v].x == 1.f )
-            pointsOnPlane.push_back( v );
-    }
-    EXPECT_EQ( pointsOnPlane.size(), 2 );
-    EXPECT_TRUE( polyline.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
-
-    EXPECT_FALSE( otherPart.topology.isClosed() );
-    pointsOnPlane.clear();
-    for ( VertId v : polyline.topology.getValidVerts() )
-    {
-        if ( otherPart.points[v].x == 1.f )
-            pointsOnPlane.push_back( v );
-    }
-    EXPECT_EQ( pointsOnPlane.size(), 2 );
-    EXPECT_TRUE( otherPart.topology.findEdge( pointsOnPlane[0], pointsOnPlane[1] ).valid() );
-}
-
 
 }

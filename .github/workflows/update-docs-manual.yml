@@ -1,0 +1,113 @@
+name: Manual Update MeshLib Documentation Site
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      output_folder:
+        required: false
+        type: string
+        default: "MeshLib/dev"
+  
+jobs:
+  create-stubs:
+    timeout-minutes: 40
+    runs-on: [self-hosted, linux-arm64]
+    container:
+      image: meshlib/meshlib-ubuntu22-arm64:latest
+      options: --user root
+    strategy:
+      fail-fast: false
+    env:
+      CONFIG: Release
+      CXX-COMPILER: /usr/bin/clang++-14
+      CXX-STANDARD: 20
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
+
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory '*'
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+
+      - name: Install mrbind
+        run: scripts/mrbind/install_mrbind_ubuntu.sh
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ON
+          MESHLIB_BUILD_DEBUG: OFF
+          CMAKE_CXX_COMPILER: ${{ env.CXX-COMPILER }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=${{ env.CXX-STANDARD }}
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=OFF
+
+      - name: Generate and build MRBind bindings
+        env:
+          CXX: ${{ env.CXX-COMPILER }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
+
+      - name: Create Python Stubs
+        run: python3 ./scripts/wheel/create_stubs.py
+
+      - name: Upload Python Stubs
+        uses: actions/upload-artifact@v4
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
+
+  update-dev-documentation:
+    needs: [ create-stubs ]
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: ${{ inputs.output_folder }}
+    secrets: inherit
+
+  delete-artifacts:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    needs: [ update-dev-documentation ]
+    if: always()
+    continue-on-error: true
+    steps:
+      - name: Delete Python Stubs
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: PythonStubs
+          failOnError: false

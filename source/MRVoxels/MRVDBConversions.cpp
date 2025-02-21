@@ -333,21 +333,6 @@ void putSimpleVolumeInDenseGrid(
     putVolumeInDenseGrid( gridAccessor, minCoord, simpleVolume, cb );
 }
 
-void makeVdbTopologyDense( openvdb::FloatGrid& grid, const Box3i& rect )
-{
-    MR_TIMER
-    auto& tree = grid.tree();
-    for ( int z = rect.min.x; z <= rect.max.z; ++z )
-        for ( int y = rect.min.y; y <= rect.max.y; ++y )
-            for ( int x = rect.min.x; x <= rect.max.x; ++x )
-                tree.touchLeaf( toVdb( Vector3i{ x, y, z } ) );
-}
-
-void makeVdbTopologyDense( VdbVolume& volume )
-{
-    makeVdbTopologyDense( *volume.data, Box3i{{0, 0, 0 }, volume.dims - Vector3i::diagonal( 1 ) } );
-}
-
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
                                    float background,
                                    ProgressCallback cb )

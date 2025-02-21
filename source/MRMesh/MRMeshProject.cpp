@@ -4,6 +4,7 @@
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
 #include "MRTimer.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -104,6 +105,24 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         }
     }
 
+    return res;
+}
+
+MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
+{
+    MeshProjectionTransforms res;
+    if ( treeXf && !isRigid( treeXf->A ) )
+        res.nonRigidXfTree = treeXf;
+
+    if ( res.nonRigidXfTree || !treeXf )
+        res.rigidXfPoint = pointXf;
+    else
+    {
+        storageXf = treeXf->inverse();
+        if ( pointXf )
+            storageXf = storageXf * ( *pointXf );
+        res.rigidXfPoint = &storageXf;
+    }
     return res;
 }
 

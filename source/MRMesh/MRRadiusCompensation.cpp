@@ -25,6 +25,8 @@ public:
     RadiusCompensator( Mesh& mesh, const CompensateRadiusParams& params ):
         mesh_{ mesh }, params_{ params }
     {
+        if ( params.projectToOriginalMesh )
+            meshCpy_ = mesh;
         params_.direction = params_.direction.normalized();
         radiusSq_ = sqr( params_.toolRadius );
     }
@@ -65,6 +67,7 @@ private:
     float sumCompensationCost_( const Vector3f& toolCenter );
 
     Mesh& mesh_;
+    Mesh meshCpy_;
     CompensateRadiusParams params_;
     const FaceBitSet* faceRegion_{ nullptr };
     VertBitSet vertRegion_;
@@ -240,7 +243,7 @@ Expected<void> RadiusCompensator::applyCompensation()
             return unexpectedOperationCanceled();
 
         DeloneSettings dParams;
-        dParams.region = &flippedFaces;
+        dParams.region = faceRegion_;
         dParams.maxAngleChange = PI_F / 6;
         makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
@@ -262,10 +265,10 @@ Expected<void> RadiusCompensator::applyCompensation()
         mesh_.points[v] = toWorldXf_( Vector3f( pos.x, pos.y, *value ) );
         vertRegion_.reset( v );
     }, subprogress( params_.callback, 0.65f, 0.8f ) );
-
+    
     if ( vertRegion_.any() )
         positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
-
+    
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -275,15 +278,43 @@ Expected<void> RadiusCompensator::applyCompensation()
 Expected<void> RadiusCompensator::postprocessMesh()
 {
     MR_TIMER;
+
+    DeloneSettings dParams;
+    dParams.region = faceRegion_;
+    dParams.maxAngleChange = PI_F / 3;
+    makeDeloneEdgeFlips( mesh_, dParams, int( faceRegion_->count() ) );
+
+    if ( !reportProgress( params_.callback, 0.85f ) )
+        return unexpectedOperationCanceled();
+
     auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh_.topology, *faceRegion_ );
     RemeshSettings rParams;
     rParams.finalRelaxIters = 2;
     rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.8f, 1.0f );
-
+    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh ? 0.92f : 1.0f );
+    
     if ( !remesh( mesh_, rParams ) )
+        return unexpectedOperationCanceled();
+
+    if ( !params_.projectToOriginalMesh )
+        return {};
+
+    auto verts = getInnerVerts( mesh_.topology, *faceRegion_ );
+    auto keepGoing = BitSetParallelFor( verts, [&] ( VertId v )
+    {
+        auto proj = findSignedDistance( mesh_.points[v], meshCpy_ );
+        if ( !proj )
+            return;
+        if ( proj->dist >= 0.0f )
+            return;
+        mesh_.points[v] = proj->proj.point;
+    }, subprogress( params_.callback, 0.92f,  1.0f ) );
+
+    mesh_.invalidateCaches();
+
+    if ( !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};

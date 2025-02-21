@@ -27,7 +27,7 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     }
 
     {
-        Historian<ChangeVertsColorMapAction> hCM( "color map update", objPoints );
+        Historian<ChangeVertsColorMapAction<ObjectPoints>> hCM( "color map update", objPoints );
         VertColors tmp;
         packed->updateVertsColorMap( tmp );    // tmp := packed
         objPoints->updateVertsColorMap( tmp ); // objPoints := tmp

@@ -388,9 +388,10 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
 }
 
 void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
-    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs )
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
-    assert( fs || ues || vs );
+    MR_TIMER
+    assert( fs || ues || vs || fsVec );
 
     const auto& m = meshPart.mesh;
     constexpr int maxTreeDepth = 32;
@@ -430,6 +431,8 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
             {
                 if ( fs )
                     fs->set( face );
+                if ( fsVec )
+                    fsVec->push_back( face );
                 if ( ues || vs )
                 {
                     EdgeId e0, e1, e2;

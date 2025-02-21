@@ -132,13 +132,26 @@ class ChangeLinesColorMapAction : public HistoryAction
 {
 public:
     using Obj = ObjectLinesHolder;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's line colors before making any changes in them
     ChangeLinesColorMapAction( const std::string& name, const std::shared_ptr<ObjectLinesHolder>& obj ) :
         obj_{ obj },
         name_{ name }
     {
         if ( obj )
             colorMap_ = obj->getLinesColorMap();
+    }
+
+    /// use this constructor to remember object's lines colors and immediate set new value
+    ChangeLinesColorMapAction( const std::string& name, const std::shared_ptr<ObjectLinesHolder>& obj, UndirectedEdgeColors&& newColorMap ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj_ )
+        {
+            colorMap_ = std::move( newColorMap );
+            obj_->updateLinesColorMap( colorMap_ );
+        }
     }
 
     virtual std::string name() const override

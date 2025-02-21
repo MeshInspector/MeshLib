@@ -22,6 +22,7 @@ struct MeshAttributes
 [[nodiscard]] MRVIEWER_API std::optional<MeshAttributes> projectMeshAttributes(
     const ObjectMesh& oldMeshObj,
     const MeshPart& newMeshPart,
+    const AffineXf3f* newMeshXf = nullptr,
     ProgressCallback cb = {} );
 
 /// set new mesh attributes and saving the history of changing mesh attributes

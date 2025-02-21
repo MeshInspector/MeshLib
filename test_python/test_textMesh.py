@@ -30,9 +30,11 @@ def test_aligned_text_mesh():
     # how deep to engrave
     params.surfaceOffset = 0.1
     alignedMesh = mrmesh.alignTextToMesh(sphere, params)
-    gravedPart = mrmesh.boolean(
+    booleanRes = mrmesh.boolean(
         sphere, alignedMesh, mrmesh.BooleanOperation.Intersection
-    ).mesh
+    )
+    assert booleanRes.valid(), booleanRes.errorString
+    gravedPart = booleanRes.mesh
     volume = gravedPart.volume()
     assert volume > 0
     assert volume < alignedMesh.volume()

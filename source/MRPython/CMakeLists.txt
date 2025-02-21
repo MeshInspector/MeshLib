@@ -15,7 +15,6 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
-    Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
@@ -26,6 +25,10 @@ ELSE()
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+ENDIF()
+
+IF(APPLE)
+  target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
@@ -47,6 +50,10 @@ IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   # By default only the `python311[_d].dll` gets copied, but we also need `python3.dll` and the non-debug `python311.dll` in Debug mode as said above.
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+  # Need a Release build of Zlib too. In Release mode it usually gets copied with something else, but in Debug we must copy manually.
+  # Might as well copy unconditionally here.
+  file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 ENDIF()
 
 IF(WIN32)
@@ -60,11 +67,6 @@ IF(WIN32)
 ENDIF()
 
 IF(MR_PCH)
-  # TODO: compare performance
-  #target_precompile_headers(${PROJECT_NAME} PRIVATE
-  #  "$<$<COMPILE_LANGUAGE:CXX>:MRPch/MRPch.h>"
-  #  "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPybind11.h>"
-  #)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 

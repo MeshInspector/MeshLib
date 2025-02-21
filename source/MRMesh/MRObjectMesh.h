@@ -19,7 +19,7 @@ public:
     virtual const char* typeName() const override { return TypeName(); }
 
     /// returns variable mesh, if const mesh is needed use `mesh()` instead
-    virtual const std::shared_ptr< Mesh > & varMesh() { return mesh_; }
+    virtual const std::shared_ptr< Mesh > & varMesh() { return data_.mesh; }
 
     /// sets given mesh to this, resets selection and creases
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );

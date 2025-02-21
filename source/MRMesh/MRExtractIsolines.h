@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -39,10 +40,10 @@ namespace MR
 /// finds all intersected triangles by the plane z=zLevel
 /// \return the section's line segment within each such triangle;
 /// \param faces optional output of the same size as return, where for each line segment one can find its triangle's id
-/// \details this function does not build and use AABB currently, but it must be faster than
+/// \details this function must be faster than
 /// extractXYPlaneSections function when connecting continuous contours take most of the time
 [[nodiscard]] MRMESH_API std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
-    std::vector<FaceId> * faces = nullptr );
+    std::vector<FaceId> * faces = nullptr, UseAABBTree u = UseAABBTree::Yes );
 
 /// track section of plane set by start point, direction and surface normal in start point 
 /// in given direction while given distance or

@@ -32,21 +32,28 @@ jobs:
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
 
-      # this job can be started even if generation stubs was failed
-      # in this case skipping this job
-      - name: End job if download stubs was failed
-        if: failure()
-        run: exit 0
+      - name: Check for Python Stubs
+        id: check_py_stubs
+        run: |
+          if [ -d MeshLib/scripts/wheel/meshlib/meshlib ] ; then
+            echo "py_stubs=true" >> $GITHUB_OUTPUT
+          else
+            echo "Failed to get Python stub files, aborting"
+            echo "py_stubs=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build All Documentation
+        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }}
 
       - name: Commit and push changes
+        if: ${{ steps.check_py_stubs.outputs.py_stubs == 'true' }}
         working-directory: MeshInspector.github.io
         run: |
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
@@ -54,4 +61,3 @@ jobs:
           git add -A
           git commit --allow-empty -m "Auto update docs" -a
           git push
-

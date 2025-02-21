@@ -122,9 +122,9 @@ IF(WIN32)
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
-    spdlog
-    fmt
-    tbb
+    spdlog::spdlog
+    fmt::fmt
+    TBB::tbb
     ${CUDART_LIBRARY}
     ${MRCUDA_OPTIONAL_DEPENDENCIES}
   )

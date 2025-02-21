@@ -28,8 +28,8 @@ void ObjectDistanceMap::applyScale( float scaleFactor )
 std::shared_ptr<MR::Object> ObjectDistanceMap::clone() const
 {
     auto res = std::make_shared<ObjectDistanceMap>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
+    if ( data_.mesh )
+        res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
     if ( dmap_ )
         res->dmap_ = std::make_shared<DistanceMap>( *dmap_ );
     return res;
@@ -102,7 +102,7 @@ std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb ) co
 
 void ObjectDistanceMap::updateMesh( const std::shared_ptr<Mesh>& mesh )
 {
-    mesh_ = mesh;
+    data_.mesh = mesh;
     setDirtyFlags( DIRTY_ALL );
 }
 

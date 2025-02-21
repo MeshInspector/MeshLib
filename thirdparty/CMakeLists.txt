@@ -39,7 +39,7 @@ add_subdirectory(../source/imgui ./imgui)
 
 IF(APPLE OR MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
-ELSEIF(0)
+ELSE()
   # TODO: correct OpenVDB module search
   list(APPEND CMAKE_MODULE_PATH
     "/usr/lib/cmake/OpenVDB/"

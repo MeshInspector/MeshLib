@@ -1,6 +1,5 @@
 #pragma once
 #include "MRHistoryAction.h"
-#include "MRVisualObject.h"
 #include <memory>
 
 namespace MR
@@ -8,13 +7,14 @@ namespace MR
 
 /// History action for vertsColorMap change
 /// \ingroup HistoryGroup
+template<typename T>
 class ChangeVertsColorMapAction : public HistoryAction
 {
 public:
-    using Obj = VisualObject;
+    using Obj = T;
 
     /// use this constructor to remember object's vertex colors before making any changes in them
-    ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<VisualObject>& obj ) :
+    ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<T>& obj ) :
         obj_{ obj },
         name_{ name }
     {
@@ -23,7 +23,7 @@ public:
     }
 
     /// use this constructor to remember object's vertex colors and immediate set new value
-    ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, VertColors&& newVertsColorMap ) :
+    ChangeVertsColorMapAction( const std::string& name, const std::shared_ptr<T>& obj, VertColors&& newVertsColorMap ) :
         obj_{ obj },
         name_{ name }
     {
@@ -46,7 +46,7 @@ public:
         obj_->updateVertsColorMap( vertsColorMap_ );
     }
 
-    static void setObjectDirty( const std::shared_ptr<VisualObject>& obj )
+    static void setObjectDirty( const std::shared_ptr<T>& obj )
     {
         if ( obj )
             obj->setDirtyFlags( DIRTY_VERTS_COLORMAP );
@@ -58,7 +58,7 @@ public:
     }
 
 private:
-    std::shared_ptr<VisualObject> obj_;
+    std::shared_ptr<T> obj_;
     VertColors vertsColorMap_;
     std::string name_;
 };

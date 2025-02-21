@@ -427,7 +427,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     setUVCoords( std::move( uvCoords ) );
 }
 
-void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces )
+void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces )
 {
     MR_TIMER
 
@@ -685,6 +685,7 @@ size_t ObjectMeshHolder::heapBytes() const
         + ancillaryTexture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + ancillaryUVCoordinates_.heapBytes()
+        + vertsColorMap_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }

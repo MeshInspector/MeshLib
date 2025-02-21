@@ -43,6 +43,7 @@
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
+    <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
@@ -180,6 +181,7 @@
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRProjectMeshAttributes.h" />
+    <ClInclude Include="MRRibbonLayoutConfig.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRMruFormatParameters.h" />

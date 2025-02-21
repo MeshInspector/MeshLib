@@ -9,6 +9,8 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRDirectory.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -119,6 +121,25 @@ bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) 
     return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<PointsVisualizePropertyType>().has_value();
 }
 
+void ObjectPointsHolder::copyColors( const ObjectPointsHolder & src, const VertMap & thisToSrc, const FaceMap& )
+{
+    MR_TIMER
+
+    setColoringType( src.getColoringType() );
+
+    const auto& srcColorMap = src.getVertsColorMap();
+    if ( srcColorMap.empty() )
+        return;
+
+    VertColors colorMap;
+    colorMap.resizeNoInit( thisToSrc.size() );
+    ParallelFor( colorMap, [&]( VertId id )
+    {
+        colorMap[id] = srcColorMap[thisToSrc[id]];
+    } );
+    setVertsColorMap( std::move( colorMap ) );
+}
+
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
@@ -204,6 +225,7 @@ size_t ObjectPointsHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
         + selectedPoints_.heapBytes()
+        + vertsColorMap_.heapBytes()
         + MR::heapBytes( points_ );
 }
 

@@ -61,9 +61,10 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "thirdparty" / "fontawesome-free" / "fa-solid-900.ttf", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "thirdparty" / "Noto_Sans" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
     shutil.copytree(SOURCE_DIR / "source" / "MRViewer" / "resource", WHEEL_SRC_DIR / "resource", dirs_exist_ok=True )
-    icon_resources = []
-    for icon_resource in ( WHEEL_SRC_DIR / "resource").rglob("*.*"): # no folders
-        icon_resources.append(icon_resource.relative_to(WHEEL_SRC_DIR))
+    icon_resources = [
+        str(icon_resource.relative_to(WHEEL_SRC_DIR))
+        for icon_resource in (WHEEL_SRC_DIR / "resource").rglob("*.*") # no folders
+    ]
     pybind_shims = []
     py_versions = []
     for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):

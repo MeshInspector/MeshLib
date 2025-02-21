@@ -67,14 +67,16 @@ ELSEIF(WIN32)
   )
 ELSE()
   find_package(OpenVDB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    OpenVDB::openvdb
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      OpenVDB::openvdb
+    PRIVATE
+      fmt::fmt
+      spdlog::spdlog
+      JsonCpp::JsonCpp
+      TBB::tbb
+      ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
 

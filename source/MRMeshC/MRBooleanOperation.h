@@ -70,16 +70,16 @@ MRMESHC_API const MRBooleanResultMapperMaps* mrBooleanResultMapperGetMaps( const
 
 /// "after cut" faces to "origin" faces
 /// this map is not 1-1, but N-1
-MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps );
+MRMESHC_API MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps );
 
 /// "after cut" faces to "after stitch" faces (1-1)
-MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps );
+MRMESHC_API MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps );
 
 /// "origin" edges to "after stitch" edges (1-1)
-MRMESHC_API const MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps );
+MRMESHC_API MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps );
 
 /// "origin" vertices to "after stitch" vertices (1-1)
-MRMESHC_API const MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps );
+MRMESHC_API MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps );
 
 /// old topology indexes are valid if true
 MRMESHC_API bool mrBooleanResultMapperMapsIdentity( const MRBooleanResultMapperMaps* maps );

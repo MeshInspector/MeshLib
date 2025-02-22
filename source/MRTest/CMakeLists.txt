@@ -53,6 +53,9 @@ ELSE()
       GTest::gtest
       spdlog::spdlog
       pybind11nonlimitedapi_stubs
+      $<$<NOT:$<BOOL:${WIN32}>>:
+        Python::Python
+      >
       ${CMAKE_DL_LIBS}
     )
   ELSE()

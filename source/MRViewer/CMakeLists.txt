@@ -86,6 +86,7 @@ ELSEIF(APPLE)
     hidapi
     clip
     ${APPKIT_LIBRARY}
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
@@ -109,7 +110,10 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     spdlog::spdlog
     fmt::fmt
     TBB::tbb
-    $<$<NOT:$<BOOL:${WIN32}>>:clip>
+    $<$<NOT:$<BOOL:${WIN32}>>:
+      clip
+    >
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
@@ -120,7 +124,6 @@ ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
     MRIOExtras
     MRSymbolMesh
     gtest
-    dl
     cpr
     imgui
     glad
@@ -131,6 +134,7 @@ ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
     fmt
     tbb
     clip
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ENDIF() # APPLE

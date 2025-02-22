@@ -84,6 +84,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
       tbb
       ${MRMESH_OPTIONAL_DEPENDENCIES}
       ${COCOA_LIBRARY}
+      ${CMAKE_DL_LIBS}
     )
   ELSE()
     target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
@@ -121,6 +122,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     Boost::boost
     JsonCpp::JsonCpp
     TBB::tbb
+    ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
@@ -138,9 +140,9 @@ ELSE()
     spdlog
     zip
     Boost::boost
-    dl
     jsoncpp
     tbb
+    ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

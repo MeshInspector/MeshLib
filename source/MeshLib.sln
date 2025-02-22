@@ -65,6 +65,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_stubs
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_meshlib_3.11", "..\thirdparty\pybind11nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MREmbeddedPython", "MREmbeddedPython\MREmbeddedPython.vcxproj", "{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -159,6 +161,10 @@ Global
 		{5612E480-6980-4242-9039-BE367F4ECBF0}.Debug|x64.Build.0 = Debug|x64
 		{5612E480-6980-4242-9039-BE367F4ECBF0}.Release|x64.ActiveCfg = Release|x64
 		{5612E480-6980-4242-9039-BE367F4ECBF0}.Release|x64.Build.0 = Release|x64
+		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Debug|x64.ActiveCfg = Debug|x64
+		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Debug|x64.Build.0 = Debug|x64
+		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Release|x64.ActiveCfg = Release|x64
+		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -186,6 +192,7 @@ Global
 		{90BC6971-76CA-4ECD-92E0-585FE3BD6672} = {AE8B4895-7920-4AD3-B554-C858A08B1680}
 		{CB6D82FB-E91D-4D62-B82E-BE644244E30A} = {DAEF3759-BD96-475D-AA71-96ACC5279E43}
 		{5612E480-6980-4242-9039-BE367F4ECBF0} = {DAEF3759-BD96-475D-AA71-96ACC5279E43}
+		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0} = {AE8B4895-7920-4AD3-B554-C858A08B1680}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6F7912D7-5687-4CBB-828B-1BEDD18B8249}

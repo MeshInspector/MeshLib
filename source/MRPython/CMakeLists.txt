@@ -15,7 +15,6 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
-    Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
@@ -26,6 +25,10 @@ ELSE()
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+ENDIF()
+
+IF(APPLE)
+  target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
@@ -64,11 +67,6 @@ IF(WIN32)
 ENDIF()
 
 IF(MR_PCH)
-  # TODO: compare performance
-  #target_precompile_headers(${PROJECT_NAME} PRIVATE
-  #  "$<$<COMPILE_LANGUAGE:CXX>:MRPch/MRPch.h>"
-  #  "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPybind11.h>"
-  #)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 

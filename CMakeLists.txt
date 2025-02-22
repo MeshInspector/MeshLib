@@ -63,7 +63,10 @@ ENDIF()
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
 set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
-list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+IF(NOT APPLE)
+  # FIXME: the line below breaks building Python modules on macOS
+  list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+ENDIF()
 IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
 ENDIF()

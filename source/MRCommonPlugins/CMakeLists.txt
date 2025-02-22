@@ -42,6 +42,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     MRMesh
     MRIOExtras
     MRViewer
+    $<$<NOT:$<BOOL:${WIN32}>>:clip>
     glad::glad
     glfw
     imgui

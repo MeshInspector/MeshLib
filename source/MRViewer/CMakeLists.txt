@@ -109,6 +109,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     spdlog::spdlog
     fmt::fmt
     TBB::tbb
+    $<$<NOT:$<BOOL:${WIN32}>>:clip>
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg

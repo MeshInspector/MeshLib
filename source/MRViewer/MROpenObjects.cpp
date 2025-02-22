@@ -196,7 +196,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
     struct ErrorInfo
     {
-        int count;
+        int count = 0;
         std::filesystem::path path;
     };
     std::unordered_map<std::string, ErrorInfo> allErrors;

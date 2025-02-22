@@ -65,7 +65,7 @@ ELSE()
       MRPython
       MREmbeddedPython
       MRViewer
-      jsoncpp
+      JsonCpp::JsonCpp
       fmt
       gtest
       spdlog

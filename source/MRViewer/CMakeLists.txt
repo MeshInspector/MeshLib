@@ -129,7 +129,7 @@ ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
     glad
     glfw
     hidapi-hidraw
-    jsoncpp
+    JsonCpp::JsonCpp
     spdlog
     fmt
     tbb

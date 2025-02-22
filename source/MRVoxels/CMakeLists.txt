@@ -79,7 +79,7 @@ ELSE()
     openvdb
     fmt::fmt
     spdlog::spdlog
-    PkgConfig::jsoncpp
+    JsonCpp::JsonCpp
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )

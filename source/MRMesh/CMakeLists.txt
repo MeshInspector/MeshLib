@@ -140,7 +140,7 @@ ELSE()
     spdlog
     zip
     Boost::boost
-    jsoncpp
+    JsonCpp::JsonCpp
     tbb
     ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}

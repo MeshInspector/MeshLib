@@ -46,7 +46,7 @@ IF(MR_PCH)
       fmt
       spdlog
       Boost::boost
-      jsoncpp
+      JsonCpp::JsonCpp
       tbb
     )
   ENDIF()

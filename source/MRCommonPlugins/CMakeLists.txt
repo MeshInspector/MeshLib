@@ -33,7 +33,7 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     spdlog
   )
-ELSEIF(WIN32)
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(glad REQUIRED)
   find_package(OpenVDB REQUIRED)
 
@@ -51,20 +51,19 @@ ELSEIF(WIN32)
     fmt::fmt
   )
 ELSE()
-  find_package(glad REQUIRED)
-
   target_link_libraries(${PROJECT_NAME} PRIVATE
-    TBB::tbb
+    tbb
     MRMesh
     MRIOExtras
     MRViewer
     clip
-    glad::glad
+    glad
     glfw
     imgui
-    JsonCpp::JsonCpp
-    spdlog::spdlog
-    fmt::fmt
+    jsoncpp
+    openvdb
+    spdlog
+    fmt
   )
 ENDIF()
 

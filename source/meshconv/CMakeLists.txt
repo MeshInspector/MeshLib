@@ -8,7 +8,7 @@ find_package(Boost COMPONENTS program_options REQUIRED)
 
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
-IF(WIN32)
+IF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
@@ -21,10 +21,10 @@ ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
-    fmt::fmt
-    spdlog::spdlog
+    fmt
+    spdlog
     Boost::program_options
-    TBB::tbb
+    tbb
   )
 ENDIF()
 

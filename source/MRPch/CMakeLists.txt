@@ -24,7 +24,7 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
-  ELSEIF(WIN32)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(Boost COMPONENTS REQUIRED)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
@@ -43,11 +43,11 @@ IF(MR_PCH)
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt::fmt
-      spdlog::spdlog
+      fmt
+      spdlog
       Boost::boost
-      JsonCpp::JsonCpp
-      TBB::tbb
+      jsoncpp
+      tbb
     )
   ENDIF()
 

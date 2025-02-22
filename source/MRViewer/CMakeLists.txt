@@ -33,8 +33,15 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOU
 set(MRVIEWER_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MRVIEWER_NO_VOXELS)
-  find_package(OpenVDB REQUIRED COMPONENTS openvdb)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels OpenVDB::openvdb)
+  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
+  IF(APPLE)
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+    find_package(OpenVDB REQUIRED)
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
+  ELSE()
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
+  ENDIF()
 ENDIF()
 
 IF(NOT MRVIEWER_NO_GTK)
@@ -81,7 +88,7 @@ ELSEIF(APPLE)
     ${APPKIT_LIBRARY}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSEIF(WIN32)
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(GDCM CONFIG REQUIRED)
   find_package(GTest REQUIRED)
   find_package(cpr REQUIRED)
@@ -104,28 +111,24 @@ ELSEIF(WIN32)
     TBB::tbb
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32
+ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
   find_package(GDCM CONFIG REQUIRED)
-  find_package(GTest REQUIRED)
-  find_package(cpr REQUIRED)
-  find_package(glad REQUIRED)
-  find_package(hidapi REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
     MRSymbolMesh
-    GTest::gtest
+    gtest
     dl
-    cpr::cpr
+    cpr
     imgui
-    glad::glad
+    glad
     glfw
-    hidapi::hidapi
-    JsonCpp::JsonCpp
-    spdlog::spdlog
-    fmt::fmt
-    TBB::tbb
+    hidapi-hidraw
+    jsoncpp
+    spdlog
+    fmt
+    tbb
     clip
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )

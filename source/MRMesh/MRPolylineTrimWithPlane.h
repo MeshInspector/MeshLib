@@ -16,7 +16,8 @@ struct DividePolylineParameters
 {
     /// onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
     std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback;
-    /// closeLineAfterCut if true, the ends of resulting polyline will be united with new edges
+    /// closeLineAfterCut if true, the ends of resulting polyline will be connected by new edges (can make a polyline closed, even if the original one was open)
+    /// if close, only cut edges (no new edges will be created)
     bool closeLineAfterCut = false;
     /// map from input polyline verts to output
     VertMap* outVmap = nullptr;

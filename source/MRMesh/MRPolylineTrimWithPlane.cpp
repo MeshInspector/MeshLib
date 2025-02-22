@@ -69,7 +69,7 @@ UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitS
             continue;
             
         auto e0 = e;
-        bool closed = false;
+        bool canClose = false;
         for ( ;; )
         {
             if ( !e0.valid() )
@@ -79,16 +79,14 @@ UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitS
             if ( orgEdges.test( e0.sym() ) )
             {
                 visited.set( e0.sym() );
-                closed = true;
+                canClose = e0.sym() != e;
                 break;
             }
-            if ( e0 == e0.sym() )
-                break;
             e0 = polyline.topology.next( e0.sym() );
             if ( e0 == e )
                 break;
         }
-        if ( cutSegments && closed )
+        if ( cutSegments && canClose )
             cutSegments->push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
     }
     return res;

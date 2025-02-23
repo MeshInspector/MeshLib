@@ -82,12 +82,16 @@ struct SubdivideSettings
 /// \return The total number of edge splits performed
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
 
+/// subdivides mesh with per-element attributes according to given settings;
+/// \return The total number of edge splits performed
+MRMESH_API int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings );
+
 /// creates a copy of given mesh part, subdivides it to get rid of too long edges compared with voxelSize, then packs resulting mesh,
 /// this is called typically in preparation for 3D space sampling with voxelSize step, and subdivision is important for making leaves of AABB tree not too big compared with voxelSize
 [[nodiscard]] MRMESH_API Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb = {} );
 
 /// returns the data of subdivided mesh given ObjectMesh (which remains unchanged) and subdivision parameters
-[[nodiscard]] MRMESH_API ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh& obj, const SubdivideSettings& subs );
+[[nodiscard]] MRMESH_API ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const SubdivideSettings & settings );
 
 /// \}
 

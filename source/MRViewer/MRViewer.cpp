@@ -177,11 +177,20 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+static bool gWindowSizeInitialized = false;
+
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->postResize( width, height );
-    viewer->postEmptyEvent();
+    auto resizeEvent = [width, height, viewer]
+    {
+        viewer->postResize( width, height );
+        viewer->postEmptyEvent();
+    };
+    if ( !gWindowSizeInitialized )
+        resizeEvent();
+    else
+        viewer->emplaceEvent( "Window resize", resizeEvent, true );
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
@@ -1906,6 +1915,8 @@ void Viewer::postResize( int w, int h )
 
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
+
+    gWindowSizeInitialized = true;
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

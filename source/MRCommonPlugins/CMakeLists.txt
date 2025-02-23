@@ -63,7 +63,7 @@ ELSE()
     glad
     glfw
     imgui
-    jsoncpp
+    JsonCpp::JsonCpp
     openvdb
     spdlog
     fmt

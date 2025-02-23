@@ -193,7 +193,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
     // processing of results
     bool atLeastOneLoaded = false;
-    std::unordered_map<std::string, int> allErrors;
+
+    struct ErrorInfo
+    {
+        int count = 0;
+        std::filesystem::path path;
+    };
+    std::unordered_map<std::string, ErrorInfo> allErrors;
     for ( const auto& [node, parent, _, taskRes] : nodes )
     {
         if ( taskRes.has_value() )
@@ -215,7 +221,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         }
         else
         {
-            ++allErrors[taskRes.error()];
+            if ( auto it = allErrors.find( taskRes.error() ); it != allErrors.end() )
+            {
+                it->second.count += 1;
+            }
+            else
+            {
+                std::error_code ec;
+                allErrors[taskRes.error()] = { 1, utf8string( std::filesystem::relative( node.path, folder, ec ) ) };
+                if ( ec )
+                    spdlog::warn( "Filesystem error when trying to obtain {} relative to {}: {}", utf8string( node.path ), utf8string( folder ), ec.message() );
+            }
         }
     }
 
@@ -223,16 +239,22 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     for ( const auto& error : allErrors )
     {
         errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
-        if ( error.second > 1 )
+        if ( error.second.count > 1 )
         {
-            errorString += std::string( " (" ) + std::to_string( error.second ) + std::string( ")" );
+            errorString += std::string( " (" ) + std::to_string( error.second.count ) + std::string( ")" );
         }
+        else
+            errorString += std::string( " (for " ) + utf8string( error.second.path ) + std::string( ")" );
     }
 
-    if ( !errorString.empty() )
-        spdlog::warn( "Load folder error:\n{}", errorString );
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
+
+    if ( !errorString.empty() )
+    {
+        spdlog::warn( "Load folder error:\n{}", errorString );
+        res.warnings = errorString + '\n' + res.warnings;
+    }
 
     res.obj = pseudoRoot->children()[0];
 

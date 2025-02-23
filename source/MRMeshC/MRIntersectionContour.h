@@ -19,7 +19,7 @@ MR_VECTOR_LIKE_DECL( ContinuousContour, VariableEdgeTri )
 
 typedef struct MRContinuousContours MRContinuousContours;
 
-MRMESHC_API const MRContinuousContour mrContinuousContoursGet( const MRContinuousContours* contours, size_t index );
+MRMESHC_API MRContinuousContour mrContinuousContoursGet( const MRContinuousContours* contours, size_t index );
 
 MRMESHC_API size_t mrContinuousContoursSize( const MRContinuousContours* contours );
 

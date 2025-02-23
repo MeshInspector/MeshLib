@@ -460,9 +460,6 @@
     <ClCompile Include="MRViewportCornerController.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
-    <ClCompile Include="MRObjectMeshSubdivide.cpp">
-      <Filter>History</Filter>
-    </ClCompile>
     <ClCompile Include="MRRibbonLayoutConfig.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
@@ -905,9 +902,6 @@
     </ClInclude>
     <ClInclude Include="MRViewportCornerController.h">
       <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectMeshSubdivide.h">
-      <Filter>History</Filter>
     </ClInclude>
     <ClInclude Include="MRMruFormatParameters.h">
       <Filter>IO</Filter>

@@ -14,7 +14,7 @@
 namespace MR
 {
 
-class MRPYTHON_CLASS EmbeddedPython
+class MREMBEDDEDPYTHON_CLASS EmbeddedPython
 {
 public:
     struct Config
@@ -23,13 +23,13 @@ public:
         std::string home;
         std::vector<std::string> argv;
     };
-    MRPYTHON_API static Config pythonConfig; // Set this once before running anything.
+    MREMBEDDEDPYTHON_API static Config pythonConfig; // Set this once before running anything.
 
-    MRPYTHON_API static bool isAvailable();
+    MREMBEDDEDPYTHON_API static bool isAvailable();
 
     // If you have used `runScript()` at least once, you should call this before terminating the program.
     // Otherwise you can get a crash in Python cleanup. I have only observed this with our patched Pybind.
-    MRPYTHON_API static void shutdown();
+    MREMBEDDEDPYTHON_API static void shutdown();
 
     // Returns true if the interpreter is busy running something.
     // If you try to run something else, your thread will block until it's done.
@@ -38,11 +38,11 @@ public:
     // Returns false on failure.
     // If `onDoneAsync` is set, doesn't wait for the script to finish.
     // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread).
-    MRPYTHON_API static bool runString( std::string pythonString, std::function<void( bool success )> onDoneAsync = nullptr );
+    MREMBEDDEDPYTHON_API static bool runString( std::string pythonString, std::function<void( bool success )> onDoneAsync = nullptr );
 
-    MRPYTHON_API static bool runScript( const std::filesystem::path& path );
+    MREMBEDDEDPYTHON_API static bool runScript( const std::filesystem::path& path );
 
-    MRPYTHON_API static bool isPythonScript( const std::filesystem::path& path );
+    MREMBEDDEDPYTHON_API static bool isPythonScript( const std::filesystem::path& path );
 private:
     EmbeddedPython();
     EmbeddedPython( const EmbeddedPython& ) = delete;
@@ -52,7 +52,7 @@ private:
     bool init_();
     void ensureInterpreterThreadIsRunning_();
 
-    MRPYTHON_API static EmbeddedPython& instance_();
+    MREMBEDDEDPYTHON_API static EmbeddedPython& instance_();
     bool available_ = false;
     bool shutdownCalled_ = false;
 

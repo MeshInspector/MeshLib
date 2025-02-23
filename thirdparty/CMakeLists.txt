@@ -37,6 +37,11 @@ ENDIF()
 #imgui build
 add_subdirectory(../source/imgui ./imgui)
 
+IF(APPLE)
+  set(INSTALL_GTEST ON)
+  add_subdirectory(./googletest ./googletest)
+ENDIF()
+
 IF(APPLE OR MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
 ELSE()

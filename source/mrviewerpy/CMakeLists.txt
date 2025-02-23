@@ -55,6 +55,7 @@ ELSE()
     MRViewer
     MRMesh
     MRPython
+    JsonCpp::JsonCpp
     fmt
     glfw
     spdlog

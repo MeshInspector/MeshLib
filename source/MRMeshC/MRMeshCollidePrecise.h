@@ -22,10 +22,10 @@ MR_VECTOR_DECL( EdgeTri )
 typedef struct MRPreciseCollisionResult MRPreciseCollisionResult;
 
 /// each edge is directed to have its origin inside and its destination outside of the other mesh
-MRMESHC_API const MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result );
+MRMESHC_API MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result );
 
 /// each edge is directed to have its origin inside and its destination outside of the other mesh
-MRMESHC_API const MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result );
+MRMESHC_API MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result );
 
 /// deallocates the PreciseCollisionResult object
 MRMESHC_API void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result );

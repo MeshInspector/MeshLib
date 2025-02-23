@@ -16,7 +16,7 @@ static_assert( sizeof( MRVariableEdgeTri ) == sizeof( VariableEdgeTri ) );
 
 MR_VECTOR_LIKE_IMPL( ContinuousContour, VariableEdgeTri )
 
-const MRContinuousContour mrContinuousContoursGet( const MRContinuousContours* contours_, size_t index )
+MRContinuousContour mrContinuousContoursGet( const MRContinuousContours* contours_, size_t index )
 {
     ARG( contours );
     RETURN_VECTOR( contours[index] );

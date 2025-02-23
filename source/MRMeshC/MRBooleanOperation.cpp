@@ -59,25 +59,25 @@ const MRBooleanResultMapperMaps* mrBooleanResultMapperGetMaps( const MRBooleanRe
     RETURN( &mapper.getMaps( index ) );
 }
 
-const MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps_ )
+MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps_ )
 {
     ARG( maps );
     RETURN_VECTOR( maps.cut2origin );
 }
 
-const MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps_ )
+MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps_ )
 {
     ARG( maps );
     RETURN_VECTOR( maps.cut2newFaces );
 }
 
-const MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps_ )
+MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps_ )
 {
     ARG( maps );
     RETURN_VECTOR( maps.old2newEdges );
 }
 
-const MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps_ )
+MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps_ )
 {
     ARG( maps );
     RETURN_VECTOR( maps.old2newVerts );

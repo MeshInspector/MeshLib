@@ -6,14 +6,12 @@
 namespace MR
 {
 
-EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
+UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBitSet* newPositiveEdges, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     if ( polyline.topology.numValidVerts() == 0 )
         return {};
 
-    if ( newPositiveEdges )
-        *newPositiveEdges = {};
-
+    UndirectedEdgeBitSet result( polyline.topology.lastNotLoneEdge().undirected() + 1 );
     EdgeBitSet sectionEdges;
     const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
     for ( const auto& sectionPoint : sectionPoints )
@@ -24,32 +22,37 @@ EdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& plane, EdgeBi
             onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
     }
 
-    EdgeBitSet visited = sectionEdges;
+    if ( newPositiveEdges )
+        *newPositiveEdges |= sectionEdges;
+
     for ( EdgeId e : sectionEdges )
     {
-        if ( visited.test( e ) )
+        if ( result.test( e.undirected() ) )
             continue;
-        visited.set( e.sym() );
 
-        EdgeId e0 = e;
         for ( ;; )
         {
-            if ( !e0.valid() )
+            if ( !e.valid() )
                 break;
 
-            visited.set( e0 );
-            visited.set( e0.sym() );
-            e0 = polyline.topology.next( e0.sym() );
+            result.set( e.undirected() );
+
+            e = e.sym();
+            if ( sectionEdges.test( e ) )
+                break;
+
+            const EdgeId eNew = polyline.topology.next( e );
+            if ( eNew == e )
+                break;
+
+            e = eNew;
         }
     }
 
-    if ( newPositiveEdges )
-        *newPositiveEdges = std::move( sectionEdges );
-
-    return visited;
+    return result;
 }
 
-EdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback /*= nullptr */ )
+UndirectedEdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback /*= nullptr */ )
 {
     return subdivideWithPlane( polyline, plane, nullptr, onEdgeSplitCallback );
 }

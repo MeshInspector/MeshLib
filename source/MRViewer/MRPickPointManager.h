@@ -105,6 +105,9 @@ public:
     /// returns point widget by index from given object or nullptr if no such widget exists
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;
 
+    /// returns index of given point widget on given object or -1 if this widget is not from given object
+    [[nodiscard]] MRVIEWER_API int getPointIndex( const std::shared_ptr<VisualObject>& obj, SurfacePointWidget& pointWidget ) const;
+
     /// returns point widget currently dragged by mouse
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 

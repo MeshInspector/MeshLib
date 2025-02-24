@@ -47,7 +47,7 @@ private:
 
     std::shared_ptr<ObjectVoxels> previewRes_;
     bool previewMode_ = false;
-    Operation previewOp_ = Operation::Union;
+    Operation operation_ = Operation::Union;
 };
 
 }

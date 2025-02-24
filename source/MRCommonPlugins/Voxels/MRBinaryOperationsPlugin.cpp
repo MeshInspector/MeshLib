@@ -73,8 +73,8 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
                 previewRes_->setAncillary( true );
                 SceneRoot::get().addChild( previewRes_ );
             }
-            previewRes_->setName( operationNames[(int)previewOp_] );
-            doOperation_( previewOp_, true );
+            previewRes_->setName( operationNames[(int)operation_] );
+            doOperation_( operation_, true );
         }
         else
         {
@@ -86,15 +86,15 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
         }
     }
 
-    if ( UI::combo( "Operation", (int*)&previewOp_, operationNames, true, operationTooltips ) )
+    if ( UI::combo( "Operation", (int*)&operation_, operationNames, true, operationTooltips ) )
     {
         if ( previewMode_ )
-            doOperation_( previewOp_, true );
+            doOperation_( operation_, true );
     }
 
     if ( UI::button( "Apply", { -1, 0 } ) )
     {
-        doOperation_( previewOp_, false );
+        doOperation_( operation_, false );
     }
 
     ImGui::EndCustomStatePlugin();
@@ -129,7 +129,7 @@ void BinaryOperations::onTransformChange()
 {
     if ( previewMode_ )
     {
-        doOperation_( previewOp_, true );
+        doOperation_( operation_, true );
     }
 }
 

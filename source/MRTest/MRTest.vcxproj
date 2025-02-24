@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />

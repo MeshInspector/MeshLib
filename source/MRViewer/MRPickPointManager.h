@@ -172,6 +172,9 @@ private:
     /// if history writing is enabled, appends given history action to global store
     void appendHistory_( std::shared_ptr<HistoryAction> action ) const;
 
+    /// setup new hovered point widget, and removes hovering from the previous one
+    void setHoveredPointWidget_( SurfacePointWidget* newHoveredPoint );
+
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;
 

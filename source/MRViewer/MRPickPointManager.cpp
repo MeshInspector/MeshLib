@@ -218,6 +218,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
     newPoint->create( obj, pt );
+    setHoveredPointWidget_( newPoint.get() );
 
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
@@ -546,10 +547,7 @@ bool PickPointManager::onMouseMove_( int, int )
 
     auto [pickObj, pick] = pick_();
     if ( hoveredPointWidget_ && pickObj != hoveredPointWidget_->getPickSphere() )
-    {
-        hoveredPointWidget_->setHovered( false );
-        hoveredPointWidget_ = nullptr;
-    }
+        setHoveredPointWidget_( nullptr );
     if ( !pickObj )
         return false;
 
@@ -560,13 +558,13 @@ bool PickPointManager::onMouseMove_( int, int )
     {
         if ( hoveredPointWidget_ )
             break;
-        for ( int index = 0; !hoveredPointWidget_ && index < widgets.size(); ++index )
+        for ( int index = 0; index < widgets.size(); ++index )
         {
             const auto& widget = widgets[index];
             if ( pickObj == widget->getPickSphere() )
             {
-                widget->setHovered( true );
-                hoveredPointWidget_ = widget.get();
+                setHoveredPointWidget_( widget.get() );
+                break;
             }
         }
     }
@@ -660,6 +658,17 @@ void PickPointManager::appendHistory_( std::shared_ptr<HistoryAction> action ) c
 {
     if ( params.writeHistory )
         AppendHistory( std::move( action ) );
+}
+
+void PickPointManager::setHoveredPointWidget_( SurfacePointWidget* newHoveredPoint )
+{
+    if ( hoveredPointWidget_ == newHoveredPoint )
+        return;
+    if ( hoveredPointWidget_ )
+        hoveredPointWidget_->setHovered( false );
+    hoveredPointWidget_ = newHoveredPoint;
+    if ( hoveredPointWidget_ )
+        hoveredPointWidget_->setHovered( true );
 }
 
 } // namespace MR

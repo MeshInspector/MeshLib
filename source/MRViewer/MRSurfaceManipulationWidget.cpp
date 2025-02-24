@@ -186,6 +186,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 void SurfaceManipulationWidget::updateTexture()
 {
     MeshTexture texture;
+    Color red = Color( 255, 16, 16, 170 );
     if ( enableDeviationTexture_ )
     {
         if ( palette_ )
@@ -196,20 +197,20 @@ void SurfaceManipulationWidget::updateTexture()
             texture.pixels.resize( texture.resolution.x * texture.resolution.y );
             for ( int x = 0; x < palleteTexture.resolution.x; ++x )
             {
-                texture.pixels[x] = Color( 255, 64, 64, 255 );
+                texture.pixels[x] = red;
                 texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
             }
         }
         else
         {
-            texture.pixels = { Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ),
+            texture.pixels = { red, red, red,
                 Color::blue(), Color::green(), Color::red() };
             texture.resolution = { 2, 2 };
         }
     }
     else
     {
-        texture.pixels = { Color( 255, 64, 64, 255 ), Color( 0, 0, 0, 0 ) };
+        texture.pixels = { red, Color( 0, 0, 0, 0 ) };
         texture.resolution = { 1, 2 };
     }
     obj_->setAncillaryTexture( texture );

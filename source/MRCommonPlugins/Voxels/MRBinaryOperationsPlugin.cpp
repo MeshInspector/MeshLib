@@ -23,7 +23,7 @@ BinaryOperations::BinaryOperations() :
 {
 }
 
-const std::string operationNames[] = {
+const std::vector<std::string> operationNames = {
     "Union",
     "Intersection",
     "Difference",
@@ -35,7 +35,7 @@ const std::string operationNames[] = {
     "Replace"
 };
 
-const std::string operationTooltips[] = {
+const std::vector<std::string> operationTooltips = {
     "Union A + B",
     "Intersection A * B",
     "Difference A - B",
@@ -61,45 +61,41 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 
     UI::separator(menuScaling, "Operations");
 
-    auto realTimeToggled = UI::checkbox( "Real-time mode", [this] { return realTimeOp_.has_value(); }, [this] ( bool val ) {
-        if ( val && !realTimeOp_ )
-            realTimeOp_ = Operation::Union;
-        else if ( !val )
-            realTimeOp_.reset();
-    } );
-    if ( realTimeToggled )
+    if ( UI::checkbox( "Real-time mode", &realTimeMode_ ) )
     {
-        if ( realTimeOp_ )
+        if ( realTimeMode_ )
         {
+            obj1_->setGlobalAlpha( 175 );
+            obj2_->setGlobalAlpha( 175 );
             if ( !realTimeRes_ )
             {
                 realTimeRes_ = std::make_shared<ObjectVoxels>();
                 SceneRoot::get().addChild( realTimeRes_ );
             }
-            realTimeRes_->setName( operationNames[(int)*realTimeOp_] );
-            doOperation_( *realTimeOp_ );
+            realTimeRes_->setName( operationNames[(int)realTimeOp_] );
+            doOperation_( realTimeOp_, true );
         }
         else
         {
+            obj1_->setGlobalAlpha( 255 );
+            obj2_->setGlobalAlpha( 255 );
             if ( realTimeRes_ )
                 SceneRoot::get().removeChild( realTimeRes_ );
             realTimeRes_.reset();
         }
     }
 
-    auto drawButton = realTimeOp_
-            ? std::function{ [this] ( int op ) { return UI::radioButton( operationNames[op].c_str(), (int*)&(*realTimeOp_), op ); } }
-            : std::function{ [] ( int op ) { return UI::button( operationNames[op].c_str(), {-1, 0} ); } };
-
-    for (int i = 0; i < int(Operation::Count); ++i)
+    if ( UI::combo( "Operation", (int*)&realTimeOp_, operationNames, true, operationTooltips ) )
     {
-        if (drawButton(i))
-        {
-            doOperation_(Operation(i));
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", operationTooltips[i].c_str());
+        if ( realTimeMode_ )
+            doOperation_( realTimeOp_, true );
     }
+
+    if ( UI::button( "Apply", { -1, 0 } ) )
+    {
+        doOperation_( realTimeOp_, false );
+    }
+
     ImGui::EndCustomStatePlugin();
 }
 
@@ -117,6 +113,8 @@ bool BinaryOperations::onDisable_()
 {
     conn1_.disconnect();
     conn1_.disconnect();
+    obj1_->setGlobalAlpha( 255 );
+    obj2_->setGlobalAlpha( 255 );
     obj1_.reset();
     obj2_.reset();
     realTimeRes_.reset();
@@ -125,13 +123,13 @@ bool BinaryOperations::onDisable_()
 
 void BinaryOperations::onTransformChange()
 {
-    if ( realTimeOp_ && *realTimeOp_ != Operation::Count )
+    if ( realTimeMode_ )
     {
-        doOperation_( *realTimeOp_ );
+        doOperation_( realTimeOp_, true );
     }
 }
 
-void BinaryOperations::doOperation_(Operation op)
+void BinaryOperations::doOperation_( Operation op, bool inPreview )
 {
     struct Res
     {
@@ -230,7 +228,7 @@ void BinaryOperations::doOperation_(Operation op)
         };
     };
 
-    if ( realTimeOp_ )
+    if ( inPreview )
     {
         if ( auto res = func( [] ( float ) { return true; } ) )
         {
@@ -240,7 +238,7 @@ void BinaryOperations::doOperation_(Operation op)
         }
     }
     else
-        ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [&] () -> std::function<void()> {
+        ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [this, op, func] () -> std::function<void()> {
             std::function<void()> cancelRes = []
             {
                 showError(stringOperationCanceled());

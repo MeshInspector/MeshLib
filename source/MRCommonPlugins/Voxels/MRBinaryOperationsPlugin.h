@@ -36,7 +36,7 @@ private:
         Replace,
         Count
     };
-    void doOperation_(Operation op);
+    void doOperation_( Operation op, bool inPreview );
 
     void onTransformChange();
 
@@ -46,7 +46,8 @@ private:
     boost::signals2::scoped_connection conn2_;
 
     std::shared_ptr<ObjectVoxels> realTimeRes_;
-    std::optional<Operation> realTimeOp_;
+    bool realTimeMode_ = false;
+    Operation realTimeOp_ = Operation::Union;
 };
 
 }

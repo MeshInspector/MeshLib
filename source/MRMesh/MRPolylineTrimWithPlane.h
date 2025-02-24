@@ -39,6 +39,7 @@ MRMESH_API void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const 
 [[deprecated]] MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} );
 
 /// This function cuts polyline with a plane
+/// \details It cuts only edges, one end of which is in the negative half-space, and the other is not
 /// \return Edge segments intersecting with a plane
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
@@ -50,7 +51,6 @@ MRMESH_API std::vector<EdgeSegment> extractSectionFromPolyline( const Polyline3&
 /// \return Edge segments intersecting with a plane slice
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
-/// \param eps shifting the plane (in the direction opposite to normal) to avoid difficult situations (e.g., the edge lies in the cut plane)
-/// \param positiveEdges Edges in a positive half-space relative to the plane or on the plane itself (only adds bits to the existing ones)
+/// \param sliceHalfWidth Maximal distance from the plane
 MRMESH_API std::vector<EdgeSegment> extractPolylineSlice( const Polyline3& polyline, const Plane3f& plane, float sliceHalfWidth );
 }

@@ -37,6 +37,8 @@ std::vector<VertPair> findSegmentEndVertices( const Polyline3& polyline, const E
     UndirectedEdgeBitSet visited( numEdges );
 
     std::vector<VertPair> result;
+    // The memory is reserved for the case when all polylines obtained during the section originate from the plane and return to it
+    // A part may be unclaimed if the polyline starts in the plane and does not return to it.
     result.reserve( orgEdges.count() / 2 );
 
     for ( auto e : orgEdges )

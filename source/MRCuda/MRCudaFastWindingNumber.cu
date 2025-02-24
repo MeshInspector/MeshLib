@@ -201,7 +201,7 @@ static constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
 
 __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
-    float* resVec, DistanceToMeshOptions options, size_t size ) // pass options by value to avoid reference on CPU memory
+    float* resVec, DistanceToMeshOptions options, size_t size, size_t offset ) // pass options by value to avoid reference on CPU memory
 {
     if ( size == 0 )
     {
@@ -213,9 +213,14 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     if ( index >= size )
         return;
 
+    size_t globalIndex = index + offset;
+    size_t globalSize = size_t( dims.x ) * dims.y * dims.z;
+    if ( globalIndex >= globalSize )
+        return;
+
     const int sizeXY = dims.x * dims.y;
-    const int sumZ = int( index % sizeXY );
-    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( index / sizeXY ) };
+    const int sumZ = int( globalIndex % sizeXY );
+    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( globalIndex / sizeXY ) };
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
@@ -227,7 +232,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     }
 
     float fwn{ 0 };
-    processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, options.windingNumberBeta, index );
+    processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, options.windingNumberBeta, globalIndex );
     float res = sqrt( resSq );
     if ( fwn > options.windingNumberThreshold )
         res = -res;
@@ -260,12 +265,11 @@ void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
 }
 
 void signedDistance( int3 dims, Matrix4 gridToMeshXf,
-                                        const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                        float* resVec, const DistanceToMeshOptions& options )
+                     const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+                     float* resVec, size_t resVecSize, size_t resVecOffset, const DistanceToMeshOptions& options )
 {
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, options, size );
+    int numBlocks = int( ( resVecSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, options, resVecSize, resVecOffset );
 }
 
 } //namespace Cuda

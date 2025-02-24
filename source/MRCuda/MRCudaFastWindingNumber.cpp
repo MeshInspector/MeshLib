@@ -179,26 +179,44 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
         res.isIdentity = false;
         return res;
     };
-
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    DynamicArrayF cudaResult;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
+
+    constexpr size_t cMaxBufferBytes = 1 << 30;
+    const auto layerSize = size_t( dims.x ) * dims.y;
+    const auto maxLayerCountInBuffer = BufferSlice<float>::maxGroupCount( cMaxBufferBytes, layerSize );
+
+    BufferSlice<float> cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.allocate( maxLayerCountInBuffer * layerSize ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    signedDistance(
-        int3{ dims.x, dims.y, dims.z },
-        cudaGridToMeshXf,
-        data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        cudaResult.data(), options );
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-    if ( !reportProgress( cb, 0.7f ) )
-        return unexpectedOperationCanceled();
+    const auto iterCount = ( dims.z / maxLayerCountInBuffer ) + bool( dims.z % maxLayerCountInBuffer );
+    int iterIndex = 0;
+    for ( cudaResult.assignOutput( res ); cudaResult.valid(); cudaResult.advance() )
+    {
+        auto cb2 = subprogress( cb, iterIndex++, iterCount );
 
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( res ) );
-    if ( !reportProgress( cb, 1.0f ) )
-        return unexpectedOperationCanceled();
+        signedDistance(
+            int3 { dims.x, dims.y, dims.z },
+            cudaGridToMeshXf,
+            data_->dipoles.data(),
+            data_->cudaNodes.data(),
+            data_->cudaMeshPoints.data(),
+            data_->cudaFaces.data(),
+            cudaResult.data(),
+            cudaResult.size(),
+            cudaResult.offset(),
+            options
+        );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        if ( !reportProgress( cb2, 0.7f ) )
+            return unexpectedOperationCanceled();
+
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyToOutput() );
+        if ( !reportProgress( cb2, 1.0f ) )
+            return unexpectedOperationCanceled();
+    }
+
     return {};
 }
 

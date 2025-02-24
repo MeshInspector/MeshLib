@@ -421,7 +421,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     if ( myPickSpheres_.contains( obj.get() ) )
-        return false;
+        return false; // we can be here only if pick sphere under cursor was not properly hovered and thus ignored mouse down
 
     if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
         return false;

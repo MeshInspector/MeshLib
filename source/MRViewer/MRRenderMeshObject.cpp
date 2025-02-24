@@ -43,6 +43,9 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 
+    if ( !objMesh_->mesh() )
+        return false;
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();

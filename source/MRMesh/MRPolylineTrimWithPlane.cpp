@@ -18,7 +18,7 @@ UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& pla
     {
         const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
         sectionEdges.autoResizeSet( sectionPoint.e );
-        result.set( sectionPoint.e.undirected() );
+        result.autoResizeSet( sectionPoint.e.undirected() );
         if ( onEdgeSplitCallback )
             onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
     }
@@ -146,7 +146,7 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
     };
     
     if ( positiveEdges )
-        positiveEdges->reserve( polyline.topology.lastNotLoneEdge().undirected() + 1 );
+        positiveEdges->reserve( polyline.topology.lastNotLoneEdge().undirected() + 1);
 
     for ( auto ue : undirectedEdges( polyline.topology ) )
     {
@@ -198,7 +198,7 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         }
         else if ( positiveEdges && p1.distFromPosPlane > 0.f && p2.distFromPosPlane > 0.f )
         {
-            positiveEdges->set( ue );
+            positiveEdges->autoResizeSet( ue );
         }
     }
 

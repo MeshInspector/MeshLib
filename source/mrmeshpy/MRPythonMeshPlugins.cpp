@@ -354,7 +354,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "projectOnOriginalMesh", &SubdivideSettings::projectOnOriginalMesh,
             "If true, then every new vertex will be projected on the original mesh (before smoothing)" );
 
-    m.def( "subdivideMesh", &MR::subdivideMesh,
+    m.def( "subdivideMesh", (int(*)( Mesh &, const SubdivideSettings & )) &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),
         "Split edges in mesh region according to the settings;\n"
         "return The total number of edge splits performed" );

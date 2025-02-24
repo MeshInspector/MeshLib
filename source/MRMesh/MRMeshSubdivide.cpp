@@ -251,60 +251,65 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
     return subMesh;
 }
 
-ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh& obj, const SubdivideSettings& subs )
+int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
 {
     MR_TIMER
-
-    ObjectMeshData res = obj.data();
-    if ( !res.mesh )
-    {
-        assert( false );
-        return res;
-    }
-    // clone mesh as well
-    res.mesh = std::make_shared<Mesh>( *res.mesh );
-
-    auto notFlippable = res.selectedEdges | res.creases;
+    auto notFlippable = data.selectedEdges | data.creases;
 
     MeshAttributesToUpdate meshParams;
-    if ( !res.uvCoordinates.empty() )
-        meshParams.uvCoords = &res.uvCoordinates;
-    if ( !res.vertColors.empty() )
-        meshParams.colorMap = &res.vertColors;
-    if ( !res.texturePerFace.empty() )
-        meshParams.texturePerFace = &res.texturePerFace;
-    if ( !res.faceColors.empty() )
-        meshParams.faceColors = &res.faceColors;
+    if ( !data.uvCoordinates.empty() )
+        meshParams.uvCoords = &data.uvCoordinates;
+    if ( !data.vertColors.empty() )
+        meshParams.colorMap = &data.vertColors;
+    if ( !data.texturePerFace.empty() )
+        meshParams.texturePerFace = &data.texturePerFace;
+    if ( !data.faceColors.empty() )
+        meshParams.faceColors = &data.faceColors;
 
-    auto updateAttributesCb = meshOnEdgeSplitAttribute( *res.mesh, meshParams );
+    auto updateAttributesCb = meshOnEdgeSplitAttribute( *data.mesh, meshParams );
 
-    auto subs1 = subs;
+    auto subs1 = settings;
     subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
     {
-        if ( res.selectedEdges.test( e.undirected() ) )
+        if ( data.selectedEdges.test( e.undirected() ) )
         {
-            res.selectedEdges.autoResizeSet( e1.undirected() );
+            data.selectedEdges.autoResizeSet( e1.undirected() );
             notFlippable.autoResizeSet( e1.undirected() );
         }
-        if ( res.creases.test( e.undirected() ) )
+        if ( data.creases.test( e.undirected() ) )
         {
-            res.creases.autoResizeSet( e1.undirected() );
+            data.creases.autoResizeSet( e1.undirected() );
             notFlippable.autoResizeSet( e1.undirected() );
         }
 
         updateAttributesCb( e1, e );
-        if ( subs.onEdgeSplit )
-            subs.onEdgeSplit( e1, e );
+        if ( settings.onEdgeSplit )
+            settings.onEdgeSplit( e1, e );
     };
     assert( !subs1.notFlippable );
     subs1.notFlippable = &notFlippable;
 
     assert( !subs1.region );
-    if ( res.selectedFaces.any() )
-        subs1.region = &res.selectedFaces;
+    if ( data.selectedFaces.any() )
+        subs1.region = &data.selectedFaces;
 
-    subdivideMesh( *res.mesh, subs1 );
-    return res;
+    return subdivideMesh( *data.mesh, subs1 );
+}
+
+ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const SubdivideSettings& settings )
+{
+    MR_TIMER
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return data;
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    subdivideMesh( data, settings );
+    return data;
 }
 
 TEST(MRMesh, SubdivideMesh)

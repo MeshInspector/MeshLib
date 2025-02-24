@@ -65,11 +65,12 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
     {
         if ( previewMode_ )
         {
-            obj1_->setGlobalAlpha( 175 );
-            obj2_->setGlobalAlpha( 175 );
+            obj1_->setVisualizeProperty( true, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
+            obj2_->setVisualizeProperty( true, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
             if ( !previewRes_ )
             {
                 previewRes_ = std::make_shared<ObjectVoxels>();
+                previewRes_->setAncillary( true );
                 SceneRoot::get().addChild( previewRes_ );
             }
             previewRes_->setName( operationNames[(int)previewOp_] );
@@ -77,8 +78,8 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
         }
         else
         {
-            obj1_->setGlobalAlpha( 255 );
-            obj2_->setGlobalAlpha( 255 );
+            obj1_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
+            obj2_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
             if ( previewRes_ )
                 SceneRoot::get().removeChild( previewRes_ );
             previewRes_.reset();
@@ -113,8 +114,8 @@ bool BinaryOperations::onDisable_()
 {
     conn1_.disconnect();
     conn1_.disconnect();
-    obj1_->setGlobalAlpha( 255 );
-    obj2_->setGlobalAlpha( 255 );
+    obj1_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
+    obj2_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
     obj1_.reset();
     obj2_.reset();
     if ( previewRes_ )
@@ -138,7 +139,7 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
     {
         FloatGrid grid;
         AffineXf3f xf;
-        float iso;
+        float iso = 0;
     };
 
     auto func = [&, this, op] ( auto reportProgress ) -> std::optional<Res>
@@ -275,7 +276,7 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
                 newObj->select( true );
                 SceneRoot::get().addChild( newObj );
                 dialogIsOpen_ = false;
-            };;
+            };
         } );
 }
 

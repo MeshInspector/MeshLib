@@ -197,10 +197,11 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
     {
-        auto cb2 = subprogress( cb, chunk.index, iterCount );
+        const auto cb2 = subprogress( cb1, chunk.index, iterCount );
 
         signedDistance(
             int3 { dims.x, dims.y, dims.z },
@@ -215,11 +216,11 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
             options
         );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-        if ( !reportProgress( cb2, 0.7f ) )
+        if ( !reportProgress( cb2, 0.25f ) )
             return unexpectedOperationCanceled();
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( res.data() + chunk.offset, chunk.size ) );
-        if ( !reportProgress( cb2, 1.0f ) )
+        if ( !reportProgress( cb2, 1.00f ) )
             return unexpectedOperationCanceled();
     }
 

@@ -187,10 +187,14 @@ static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height
         viewer->postResize( width, height );
         viewer->postEmptyEvent();
     };
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
     if ( !gWindowSizeInitialized )
         resizeEvent();
     else
         viewer->emplaceEvent( "Window resize", resizeEvent, true );
+#else
+    resizeEvent();
+#endif
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )

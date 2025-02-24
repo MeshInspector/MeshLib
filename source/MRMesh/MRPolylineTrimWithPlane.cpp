@@ -11,43 +11,20 @@ UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& pla
     if ( polyline.topology.numValidVerts() == 0 )
         return {};
 
-    UndirectedEdgeBitSet result( polyline.topology.lastNotLoneEdge().undirected() + 1 );
+    UndirectedEdgeBitSet result;
     EdgeBitSet sectionEdges;
-    const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f );
+    const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f, &result );
     for ( const auto& sectionPoint : sectionPoints )
     {
         const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
         sectionEdges.autoResizeSet( sectionPoint.e );
+        result.set( sectionPoint.e.undirected() );
         if ( onEdgeSplitCallback )
             onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
     }
 
     if ( newPositiveEdges )
         *newPositiveEdges |= sectionEdges;
-
-    for ( EdgeId e : sectionEdges )
-    {
-        if ( result.test( e.undirected() ) )
-            continue;
-
-        for ( ;; )
-        {
-            if ( !e.valid() )
-                break;
-
-            result.set( e.undirected() );
-
-            e = e.sym();
-            if ( sectionEdges.test( e ) )
-                break;
-
-            const EdgeId eNew = polyline.topology.next( e );
-            if ( eNew == e )
-                break;
-
-            e = eNew;
-        }
-    }
 
     return result;
 }
@@ -152,7 +129,7 @@ void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const D
     trimWithPlane( polyline, plane, params );
 }
 
-std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps )
+std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps, UndirectedEdgeBitSet* positiveEdges )
 {
     std::vector<EdgeSegment> result;
     if ( polyline.topology.edgeSize() <= 0 )
@@ -167,7 +144,10 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         float distFromPosPlane = {};
         float distFromNegPlane = {};
     };
-        
+    
+    if ( positiveEdges )
+        positiveEdges->reserve( polyline.topology.lastNotLoneEdge().undirected() + 1 );
+
     for ( auto ue : undirectedEdges( polyline.topology ) )
     {
         const EdgeId e( ue );
@@ -175,8 +155,8 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPosPlane = planePos.distance( p1.p ), .distFromNegPlane = planeNeg.distance( p1.p ) };
         PointPosition p2{ .p = polyline.destPnt( e ), .distFromPosPlane = planePos.distance( p2.p ), .distFromNegPlane = planeNeg.distance( p2.p ) };
 
-        bool isP1Between = p1.distFromNegPlane < 0 && p1.distFromPosPlane < 0;
-        bool isP2Between = p2.distFromNegPlane < 0 && p2.distFromPosPlane < 0;
+        bool isP1Between = p1.distFromNegPlane <= 0 && p1.distFromPosPlane <= 0;
+        bool isP2Between = p2.distFromNegPlane <= 0 && p2.distFromPosPlane <= 0;
 
         EdgeSegment segment( e );
 
@@ -205,8 +185,8 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
                 if ( p1.distFromPosPlane > 0 )
                 {
                     segment.e = segment.e.sym();
-                    segment.a = 1 - p1.distFromPosPlane / denom;
-                    segment.b = p2.distFromNegPlane / denom;
+                    segment.a = p2.distFromNegPlane / denom;
+                    segment.b = 1 - p1.distFromPosPlane / denom;
                 }
                 else
                 {
@@ -215,6 +195,10 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
                 }
             }
             result.push_back( segment );
+        }
+        else if ( positiveEdges && p1.distFromPosPlane > 0.f && p2.distFromPosPlane > 0.f )
+        {
+            positiveEdges->set( ue );
         }
     }
 

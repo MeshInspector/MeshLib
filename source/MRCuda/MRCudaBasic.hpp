@@ -64,18 +64,19 @@ inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
 
 
 template <typename T>
-inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
 {
-    assert( numBytes % sizeof( T ) == 0 );
-    resize( numBytes / sizeof( T ) );
-    return CUDA_LOGE( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ) );
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data_, data, std::min( size_, size ), cudaMemcpyHostToDevice ) );
 }
 
 template <typename T>
-inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data, size_t numBytes ) const
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyTo( U* data, size_t size ) const
 {
-    assert( numBytes % sizeof( T ) == 0 );
-    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size_ * sizeof( T ), numBytes ), cudaMemcpyDeviceToHost ) );
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size, size_ ), cudaMemcpyDeviceToHost ) );
 }
 
 template<typename T>
@@ -142,7 +143,7 @@ void BufferSlice<T>::advance()
 template <typename T>
 cudaError_t BufferSlice<T>::copyToOutput() const
 {
-    return buf_.toBytes( ( uint8_t* )outData_, outSize_ * sizeof( T ) );
+    return buf_.copyTo( outData_, outSize_ );
 }
 
 template<typename T>

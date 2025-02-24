@@ -33,10 +33,12 @@ public:
     cudaError_t fromVector( const std::vector<U>& vec );
 
     // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
-    cudaError_t fromBytes( const uint8_t* data, size_t numBytes );
+    template <typename U>
+    cudaError_t copyFrom( const U* data, size_t size );
 
     // copy given data to CPU (data should be already allocated)
-    cudaError_t toBytes( uint8_t* data, size_t numBytes ) const;
+    template <typename U>
+    cudaError_t copyTo( U* data, size_t size ) const;
 
     // copy this GPU array to given vector
     template <typename U>

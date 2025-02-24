@@ -12,7 +12,7 @@ UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& pla
         return {};
 
     UndirectedEdgeBitSet result;
-    const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f, &result );
+    const auto sectionPoints = extractSectionFromPolyline( polyline, plane, 0.0f, &result );
     for ( const auto& sectionPoint : sectionPoints )
     {
         const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
@@ -124,20 +124,18 @@ void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const D
     trimWithPlane( polyline, plane, params );
 }
 
-std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps, UndirectedEdgeBitSet* positiveEdges )
+std::vector<EdgeSegment> extractSectionFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps, UndirectedEdgeBitSet* positiveEdges )
 {
     std::vector<EdgeSegment> result;
     if ( polyline.topology.edgeSize() <= 0 )
         return {};
 
-    Plane3f planePos( plane.n, plane.d + eps );
-    Plane3f planeNeg( -plane.n, -plane.d + eps );
+    Plane3f planeEps( plane.n, plane.d - eps );
 
     struct PointPosition
     {
         Vector3f p;
-        float distFromPosPlane = {};
-        float distFromNegPlane = {};
+        float distFromPlane = {};
     };
     
     if ( positiveEdges && positiveEdges->size() < polyline.topology.undirectedEdgeSize() )
@@ -147,6 +145,53 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
     {
         const EdgeId e( ue );
             
+        PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPlane = planeEps.distance( p1.p ) };
+        PointPosition p2{ .p = polyline.destPnt( e ), .distFromPlane = planeEps.distance( p2.p ) };
+
+        if ( ( p1.distFromPlane < 0.f && p2.distFromPlane >= 0.f ) ||
+             ( p1.distFromPlane >= 0.f && p2.distFromPlane < 0.f ) )
+        {
+            EdgeSegment segment( e );
+            if ( p1.distFromPlane < 0.f )
+            {
+                segment.a = segment.b = -p1.distFromPlane / ( p2.distFromPlane - p1.distFromPlane );
+            }
+            else
+            {
+                segment.e = e.sym();
+                segment.a = segment.b = -p2.distFromPlane / ( p1.distFromPlane - p2.distFromPlane );
+            }
+            result.push_back( segment );
+        }
+        else if ( positiveEdges && p1.distFromPlane >= 0.f && p2.distFromPlane >= 0.f )
+        {
+            positiveEdges->set( ue );
+        }
+    }
+
+    return result;
+}
+
+std::vector<MR::EdgeSegment> extractPolylineSlice( const Polyline3& polyline, const Plane3f& plane, float sliceHalfWidth )
+{
+    std::vector<EdgeSegment> result;
+    if ( polyline.topology.edgeSize() <= 0 )
+        return {};
+
+    Plane3f planePos( plane.n, plane.d + sliceHalfWidth );
+    Plane3f planeNeg( -plane.n, -plane.d + sliceHalfWidth );
+
+    struct PointPosition
+    {
+        Vector3f p;
+        float distFromPosPlane = {};
+        float distFromNegPlane = {};
+    };
+
+    for ( auto ue : undirectedEdges( polyline.topology ) )
+    {
+        const EdgeId e( ue );
+
         PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPosPlane = planePos.distance( p1.p ), .distFromNegPlane = planeNeg.distance( p1.p ) };
         PointPosition p2{ .p = polyline.destPnt( e ), .distFromPosPlane = planePos.distance( p2.p ), .distFromNegPlane = planeNeg.distance( p2.p ) };
 
@@ -173,8 +218,8 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         }
         else if ( p1.distFromPosPlane * p2.distFromPosPlane < 0 )
         {
-            const float denom = ( p1.distFromPosPlane > 0 ) ? p1.distFromPosPlane + p2.distFromNegPlane + 2 * eps :
-                                                                p1.distFromNegPlane + p2.distFromPosPlane + 2 * eps;
+            const float denom = ( p1.distFromPosPlane > 0 ) ? p1.distFromPosPlane + p2.distFromNegPlane + 2 * sliceHalfWidth :
+                p1.distFromNegPlane + p2.distFromPosPlane + 2 * sliceHalfWidth;
             if ( denom != 0 )
             {
                 if ( p1.distFromPosPlane > 0 )
@@ -190,10 +235,6 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
                 }
             }
             result.push_back( segment );
-        }
-        else if ( positiveEdges && p1.distFromPosPlane > 0.f && p2.distFromPosPlane > 0.f )
-        {
-            positiveEdges->set( ue );
         }
     }
 

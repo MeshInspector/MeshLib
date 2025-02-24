@@ -99,53 +99,6 @@ cudaError_t DynamicArray<T>::resize( size_t size )
     return cudaSuccess;
 }
 
-template <typename T>
-size_t BufferSlice<T>::maxGroupCount( size_t maxBytes, size_t groupSize )
-{
-    const size_t maxElementCount = maxBytes / sizeof( T );
-    return maxElementCount / groupSize;
-}
-
-template <typename T>
-template <typename U>
-void BufferSlice<T>::assignOutput( std::vector<U>& vec )
-{
-    static_assert( sizeof( U ) == sizeof( T ) );
-    outData_ = vec.data();
-    outSize_ = vec.size();
-}
-
-template <typename T>
-void BufferSlice<T>::setOverlap( size_t overlap )
-{
-    assert( overlap < buf_.size() );
-    overlap_ = overlap;
-}
-
-template <typename T>
-void BufferSlice<T>::advance()
-{
-    const size_t shift = buf_.size() - overlap_;
-    if ( shift < outSize_ )
-    {
-        offset_ += shift;
-        outData_ += shift;
-        outSize_ -= shift;
-    }
-    else
-    {
-        offset_ += outSize_;
-        outData_ = nullptr;
-        outSize_ = 0;
-    }
-}
-
-template <typename T>
-cudaError_t BufferSlice<T>::copyToOutput() const
-{
-    return buf_.copyTo( outData_, outSize_ );
-}
-
 template<typename T>
 template<typename U>
 cudaError_t DynamicArray<T>::toVector( std::vector<U>& vec ) const

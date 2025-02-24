@@ -77,62 +77,6 @@ using DynamicArrayU64 = MR::Cuda::DynamicArray<uint64_t>;
 using DynamicArrayU16 = MR::Cuda::DynamicArray<uint16_t>;
 using DynamicArrayF = MR::Cuda::DynamicArray<float>;
 
-// ...
-template <typename T>
-class BufferSlice
-{
-public:
-    BufferSlice() = default;
-
-    static size_t maxGroupCount( size_t maxBytes, size_t groupSize );
-
-    // resize the underlying buffer
-    cudaError_t allocate( size_t size ) { return buf_.resize( size ); }
-
-    // ...
-    cudaError_t release() { return buf_.resize( 0 ); }
-
-    // ...
-    void assignOutput( T* data, size_t size ) { outData_ = data; outSize_ = size; }
-    template <typename U>
-    void assignOutput( std::vector<U>& vec );
-
-    // ...
-    void setOverlap( size_t overlap );
-
-    // move the slice window
-    void advance();
-
-    // ...
-    size_t offset() const { return offset_; }
-
-    // ...
-    bool valid() const { return outData_ != nullptr; }
-
-    // ...
-    cudaError_t copyToOutput() const;
-
-    // ...
-    T* data() { return buf_.data(); }
-    // ...
-    const T* data() const { return buf_.data(); }
-
-    // ...
-    size_t size() const { return std::min( buf_.size(), outSize_ ); }
-
-    // ...
-    size_t bytes() const { return buf_.bytes(); }
-
-private:
-    DynamicArray<T> buf_;
-
-    T* outData_{ nullptr };
-    size_t outSize_{ 0 };
-
-    size_t overlap_{ 0 };
-    size_t offset_{ 0 };
-};
-
 // Sets all float values of GPU array to zero
 cudaError_t setToZero( DynamicArrayF& devArray );
 

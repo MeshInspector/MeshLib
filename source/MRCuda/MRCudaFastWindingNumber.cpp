@@ -1,9 +1,11 @@
 #include "MRCudaFastWindingNumber.h"
 #include "MRCudaFastWindingNumber.cuh"
 #include "MRCudaMath.cuh"
+
 #include "MRMesh/MRAABBTree.h"
-#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -181,20 +183,24 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     };
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
-    constexpr size_t cMaxBufferBytes = 1 << 30;
-    const auto layerSize = size_t( dims.x ) * dims.y;
-    const auto maxLayerCountInBuffer = BufferSlice<float>::maxGroupCount( cMaxBufferBytes, layerSize );
+    // TODO: compute available memory amount
+    const size_t cMaxBufferBytes = 1 << 30; // 1 GiB
+    const auto maxBufferSize = cMaxBufferBytes / sizeof( float );
 
-    BufferSlice<float> cudaResult;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.allocate( maxLayerCountInBuffer * layerSize ) );
+    const auto layerSize = size_t( dims.x ) * dims.y;
+    const auto maxLayerCountInBuffer = maxBufferSize / layerSize;
+    const auto bufferSize = maxLayerCountInBuffer * layerSize;
+    const auto totalSize = dims.z * layerSize;
+
+    DynamicArrayF cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    const auto iterCount = ( dims.z / maxLayerCountInBuffer ) + bool( dims.z % maxLayerCountInBuffer );
-    int iterIndex = 0;
-    for ( cudaResult.assignOutput( res ); cudaResult.valid(); cudaResult.advance() )
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
     {
-        auto cb2 = subprogress( cb, iterIndex++, iterCount );
+        auto cb2 = subprogress( cb, chunk.index, iterCount );
 
         signedDistance(
             int3 { dims.x, dims.y, dims.z },
@@ -204,15 +210,15 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
             data_->cudaMeshPoints.data(),
             data_->cudaFaces.data(),
             cudaResult.data(),
-            cudaResult.size(),
-            cudaResult.offset(),
+            chunk.size,
+            chunk.offset,
             options
         );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
         if ( !reportProgress( cb2, 0.7f ) )
             return unexpectedOperationCanceled();
 
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyToOutput() );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( res.data() + chunk.offset, chunk.size ) );
         if ( !reportProgress( cb2, 1.0f ) )
             return unexpectedOperationCanceled();
     }

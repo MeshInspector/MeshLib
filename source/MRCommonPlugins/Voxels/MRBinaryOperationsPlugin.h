@@ -45,9 +45,9 @@ private:
     boost::signals2::scoped_connection conn1_;
     boost::signals2::scoped_connection conn2_;
 
-    std::shared_ptr<ObjectVoxels> realTimeRes_;
-    bool realTimeMode_ = false;
-    Operation realTimeOp_ = Operation::Union;
+    std::shared_ptr<ObjectVoxels> previewRes_;
+    bool previewMode_ = false;
+    Operation previewOp_ = Operation::Union;
 };
 
 }

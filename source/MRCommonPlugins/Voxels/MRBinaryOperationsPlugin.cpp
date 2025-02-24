@@ -61,39 +61,39 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 
     UI::separator(menuScaling, "Operations");
 
-    if ( UI::checkbox( "Real-time mode", &realTimeMode_ ) )
+    if ( UI::checkbox( "Enable preview", &previewMode_ ) )
     {
-        if ( realTimeMode_ )
+        if ( previewMode_ )
         {
             obj1_->setGlobalAlpha( 175 );
             obj2_->setGlobalAlpha( 175 );
-            if ( !realTimeRes_ )
+            if ( !previewRes_ )
             {
-                realTimeRes_ = std::make_shared<ObjectVoxels>();
-                SceneRoot::get().addChild( realTimeRes_ );
+                previewRes_ = std::make_shared<ObjectVoxels>();
+                SceneRoot::get().addChild( previewRes_ );
             }
-            realTimeRes_->setName( operationNames[(int)realTimeOp_] );
-            doOperation_( realTimeOp_, true );
+            previewRes_->setName( operationNames[(int)previewOp_] );
+            doOperation_( previewOp_, true );
         }
         else
         {
             obj1_->setGlobalAlpha( 255 );
             obj2_->setGlobalAlpha( 255 );
-            if ( realTimeRes_ )
-                SceneRoot::get().removeChild( realTimeRes_ );
-            realTimeRes_.reset();
+            if ( previewRes_ )
+                SceneRoot::get().removeChild( previewRes_ );
+            previewRes_.reset();
         }
     }
 
-    if ( UI::combo( "Operation", (int*)&realTimeOp_, operationNames, true, operationTooltips ) )
+    if ( UI::combo( "Operation", (int*)&previewOp_, operationNames, true, operationTooltips ) )
     {
-        if ( realTimeMode_ )
-            doOperation_( realTimeOp_, true );
+        if ( previewMode_ )
+            doOperation_( previewOp_, true );
     }
 
     if ( UI::button( "Apply", { -1, 0 } ) )
     {
-        doOperation_( realTimeOp_, false );
+        doOperation_( previewOp_, false );
     }
 
     ImGui::EndCustomStatePlugin();
@@ -117,15 +117,18 @@ bool BinaryOperations::onDisable_()
     obj2_->setGlobalAlpha( 255 );
     obj1_.reset();
     obj2_.reset();
-    realTimeRes_.reset();
+    if ( previewRes_ )
+        SceneRoot::get().removeChild( previewRes_ );
+    previewRes_.reset();
+    previewMode_ = false;
     return true;
 }
 
 void BinaryOperations::onTransformChange()
 {
-    if ( realTimeMode_ )
+    if ( previewMode_ )
     {
-        doOperation_( realTimeOp_, true );
+        doOperation_( previewOp_, true );
     }
 }
 
@@ -232,9 +235,10 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
     {
         if ( auto res = func( [] ( float ) { return true; } ) )
         {
-            realTimeRes_->setXf( res->xf );
-            realTimeRes_->construct( res->grid, obj1_->vdbVolume().voxelSize );
-            realTimeRes_->updateIsoSurface( *realTimeRes_->recalculateIsoSurface( res->iso ) );
+            previewRes_->setName( operationNames[(int)op] );
+            previewRes_->setXf( res->xf );
+            previewRes_->construct( res->grid, obj1_->vdbVolume().voxelSize );
+            previewRes_->updateIsoSurface( *previewRes_->recalculateIsoSurface( res->iso ) );
         }
     }
     else

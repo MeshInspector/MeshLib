@@ -61,26 +61,31 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 
     UI::separator(menuScaling, "Operations");
 
-    UI::checkbox( "Real-time mode", [this] { return realTimeOp_.has_value(); }, [this] ( bool val ) {
-        if ( val )
+    auto realTimeToggled = UI::checkbox( "Real-time mode", [this] { return realTimeOp_.has_value(); }, [this] ( bool val ) {
+        if ( val && !realTimeOp_ )
+            realTimeOp_ = Operation::Union;
+        else if ( !val )
+            realTimeOp_.reset();
+    } );
+    if ( realTimeToggled )
+    {
+        if ( realTimeOp_ )
         {
-            if ( !realTimeOp_ )
-                realTimeOp_ = Operation::Union;
             if ( !realTimeRes_ )
             {
                 realTimeRes_ = std::make_shared<ObjectVoxels>();
                 SceneRoot::get().addChild( realTimeRes_ );
             }
             realTimeRes_->setName( operationNames[(int)*realTimeOp_] );
+            doOperation_( *realTimeOp_ );
         }
         else
         {
-            realTimeOp_.reset();
             if ( realTimeRes_ )
                 SceneRoot::get().removeChild( realTimeRes_ );
             realTimeRes_.reset();
         }
-    } );
+    }
 
     auto drawButton = realTimeOp_
             ? std::function{ [this] ( int op ) { return UI::radioButton( operationNames[op].c_str(), (int*)&(*realTimeOp_), op ); } }

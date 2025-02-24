@@ -34,7 +34,7 @@ struct DividePolylineParameters
 /// This function divides polyline with a plane, leaving only part of polyline that lies in positive direction of normal
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
-/// \param params parameters of the function, containing optional output
+/// \param params Parameters of the function, containing optional output
 MRMESH_API void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} );
 [[deprecated]] MRMESH_API void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params = {} );
 
@@ -43,7 +43,7 @@ MRMESH_API void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const 
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
 /// \param eps Maximal distance from the plane
-/// \param edges in a positive half-space relative to the plane (only adds bits to the existing ones)
+/// \param positiveEdges Edges in a positive half-space relative to the plane (only adds bits to the existing ones)
 MRMESH_API std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps, UndirectedEdgeBitSet* positiveEdges = {} );
 
 }

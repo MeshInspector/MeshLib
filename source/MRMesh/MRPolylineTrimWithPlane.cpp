@@ -12,19 +12,16 @@ UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& pla
         return {};
 
     UndirectedEdgeBitSet result;
-    EdgeBitSet sectionEdges;
     const auto sectionPoints = extractSectionsFromPolyline( polyline, plane, 0.0f, &result );
     for ( const auto& sectionPoint : sectionPoints )
     {
         const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
-        sectionEdges.autoResizeSet( sectionPoint.e );
         result.autoResizeSet( sectionPoint.e.undirected() );
+        if ( newPositiveEdges )
+            newPositiveEdges->autoResizeSet( sectionPoint.e );
         if ( onEdgeSplitCallback )
             onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
     }
-
-    if ( newPositiveEdges )
-        *newPositiveEdges |= sectionEdges;
 
     return result;
 }
@@ -34,14 +31,13 @@ UndirectedEdgeBitSet subdividePolylineWithPlane( Polyline3& polyline, const Plan
     return subdivideWithPlane( polyline, plane, nullptr, onEdgeSplitCallback );
 }
 
-UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitSet& orgEdges, std::vector<VertPair>* cutSegments )
+std::vector<VertPair> findSegmentEndVertices( const Polyline3& polyline, const EdgeBitSet& orgEdges )
 {
     const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
-    UndirectedEdgeBitSet res( numEdges );
     UndirectedEdgeBitSet visited( numEdges );
 
-    if ( cutSegments )
-        cutSegments->reserve( orgEdges.count() / 2 );
+    std::vector<VertPair> result;
+    result.reserve( orgEdges.count() / 2 );
 
     for ( auto e : orgEdges )
     {
@@ -49,27 +45,25 @@ UndirectedEdgeBitSet fillPolylineLeft( const Polyline3& polyline, const EdgeBitS
             continue;
             
         auto e0 = e;
-        bool canClose = false;
         for ( ;; )
         {
             if ( !e0.valid() )
                 break;
 
-            res.set( e0.undirected() );
-            if ( orgEdges.test( e0.sym() ) )
+            e0 = e0.sym();
+            if ( orgEdges.test( e0 ) )
             {
-                visited.set( e0.sym() );
-                canClose = e0.sym() != e;
+                visited.set( e0 );
                 break;
             }
-            e0 = polyline.topology.next( e0.sym() );
+            e0 = polyline.topology.next( e0 );
             if ( e0 == e )
                 break;
         }
-        if ( cutSegments && canClose )
-            cutSegments->push_back( { polyline.topology.org( e ), polyline.topology.org( e0.sym() ) } );
+        if ( e0.valid() && e0 != e )
+            result.push_back( { polyline.topology.org( e ), polyline.topology.org( e0 ) } );
     }
-    return res;
+    return result;
 }
 
 void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params )
@@ -78,7 +72,7 @@ void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolyl
         return;
 
     EdgeBitSet newEdges;
-    subdivideWithPlane( polyline, plane, &newEdges, params.onEdgeSplitCallback );
+    const auto posEdges = subdivideWithPlane( polyline, plane, &newEdges, params.onEdgeSplitCallback );
     if ( newEdges.empty() )
     {            
         if ( plane.distance( polyline.points.front() ) < 0 )
@@ -91,7 +85,8 @@ void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolyl
     }
 
     std::vector<VertPair> cutSegments;
-    const auto posEdges = fillPolylineLeft( polyline, newEdges, params.closeLineAfterCut ? &cutSegments : nullptr );
+    if ( params.closeLineAfterCut )
+        cutSegments = findSegmentEndVertices( polyline, newEdges );
     Polyline3 res;
     VertMap vMap;
     res.addPartByMask( polyline, posEdges, &vMap, params.outEmap );
@@ -145,8 +140,8 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         float distFromNegPlane = {};
     };
     
-    if ( positiveEdges )
-        positiveEdges->reserve( polyline.topology.lastNotLoneEdge().undirected() + 1);
+    if ( positiveEdges && positiveEdges->size() < polyline.topology.undirectedEdgeSize() )
+        positiveEdges->resize( polyline.topology.undirectedEdgeSize() );
 
     for ( auto ue : undirectedEdges( polyline.topology ) )
     {
@@ -198,7 +193,7 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         }
         else if ( positiveEdges && p1.distFromPosPlane > 0.f && p2.distFromPosPlane > 0.f )
         {
-            positiveEdges->autoResizeSet( ue );
+            positiveEdges->set( ue );
         }
     }
 

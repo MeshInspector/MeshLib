@@ -36,6 +36,17 @@ TEST( MRMesh, SubdividePolylineWithPlane )
     EXPECT_EQ( topUEdges, expectedTopUEdges );
 }
 
+TEST( MRMesh, ExtractSectionsFromPolyline )
+{
+    // infinity cycle
+    std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {1.f, 1.f, 0.f}, {2.f, 0.f, 0.f} };
+    Plane3f plane( { 1.f, 0.f, 0.f }, 1.f );
+    Polyline3 polyline;
+    polyline.addFromPoints( points.data(), points.size(), true );
+    trimWithPlane( polyline, plane );
+}
+
+
 
 TEST( MRMesh, TrimPolylineWithPlane )
 {

@@ -4,6 +4,7 @@ import json
 import os
 import pprint
 from pathlib import Path
+from typing import List
 
 import requests
 
@@ -58,7 +59,7 @@ def parse_job(job: dict):
         # re-throw the exception
         raise
 
-def parse_jobs(jobs: list[dict]):
+def parse_jobs(jobs: List[dict]):
     return [
         job
         for job in [

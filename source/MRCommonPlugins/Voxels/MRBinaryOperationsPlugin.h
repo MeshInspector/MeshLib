@@ -23,7 +23,7 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    enum class Operation
+    enum class Operation : int
     {
         Union,
         Intersection,
@@ -38,8 +38,15 @@ private:
     };
     void doOperation_(Operation op);
 
+    void onTransformChange();
+
     std::shared_ptr<ObjectVoxels> obj1_;
     std::shared_ptr<ObjectVoxels> obj2_;
+    boost::signals2::scoped_connection conn1_;
+    boost::signals2::scoped_connection conn2_;
+
+    std::shared_ptr<ObjectVoxels> realTimeRes_;
+    std::optional<Operation> realTimeOp_;
 };
 
 }

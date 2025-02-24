@@ -61,9 +61,34 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 
     UI::separator(menuScaling, "Operations");
 
+    UI::checkbox( "Real-time mode", [this] { return realTimeOp_.has_value(); }, [this] ( bool val ) {
+        if ( val )
+        {
+            if ( !realTimeOp_ )
+                realTimeOp_ = Operation::Union;
+            if ( !realTimeRes_ )
+            {
+                realTimeRes_ = std::make_shared<ObjectVoxels>();
+                SceneRoot::get().addChild( realTimeRes_ );
+            }
+            realTimeRes_->setName( operationNames[(int)*realTimeOp_] );
+        }
+        else
+        {
+            realTimeOp_.reset();
+            if ( realTimeRes_ )
+                SceneRoot::get().removeChild( realTimeRes_ );
+            realTimeRes_.reset();
+        }
+    } );
+
+    auto drawButton = realTimeOp_
+            ? std::function{ [this] ( int op ) { return UI::radioButton( operationNames[op].c_str(), (int*)&(*realTimeOp_), op ); } }
+            : std::function{ [] ( int op ) { return UI::button( operationNames[op].c_str(), {-1, 0} ); } };
+
     for (int i = 0; i < int(Operation::Count); ++i)
     {
-        if (UI::button(operationNames[i].c_str(), { -1, 0 }))
+        if (drawButton(i))
         {
             doOperation_(Operation(i));
         }
@@ -78,25 +103,40 @@ bool BinaryOperations::onEnable_()
     auto objs = getAllObjectsInTree<ObjectVoxels>(&SceneRoot::get(), ObjectSelectivityType::Selected);
     obj1_ = objs[0];
     obj2_ = objs[1];
+    conn1_ = obj1_->worldXfChangedSignal.connect( std::bind_front( &BinaryOperations::onTransformChange, this ) );
+    conn2_ = obj2_->worldXfChangedSignal.connect( std::bind_front( &BinaryOperations::onTransformChange, this ) );
     return true;
 }
 
 bool BinaryOperations::onDisable_()
 {
+    conn1_.disconnect();
+    conn1_.disconnect();
     obj1_.reset();
     obj2_.reset();
+    realTimeRes_.reset();
     return true;
+}
+
+void BinaryOperations::onTransformChange()
+{
+    if ( realTimeOp_ && *realTimeOp_ != Operation::Count )
+    {
+        doOperation_( *realTimeOp_ );
+    }
 }
 
 void BinaryOperations::doOperation_(Operation op)
 {
-    ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [&, this, op]()->std::function<void()>
+    struct Res
     {
-        std::function<void()> cancelRes = []
-        {
-            showError(stringOperationCanceled());
-        };
+        FloatGrid grid;
+        AffineXf3f xf;
+        float iso;
+    };
 
+    auto func = [&, this, op] ( auto reportProgress ) -> std::optional<Res>
+    {
         VdbVolume vol1 = obj1_->vdbVolume();
         VdbVolume vol2 = obj2_->vdbVolume();
         openvdb::FloatGrid::Ptr resGrid;
@@ -138,11 +178,11 @@ void BinaryOperations::doOperation_(Operation op)
         default:
             {
                 resGrid = grid1.deepCopy();
-                if (!ProgressBar::setProgress(0.25f))
-                    return cancelRes;
+                if (!reportProgress(0.25f))
+                    return {};
                 openvdb::FloatGrid::Ptr copy2 = grid2.deepCopy();
-                if (!ProgressBar::setProgress(0.5f))
-                    return cancelRes;
+                if (!reportProgress(0.5f))
+                    return {};
                 switch (op)
                 {
                 case MR::BinaryOperations::Operation::Max:
@@ -175,35 +215,61 @@ void BinaryOperations::doOperation_(Operation op)
                 }
             }
         }
-        if (!ProgressBar::setProgress(0.75f))
-            return cancelRes;
+        if (!reportProgress(0.75f))
+            return {};
 
-        std::shared_ptr<ObjectVoxels> newObj = std::make_shared<ObjectVoxels>();
-        newObj->setName(operationNames[int(op)]);
-        newObj->construct( MakeFloatGrid( std::move( resGrid ) ), obj1_->vdbVolume().voxelSize );
-        newObj->setXf( postXf );
-        if ( !newObj->setIsoValue( resIso, subprogress(ProgressBar::setProgress, 0.75f, 1.f)) )
-            return cancelRes;
-        return [this, newObj]()
-        {
-            SCOPED_HISTORY( newObj->name() );
-
-            AppendHistory<ChangeObjectVisibilityAction>( "invis1", obj1_ );
-            obj1_->setVisible( false );
-            AppendHistory<ChangeObjectSelectedAction>( "unselect1", obj1_ );
-            obj1_->select( false );
-
-            AppendHistory<ChangeObjectVisibilityAction>( "invis2", obj2_ );
-            obj2_->setVisible( false );
-            AppendHistory<ChangeObjectSelectedAction>( "unselect2", obj2_ );
-            obj2_->select( false );
-
-            AppendHistory<ChangeSceneAction>( "add obj", newObj, ChangeSceneAction::Type::AddObject );
-            newObj->select( true );
-            SceneRoot::get().addChild( newObj );
-            dialogIsOpen_ = false;
+        return Res{
+            .grid = MakeFloatGrid( std::move( resGrid ) ),
+            .xf = postXf,
+            .iso = resIso
         };
-    });
+    };
+
+    if ( realTimeOp_ )
+    {
+        if ( auto res = func( [] ( float ) { return true; } ) )
+        {
+            realTimeRes_->setXf( res->xf );
+            realTimeRes_->construct( res->grid, obj1_->vdbVolume().voxelSize );
+            realTimeRes_->updateIsoSurface( *realTimeRes_->recalculateIsoSurface( res->iso ) );
+        }
+    }
+    else
+        ProgressBar::orderWithMainThreadPostProcessing(operationNames[int(op)].c_str(), [&] () -> std::function<void()> {
+            std::function<void()> cancelRes = []
+            {
+                showError(stringOperationCanceled());
+            };
+
+            auto res = func( ProgressBar::setProgress );
+            if ( !res )
+                return cancelRes;
+            std::shared_ptr<ObjectVoxels> newObj = std::make_shared<ObjectVoxels>();
+            newObj->setName(operationNames[int(op)]);
+            newObj->construct( res->grid, obj1_->vdbVolume().voxelSize );
+            newObj->setXf( res->xf );
+            if ( !newObj->setIsoValue( res->iso, subprogress(ProgressBar::setProgress, 0.75f, 1.f)) )
+                return cancelRes;
+            return [this, newObj]()
+            {
+                SCOPED_HISTORY( newObj->name() );
+
+                AppendHistory<ChangeObjectVisibilityAction>( "invis1", obj1_ );
+                obj1_->setVisible( false );
+                AppendHistory<ChangeObjectSelectedAction>( "unselect1", obj1_ );
+                obj1_->select( false );
+
+                AppendHistory<ChangeObjectVisibilityAction>( "invis2", obj2_ );
+                obj2_->setVisible( false );
+                AppendHistory<ChangeObjectSelectedAction>( "unselect2", obj2_ );
+                obj2_->select( false );
+
+                AppendHistory<ChangeSceneAction>( "add obj", newObj, ChangeSceneAction::Type::AddObject );
+                newObj->select( true );
+                SceneRoot::get().addChild( newObj );
+                dialogIsOpen_ = false;
+            };;
+        } );
 }
 
 MR_REGISTER_RIBBON_ITEM(BinaryOperations)

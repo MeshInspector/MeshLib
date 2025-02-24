@@ -89,7 +89,7 @@ jobs:
       tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
 
     env:
       # duplicate output values here since they cannot be accessed from steps

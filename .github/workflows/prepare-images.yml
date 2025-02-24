@@ -21,7 +21,7 @@ on:
 
 jobs:
   always-success:
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     steps:
       - name: Do nothing
         run: echo

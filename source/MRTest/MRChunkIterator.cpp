@@ -231,25 +231,22 @@ TEST_P(ChunkIteratorTestFixture, ExhaustiveParameterizedTest)
     EXPECT_EQ(std::distance(begin, end), tc.expectedChunks);
 
     // If we expect chunks, verify they cover the array correctly
-    if (tc.expectedChunks > 0)
+    if ( tc.expectedChunks > 0 )
     {
-        std::vector<bool> covered(tc.totalSize, false);
+        BitSet covered( tc.totalSize, false );
 
-        for (auto it = begin; it != end; ++it)
+        for ( auto it = begin; it != end; ++it )
         {
             Chunk chunk = *it;
-            EXPECT_LE(chunk.offset + chunk.size, tc.totalSize + 1);
+            EXPECT_LE( chunk.offset + chunk.size, tc.totalSize + 1 );
 
             // Mark covered elements
-            for (size_t i = 0; i < chunk.size; ++i)
-            {
-                covered[chunk.offset + i] = true;
-            }
+            for ( size_t i = 0; i < chunk.size; ++i )
+                covered.set( chunk.offset + i );
         }
 
         // Verify all elements are covered
-        bool allCovered = std::all_of(covered.begin(), covered.end(), []( bool b ) { return b; });
-        EXPECT_TRUE(allCovered);
+        EXPECT_TRUE( covered.all() );
     }
 }
 

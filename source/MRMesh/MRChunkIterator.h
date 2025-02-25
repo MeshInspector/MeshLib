@@ -25,7 +25,6 @@ struct ChunkIterator
     size_t index{ 0 };
 
     MRMESH_API bool operator ==( const ChunkIterator& other ) const;
-    bool operator !=( const ChunkIterator& other ) const { return !( *this == other ); }
 
     using iterator_category = std::input_iterator_tag;
     using value_type = Chunk;

@@ -34,7 +34,6 @@ struct Dipole
     }
 };
 
-// ...
 struct FastWindingNumberData
 {
     const Dipole* __restrict__ dipoles;

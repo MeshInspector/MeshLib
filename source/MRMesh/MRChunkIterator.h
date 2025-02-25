@@ -8,14 +8,14 @@
 namespace MR
 {
 
-/// ...
+/// array chunk representation
 struct Chunk
 {
-    /// ...
+    /// chunk index
     size_t index;
-    /// ...
+    /// chunk offset
     size_t offset;
-    /// ...
+    /// chunk size; the last chunk's size may be smaller than other chunk's ones
     size_t size;
 };
 
@@ -36,10 +36,10 @@ struct ChunkIterator
     MRMESH_API Chunk operator *() const;
 };
 
-/// ...
+/// returns the amount of chunks of given size required to cover the full array
 MRMESH_API size_t chunkCount( size_t totalSize, size_t chunkSize, size_t overlap = 0 );
 
-/// ...
+/// returns a pair of iterators for chunks covering the array of given size
 MRMESH_API IteratorRange<ChunkIterator> splitByChunks( size_t totalSize, size_t chunkSize, size_t overlap = 0 );
 
 } // namespace MR

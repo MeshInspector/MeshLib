@@ -186,7 +186,7 @@ private:
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();
 
-    // set color of pick shpere from the current state and parameters
+    // set color of pick sphere from the current state and parameters
     void setSphereColor_();
 };
 

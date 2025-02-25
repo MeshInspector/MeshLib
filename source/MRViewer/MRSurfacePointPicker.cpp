@@ -317,9 +317,12 @@ void SurfacePointWidget::setPointRadius_()
 
         case Parameters::PointSizeType::Pixel:
         {
-            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( pickSphere_->parent()->worldXf()( pickSphere_->getCenter( getViewerInstance().viewport().id ) ) );
-
             const auto baseObjectWorldXf = baseObject_->worldXf();
+
+            // This assertion should probably be true always, not only here. But here I rely on them being the same (for the scale calculation), so better check.
+            assert( baseObject_.get() == pickSphere_->parent() );
+            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( baseObjectWorldXf( pickSphere_->getCenter( getViewerInstance().viewport().id ) ) );
+
             Matrix3f r, s;
             decomposeMatrix3( baseObjectWorldXf.A, r, s );
             const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;

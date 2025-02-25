@@ -53,7 +53,7 @@ public:
     /// returns true if appending history to viewer history store is enabled in this tool
     bool isHistoryEnabled() const { return historyEnabled_; }
 
-    std::optional<std::function<void( std::vector<std::shared_ptr<Object>> objects, std::vector<AffineXf3f> initialXfs, AffineXf3f currentXf, bool history )>> onXfChangedCallBack_ = std::nullopt;
+    std::optional<std::function<void( const std::vector<std::shared_ptr<Object>>& objects, const std::vector<AffineXf3f>& initialXfs, const AffineXf3f& currentXf, bool history )>> onXfChangedCallBack_ = std::nullopt;
 
 protected:
     /// Transformation mode

@@ -17,7 +17,7 @@ namespace
 size_t getCudaAvailableMemoryForBuffers()
 {
     constexpr float cMaxGpuMemoryUsage = 0.80f;
-    return MR::Cuda::getCudaAvailableMemory() * cMaxGpuMemoryUsage;
+    return size_t( MR::Cuda::getCudaAvailableMemory() * cMaxGpuMemoryUsage );
 }
 
 } // namespace

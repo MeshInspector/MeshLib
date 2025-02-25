@@ -317,7 +317,7 @@ void SurfacePointWidget::setPointRadius_()
 
         case Parameters::PointSizeType::Pixel:
         {
-            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( pickSphere_->getCenter( getViewerInstance().viewport().id ) );
+            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( pickSphere_->parent()->worldXf()( pickSphere_->getCenter( getViewerInstance().viewport().id ) ) );
 
             const auto baseObjectWorldXf = baseObject_->worldXf();
             Matrix3f r, s;

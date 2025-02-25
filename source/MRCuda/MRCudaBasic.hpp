@@ -77,6 +77,22 @@ inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data )
     return CUDA_LOGE( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
+template <typename T>
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data_, data, std::min( size_, size ) * sizeof( T ), cudaMemcpyHostToDevice ) );
+}
+
+template <typename T>
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyTo( U* data, size_t size ) const
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size, size_ ) * sizeof( T ), cudaMemcpyDeviceToHost ) );
+}
+
 template<typename T>
 cudaError_t DynamicArray<T>::resize( size_t size )
 {

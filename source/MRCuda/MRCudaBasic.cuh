@@ -42,6 +42,14 @@ public:
     template <typename U>
     cudaError_t toVector( std::vector<U>& vec ) const;
 
+    // copy given data to GPU (truncated if the array size is smaller that the data one)
+    template <typename U>
+    cudaError_t copyFrom( const U* data, size_t size );
+
+    // copy given data to CPU (truncated if the data size is smaller that the array one)
+    template <typename U>
+    cudaError_t copyTo( U* data, size_t size ) const;
+
     // resize (free and malloc againg if size inconsistent) this GPU array (if size == 0 free it (if needed))
     cudaError_t resize( size_t size );
 

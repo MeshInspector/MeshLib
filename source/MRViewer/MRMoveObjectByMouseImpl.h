@@ -63,14 +63,15 @@ protected:
         Scale
     };
 
-    /// Called from `onMouseDown`
-    /// Returns chosen `TransformMode` to start transformation, `None` to skip; fills the output parameters:
+    /// This function is called from `onMouseMove` to update current active objects
     /// `objects` - list of objects to be affected by transformation
-    /// `centerPoint` - center point for rotation (world coordinates)
+    MRVIEWER_API virtual ObjAndPick pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers );
+
+    /// this function is called from `onMouseDown` to verify if pick should proceed, if None is returned - `onMouseDown` is canceled
+    MRVIEWER_API virtual TransformMode modeFromPick_( MouseButton button, int modifiers );
+
     /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
-    /// Default implementation can be used as a reference for custom implementations
-    MRVIEWER_API virtual TransformMode pick_( MouseButton button, int modifiers,
-        std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint );
+    MRVIEWER_API virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint );
 
     /// Helper function to calculate world bounding box for several objects
     /// Note: can be invalid (feature objects give an invalid box etc.)
@@ -78,6 +79,13 @@ protected:
 
 private:
     int minDistance_ = 0;
+
+    /// Called from `onMouseDown`
+    /// Returns chosen `TransformMode` to start transformation, `None` to skip; fills the output parameters:
+    /// `centerPoint` - center point for rotation (world coordinates)
+    /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
+    /// Default implementation can be used as a reference for custom implementations
+    TransformMode pick_( MouseButton button, int modifiers );
 
     void clear_();
 

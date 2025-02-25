@@ -96,18 +96,13 @@ void MoveObjectByMouse::postDraw_()
         moveByMouse_.onDrawDialog( menu->menu_scaling() );
 }
 
-MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,
-    std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
+ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers )
 {
-    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
-         ( modifiers & ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) == ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) )
-        return TransformMode::None;
-
-    Viewer& viewerInstance = getViewerInstance();
-    Viewport& viewport = viewerInstance.viewport();
-
-    // Pick non-ancillary object
-    auto [obj, pick] = viewport.pickRenderObject();
+    Viewer& viewerRef = getViewerInstance();
+    Viewport& viewport = viewerRef.viewport( viewerRef.getHoveredViewportId() );
+    // Pick a single object under cursor
+    ObjAndPick res = viewport.pickRenderObject();
+    auto& [obj, pick] = res;
     if ( obj && obj->isAncillary() )
         obj = nullptr;
 
@@ -122,23 +117,20 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     {
         // Move picked object
         if ( !obj )
-            return TransformMode::None;
+        {
+            objects = {};
+            return res;
+        }
         objects = { obj };
     }
+    return res;
+}
 
-    // See MoveObjectByMouseImpl::pick_
-    if ( obj )
-    {
-        startPoint = obj->worldXf()( pick.point );
-    }
-    else
-    {
-        Vector2i mousePos = viewerInstance.mouseController().getMousePos();
-        Vector3f viewportPos = viewerInstance.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
-        startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
-    }
-    Box3f box = getBbox_( objects );
-    centerPoint = box.valid() ? box.center() : Vector3f{};
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::modeFromPick_( MouseButton button, int modifiers )
+{
+    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
+     ( modifiers & ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) == ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) )
+        return TransformMode::None;
 
     if ( int( modXfMode ) == int( XfMode::Scale ) || ( modifiers & GLFW_MOD_ALT ) == GLFW_MOD_ALT )
         return TransformMode::Scale;
@@ -146,6 +138,23 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
         return TransformMode::Rotation;
     else
         return TransformMode::Translation;
+}
+
+void MoveObjectByMouse::MoveObjectByMouseWithSelected::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint )
+{
+    const auto& [obj, pick] = objPick;
+    if ( obj )
+    {
+        startPoint = obj->worldXf()( pick.point );
+    }
+    else
+    {
+        Viewer& viewerRef = getViewerInstance();
+        Viewport& viewport = viewerRef.viewport( viewerRef.getHoveredViewportId() );
+        Vector2i mousePos = viewerRef.mouseController().getMousePos();
+        Vector3f viewportPos = viewerRef.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
+        startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
+    }
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

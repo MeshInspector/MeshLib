@@ -83,10 +83,10 @@ struct Matrix4
 
     constexpr T* data() { return (T*) (&x); };
     constexpr const T* data() const { return (T*) (&x); };
-    Matrix4 & operator +=( const Matrix4<T> & b ) { x += b.x; y += b.y; z += b.z; w += b.w; return * this; }
-    Matrix4 & operator -=( const Matrix4<T> & b ) { x -= b.x; y -= b.y; z -= b.z; w -= b.w; return * this; }
-    Matrix4 & operator *=( T b ) { x *= b; y *= b; z *= b; w *= b; return * this; }
-    Matrix4 & operator /=( T b )
+    constexpr Matrix4 & operator +=( const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x += b.x; y += b.y; z += b.z; w += b.w; return * this; }
+    constexpr Matrix4 & operator -=( const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x -= b.x; y -= b.y; z -= b.z; w -= b.w; return * this; }
+    constexpr Matrix4 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x *= b; y *= b; z *= b; w *= b; return * this; }
+    constexpr Matrix4 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; z /= b; w /= b; return * this; }
@@ -130,11 +130,11 @@ struct Matrix4
 
     friend bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
     friend bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b ) { return !( a == b ); }
-    friend Matrix4<T> operator +( const Matrix4<T> & a, const Matrix4<T> & b ) { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
-    friend Matrix4<T> operator -( const Matrix4<T> & a, const Matrix4<T> & b ) { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
-    friend Matrix4<T> operator *( T a, const Matrix4<T> & b ) { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
-    friend Matrix4<T> operator *( const Matrix4<T> & b, T a ) { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
-    friend Matrix4<T> operator /( Matrix4<T> b, T a ) { b /= a; return b; }
+    friend Matrix4<T> operator +( const Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
+    friend Matrix4<T> operator -( const Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
+    friend Matrix4<T> operator *( T a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    friend Matrix4<T> operator *( const Matrix4<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
+    friend Matrix4<T> operator /( Matrix4<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 };
 
 /// \related Matrix4

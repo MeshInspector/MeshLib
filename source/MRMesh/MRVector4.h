@@ -54,19 +54,22 @@ struct Vector4
         return ( 1 / len ) * ( *this );
     }
 
-    Vector4 operator -() const { return Vector4( -x, -y, -z, -w ); }
-    const Vector4 & operator +() const { return *this; }
+    Vector4 operator -() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector4( -x, -y, -z, -w ); }
+    const Vector4 & operator +() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return *this; }
 
-    Vector4 & operator +=( const Vector4<T> & b )
+    Vector4 & operator +=( const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         x += b.x; y += b.y; z += b.z; w += b.w; return *this;
     }
-    Vector4 & operator -=( const Vector4<T> & b )
+    Vector4 & operator -=( const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         x -= b.x; y -= b.y; z -= b.z; w -= b.w; return *this;
     }
-    Vector4 & operator *=( T b ) { x *= b; y *= b; z *= b; w *= b; return * this; }
-    Vector4 & operator /=( T b )
+    Vector4 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
+    {
+        x *= b; y *= b; z *= b; w *= b; return * this;
+    }
+    Vector4 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; z /= b; w /= b; return * this; }
@@ -86,38 +89,41 @@ struct Vector4
     }
 
 
-    friend bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
+    friend constexpr bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
     {
         return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
     }
 
-    friend bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
+    friend constexpr bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
     {
         return !( a == b );
     }
 
-    friend Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b )
+    friend constexpr Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
     }
 
-    friend Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b )
+    friend constexpr Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
     }
 
-    friend Vector4<T> operator *( T a, const Vector4<T> & b )
+    friend constexpr Vector4<T> operator *( T a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return {a * b.x, a * b.y, a * b.z, a * b.w};
     }
 
-    friend Vector4<T> operator *( const Vector4<T> & b, T a )
+    friend constexpr Vector4<T> operator *( const Vector4<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return {a * b.x, a * b.y, a * b.z, a * b.w};
     }
 
-    friend Vector4<T> operator /( Vector4<T> b, T a )
-        { b /= a; return b; }
+    friend constexpr Vector4<T> operator /( Vector4<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
+    {
+        b /= a;
+        return b;
+    }
 };
 
 /// \related Vector4

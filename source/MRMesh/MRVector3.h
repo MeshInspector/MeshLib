@@ -69,7 +69,8 @@ struct Vector3
     std::pair<Vector3, Vector3> perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
 
     /// returns this vector transformed by xf if it is
-    Vector3 transformed( const AffineXf3<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
+    template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)> // Need this, otherwise the bindings try to instantiate `AffineXf3` with non-FP arguments.
+    Vector3 transformed( const AffineXf3<TT>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         return xf ? ( *xf )( *this ) : *this;
     }
@@ -87,19 +88,19 @@ struct Vector3
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z );
     }
 
-    [[nodiscard]] friend bool operator ==( const Vector3<T> & a, const Vector3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
-    [[nodiscard]] friend bool operator !=( const Vector3<T> & a, const Vector3<T> & b ) { return !( a == b ); }
-    [[nodiscard]] friend constexpr Vector3<T> operator +( const Vector3<T> & a, const Vector3<T> & b ) { return { T( a.x + b.x ), T( a.y + b.y ), T( a.z + b.z ) }; }
-    [[nodiscard]] friend Vector3<T> operator -( const Vector3<T> & a, const Vector3<T> & b ) { return { T( a.x - b.x ), T( a.y - b.y ), T( a.z - b.z ) }; }
-    [[nodiscard]] friend Vector3<T> operator *( T a, const Vector3<T> & b ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
-    [[nodiscard]] friend Vector3<T> operator *( const Vector3<T> & b, T a ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
-    [[nodiscard]] friend Vector3<T> operator /( Vector3<T> b, T a ) { b /= a; return b; }
+    [[nodiscard]] friend constexpr bool operator ==( const Vector3<T> & a, const Vector3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    [[nodiscard]] friend constexpr bool operator !=( const Vector3<T> & a, const Vector3<T> & b ) { return !( a == b ); }
+    [[nodiscard]] friend constexpr Vector3<T> operator +( const Vector3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { T( a.x + b.x ), T( a.y + b.y ), T( a.z + b.z ) }; }
+    [[nodiscard]] friend constexpr Vector3<T> operator -( const Vector3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { T( a.x - b.x ), T( a.y - b.y ), T( a.z - b.z ) }; }
+    [[nodiscard]] friend constexpr Vector3<T> operator *(               T    a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
+    [[nodiscard]] friend constexpr Vector3<T> operator *( const Vector3<T> & b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
+    [[nodiscard]] friend constexpr Vector3<T> operator /(       Vector3<T>   b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 
-    friend Vector3<T> & operator +=( Vector3<T> & a, const Vector3<T> & b ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
-    friend Vector3<T> & operator -=( Vector3<T> & a, const Vector3<T> & b ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
-    friend Vector3<T> & operator *=( Vector3<T> & a, T b ) { a.x *= b; a.y *= b; a.z *= b; return a; }
+    friend constexpr Vector3<T> & operator +=( Vector3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
+    friend constexpr Vector3<T> & operator -=( Vector3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
+    friend constexpr Vector3<T> & operator *=( Vector3<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { a.x *= b; a.y *= b; a.z *= b; return a; }
 
-    friend Vector3<T> & operator /=( Vector3<T> & a, T b )
+    friend constexpr Vector3<T> & operator /=( Vector3<T> & a, T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         if constexpr ( std::is_integral_v<T> )
             { a.x /= b; a.y /= b; a.z /= b; return a; }
@@ -107,9 +108,9 @@ struct Vector3
             return a *= ( 1 / b );
     }
 
-    friend Vector3<T> operator -( const Vector3<T> & a ) { return Vector3<T>( -a.x, -a.y, -a.z ); }
+    friend constexpr Vector3<T> operator -( const Vector3<T> & a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector3<T>( -a.x, -a.y, -a.z ); }
 
-    friend const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
+    friend constexpr const Vector3<T> & operator +( const Vector3<T> & a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return a; }
 };
 
 /// \related Vector3

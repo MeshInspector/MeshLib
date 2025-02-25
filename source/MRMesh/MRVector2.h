@@ -58,19 +58,19 @@ struct Vector2
         return ( 1 / len ) * (*this);
     }
 
-    Vector2 operator -() const { return Vector2( -x, -y ); }
-    const Vector2 & operator +() const { return *this; }
+    constexpr Vector2 operator -() const { return Vector2( -x, -y ); }
+    constexpr const Vector2 & operator +() const { return *this; }
 
     /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
     Vector2 furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> );
 
     /// returns same length vector orthogonal to this (rotated 90 degrees counter-clockwise)
-    Vector2 perpendicular() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector2{ -y, x }; }
+    constexpr Vector2 perpendicular() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector2{ -y, x }; }
 
-    Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
-    Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }
-    Vector2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    Vector2 & operator /=( T b )
+    constexpr Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
+    constexpr Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }
+    constexpr Vector2 & operator *=( T b ) { x *= b; y *= b; return * this; }
+    constexpr Vector2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; return * this; }
@@ -83,13 +83,13 @@ struct Vector2
         return std::isfinite( x ) && std::isfinite( y );
     }
 
-    friend bool operator ==( const Vector2<T> & a, const Vector2<T> & b ) { return a.x == b.x && a.y == b.y; }
-    friend bool operator !=( const Vector2<T> & a, const Vector2<T> & b ) { return !( a == b ); }
-    friend Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ) { return { a.x + b.x, a.y + b.y }; }
-    friend Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ) { return { a.x - b.x, a.y - b.y }; }
-    friend Vector2<T> operator *( T a, const Vector2<T> & b ) { return { a * b.x, a * b.y }; }
-    friend Vector2<T> operator *( const Vector2<T> & b, T a ) { return { a * b.x, a * b.y }; }
-    friend Vector2<T> operator /( Vector2<T> b, T a ) { b /= a; return b; }
+    friend constexpr bool operator ==( const Vector2<T> & a, const Vector2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    friend constexpr bool operator !=( const Vector2<T> & a, const Vector2<T> & b ) { return !( a == b ); }
+    friend constexpr Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y }; }
+    friend constexpr Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y }; }
+    friend constexpr Vector2<T> operator *(               T    a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
+    friend constexpr Vector2<T> operator *( const Vector2<T> & b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
+    friend constexpr Vector2<T> operator /(       Vector2<T>   b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 };
 
 /// \related Vector2

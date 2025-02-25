@@ -65,10 +65,10 @@ struct Matrix2
     /// computes transposed matrix
     constexpr Matrix2<T> transposed() const noexcept;
 
-    Matrix2 & operator +=( const Matrix2<T> & b ) { x += b.x; y += b.y; return * this; }
-    Matrix2 & operator -=( const Matrix2<T> & b ) { x -= b.x; y -= b.y; return * this; }
-    Matrix2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    Matrix2 & operator /=( T b )
+    constexpr Matrix2 & operator +=( const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x += b.x; y += b.y; return * this; }
+    constexpr Matrix2 & operator -=( const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x -= b.x; y -= b.y; return * this; }
+    constexpr Matrix2 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x *= b; y *= b; return * this; }
+    constexpr Matrix2 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; return * this; }
@@ -77,12 +77,12 @@ struct Matrix2
     }
 
 
-    friend Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
+    friend constexpr Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return { dot( a.x, b ), dot( a.y, b ) };
     }
 
-    friend Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
+    friend constexpr Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         Matrix2<T> res;
         for ( int i = 0; i < 2; ++i )
@@ -91,13 +91,13 @@ struct Matrix2
         return res;
     }
 
-    friend bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b ) { return a.x == b.x && a.y == b.y; }
-    friend bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b ) { return !( a == b ); }
-    friend Matrix2<T> operator +( const Matrix2<T> & a, const Matrix2<T> & b ) { return { a.x + b.x, a.y + b.y }; }
-    friend Matrix2<T> operator -( const Matrix2<T> & a, const Matrix2<T> & b ) { return { a.x - b.x, a.y - b.y }; }
-    friend Matrix2<T> operator *( T a, const Matrix2<T> & b ) { return { a * b.x, a * b.y }; }
-    friend Matrix2<T> operator *( const Matrix2<T> & b, T a ) { return { a * b.x, a * b.y }; }
-    friend Matrix2<T> operator /( Matrix2<T> b, T a ) { b /= a; return b; }
+    friend constexpr bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    friend constexpr bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b ) { return !( a == b ); }
+    friend constexpr Matrix2<T> operator +( const Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y }; }
+    friend constexpr Matrix2<T> operator -( const Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y }; }
+    friend constexpr Matrix2<T> operator *( T a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
+    friend constexpr Matrix2<T> operator *( const Matrix2<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
+    friend constexpr Matrix2<T> operator /( Matrix2<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 };
 
 /// \related Matrix2

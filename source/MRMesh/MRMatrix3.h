@@ -80,10 +80,10 @@ struct Matrix3
     /// decompose this matrix on the product Q*R, where Q is orthogonal and R is upper triangular
     QR qr() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
-    Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
-    Matrix3 & operator -=( const Matrix3<T> & b ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
-    Matrix3 & operator *=( T b ) { x *= b; y *= b; z *= b; return * this; }
-    Matrix3 & operator /=( T b )
+    constexpr Matrix3 & operator +=( const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x += b.x; y += b.y; z += b.z; return * this; }
+    constexpr Matrix3 & operator -=( const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
+    constexpr Matrix3 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x *= b; y *= b; z *= b; return * this; }
+    constexpr Matrix3 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; z /= b; return * this; }
@@ -92,13 +92,13 @@ struct Matrix3
     }
 
     /// x = a * b
-    friend Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b )
+    friend constexpr Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
     }
 
     /// product of two matrices
-    friend Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )
+    friend constexpr Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
     {
         Matrix3<T> res;
         for ( int i = 0; i < 3; ++i )
@@ -107,13 +107,13 @@ struct Matrix3
         return res;
     }
 
-    friend bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
-    friend bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b ) { return !( a == b ); }
-    friend Matrix3<T> operator +( const Matrix3<T> & a, const Matrix3<T> & b ) { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
-    friend Matrix3<T> operator -( const Matrix3<T> & a, const Matrix3<T> & b ) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
-    friend Matrix3<T> operator *( T a, const Matrix3<T> & b ) { return { a * b.x, a * b.y, a * b.z }; }
-    friend Matrix3<T> operator *( const Matrix3<T> & b, T a ) { return { a * b.x, a * b.y, a * b.z }; }
-    friend Matrix3<T> operator /( Matrix3<T> b, T a ) { b /= a; return b; }
+    friend constexpr bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    friend constexpr bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b ) { return !( a == b ); }
+    friend constexpr Matrix3<T> operator +( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
+    friend constexpr Matrix3<T> operator -( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
+    friend constexpr Matrix3<T> operator *( T a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z }; }
+    friend constexpr Matrix3<T> operator *( const Matrix3<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z }; }
+    friend constexpr Matrix3<T> operator /( Matrix3<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 
 };
 

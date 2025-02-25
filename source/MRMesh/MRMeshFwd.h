@@ -231,7 +231,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
     ( SymMatrix4d,  SymMatrix4<double>    )
 )
 
-MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
+template <typename T> struct CheckAffVec : std::true_type {};
+template <> struct CheckAffVec<Vector3b> : std::false_type {};
+
+MR_CANONICAL_TYPEDEFS( (template <typename V> requires(CheckAffVec<V>::value) struct), AffineXf,
     ( AffineXf2f, AffineXf<Vector2<float>>  )
     ( AffineXf2d, AffineXf<Vector2<double>> )
     ( AffineXf3f, AffineXf<Vector3<float>>  )

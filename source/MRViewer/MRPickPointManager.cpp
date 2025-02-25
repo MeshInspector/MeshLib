@@ -67,11 +67,11 @@ class PickPointManager::AddRemovePointHistoryAction : public PickPointManager::W
 public:
     /// appends new point at the end, and returns undo action for its removal
     static std::shared_ptr<AddRemovePointHistoryAction> appendAndGetUndo(
-        PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point );
+        PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, bool startDragging );
 
     /// inserts new point before given position, and returns undo action for its removal
     static std::shared_ptr<AddRemovePointHistoryAction> insertAndGetUndo(
-        PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point );
+        PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point, bool startDragging );
 
     /// removes point by index, and returns undo action for its addition at the same place
     static std::shared_ptr<AddRemovePointHistoryAction> removeAndGetUndo(
@@ -91,7 +91,7 @@ private:
         insertOnAction_{ insertOnAction }
     {};
 
-    void insertPoint_();
+    void insertPoint_( bool startDragging );
     void removePoint_();
 
     std::string name_;
@@ -103,18 +103,18 @@ private:
 };
 
 std::shared_ptr<PickPointManager::AddRemovePointHistoryAction> PickPointManager::AddRemovePointHistoryAction::appendAndGetUndo(
-    PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point )
+    PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point, bool startDragging )
 {
     std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Append Point", widget, obj, point, -1, true ) );
-    res->insertPoint_();
+    res->insertPoint_( startDragging );
     return res;
 }
 
 std::shared_ptr<PickPointManager::AddRemovePointHistoryAction> PickPointManager::AddRemovePointHistoryAction::insertAndGetUndo(
-    PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point )
+    PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point, bool startDragging )
 {
     std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Insert Point", widget, obj, point, index, true ) );
-    res->insertPoint_();
+    res->insertPoint_( startDragging );
     return res;
 }
 
@@ -130,19 +130,19 @@ std::shared_ptr<PickPointManager::AddRemovePointHistoryAction> PickPointManager:
 void PickPointManager::AddRemovePointHistoryAction::action( Type )
 {
     if ( insertOnAction_ )
-        insertPoint_();
+        insertPoint_( false );
     else
         removePoint_();
 }
 
-void PickPointManager::AddRemovePointHistoryAction::insertPoint_()
+void PickPointManager::AddRemovePointHistoryAction::insertPoint_( bool startDragging )
 {
     assert( insertOnAction_ );
-    index_ = widget_.insertPointNoHistory_( obj_, index_, point_ );
+    index_ = widget_.insertPointNoHistory_( obj_, index_, point_, startDragging );
     insertOnAction_ = false;
 }
 
-int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point )
+int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point, bool startDragging )
 {
     auto& contour = pickedPoints_[obj];
     if ( index < 0 )
@@ -150,11 +150,18 @@ int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>
     else
         assert( index <= contour.size() );
 
-    contour.insert( contour.begin() + index, createPickWidget_( obj, point ) );
+    auto pw = createPickWidget_( obj, point );
+    contour.insert( contour.begin() + index, pw );
     if ( index + 1 == contour.size() ) // last point was added
         colorLast2Points_( obj );
     if ( params.onPointAdd )
         params.onPointAdd( obj, index );
+    if ( startDragging )
+    {
+        MR_SCOPED_VALUE( params.writeHistory, false );
+        setHoveredPointWidget_( pw.get() );
+        pw->startDragging();
+    }
     return index;
 }
 
@@ -230,7 +237,6 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
     newPoint->create( obj, pt );
-    setHoveredPointWidget_( newPoint.get() );
 
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
@@ -412,15 +418,15 @@ int PickPointManager::getPointIndex( const std::shared_ptr<VisualObject>& obj, S
     return res;
 }
 
-bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
+bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint, bool startDragging )
 {
-    appendHistory_( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint ) );
+    appendHistory_( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint, startDragging ) );
     return true;
 }
 
-bool PickPointManager::insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint )
+bool PickPointManager::insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint, bool startDragging )
 {
-    appendHistory_( AddRemovePointHistoryAction::insertAndGetUndo( *this, obj, index, triPoint ) );
+    appendHistory_( AddRemovePointHistoryAction::insertAndGetUndo( *this, obj, index, triPoint, startDragging ) );
     return true;
 }
 
@@ -459,7 +465,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
             return false;
-        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
+        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), true );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {
@@ -640,7 +646,7 @@ void PickPointManager::swapStateNoHistory_( FullState& s )
         if ( const auto obj = state.objPtr.lock() )
         {
             for ( const auto& p : state.pickedPoints )
-                insertPointNoHistory_( obj, -1, p );
+                insertPointNoHistory_( obj, -1, p, false );
         }
     }
     s = std::move( orgiginal );

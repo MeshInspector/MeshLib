@@ -239,37 +239,36 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     resVec[index] = res;
 }
 
-void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
-                                const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromVector( const float3* points,
+                                FastWindingNumberData data,
                                 float* resVec, float beta, int skipFace, size_t size )
 {
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, dipoles, nodes, meshPoints, faces, resVec, beta, skipFace, size );
+    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, skipFace, size );
 }
 
-void fastWindingNumberFromMesh( const Dipole* dipoles,
-                                        const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromMesh( FastWindingNumberData data,
                                         float* resVec, float beta, size_t size )
 {
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( dipoles, nodes, meshPoints, faces, resVec, beta, size );
+    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, size );
 }
 
 void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
-                                        const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+                                        FastWindingNumberData data,
                                         float* resVec, float beta )
 {
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );
+    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, size );
 }
 
 void signedDistance( int3 dims, Matrix4 gridToMeshXf,
-                     const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+                     FastWindingNumberData data,
                      float* resVec, size_t resVecSize, size_t resVecOffset, const DistanceToMeshOptions& options )
 {
     int numBlocks = int( ( resVecSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, options, resVecSize, resVecOffset );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, options, resVecSize, resVecOffset );
 }
 
 } //namespace Cuda

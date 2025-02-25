@@ -11,6 +11,7 @@ struct DistanceToMeshOptions;
 
 namespace Cuda
 {
+
 // GPU analog of CPU Dipole struct
 struct Dipole
 {
@@ -33,26 +34,34 @@ struct Dipole
     }
 };
 
+// ...
+struct FastWindingNumberData
+{
+    const Dipole* dipoles;
+    const Node3* nodes;
+    const float3* meshPoints;
+    const FaceToThreeVerts* faces;
+};
+
 // calls fast winding number for each point in parallel
-void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
-                           const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromVector( const float3* points,
+                           FastWindingNumberData data,
                            float* resVec, float beta, int skipFace, size_t size );
 
 // calls fast winding number for each triangle center
-void fastWindingNumberFromMesh( const Dipole* dipoles,
-                                      const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromMesh( FastWindingNumberData data,
                                       float* resVec, float beta, size_t size );
 
 // calls fast winding number for each point in three-dimensional grid
 void fastWindingNumberFromGrid( int3 gridSize, Matrix4 gridToMeshXf,
-                                      const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+                                      FastWindingNumberData data,
                                       float* resVec, float beta );
 
 /// calls fast winding number for each point in three-dimensional grid to get sign
 void signedDistance( int3 gridSize, Matrix4 gridToMeshXf,
-                    const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+                    FastWindingNumberData data,
                     float* resVec, size_t resVecSize, size_t resVecOffset, const DistanceToMeshOptions& options );
 
-} //namespece Cuda
+} // namespace Cuda
 
-} //namespace MR
+} // namespace MR

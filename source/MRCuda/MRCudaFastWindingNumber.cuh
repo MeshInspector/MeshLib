@@ -37,10 +37,10 @@ struct Dipole
 // ...
 struct FastWindingNumberData
 {
-    const Dipole* dipoles;
-    const Node3* nodes;
-    const float3* meshPoints;
-    const FaceToThreeVerts* faces;
+    const Dipole* __restrict__ dipoles;
+    const Node3* __restrict__ nodes;
+    const float3* __restrict__ meshPoints;
+    const FaceToThreeVerts* __restrict__ faces;
 };
 
 // calls fast winding number for each point in parallel

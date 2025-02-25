@@ -74,7 +74,7 @@ struct EdgeSegment
     /// returns true if the edge is valid and start point is less than end point
     [[nodiscard]] bool valid() const { return e.valid() && a <= b; }
 
-    bool operator==( const EdgeSegment& rhs ) const { return e == rhs.e && a == rhs.a && b == rhs.b; }
+    bool operator==( const EdgeSegment& rhs ) const = default;
     /// represents the same segment relative to sym edge in
     [[nodiscard]] EdgeSegment sym() const { return EdgeSegment{ e.sym(), b.sym(), a.sym() }; }
 };

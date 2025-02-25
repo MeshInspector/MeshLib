@@ -402,6 +402,7 @@
     <ClInclude Include="MROnInit.h" />
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
+    <ClInclude Include="MRChunkIterator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObjectMeshData.cpp" />
@@ -679,6 +680,7 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
     <ClCompile Include="MRWasmHelpers.cpp" />
+    <ClCompile Include="MRChunkIterator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

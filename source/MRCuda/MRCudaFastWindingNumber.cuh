@@ -50,17 +50,17 @@ void fastWindingNumberFromVector( const float3* points,
 
 // calls fast winding number for each triangle center
 void fastWindingNumberFromMesh( FastWindingNumberData data,
-                                      float* resVec, float beta, size_t size );
+                                      float* resVec, float beta, size_t size, size_t offset );
 
 // calls fast winding number for each point in three-dimensional grid
 void fastWindingNumberFromGrid( int3 gridSize, Matrix4 gridToMeshXf,
                                       FastWindingNumberData data,
-                                      float* resVec, float beta );
+                                      float* resVec, float beta, size_t size, size_t offset );
 
-/// calls fast winding number for each point in three-dimensional grid to get sign
+// calls fast winding number for each point in three-dimensional grid to get sign
 void signedDistance( int3 gridSize, Matrix4 gridToMeshXf,
                     FastWindingNumberData data,
-                    float* resVec, size_t resVecSize, size_t resVecOffset, const DistanceToMeshOptions& options );
+                    float* resVec, size_t size, size_t offset, const DistanceToMeshOptions& options );
 
 } // namespace Cuda
 

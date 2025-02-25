@@ -186,8 +186,8 @@ private:
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();
 
+    // set color of pick shpere from the current state and parameters
+    void setSphereColor_();
 };
 
-
-
-}
+} //namespace MR

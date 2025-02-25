@@ -209,7 +209,7 @@ TEST(ChunkIteratorTest, IteratorStandardLibraryAlgorithms)
     EXPECT_EQ(chunks.size(), 4);
 
     // Check if all chunks have correct indices
-    bool allIndicesCorrect = std::all_of(begin, end, [idx = 0]( const Chunk& c ) mutable
+    bool allIndicesCorrect = std::all_of(begin, end, [idx = size_t( 0 )]( const Chunk& c ) mutable
     {
         return c.index == idx++;
     });

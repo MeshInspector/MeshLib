@@ -65,9 +65,13 @@ void PickPointManager::SetStateHistoryAction::action( Type )
 class PickPointManager::AddRemovePointHistoryAction : public PickPointManager::WidgetHistoryAction
 {
 public:
-    /// appends new point at given position, and returns undo action for its removal
+    /// appends new point at the end, and returns undo action for its removal
     static std::shared_ptr<AddRemovePointHistoryAction> appendAndGetUndo(
         PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point );
+
+    /// inserts new point before given position, and returns undo action for its removal
+    static std::shared_ptr<AddRemovePointHistoryAction> insertAndGetUndo(
+        PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point );
 
     /// removes point by index, and returns undo action for its addition at the same place
     static std::shared_ptr<AddRemovePointHistoryAction> removeAndGetUndo(
@@ -102,6 +106,14 @@ std::shared_ptr<PickPointManager::AddRemovePointHistoryAction> PickPointManager:
     PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& point )
 {
     std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Append Point", widget, obj, point, -1, true ) );
+    res->insertPoint_();
+    return res;
+}
+
+std::shared_ptr<PickPointManager::AddRemovePointHistoryAction> PickPointManager::AddRemovePointHistoryAction::insertAndGetUndo(
+    PickPointManager& widget, const std::shared_ptr<MR::VisualObject>& obj, int index, const PickedPoint& point )
+{
+    std::shared_ptr<AddRemovePointHistoryAction> res( new AddRemovePointHistoryAction( "Insert Point", widget, obj, point, index, true ) );
     res->insertPoint_();
     return res;
 }
@@ -403,6 +415,12 @@ int PickPointManager::getPointIndex( const std::shared_ptr<VisualObject>& obj, S
 bool PickPointManager::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
 {
     appendHistory_( AddRemovePointHistoryAction::appendAndGetUndo( *this, obj, triPoint ) );
+    return true;
+}
+
+bool PickPointManager::insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint )
+{
+    appendHistory_( AddRemovePointHistoryAction::insertAndGetUndo( *this, obj, index, triPoint ) );
     return true;
 }
 

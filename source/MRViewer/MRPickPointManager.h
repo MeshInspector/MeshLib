@@ -114,6 +114,10 @@ public:
     /// Add a point to the end of non closed contour connected with obj
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
 
+    /// Inserts a point into contour connected with obj
+    /// \param index point index before which to insert new point
+    MRVIEWER_API bool insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint );
+
     /// Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
 

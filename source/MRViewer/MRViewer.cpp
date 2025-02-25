@@ -182,19 +182,20 @@ static bool gWindowSizeInitialized = false;
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
-    auto resizeEvent = [width, height, viewer]
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
+    if ( gWindowSizeInitialized )
+    {
+        viewer->emplaceEvent( "Window resize", [width, height, viewer]
+        {
+            viewer->postResize( width, height );
+        }, true );
+    }
+    else
+#endif
     {
         viewer->postResize( width, height );
         viewer->postEmptyEvent();
-    };
-#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
-    if ( !gWindowSizeInitialized )
-        resizeEvent();
-    else
-        viewer->emplaceEvent( "Window resize", resizeEvent, true );
-#else
-    resizeEvent();
-#endif
+    }
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )

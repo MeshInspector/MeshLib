@@ -172,7 +172,7 @@ __global__ void fastWindingNumberFromMeshKernel( const Dipole* __restrict__ dipo
         return;
 
     const auto q = ( meshPoints[face.verts[0]] + meshPoints[face.verts[1]] + meshPoints[face.verts[2]] ) / 3.0f;
-    processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta );
+    processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, faceIndex );
 }
 
 __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf,

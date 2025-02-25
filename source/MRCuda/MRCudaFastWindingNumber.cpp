@@ -159,12 +159,11 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
         }
 
         res.resize( totalSize );
-        auto update = [&] ( FaceId f )
+        if ( !BitSetParallelForAll( res, [&] (FaceId f)
         {
-            res.set( f, wns[f] < 0 || wns[f] > 1 );
-        };
-        if ( !BitSetParallelForAll( res, update, subprogress( cb, 0.9f, 1.0f ) ) )
-            return unexpectedOperationCanceled();
+            if ( wns[f] < 0 || wns[f] > 1 )
+                res.set( f );
+        }, subprogress( cb, 0.9f, 1.0f ) ) )
 
         return {};
     } );

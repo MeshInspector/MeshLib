@@ -118,19 +118,19 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
     return memoryAmount;
 }
 
-size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& dims )
+size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& )
 {
-    return fastWindingNumberMeshMemory( mesh ) + size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+    return fastWindingNumberMeshMemory( mesh );
 }
 
-size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
+size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t )
 {
-    return fastWindingNumberMeshMemory( mesh ) + inputSize * ( sizeof( float ) + sizeof( Vector3f ) );
+    return fastWindingNumberMeshMemory( mesh );
 }
 
 size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
 {
-    return fastWindingNumberMeshMemory( mesh ) + mesh.topology.faceSize() * sizeof( float );
+    return fastWindingNumberMeshMemory( mesh );
 }
 
 size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )

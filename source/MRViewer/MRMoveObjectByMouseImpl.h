@@ -53,6 +53,8 @@ public:
     /// returns true if appending history to viewer history store is enabled in this tool
     bool isHistoryEnabled() const { return historyEnabled_; }
 
+    std::optional<std::function<void( std::vector<std::shared_ptr<Object>> objects, std::vector<AffineXf3f> initialXfs, AffineXf3f currentXf, bool history )>> onXfChangedCallBack_ = std::nullopt;
+
 protected:
     /// Transformation mode
     enum class TransformMode
@@ -76,6 +78,10 @@ protected:
     /// Note: can be invalid (feature objects give an invalid box etc.)
     MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects );
 
+    std::vector<std::shared_ptr<Object>> objects_;
+    std::vector<AffineXf3f> initialXfs_;
+    AffineXf3f currentXf_;      // Transform currently applied to objects
+
 private:
     int minDistance_ = 0;
 
@@ -86,12 +92,10 @@ private:
 
     void setVisualizeVectors_( std::vector<Vector3f> worldPoints );
 
-    std::vector<std::shared_ptr<Object>> objects_;
-    std::vector<AffineXf3f> initialXfs_;
+ 
 
     TransformMode transformMode_ = TransformMode::None;
     Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
-    AffineXf3f currentXf_;      // Transform currently applied to objects
     MouseButton currentButton_ = MouseButton::NoButton;
 
     // Data used to calculate transform

@@ -287,6 +287,8 @@ void MoveObjectByMouseImpl::applyCurrentXf_( bool history )
             AppendHistory<ChangeXfAction>( "xf", obj );
         obj->setWorldXf( currentXf_ * *itXf++ );
     }
+    if ( onXfChangedCallBack_ )
+        onXfChangedCallBack_.value()( objects_ , initialXfs_ , currentXf_ , history );
 }
 
 void MoveObjectByMouseImpl::resetXfs_()

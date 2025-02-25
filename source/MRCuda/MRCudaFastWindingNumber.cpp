@@ -164,6 +164,7 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
             if ( wns[f] < 0 || wns[f] > 1 )
                 res.set( f );
         }, subprogress( cb, 0.9f, 1.0f ) ) )
+            return unexpectedOperationCanceled();
 
         return {};
     } );

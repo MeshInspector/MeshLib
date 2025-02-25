@@ -725,8 +725,11 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 } // anonymous namespace
 
-bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
+DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
+    if ( utf8string( path.extension() ) != ".dcm" )
+        return DicomStatusEnum::Invalid;
+
     std::ifstream ifs( path, std::ios_base::binary );
 
 #ifdef __EMSCRIPTEN__
@@ -737,9 +740,9 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
     // NOTE: std::ifstream::get appends a null character
     std::array<char, std::size( cDicomMagicNumber ) + 1> buf;
     if ( !ifs.seekg( cDicomMagicNumberOffset, std::ios::beg ) || !ifs.get( buf.data(), buf.size(), '\0' ) )
-        return false;
+        return DicomStatusEnum::Invalid;
     if ( std::strncmp( buf.data(), cDicomMagicNumber.data(), cDicomMagicNumber.size() ) != 0 )
-        return false;
+        return DicomStatusEnum::Invalid;
     ifs.seekg( 0, std::ios::beg );
     assert( ifs );
 #endif
@@ -747,7 +750,7 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
     gdcm::ImageReader ir;
     ir.SetStream( ifs );
     if ( !ir.CanRead() )
-        return false;
+        return DicomStatusEnum::Invalid;
     // we read these tags to be able to determine whether this file is dicom dir or image
     auto tags = {
         gdcm::Tag( 0x0002, 0x0002 ), // media storage
@@ -757,7 +760,7 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
         gdcm::Keywords::SeriesInstanceUID::GetTag(),
         gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
     if ( !ir.ReadSelectedTags( tags ) )
-        return false;
+        return { DicomStatusEnum::Unsupported, "missing required tag" };
     gdcm::MediaStorage ms;
     ms.SetFromFile( ir.GetFile() );
 
@@ -766,14 +769,14 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
         || ms == gdcm::MediaStorage::BasicTextSR )
     {
         spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
-        return false;
+        return { DicomStatusEnum::Unsupported, "unsupported media storage" };
     }
 
     // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file
     if ( !gdcm::ImageHelper::GetPointerFromElement( gdcm::Keywords::PhotometricInterpretation::GetTag(), ir.GetFile() ) )
     {
         spdlog::warn( "DICOM file {} does not have Photometric Interpretation", utf8string( path ) );
-        return false;
+        return { DicomStatusEnum::Unsupported, "missing photometric interpretation" };
     }
 
     auto photometric = gdcm::ImageHelper::GetPhotometricInterpretationValue( ir.GetFile() );
@@ -781,14 +784,14 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
          photometric != gdcm::PhotometricInterpretation::MONOCHROME1 )
     {
         spdlog::warn( "DICOM file {} has Photometric Interpretation other than Monochrome", utf8string( path ) );
-        return false;
+        return { DicomStatusEnum::Unsupported, "unsupported photometric interpretation" };
     }
 
     auto dims = gdcm::ImageHelper::GetDimensionsValue( ir.GetFile() );
     if ( dims.size() != 3 )
     {
         spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
-        return false;
+        return { DicomStatusEnum::Unsupported, "unsupported dimensionality" };
     }
 
     if ( seriesUid )
@@ -804,7 +807,7 @@ bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
         }
     }
 
-    return true;
+    return DicomStatusEnum::Ok;
 }
 
 bool isDicomFolder( const std::filesystem::path& dirPath )

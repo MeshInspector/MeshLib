@@ -17,9 +17,35 @@ namespace MR
 namespace VoxelsLoad
 {
 
+
+enum class DicomStatusEnum : int
+{
+    Ok = 0,         // valid DICOM and we can open it
+    Invalid,        // not a valid DICOM
+    Unsupported,    // a valid DICOM, but we do not support it (e.g. some MediaStorages)
+};
+
+struct DicomStatus
+{
+    // implicit by design
+    DicomStatus( DicomStatusEnum st, std::string_view rs = "" ):
+        status( st ),
+        reason( rs )
+    {}
+
+    explicit operator bool() const
+    { return status == DicomStatusEnum::Ok; }
+
+    bool operator==( DicomStatusEnum s ) const
+    { return status == s; }
+
+    DicomStatusEnum status = DicomStatusEnum::Invalid;
+    std::string reason;     // if status is Unsupported, specify reason why
+};
+
 /// check if file is a valid DICOM dataset file
 /// \param seriesUid - if set, the extracted series instance UID is copied to the variable
-MRVOXELS_API bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
+MRVOXELS_API DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
 
 /// check if given folder contains at least one DICOM file
 MRVOXELS_API bool isDicomFolder( const std::filesystem::path& dirPath );

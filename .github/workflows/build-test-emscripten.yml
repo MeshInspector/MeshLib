@@ -92,7 +92,14 @@ jobs:
       - name: Test
         timeout-minutes: 5
         run: |
-          Xvfb -ac :99 -screen 0 1280x1024x16 &
-          export DISPLAY=:99
-          printf "before emrun\n"
-          emrun ./build/Release/bin/MRTest.html
+          echo "check the \$HOME dir permissions in case of timeout issues"
+          echo ls -al \$HOME
+          ls -al $HOME
+          echo
+          
+          emrun \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./build/Release/bin/MRTest.html

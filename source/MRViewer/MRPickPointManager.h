@@ -105,11 +105,18 @@ public:
     /// returns point widget by index from given object or nullptr if no such widget exists
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;
 
+    /// returns index of given point widget on given object or -1 if this widget is not from given object
+    [[nodiscard]] MRVIEWER_API int getPointIndex( const std::shared_ptr<VisualObject>& obj, SurfacePointWidget& pointWidget ) const;
+
     /// returns point widget currently dragged by mouse
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
     /// Add a point to the end of non closed contour connected with obj
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
+
+    /// Inserts a point into contour connected with obj
+    /// \param index point index before which to insert new point
+    MRVIEWER_API bool insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint );
 
     /// Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
@@ -168,6 +175,9 @@ private:
 
     /// if history writing is enabled, appends given history action to global store
     void appendHistory_( std::shared_ptr<HistoryAction> action ) const;
+
+    /// setup new hovered point widget, and removes hovering from the previous one
+    void setHoveredPointWidget_( SurfacePointWidget* newHoveredPoint );
 
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;

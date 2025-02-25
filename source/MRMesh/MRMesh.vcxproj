@@ -19,6 +19,7 @@
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
+    <ClInclude Include="MRChangeMeshDataAction.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
+    <ClInclude Include="MRObjectMeshData.h" />
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MROutlierPoints.h" />
     <ClInclude Include="MRParabola.h" />
@@ -402,6 +404,7 @@
     <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

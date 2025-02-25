@@ -61,13 +61,13 @@ MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshP
     };
 }
 
-const MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result_ )
+MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result_ )
 {
     ARG( result );
     RETURN_VECTOR( result.edgesAtrisB );
 }
 
-const MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result_ )
+MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result_ )
 {
     ARG( result );
     RETURN_VECTOR( result.edgesBtrisA );

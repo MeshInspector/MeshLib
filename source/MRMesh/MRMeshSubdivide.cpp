@@ -13,6 +13,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRBuffer.h"
+#include "MRObjectMesh.h"
+#include "MRMeshSubdivideCallbacks.h"
 #include <queue>
 
 namespace MR
@@ -247,6 +249,67 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
         return unexpectedOperationCanceled();
 
     return subMesh;
+}
+
+int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
+{
+    MR_TIMER
+    auto notFlippable = data.selectedEdges | data.creases;
+
+    MeshAttributesToUpdate meshParams;
+    if ( !data.uvCoordinates.empty() )
+        meshParams.uvCoords = &data.uvCoordinates;
+    if ( !data.vertColors.empty() )
+        meshParams.colorMap = &data.vertColors;
+    if ( !data.texturePerFace.empty() )
+        meshParams.texturePerFace = &data.texturePerFace;
+    if ( !data.faceColors.empty() )
+        meshParams.faceColors = &data.faceColors;
+
+    auto updateAttributesCb = meshOnEdgeSplitAttribute( *data.mesh, meshParams );
+
+    auto subs1 = settings;
+    subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+    {
+        if ( data.selectedEdges.test( e.undirected() ) )
+        {
+            data.selectedEdges.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+        if ( data.creases.test( e.undirected() ) )
+        {
+            data.creases.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+
+        updateAttributesCb( e1, e );
+        if ( settings.onEdgeSplit )
+            settings.onEdgeSplit( e1, e );
+    };
+    assert( !subs1.notFlippable );
+    subs1.notFlippable = &notFlippable;
+
+    assert( !subs1.region );
+    if ( data.selectedFaces.any() )
+        subs1.region = &data.selectedFaces;
+
+    return subdivideMesh( *data.mesh, subs1 );
+}
+
+ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const SubdivideSettings& settings )
+{
+    MR_TIMER
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return data;
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    subdivideMesh( data, settings );
+    return data;
 }
 
 TEST(MRMesh, SubdivideMesh)

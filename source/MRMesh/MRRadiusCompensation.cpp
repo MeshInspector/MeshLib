@@ -25,6 +25,8 @@ public:
     RadiusCompensator( Mesh& mesh, const CompensateRadiusParams& params ):
         mesh_{ mesh }, params_{ params }
     {
+        if ( params.projectToOriginalMesh )
+            meshCpy_ = mesh;
         params_.direction = params_.direction.normalized();
         radiusSq_ = sqr( params_.toolRadius );
     }
@@ -65,6 +67,7 @@ private:
     float sumCompensationCost_( const Vector3f& toolCenter );
 
     Mesh& mesh_;
+    Mesh meshCpy_;
     CompensateRadiusParams params_;
     const FaceBitSet* faceRegion_{ nullptr };
     VertBitSet vertRegion_;
@@ -76,7 +79,10 @@ private:
     AffineXf3f toDmXf_;
     Vector2i pixelsInRadius_;
 
+    // speedup caches
     std::vector<Vector3f> toolCenters_; // per pixel
+    std::vector<Vector3f> unprojectedPixes_; // per pixel
+
     // cost is (approx compensation Volume)/(approx compensation Projected Area) - less is better
     std::vector<std::pair<float,int>> costs_; // <cost, id> per pixel (this array will be sorted, thats why we need id as value and not only as key)
 
@@ -107,6 +113,18 @@ Expected<void> RadiusCompensator::init()
     toWorldXf_ = dmParams.xf();
     toDmXf_ = toWorldXf_.inverse();
 
+    unprojectedPixes_.resize( dm_.size() );
+    auto keepGoing = ParallelFor( unprojectedPixes_, [&] ( size_t i )
+    {
+        auto pos = dm_.toPos( i );
+        auto worldPos = dm_.unproject( pos.x, pos.y, toWorldXf_ );
+        if ( worldPos )
+            unprojectedPixes_[i] = *worldPos;
+    }, subprogress( params_.callback, 0.05f, 0.1f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
     Vector2f realPixelSize = div( Vector2f( dmParams.xRange.length(), dmParams.yRange.length() ), Vector2f( dmParams.resolution ) );
     pixelsInRadius_ = Vector2i( div( Vector2f::diagonal( params_.toolRadius ), realPixelSize ) ) + Vector2i::diagonal( 1 );
 
@@ -125,7 +143,7 @@ Expected<void> RadiusCompensator::calcCompensations()
         toolCenter = findToolCenterAtPixel_(pixelCoord);
         if ( toolCenter.x != FLT_MAX )
             costs_[i] = std::make_pair( sumCompensationCost_( toolCenter ), int( i ) );
-    }, subprogress( params_.callback, 0.05f, 0.15f ) );
+    }, subprogress( params_.callback, 0.01f, 0.15f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
@@ -171,14 +189,26 @@ Expected<void> RadiusCompensator::compensateDistanceMap()
         if ( !needCompensate )
             continue;
 
-        iteratePixelsInRadius_( pixelCoord, [&] ( const Vector2i& pixeli )->bool
+        // iterate in parallel
+        int xZoneLength = ( 2 * pixelsInRadius_.x + 1 );
+        int numPixesInArea = xZoneLength * ( 2 * pixelsInRadius_.y + 1 );
+        ParallelFor( 0, numPixesInArea, [&] ( int i )
         {
-            auto realValue = dm_.getValue( pixeli.x, pixeli.y );
-            auto& compValue = compensatedDm_.getValue( pixeli.x, pixeli.y );
-            auto newCompValue = calcCompensatedHeightAtPixel_( pixeli, toolCenter );
+            int xShift = ( i % xZoneLength ) - pixelsInRadius_.x;
+            int yShift = ( i / xZoneLength ) - pixelsInRadius_.y;
+            int xi = pixelCoord.x + xShift;
+            int yi = pixelCoord.y + yShift;
+            if ( xi < 0 || xi >= dm_.resX() )
+                return;
+            if ( yi < 0 || yi >= dm_.resY() )
+                return;
+            if ( !dm_.isValid( xi, yi ) )
+                return;
+            auto realValue = dm_.getValue( xi, yi );
+            auto& compValue = compensatedDm_.getValue( xi, yi );
+            auto newCompValue = realValue + calcCompensatedHeightAtPixel_( Vector2i( xi, yi ), toolCenter);
             if ( newCompValue > compValue && newCompValue + cTolerance >= realValue )
                 compValue = std::max( newCompValue, realValue );
-            return true;
         } );
     }
 
@@ -240,7 +270,7 @@ Expected<void> RadiusCompensator::applyCompensation()
             return unexpectedOperationCanceled();
 
         DeloneSettings dParams;
-        dParams.region = &flippedFaces;
+        dParams.region = faceRegion_;
         dParams.maxAngleChange = PI_F / 6;
         makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
@@ -262,10 +292,10 @@ Expected<void> RadiusCompensator::applyCompensation()
         mesh_.points[v] = toWorldXf_( Vector3f( pos.x, pos.y, *value ) );
         vertRegion_.reset( v );
     }, subprogress( params_.callback, 0.65f, 0.8f ) );
-
+    
     if ( vertRegion_.any() )
         positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
-
+    
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
@@ -275,15 +305,43 @@ Expected<void> RadiusCompensator::applyCompensation()
 Expected<void> RadiusCompensator::postprocessMesh()
 {
     MR_TIMER;
+
+    DeloneSettings dParams;
+    dParams.region = faceRegion_;
+    dParams.maxAngleChange = PI_F / 3;
+    makeDeloneEdgeFlips( mesh_, dParams, int( faceRegion_->count() ) );
+
+    if ( !reportProgress( params_.callback, 0.85f ) )
+        return unexpectedOperationCanceled();
+
     auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh_.topology, *faceRegion_ );
     RemeshSettings rParams;
     rParams.finalRelaxIters = 2;
     rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
     rParams.region = params_.region;
     rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.8f, 1.0f );
-
+    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh ? 0.92f : 1.0f );
+    
     if ( !remesh( mesh_, rParams ) )
+        return unexpectedOperationCanceled();
+
+    if ( !params_.projectToOriginalMesh )
+        return {};
+
+    auto verts = getInnerVerts( mesh_.topology, *faceRegion_ );
+    auto keepGoing = BitSetParallelFor( verts, [&] ( VertId v )
+    {
+        auto proj = findSignedDistance( mesh_.points[v], meshCpy_ );
+        if ( !proj )
+            return;
+        if ( proj->dist >= 0.0f )
+            return;
+        mesh_.points[v] = proj->proj.point;
+    }, subprogress( params_.callback, 0.92f,  1.0f ) );
+
+    mesh_.invalidateCaches();
+
+    if ( !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};
@@ -305,11 +363,12 @@ Vector3f RadiusCompensator::calcNormalAtPixel_( const Vector2i& coord0, Vector3f
     };
 
     Vector3f sumNorm;
-    auto pos0 = dm_.unproject( coord0.x, coord0.y, toWorldXf_ );
-    if ( !pos0 )
+    auto i0 = dm_.toIndex( coord0 );
+    if ( !dm_.isValid( i0 ) )
         return {};
+    auto pos0 = unprojectedPixes_[i0];
     if ( outPixelWorldPos )
-        *outPixelWorldPos = *pos0;
+        *outPixelWorldPos = pos0;
     Vector3f prevPos;
     bool hasPrev{ false };
     for ( const auto& neighShift : cNeigborsOrder )
@@ -320,22 +379,23 @@ Vector3f RadiusCompensator::calcNormalAtPixel_( const Vector2i& coord0, Vector3f
             hasPrev = false;
             continue;
         }
-        auto posi = dm_.unproject( coordi.x, coordi.y, toWorldXf_ );
-        if ( !posi )
+        auto ii = dm_.toIndex( coordi );
+        if ( !dm_.isValid( ii ) )
         {
             hasPrev = false;
             continue;
         }
+        auto posi = unprojectedPixes_[ii];
         if ( !hasPrev )
         {
-            prevPos = *posi;
+            prevPos = posi;
             hasPrev = true;
             continue;
         }
-        auto veci = *posi - *pos0;
-        auto vecPrev = prevPos - *pos0;
+        auto veci = posi - pos0;
+        auto vecPrev = prevPos - pos0;
         sumNorm -= ( MR::angle( veci, vecPrev ) * ( cross( veci, vecPrev ).normalized() ) );
-        prevPos = *posi;
+        prevPos = posi;
     }
     if ( sumNorm == Vector3f() )
         return {};
@@ -364,8 +424,7 @@ Vector3f RadiusCompensator::findToolCenterAtPixel_( const Vector2i& coord0 )
 
 float RadiusCompensator::calcCompensatedHeightAtPixel_( const Vector2i& pixelCoord, const Vector3f& worldToolCenter )
 {
-    auto val = dm_.getValue( pixelCoord.x, pixelCoord.y ); // should be OK if we got here
-    auto pos = toWorldXf_( Vector3f( pixelCoord.x + 0.5f, pixelCoord.y + 0.5f, val ) );
+    auto pos = unprojectedPixes_[dm_.toIndex( pixelCoord )]; // should be OK not to validate if we got here
     auto rVec = pos - worldToolCenter;
     auto projection = dot( rVec, params_.direction );
     auto distSq = rVec.lengthSq() - sqr( projection );
@@ -374,7 +433,7 @@ float RadiusCompensator::calcCompensatedHeightAtPixel_( const Vector2i& pixelCoo
         return -FLT_MAX;
 
     auto shift = std::sqrt( radiusSq_ - distSq );
-    return val - projection + shift;
+    return shift - projection;
 }
 
 void RadiusCompensator::iteratePixelsInRadius_( const Vector2i& pixelCoord, const std::function<bool( const Vector2i& )>& callback )
@@ -404,7 +463,7 @@ float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
     iteratePixelsInRadius_( toolPixel, [&] ( const Vector2i& pixelCoord )->bool
     {
         auto value = dm_.getValue( pixelCoord.x, pixelCoord.y );
-        auto height = calcCompensatedHeightAtPixel_( pixelCoord, toolCenter );
+        auto height = value + calcCompensatedHeightAtPixel_( pixelCoord, toolCenter );
         if ( height + cTolerance >= value )
         {
             sumVolume += std::max( height - value, 0.0f );

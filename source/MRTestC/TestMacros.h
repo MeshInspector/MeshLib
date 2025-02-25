@@ -1,8 +1,20 @@
 #pragma once
 
+#include "TestFunctions.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <tgmath.h>
+
+#define RUN_TEST( func )                      \
+    printf( "%s ...\n", #func );              \
+    {                                         \
+        struct timespec ts1 = timespec_now(); \
+        func();                               \
+        struct timespec ts2 = timespec_now(); \
+        struct timespec duration = timespec_get_duration( &ts1, &ts2 );          \
+        printf( "%s done (%.3f s)\n", #func, timespec_to_seconds( &duration ) ); \
+    }
 
 #define TEST_ASSERT( ... )  \
     if ( !( __VA_ARGS__ ) ) \

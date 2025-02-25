@@ -58,9 +58,6 @@
     <Filter Include="Source Files\DataModel\Measurements">
       <UniqueIdentifier>{744e0637-b69b-442b-b0f8-19f0f815c033}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\DataModel\ModelHolder">
-      <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\MeshBuilder">
       <UniqueIdentifier>{c83e4212-7072-40c2-8354-827c896c1628}</UniqueIdentifier>
     </Filter>
@@ -543,9 +540,6 @@
     <ClInclude Include="MRSphereObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRObjectMeshHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
-    </ClInclude>
     <ClInclude Include="MR2to3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -554,9 +548,6 @@
     </ClInclude>
     <ClInclude Include="MRPolyline.h">
       <Filter>Source Files\Polyline</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectLinesHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRLineObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -569,9 +560,6 @@
     </ClInclude>
     <ClInclude Include="MRHeapBytes.h">
       <Filter>Source Files\Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectPointsHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePointCloudAction.h">
       <Filter>Source Files\History</Filter>
@@ -1275,6 +1263,21 @@
     <ClInclude Include="MROutlierPoints.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectLinesHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectMeshHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectPointsHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectMeshData.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRChangeMeshDataAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1586,17 +1589,11 @@
     <ClCompile Include="MRSphereObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRObjectMeshHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
-    </ClCompile>
     <ClCompile Include="MRPlaneObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline.cpp">
       <Filter>Source Files\Polyline</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectLinesHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRLineObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -1606,9 +1603,6 @@
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp">
       <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectPointsHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRPointObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -2098,6 +2092,18 @@
     </ClCompile>
     <ClCompile Include="MROutlierPoints.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectLinesHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectMeshHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectPointsHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectMeshData.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

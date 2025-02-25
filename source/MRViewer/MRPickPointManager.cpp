@@ -159,6 +159,7 @@ int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>
     if ( startDragging )
     {
         MR_SCOPED_VALUE( params.writeHistory, false );
+        setHoveredPointWidget_( pw.get() );
         pw->startDragging();
     }
     return index;
@@ -236,7 +237,6 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
     newPoint->create( obj, pt );
-    setHoveredPointWidget_( newPoint.get() );
 
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {

@@ -112,12 +112,12 @@ public:
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
     /// Add a point to the end of non closed contour connected with obj
-    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is down
+    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is over new point and is down
     MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint, bool startDragging = false );
 
     /// Inserts a point into contour connected with obj
     /// \param index point index before which to insert new point
-    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is down
+    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is over new point and is down
     MRVIEWER_API bool insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint, bool startDragging = false );
 
     /// Remove point with pickedIndex index from contour connected with obj.

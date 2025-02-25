@@ -118,19 +118,28 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
     return memoryAmount;
 }
 
-size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& )
+size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& dims )
 {
-    return fastWindingNumberMeshMemory( mesh );
+    constexpr size_t cMinLayerCount = 10;
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float );
 }
 
-size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t )
+size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
 {
-    return fastWindingNumberMeshMemory( mesh );
+    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( inputSize * ( sizeof( float ) + sizeof( Vector3f ) ), cMinCudaBufferSize );
 }
 
 size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
 {
-    return fastWindingNumberMeshMemory( mesh );
+    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( mesh.topology.faceSize() * sizeof( float ), cMinCudaBufferSize );
 }
 
 size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )

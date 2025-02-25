@@ -49,8 +49,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     pickSphere_ = std::make_shared<SphereObject>();
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
-    pickSphere_->setFrontColor( params_.baseColor, false );
-    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    setSphereColor_();
     pickSphere_->setGlobalAlpha( 255 );
     pickSphere_->setMainFeatureAlpha( 1.f );
     pickSphere_->setVisualizeProperty( false, DimensionsVisualizePropertyType::diameter, ViewportMask::all() );
@@ -94,19 +93,23 @@ void SurfacePointWidget::reset()
     endMove_ = {};
 }
 
+void SurfacePointWidget::setSphereColor_()
+{
+    if ( !pickSphere_ )
+        return;
+    if ( isOnMove_ )
+        pickSphere_->setFrontColor( params_.activeColor, false );
+    else if ( isHovered_ )
+        pickSphere_->setFrontColor( params_.hoveredColor, false );
+    else
+        pickSphere_->setFrontColor( params_.baseColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+}
+
 void SurfacePointWidget::setParameters( const Parameters& params )
 {
     if ( pickSphere_ )
     {
-        if ( isHovered_ )
-            pickSphere_->setFrontColor( params.hoveredColor, false );
-        else if ( isOnMove_ )
-            pickSphere_->setFrontColor( params.activeColor, false );
-        else
-            pickSphere_->setFrontColor( params.baseColor, false );
-
-        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
-
         if ( params.positionType != params_.positionType ||
              params.radius != params_.radius )
         {
@@ -114,6 +117,7 @@ void SurfacePointWidget::setParameters( const Parameters& params )
         }
     }
     params_ = params;
+    setSphereColor_();
 }
 
 void SurfacePointWidget::setBaseColor( const Color& color )
@@ -121,11 +125,7 @@ void SurfacePointWidget::setBaseColor( const Color& color )
     if ( params_.baseColor == color )
         return;
     params_.baseColor = color;
-    if ( pickSphere_ )
-    {
-        pickSphere_->setFrontColor( color, false );
-        pickSphere_->setBackColor( color );
-    }
+    setSphereColor_();
 }
 
 void SurfacePointWidget::updateParameters( const std::function<void( Parameters& )>& visitor )
@@ -140,8 +140,7 @@ void SurfacePointWidget::setHovered( bool on )
     if ( !isOnMove_ && isHovered_ != on )
     {
         isHovered_ = on;
-        pickSphere_->setFrontColor( isHovered_ ? params_.hoveredColor : params_.baseColor, false );
-        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+        setSphereColor_();
     }
 }
 
@@ -150,8 +149,7 @@ void SurfacePointWidget::startDragging()
     assert( !isOnMove_ );
     pickSphere_->setPickable( false );
     isOnMove_ = true;
-    pickSphere_->setFrontColor( params_.activeColor, false );
-    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    setSphereColor_();
     if ( startMove_ )
         startMove_( *this, currentPos_ );
 }
@@ -175,8 +173,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
         return false;
     isOnMove_ = false;
     pickSphere_->setPickable( true );
-    pickSphere_->setFrontColor( params_.baseColor, false );
-    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    setSphereColor_();
     if ( endMove_ )
         endMove_( *this, currentPos_ );
     return true;

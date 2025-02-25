@@ -150,6 +150,9 @@ public:
     // Checks whether the current peak is a peak in the invisible (reverse) side of the mesh or cloud point.
     [[nodiscard]] static bool isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye );
 
+    /// this method is called on mouse down, but it can also be called manually if the caller is sure that mouse is down
+    void startDragging();
+
 private:
     MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;

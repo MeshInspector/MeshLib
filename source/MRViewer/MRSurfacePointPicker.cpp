@@ -145,6 +145,17 @@ void SurfacePointWidget::setHovered( bool on )
     }
 }
 
+void SurfacePointWidget::startDragging()
+{
+    assert( !isOnMove_ );
+    pickSphere_->setPickable( false );
+    isOnMove_ = true;
+    pickSphere_->setFrontColor( params_.activeColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    if ( startMove_ )
+        startMove_( *this, currentPos_ );
+}
+
 bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 {
     if ( button != MouseButton::Left || !isHovered_ )
@@ -154,12 +165,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( ( mod != 0 ) && ( ( mod & params_.customModifiers ) != mod ) )
         return false;
 
-    pickSphere_->setPickable( false );
-    isOnMove_ = true;
-    pickSphere_->setFrontColor( params_.activeColor, false );
-    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
-    if ( startMove_ )
-        startMove_( *this, currentPos_ );
+    startDragging();
     return true;
 }
 

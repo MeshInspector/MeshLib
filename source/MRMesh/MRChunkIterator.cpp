@@ -26,7 +26,6 @@ Chunk ChunkIterator::operator*() const
 {
     const auto offset = index * ( chunkSize - overlap );
     return {
-        .index = index,
         .offset = offset,
         .size = std::min( chunkSize, totalSize - offset ),
     };

@@ -108,7 +108,6 @@ TEST(ChunkIteratorTest, ChunkIteratorDereference)
     {
         ChunkIterator it{100, 40, 0, 0};
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 0);
         EXPECT_EQ(chunk.offset, 0);
         EXPECT_EQ(chunk.size, 40);
     }
@@ -117,7 +116,6 @@ TEST(ChunkIteratorTest, ChunkIteratorDereference)
     {
         ChunkIterator it{100, 40, 0, 1};
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 1);
         EXPECT_EQ(chunk.offset, 40);
         EXPECT_EQ(chunk.size, 40);
     }
@@ -126,7 +124,6 @@ TEST(ChunkIteratorTest, ChunkIteratorDereference)
     {
         ChunkIterator it{100, 40, 0, 2};
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 2);
         EXPECT_EQ(chunk.offset, 80);
         EXPECT_EQ(chunk.size, 20); // Last chunk is smaller
     }
@@ -140,7 +137,6 @@ TEST(ChunkIteratorTest, ChunkIteratorWithOverlap)
     // First chunk
     {
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 0);
         EXPECT_EQ(chunk.offset, 0);
         EXPECT_EQ(chunk.size, 40);
     }
@@ -149,7 +145,6 @@ TEST(ChunkIteratorTest, ChunkIteratorWithOverlap)
     ++it;
     {
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 1);
         EXPECT_EQ(chunk.offset, 20); // 20 units after first chunk start
         EXPECT_EQ(chunk.size, 40);
     }
@@ -158,7 +153,6 @@ TEST(ChunkIteratorTest, ChunkIteratorWithOverlap)
     ++it;
     {
         Chunk chunk = *it;
-        EXPECT_EQ(chunk.index, 2);
         EXPECT_EQ(chunk.offset, 40); // 20 units after second chunk start
         EXPECT_EQ(chunk.size, 40);
     }
@@ -179,12 +173,10 @@ TEST(ChunkIteratorTest, IteratorRangeForLoop)
     EXPECT_EQ(chunks.size(), 4);
 
     // Check first chunk
-    EXPECT_EQ(chunks[0].index, 0);
     EXPECT_EQ(chunks[0].offset, 0);
     EXPECT_EQ(chunks[0].size, 30);
 
     // Check last chunk
-    EXPECT_EQ(chunks[3].index, 3);
     EXPECT_EQ(chunks[3].offset, 90);
     EXPECT_EQ(chunks[3].size, 10);
 
@@ -207,13 +199,6 @@ TEST(ChunkIteratorTest, IteratorStandardLibraryAlgorithms)
     // Convert to vector
     std::vector<Chunk> chunks(begin, end);
     EXPECT_EQ(chunks.size(), 4);
-
-    // Check if all chunks have correct indices
-    bool allIndicesCorrect = std::all_of(begin, end, [idx = size_t( 0 )]( const Chunk& c ) mutable
-    {
-        return c.index == idx++;
-    });
-    EXPECT_TRUE(allIndicesCorrect);
 
     // Verify total coverage equals the original size
     size_t totalSize = 0;
@@ -253,7 +238,6 @@ TEST_P(ChunkIteratorTestFixture, ExhaustiveParameterizedTest)
         for (auto it = begin; it != end; ++it)
         {
             Chunk chunk = *it;
-            EXPECT_EQ(chunk.index, it.index);
             EXPECT_LE(chunk.offset + chunk.size, tc.totalSize + 1);
 
             // Mark covered elements

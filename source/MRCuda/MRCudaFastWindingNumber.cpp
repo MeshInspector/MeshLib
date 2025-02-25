@@ -114,9 +114,11 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
 
         const auto cb1 = subprogress( cb, 0.60f, 1.00f );
         const auto iterCount = chunkCount( totalSize, bufferSize );
+        size_t iterIndex = 0;
+
         for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
         {
-            const auto cb2 = subprogress( cb1, chunk.index, iterCount );
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.copyFrom( points.data() + chunk.offset, chunk.size ) );
 
@@ -156,9 +158,11 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
 
         const auto cb1 = subprogress( cb, 0.60f, 0.90f );
         const auto iterCount = chunkCount( totalSize, bufferSize );
+        size_t iterIndex = 0;
+
         for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
         {
-            const auto cb2 = subprogress( cb1, chunk.index, iterCount );
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
             fastWindingNumberFromMesh( data_->toData(), cudaResult.data(), beta, chunk.size, chunk.offset );
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
@@ -216,9 +220,11 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
 
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
     for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
     {
-        const auto cb2 = subprogress( cb1, chunk.index, iterCount );
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
         fastWindingNumberFromGrid(
             int3 { dims.x, dims.y, dims.z },
@@ -275,9 +281,11 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
 
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
     for ( const auto chunk : splitByChunks( totalSize, bufferSize ) )
     {
-        const auto cb2 = subprogress( cb1, chunk.index, iterCount );
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
         signedDistance(
             int3 { dims.x, dims.y, dims.z },

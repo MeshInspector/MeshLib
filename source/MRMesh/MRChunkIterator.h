@@ -11,8 +11,6 @@ namespace MR
 /// array chunk representation
 struct Chunk
 {
-    /// chunk index
-    size_t index;
     /// chunk offset
     size_t offset;
     /// chunk size; the last chunk's size may be smaller than other chunk's ones

@@ -100,7 +100,7 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
         const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
         const auto totalSize = points.size();
-        const auto bufferSize = std::min( maxBufferSize, totalSize ) / 2; // need to allocate two buffers of the same size
+        const auto bufferSize = std::min( maxBufferSize, totalSize ) / ( 3 + 1 ); // need to allocate two buffers of the same size, one of float type, another of float3 type
 
         DynamicArray<float3> cudaPoints;
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.resize( bufferSize ) );

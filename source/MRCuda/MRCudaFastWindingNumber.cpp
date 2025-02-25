@@ -1,5 +1,7 @@
 #include "MRCudaFastWindingNumber.h"
 #include "MRCudaFastWindingNumber.cuh"
+
+#include "MRCudaBasic.h"
 #include "MRCudaMath.cuh"
 
 #include "MRMesh/MRAABBTree.h"
@@ -183,14 +185,14 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     };
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
-    // TODO: compute available memory amount
-    const size_t cMaxBufferBytes = 1 << 30; // 1 GiB
-    const auto maxBufferSize = cMaxBufferBytes / sizeof( float );
+    // TODO: allow user to set the upper limit
+    const auto maxBufferBytes = getCudaAvailableMemory();
+    const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
     const auto layerSize = size_t( dims.x ) * dims.y;
     const auto maxLayerCountInBuffer = maxBufferSize / layerSize;
-    const auto bufferSize = maxLayerCountInBuffer * layerSize;
     const auto totalSize = dims.z * layerSize;
+    const auto bufferSize = std::min( maxLayerCountInBuffer * layerSize, totalSize );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );

@@ -31,7 +31,7 @@ constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
 namespace MR
 {
 
-void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ ) const
+void MoveObjectByMouseImpl::onDrawDialog( float /*menuScaling*/ ) const
 {
     if ( !isMoving() )
         return;
@@ -55,7 +55,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     Viewport& viewport = viewer.viewport();
 
     cancel();
-    transformMode_ = pick_( button, modifiers, objects_, xfCenterPoint_, worldStartPoint_ );
+    transformMode_ = pick_( button, modifiers );
     if ( transformMode_ == TransformMode::None )
     {
         clear_();
@@ -230,33 +230,60 @@ void MoveObjectByMouseImpl::cancel()
     clear_();
 }
 
-MRVIEWER_API MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton button, int modifiers,
-    std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton button, int modifiers )
 {
     // Use LMB for `Translation` and Ctrl+LMB for `Rotation`
+    auto mode = modeFromPick_( button, modifiers );
+    if ( mode == TransformMode::None )
+        return mode;
+
+    auto objPick = pickObjects_( objects_, modifiers );
+    const auto& [obj, pick] = objPick;
+
+    if ( objects_.empty() )
+        return TransformMode::None;
+
+    Box3f box = getBbox_( objects_ );
+    xfCenterPoint_ = box.valid() ? box.center() : Vector3f{};
+
+    setStartPoint_( objPick, worldStartPoint_ );
+    return mode;
+}
+
+ObjAndPick MoveObjectByMouseImpl::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int /*modifiers*/ )
+{
+    Viewer& viewer = getViewerInstance();
+    Viewport& viewport = viewer.viewport( viewer.getHoveredViewportId() );
+    // Pick a single object under cursor
+    ObjAndPick res = viewport.pickRenderObject();
+    const auto& [obj, pick] = res;
+    if ( !obj || obj->isAncillary() )
+    {
+        objects = {};
+        return res;
+    }
+    objects = { obj };
+    return res;
+}
+
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPick_( MouseButton button, int modifiers )
+{
     if ( !( button == MouseButton::Left && ( modifiers == 0 || modifiers == GLFW_MOD_CONTROL ) ) )
         return TransformMode::None;
+    return modifiers == 0 ? TransformMode::Translation : TransformMode::Rotation;
+}
 
-    Viewer& viewer = getViewerInstance();
-    Viewport& viewport = viewer.viewport();
-
-    // Pick a single object under cursor
-    auto [obj, pick] = viewport.pickRenderObject();
-
-    // Check if picked something, and is not an ancillary object
-    if ( !obj || obj->isAncillary() )
-        return TransformMode::None;
-
-    // Use bounding box center as transform center and the picked point as an initial position
-    objects = { obj };
-    Box3f box = getBbox_( objects );
-    centerPoint = box.valid() ? box.center() : Vector3f{};
+void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint )
+{
+    const auto& [obj, pick] = objPick;
+    if ( !obj )
+        return;
     startPoint = obj->worldXf()( pick.point );
+
     // Sample code to calculate reasonable startPoint when pick is unavailable
     // Vector2i mousePos = viewer.mouseController().getMousePos();
     // Vector3f viewportPos = viewer.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     // startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
-    return modifiers == 0 ? TransformMode::Translation : TransformMode::Rotation;
 }
 
 Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects )

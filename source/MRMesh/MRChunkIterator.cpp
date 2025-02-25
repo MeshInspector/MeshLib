@@ -39,7 +39,7 @@ size_t chunkCount( size_t totalSize, size_t chunkSize, size_t overlap )
 
     const auto size = totalSize - overlap; // otherwise the last chunk's size may be smaller or equal to the overlap i.e. fully in the previous chunk
     const auto step = chunkSize - overlap;
-    return ( size / step ) + !!( size % step ); // integer variant of `std::ceil( a / b )`
+    return ( size + step - 1 ) / step;
 }
 
 IteratorRange<ChunkIterator> splitByChunks( size_t totalSize, size_t chunkSize, size_t overlap )

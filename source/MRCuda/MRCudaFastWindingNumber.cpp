@@ -10,6 +10,18 @@
 #include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
 
+namespace
+{
+
+// returns maximum amount of free GPU memory used for dynamic-sized buffers
+size_t getCudaAvailableMemoryForBuffers()
+{
+    constexpr float cMaxGpuMemoryUsage = 0.80f;
+    return MR::Cuda::getCudaAvailableMemory() * cMaxGpuMemoryUsage;
+}
+
+} // namespace
+
 namespace MR
 {
 namespace Cuda
@@ -84,7 +96,7 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
         // TODO: allow user to set the upper limit
-        const auto maxBufferBytes = getCudaAvailableMemory();
+        const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
         const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
         const auto totalSize = points.size();
@@ -128,7 +140,7 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
         // TODO: allow user to set the upper limit
-        const auto maxBufferBytes = getCudaAvailableMemory();
+        const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
         const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
         const auto totalSize = mesh_.topology.faceSize();
@@ -189,7 +201,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     // TODO: allow user to set the upper limit
-    const auto maxBufferBytes = getCudaAvailableMemory();
+    const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
     const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
     const auto layerSize = size_t( dims.x ) * dims.y;
@@ -248,7 +260,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     // TODO: allow user to set the upper limit
-    const auto maxBufferBytes = getCudaAvailableMemory();
+    const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
     const auto maxBufferSize = maxBufferBytes / sizeof( float );
 
     const auto layerSize = size_t( dims.x ) * dims.y;

@@ -3,10 +3,23 @@
 namespace MR
 {
 
+bool ChunkIterator::operator==( const ChunkIterator& other ) const
+{
+    return std::tie( totalSize, chunkSize, overlap, index )
+        == std::tie( other.totalSize, other.chunkSize, other.overlap, other.index );
+}
+
 ChunkIterator& ChunkIterator::operator++()
 {
     ++index;
     return *this;
+}
+
+ChunkIterator ChunkIterator::operator++( int )
+{
+    auto copy = *this;
+    ++( *this );
+    return copy;
 }
 
 Chunk ChunkIterator::operator*() const

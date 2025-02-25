@@ -26,14 +26,20 @@ struct ChunkIterator
     size_t overlap{ 0 };
     size_t index{ 0 };
 
-    auto operator <=>( const ChunkIterator& ) const = default;
+    MRMESH_API bool operator ==( const ChunkIterator& other ) const;
+    bool operator !=( const ChunkIterator& other ) const { return !( *this == other ); }
 
     using iterator_category = std::input_iterator_tag;
     using value_type = Chunk;
     using difference_type = std::ptrdiff_t;
+    using pointer = Chunk*;
+    using reference = Chunk&;
 
     MRMESH_API ChunkIterator& operator ++();
+    MRMESH_API ChunkIterator operator ++( int );
+
     MRMESH_API Chunk operator *() const;
+    Chunk operator ->() const { return operator*(); }
 };
 
 /// returns the amount of chunks of given size required to cover the full array

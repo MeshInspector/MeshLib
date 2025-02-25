@@ -105,8 +105,8 @@ bool BinaryOperations::onEnable_()
     auto objs = getAllObjectsInTree<ObjectVoxels>(&SceneRoot::get(), ObjectSelectivityType::Selected);
     obj1_ = objs[0];
     obj2_ = objs[1];
-    conn1_ = obj1_->worldXfChangedSignal.connect( std::bind_front( &BinaryOperations::onTransformChange, this ) );
-    conn2_ = obj2_->worldXfChangedSignal.connect( std::bind_front( &BinaryOperations::onTransformChange, this ) );
+    conn1_ = obj1_->worldXfChangedSignal.connect( [this] { return onTransformChange(); } );
+    conn2_ = obj2_->worldXfChangedSignal.connect( [this] { return onTransformChange(); } );
     return true;
 }
 

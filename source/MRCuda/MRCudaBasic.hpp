@@ -64,6 +64,20 @@ inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )
 
 
 template <typename T>
+inline cudaError_t DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
+{
+    assert( numBytes % sizeof( T ) == 0 );
+    resize( numBytes / sizeof( T ) );
+    return CUDA_LOGE( cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice ) );
+}
+
+template <typename T>
+inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data )
+{
+    return CUDA_LOGE( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+}
+
+template <typename T>
 template <typename U>
 inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
 {

@@ -93,7 +93,7 @@ DistanceMap computeDistanceMap( const MR::Mesh& mesh, const MR::MeshToDistanceMa
     if ( !reportProgress( cb, 0.6f ) )
         return {};
 
-    CUDA_EXEC( result.copyTo( distMap.data(), distMap.size() ) );
+    CUDA_EXEC( result.toBytes( ( uint8_t* )distMap.data() ) );
     if ( outSamples )
     {
         CUDA_EXEC( outTriPoints.toVector( *outSamples ) );

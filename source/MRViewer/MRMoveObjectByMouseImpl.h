@@ -4,7 +4,6 @@
 #include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRMouse.h"
 #include "MRViewer/MRImGui.h"
-#include "MRViewport.h"
 
 namespace MR
 {

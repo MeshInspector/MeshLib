@@ -238,7 +238,6 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton b
         return mode;
 
     auto objPick = pickObjects_( objects_, modifiers );
-    const auto& [obj, pick] = objPick;
 
     if ( objects_.empty() )
         return TransformMode::None;

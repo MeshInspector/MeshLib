@@ -18,9 +18,6 @@
 #include <optional>
 #include <span>
 
-using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnObject>;
-using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnObject>;
-
 namespace MR
 {
 

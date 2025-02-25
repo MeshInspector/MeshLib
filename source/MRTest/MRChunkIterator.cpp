@@ -221,14 +221,14 @@ class ChunkIteratorTestFixture : public testing::TestWithParam<ChunkIteratorTest
 {
 };
 
-TEST_P(ChunkIteratorTestFixture, ExhaustiveParameterizedTest)
+TEST_P( ChunkIteratorTestFixture, ExhaustiveParameterizedTest )
 {
     const auto& tc = GetParam();
 
-    EXPECT_EQ(chunkCount(tc.totalSize, tc.chunkSize, tc.overlap), tc.expectedChunks);
+    EXPECT_EQ( chunkCount( tc.totalSize, tc.chunkSize, tc.overlap ), tc.expectedChunks );
 
-    auto [begin, end] = splitByChunks(tc.totalSize, tc.chunkSize, tc.overlap);
-    EXPECT_EQ(std::distance(begin, end), tc.expectedChunks);
+    auto [ begin, end ] = splitByChunks( tc.totalSize, tc.chunkSize, tc.overlap );
+    EXPECT_EQ( std::distance( begin, end ), (std::ptrdiff_t)tc.expectedChunks );
 
     // If we expect chunks, verify they cover the array correctly
     if ( tc.expectedChunks > 0 )

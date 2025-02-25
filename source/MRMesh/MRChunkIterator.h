@@ -17,6 +17,7 @@ struct Chunk
     size_t size;
 };
 
+/// iterator class for array chunks
 struct ChunkIterator
 {
     size_t totalSize{ 0 };

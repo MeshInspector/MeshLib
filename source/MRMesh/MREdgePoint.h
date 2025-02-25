@@ -59,20 +59,24 @@ struct EdgePointPair
 /// Represents a segment on one edge
 struct EdgeSegment
 {
-    // id of the edge
+    /// id of the edge
     EdgeId e;
-    // start of the segment
+    /// start of the segment
     SegmPointf a{ 0.0f };
-    // end of the segment
+    /// end of the segment
     SegmPointf b{ 1.0f };
     [[nodiscard]] EdgeSegment() = default;
     [[nodiscard]] EdgeSegment( EdgeId e, float a = 0.0f, float b = 1.0f ) : e( e ), a( a ), b( b ) { assert( valid() ); };
-    // returns starting EdgePoint
+    /// returns starting EdgePoint
     [[nodiscard]] EdgePoint edgePointA() const { return { e, a }; }
-    // returns ending EdgePoint
+    /// returns ending EdgePoint
     [[nodiscard]] EdgePoint edgePointB() const { return { e, b }; }
-    // returns true if the edge is valid and start point is less than end point
+    /// returns true if the edge is valid and start point is less than end point
     [[nodiscard]] bool valid() const { return e.valid() && a <= b; }
+
+    bool operator==( const EdgeSegment& rhs ) const { return e == rhs.e && a == rhs.a && b == rhs.b; }
+    /// represents the same segment relative to sym edge in
+    [[nodiscard]] EdgeSegment sym() const { return EdgeSegment{ e.sym(), b.sym(), a.sym() }; }
 };
 
 /// returns true if points a and b are located on a boundary of the same triangle;

@@ -50,12 +50,12 @@ void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
             if ( ImGui::GetIO().KeyMods & ImGuiMod_Super )
                 mods |= GLFW_MOD_SUPER;
             expectedMode = modeFromPickModifiers_( mods );
-            if ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::Scale )
+            if ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::UniformScale || expectedMode == TransformMode::NonUniformScale )
                 pickObjects_( tempObjects, mods );
         }
         const auto& objs = objects_.empty() ? tempObjects : objects_;
 
-        if ( !objs.empty() && ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::Scale ) )
+        if ( !objs.empty() && ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::UniformScale || expectedMode == TransformMode::NonUniformScale ) )
         {
             ViewportId vpId = getViewerInstance().viewport().id;
             Vector3f centerPoint = xfCenterPoint_;
@@ -90,8 +90,10 @@ void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
         ImGui::SetTooltip( "Distance : %s", valueToString<LengthUnit>( shift_ ).c_str() );
     if ( transformMode_ == TransformMode::Rotation )
         ImGui::SetTooltip( "Angle : %s", valueToString<AngleUnit>( angle_ ).c_str() );
-    if ( transformMode_ == TransformMode::Scale )
-        ImGui::SetTooltip( "Scale : %s", valueToString<RatioUnit>( scale_ ).c_str() );
+    if ( transformMode_ == TransformMode::UniformScale )
+        ImGui::SetTooltip( "Uniform Scale : %s", valueToString<RatioUnit>( scale_ ).c_str() );
+    if ( transformMode_ == TransformMode::NonUniformScale )
+        ImGui::SetTooltip( "Non-Uniform Scale : %s", valueToString<RatioUnit>( scale_ ).c_str() );
 }
 
 bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
@@ -114,7 +116,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     viewportStartPointZ_ = viewportStartPoint.z;
 
     Vector3f viewportCenterPoint;
-    if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::Scale )
+    if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
         viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
 
@@ -139,7 +141,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     for ( std::shared_ptr<Object>& obj : objects_ )
         initialXfs_.push_back( obj->worldXf() );
 
-    if ( transformMode_ == TransformMode::Rotation )
+    if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
         Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
         referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
@@ -152,19 +154,6 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
             spdlog::warn( "Bad cross start axis and rotation plane" );
 
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldStartPoint_ } );
-    }
-    else if ( transformMode_ == TransformMode::Scale )
-    {
-        Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
-        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
-
-        Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
-
-        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
-            worldStartPoint_ = *crossPL;
-        else
-            spdlog::warn( "Bad cross start axis and rotation plane" );
-        setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_ } );
     }
     else // if ( transformMode_ == TransformMode::Translation )
         setVisualizeVectors_( { worldStartPoint_, worldStartPoint_ } );
@@ -211,11 +200,9 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldEndPoint } );
 
         // Rotate around center point (e.g. bounding box center)
-        AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - xfCenterPoint_ ) );
-        AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
-        currentXf_ = toCenterPoint * rotation * toCenterPoint.inverse();
+        currentXf_ = AffineXf3f::xfAround( Matrix3f::rotation( vectorStart, worldEndPoint - xfCenterPoint_ ), xfCenterPoint_ );
     }
-    else if ( transformMode_ == TransformMode::Scale )
+    else if ( transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
         auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
         if ( auto crossPL = intersection( referencePlane_, endAxis ) )
@@ -231,8 +218,16 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { xfCenterPoint_, worldEndPoint } );
 
         // Scale around center point (e.g. bounding box center)
-        AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
-        currentXf_ = toCenterPoint * AffineXf3f::linear( Matrix3f::scale( scale_ ) ) * toCenterPoint.inverse();
+        if ( transformMode_ == TransformMode::UniformScale )
+        {
+            currentXf_ = AffineXf3f::xfAround( Matrix3f::scale( scale_ ), xfCenterPoint_ );
+        }
+        else// if ( transformMode_ == TransformMode::NonUniformScale )
+        {
+            auto rotMat = Matrix3f::rotation( vectorEnd, Vector3f::plusX() );
+            auto scaleAlongMat = rotMat.inverse() * Matrix3f::scale( scale_, 1, 1 ) * rotMat;
+            currentXf_ = AffineXf3f::xfAround( scaleAlongMat, xfCenterPoint_ );
+        }
     }
     else // if ( transformMode_ == TransformMode::Translation )
     {
@@ -336,9 +331,14 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPickModifier
 
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPick_( MouseButton button, int modifiers ) const
 {
-    if ( button != MouseButton::Left )
-        return TransformMode::None;
-    return modeFromPickModifiers_( modifiers );
+    auto mode = modeFromPickModifiers_( modifiers );
+    if ( mode == TransformMode::None )
+        return mode;
+    if ( mode == TransformMode::UniformScale && button == MouseButton::Right )
+        return TransformMode::NonUniformScale;
+    if ( button == MouseButton::Left )
+        return mode;
+    return TransformMode::None;
 }
 
 void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint ) const

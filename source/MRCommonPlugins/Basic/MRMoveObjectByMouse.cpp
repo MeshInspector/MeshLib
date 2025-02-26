@@ -55,7 +55,18 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    ImGui::Text( "Click and hold LMB to move or transform" );
+    if ( int( moveByMouse_.modXfMode ) == int( XfMode::Scale ) )
+    {
+        ImGui::Text( "Drag object with LMB to uniform scale\nRMB - non-uniform" );
+    }
+    else if ( int( moveByMouse_.modXfMode ) == int( XfMode::Rotate ) )
+    {
+        ImGui::Text( "Drag object with LMB to rotate\n" );
+    }
+    else
+    {
+        ImGui::Text( "Drag object with LMB to move\n" );
+    }
 
     ImGui::Separator();
 
@@ -133,7 +144,7 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
         return TransformMode::None;
 
     if ( int( modXfMode ) == int( XfMode::Scale ) || ( modifiers & GLFW_MOD_ALT ) == GLFW_MOD_ALT )
-        return TransformMode::Scale;
+        return TransformMode::UniformScale;
     else if ( int( modXfMode ) == int( XfMode::Rotate ) || ( modifiers & GLFW_MOD_CONTROL ) == GLFW_MOD_CONTROL )
         return TransformMode::Rotation;
     else

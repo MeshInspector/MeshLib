@@ -177,11 +177,26 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+static bool gWindowSizeInitialized = false;
+
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->postResize( width, height );
-    viewer->postEmptyEvent();
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
+    if ( gWindowSizeInitialized )
+    {
+        // on Linux some (or all?) window managers send resize events in batch, processing all of them hits performance
+        viewer->emplaceEvent( "Window resize", [width, height, viewer]
+        {
+            viewer->postResize( width, height );
+        }, true );
+    }
+    else
+#endif
+    {
+        viewer->postResize( width, height );
+        viewer->postEmptyEvent();
+    }
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
@@ -1906,6 +1921,8 @@ void Viewer::postResize( int w, int h )
 
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
+
+    gWindowSizeInitialized = true;
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

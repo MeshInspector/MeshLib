@@ -22,7 +22,7 @@ jobs:
 
   debug-config:
     needs: config
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     steps:
       - name: Print config
         run: |
@@ -311,7 +311,7 @@ jobs:
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     needs: [ upload-distributions ]
     if: always()
     continue-on-error: true
@@ -335,7 +335,7 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: aws-micro
     needs: [ collect-stats, update-dev-documentation ]
     if: always()
     continue-on-error: true

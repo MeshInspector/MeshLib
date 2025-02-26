@@ -56,7 +56,7 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
     const auto& style = ImGui::GetStyle();
     const float textWidth = menuWidth - 2 * style.WindowPadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "Reference object" ).x;
     UI::inputTextCenteredReadOnly( "Object A", obj1_->name(), textWidth, ImVec4{ 1.0f, 0.4f, 0.4f, 1.0f } );
-    UI::inputTextCenteredReadOnly( "Bbject B", obj2_->name(), textWidth, ImVec4{ 0.4f, 0.4f, 1.0f, 1.0f } );
+    UI::inputTextCenteredReadOnly( "Object B", obj2_->name(), textWidth, ImVec4{ 0.4f, 0.4f, 1.0f, 1.0f } );
 
     if ( UI::button( "Swap", {-1, 0} ) )
     {

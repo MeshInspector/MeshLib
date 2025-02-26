@@ -51,7 +51,7 @@ TEST( MRMesh, ExtractSectionsFromPolyline )
     expectedPositiveEdges.resize( 5 );
 
     expectedEdgeSegments[0] = std::vector<std::vector<EdgeSegment>>{ {}, { {0_e, 1.f, 1.f} }, { {0_e, 0.5f, 1.f} }, { {0_e, 1 / 3.f, 1.f} }, { {0_e, 0.25f, 0.75f} } };
-    expectedEdgeSegments[1] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1.f, 1.f} }, {}, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1 - 1 / 3.f} } };
+    expectedEdgeSegments[1] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1 - 1 / 3.f} } };
     expectedEdgeSegments[2] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 0.5f, 1.f} }, { {1_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 0.5f} } };
     expectedEdgeSegments[3] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1 / 3.f, 1.f} }, { {1_e, 0.f, 1.f} }, { {1_e, 0.f, 1.f} }, {}, {} };
     expectedEdgeSegments[4] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 0.25f, 0.75f} }, { {1_e, 0.f, 1 - 1 / 3.f} }, { {1_e, 0.0f, 0.5f} }, {}, {} };

@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRTestApp.cpp" />

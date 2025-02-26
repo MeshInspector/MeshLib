@@ -650,7 +650,6 @@
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshSubdivide.cpp" />
-    <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />

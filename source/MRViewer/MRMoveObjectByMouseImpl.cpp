@@ -31,8 +31,53 @@ constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
 namespace MR
 {
 
-void MoveObjectByMouseImpl::onDrawDialog( float /*menuScaling*/ ) const
+void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
 {
+    if ( deadZonePixelRadius_ > 0.0f )
+    {
+        std::vector<std::shared_ptr<Object>> tempObjects;
+        TransformMode expectedMode = transformMode_;
+
+        if ( objects_.empty() )
+        {
+            int mods = 0;
+            if ( ImGui::GetIO().KeyMods & ImGuiMod_Ctrl )
+                mods |= GLFW_MOD_CONTROL;
+            if ( ImGui::GetIO().KeyMods & ImGuiMod_Shift )
+                mods |= GLFW_MOD_SHIFT;
+            if ( ImGui::GetIO().KeyMods & ImGuiMod_Alt )
+                mods |= GLFW_MOD_ALT;
+            if ( ImGui::GetIO().KeyMods & ImGuiMod_Super )
+                mods |= GLFW_MOD_SUPER;
+            expectedMode = modeFromPickModifiers_( mods );
+            if ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::Scale )
+                pickObjects_( tempObjects, mods );
+        }
+        const auto& objs = objects_.empty() ? tempObjects : objects_;
+
+        if ( !objs.empty() && ( expectedMode == TransformMode::Rotation || expectedMode == TransformMode::Scale ) )
+        {
+            ViewportId vpId = getViewerInstance().viewport().id;
+            Vector3f centerPoint = xfCenterPoint_;
+            if ( objects_.empty() )
+            {
+                Box3f box = getBbox_( objs );
+                centerPoint = box.valid() ? box.center() : Vector3f{};
+                vpId = getViewerInstance().getHoveredViewportId();
+            }
+
+            const auto& vp = getViewerInstance().viewport( vpId );
+            auto screenPos = getViewerInstance().viewportToScreen( vp.projectToViewportSpace( centerPoint ), vpId );
+
+            auto drawList = ImGui::GetBackgroundDrawList();
+            drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), menuScaling * deadZonePixelRadius_, Color::gray().scaledAlpha( 0.5f ).getUInt32() );
+            if ( deadZonePixelRadius_ * 0.5f > 4.0f )
+            {
+                drawList->AddCircleFilled( ImVec2( screenPos.x, screenPos.y ), menuScaling * 4.0f, Color::red().getUInt32() );
+            }
+        }
+    }
+
     if ( !isMoving() )
         return;
     if ( transformMode_ != TransformMode::None )
@@ -64,23 +109,41 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
 
     currentButton_ = button;
     screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
+
+    auto viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
+    viewportStartPointZ_ = viewportStartPoint.z;
+
+    Vector3f viewportCenterPoint;
+    if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::Scale )
+    {
+        viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
+
+        if ( deadZonePixelRadius_ > 0.0f )
+        {
+            float realDeadZone = deadZonePixelRadius_;
+            if ( const auto& menu = viewer.getMenuPlugin() )
+                realDeadZone *= menu->menu_scaling();
+            if ( to2dim( viewportStartPoint - viewportCenterPoint ).lengthSq() <= sqr( realDeadZone ) )
+            {
+                clear_();
+                return false;
+            }
+        }
+    }
+
     angle_ = 0.f;
     shift_ = 0.f;
     scale_ = 1.f;
     currentXf_ = {};
-    viewportStartPointZ_ = viewport.projectToViewportSpace( worldStartPoint_ ).z;
     initialXfs_.clear();
     for ( std::shared_ptr<Object>& obj : objects_ )
         initialXfs_.push_back( obj->worldXf() );
 
     if ( transformMode_ == TransformMode::Rotation )
     {
-        Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
-
         Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
         referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
 
-        Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
         Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
 
         if ( auto crossPL = intersection( referencePlane_, startAxis ) )
@@ -92,12 +155,9 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     }
     else if ( transformMode_ == TransformMode::Scale )
     {
-        Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
-
         Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
         referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
 
-        Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
         Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
 
         if ( auto crossPL = intersection( referencePlane_, startAxis ) )
@@ -249,7 +309,7 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton b
     return mode;
 }
 
-ObjAndPick MoveObjectByMouseImpl::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int /*modifiers*/ )
+ObjAndPick MoveObjectByMouseImpl::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int /*modifiers*/ ) const
 {
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport( viewer.getHoveredViewportId() );
@@ -265,14 +325,23 @@ ObjAndPick MoveObjectByMouseImpl::pickObjects_( std::vector<std::shared_ptr<Obje
     return res;
 }
 
-MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPick_( MouseButton button, int modifiers )
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPickModifiers_( int modifiers ) const
 {
-    if ( !( button == MouseButton::Left && ( modifiers == 0 || modifiers == GLFW_MOD_CONTROL ) ) )
-        return TransformMode::None;
-    return modifiers == 0 ? TransformMode::Translation : TransformMode::Rotation;
+    if ( modifiers == 0 )
+        return TransformMode::Translation;
+    else if ( modifiers == GLFW_MOD_CONTROL )
+        return TransformMode::Rotation;
+    return TransformMode::None;
 }
 
-void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint )
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::modeFromPick_( MouseButton button, int modifiers ) const
+{
+    if ( button != MouseButton::Left )
+        return TransformMode::None;
+    return modeFromPickModifiers_( modifiers );
+}
+
+void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint ) const
 {
     const auto& [obj, pick] = objPick;
     if ( !obj )
@@ -285,7 +354,7 @@ void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f&
     // startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
 }
 
-Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects )
+Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const
 {
     Box3f worldBbox;
     for ( const std::shared_ptr<Object>& obj : objects )

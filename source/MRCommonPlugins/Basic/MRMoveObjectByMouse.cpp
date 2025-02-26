@@ -92,11 +92,11 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 
 void MoveObjectByMouse::postDraw_()
 {
-    if (const auto& menu = getViewerInstance().getMenuPlugin() )
+    if ( const auto& menu = getViewerInstance().getMenuPlugin() )
         moveByMouse_.onDrawDialog( menu->menu_scaling() );
 }
 
-ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers )
+ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers ) const
 {
     Viewer& viewerRef = getViewerInstance();
     Viewport& viewport = viewerRef.viewport( viewerRef.getHoveredViewportId() );
@@ -126,9 +126,9 @@ ObjAndPick MoveObjectByMouse::MoveObjectByMouseWithSelected::pickObjects_( std::
     return res;
 }
 
-MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::modeFromPick_( MouseButton button, int modifiers )
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::modeFromPickModifiers_( int modifiers ) const
 {
-    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
+    if ( ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
      ( modifiers & ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) == ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) )
         return TransformMode::None;
 
@@ -140,7 +140,7 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
         return TransformMode::Translation;
 }
 
-void MoveObjectByMouse::MoveObjectByMouseWithSelected::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint )
+void MoveObjectByMouse::MoveObjectByMouseWithSelected::setStartPoint_( const ObjAndPick& objPick, Vector3f& startPoint ) const
 {
     const auto& [obj, pick] = objPick;
     if ( obj )

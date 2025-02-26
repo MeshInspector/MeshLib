@@ -8,6 +8,65 @@
 namespace MR
 {
 
+TEST( MRMesh, ExtractSectionsFromPolyline )
+{
+    Plane3f plane( { 1.f, 0.f, 0.f }, 1.f );
+
+    auto check = [&plane] ( const std::vector<Vector3f>& points, float eps, std::vector<EdgeSegment> edgeSegmentsOut, UndirectedEdgeBitSet positiveEdgesOut )
+    {
+        Polyline3 polyline;
+        polyline.addFromPoints( points.data(), points.size(), false );
+        UndirectedEdgeBitSet positiveEdgesIn;
+        std::vector<EdgeSegment> edgeSegmentsIn = extractSectionsFromPolyline( polyline, plane, eps, &positiveEdgesIn );
+        EXPECT_EQ( edgeSegmentsIn, edgeSegmentsOut );
+        EXPECT_EQ( positiveEdgesIn, positiveEdgesOut );
+    };
+
+    UndirectedEdgeBitSet bsOne;
+    bsOne.autoResizeSet( 0_ue );
+
+    // eps == 0.f
+    std::vector<std::vector<std::vector<EdgeSegment>>> expectedEdgeSegments( 3 );
+    std::vector<std::vector<UndirectedEdgeBitSet>> expectedPositiveEdges( 3 );
+
+    expectedEdgeSegments[0] = std::vector<std::vector<EdgeSegment>>{ {}, { {0_e, 1.f, 1.f} }, { {0_e, 0.5f, 0.5f} } };
+    expectedEdgeSegments[1] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1.f, 1.f} }, {}, {} };
+    expectedEdgeSegments[2] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 0.5f, 0.5f} }, {}, {} };
+
+    expectedPositiveEdges[0] = { {}, {}, {} };
+    expectedPositiveEdges[1] = { {}, bsOne, bsOne };
+    expectedPositiveEdges[2] = { {}, bsOne, bsOne };
+
+    for ( int i = 0; i < 3; ++i )
+    {
+        for ( int j = 0; j < 3; ++j )
+            check( { {float( i ), 0.f, 0.f}, {float( j ), 1.f, 0.f} }, 0.f, expectedEdgeSegments[i][j], expectedPositiveEdges[i][j] );
+    }
+
+
+    // eps > 0.f
+    plane = Plane3f( { 1.f, 0.f, 0.f }, 2.f );
+
+    expectedEdgeSegments.resize( 5 );
+    expectedPositiveEdges.resize( 5 );
+
+    expectedEdgeSegments[0] = std::vector<std::vector<EdgeSegment>>{ {}, { {0_e, 1.f, 1.f} }, { {0_e, 0.5f, 1.f} }, { {0_e, 1 / 3.f, 1.f} }, { {0_e, 0.25f, 0.75f} } };
+    expectedEdgeSegments[1] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1.f, 1.f} }, {}, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1 - 1 / 3.f} } };
+    expectedEdgeSegments[2] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 0.5f, 1.f} }, { {1_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 1.f} }, { {0_e, 0.f, 0.5f} } };
+    expectedEdgeSegments[3] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 1 / 3.f, 1.f} }, { {1_e, 0.f, 1.f} }, { {1_e, 0.f, 1.f} }, {}, {} };
+    expectedEdgeSegments[4] = std::vector<std::vector<EdgeSegment>>{ { {1_e, 0.25f, 0.75f} }, { {1_e, 0.f, 1 - 1 / 3.f} }, { {1_e, 0.0f, 0.5f} }, {}, {} };
+
+    expectedPositiveEdges[0] = { {}, {}, {}, {}, {} };
+    for ( int i = 1; i < 5; ++i )
+        expectedPositiveEdges[i] = { {}, bsOne, bsOne, bsOne, bsOne };
+
+    for ( int i = 0; i < 5; ++i )
+    {
+        for ( int j = 0; j < 5; ++j )
+            check( { {float( i ), 0.f, 0.f}, {float( j ), 1.f, 0.f} }, 1.f, expectedEdgeSegments[i][j], expectedPositiveEdges[i][j] );
+    }
+}
+
 TEST( MRMesh, SubdividePolylineWithPlane )
 {
     std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {2.f, 2.f, 2.f}, {4.f, 4.f, 4.f}, {6.f, 6.f, 6.f},
@@ -36,7 +95,7 @@ TEST( MRMesh, SubdividePolylineWithPlane )
     EXPECT_EQ( topUEdges, expectedTopUEdges );
 }
 
-TEST( MRMesh, ExtractSectionsFromPolyline )
+TEST( MRMesh, TrimWithPlaneInfinity )
 {
     // infinity cycle
     std::vector<Vector3f> points = { {0.f, 0.f, 0.f}, {1.f, 1.f, 0.f}, {2.f, 0.f, 0.f} };
@@ -45,8 +104,6 @@ TEST( MRMesh, ExtractSectionsFromPolyline )
     polyline.addFromPoints( points.data(), points.size(), true );
     trimWithPlane( polyline, plane );
 }
-
-
 
 TEST( MRMesh, TrimPolylineWithPlane )
 {

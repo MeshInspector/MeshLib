@@ -60,7 +60,8 @@ protected:
         None,
         Translation,
         Rotation,
-        Scale
+        UniformScale,
+        NonUniformScale,
     };
 
     /// if this value is > 0.0f, then Rotation and Scale will be blocked in this zone around xf center
@@ -84,6 +85,7 @@ protected:
     /// Note: can be invalid (feature objects give an invalid box etc.)
     MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const;
 
+    AffineXf3f currentXf_;      // Transform currently applied to objects
 private:
     int minDistance_ = 0;
 
@@ -106,7 +108,6 @@ private:
 
     TransformMode transformMode_ = TransformMode::None;
     Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
-    AffineXf3f currentXf_;      // Transform currently applied to objects
     MouseButton currentButton_ = MouseButton::NoButton;
 
     // Data used to calculate transform

@@ -63,7 +63,7 @@ protected:
         Scale
     };
 
-    /// if this value is > 0.0f then Rotation and Scale, will be blocked in this zone around xf center
+    /// if this value is > 0.0f, then Rotation and Scale will be blocked in this zone around xf center
     /// (this value IS automatically modified by menuScaling)
     float deadZonePixelRadius_{ 20.0f };
 

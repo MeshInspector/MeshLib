@@ -63,19 +63,26 @@ protected:
         Scale
     };
 
+    /// if this value is > 0.0f then Rotation and Scale, will be blocked in this zone around xf center
+    /// (this value IS automatically modified by menuScaling)
+    float deadZonePixelRadius_{ 20.0f };
+
     /// This function is called from `onMouseMove` to update current active objects
     /// `objects` - list of objects to be affected by transformation
-    MRVIEWER_API virtual ObjAndPick pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers );
+    MRVIEWER_API virtual ObjAndPick pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers ) const;
+
+    /// Helper function to determine TransformMode based on modifiers
+    MRVIEWER_API virtual TransformMode modeFromPickModifiers_( int modifiers ) const;
 
     /// this function is called from `onMouseDown` to verify if pick should proceed, if None is returned - `onMouseDown` is canceled
-    MRVIEWER_API virtual TransformMode modeFromPick_( MouseButton button, int modifiers );
+    MRVIEWER_API virtual TransformMode modeFromPick_( MouseButton button, int modifiers ) const;
 
     /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
-    MRVIEWER_API virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint );
+    MRVIEWER_API virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint ) const;
 
     /// Helper function to calculate world bounding box for several objects
     /// Note: can be invalid (feature objects give an invalid box etc.)
-    MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects );
+    MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const;
 
 private:
     int minDistance_ = 0;

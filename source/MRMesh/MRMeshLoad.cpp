@@ -745,10 +745,15 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
     auto loader = getMeshLoader( ext );
     if ( !loader.fileLoad )
     {
+        if ( loader.streamLoad )
+        {
+            std::ifstream in( file, std::ifstream::binary );
+            if ( !in )
+                return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+            return addFileNameInError( loader.streamLoad( in, settings ), file );
+        }
         // the error string must start with stringUnsupportedFileExtension()
         std::string err = fmt::format( "{} {} for mesh loading.", stringUnsupportedFileExtension(), ext );
-        if ( loader.streamLoad )
-            return unexpected( err + "\nPlease use stream opening version of mesh loading." );
         if ( SceneLoad::getSceneLoader( ext ) )
             return unexpected( err + "\nPlease open this format using scene loading function." );
         return unexpected( err );

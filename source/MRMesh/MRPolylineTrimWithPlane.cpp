@@ -150,48 +150,35 @@ std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline,
         PointPosition p1{ .p = polyline.orgPnt( e ), .distFromPosPlane = planePos.distance( p1.p ), .distFromNegPlane = planeNeg.distance( p1.p ) };
         PointPosition p2{ .p = polyline.destPnt( e ), .distFromPosPlane = planePos.distance( p2.p ), .distFromNegPlane = planeNeg.distance( p2.p ) };
 
-        bool isP1Between = p1.distFromNegPlane <= 0 && p1.distFromPosPlane <= 0;
-        bool isP2Between = p2.distFromNegPlane <= 0 && p2.distFromPosPlane <= 0;
-
         EdgeSegment segment( e );
 
-        if ( isP1Between && isP2Between )
+        // order points according increasing its projection to normal
+        if ( p1.distFromPosPlane > p2.distFromPosPlane )
         {
-            result.push_back( segment );
+            segment.e = e.sym();
+            std::swap( p1, p2 );
         }
-        else if ( isP1Between )
+
+        const float height = p2.distFromPosPlane - p1.distFromPosPlane;
+        if ( height == 0 )
         {
-            segment.b = p2.distFromPosPlane > 0 ? p1.distFromPosPlane / ( p1.distFromPosPlane - p2.distFromPosPlane )
-                : p1.distFromNegPlane / ( p1.distFromNegPlane - p2.distFromNegPlane );
-            result.push_back( segment );
+            if ( p1.distFromNegPlane < 0.f && p1.distFromPosPlane < 0.f )
+                result.push_back( segment );
+            if ( eps > 0.f && p1.distFromNegPlane == 0.f )
+                result.push_back( segment );
         }
-        else if ( isP2Between )
+        else
         {
-            segment.a = p1.distFromPosPlane > 0 ? p1.distFromPosPlane / ( p1.distFromPosPlane - p2.distFromPosPlane )
-                : p1.distFromNegPlane / ( p1.distFromNegPlane - p2.distFromNegPlane );
-            result.push_back( segment );
+            if ( p1.distFromNegPlane > 0.f )
+                segment.a = p1.distFromNegPlane / height;
+            if ( p2.distFromPosPlane > 0.f )
+                segment.b = 1 - p2.distFromPosPlane / height;
+
+            if ( !( p2.distFromNegPlane > 0.f || p1.distFromPosPlane >= 0.f ) )
+                result.push_back( segment );
         }
-        else if ( p1.distFromPosPlane * p2.distFromPosPlane < 0 )
-        {
-            const float denom = ( p1.distFromPosPlane > 0 ) ? p1.distFromPosPlane + p2.distFromNegPlane + 2 * eps :
-                                                                p1.distFromNegPlane + p2.distFromPosPlane + 2 * eps;
-            if ( denom != 0 )
-            {
-                if ( p1.distFromPosPlane > 0 )
-                {
-                    segment.e = segment.e.sym();
-                    segment.a = p2.distFromNegPlane / denom;
-                    segment.b = 1 - p1.distFromPosPlane / denom;
-                }
-                else
-                {
-                    segment.a = p1.distFromNegPlane / denom;
-                    segment.b = 1 - p2.distFromPosPlane / denom;
-                }
-            }
-            result.push_back( segment );
-        }
-        else if ( positiveEdges && p1.distFromPosPlane > 0.f && p2.distFromPosPlane > 0.f )
+        
+        if ( positiveEdges && p1.distFromNegPlane <= 0.f && p2.distFromNegPlane <= 0.f )
         {
             positiveEdges->set( ue );
         }

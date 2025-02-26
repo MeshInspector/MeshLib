@@ -49,15 +49,22 @@ const std::vector<std::string> operationTooltips = {
 
 void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
 {
-    auto menuWidth = 200 * menuScaling;
+    auto menuWidth = 300 * menuScaling;
     if (!ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling }))
         return;
 
-    ImGui::Text("Object A: %s", obj1_->name().c_str());
-    ImGui::Text("Object B: %s", obj2_->name().c_str());
+    const auto& style = ImGui::GetStyle();
+    const float textWidth = menuWidth - 2 * style.WindowPadding.x - style.ItemSpacing.x - ImGui::CalcTextSize( "Reference object" ).x;
+    UI::inputTextCenteredReadOnly( "Object A", obj1_->name(), textWidth, ImVec4{ 1.0f, 0.4f, 0.4f, 1.0f } );
+    UI::inputTextCenteredReadOnly( "Object B", obj2_->name(), textWidth, ImVec4{ 0.4f, 0.4f, 1.0f, 1.0f } );
 
-    if (UI::button("Swap", { -1, 0 }))
-        std::swap(obj1_, obj2_);
+    if ( UI::button( "Swap", {-1, 0} ) )
+    {
+        std::swap( obj1_, obj2_ );
+        std::swap( conn1_, conn2_ );
+        if ( previewMode_ )
+            doOperation_( operation_, true );
+    }
 
     UI::separator(menuScaling, "Operations");
 

@@ -744,7 +744,15 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
 
     auto loader = getMeshLoader( ext );
     if ( !loader.fileLoad )
-        return unexpectedUnsupportedFileExtension();
+    {
+        // the error string must start with stringUnsupportedFileExtension()
+        std::string err = fmt::format( "{} {} for mesh loading.", stringUnsupportedFileExtension(), ext );
+        if ( loader.streamLoad )
+            return unexpected( err + "\nPlease use stream opening version of mesh loading." );
+        if ( SceneLoad::getSceneLoader( ext ) )
+            return unexpected( err + "\nPlease open this format using scene loading function." );
+        return unexpected( err );
+    }
 
     return loader.fileLoad( file, settings );
 }
@@ -757,7 +765,15 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
 
     auto loader = getMeshLoader( ext );
     if ( !loader.streamLoad )
-        return unexpectedUnsupportedFileExtension();
+    {
+        // the error string must start with stringUnsupportedFileExtension()
+        std::string err = fmt::format( "{} {} for mesh loading.", stringUnsupportedFileExtension(), ext );
+        if ( loader.fileLoad )
+            return unexpected( err + "\nPlease use file opening version of mesh loading." );
+        if ( SceneLoad::getSceneLoader( ext ) )
+            return unexpected( err + "\nPlease open this format using scene loading function." );
+        return unexpected( err );
+    }
 
     return loader.streamLoad( in, settings );
 }

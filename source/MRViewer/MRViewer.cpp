@@ -185,6 +185,7 @@ static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height
 #if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
     if ( gWindowSizeInitialized )
     {
+        // on Linux some (or all?) window managers send resize events in batch, processing all of them hits performance
         viewer->emplaceEvent( "Window resize", [width, height, viewer]
         {
             viewer->postResize( width, height );

@@ -10,6 +10,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRVoxels/MRObjectVoxels.h"
 
+#define INST_IF(cond) MR_CONCAT(INST_IF_, cond)
 #define INST_IF_0(...)
 #define INST_IF_1(...) __VA_ARGS__
 

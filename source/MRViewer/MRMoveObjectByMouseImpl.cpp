@@ -61,8 +61,7 @@ void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
             Vector3f centerPoint = xfCenterPoint_;
             if ( objects_.empty() )
             {
-                Box3f box = getBbox_( objs );
-                centerPoint = box.valid() ? box.center() : Vector3f{};
+                setCenterPoint_( objs, centerPoint );
                 vpId = getViewerInstance().getHoveredViewportId();
             }
 
@@ -297,11 +296,17 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton b
     if ( objects_.empty() )
         return TransformMode::None;
 
-    Box3f box = getBbox_( objects_ );
-    xfCenterPoint_ = box.valid() ? box.center() : Vector3f{};
+    setCenterPoint_( objects_, xfCenterPoint_ );
 
     setStartPoint_( objPick, worldStartPoint_ );
+
+    onPick_( mode, objects_, xfCenterPoint_, worldStartPoint_ );
+
     return mode;
+}
+
+void MoveObjectByMouseImpl::onPick_( TransformMode, const std::vector<std::shared_ptr<Object>>&, const Vector3f&, const Vector3f& )
+{
 }
 
 ObjAndPick MoveObjectByMouseImpl::pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int /*modifiers*/ ) const
@@ -352,6 +357,12 @@ void MoveObjectByMouseImpl::setStartPoint_( const ObjAndPick& objPick, Vector3f&
     // Vector2i mousePos = viewer.mouseController().getMousePos();
     // Vector3f viewportPos = viewer.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     // startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
+}
+
+void MoveObjectByMouseImpl::setCenterPoint_( const std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint ) const
+{
+    Box3f box = getBbox_( objects );
+    centerPoint = box.valid() ? box.center() : Vector3f{};
 }
 
 Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const

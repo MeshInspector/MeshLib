@@ -300,12 +300,12 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton b
 
     setStartPoint_( objPick, worldStartPoint_ );
 
-    postPickModifier_( mode, objects_, xfCenterPoint_, worldStartPoint_ );
+    onPick_( mode, objects_, xfCenterPoint_, worldStartPoint_ );
 
     return mode;
 }
 
-void MoveObjectByMouseImpl::postPickModifier_( TransformMode, const std::vector<std::shared_ptr<Object>>&, const Vector3f&, const Vector3f& )
+void MoveObjectByMouseImpl::onPick_( TransformMode, const std::vector<std::shared_ptr<Object>>&, const Vector3f&, const Vector3f& )
 {
 }
 

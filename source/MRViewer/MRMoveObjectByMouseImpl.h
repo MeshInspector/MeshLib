@@ -100,7 +100,7 @@ private:
     TransformMode pick_( MouseButton button, int modifiers );
 
     /// one can override this function to modify derived class right after `pick_` is called
-    MRVIEWER_API virtual void postPickModifier_(
+    MRVIEWER_API virtual void onPick_(
         TransformMode mode, const std::vector<std::shared_ptr<Object>>& objects,
         const Vector3f& centerPoint, const Vector3f& startPoint );
 

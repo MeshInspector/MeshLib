@@ -9,7 +9,7 @@ namespace MR
 
 /// affine transformation: y = A*x + b, where A in VxV, and b in V
 /// \ingroup MathGroup
-template <typename V> requires(CheckAffVec<V>::value)
+template <typename V>
 struct AffineXf
 {
     using T = typename V::ValueType;
@@ -58,7 +58,7 @@ struct AffineXf
 /// \related AffineXf
 /// \{
 
-template <typename V> requires(CheckAffVec<V>::value)
+template <typename V>
 inline constexpr AffineXf<V> AffineXf<V>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     AffineXf<V> res;

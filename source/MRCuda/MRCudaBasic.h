@@ -24,9 +24,9 @@ MRCUDA_API size_t getCudaAvailableMemory();
 MRCUDA_API size_t getCudaSafeMemoryLimit();
 
 // Returns maximum buffer size in elements that can be allocated with given memory limit
-MRCUDA_API size_t maxBufferSize( size_t memoryBytes, size_t dim, size_t elementBytes );
-MRCUDA_API size_t maxBufferSize( size_t memoryBytes, Vector2i dims, size_t elementBytes );
-MRCUDA_API size_t maxBufferSize( size_t memoryBytes, Vector3i dims, size_t elementBytes );
+MRCUDA_API size_t maxBufferSize( size_t availableBytes, size_t dim, size_t elementBytes );
+MRCUDA_API size_t maxBufferSize( size_t availableBytes, const Vector2i& dims, size_t elementBytes );
+MRCUDA_API size_t maxBufferSize( size_t availableBytes, const Vector3i& dims, size_t elementBytes );
 
 } //namespace Cuda
 

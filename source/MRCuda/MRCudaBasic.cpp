@@ -76,23 +76,23 @@ size_t getCudaSafeMemoryLimit()
     return size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
 }
 
-size_t maxBufferSize( size_t memoryBytes, size_t dim, size_t elementBytes )
+size_t maxBufferSize( size_t availableBytes, size_t dim, size_t elementBytes )
 {
-    const auto upperLimit = memoryBytes / elementBytes;
+    const auto upperLimit = availableBytes / elementBytes;
     return std::min( dim, upperLimit );
 }
 
-size_t maxBufferSize( size_t memoryBytes, Vector2i dims, size_t elementBytes )
+size_t maxBufferSize( size_t availableBytes, const Vector2i& dims, size_t elementBytes )
 {
-    const auto upperLimit = memoryBytes / elementBytes;
+    const auto upperLimit = availableBytes / elementBytes;
     const auto rowSize = (size_t)dims.x;
     const auto rowCount = (size_t)dims.y;
     return std::min( rowCount, upperLimit / rowSize ) * rowSize;
 }
 
-size_t maxBufferSize( size_t memoryBytes, Vector3i dims, size_t elementBytes )
+size_t maxBufferSize( size_t availableBytes, const Vector3i& dims, size_t elementBytes )
 {
-    const auto upperLimit = memoryBytes / elementBytes;
+    const auto upperLimit = availableBytes / elementBytes;
     const auto layerSize = (size_t)dims.x * dims.y;
     const auto layerCount = (size_t)dims.z;
     return std::min( layerCount, upperLimit / layerSize ) * layerSize;

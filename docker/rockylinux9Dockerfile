@@ -1,6 +1,7 @@
 FROM rockylinux:9 AS build
 
-RUN dnf -y install --enablerepo crb \
+RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
+    dnf -y install --enablerepo crb \
         git cmake ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
@@ -60,9 +61,8 @@ ENV MESHLIB_USE_VCPKG=ON
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_TRIPLET=x64-linux-dynamic
 
-RUN dnf -y install 'dnf-command(config-manager)' && \
-    dnf config-manager --set-enabled crb && \
-    dnf -y install \
+RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
+    dnf -y install --enablerepo cbr \
         git cmake ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
@@ -73,7 +73,8 @@ RUN dnf -y install 'dnf-command(config-manager)' && \
         && \
     dnf clean all
 
-RUN dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
+RUN dnf -y install 'dnf-command(config-manager)' && \
+    dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \
     dnf -y install gh && \
     dnf clean all
 

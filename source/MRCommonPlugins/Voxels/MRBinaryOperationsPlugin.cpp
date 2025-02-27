@@ -135,6 +135,7 @@ bool BinaryOperations::onEnable_()
         };
     }
 
+    operation_ = enabledOps[0];
     enabledOps_.clear();
     enabledOpsTooltips_.clear();
     for ( Operation op : enabledOps )

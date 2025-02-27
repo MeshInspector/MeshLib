@@ -44,6 +44,9 @@ private:
     boost::signals2::scoped_connection conn1_;
     boost::signals2::scoped_connection conn2_;
 
+    std::vector<std::string> enabledOps_;
+    std::vector<std::string> enabledOpsTooltips_;
+
     std::shared_ptr<ObjectVoxels> previewRes_;
     bool previewMode_ = false;
     Operation operation_ = Operation::Union;

@@ -10,7 +10,7 @@ namespace MR
 // Common traits for (mathematical) vectors.
 
 template <typename T>
-struct VectorTraits
+struct MR_BIND_IGNORE VectorTraits
 {
     // The base template handles scalars (or just non-vectors).
 

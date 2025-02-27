@@ -73,7 +73,7 @@ struct Matrix4
     /// computes determinant of the matrix
     T det() const noexcept;
     /// computes inverse matrix
-    constexpr Matrix4<T> inverse() const noexcept;
+    constexpr Matrix4<T> inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
     /// computes transposed matrix
     constexpr Matrix4<T> transposed() const noexcept;
 
@@ -206,7 +206,7 @@ constexpr Matrix4<T> Matrix4<T>::transposed() const noexcept
 }
 
 template <typename T>
-constexpr Matrix4<T> Matrix4<T>::inverse() const noexcept
+constexpr Matrix4<T> Matrix4<T>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     Matrix4<T> inv;
     T* m = (T*) (&x);

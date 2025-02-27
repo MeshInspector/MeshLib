@@ -81,6 +81,9 @@ protected:
     /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
     MRVIEWER_API virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint ) const;
 
+    /// `centerPoint` - a point that will be used as center of rotation/scaling in world space
+    MRVIEWER_API virtual void setCenterPoint_( const std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint ) const;
+
     /// Helper function to calculate world bounding box for several objects
     /// Note: can be invalid (feature objects give an invalid box etc.)
     MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects ) const;
@@ -95,6 +98,11 @@ private:
     /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
     /// Default implementation can be used as a reference for custom implementations
     TransformMode pick_( MouseButton button, int modifiers );
+
+    /// one can override this function to modify derived class right after `pick_` is called
+    MRVIEWER_API virtual void postPickModifier_(
+        TransformMode mode, const std::vector<std::shared_ptr<Object>>& objects,
+        const Vector3f& centerPoint, const Vector3f& startPoint );
 
     void clear_();
 

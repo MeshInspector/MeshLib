@@ -144,6 +144,8 @@ size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
 
 size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )
 {
+    constexpr size_t cMinLayerCount = 10;
+
     const auto& tree = pointCloud.getAABBTree();
     const auto& nodes = tree.nodes();
 
@@ -151,7 +153,7 @@ size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud,
         nodes.size() * sizeof( AABBTreePoints::Node )
         + tree.orderedPoints().size() * sizeof( AABBTreePoints::Point )
         + ( ptNormals ? ptNormals->size() : pointCloud.normals.size() ) * sizeof( Vector3f )
-        + size_t( dims.x ) * dims.y * dims.z * sizeof( float )
+        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float )
     ;
 }
 

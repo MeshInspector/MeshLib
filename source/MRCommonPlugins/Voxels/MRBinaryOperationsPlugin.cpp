@@ -31,8 +31,7 @@ const std::vector<std::string> operationNames = {
     "Min",
     "Sum",
     "Multiply",
-    "Divide",
-    "Replace"
+    "Divide"
 };
 
 const std::vector<std::string> operationTooltips = {
@@ -43,8 +42,7 @@ const std::vector<std::string> operationTooltips = {
     "Compute min(a, b) per voxel",
     "Compute a + b per voxel",
     "Compute a * b per voxel",
-    "Compute a / b per voxel",
-    "Copy the active voxels of B into A"
+    "Compute a / b per voxel"
 };
 
 void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
@@ -219,10 +217,6 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
                     openvdb::tools::compDiv( *resGrid, *copy2 );
                     if ( iso2 != 0 )
                         resIso = iso1 / iso2;
-                    break;
-                case MR::BinaryOperations::Operation::Replace:
-                    openvdb::tools::compReplace( *resGrid, *copy2 );
-                    resIso = iso2;
                     break;
                 default:
                     assert( false );

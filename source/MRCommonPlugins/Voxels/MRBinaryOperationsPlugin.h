@@ -33,7 +33,6 @@ private:
         Sum,
         Mul,
         Div,
-        Replace,
         Count
     };
     void doOperation_( Operation op, bool inPreview );

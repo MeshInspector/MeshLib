@@ -62,7 +62,7 @@ ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_TRIPLET=x64-linux-dynamic
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
-    dnf -y install --enablerepo cbr \
+    dnf -y install --enablerepo crb \
         git cmake ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \

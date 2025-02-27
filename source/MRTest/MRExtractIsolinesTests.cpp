@@ -1,9 +1,8 @@
-#include "MRGTest.h"
-#include "MRExtractIsolines.h"
-#include "MRMesh.h"
-#include "MRObjectMesh.h"
-#include "MRCube.h"
-
+#include <MRMesh/MRGTest.h>
+#include <MRMesh/MRExtractIsolines.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRCube.h>
 
 namespace MR
 {

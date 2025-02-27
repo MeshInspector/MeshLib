@@ -11,7 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRExampleTest.cpp" />
+    <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />

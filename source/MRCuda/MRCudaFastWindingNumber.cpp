@@ -185,7 +185,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     const auto totalSize = (size_t)dims.x * dims.y * dims.z;
-    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -240,7 +240,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     const auto totalSize = (size_t)dims.x * dims.y * dims.z;
-    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );

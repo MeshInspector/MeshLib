@@ -76,21 +76,21 @@ size_t getCudaSafeMemoryLimit()
     return size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
 }
 
-size_t maxBufferSize( size_t availableBytes, size_t dim, size_t elementBytes )
+size_t maxBufferSize( size_t availableBytes, size_t elementCount, size_t elementBytes )
 {
-    return std::min( availableBytes / elementBytes, dim );
+    return std::min( availableBytes / elementBytes, elementCount );
 }
 
-size_t maxBufferSize( size_t availableBytes, const Vector2i& dims, size_t elementBytes )
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector2i& blockDims, size_t elementBytes )
 {
-    const auto rowSize = (size_t)dims.x;
-    return std::min( availableBytes / elementBytes / rowSize, (size_t)dims.y ) * rowSize;
+    const auto rowSize = (size_t)blockDims.x;
+    return std::min( availableBytes / elementBytes / rowSize, (size_t)blockDims.y ) * rowSize;
 }
 
-size_t maxBufferSize( size_t availableBytes, const Vector3i& dims, size_t elementBytes )
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& blockDims, size_t elementBytes )
 {
-    const auto layerSize = (size_t)dims.x * dims.y;
-    return std::min( availableBytes / elementBytes / layerSize, (size_t)dims.z ) * layerSize;
+    const auto layerSize = (size_t)blockDims.x * blockDims.y;
+    return std::min( availableBytes / elementBytes / layerSize, (size_t)blockDims.z ) * layerSize;
 }
 
 std::string getError( cudaError_t code )

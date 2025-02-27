@@ -72,7 +72,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     };
 
     const auto totalSize = distMap.size();
-    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), distMap.dims(), sizeof( float ) + ( outSamples ? sizeof( Cuda::MeshTriPoint ) : 0 ) );
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), distMap.dims(), sizeof( float ) + ( outSamples ? sizeof( Cuda::MeshTriPoint ) : 0 ) );
 
     DynamicArray<float> result;
     CUDA_LOGE_RETURN_UNEXPECTED( result.resize( bufferSize ) );

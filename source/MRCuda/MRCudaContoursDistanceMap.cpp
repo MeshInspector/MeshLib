@@ -33,7 +33,7 @@ Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const 
     CUDA_LOGE_RETURN_UNEXPECTED( cudaOrgs.fromVector( orgs.vec_ ) );
 
     const auto totalSize = (size_t)params.resolution.x * params.resolution.y;
-    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), params.resolution, sizeof( float ) );
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.resolution, sizeof( float ) );
 
     DynamicArrayF cudaRes;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaRes.resize( bufferSize ) );

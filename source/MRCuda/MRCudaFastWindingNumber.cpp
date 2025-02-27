@@ -84,7 +84,7 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
         const auto totalSize = points.size();
-        const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float ) + sizeof( float3 ) );
+        const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float ) + sizeof( float3 ) );
 
         DynamicArray<float3> cudaPoints;
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.resize( bufferSize ) );
@@ -126,7 +126,7 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
         const auto totalSize = mesh_.topology.faceSize();
-        const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float ) );
+        const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float ) );
 
         DynamicArrayF cudaResult;
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -185,7 +185,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     const auto totalSize = (size_t)dims.x * dims.y * dims.z;
-    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), dims, sizeof( float ) );
+    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -240,7 +240,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
     const auto totalSize = (size_t)dims.x * dims.y * dims.z;
-    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), dims, sizeof( float ) );
+    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );

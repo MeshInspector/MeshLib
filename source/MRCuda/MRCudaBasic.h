@@ -20,8 +20,8 @@ MRCUDA_API bool isCudaAvailable( int* driverVersion = nullptr, int* runtimeVersi
 // Returns available GPU memory in bytes
 MRCUDA_API size_t getCudaAvailableMemory();
 
-// Returns maximum amount of free GPU memory used for dynamic-sized buffers
-MRCUDA_API size_t getCudaAvailableMemoryForBuffers();
+// Returns maximum safe amount of free GPU memory that will be used for dynamic-sized buffers
+MRCUDA_API size_t getCudaSafeMemoryLimit();
 
 // Returns maximum buffer size in elements that can be allocated with given memory limit
 MRCUDA_API size_t maxBufferSize( size_t memoryBytes, size_t dim, size_t elementBytes );

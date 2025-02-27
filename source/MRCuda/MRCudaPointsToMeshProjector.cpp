@@ -96,7 +96,7 @@ void PointsToMeshProjector::findProjections(
         cudaXf = getCudaMatrix( *xfPtr );
 
     const auto totalSize = points.size();
-    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float3 ) + sizeof( MeshProjectionResult ) );
+    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float3 ) + sizeof( MeshProjectionResult ) );
 
     DynamicArray<float3> cudaPoints;
     cudaPoints.resize( bufferSize );

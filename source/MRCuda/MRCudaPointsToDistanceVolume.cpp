@@ -47,7 +47,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     cudaParams.dimensions.z = params.dimensions.z;
 
     const auto totalSize = (size_t)params.dimensions.x * params.dimensions.y * params.dimensions.z;
-    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), params.dimensions, sizeof( float ) );
+    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
 
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );

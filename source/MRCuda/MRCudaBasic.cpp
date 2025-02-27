@@ -70,7 +70,7 @@ size_t getCudaAvailableMemory()
     return memFree - 128 * 1024 * 1024;
 }
 
-size_t getCudaAvailableMemoryForBuffers()
+size_t getCudaSafeMemoryLimit()
 {
     constexpr float cMaxGpuMemoryUsage = 0.80f;
     return size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );

@@ -10,9 +10,6 @@
 #include "MRMesh/MRVector3.h"
 #include "MRVoxels/MRObjectVoxels.h"
 
-#define INST_CAT(x, y) INST_CAT_(x, y)
-#define INST_CAT_(x, y) x##y
-#define INST_IF(cond) INST_CAT(INST_IF_, cond)
 #define INST_IF_0(...)
 #define INST_IF_1(...) __VA_ARGS__
 

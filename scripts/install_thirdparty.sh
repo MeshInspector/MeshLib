@@ -16,7 +16,7 @@ else
   MR_THIRDPARTY_DIR="."
 fi
 
-#install MR requirements
+# install MR requirements
 MR_LIB_DIR="./lib/"
 MR_INSTALL_THIRDPARTY_DIR="/usr/local/lib/"
 MR_INSTALL_FONTS_DIR="/usr/local/share/fonts/"
@@ -26,28 +26,20 @@ if [ -z "$MR_THIRDPARTY_DIR" ]; then
   MR_THIRDPARTY_DIR="./thirdparty"
 fi
 
-if [ "$EUID" -ne 0 ]; then
- printf "Root access required!\n"
- RUN_AS_ROOT="NO"
-fi
-
 cd ${MR_LIB_DIR}
-# copy libs
-find . -name \*.so* -exec sudo cp -R --preserve=links -p {} ${MR_INSTALL_THIRDPARTY_DIR} \;
-#copy fonts
-find . -name \*.ttf -exec sudo cp -p {} ${MR_INSTALL_FONTS_DIR} \;
-find . -name \*.otf -exec sudo cp -p {} ${MR_INSTALL_FONTS_DIR} \;
+  # copy libs
+  find . -name \*.so* -exec cp -R --preserve=links -p {} ${MR_INSTALL_THIRDPARTY_DIR} \;
+  # copy fonts
+  find . -name \*.ttf -exec cp -p {} ${MR_INSTALL_FONTS_DIR} \;
+  find . -name \*.otf -exec cp -p {} ${MR_INSTALL_FONTS_DIR} \;
 cd -
 
 # headers copy
 cd ${MR_THIRDPARTY_DIR}
-find . -name '*.h' -type f -exec sudo cp -fr --parents \{\} ${MR_INSTALL_INCLUDE_DIR} \;
+  find . -name '*.h' -type f -exec cp -fr --parents \{\} ${MR_INSTALL_INCLUDE_DIR} \;
 cd -
 cd ${MR_LIB_DIR}
-find . -name '*.h' -type f -exec sudo cp -fr --parents \{\} ${MR_INSTALL_INCLUDE_DIR} \;
+  find . -name '*.h' -type f -exec cp -fr --parents \{\} ${MR_INSTALL_INCLUDE_DIR} \;
 cd -
 
-if [ "${RUN_AS_ROOT}" = "NO" ]; then
- sudo -k
-fi
-printf "Thirdparty installation done!\n"
+echo "Thirdparty installation done!"

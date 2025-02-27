@@ -259,7 +259,7 @@ jobs:
       - name: Sign NuGet package with certificate
         run: |
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com DistributivesNuGet/MeshLib.nupkg
-          nuget verify -All -Verbosity detailed MeshLib.nupkg
+          nuget verify -All -Verbosity detailed DistributivesNuGet/MeshLib.nupkg
           
       - name: Upload Signed NuGet Package
         uses: actions/upload-artifact@v4

@@ -74,7 +74,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     // TODO: allow user to set the upper limit
     constexpr float cMaxGpuMemoryUsage = 0.80f;
     const auto maxBufferBytes = size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-    const auto maxBufferSize = maxBufferBytes / ( sizeof( float ) + sizeof( MeshTriPoint ) );
+    const auto maxBufferSize = maxBufferBytes / ( sizeof( float ) + ( outSamples ? sizeof( MeshTriPoint ) : 0 ) );
 
     const auto rowSize = distMap.resY();
     const auto maxRowCountInBuffer = maxBufferSize / rowSize;

@@ -243,12 +243,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: DistributivesNuGet*
+
+      - name: List files
+        run: Get-ChildItem
           
       - name: Delete unsigned NuGet package
         uses: geekyeggo/delete-artifact@v5
         with:
           name: DistributivesNuGet*
           failOnError: false
+
+      - name: List files
+        run: Get-ChildItem
      
       - name: Sign NuGet package with certificate
         run: |

@@ -32,15 +32,8 @@ Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const 
     DynamicArray<int> cudaOrgs;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaOrgs.fromVector( orgs.vec_ ) );
 
-    // TODO: allow user to set the upper limit
-    constexpr float cMaxGpuMemoryUsage = 0.80f;
-    const auto maxBufferBytes = size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-    const auto maxBufferSize = maxBufferBytes / sizeof( float );
-
-    const auto rowSize = size_t( params.resolution.y );
-    const auto maxRowCountInBuffer = maxBufferSize / rowSize;
-    const auto totalSize = params.resolution.x * rowSize;
-    const auto bufferSize = std::min( maxRowCountInBuffer * rowSize, totalSize );
+    const auto totalSize = (size_t)params.resolution.x * params.resolution.y;
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), params.resolution, sizeof( float ) );
 
     DynamicArrayF cudaRes;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaRes.resize( bufferSize ) );

@@ -46,15 +46,8 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     cudaParams.dimensions.y = params.dimensions.y;
     cudaParams.dimensions.z = params.dimensions.z;
 
-    // TODO: allow user to set the upper limit
-    constexpr float cMaxGpuMemoryUsage = 0.80f;
-    const auto maxBufferBytes = size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-    const auto maxBufferSize = maxBufferBytes / sizeof( float );
-
-    const auto layerSize = size_t( params.dimensions.x ) * params.dimensions.y;
-    const auto maxLayerCountInBuffer = maxBufferSize / layerSize;
-    const auto totalSize = params.dimensions.z * layerSize;
-    const auto bufferSize = std::min( maxLayerCountInBuffer * layerSize, totalSize );
+    const auto totalSize = (size_t)params.dimensions.x * params.dimensions.y * params.dimensions.z;
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), params.dimensions, sizeof( float ) );
 
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );

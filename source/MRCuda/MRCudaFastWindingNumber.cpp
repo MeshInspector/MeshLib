@@ -10,18 +10,6 @@
 #include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
 
-namespace
-{
-
-// returns maximum amount of free GPU memory used for dynamic-sized buffers
-size_t getCudaAvailableMemoryForBuffers()
-{
-    constexpr float cMaxGpuMemoryUsage = 0.80f;
-    return size_t( MR::Cuda::getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-}
-
-} // namespace
-
 namespace MR
 {
 namespace Cuda
@@ -95,12 +83,8 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     MR_TIMER
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
-        // TODO: allow user to set the upper limit
-        const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
-        const auto maxBufferSize = maxBufferBytes / ( sizeof( float ) + sizeof( float3 ) ); // need to allocate two buffers of the same size, one of float type, another of float3 type
-
         const auto totalSize = points.size();
-        const auto bufferSize = std::min( maxBufferSize, totalSize );
+        const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float ) + sizeof( float3 ) );
 
         DynamicArray<float3> cudaPoints;
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.resize( bufferSize ) );
@@ -141,12 +125,8 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
     MR_TIMER
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
-        // TODO: allow user to set the upper limit
-        const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
-        const auto maxBufferSize = maxBufferBytes / sizeof( float );
-
         const auto totalSize = mesh_.topology.faceSize();
-        const auto bufferSize = std::min( maxBufferSize, totalSize );
+        const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float ) );
 
         DynamicArrayF cudaResult;
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -204,14 +184,8 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     };
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
-    // TODO: allow user to set the upper limit
-    const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
-    const auto maxBufferSize = maxBufferBytes / sizeof( float );
-
-    const auto layerSize = size_t( dims.x ) * dims.y;
-    const auto maxLayerCountInBuffer = maxBufferSize / layerSize;
-    const auto totalSize = dims.z * layerSize;
-    const auto bufferSize = std::min( maxLayerCountInBuffer * layerSize, totalSize );
+    const auto totalSize = (size_t)dims.x * dims.y * dims.z;
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -265,14 +239,8 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     };
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
 
-    // TODO: allow user to set the upper limit
-    const auto maxBufferBytes = getCudaAvailableMemoryForBuffers();
-    const auto maxBufferSize = maxBufferBytes / sizeof( float );
-
-    const auto layerSize = size_t( dims.x ) * dims.y;
-    const auto maxLayerCountInBuffer = maxBufferSize / layerSize;
-    const auto totalSize = dims.z * layerSize;
-    const auto bufferSize = std::min( maxLayerCountInBuffer * layerSize, totalSize );
+    const auto totalSize = (size_t)dims.x * dims.y * dims.z;
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), dims, sizeof( float ) );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );

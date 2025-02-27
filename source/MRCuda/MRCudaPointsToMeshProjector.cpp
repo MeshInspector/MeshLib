@@ -95,13 +95,8 @@ void PointsToMeshProjector::findProjections(
     if ( xfPtr )
         cudaXf = getCudaMatrix( *xfPtr );
 
-    // TODO: allow user to set the upper limit
-    constexpr float cMaxGpuMemoryUsage = 0.80f;
-    const auto maxBufferBytes = size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-    const auto maxBufferSize = maxBufferBytes / ( sizeof( float3 ) + sizeof( MeshProjectionResult ) );
-
     const auto totalSize = points.size();
-    const auto bufferSize = std::min( maxBufferSize, totalSize );
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), totalSize, sizeof( float3 ) + sizeof( MeshProjectionResult ) );
 
     DynamicArray<float3> cudaPoints;
     cudaPoints.resize( bufferSize );

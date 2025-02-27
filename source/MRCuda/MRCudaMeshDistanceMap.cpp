@@ -71,15 +71,8 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
         .allowNegativeValues = params.allowNegativeValues,
     };
 
-    // TODO: allow user to set the upper limit
-    constexpr float cMaxGpuMemoryUsage = 0.80f;
-    const auto maxBufferBytes = size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
-    const auto maxBufferSize = maxBufferBytes / ( sizeof( float ) + ( outSamples ? sizeof( MeshTriPoint ) : 0 ) );
-
-    const auto rowSize = distMap.resY();
-    const auto maxRowCountInBuffer = maxBufferSize / rowSize;
-    const auto totalSize = params.resolution.x * rowSize;
-    const auto bufferSize = std::min( maxRowCountInBuffer * rowSize, totalSize );
+    const auto totalSize = distMap.size();
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), distMap.dims(), sizeof( float ) + ( outSamples ? sizeof( MeshTriPoint ) : 0 ) );
 
     DynamicArray<float> result;
     CUDA_LOGE_RETURN_UNEXPECTED( result.resize( bufferSize ) );

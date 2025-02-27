@@ -31,7 +31,7 @@ struct Node2
 void contoursDistanceMapProjectionKernel(
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
     const Node2* nodes, const float2* polylinePoints, const int* orgs, float* dists,
-    const size_t size );
+    const size_t size, size_t offset );
 
 }
 

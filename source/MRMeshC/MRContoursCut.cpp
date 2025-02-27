@@ -16,7 +16,7 @@ REGISTER_AUTO_CAST( OneMeshContours )
 
 static_assert( sizeof( MROneMeshIntersection ) == sizeof( OneMeshIntersection ) );
 
-const MROneMeshContour mrOneMeshContoursGet( const MROneMeshContours* contours_, size_t index )
+MROneMeshContour mrOneMeshContoursGet( const MROneMeshContours* contours_, size_t index )
 {
     ARG( contours );
     const auto& result = contours[index];

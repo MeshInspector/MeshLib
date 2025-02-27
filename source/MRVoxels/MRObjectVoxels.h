@@ -27,7 +27,7 @@ public:
     MRVOXELS_API virtual void applyScale( float scaleFactor ) override;
 
     /// Returns iso surface, empty if iso value is not set
-    const std::shared_ptr<Mesh>& surface() const { return mesh_; }
+    const std::shared_ptr<Mesh>& surface() const { return data_.mesh; }
 
     /// Return VdbVolume
     const VdbVolume& vdbVolume() const { return vdbVolume_; };

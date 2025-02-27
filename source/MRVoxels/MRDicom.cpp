@@ -7,7 +7,7 @@
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxelsLoad.h"
 #include "MRVoxelsSave.h"
-
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
@@ -37,13 +37,11 @@ struct VoxelTraits<openvdb::FloatGrid::Accessor>
 
 using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
 
-}
+namespace VoxelsLoad
+{
 
 namespace
 {
-
-using namespace MR;
-using namespace MR::VoxelsLoad;
 
 ScalarType convertToScalarType( const gdcm::PixelFormat& format )
 {
@@ -83,112 +81,6 @@ std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
         return { gdcm::PixelFormat::ScalarType::UINT16, gdcm::Tag( 0x7FE0, 0x0010 ) };
     else
         static_assert( dependent_false<T>, "Unsupported type T" );
-}
-
-} // namespace
-
-namespace MR
-{
-
-namespace VoxelsLoad
-{
-
-bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
-{
-    std::ifstream ifs( path, std::ios_base::binary );
-
-#ifdef __EMSCRIPTEN__
-    // try to detect by ourselves
-    // GDCM uses exceptions which causes problems on Wasm
-    constexpr auto cDicomMagicNumberOffset = 0x80;
-    constexpr std::array cDicomMagicNumber { 'D', 'I', 'C', 'M' };
-    // NOTE: std::ifstream::get appends a null character
-    std::array<char, std::size( cDicomMagicNumber ) + 1> buf;
-    if ( !ifs.seekg( cDicomMagicNumberOffset, std::ios::beg ) || !ifs.get( buf.data(), buf.size(), '\0' ) )
-        return false;
-    if ( std::strncmp( buf.data(), cDicomMagicNumber.data(), cDicomMagicNumber.size() ) != 0 )
-        return false;
-    ifs.seekg( 0, std::ios::beg );
-    assert( ifs );
-#endif
-
-    gdcm::ImageReader ir;
-    ir.SetStream( ifs );
-    if ( !ir.CanRead() )
-        return false;
-    // we read these tags to be able to determine whether this file is dicom dir or image
-    auto tags = {
-        gdcm::Tag( 0x0002, 0x0002 ), // media storage
-        gdcm::Tag( 0x0008, 0x0016 ), // media storage
-        gdcm::Keywords::PhotometricInterpretation::GetTag(),
-        gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm,
-        gdcm::Keywords::SeriesInstanceUID::GetTag(),
-        gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
-    if ( !ir.ReadSelectedTags( tags ) )
-        return false;
-    gdcm::MediaStorage ms;
-    ms.SetFromFile( ir.GetFile() );
-
-    // skip unsupported media storage
-    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage
-        || ms == gdcm::MediaStorage::BasicTextSR )
-    {
-        spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
-        return false;
-    }
-
-    // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file
-    if ( !gdcm::ImageHelper::GetPointerFromElement( gdcm::Keywords::PhotometricInterpretation::GetTag(), ir.GetFile() ) )
-    {
-        spdlog::warn( "DICOM file {} does not have Photometric Interpretation", utf8string( path ) );
-        return false;
-    }
-
-    auto photometric = gdcm::ImageHelper::GetPhotometricInterpretationValue( ir.GetFile() );
-    if ( photometric != gdcm::PhotometricInterpretation::MONOCHROME2 &&
-         photometric != gdcm::PhotometricInterpretation::MONOCHROME1 )
-    {
-        spdlog::warn( "DICOM file {} has Photometric Interpretation other than Monochrome", utf8string( path ) );
-        return false;
-    }
-
-    auto dims = gdcm::ImageHelper::GetDimensionsValue( ir.GetFile() );
-    if ( dims.size() != 3 )
-    {
-        spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
-        return false;
-    }
-
-    if ( seriesUid )
-    {
-        const auto& ds = ir.GetFile().GetDataSet();
-        if ( ds.FindDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() ) )
-        {
-            const auto& de = ds.GetDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() );
-            gdcm::Keywords::SeriesInstanceUID uid;
-            uid.SetFromDataElement( de );
-            auto uidVal = uid.GetValue();
-            *seriesUid = uidVal;
-        }
-    }
-
-    return true;
-}
-
-bool isDicomFolder( const std::filesystem::path& dirPath )
-{
-    std::error_code ec;
-    for ( const auto& entry : Directory { dirPath, ec } )
-    {
-        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
-        {
-            const auto& path = entry.path();
-            const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
-                return true;
-        }
-    }
-    return false;
 }
 
 struct DCMFileLoadResult
@@ -410,6 +302,148 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     return res;
 }
 
+template <typename T>
+Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
+{
+    MR_TIMER
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    T vol{};
+    vol.voxelSize = Vector3f();
+    vol.dims.z = 1;
+    auto fileRes = loadSingleFile( file, vol, 0 );
+    if ( !fileRes.success )
+        return unexpected( "loadDicomFile: error load file: " + utf8string( file ) );
+    vol.max = fileRes.max;
+    vol.min = fileRes.min;
+
+    if constexpr ( std::same_as<T, VdbVolume> )
+        openvdb::tools::changeBackground( vol.data->tree(), vol.min );
+
+    DicomVolumeT<T> res;
+    res.vol = std::move( vol );
+    res.name = utf8string( file.stem() );
+    return res;
+}
+
+struct LoadSlicesResult
+{
+    int numLoadedSlices;
+    bool cancelCalled;
+    std::vector<DCMFileLoadResult> slicesRes;
+};
+
+template <typename T>
+LoadSlicesResult loadSlices( const std::vector<std::filesystem::path>& files, T& data, unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb = {} );
+
+template <>
+LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>& files, VdbVolume& data,
+                                        unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb )
+{
+    bool cancelCalled = false;
+    std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
+    tbb::task_arena limitedArena( maxNumThreads );
+    std::atomic<int> numLoadedSlices = 0;
+    const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
+
+    // do not call `touchLeaf` for all voxels, because it does not activate touched voxels as `denseFill` do
+    // note that changing active state in parallel in general is not safe, so you should have valid state before parallel modification of the grid
+    // note that first layer is already loaded
+    data.data->denseFill( toVdbBox( Box3i( Vector3i( 0, 0, 1 ), data.dims - Vector3i::diagonal( 1 ) ) ), data.min, true );
+
+    limitedArena.execute( [&]
+    {
+        tbb::enumerable_thread_specific<VolumeMinMaxAccessor> tls( VolumeMinMaxAccessor{
+            { .data = data.data->getAccessor(), .dims = data.dims, .voxelSize = data.voxelSize },
+            { data.min, data.max }
+        } );
+
+        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), tls, [&] ( int i, auto& vol )
+        {
+            slicesRes[i] = loadSingleFile( files[i + 1], vol, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
+            ++numLoadedSlices;
+        }, subprogress( cb, 0.4f, 0.9f ), 1 );
+    } );
+
+    openvdb::tools::changeBackground( data.data->tree(), data.min );
+
+    return { numLoadedSlices, cancelCalled, slicesRes };
+}
+
+template <>
+LoadSlicesResult loadSlices<SimpleVolumeMinMax>( const std::vector<std::filesystem::path>& files, SimpleVolumeMinMax& data,
+                                                 unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb )
+{
+    bool cancelCalled = false;
+    std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
+    tbb::task_arena limitedArena( maxNumThreads );
+    std::atomic<int> numLoadedSlices = 0;
+    const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
+
+    limitedArena.execute( [&]
+    {
+        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), [&] ( int i )
+        {
+            slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
+            ++numLoadedSlices;
+        }, subprogress( cb, 0.4f, 0.9f ), 1 );
+    } );
+
+    return { numLoadedSlices, cancelCalled, slicesRes };
+}
+
+
+class VolumeUpdater
+{
+public:
+    explicit VolumeUpdater( SimpleVolume& vol ):
+        a_( vol.data.data() ),
+        ind_( vol.dims )
+    {}
+
+    explicit VolumeUpdater( VdbVolume& vol ):
+        a_( vol.data->getAccessor() ),
+        ind_( vol.dims )
+    {}
+
+    const float& getValue( const Vector3i& pos ) const
+    {
+        return std::visit( overloaded{
+            [&] ( float* arr ) -> const float& { return arr[ind_.toVoxelId( pos )]; },
+            [&] ( const openvdb::FloatGrid::Accessor& acc ) -> const float& { return acc.getValue( toVdb( pos ) ); }
+        }, a_ );
+    }
+    const float& getValue( int x, int y, int z ) const
+    {
+        return getValue( { x, y, z } );
+    }
+    const float& getValue( VoxelId flatIndex ) const
+    {
+        return getValue( ind_.toPos( flatIndex ) );
+    }
+
+    void setValue( const Vector3i& pos, float val )
+    {
+        std::visit( overloaded{
+            [&] ( float* arr ) { arr[ind_.toVoxelId( pos )] = val; },
+            [&] ( openvdb::FloatGrid::Accessor& acc ) { acc.setValue( toVdb( pos ), val ); }
+        }, a_ );
+    }
+    void setValue( int x, int y, int z, float val )
+    {
+        setValue( { x, y, z }, val );
+    }
+    void setValue( VoxelId flatIndex, float val )
+    {
+        setValue( ind_.toPos( flatIndex ), val );
+    }
+
+private:
+    std::variant<float*, openvdb::FloatGrid::Accessor> a_;
+    VolumeIndexer ind_;
+};
+
 struct SeriesInfo
 {
     float sliceSize{ 0.0f };
@@ -513,127 +547,6 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
     return res;
 }
 
-
-namespace
-{
-
-struct LoadSlicesResult
-{
-    int numLoadedSlices;
-    bool cancelCalled;
-    std::vector<DCMFileLoadResult> slicesRes;
-};
-
-template <typename T>
-LoadSlicesResult loadSlices( const std::vector<std::filesystem::path>& files, T& data, unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb = {} );
-
-template <>
-LoadSlicesResult loadSlices<VdbVolume>( const std::vector<std::filesystem::path>& files, VdbVolume& data,
-                                        unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb )
-{
-    bool cancelCalled = false;
-    std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
-    tbb::task_arena limitedArena( maxNumThreads );
-    std::atomic<int> numLoadedSlices = 0;
-    const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
-    makeVdbTopologyDense( data );
-
-    limitedArena.execute( [&]
-    {
-        tbb::enumerable_thread_specific<VolumeMinMaxAccessor> tls( VolumeMinMaxAccessor{
-            { .data = data.data->getAccessor(), .dims = data.dims, .voxelSize = data.voxelSize },
-            { data.min, data.max }
-        } );
-
-        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), tls, [&] ( int i, auto& vol )
-        {
-            slicesRes[i] = loadSingleFile( files[i + 1], vol, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
-            ++numLoadedSlices;
-        }, subprogress( cb, 0.4f, 0.9f ), 1 );
-    } );
-
-    openvdb::tools::changeBackground( data.data->tree(), data.min );
-
-    return { numLoadedSlices, cancelCalled, slicesRes };
-}
-
-template <>
-LoadSlicesResult loadSlices<SimpleVolumeMinMax>( const std::vector<std::filesystem::path>& files, SimpleVolumeMinMax& data,
-                                                 unsigned maxNumThreads, const BitSet& presentSlices, const ProgressCallback& cb )
-{
-    bool cancelCalled = false;
-    std::vector<DCMFileLoadResult> slicesRes( files.size() - 1 );
-    tbb::task_arena limitedArena( maxNumThreads );
-    std::atomic<int> numLoadedSlices = 0;
-    const auto dimXY = size_t( data.dims.x ) * size_t( data.dims.y );
-
-    limitedArena.execute( [&]
-    {
-        cancelCalled = !ParallelFor( 0, int( slicesRes.size() ), [&] ( int i )
-        {
-            slicesRes[i] = loadSingleFile( files[i + 1], data, ( presentSlices.nthSetBit( i + 1 ) ) * dimXY );
-            ++numLoadedSlices;
-        }, subprogress( cb, 0.4f, 0.9f ), 1 );
-    } );
-
-    return { numLoadedSlices, cancelCalled, slicesRes };
-}
-
-
-class VolumeUpdater
-{
-public:
-    explicit VolumeUpdater( SimpleVolume& vol ):
-        a_( vol.data.data() ),
-        ind_( vol.dims )
-    {}
-
-    explicit VolumeUpdater( VdbVolume& vol ):
-        a_( vol.data->getAccessor() ),
-        ind_( vol.dims )
-    {}
-
-    const float& getValue( const Vector3i& pos ) const
-    {
-        return std::visit( overloaded{
-            [&] ( float* arr ) -> const float& { return arr[ind_.toVoxelId( pos )]; },
-            [&] ( const openvdb::FloatGrid::Accessor& acc ) -> const float& { return acc.getValue( toVdb( pos ) ); }
-        }, a_ );
-    }
-    const float& getValue( int x, int y, int z ) const
-    {
-        return getValue( { x, y, z } );
-    }
-    const float& getValue( VoxelId flatIndex ) const
-    {
-        return getValue( ind_.toPos( flatIndex ) );
-    }
-
-    void setValue( const Vector3i& pos, float val )
-    {
-        std::visit( overloaded{
-            [&] ( float* arr ) { arr[ind_.toVoxelId( pos )] = val; },
-            [&] ( openvdb::FloatGrid::Accessor& acc ) { acc.setValue( toVdb( pos ), val ); }
-        }, a_ );
-    }
-    void setValue( int x, int y, int z, float val )
-    {
-        setValue( { x, y, z }, val );
-    }
-    void setValue( VoxelId flatIndex, float val )
-    {
-        setValue( ind_.toPos( flatIndex ), val );
-    }
-
-private:
-    std::variant<float*, openvdb::FloatGrid::Accessor> a_;
-    VolumeIndexer ind_;
-};
-
-
-}
-
-
 template <typename T>
 Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                  unsigned maxNumThreads, const ProgressCallback& cb )
@@ -643,7 +556,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
         return unexpectedOperationCanceled();
 
     if ( files.empty() )
-        return unexpected( "loadDicomFolderAsVdb: there is no dcm file" );
+        return unexpected( "loadSingleDicomFolder: there is no dcm file" );
 
     T data;
     data.voxelSize = Vector3f();
@@ -662,7 +575,7 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
-        return unexpected( "loadDicomFolderAsVdb: error loading first file \"" + utf8string( files.front() ) + "\"" );
+        return unexpected( "loadSingleDicomFolder: error loading first file \"" + utf8string( files.front() ) + "\"" );
     data.min = firstRes.min;
     data.max = firstRes.max;
 
@@ -746,7 +659,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
-        return unexpected( "loadDicomFolderAsVdb: path is not directory" );
+        return unexpected( "extractDCMSeries: path is not directory" );
 
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
@@ -810,10 +723,107 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
     return loadSingleDicomFolder<T>( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
 }
 
-std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path,
-                                                     unsigned maxNumThreads, const ProgressCallback& cb )
+} // anonymous namespace
+
+DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
-    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
+    if ( utf8string( path.extension() ) != ".dcm" )
+        return DicomStatusEnum::Invalid;
+
+    std::ifstream ifs( path, std::ios_base::binary );
+
+#ifdef __EMSCRIPTEN__
+    // try to detect by ourselves
+    // GDCM uses exceptions which causes problems on Wasm
+    constexpr auto cDicomMagicNumberOffset = 0x80;
+    constexpr std::array cDicomMagicNumber { 'D', 'I', 'C', 'M' };
+    // NOTE: std::ifstream::get appends a null character
+    std::array<char, std::size( cDicomMagicNumber ) + 1> buf;
+    if ( !ifs.seekg( cDicomMagicNumberOffset, std::ios::beg ) || !ifs.get( buf.data(), buf.size(), '\0' ) )
+        return DicomStatusEnum::Invalid;
+    if ( std::strncmp( buf.data(), cDicomMagicNumber.data(), cDicomMagicNumber.size() ) != 0 )
+        return DicomStatusEnum::Invalid;
+    ifs.seekg( 0, std::ios::beg );
+    assert( ifs );
+#endif
+
+    gdcm::ImageReader ir;
+    ir.SetStream( ifs );
+    if ( !ir.CanRead() )
+        return DicomStatusEnum::Invalid;
+    // we read these tags to be able to determine whether this file is dicom dir or image
+    auto tags = {
+        gdcm::Tag( 0x0002, 0x0002 ), // media storage
+        gdcm::Tag( 0x0008, 0x0016 ), // media storage
+        gdcm::Keywords::PhotometricInterpretation::GetTag(),
+        gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm,
+        gdcm::Keywords::SeriesInstanceUID::GetTag(),
+        gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
+    if ( !ir.ReadSelectedTags( tags ) )
+        return { DicomStatusEnum::Unsupported, "missing required tag" };
+    gdcm::MediaStorage ms;
+    ms.SetFromFile( ir.GetFile() );
+
+    // skip unsupported media storage
+    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage
+        || ms == gdcm::MediaStorage::BasicTextSR )
+    {
+        spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
+        return { DicomStatusEnum::Unsupported, "unsupported media storage" };
+    }
+
+    // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file
+    if ( !gdcm::ImageHelper::GetPointerFromElement( gdcm::Keywords::PhotometricInterpretation::GetTag(), ir.GetFile() ) )
+    {
+        spdlog::warn( "DICOM file {} does not have Photometric Interpretation", utf8string( path ) );
+        return { DicomStatusEnum::Unsupported, "missing photometric interpretation" };
+    }
+
+    auto photometric = gdcm::ImageHelper::GetPhotometricInterpretationValue( ir.GetFile() );
+    if ( photometric != gdcm::PhotometricInterpretation::MONOCHROME2 &&
+         photometric != gdcm::PhotometricInterpretation::MONOCHROME1 )
+    {
+        spdlog::warn( "DICOM file {} has Photometric Interpretation other than Monochrome", utf8string( path ) );
+        return { DicomStatusEnum::Unsupported, "unsupported photometric interpretation" };
+    }
+
+    auto dims = gdcm::ImageHelper::GetDimensionsValue( ir.GetFile() );
+    if ( dims.size() != 3 )
+    {
+        spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
+        return { DicomStatusEnum::Unsupported, "unsupported dimensionality" };
+    }
+
+    if ( seriesUid )
+    {
+        const auto& ds = ir.GetFile().GetDataSet();
+        if ( ds.FindDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() ) )
+        {
+            const auto& de = ds.GetDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() );
+            gdcm::Keywords::SeriesInstanceUID uid;
+            uid.SetFromDataElement( de );
+            auto uidVal = uid.GetValue();
+            *seriesUid = uidVal;
+        }
+    }
+
+    return DicomStatusEnum::Ok;
+}
+
+bool isDicomFolder( const std::filesystem::path& dirPath )
+{
+    std::error_code ec;
+    for ( const auto& entry : Directory { dirPath, ec } )
+    {
+        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
+        {
+            const auto& path = entry.path();
+            const auto ext = toLower( utf8string( path.extension() ) );
+            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                return true;
+        }
+    }
+    return false;
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
@@ -880,45 +890,35 @@ Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::
     return res;
 }
 
-template <typename T>
-Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolume> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    MR_TIMER
-    if ( !reportProgress( cb, 0.0f ) )
-        return unexpectedOperationCanceled();
-
-    auto vol = [] {
-        if constexpr ( std::convertible_to<T, VdbVolume> )
-            return VdbVolume{};
-        else
-            return SimpleVolumeMinMax{};
-    }();
-    vol.voxelSize = Vector3f();
-    vol.dims.z = 1;
-    auto fileRes = loadSingleFile( path, vol, 0 );
-    if ( !fileRes.success )
-        return unexpected( "loadDicomFileAsVdb: error load file: " + utf8string( path ) );
-    vol.max = fileRes.max;
-    vol.min = fileRes.min;
-
-    DicomVolumeT<T> res;
-    res.vol = std::move( vol );
-    res.name = utf8string( path.stem() );
-    return res;
+    return loadDicomFolder<SimpleVolumeMinMax>( path, maxNumThreads, cb );
 }
 
+Expected<DicomVolumeAsVdb> loadDicomFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomFolder<VdbVolume>( path, maxNumThreads, cb );
+}
 
-template MRVOXELS_API Expected<DicomVolumeT<SimpleVolumeMinMax>> loadDicomFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template MRVOXELS_API Expected<DicomVolumeT<VdbVolume>> loadDicomFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+Expected<DicomVolume> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
+{
+    return loadDicomFile<SimpleVolumeMinMax>( file, cb );
+}
 
-template MRVOXELS_API Expected<DicomVolume> loadDicomFile<SimpleVolumeMinMax>( const std::filesystem::path& path, const ProgressCallback& cb );
-template MRVOXELS_API Expected<DicomVolumeAsVdb> loadDicomFile<VdbVolume>( const std::filesystem::path& path, const ProgressCallback& cb );
+Expected<DicomVolumeAsVdb> loadDicomFileAsVdb( const std::filesystem::path& file, const ProgressCallback& cb )
+{
+    return loadDicomFile<VdbVolume>( file, cb );
+}
 
-template MRVOXELS_API std::vector<Expected<DicomVolumeT<SimpleVolumeMinMax>>>
-    loadDicomsFolder<SimpleVolumeMinMax>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
-template MRVOXELS_API std::vector<Expected<DicomVolumeT<VdbVolume>>>
-    loadDicomsFolder<VdbVolume>( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb );
+std::vector<Expected<DicomVolume>>      loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomsFolder<SimpleVolumeMinMax>( path, maxNumThreads, cb );
+}
 
+std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+{
+    return loadDicomsFolder<VdbVolume>( path, maxNumThreads, cb );
+}
 
 } // namespace VoxelsLoad
 
@@ -941,7 +941,7 @@ Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::f
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    auto [gdcmScalar, gdcmTag] = getGDCMTypeAndTag<T>();
+    auto [gdcmScalar, gdcmTag] = MR::VoxelsLoad::getGDCMTypeAndTag<T>();
 
     gdcm::ImageWriter iw;
     auto& image = iw.GetImage();
@@ -1005,8 +1005,8 @@ MR_ON_INIT
         filter,
         []( const std::filesystem::path& path, const ProgressCallback& cb )
         {
-            return loadDicomFile<VdbVolume>( path, cb ).transform(
-                []( DicomVolumeAsVdb&& r )
+            return MR::VoxelsLoad::loadDicomFileAsVdb( path, cb ).transform(
+                []( MR::VoxelsLoad::DicomVolumeAsVdb&& r )
                 {
                     std::vector<VdbVolume> ret;
                     ret.push_back( std::move( r.vol ) ); // Not using `return std::vector{ std::move( r.vdbVolume ) }` because that would always copy `v`.

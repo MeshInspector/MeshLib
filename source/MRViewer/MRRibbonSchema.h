@@ -51,6 +51,12 @@ struct RibbonSchema
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
     MenuItemsList sceneButtonsList;
+
+    /// deletes empty groups (and references on them from tabs)
+    MRVIEWER_API void eliminateEmptyGroups();
+
+    /// re-order items in tabsOrder according to their priority, the order of items having same priority is preserved
+    MRVIEWER_API void sortTabsByPriority();
 };
 
 // This class holds static ribbon schema,
@@ -86,6 +92,9 @@ public:
 
     MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
         std::vector<SearchResultWeight>* weights = nullptr );
+
+    /// returns item tab index in schema.tabsOrder or -1 if no tab found (e.g. scene fast access panel or header access panel)
+    MRVIEWER_API static int findItemTab( const std::shared_ptr<RibbonMenuItem>& item );
 
 private:
     RibbonSchemaHolder() = default;

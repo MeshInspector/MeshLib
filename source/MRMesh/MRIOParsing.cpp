@@ -59,8 +59,8 @@ std::vector<size_t> splitByLines( const char* data, size_t size )
             std::vector<size_t> group;
             const auto begin = i * groupSize;
             const auto end = std::min( ( i + 1 ) * groupSize, size );
-            for ( auto ci = begin; ci < end; ci++ )
-                if ( data[ci] == '\n' )
+            for ( auto ci = begin; ci < end; ci++ ) // support all 3: '\n', '\r\n' and '\r' line endings
+                if ( data[ci] == '\n' || ( data[ci] == '\r' && ( ci + 1 == size || data[ci + 1] != '\n' ) ) )
                     group.emplace_back( ci + 1 );
             groups[i] = std::move( group );
         } );

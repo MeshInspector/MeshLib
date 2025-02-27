@@ -6,6 +6,7 @@
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
 #include "MRCommonPlugins/exports.h"
+#include "MRMruFormatParameters.h"
 
 namespace MR
 {
@@ -88,6 +89,8 @@ private:
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_( float menuScaling );
 
+    void drawMruInnerFormats_( float menuWidth, float menuScaling );
+
     void drawGlobalSettings_( float buttonWidth, float menuScaling );
     void drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling );
     void drawSeparator_( const std::string& separatorName, float menuScaling );
@@ -122,6 +125,8 @@ private:
     TabType orderedTab_ = TabType::Count; // invalid
 
     std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
+
+    MruFormatParameters mruFormatParameters_;
 };
 
 }

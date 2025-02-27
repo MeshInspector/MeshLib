@@ -185,7 +185,7 @@ def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
             f"{test_report}voxels.min of voxels are differs, \n"
             f"voxel_a:{voxels_a.min}\nvoxel_b:{voxels_b.min}\n")
         assert voxels_a.max == pytest.approx(voxels_b.max), (
-            f"{test_report}voxels.min of voxels are differs, \n"
+            f"{test_report}voxels.max of voxels are differs, \n"
             f"voxel_a:{voxels_a.max}\nvoxel_b:{voxels_b.max}\n")
         assert voxels_a.dims == voxels_b.dims, (
             f"{test_report}voxels.dims of voxels are differs, \n"

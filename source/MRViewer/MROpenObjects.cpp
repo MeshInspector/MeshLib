@@ -35,6 +35,7 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::vector<FilePathNode> files;
         #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             bool dicomFolder = false;
+            VoxelsLoad::DicomStatus dicomStatus = VoxelsLoad::DicomStatusEnum::Invalid;
         #endif
 
         bool empty() const
@@ -69,8 +70,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     continue;
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
                 {
+                    node.dicomStatus = dicomStatus;
                     node.dicomFolder = true;
                     node.files.clear();
                 }
@@ -96,9 +98,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         }
     };
     clearEmptySubfolders( filesTree );
-
-    if ( filesTree.empty() )
-        return unexpected( std::string( "Error: folder is empty." ) );
 
     using loadObjResultType = Expected<LoadedObjects>;
     struct NodeAndResult
@@ -137,6 +136,14 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     res.obj->setName( utf8string( folder.stem() ) );
     createFolderObj( filesTree, res.obj.get() );
 
+    if ( nodes.empty() )
+    {
+        if ( dicomOnly )
+            return unexpected( "Could not find any DICOM files." );
+        else
+            return unexpected( "Error: folder is empty." );
+    }
+
     auto pseudoRoot = std::make_shared<Object>();
     pseudoRoot->addChild( res.obj );
 
@@ -157,14 +164,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
             else
             {
-                nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
-                    [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
-                    {
-                        // dicom is always opened in meters, and we can use this information to convert them properly
-                        for ( auto& obj : objs.objs )
-                            obj->applyScale( dicomScaleFactor );
-                        return std::move( objs );
-                    } );
+                if ( !nodeAndRes.node.dicomStatus )
+                    nodeAndRes.result = loadObjResultType( unexpected( fmt::format( "Unsupported DICOM folder: {}", nodeAndRes.node.dicomStatus.reason ) ) );
+                else
+                    nodeAndRes.result = VoxelsLoad::makeObjectVoxelsFromDicomFolder( nodeAndRes.node.path, nodeAndRes.cb ).and_then(
+                        [&, dicomScaleFactor]( LoadedObjects && objs ) -> loadObjResultType
+                        {
+                            // dicom is always opened in meters, and we can use this information to convert them properly
+                            for ( auto& obj : objs.objs )
+                                obj->applyScale( dicomScaleFactor );
+                            return std::move( objs );
+                        } );
             }
             #endif
             completed += 1;
@@ -183,7 +193,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
 
     // processing of results
     bool atLeastOneLoaded = false;
-    std::unordered_map<std::string, int> allErrors;
+
+    struct ErrorInfo
+    {
+        int count = 0;
+        std::filesystem::path path;
+    };
+    std::unordered_map<std::string, ErrorInfo> allErrors;
     for ( const auto& [node, parent, _, taskRes] : nodes )
     {
         if ( taskRes.has_value() )
@@ -205,7 +221,17 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         }
         else
         {
-            ++allErrors[taskRes.error()];
+            if ( auto it = allErrors.find( taskRes.error() ); it != allErrors.end() )
+            {
+                it->second.count += 1;
+            }
+            else
+            {
+                std::error_code ec;
+                allErrors[taskRes.error()] = { 1, utf8string( std::filesystem::relative( node.path, folder, ec ) ) };
+                if ( ec )
+                    spdlog::warn( "Filesystem error when trying to obtain {} relative to {}: {}", utf8string( node.path ), utf8string( folder ), ec.message() );
+            }
         }
     }
 
@@ -213,16 +239,22 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     for ( const auto& error : allErrors )
     {
         errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
-        if ( error.second > 1 )
+        if ( error.second.count > 1 )
         {
-            errorString += std::string( " (" ) + std::to_string( error.second ) + std::string( ")" );
+            errorString += std::string( " (" ) + std::to_string( error.second.count ) + std::string( ")" );
         }
+        else
+            errorString += std::string( " (for " ) + utf8string( error.second.path ) + std::string( ")" );
     }
 
-    if ( !errorString.empty() )
-        spdlog::warn( "Load folder error:\n{}", errorString );
     if ( !atLeastOneLoaded )
         return unexpected( errorString );
+
+    if ( !errorString.empty() )
+    {
+        spdlog::warn( "Load folder error:\n{}", errorString );
+        res.warnings = errorString + '\n' + res.warnings;
+    }
 
     res.obj = pseudoRoot->children()[0];
 

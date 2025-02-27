@@ -22,7 +22,7 @@ jobs:
 
   debug-config:
     needs: config
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     steps:
       - name: Print config
         run: |
@@ -295,7 +295,7 @@ jobs:
   update-dev-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
-    if: ${{ ( needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' ) && always() }}
+    if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && always() }}
     needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
@@ -311,7 +311,7 @@ jobs:
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     needs: [ upload-distributions ]
     if: always()
     continue-on-error: true
@@ -335,7 +335,7 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: aws-micro
     needs: [ collect-stats, update-dev-documentation ]
     if: always()
     continue-on-error: true

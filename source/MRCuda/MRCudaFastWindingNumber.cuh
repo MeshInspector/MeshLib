@@ -11,6 +11,7 @@ struct DistanceToMeshOptions;
 
 namespace Cuda
 {
+
 // GPU analog of CPU Dipole struct
 struct Dipole
 {
@@ -33,27 +34,33 @@ struct Dipole
     }
 };
 
+struct FastWindingNumberData
+{
+    const Dipole* __restrict__ dipoles{ nullptr };
+    const Node3* __restrict__ nodes{ nullptr };
+    const float3* __restrict__ meshPoints{ nullptr };
+    const FaceToThreeVerts* __restrict__ faces{ nullptr };
+};
+
 // calls fast winding number for each point in parallel
-void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
-                           const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromVector( const float3* points,
+                           FastWindingNumberData data,
                            float* resVec, float beta, int skipFace, size_t size );
 
 // calls fast winding number for each triangle center
-void fastWindingNumberFromMesh( const Dipole* dipoles,
-                                      const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                      float* resVec, float beta, size_t size );
+void fastWindingNumberFromMesh( FastWindingNumberData data,
+                                      float* resVec, float beta, size_t chunkSize, size_t chunkOffset );
 
 // calls fast winding number for each point in three-dimensional grid
 void fastWindingNumberFromGrid( int3 gridSize, Matrix4 gridToMeshXf,
-                                      const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                      float* resVec, float beta );
+                                      FastWindingNumberData data,
+                                      float* resVec, float beta, size_t chunkSize, size_t chunkOffset );
 
-/// calls fast winding number for each point in three-dimensional grid to get sign
+// calls fast winding number for each point in three-dimensional grid to get sign
 void signedDistance( int3 gridSize, Matrix4 gridToMeshXf,
-                                      const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                      float* resVec, const DistanceToMeshOptions& options );
+                    FastWindingNumberData data,
+                    float* resVec, size_t chunkSize, size_t chunkOffset, const DistanceToMeshOptions& options );
 
+} // namespace Cuda
 
-} //namespece Cuda
-
-} //namespace MR
+} // namespace MR

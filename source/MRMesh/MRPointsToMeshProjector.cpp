@@ -18,31 +18,17 @@ void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& 
 {
     MR_TIMER
     if ( !mesh_ )
-    
-    return;
+        return;
     
     result.resize( points.size() );
 
-    const AffineXf3f* notRigidRefXf{ nullptr };
-    if ( refObjXf && !isRigid( refObjXf->A ) )
-        notRigidRefXf = refObjXf;
-
     AffineXf3f xf;
-    const AffineXf3f* xfPtr{ nullptr };
-    if ( notRigidRefXf || !refObjXf )
-        xfPtr = objXf;
-    else
-    {
-        xf = refObjXf->inverse();
-        if ( objXf )
-            xf = xf * ( *objXf );
-        xfPtr = &xf;
-    }
+    auto simplifiedXfs = createProjectionTransforms( xf, objXf, refObjXf );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
-            result[i] = findProjection( xfPtr ? ( *xfPtr )( points[VertId( i )] ) : points[VertId( i )], *mesh_, upDistLimitSq, notRigidRefXf, loDistLimitSq );
+            result[i] = findProjection( simplifiedXfs.rigidXfPoint ? ( *simplifiedXfs.rigidXfPoint )( points[VertId( i )] ) : points[VertId( i )], *mesh_, upDistLimitSq, simplifiedXfs.nonRigidXfTree, loDistLimitSq );
     } );
 }
 

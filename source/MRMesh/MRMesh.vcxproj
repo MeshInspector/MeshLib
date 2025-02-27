@@ -19,6 +19,7 @@
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
+    <ClInclude Include="MRChangeMeshDataAction.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
+    <ClInclude Include="MRObjectMeshData.h" />
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MROutlierPoints.h" />
     <ClInclude Include="MRParabola.h" />
@@ -400,8 +402,10 @@
     <ClInclude Include="MROnInit.h" />
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
+    <ClInclude Include="MRChunkIterator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -421,7 +425,6 @@
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitParabola.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
-    <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
@@ -457,11 +460,9 @@
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
     <ClCompile Include="MREnumNeighbours.cpp" />
-    <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
-    <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFaceDistance.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
@@ -641,12 +642,10 @@
     <ClCompile Include="MRMeshDelone.cpp" />
     <ClCompile Include="MRMeshEigen.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
-    <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshSubdivide.cpp" />
-    <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
@@ -676,6 +675,7 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
     <ClCompile Include="MRWasmHelpers.cpp" />
+    <ClCompile Include="MRChunkIterator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

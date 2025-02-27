@@ -13,6 +13,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRBuffer.h"
+#include "MRObjectMesh.h"
+#include "MRMeshSubdivideCallbacks.h"
 #include <queue>
 
 namespace MR
@@ -247,6 +249,91 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
         return unexpectedOperationCanceled();
 
     return subMesh;
+}
+
+int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
+{
+    MR_TIMER
+    if ( !data.mesh )
+    {
+        assert( false );
+        return 0;
+    }
+
+    auto notFlippable = data.selectedEdges | data.creases;
+
+    MeshAttributesToUpdate meshParams;
+    if ( !data.uvCoordinates.empty() )
+        meshParams.uvCoords = &data.uvCoordinates;
+    if ( !data.vertColors.empty() )
+        meshParams.colorMap = &data.vertColors;
+    if ( !data.texturePerFace.empty() )
+        meshParams.texturePerFace = &data.texturePerFace;
+    if ( !data.faceColors.empty() )
+        meshParams.faceColors = &data.faceColors;
+
+    auto updateAttributesCb = meshOnEdgeSplitAttribute( *data.mesh, meshParams );
+
+    auto subs1 = settings;
+    FaceBitSet * maintainRegion = nullptr; // if a face from here is subdivided, then new face must be added here
+    if ( data.selectedFaces.any() )
+    {
+        if ( subs1.region )
+        {
+            // given region must not include any face not from current face selection
+            assert( subs1.region->is_subset_of( data.selectedFaces ) );
+            // manually maintain face selection during subdivision
+            maintainRegion = &data.selectedFaces;
+        }
+        else // set face selection as subdivision region
+            subs1.region = &data.selectedFaces;
+    }
+
+    const auto & topology = data.mesh->topology;
+    subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+    {
+        if ( data.selectedEdges.test( e.undirected() ) )
+        {
+            data.selectedEdges.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+        if ( data.creases.test( e.undirected() ) )
+        {
+            data.creases.autoResizeSet( e1.undirected() );
+            notFlippable.autoResizeSet( e1.undirected() );
+        }
+        if ( maintainRegion )
+        {
+            if ( contains( *maintainRegion, topology.left( e ) ) )
+                maintainRegion->autoResizeSet( topology.left( e1 ) );
+            if ( contains( *maintainRegion, topology.right( e ) ) )
+                maintainRegion->autoResizeSet( topology.right( e1 ) );
+        }
+
+        updateAttributesCb( e1, e );
+        if ( settings.onEdgeSplit )
+            settings.onEdgeSplit( e1, e );
+    };
+    assert( !subs1.notFlippable );
+    subs1.notFlippable = &notFlippable;
+
+    return subdivideMesh( *data.mesh, subs1 );
+}
+
+ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const SubdivideSettings& settings )
+{
+    MR_TIMER
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return data;
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    subdivideMesh( data, settings );
+    return data;
 }
 
 TEST(MRMesh, SubdivideMesh)

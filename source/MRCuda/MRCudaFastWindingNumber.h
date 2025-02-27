@@ -10,14 +10,14 @@ namespace MR
 namespace Cuda
 {
 
-struct FastWindingNumberData;
+struct FastWindingNumberDataBuffers;
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
 class MRCUDA_CLASS FastWindingNumber : public IFastWindingNumber
 {
     const Mesh & mesh_;
-    std::shared_ptr<FastWindingNumberData> data_;
+    std::shared_ptr<FastWindingNumberDataBuffers> data_;
 
 public:
     /// constructs this from AABB tree of given mesh;

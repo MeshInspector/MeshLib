@@ -21,4 +21,9 @@ MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>&
 MRMESH_API AffineXf3f getXfFromOxyPlane( const Contours3f& contours );
 MRMESH_API AffineXf3f getXfFromOxyPlane( const Mesh& mesh, const std::vector<EdgePath>& paths );
 
-}
+/// given an ObjectMeshData and the contours of a planar hole in it,
+/// fills the hole using fillContours2D function and updates all per-element attributes;
+/// if some contours were not closed on input, then it closes them by adding a bridge edge in each
+MRMESH_API Expected<void> fillPlanarHole( ObjectMeshData& data, std::vector<EdgeLoop>& holeContours );
+
+} //namespace MR

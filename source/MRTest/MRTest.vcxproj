@@ -11,6 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRExampleTest.cpp" />
+    <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRMeshLoadSaveTest.cpp" />
+    <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
@@ -19,6 +26,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
       <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">
+      <Project>{e0202297-edb2-4cdc-9cd0-8921eff08da0}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>

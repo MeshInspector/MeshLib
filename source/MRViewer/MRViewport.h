@@ -18,9 +18,6 @@
 #include <optional>
 #include <span>
 
-using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnObject>;
-using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnObject>;
-
 namespace MR
 {
 
@@ -568,7 +565,7 @@ private:
     // fit view and proj matrices to match the screen size with boxes returned by getBoxFn
     // getBoxFn( true ) - always camera space (respecting projection)
     // getBoxFn( false ) - if orthographic - camera space, otherwise - world space
-    // getBoxFn/globalBasis - if true then getBoxFn should return box of global basis object (separetely, not to interfere with actual scene size)
+    // getBoxFn/globalBasis - if true then getBoxFn should return box of global basis object (separately, not to interfere with actual scene size)
     void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& params );
 
     bool rotation_{ false };

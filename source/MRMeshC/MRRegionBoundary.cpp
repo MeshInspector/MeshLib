@@ -22,7 +22,7 @@ MREdgeLoop* mrTrackRightBoundaryLoop( const MRMeshTopology* topology_, MREdgeId 
     RETURN_NEW_VECTOR( trackRightBoundaryLoop( topology, e0, region ) );
 }
 
-const MREdgeLoop mrEdgeLoopsGet( const MREdgeLoops* loops_, size_t index )
+MREdgeLoop mrEdgeLoopsGet( const MREdgeLoops* loops_, size_t index )
 {
     ARG( loops );
     RETURN_VECTOR( loops[index] );

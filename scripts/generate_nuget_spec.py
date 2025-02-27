@@ -13,7 +13,7 @@ print('\n')
 path_to_license = os.path.join(base_path, 'LICENSE')
 shutil.copy(path_to_license, path_to_license + '.txt')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC', 'c-sharp-examples']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
 

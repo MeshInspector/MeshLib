@@ -42,6 +42,7 @@
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRProjectMeshAttributes.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
+    <ClCompile Include="MRRibbonLayoutConfig.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
@@ -178,8 +179,10 @@
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRProjectMeshAttributes.h" />
+    <ClInclude Include="MRRibbonLayoutConfig.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
+    <ClInclude Include="MRMruFormatParameters.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
@@ -389,6 +392,9 @@
     <Image Include="resource\object_icons\X3\PointObject.png" />
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png" />
     <Image Include="resource\object_icons\X3\SphereObject.png" />
+    <Image Include="resource\textures\controller_cube_default.png" />
+    <Image Include="resource\textures\controller_cube_edges.png" />
+    <Image Include="resource\textures\controller_cube_sides.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">

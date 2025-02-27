@@ -80,6 +80,9 @@
     <Filter Include="resource\independent_icons\X3">
       <UniqueIdentifier>{45fcdb0a-41ef-49c2-9cbf-10737e61ba27}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resource\textures">
+      <UniqueIdentifier>{6bd35111-e84a-4284-9b50-7898d961d1fa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -456,6 +459,9 @@
     </ClCompile>
     <ClCompile Include="MRViewportCornerController.cpp">
       <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonLayoutConfig.cpp">
+      <Filter>RibbonMenu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -897,6 +903,12 @@
     <ClInclude Include="MRViewportCornerController.h">
       <Filter>Viewer</Filter>
     </ClInclude>
+    <ClInclude Include="MRMruFormatParameters.h">
+      <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonLayoutConfig.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -1079,6 +1091,15 @@
     </Image>
     <Image Include="resource\object_icons\X3\Object_open.png">
       <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\textures\controller_cube_default.png">
+      <Filter>resource\textures</Filter>
+    </Image>
+    <Image Include="resource\textures\controller_cube_edges.png">
+      <Filter>resource\textures</Filter>
+    </Image>
+    <Image Include="resource\textures\controller_cube_sides.png">
+      <Filter>resource\textures</Filter>
     </Image>
   </ItemGroup>
 </Project>

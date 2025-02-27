@@ -454,9 +454,13 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     MR_TIMER;
 
     bool haveColors = false;
-    bool haveUVs = !faces[minFace].textures.empty();
-
-    auto firstVert = faces[minFace].vertices.front();
+    bool haveUVs = false;
+    int firstVert = -1;
+    if ( minFace < faces.size() ) // do not crash if minFace = 0 and faces are empty
+    {
+        haveUVs = !faces[minFace].textures.empty();
+        firstVert = faces[minFace].vertices.front();
+    }
     if ( firstVert < 0 )
         firstVert = int( points.size() ) - firstVert;
     if ( firstVert < 0 || firstVert >= points.size() )

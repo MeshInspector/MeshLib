@@ -1,7 +1,7 @@
-#include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRBitSet.h"
-#include "MRGTest.h"
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {

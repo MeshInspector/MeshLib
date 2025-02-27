@@ -177,11 +177,26 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+static bool gWindowSizeInitialized = false;
+
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->postResize( width, height );
-    viewer->postEmptyEvent();
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
+    if ( gWindowSizeInitialized )
+    {
+        // on Linux some (or all?) window managers send resize events in batch, processing all of them hits performance
+        viewer->emplaceEvent( "Window resize", [width, height, viewer]
+        {
+            viewer->postResize( width, height );
+        }, true );
+    }
+    else
+#endif
+    {
+        viewer->postResize( width, height );
+        viewer->postEmptyEvent();
+    }
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
@@ -944,6 +959,7 @@ void Viewer::launchShut()
     clippingPlaneObject.reset();
     globalBasisAxes.reset();
     globalHistoryStore_.reset();
+    basisViewController.reset();
 
     GLStaticHolder::freeAllShaders();
 
@@ -1599,6 +1615,9 @@ bool Viewer::needRedraw_() const
     if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
         return true;
 
+    if ( basisViewController && basisViewController->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
@@ -1614,6 +1633,9 @@ void Viewer::resetRedraw_()
 
     if ( basisAxes )
         basisAxes->resetRedrawFlag();
+
+    if ( basisViewController )
+        basisViewController->resetRedrawFlag();
 
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
@@ -1899,6 +1921,8 @@ void Viewer::postResize( int w, int h )
 
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
+
+    gWindowSizeInitialized = true;
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
@@ -1999,7 +2023,7 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
     globalBasisAxes->setFlatShading( true );
 
-    updateGlobalBasis_ = ColorTheme::instance().onChanged( [this] ()
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !globalBasisAxes )
             return;
@@ -2012,14 +2036,18 @@ void Viewer::initGlobalBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
-    } );
+    } ) );
 }
 
 void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner
-    const float size = 0.8f;
-    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.1f ) );
+    const float cubeSzie = 0.8f;
+    const float size = 1.0f;
+    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.03f, 0.0f ) );
+    const Vector3f translation = Vector3f::diagonal( -cubeSzie * 0.5f );
+    basisAxesMesh->transform( AffineXf3f::translation( translation ) );
+
     basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
@@ -2040,14 +2068,15 @@ void Viewer::initBasisAxesObject_()
     }
     const float labelPos = size + 0.2f;
 
-    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX(), false );
-    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), false );
-    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), false );
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() + translation, true );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() + translation, true );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() + translation, true );
 
     basisAxes->setFacesColorMap( std::move( colorMap ) );
+    basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    updateBasisAxes_ = ColorTheme::instance().onChanged( [this] ()
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !basisAxes )
             return;
@@ -2060,7 +2089,7 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
-    } );
+    } ) );
 }
 
 void Viewer::initBasisViewControllerObject_()
@@ -2069,9 +2098,30 @@ void Viewer::initBasisViewControllerObject_()
     basisViewController = std::make_shared<ObjectMesh>();
     basisViewController->setMesh( basisControllerMesh );
     basisViewController->setName( "Corner View Controller" );
+    basisViewController->setTextures( loadCornerControllerTextures() );
+    basisViewController->setUVCoords( makeCornerControllerUVCoords() );
+    if ( !basisViewController->getTextures().empty() )
+    {
+        basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
+        basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+    }
     basisViewController->setFlatShading( true );
-    basisViewController->setFacesColorMap( getCornerControllerColorMap() );
-    basisViewController->setColoringType( ColoringType::FacesColorMap );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+    basisViewController->setEdgeWidth( 0.2f );
+
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    {
+        if ( !basisViewController )
+            return;
+
+        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
+        basisViewController->setFrontColor( colorBg, true );
+        basisViewController->setFrontColor( colorBg, false );
+        basisViewController->setBordersColor( colorBorder );
+    } ) );
 }
 
 void Viewer::initClippingPlaneObject_()

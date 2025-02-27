@@ -10,9 +10,8 @@ sphere2.transform(xf)
 
 # perform boolean operation
 result = mrmeshpy.boolean(sphere1, sphere2, mrmeshpy.BooleanOperation.Intersection)
-result_mesh = result.mesh
 if not result.valid():
     print(result.errorString)
-
-# save result to STL file
-mrmeshpy.saveMesh(result_mesh, "out_boolean.stl")
+else:
+    # save result to STL file
+    mrmeshpy.saveMesh(result.mesh, "out_boolean.stl")

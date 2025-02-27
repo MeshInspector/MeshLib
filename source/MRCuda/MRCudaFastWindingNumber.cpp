@@ -1,9 +1,13 @@
 #include "MRCudaFastWindingNumber.h"
 #include "MRCudaFastWindingNumber.cuh"
+
+#include "MRCudaBasic.h"
 #include "MRCudaMath.cuh"
+
 #include "MRMesh/MRAABBTree.h"
-#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -11,15 +15,22 @@ namespace MR
 namespace Cuda
 {
 
-struct FastWindingNumberData
+struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
-    DynamicArray<float3> cudaPoints;
     DynamicArray<float3> cudaMeshPoints;
     DynamicArray<Node3> cudaNodes;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
-    Matrix4 gridToMeshXf;
+    [[nodiscard]] FastWindingNumberData toData() const
+    {
+        return {
+            .dipoles = dipoles.data(),
+            .nodes = cudaNodes.data(),
+            .meshPoints = cudaMeshPoints.data(),
+            .faces = cudaFaces.data(),
+        };
+    }
 };
 
 FastWindingNumber::FastWindingNumber( const Mesh& mesh ) : mesh_( mesh )
@@ -37,7 +48,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     }
     MR_TIMER
 
-    auto data = std::make_shared<FastWindingNumberData>();
+    auto data = std::make_shared<FastWindingNumberDataBuffers>();
 
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
@@ -72,22 +83,39 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
     MR_TIMER
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
-        const size_t size = points.size();
-        res.resize( size );
-        CUDA_LOGE_RETURN_UNEXPECTED( data_->cudaPoints.fromVector( points ) );
+        const auto totalSize = points.size();
+        const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float ) + sizeof( float3 ) );
+
+        DynamicArray<float3> cudaPoints;
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.resize( bufferSize ) );
         if ( !reportProgress( cb, 0.6f ) )
             return unexpectedOperationCanceled();
 
         DynamicArrayF cudaResult;
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
-        fastWindingNumberFromVector( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, int( skipFace ), size );
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-        if ( !reportProgress( cb, 0.7f ) )
-            return unexpectedOperationCanceled();
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
 
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( res ) );
-        if ( !reportProgress( cb, 1.0f ) )
-            return unexpectedOperationCanceled();
+        res.resize( points.size() );
+
+        const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+        const auto iterCount = chunkCount( totalSize, bufferSize );
+        size_t iterIndex = 0;
+
+        for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+        {
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.copyFrom( points.data() + offset, size ) );
+
+            fastWindingNumberFromVector( cudaPoints.data(), data_->toData(), cudaResult.data(), beta, int( skipFace ), size );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+            if ( !reportProgress( cb2, 0.25f ) )
+                return unexpectedOperationCanceled();
+
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( res.data() + offset, size ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
+        }
+
         return {};
     } );
 }
@@ -97,29 +125,43 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
     MR_TIMER
     return prepareData_( subprogress( cb, 0.0, 0.5f ) ).and_then( [&]() -> Expected<void>
     {
-        const size_t size = mesh_.topology.faceSize();
+        const auto totalSize = mesh_.topology.faceSize();
+        const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float ) );
+
         DynamicArrayF cudaResult;
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
         if ( !reportProgress( cb, 0.6f ) )
             return unexpectedOperationCanceled();
 
-        fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, size);
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-        if ( !reportProgress( cb, 0.7f ) )
-            return unexpectedOperationCanceled();
-
         std::vector<float> wns;
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( wns ) );
-        if ( !reportProgress( cb, 0.9f ) )
-            return unexpectedOperationCanceled();
-    
-        res.resize( size );
+        wns.resize( totalSize );
+
+        const auto cb1 = subprogress( cb, 0.60f, 0.90f );
+        const auto iterCount = chunkCount( totalSize, bufferSize );
+        size_t iterIndex = 0;
+
+        for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+        {
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+            fastWindingNumberFromMesh( data_->toData(), cudaResult.data(), beta, size, offset );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+            if ( !reportProgress( cb2, 0.33f ) )
+                return unexpectedOperationCanceled();
+
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( wns.data() + offset, size ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
+        }
+
+        res.resize( totalSize );
         if ( !BitSetParallelForAll( res, [&] (FaceId f)
         {
             if ( wns[f] < 0 || wns[f] > 1 )
                 res.set( f );
         }, subprogress( cb, 0.9f, 1.0f ) ) )
             return unexpectedOperationCanceled();
+
         return {};
     } );
 }
@@ -140,26 +182,42 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
         res.isIdentity = false;
         return res;
     };
-    
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
+
+    const auto totalSize = (size_t)dims.x * dims.y * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+
     DynamicArrayF cudaResult;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    fastWindingNumberFromGrid(
-        int3{ dims.x, dims.y, dims.z },
-        cudaGridToMeshXf,
-        data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        cudaResult.data(), beta );
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-    if ( !reportProgress( cb, 0.7f ) )
-        return unexpectedOperationCanceled();
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
 
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( res ) );
-    if ( !reportProgress( cb, 1.0f ) )
-        return unexpectedOperationCanceled();
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+    {
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+        fastWindingNumberFromGrid(
+            int3 { dims.x, dims.y, dims.z },
+            cudaGridToMeshXf,
+            data_->toData(),
+            cudaResult.data(),
+            beta,
+            size,
+            offset
+        );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        if ( !reportProgress( cb2, 0.25f ) )
+            return unexpectedOperationCanceled();
+
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( res.data() + offset, size ) );
+        if ( !reportProgress( cb2, 1.00f ) )
+            return unexpectedOperationCanceled();
+    }
+
     return {};
 }
 
@@ -179,26 +237,42 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
         res.isIdentity = false;
         return res;
     };
-
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
+
+    const auto totalSize = (size_t)dims.x * dims.y * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+
     DynamicArrayF cudaResult;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( size ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    signedDistance(
-        int3{ dims.x, dims.y, dims.z },
-        cudaGridToMeshXf,
-        data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        cudaResult.data(), options );
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
-    if ( !reportProgress( cb, 0.7f ) )
-        return unexpectedOperationCanceled();
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
 
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( res ) );
-    if ( !reportProgress( cb, 1.0f ) )
-        return unexpectedOperationCanceled();
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+    {
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+        signedDistance(
+            int3 { dims.x, dims.y, dims.z },
+            cudaGridToMeshXf,
+            data_->toData(),
+            cudaResult.data(),
+            size,
+            offset,
+            options
+        );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        if ( !reportProgress( cb2, 0.25f ) )
+            return unexpectedOperationCanceled();
+
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( res.data() + offset, size ) );
+        if ( !reportProgress( cb2, 1.00f ) )
+            return unexpectedOperationCanceled();
+    }
+
     return {};
 }
 

@@ -605,6 +605,8 @@ void RenderMeshObject::bindSelectedEdges_()
 {
     if ( !( dirty_ & DIRTY_EDGES_SELECTION ) || !objMesh_->mesh() )
     {
+        if ( !selEdgesTexture_.valid() )
+            selEdgesTexture_.gen();
         selEdgesTexture_.bind();
         return;
     }
@@ -1041,7 +1043,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
+        return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, !faceSelectionTex_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -1075,7 +1077,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
+        return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, !facesNormalsTex_.valid() );
 
     MR_NAMED_TIMER( "dirty_faces_normals" )
 
@@ -1096,7 +1098,7 @@ RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_TEXTURE_PER_FACE ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, false );
+        return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, !texturePerFace_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;

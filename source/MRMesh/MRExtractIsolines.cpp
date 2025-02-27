@@ -227,6 +227,7 @@ void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
 
 IsoLines Isoliner::extract()
 {
+    MR_TIMER
     activeEdges_.clear();
     activeEdges_.resize( topology_.undirectedEdgeSize() );
     BitSetParallelForAll( activeEdges_, [&]( UndirectedEdgeId ue )
@@ -447,7 +448,7 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
 }
 
 std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
-    std::vector<FaceId> * faces )
+    std::vector<FaceId> * faces, UseAABBTree u )
 {
     MR_TIMER
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
@@ -455,55 +456,83 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
         return points[v].z - zLevel;
     };
 
-    VertBitSet store;
-    const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
-    const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
+    std::vector<FaceId> crossedFacesVec; // the faces crossing given zLevel
 
-    FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
-    BitSetParallelFor( crossedFaces, [&]( FaceId f )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
     {
-        auto vs = mp.mesh.topology.getTriVerts( f );
-        int numNegative = negativeVerts.test( vs[0] ) + negativeVerts.test( vs[1] ) + negativeVerts.test( vs[2] );
-        assert( numNegative >= 0 && numNegative <= 3 );
-        if ( numNegative == 0 || numNegative == 3 )
-            crossedFaces.reset( f );
-    } );
+        // brute force checking all region triangles
+        VertBitSet store;
+        const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
+        const auto negativeVerts = findNegativeVerts( regionVerts, valueInPoint );
 
-    std::vector<FaceId> crossedFacesVec;
-    crossedFacesVec.reserve( crossedFaces.count() );
-    for ( auto f : crossedFaces )
-        crossedFacesVec.push_back( f );
+        FaceBitSet crossedFaces = mp.mesh.topology.getFaceIds( mp.region );
+        BitSetParallelFor( crossedFaces, [&]( FaceId f )
+        {
+            auto vs = mp.mesh.topology.getTriVerts( f );
+            int numNegative = negativeVerts.test( vs[0] ) + negativeVerts.test( vs[1] ) + negativeVerts.test( vs[2] );
+            assert( numNegative >= 0 && numNegative <= 3 );
+            if ( numNegative == 0 || numNegative == 3 )
+                crossedFaces.reset( f );
+        } );
+
+        crossedFacesVec.reserve( crossedFaces.count() );
+        for ( auto f : crossedFaces )
+            crossedFacesVec.push_back( f );
+    }
+    else
+    {
+        // optimized check using AABB tree
+        xyPlaneMeshIntersect( mp, zLevel, nullptr, nullptr, nullptr, &crossedFacesVec );
+    }
 
     std::vector<LineSegm3f> res( crossedFacesVec.size() );
     ParallelFor( res, [&]( size_t i )
     {
-        auto f = crossedFacesVec[i];
-        EdgeId e0, e1, e2;
-        mp.mesh.topology.getTriEdges( f, e0, e1, e2 );
-        const float z0 = valueInPoint( mp.mesh.topology.org( e0 ) );
-        const float z1 = valueInPoint( mp.mesh.topology.org( e1 ) );
-        const float z2 = valueInPoint( mp.mesh.topology.org( e2 ) );
-        assert( z0 < 0 || z1 < 0 || z2 < 0 );
-        assert( z0 >= 0 || z1 >= 0 || z2 >= 0 );
-        LineSegm3f segm;
-        int n = 0;
-        auto checkEdge = [&]( EdgeId e, float vo, float vd )
+        auto vs = mp.mesh.topology.getTriVerts( crossedFacesVec[i] );
+        float zs[3];
+        int bs[3];
+        for ( int j = 0; j < 3; ++j )
         {
-            if ( ( vo < 0 && 0 <= vd ) || ( vd < 0 && 0 <= vo ) )
-            {
-                auto p = mp.mesh.edgePoint( toEdgePoint( e, vo, vd ) );
-                assert( n == 0 || n == 1 );
-                if ( n == 0 )
-                    segm.a = p;
-                else
-                    segm.b = p;
-                ++n;
-            }
-        };
-        checkEdge( e0, z0, z1 );
-        checkEdge( e1, z1, z2 );
-        checkEdge( e2, z2, z0 );
-        assert( n == 2 );
+            zs[j] = valueInPoint( vs[j] );
+            bs[j] = int( zs[j] < 0 );
+        }
+        assert( bs[0] || bs[1] || bs[2] );
+        assert( !bs[0] || !bs[1] || !bs[2] );
+
+        // rotate vertices so that isoline intersects segments rvs[0]-rvs[1] and rvs[1]-rvs[2]
+        VertId rvs[3];
+        float rzs[3];
+        if ( ( bs[2] ^ bs[0] ) == 0 )
+        {
+            rvs[0] = vs[0]; rvs[1] = vs[1]; rvs[2] = vs[2];
+            rzs[0] = zs[0]; rzs[1] = zs[1]; rzs[2] = zs[2];
+        }
+        else if ( ( bs[0] ^ bs[1] ) == 0 )
+        {
+            rvs[0] = vs[1]; rvs[1] = vs[2]; rvs[2] = vs[0];
+            rzs[0] = zs[1]; rzs[1] = zs[2]; rzs[2] = zs[0];
+        }
+        else if ( ( bs[1] ^ bs[2] ) == 0 )
+        {
+            rvs[0] = vs[2]; rvs[1] = vs[0]; rvs[2] = vs[1];
+            rzs[0] = zs[2]; rzs[1] = zs[0]; rzs[2] = zs[1];
+        }
+        else
+        {
+            assert( false );
+        }
+
+        LineSegm3f segm;
+        {
+            assert ( ( rzs[0] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[0] ) );
+            const float x = rzs[0] / ( rzs[0] - rzs[1] );
+            segm.a = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[0]];
+        }
+        {
+            assert ( ( rzs[2] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[2] ) );
+            const float x = rzs[2] / ( rzs[2] - rzs[1] );
+            segm.b = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[2]];
+        }
         res[i] = segm;
     } );
 

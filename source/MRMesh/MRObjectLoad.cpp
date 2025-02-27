@@ -335,7 +335,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             maybe->obj->select( true );
             result = LoadedObjects{ .objs = { maybe->obj }, .warnings = std::move( std::move( maybe->warnings ) ) };
         }
-        else if ( maybe.error() != stringUnsupportedFileExtension() )
+        else if ( !maybe.error().starts_with( stringUnsupportedFileExtension() ) )
             result = unexpected( std::move( maybe.error() ) );
     }
 

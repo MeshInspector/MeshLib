@@ -35,6 +35,7 @@ IF(MR_EMSCRIPTEN)
   )
 ELSEIF(WIN32)
   find_package(glad REQUIRED)
+  find_package(OpenVDB REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
     TBB::tbb
@@ -45,6 +46,7 @@ ELSEIF(WIN32)
     glfw
     imgui
     JsonCpp::JsonCpp
+    OpenVDB::openvdb
     spdlog::spdlog
     fmt::fmt
   )
@@ -59,6 +61,7 @@ ELSE()
     glfw
     imgui
     jsoncpp
+    openvdb
     spdlog
     fmt
   )

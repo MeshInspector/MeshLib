@@ -9,11 +9,11 @@ namespace Cuda
 __global__ void kernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
                         IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
-    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( chunkIndex >= chunkSize )
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( index >= chunkSize )
         return;
 
-    size_t gridIndex = chunkIndex + chunkOffset;
+    size_t gridIndex = index + chunkOffset;
     int x = gridIndex % params.resolution.x;
     int y = gridIndex / params.resolution.x;
 
@@ -21,14 +21,14 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 
     MeshIntersectionResult interRes = rayMeshIntersect( nodes, meshPoints, faces, org, -FLT_MAX, FLT_MAX, prec );
 
-    res[chunkIndex] = -FLT_MAX;
+    res[index] = -FLT_MAX;
     if ( !params.useDistanceLimits
          || ( interRes.distanceAlongLine < params.minValue )
          || ( interRes.distanceAlongLine > params.maxValue ) )
     {
-        res[chunkIndex] = interRes.distanceAlongLine - shift;
+        res[index] = interRes.distanceAlongLine - shift;
         if ( outSamples )
-            outSamples[chunkIndex] = interRes.tp;
+            outSamples[index] = interRes.tp;
     }
 }
 

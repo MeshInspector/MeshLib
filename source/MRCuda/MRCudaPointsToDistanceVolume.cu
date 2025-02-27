@@ -14,16 +14,16 @@ namespace Cuda
             return;
         }
 
-        const size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-        if ( chunkIndex >= chunkSize )
+        const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+        if ( index >= chunkSize )
             return;
 
-        size_t gridIndex = chunkIndex + chunkOffset;
+        size_t gridIndex = index + chunkOffset;
         if ( gridIndex >= gridSize )
             return;
 
         const unsigned char quietNan[4] = { 0x00 , 0x00, 0xc0, 0x7f };
-        volume[chunkIndex] = *( float* ) quietNan;
+        volume[index] = *( float* ) quietNan;
 
         const size_t sizeXY = size_t( params.dimensions.x ) * params.dimensions.y;
         float3 coord;
@@ -84,7 +84,7 @@ namespace Cuda
         }
 
         if ( sumWeight >= params.minWeight )
-            volume[chunkIndex] = sumDist / sumWeight;
+            volume[index] = sumDist / sumWeight;
     }
 
     void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )

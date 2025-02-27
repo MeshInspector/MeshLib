@@ -49,13 +49,13 @@ __global__ void kernel(
         return;
     }
 
-    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( chunkIndex >= chunkSize )
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( index >= chunkSize )
         return;
 
     float2 pt;
 
-    size_t gridIndex = chunkIndex + chunkOffset;
+    size_t gridIndex = index + chunkOffset;
     size_t x = gridIndex % resolution.x;
     size_t y = gridIndex / resolution.x;
 
@@ -125,7 +125,7 @@ __global__ void kernel(
         addSubTask( s2 ); // smaller distance to look first
     }
 
-    dists[chunkIndex] = sqrt( resDistSq );
+    dists[index] = sqrt( resDistSq );
 }
 
 void contoursDistanceMapProjectionKernel( 

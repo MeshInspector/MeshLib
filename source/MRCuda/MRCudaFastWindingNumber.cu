@@ -162,17 +162,17 @@ __global__ void fastWindingNumberFromMeshKernel( const Dipole* __restrict__ dipo
         return;
     }
 
-    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( chunkIndex >= chunkSize )
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( index >= chunkSize )
         return;
 
-    const size_t faceIndex = chunkIndex + chunkOffset;
+    const size_t faceIndex = index + chunkOffset;
     const auto& face = faces[faceIndex];
     if ( face.verts[0] < 0 || face.verts[1] < 0 || face.verts[2] < 0 )
         return;
 
     const auto q = ( meshPoints[face.verts[0]] + meshPoints[face.verts[1]] + meshPoints[face.verts[2]] ) / 3.0f;
-    processPoint( q, resVec[chunkIndex], dipoles, nodes, meshPoints, faces, beta, faceIndex );
+    processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, faceIndex );
 }
 
 __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf,
@@ -185,11 +185,11 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
         return;
     }
 
-    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( chunkIndex >= chunkSize )
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( index >= chunkSize )
         return;
 
-    const size_t gridIndex = chunkIndex + chunkOffset;
+    const size_t gridIndex = index + chunkOffset;
     const size_t gridSize = size_t( dims.x ) * dims.y * dims.z;
     if ( gridIndex >= gridSize )
         return;
@@ -200,7 +200,7 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
-    processPoint( transformedPoint, resVec[chunkIndex], dipoles, nodes, meshPoints, faces, beta );
+    processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta );
 }
 
 static constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
@@ -215,11 +215,11 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
         return;
     }
 
-    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( chunkIndex >= chunkSize )
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( index >= chunkSize )
         return;
 
-    const size_t gridIndex = chunkIndex + chunkOffset;
+    const size_t gridIndex = index + chunkOffset;
     const size_t gridSize = size_t( dims.x ) * dims.y * dims.z;
     if ( gridIndex >= gridSize )
         return;
@@ -233,7 +233,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     float resSq = calcDistanceSq( transformedPoint, nodes, meshPoints, faces, options.maxDistSq, options.minDistSq );
     if ( options.nullOutsideMinMax && ( resSq < options.minDistSq || resSq >= options.maxDistSq ) ) // note that resSq == minDistSq (e.g. == 0) is a valid situation
     {
-        resVec[chunkIndex] = cQuietNan;
+        resVec[index] = cQuietNan;
         return;
     }
 
@@ -242,7 +242,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     float res = sqrt( resSq );
     if ( fwn > options.windingNumberThreshold )
         res = -res;
-    resVec[chunkIndex] = res;
+    resVec[index] = res;
 }
 
 void fastWindingNumberFromVector( const float3* points,

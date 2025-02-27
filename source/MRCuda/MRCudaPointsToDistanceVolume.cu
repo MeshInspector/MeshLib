@@ -5,7 +5,7 @@ namespace MR
 {
 namespace Cuda
 {
-    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t size, size_t offset )
+    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
         const size_t gridSize = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
         if ( gridSize == 0 )
@@ -14,16 +14,16 @@ namespace Cuda
             return;
         }
 
-        const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-        if ( index >= size )
+        const size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
+        if ( chunkIndex >= chunkSize )
             return;
 
-        size_t gridIndex = index + offset;
+        size_t gridIndex = chunkIndex + chunkOffset;
         if ( gridIndex >= gridSize )
             return;
 
         const unsigned char quietNan[4] = { 0x00 , 0x00, 0xc0, 0x7f };
-        volume[index] = *( float* ) quietNan;
+        volume[chunkIndex] = *( float* ) quietNan;
 
         const size_t sizeXY = size_t( params.dimensions.x ) * params.dimensions.y;
         float3 coord;
@@ -84,15 +84,15 @@ namespace Cuda
         }
 
         if ( sumWeight >= params.minWeight )
-            volume[index] = sumDist / sumWeight;
+            volume[chunkIndex] = sumDist / sumWeight;
     }
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t size, size_t offset )
+    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
         constexpr int maxThreadsPerBlock = 640;
 
-        auto numBlocks = (unsigned int)( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-        kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, points, normals, volume, params, size, offset );
+        auto numBlocks = (unsigned int)( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+        kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, points, normals, volume, params, chunkSize, chunkOffset );
     }
 } // namespace Cuda
 } // namespace MR

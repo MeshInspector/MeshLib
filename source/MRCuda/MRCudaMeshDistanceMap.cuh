@@ -24,7 +24,7 @@ struct MeshToDistanceMapParams
     bool allowNegativeValues;
 };
 
-void computeMeshDistanceMapKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params, IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, size_t size, size_t offset );
+void computeMeshDistanceMapKernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params, IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset );
 
 }
 

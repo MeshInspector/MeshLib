@@ -7,13 +7,13 @@ namespace Cuda
 {
 
 __global__ void kernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
-                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned size, float3 xStep, float3 yStep, size_t offset )
+                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
-    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
+    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( chunkIndex >= chunkSize )
         return;
 
-    size_t gridIndex = index + offset;
+    size_t gridIndex = chunkIndex + chunkOffset;
     int x = gridIndex % params.resolution.x;
     int y = gridIndex / params.resolution.x;
 
@@ -21,14 +21,14 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 
     MeshIntersectionResult interRes = rayMeshIntersect( nodes, meshPoints, faces, org, -FLT_MAX, FLT_MAX, prec );
 
-    res[index] = -FLT_MAX;
+    res[chunkIndex] = -FLT_MAX;
     if ( !params.useDistanceLimits
          || ( interRes.distanceAlongLine < params.minValue )
          || ( interRes.distanceAlongLine > params.maxValue ) )
     {
-        res[index] = interRes.distanceAlongLine - shift;
+        res[chunkIndex] = interRes.distanceAlongLine - shift;
         if ( outSamples )
-            outSamples[index] = interRes.tp;
+            outSamples[chunkIndex] = interRes.tp;
     }
 }
 
@@ -36,16 +36,16 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 void computeMeshDistanceMapKernel(
     const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
     IntersectionPrecomputes prec, float shift,
-    float* res, MeshTriPoint* outSamples, size_t size, size_t offset )
+    float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset )
 {
     constexpr size_t maxThreadsPerBlock = 640;
-    unsigned numBlocks = ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
+    unsigned numBlocks = ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
 
     float3 xStep = params.xRange / float( params.resolution.x );
     float3 yStep = params.yRange / float( params.resolution.y );
 
     // kernel
-    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, size, xStep, yStep, offset );
+    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, chunkSize, xStep, yStep, chunkOffset );
 }
 
 }

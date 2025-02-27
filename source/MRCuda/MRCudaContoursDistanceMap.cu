@@ -41,21 +41,21 @@ __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, con
 __global__ void kernel(
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
     const Node2* __restrict__ nodes, const float2* __restrict__ polylinePoints, const int* __restrict__ orgs,
-    float* dists, const size_t size, size_t offset )
+    float* dists, const size_t chunkSize, size_t chunkOffset )
 {
-    if ( size == 0 )
+    if ( chunkSize == 0 )
     {
         assert( false );
         return;
     }
 
-    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
+    size_t chunkIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( chunkIndex >= chunkSize )
         return;
 
     float2 pt;
 
-    size_t gridIndex = index + offset;
+    size_t gridIndex = chunkIndex + chunkOffset;
     size_t x = gridIndex % resolution.x;
     size_t y = gridIndex / resolution.x;
 
@@ -125,21 +125,21 @@ __global__ void kernel(
         addSubTask( s2 ); // smaller distance to look first
     }
 
-    dists[index] = sqrt( resDistSq );
+    dists[chunkIndex] = sqrt( resDistSq );
 }
 
 void contoursDistanceMapProjectionKernel( 
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
     const Node2* nodes, const float2* polylinePoints, const int* orgs, float* dists,
-    const size_t size, size_t offset )
+    const size_t chunkSize, size_t chunkOffset )
 {
     constexpr int maxThreadsPerBlock = 640;
-    int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
 
     // kernel
     kernel<<< numBlocks, maxThreadsPerBlock >>>(
         originPoint, resolution, pixelSize,
-        nodes, polylinePoints, orgs, dists, size, offset );
+        nodes, polylinePoints, orgs, dists, chunkSize, chunkOffset );
 }
 
 }

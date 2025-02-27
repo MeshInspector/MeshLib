@@ -12,13 +12,14 @@ RUN dnf -y update && \
         && \
     dnf clean all
 
-RUN mkdir /opt
 WORKDIR /opt
 
 ENV VCPKG_VERSION=2024.10.21
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
     cd vcpkg && \
     ./bootstrap-vcpkg.sh -disableMetrics
+
+WORKDIR /opt/vcpkg
 
 # build vcpkg packages
 COPY requirements/vcpkg-linux.txt requirements.txt

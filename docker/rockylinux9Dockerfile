@@ -32,6 +32,7 @@ WORKDIR /home/MeshLib
 
 # copy files
 COPY .git .git
+COPY cmake cmake
 COPY scripts scripts
 COPY source source
 COPY thirdparty thirdparty
@@ -52,7 +53,8 @@ WORKDIR /usr/local/lib/meshlib-thirdparty-lib
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 
 COPY --from=build /opt/vcpkg /opt/vcpkg
-COPY --from=build /home/MeshLib/thirdparty_build /usr/local/lib/meshlib-thirdparty-lib/build
+COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
@@ -76,8 +78,7 @@ RUN dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.rep
     dnf -y install gh && \
     dnf clean all
 
-RUN cmake --install build --prefix /usr/local/lib/meshlib-thirdparty-lib \
-    ./scripts/install_thirdparty.sh && \
+RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a /etc/ld.so.conf && \
     ldconfig
 

@@ -83,6 +83,7 @@ struct SubdivideSettings
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
 
 /// subdivides mesh with per-element attributes according to given settings;
+/// \detail if settings.region is not null, then given region must be a subset of current face selection or face selection must absent
 /// \return The total number of edge splits performed
 MRMESH_API int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings );
 

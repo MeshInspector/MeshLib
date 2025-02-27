@@ -254,6 +254,12 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
 int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
 {
     MR_TIMER
+    if ( !data.mesh )
+    {
+        assert( false );
+        return 0;
+    }
+
     auto notFlippable = data.selectedEdges | data.creases;
 
     MeshAttributesToUpdate meshParams;
@@ -269,6 +275,21 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
     auto updateAttributesCb = meshOnEdgeSplitAttribute( *data.mesh, meshParams );
 
     auto subs1 = settings;
+    FaceBitSet * maintainRegion = nullptr; // if a face from here is subdivided, then new face must be added here
+    if ( data.selectedFaces.any() )
+    {
+        if ( subs1.region )
+        {
+            // given region must not include any face not from current face selection
+            assert( subs1.region->is_subset_of( data.selectedFaces ) );
+            // manually maintain face selection during subdivision
+            maintainRegion = &data.selectedFaces;
+        }
+        else // set face selection as subdivision region
+            subs1.region = &data.selectedFaces;
+    }
+
+    const auto & topology = data.mesh->topology;
     subs1.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
     {
         if ( data.selectedEdges.test( e.undirected() ) )
@@ -281,6 +302,13 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
             data.creases.autoResizeSet( e1.undirected() );
             notFlippable.autoResizeSet( e1.undirected() );
         }
+        if ( maintainRegion )
+        {
+            if ( contains( *maintainRegion, topology.left( e ) ) )
+                maintainRegion->autoResizeSet( topology.left( e1 ) );
+            if ( contains( *maintainRegion, topology.right( e ) ) )
+                maintainRegion->autoResizeSet( topology.right( e1 ) );
+        }
 
         updateAttributesCb( e1, e );
         if ( settings.onEdgeSplit )
@@ -288,10 +316,6 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
     };
     assert( !subs1.notFlippable );
     subs1.notFlippable = &notFlippable;
-
-    assert( !subs1.region );
-    if ( data.selectedFaces.any() )
-        subs1.region = &data.selectedFaces;
 
     return subdivideMesh( *data.mesh, subs1 );
 }

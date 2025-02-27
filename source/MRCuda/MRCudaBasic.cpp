@@ -78,24 +78,19 @@ size_t getCudaSafeMemoryLimit()
 
 size_t maxBufferSize( size_t availableBytes, size_t dim, size_t elementBytes )
 {
-    const auto upperLimit = availableBytes / elementBytes;
-    return std::min( dim, upperLimit );
+    return std::min( availableBytes / elementBytes, dim );
 }
 
 size_t maxBufferSize( size_t availableBytes, const Vector2i& dims, size_t elementBytes )
 {
-    const auto upperLimit = availableBytes / elementBytes;
     const auto rowSize = (size_t)dims.x;
-    const auto rowCount = (size_t)dims.y;
-    return std::min( rowCount, upperLimit / rowSize ) * rowSize;
+    return std::min( availableBytes / elementBytes / rowSize, (size_t)dims.y ) * rowSize;
 }
 
 size_t maxBufferSize( size_t availableBytes, const Vector3i& dims, size_t elementBytes )
 {
-    const auto upperLimit = availableBytes / elementBytes;
     const auto layerSize = (size_t)dims.x * dims.y;
-    const auto layerCount = (size_t)dims.z;
-    return std::min( layerCount, upperLimit / layerSize ) * layerSize;
+    return std::min( availableBytes / elementBytes / layerSize, (size_t)dims.z ) * layerSize;
 }
 
 std::string getError( cudaError_t code )

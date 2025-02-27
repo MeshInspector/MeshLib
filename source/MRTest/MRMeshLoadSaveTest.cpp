@@ -1,8 +1,8 @@
-#include "MRMeshLoad.h"
-#include "MRMeshSave.h"
-#include "MRMesh.h"
-#include "MRBox.h"
-#include "MRGTest.h"
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRBox.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {

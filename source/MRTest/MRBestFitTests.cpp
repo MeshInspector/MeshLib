@@ -1,8 +1,7 @@
-#include "MRBestFit.h"
-#include "MRMeshFwd.h"
-#include "MRLine3.h"
-#include "MRPlane3.h"
-#include "MRGTest.h"
+#include <MRMesh/MRBestFit.h>
+#include <MRMesh/MRLine3.h>
+#include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {

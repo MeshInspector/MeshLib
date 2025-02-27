@@ -58,6 +58,7 @@ COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
 ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_TRIPLET=x64-linux-dynamic
 
 RUN dnf -y install 'dnf-command(config-manager)' && \
     dnf config-manager --set-enabled crb && \

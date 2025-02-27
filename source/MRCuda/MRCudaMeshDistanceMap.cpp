@@ -72,13 +72,13 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     };
 
     const auto totalSize = distMap.size();
-    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), distMap.dims(), sizeof( float ) + ( outSamples ? sizeof( MeshTriPoint ) : 0 ) );
+    const auto bufferSize = maxBufferSize( getCudaAvailableMemoryForBuffers(), distMap.dims(), sizeof( float ) + ( outSamples ? sizeof( Cuda::MeshTriPoint ) : 0 ) );
 
     DynamicArray<float> result;
     CUDA_LOGE_RETURN_UNEXPECTED( result.resize( bufferSize ) );
     std::vector<float> vec( totalSize );
 
-    DynamicArray<MeshTriPoint> outTriPoints;
+    DynamicArray<Cuda::MeshTriPoint> outTriPoints;
     if ( outSamples )
     {
         CUDA_LOGE_RETURN_UNEXPECTED( outTriPoints.resize( bufferSize ) );

@@ -15,6 +15,10 @@
 #include "MRMeshDecimate.h"
 #include "MRPch/MRTBB.h"
 #include "MRTimer.h"
+#include "MRAABBTreePoints.h"
+#include "MRPointsInBall.h"
+#include "MRBall.h"
+#include "MRRingIterator.h"
 
 namespace MR
 {
@@ -25,204 +29,142 @@ public:
     RadiusCompensator( Mesh& mesh, const CompensateRadiusParams& params ):
         mesh_{ mesh }, params_{ params }
     {
-        if ( params.projectToOriginalMesh )
-            meshCpy_ = mesh;
         params_.direction = params_.direction.normalized();
         radiusSq_ = sqr( params_.toolRadius );
     }
 
-    // prepares raw distance map
+    // prepares data for processing
     Expected<void> init();
 
-    // finds tool locations for each pixel and summary compensation cost for each
+    // finds tool locations for each vertex and summary compensation cost for each
     Expected<void> calcCompensations();
 
-    // creates compensation distance map
-    Expected<void> compensateDistanceMap();
+    // filters out excessive compensations based on costs
+    Expected<void> filterCompensations();
 
     // apply compensation
     Expected<void> applyCompensation();
-
-    // remesh and smooth final result
-    Expected<void> postprocessMesh();
 private:
 
-    // calculates weighted normal for pixel in distance map
-    // outPixelWorldPos returns world position of the pixel within this argument
-    Vector3f calcNormalAtPixel_( const Vector2i& pixelCoord, Vector3f* outPixelWorldPos );
-
-    // find world tool center location applying it by its normal to distance map normal at given pixel
+    // find world tool center location applying it by its normal at given vert
     // returns Vector3f::diagonal(FLT_MAX) if invalid
-    Vector3f findToolCenterAtPixel_( const Vector2i& pixelCoord );
+    Vector3f findToolCenterAtVertId_( VertId pixelCoord );
 
-    // returns compensated value given pixel with given tool position
+    // returns compensated shift for given vert out of given toolCenter (in )
     // returns -FLT_MAX if invalid
-    float calcCompensatedHeightAtPixel_( const Vector2i& pixelCoord, const Vector3f& worldToolCenter );
-
-    // calls callback for each valid pixel in tool radius around pixelCoord
-    // if callback returns false iterations stops
-    void iteratePixelsInRadius_( const Vector2i& pixelCoord, const std::function<bool( const Vector2i& )>& callback );
+    Vector3f calcCompensationMovement_( const Vector3f& planeVertPos, const Vector3f& planeToolCenter );
 
     // calculates summary compensation cost for given tool location
     float sumCompensationCost_( const Vector3f& toolCenter );
 
     Mesh& mesh_;
-    Mesh meshCpy_;
     CompensateRadiusParams params_;
-    const FaceBitSet* faceRegion_{ nullptr };
     VertBitSet vertRegion_;
     float radiusSq_{ 0.0f };
 
-    // raw distance map with no compensation
-    DistanceMap dm_;
+    // 2d tree to faster search of 
+    std::unique_ptr<AABBTreePoints> planeTree_;
+    VertCoords planeVerts_;
     AffineXf3f toWorldXf_;
-    AffineXf3f toDmXf_;
-    Vector2i pixelsInRadius_;
+    AffineXf3f toPlaneXf_;
 
     // speedup caches
-    std::vector<Vector3f> toolCenters_; // per pixel
-    std::vector<Vector3f> unprojectedPixes_; // per pixel
+    Vector<Vector3f, VertId> toolCenters_; // per vertex
 
-    // cost is (approx compensation Volume)/(approx compensation Projected Area) - less is better
-    std::vector<std::pair<float,int>> costs_; // <cost, id> per pixel (this array will be sorted, thats why we need id as value and not only as key)
-
-    DistanceMap compensatedDm_;
-
-    // tolerance of distance map height for "touching" compensations
-    static constexpr float cDMTolearance = 1e-5f;
+    // cost is summary movement required for compensation - less is better
+    Vector<std::pair<float, VertId>, VertId> costs_; // <cost, id> per vert (this array will be sorted, thats why we need id as value and not only as key)
 };
 
 Expected<void> RadiusCompensator::init()
 {
     MR_TIMER;
-    faceRegion_ = &mesh_.topology.getFaceIds( params_.region );
-    assert( faceRegion_ );
-    vertRegion_ = getIncidentVerts( mesh_.topology, *faceRegion_ );
+    const auto& faceRegion = &mesh_.topology.getFaceIds( params_.region );
+    assert( faceRegion );
+    vertRegion_ = getInnerVerts( mesh_.topology, *faceRegion );
 
     if ( MeshComponents::hasFullySelectedComponent( mesh_, vertRegion_ - mesh_.topology.findBoundaryVerts( &vertRegion_ ) ) )
         return unexpected( "MeshPart should not contain closed components" );
 
-    MeshToDistanceMapParams dmParams;
-    dmParams = MeshToDistanceMapParams( params_.direction, params_.distanceMapResolution, MeshPart( mesh_, params_.region ), true );
+    auto [xvec, yvec] = params_.direction.perpendicular();
+    toWorldXf_ = AffineXf3f::linear( Matrix3f::fromColumns( xvec, yvec, params_.direction ) );
+    toPlaneXf_ = toWorldXf_.inverse();
 
-    dm_ = computeDistanceMap( MeshPart( mesh_, params_.region ), dmParams, subprogress( params_.callback, 0.0f, 0.05f ) );
-
-    if ( dm_.size() == 0 )
-        return unexpectedOperationCanceled();
-
-    toWorldXf_ = dmParams.xf();
-    toDmXf_ = toWorldXf_.inverse();
-
-    unprojectedPixes_.resize( dm_.size() );
-    auto keepGoing = ParallelFor( unprojectedPixes_, [&] ( size_t i )
+    planeVerts_.resize( vertRegion_.endId() );
+    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
     {
-        auto pos = dm_.toPos( i );
-        auto worldPos = dm_.unproject( pos.x, pos.y, toWorldXf_ );
-        if ( worldPos )
-            unprojectedPixes_[i] = *worldPos;
-    }, subprogress( params_.callback, 0.05f, 0.1f ) );
+        planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );
+    }, subprogress( params_.callback, 0.0f, 0.1f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
-    Vector2f realPixelSize = div( Vector2f( dmParams.xRange.length(), dmParams.yRange.length() ), Vector2f( dmParams.resolution ) );
-    pixelsInRadius_ = Vector2i( div( Vector2f::diagonal( params_.toolRadius ), realPixelSize ) ) + Vector2i::diagonal( 1 );
-
+    planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ );
     return {};
 }
 
 Expected<void> RadiusCompensator::calcCompensations()
 {
     MR_TIMER;
-    toolCenters_.resize( dm_.size(), Vector3f::diagonal( FLT_MAX ) );
-    costs_.resize( dm_.size(), std::make_pair( -1.0f, -1 ) );
-    bool keepGoing = ParallelFor( size_t( 0 ), dm_.size(), [&] ( size_t i )
+    toolCenters_.resize( vertRegion_.endId(), Vector3f::diagonal( FLT_MAX ) );
+    costs_.resize( vertRegion_.endId(), std::make_pair( -FLT_MAX, VertId() ) );
+    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
     {
-        auto pixelCoord = dm_.toPos( i );
-        auto& toolCenter = toolCenters_[i];
-        toolCenter = findToolCenterAtPixel_(pixelCoord);
-        if ( toolCenter.x != FLT_MAX )
-            costs_[i] = std::make_pair( sumCompensationCost_( toolCenter ), int( i ) );
-    }, subprogress( params_.callback, 0.01f, 0.15f ) );
+        auto tc = findToolCenterAtVertId_( v );
+        toolCenters_[v] = tc;
+        if ( tc.x != FLT_MAX )
+            costs_[v] = std::make_pair( sumCompensationCost_( tc ), v );
+    }, subprogress( params_.callback, 0.0f, 0.25f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
-    tbb::parallel_sort( costs_.begin(), costs_.end(), [] ( const auto& l, const auto& r )
+    tbb::parallel_sort( begin( costs_ ), end( costs_ ), [] ( const auto& l, const auto& r )
     {
         return l.first < r.first;
     } );
 
-    if ( !reportProgress( params_.callback, 0.2f ) )
+    if ( !reportProgress( params_.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     return {};
 }
 
-Expected<void> RadiusCompensator::compensateDistanceMap()
+MR::Expected<void> RadiusCompensator::filterCompensations()
 {
-    MR_TIMER;
-    auto sb = subprogress( params_.callback, 0.2f, 0.5f );
-    compensatedDm_ = DistanceMap( dm_.resX(), dm_.resY() );
-    size_t i = 0;
-    const float cTolerance = params_.toolRadius * cDMTolearance;
-    for ( auto [cost, cId] : costs_ )
+    auto sb = subprogress( params_.callback, 0.25f, 0.4f );
+    VertBitSet visitedVerts = vertRegion_;
+    int i = 0;
+    for ( auto& [cost, cId] : costs_ )
     {
-        if ( ( ++i % 1024 == 0 ) && !reportProgress( sb, float( i ) / costs_.size() ) )
+        ++i;
+        if ( ( i % 1024 == 0 ) && !reportProgress( sb, float( i ) / float( costs_.size() ) ) )
             return unexpectedOperationCanceled();
 
-        if ( cId < 0 || cost < 0.0f )
+        if ( cId < 0 )
             continue;
 
+        visitedVerts.reset( cId );
         const auto& toolCenter = toolCenters_[cId];
-        if ( toolCenter.x == FLT_MAX )
-            continue;
-
-        auto pixelCoord = Vector2i( to2dim( toDmXf_( toolCenter ) ) );
-
-        bool needCompensate = false;
-        iteratePixelsInRadius_( pixelCoord, [&] ( const Vector2i& pixeli )->bool
+        if ( toolCenter.x == FLT_MAX || cost == -FLT_MAX )
         {
-            needCompensate = !compensatedDm_.isValid( pixeli.x, pixeli.y );
-            return !needCompensate;
-        } );
-        if ( !needCompensate )
+            cId = VertId(); // filter it out
             continue;
+        }
+        auto planeToolCenter = toPlaneXf_( toolCenter );
 
-        // iterate in parallel
-        int xZoneLength = ( 2 * pixelsInRadius_.x + 1 );
-        int numPixesInArea = xZoneLength * ( 2 * pixelsInRadius_.y + 1 );
-        ParallelFor( 0, numPixesInArea, [&] ( int i )
+        bool validCompensation = false;
+        findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
+                [&] ( VertId v, const Vector3f& )
         {
-            int xShift = ( i % xZoneLength ) - pixelsInRadius_.x;
-            int yShift = ( i / xZoneLength ) - pixelsInRadius_.y;
-            int xi = pixelCoord.x + xShift;
-            int yi = pixelCoord.y + yShift;
-            if ( xi < 0 || xi >= dm_.resX() )
+            auto planePoint = toPlaneXf_( mesh_.points[v] );
+            auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
+            if ( shift == Vector3f() )
                 return;
-            if ( yi < 0 || yi >= dm_.resY() )
-                return;
-            if ( !dm_.isValid( xi, yi ) )
-                return;
-            auto realValue = dm_.getValue( xi, yi );
-            auto& compValue = compensatedDm_.getValue( xi, yi );
-            auto newCompValue = realValue + calcCompensatedHeightAtPixel_( Vector2i( xi, yi ), toolCenter);
-            if ( newCompValue > compValue && newCompValue + cTolerance >= realValue )
-                compValue = std::max( newCompValue, realValue );
+            validCompensation = visitedVerts.test_set( v, false ) || validCompensation;
         } );
+        if ( !validCompensation )
+            cId = VertId(); // filter it out
     }
-
-    if ( !reportProgress( sb, 1.0f ) )
-        return unexpectedOperationCanceled();
-
-    ParallelFor( size_t( 0 ), dm_.size(), [&] ( size_t i )
-    {
-        auto& cv = compensatedDm_.getValue( i );
-        auto v = dm_.getValue( i );
-        if ( v > cv )
-            cv = v;
-    } );
-
     return {};
 }
 
@@ -231,247 +173,137 @@ Expected<void> RadiusCompensator::applyCompensation()
     MR_TIMER;
     MR_WRITER( mesh_ );
 
-    // transform verts into distance map space
-    VertBitSet bounds = vertRegion_ - getInnerVerts( mesh_.topology, faceRegion_ );
-    Contour3f backupBounds( bounds.count() );
-    int i = 0;
-    for ( auto v : vertRegion_ )
-    {
-        if ( bounds.test( v ) )
-            backupBounds[i++] = mesh_.points[v];
-        mesh_.points[v] = to3dim( to2dim( toDmXf_( mesh_.points[v] ) ) );
-    }
+    Mesh cpyMesh = mesh_; // for projecting
+    VertBitSet updatedVerts( vertRegion_.size() );
 
-    // fix inverted faces (undercuts on original mesh)
-    for ( int iFlipped = 0; iFlipped < 10; ++iFlipped ) // repeat until no flipped faces left, 10 - max iters
+    auto sb = subprogress( params_.callback, 0.25f, 1.0f );
+    auto maxAllowedShiftSq = sqr( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f );
+    for ( int i = 1; i <= params_.maxIterations; ++i )
     {
-        // only fix flipped areas
-        auto sumDirArea = Vector3f( mesh_.dirArea( faceRegion_ ).normalized() ); // we only care about direction
+        if ( i == params_.maxIterations )
+            maxAllowedShiftSq = radiusSq_; // allow full move on last iteration
 
-        auto flippedFaces = *faceRegion_;
-        BitSetParallelFor( flippedFaces, [&] ( FaceId f )
+        float maxShiftSq = -FLT_MAX;
+        updatedVerts.reset();
+        for ( auto [cost, cId] : costs_ )
         {
-            if ( dot( mesh_.normal( f ), sumDirArea ) > 0.0f )
-                flippedFaces.reset( f );
+            if ( cId < 0 )
+                continue;
+            auto planeToolCenter = toPlaneXf_( toolCenters_[cId] );
+
+            findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
+                [&] ( VertId v, const Vector3f& )
+            {
+                auto planePoint = toPlaneXf_( mesh_.points[v] );
+                auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
+                if ( shift == Vector3f() )
+                    return;
+
+                auto shiftLenSq = shift.lengthSq();
+                if ( shiftLenSq > maxShiftSq )
+                    maxShiftSq = shiftLenSq;
+                if ( shiftLenSq < maxAllowedShiftSq )
+                {
+                    mesh_.points[v] += shift;
+                    if ( shiftLenSq < maxAllowedShiftSq * 1e-4f )
+                        return;
+                }
+                else
+                {
+                    mesh_.points[v] += shift.normalized() * maxAllowedShiftSq;
+                }
+                updatedVerts.set( v );
+            } );
+        }
+
+        if ( updatedVerts.none() )
+            break; // fast return on finish
+
+        expand( mesh_.topology, updatedVerts, 1 );
+        updatedVerts &= vertRegion_;
+        relax( mesh_, { {.iterations = 2, .region = &updatedVerts,.force = 0.2f} } );
+
+        BitSetParallelFor( updatedVerts, [&] ( VertId v )
+        {
+            auto proj = findSignedDistance( mesh_.points[v], cpyMesh, 4 * maxShiftSq );
+            if ( proj && proj->dist > 0 )
+                mesh_.points[v] = proj->proj.point;
+
+            planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );
         } );
-        expand( mesh_.topology, flippedFaces, 4 );
-        flippedFaces &= *faceRegion_;
 
-        if ( flippedFaces.none() )
-            break;
-
-        auto equalizingVertRegion = getInnerVerts( mesh_.topology, flippedFaces );
-        assert( ( equalizingVertRegion & bounds ).none() );
-        MeshEqualizeTriAreasParams etParams;
-        etParams.region = &equalizingVertRegion;
-        etParams.iterations = std::max( int( flippedFaces.count() ), 50 ); // some weird estimation
-        bool keepGoing = equalizeTriAreas( mesh_, etParams, subprogress( params_.callback, 0.5f, 0.6f ) );
-        if ( !keepGoing )
+        if ( i != params_.maxIterations )
+        {
+            if ( i % 5 == 0 )
+                planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ ); // rebuild tree each 5th iteration
+            else
+                planeTree_->refit( planeVerts_, updatedVerts ); // update tree
+        }
+        if ( !reportProgress( sb, float( i ) / float( params_.maxIterations ) ) )
             return unexpectedOperationCanceled();
-
-        DeloneSettings dParams;
-        dParams.region = faceRegion_;
-        dParams.maxAngleChange = PI_F / 6;
-        makeDeloneEdgeFlips( mesh_, dParams, etParams.iterations * 20 );
     }
-
-    i = 0;
-    for ( auto v : bounds )
-        mesh_.points[v] = backupBounds[i++];
-
-    if ( !reportProgress( params_.callback, 0.65f ) )
-        return unexpectedOperationCanceled();
-
-    vertRegion_ -= bounds;
-    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
-    {
-        auto pos = to2dim( mesh_.points[v] );
-        auto value = compensatedDm_.getInterpolated( pos.x, pos.y );
-        if ( !value )
-            return;
-        mesh_.points[v] = toWorldXf_( Vector3f( pos.x, pos.y, *value ) );
-        vertRegion_.reset( v );
-    }, subprogress( params_.callback, 0.65f, 0.8f ) );
-    
-    if ( vertRegion_.any() )
-        positionVertsSmoothlySharpBd( mesh_, vertRegion_ );
-    
-    if ( !keepGoing )
-        return unexpectedOperationCanceled();
 
     return {};
 }
 
-Expected<void> RadiusCompensator::postprocessMesh()
+Vector3f RadiusCompensator::findToolCenterAtVertId_( VertId v )
 {
-    MR_TIMER;
-
-    DeloneSettings dParams;
-    dParams.region = faceRegion_;
-    dParams.maxAngleChange = PI_F / 3;
-    makeDeloneEdgeFlips( mesh_, dParams, int( faceRegion_->count() ) );
-
-    if ( !reportProgress( params_.callback, 0.85f ) )
-        return unexpectedOperationCanceled();
-
-    auto edgeBounds = findRegionBoundaryUndirectedEdgesInsideMesh( mesh_.topology, *faceRegion_ );
-    RemeshSettings rParams;
-    rParams.finalRelaxIters = 2;
-    rParams.targetEdgeLen = params_.remeshTargetEdgeLength <= 0.0f ? mesh_.averageEdgeLength() : params_.remeshTargetEdgeLength;
-    rParams.region = params_.region;
-    rParams.notFlippable = &edgeBounds;
-    rParams.progressCallback = subprogress( params_.callback, 0.85f, params_.projectToOriginalMesh ? 0.92f : 1.0f );
-    
-    if ( !remesh( mesh_, rParams ) )
-        return unexpectedOperationCanceled();
-
-    if ( !params_.projectToOriginalMesh )
-        return {};
-
-    auto verts = getInnerVerts( mesh_.topology, *faceRegion_ );
-    auto keepGoing = BitSetParallelFor( verts, [&] ( VertId v )
-    {
-        auto proj = findSignedDistance( mesh_.points[v], meshCpy_ );
-        if ( !proj )
-            return;
-        if ( proj->dist >= 0.0f )
-            return;
-        mesh_.points[v] = proj->proj.point;
-    }, subprogress( params_.callback, 0.92f,  1.0f ) );
-
-    mesh_.invalidateCaches();
-
-    if ( !keepGoing )
-        return unexpectedOperationCanceled();
-
-    return {};
+    auto norm = mesh_.normal( v );
+    return mesh_.points[v] + norm * params_.toolRadius;
 }
 
-Vector3f RadiusCompensator::calcNormalAtPixel_( const Vector2i& coord0, Vector3f* outPixelWorldPos )
+Vector3f RadiusCompensator::calcCompensationMovement_( const Vector3f& point, const Vector3f& planeToolCenter )
 {
-    constexpr std::array<Vector2i, 9> cNeigborsOrder =
+    if ( point.z <= planeToolCenter.z )
     {
-        Vector2i( -1,1 ),
-        Vector2i( 0,1 ),
-        Vector2i( 1,1 ),
-        Vector2i( 1,0 ),
-        Vector2i( 1,-1 ),
-        Vector2i( 0,-1 ),
-        Vector2i( -1,-1 ),
-        Vector2i( -1,0 ),
-        Vector2i( -1,1 )
-    };
+        auto point2d = to2dim( point );
+        auto center2d = to2dim( planeToolCenter );
+        auto vec = point2d - center2d;
+        auto vecLenSq = vec.lengthSq();
+        if ( vecLenSq > radiusSq_ || vecLenSq == 0 )
+            return {}; // fast return for updated/non-determined points
+        vec = vec / std::sqrt( vecLenSq );
 
-    Vector3f sumNorm;
-    auto i0 = dm_.toIndex( coord0 );
-    if ( !dm_.isValid( i0 ) )
-        return {};
-    auto pos0 = unprojectedPixes_[i0];
-    if ( outPixelWorldPos )
-        *outPixelWorldPos = pos0;
-    Vector3f prevPos;
-    bool hasPrev{ false };
-    for ( const auto& neighShift : cNeigborsOrder )
-    {
-        auto coordi = coord0 + neighShift;
-        if ( coordi.x < 0 || coordi.x >= dm_.resX() || coordi.y < 0 || coordi.y >= dm_.resY() )
-        {
-            hasPrev = false;
-            continue;
-        }
-        auto ii = dm_.toIndex( coordi );
-        if ( !dm_.isValid( ii ) )
-        {
-            hasPrev = false;
-            continue;
-        }
-        auto posi = unprojectedPixes_[ii];
-        if ( !hasPrev )
-        {
-            prevPos = posi;
-            hasPrev = true;
-            continue;
-        }
-        auto veci = posi - pos0;
-        auto vecPrev = prevPos - pos0;
-        sumNorm -= ( MR::angle( veci, vecPrev ) * ( cross( veci, vecPrev ).normalized() ) );
-        prevPos = posi;
+        auto newPos = center2d + vec * params_.toolRadius;
+        return toWorldXf_.A * to3dim( newPos - point2d );
     }
-    if ( sumNorm == Vector3f() )
-        return {};
-    sumNorm = sumNorm.normalized();
-    return sumNorm;
-}
-
-Vector3f RadiusCompensator::findToolCenterAtPixel_( const Vector2i& coord0 )
-{
-    Vector3f pos0;
-    auto normAtPixel = calcNormalAtPixel_( coord0, &pos0 );
-    if ( normAtPixel == Vector3f() )
-        return Vector3f::diagonal( FLT_MAX );
-
-    // this block is not useful but lets keep it as comment for possible improvements
-    /*
-    auto normCos = dot( -normAtPixel, params_.direction );
-    if ( normCos <= params_.criticalToolAngleCos )
-    {
-        normAtPixel += normCos * params_.direction; // plus here because we used -normAtPixel for dot product
-        normAtPixel = normAtPixel.normalized();
-    }
-    */
-    return pos0 + normAtPixel * params_.toolRadius;
-}
-
-float RadiusCompensator::calcCompensatedHeightAtPixel_( const Vector2i& pixelCoord, const Vector3f& worldToolCenter )
-{
-    auto pos = unprojectedPixes_[dm_.toIndex( pixelCoord )]; // should be OK not to validate if we got here
-    auto rVec = pos - worldToolCenter;
-    auto projection = dot( rVec, params_.direction );
-    auto distSq = rVec.lengthSq() - sqr( projection );
-
-    if ( distSq >= radiusSq_ )
-        return -FLT_MAX;
-
-    auto shift = std::sqrt( radiusSq_ - distSq );
-    return shift - projection;
-}
-
-void RadiusCompensator::iteratePixelsInRadius_( const Vector2i& pixelCoord, const std::function<bool( const Vector2i& )>& callback )
-{
-    for ( int xi = pixelCoord.x - pixelsInRadius_.x; xi <= pixelCoord.x + pixelsInRadius_.x; ++xi )
-    {
-        if ( xi < 0 || xi >= dm_.resX() )
-            continue;
-        for ( int yi = pixelCoord.y - pixelsInRadius_.y; yi <= pixelCoord.y + pixelsInRadius_.y; ++yi )
-        {
-            if ( yi < 0 || yi >= dm_.resY() )
-                continue;
-            if ( !dm_.isValid( xi, yi ) )
-                continue;
-            if ( !callback( Vector2i( xi, yi ) ) )
-                return;
-        }
-    }
+    auto vec = point - planeToolCenter;
+    auto vecLenSq = vec.lengthSq();
+    if ( vecLenSq > radiusSq_ || vecLenSq == 0 )
+        return {}; // fast return for updated/non-determined points
+    vec = vec / std::sqrt( vecLenSq );
+    auto newPos = planeToolCenter + vec * params_.toolRadius;
+    return toWorldXf_.A * ( newPos - point );
 }
 
 float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
 {
-    double sumVolume = 0.0;
-    double sumArea = 0.0;
-    auto toolPixel = Vector2i( to2dim( toDmXf_( toolCenter ) ) );
-    const float cTolerance = cDMTolearance * params_.toolRadius;
-    iteratePixelsInRadius_( toolPixel, [&] ( const Vector2i& pixelCoord )->bool
+    float sumProjArea = 0.0f;
+    float sumShiftLength = 0.0f;
+    auto planeToolCenter = toPlaneXf_( toolCenter );
+    MinMaxf minmaxZ;
+    findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
+        [&] ( VertId v, const Vector3f& )
     {
-        auto value = dm_.getValue( pixelCoord.x, pixelCoord.y );
-        auto height = value + calcCompensatedHeightAtPixel_( pixelCoord, toolCenter );
-        if ( height + cTolerance >= value )
-        {
-            sumVolume += std::max( height - value, 0.0f );
-            sumArea += 1.0;
-        }
-        return true;
+        auto planePoint = toPlaneXf_( mesh_.points[v] );
+        auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
+        if ( shift == Vector3f() )
+            return;
+
+        for ( auto e : orgRing( mesh_.topology, v ) )
+            if ( auto l = mesh_.topology.left( e ) )
+                sumProjArea += std::abs( dot( mesh_.leftDirDblArea( e ), params_.direction ) );
+        sumShiftLength += shift.length();
+        minmaxZ.include( planePoint.z );
     } );
-    return sumArea == 0.0 ? -1.0f : float( sumVolume / sumArea );
+    sumProjArea *= 0.5f; // more area affected - better
+    // sumShiftLength - more shift - worse
+    // minmaxZ.size() - more height affected - worse
+
+    if ( !minmaxZ.valid() )
+        return -FLT_MAX;
+
+    return minmaxZ.size() * sumShiftLength / sumProjArea; // lets consider tool position as cost for now
 }
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )
@@ -488,15 +320,11 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
     if ( !res.has_value() )
         return res;
 
-    res = c.compensateDistanceMap();
+    res = c.filterCompensations();
     if ( !res.has_value() )
         return res;
 
-    res = c.applyCompensation();
-    if ( !res.has_value() )
-        return res;
-
-    return c.postprocessMesh();
+    return res = c.applyCompensation();
 }
 
 }

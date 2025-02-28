@@ -12,7 +12,7 @@ on:
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
-      vcpkg_version:
+      win22_vcpkg_version:
         required: true
         type: string
 
@@ -103,7 +103,7 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{ inputs.vcpkg_version }}
+          git checkout ${{ inputs.win22_vcpkg_version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 

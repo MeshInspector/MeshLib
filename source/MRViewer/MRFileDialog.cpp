@@ -253,21 +253,47 @@ std::string getCurrentFolder( const FileDialogParameters& params )
     return MR::utf8string( MR::GetHomeDirectory() );
 }
 
-std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
+#if GTKMM_MAJOR_VERSION == 4
+    #define GTK_FILE_CHOOSER_ACTION Gtk::FileChooser::Action
+    #define GTK_FILE_CHOOSER_ACTION_OPEN Gtk::FileChooser::Action::OPEN
+    #define GTK_FILE_CHOOSER_ACTION_SAVE Gtk::FileChooser::Action::SAVE
+    #define GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER Gtk::FileChooser::Action::SELECT_FOLDER
+
+    #define GTK_RESPONSE_ACCEPT Gtk::ResponseType::ACCEPT
+    #define GTK_RESPONSE_CANCEL Gtk::ResponseType::CANCEL
+
+namespace
 {
-    switch ( action )
+    Glib::RefPtr<Gio::File> GIO( const std::string& path )
     {
-    case Gtk::FILE_CHOOSER_ACTION_OPEN:
-        return multiple ? "Open Files" : "Open File";
-    case Gtk::FILE_CHOOSER_ACTION_SAVE:
-        return "Save File";
-    case Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER:
-        return multiple ? "Open Folders" : "Open Folder";
-    case Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER:
-        return "Save Folder";
+        return Gio::File::create_for_path( path );
     }
-    assert( false );
-    return {};
+
+    std::string GIO( const Glib::RefPtr<Gio::File>& file )
+    {
+        return file->get_path();
+    }
+}
+#else
+    #define GTK_FILE_CHOOSER_ACTION Gtk::FileChooserAction
+    #define GTK_FILE_CHOOSER_ACTION_OPEN Gtk::FILE_CHOOSER_ACTION_OPEN
+    #define GTK_FILE_CHOOSER_ACTION_SAVE Gtk::FILE_CHOOSER_ACTION_SAVE
+    #define GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER
+
+    #define GTK_RESPONSE_ACCEPT Gtk::RESPONSE_ACCEPT
+    #define GTK_RESPONSE_CANCEL Gtk::RESPONSE_CANCEL
+
+    #define GIO( x ) ( x )
+#endif
+
+std::tuple<GTK_FILE_CHOOSER_ACTION, std::string> gtkDialogParameters( const FileDialogParameters& params )
+{
+    if ( params.folderDialog )
+        return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
+    else if ( params.saveDialog )
+        return { GTK_FILE_CHOOSER_ACTION_SAVE, "Save File" };
+    else
+        return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
 std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params = {} )
@@ -277,22 +303,18 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     auto kit = Gtk::Application::create();
     std::setlocale( LC_ALL, locale.c_str() );
 
-    Gtk::FileChooserAction action;
-    if ( params.folderDialog )
-        action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER : Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER;
-    else
-        action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN;
+    auto [action, title] = gtkDialogParameters( params );
 #if defined( __APPLE__ )
-    const auto dialogPtr = Gtk::FileChooserNative::create(gtkDialogTitle( action, params.multiselect ), action );
+    const auto dialogPtr = Gtk::FileChooserNative::create( title, action );
     auto& dialog = *dialogPtr.get();
 #else
-    Gtk::FileChooserDialog dialog( gtkDialogTitle( action, params.multiselect ), action );
+    Gtk::FileChooserDialog dialog( title, action );
 #endif
     dialog.set_select_multiple( params.multiselect );
 
 #if !defined( __APPLE__ )
-    dialog.add_button( Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL );
-    dialog.add_button( params.saveDialog ? Gtk::Stock::SAVE : Gtk::Stock::OPEN, Gtk::RESPONSE_ACCEPT );
+    dialog.add_button( "_Cancel", GTK_RESPONSE_CANCEL );
+    dialog.add_button( params.saveDialog ? "_Save" : "_Open", GTK_RESPONSE_ACCEPT );
 #endif
 
     for ( const auto& filter: params.filters )
@@ -316,22 +338,31 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         dialog.add_filter( filterText );
     }
 
-    dialog.set_current_folder( getCurrentFolder( params ) );
+    dialog.set_current_folder( GIO( getCurrentFolder( params ) ) );
 
     if ( !params.fileName.empty() )
         dialog.set_current_name( params.fileName );
 
+#if GTKMM_MAJOR_VERSION == 3
     if ( params.saveDialog )
         dialog.set_do_overwrite_confirmation( true );
+#endif
 
     std::vector<std::filesystem::path> results;
     auto onResponse = [&] ( int responseId )
     {
-        if ( responseId == Gtk::RESPONSE_ACCEPT )
+        if ( responseId == GTK_RESPONSE_ACCEPT )
         {
-            for ( const auto& filename : dialog.get_filenames() )
+            const auto filenames =
+            #if GTKMM_MAJOR_VERSION == 4
+                dialog.get_files2()
+            #else
+                dialog.get_filenames()
+            #endif
+            ;
+            for ( const auto& filename : filenames )
             {
-                std::filesystem::path filepath( filename );
+                std::filesystem::path filepath( GIO( filename ) );
                 if ( params.saveDialog && !filepath.has_extension() )
                 {
                     const std::string filterName = dialog.get_filter()->get_name();
@@ -348,9 +379,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
             }
 
             auto& cfg = MR::Config::instance();
-            cfg.setJsonValue( cLastUsedDirKey, dialog.get_current_folder() );
+            cfg.setJsonValue( cLastUsedDirKey, GIO( dialog.get_current_folder() ) );
         }
-        else if ( responseId != Gtk::RESPONSE_CANCEL )
+        else if ( responseId != GTK_RESPONSE_CANCEL )
         {
             spdlog::warn( "GTK dialog failed" );
         }
@@ -365,12 +396,21 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 #if defined( __APPLE__ )
     onResponse( dialog.run() );
 #else // __APPLE__
-    dialog.signal_response().connect([&] ( int responseId )
+    dialog.signal_response().connect( [&] ( int responseId )
     {
         onResponse( responseId );
         dialog.hide();
-    });
+    } );
+#if GTKMM_MAJOR_VERSION == 4
+    kit->signal_activate().connect( [&]
+    {
+        kit->add_window( dialog );
+        dialog.show();
+    } );
+    kit->run();
+#else
     kit->run( dialog );
+#endif
 #endif // __APPLE__
 
     return results;

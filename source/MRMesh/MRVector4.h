@@ -54,29 +54,6 @@ struct Vector4
         return ( 1 / len ) * ( *this );
     }
 
-    Vector4 operator -() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector4( -x, -y, -z, -w ); }
-    const Vector4 & operator +() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return *this; }
-
-    Vector4 & operator +=( const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        x += b.x; y += b.y; z += b.z; w += b.w; return *this;
-    }
-    Vector4 & operator -=( const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        x -= b.x; y -= b.y; z -= b.z; w -= b.w; return *this;
-    }
-    Vector4 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        x *= b; y *= b; z *= b; w *= b; return * this;
-    }
-    Vector4 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; z /= b; w /= b; return * this; }
-        else
-            return *this *= ( 1 / b );
-    }
-
     /// assuming this is a point represented in homogeneous 4D coordinates, returns the point as 3D-vector
     Vector3<T> proj3d() const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
     {
@@ -88,41 +65,33 @@ struct Vector4
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z ) && std::isfinite( w );
     }
 
+    [[nodiscard]] friend constexpr bool operator ==( const Vector4<T> & a, const Vector4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
+    [[nodiscard]] friend constexpr bool operator !=( const Vector4<T> & a, const Vector4<T> & b ) { return !( a == b ); }
 
-    friend constexpr bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
+    [[nodiscard]] friend constexpr const Vector4<T> & operator +( const Vector4<T> & a ) { return a; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector4<T> & a ) -> Vector4<decltype( -std::declval<T>() )> { return { -a.x, -a.y, -a.z, -a.w }; }
+
+    [[nodiscard]] friend constexpr auto operator +( const Vector4<T> & a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector4<T> & a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    [[nodiscard]] friend constexpr auto operator *( const Vector4<T> & b,               T    a ) -> Vector4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    [[nodiscard]] friend constexpr auto operator /(       Vector4<T>   b,               T    a ) -> Vector4<decltype( std::declval<T>() / std::declval<T>() )>
     {
-        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        if constexpr ( std::is_integral_v<T> )
+            return { b.x / a, b.y / a, b.z / a, b.w / a };
+        else
+            return b * ( 1 / a );
     }
 
-    friend constexpr bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
+    friend constexpr Vector4<T> & operator +=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; a.z += b.z; a.w += b.w; return a; }
+    friend constexpr Vector4<T> & operator -=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
+    friend constexpr Vector4<T> & operator *=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
+    friend constexpr Vector4<T> & operator /=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
     {
-        return !( a == b );
-    }
-
-    friend constexpr Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-    }
-
-    friend constexpr Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-    }
-
-    friend constexpr Vector4<T> operator *( T a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        return {a * b.x, a * b.y, a * b.z, a * b.w};
-    }
-
-    friend constexpr Vector4<T> operator *( const Vector4<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        return {a * b.x, a * b.y, a * b.z, a * b.w};
-    }
-
-    friend constexpr Vector4<T> operator /( Vector4<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        b /= a;
-        return b;
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
+        else
+            return a *= ( 1 / b );
     }
 };
 
@@ -145,7 +114,7 @@ inline T distance( const Vector4<T> & a, const Vector4<T> & b )
 
 /// dot product
 template <typename T>
-inline T dot( const Vector4<T>& a, const Vector4<T>& b )
+inline auto dot( const Vector4<T> & a, const Vector4<T> & b ) -> decltype( a.x * b.x )
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }

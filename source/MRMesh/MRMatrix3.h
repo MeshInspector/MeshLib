@@ -80,41 +80,47 @@ struct Matrix3
     /// decompose this matrix on the product Q*R, where Q is orthogonal and R is upper triangular
     QR qr() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
-    constexpr Matrix3 & operator +=( const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x += b.x; y += b.y; z += b.z; return * this; }
-    constexpr Matrix3 & operator -=( const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
-    constexpr Matrix3 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x *= b; y *= b; z *= b; return * this; }
-    constexpr Matrix3 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
+    [[nodiscard]] friend constexpr bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+    [[nodiscard]] friend constexpr bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b ) { return !( a == b ); }
+
+    [[nodiscard]] friend constexpr auto operator +( const Matrix3<T> & a, const Matrix3<T> & b ) -> Matrix3<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
+    [[nodiscard]] friend constexpr auto operator -( const Matrix3<T> & a, const Matrix3<T> & b ) -> Matrix3<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Matrix3<T> & b ) -> Matrix3<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z }; }
+    [[nodiscard]] friend constexpr auto operator *( const Matrix3<T> & b,               T    a ) -> Matrix3<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z }; }
+    [[nodiscard]] friend constexpr auto operator /(       Matrix3<T>   b,               T    a ) -> Matrix3<decltype( std::declval<T>() / std::declval<T>() )>
     {
         if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; z /= b; return * this; }
+            return { b.x / a, b.y / a, b.z / a };
         else
-            return *this *= ( 1 / b );
+            return b * ( 1 / a );
+    }
+
+    friend constexpr Matrix3<T> & operator +=( Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
+    friend constexpr Matrix3<T> & operator -=( Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
+    friend constexpr Matrix3<T> & operator *=( Matrix3<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; a.z *= b; return a; }
+    friend constexpr Matrix3<T> & operator /=( Matrix3<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; a.z /= b; return a; }
+        else
+            return a *= ( 1 / b );
     }
 
     /// x = a * b
-    friend constexpr Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
+    [[nodiscard]] friend constexpr auto operator *( const Matrix3<T> & a, const Vector3<T> & b ) -> Vector3<decltype( dot( std::declval<Vector3<T>>(), std::declval<Vector3<T>>() ) )>
     {
         return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
     }
 
     /// product of two matrices
-    friend constexpr Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
+    [[nodiscard]] friend constexpr auto operator *( const Matrix3<T> & a, const Matrix3<T> & b ) -> Matrix3<decltype( dot( std::declval<Vector3<T>>(), std::declval<Vector3<T>>() ) )>
     {
-        Matrix3<T> res;
+        Matrix3<decltype( dot( std::declval<Vector3<T>>(), std::declval<Vector3<T>>() ) )> res;
         for ( int i = 0; i < 3; ++i )
             for ( int j = 0; j < 3; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
-
-    friend constexpr bool operator ==( const Matrix3<T> & a, const Matrix3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
-    friend constexpr bool operator !=( const Matrix3<T> & a, const Matrix3<T> & b ) { return !( a == b ); }
-    friend constexpr Matrix3<T> operator +( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
-    friend constexpr Matrix3<T> operator -( const Matrix3<T> & a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
-    friend constexpr Matrix3<T> operator *( T a, const Matrix3<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z }; }
-    friend constexpr Matrix3<T> operator *( const Matrix3<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z }; }
-    friend constexpr Matrix3<T> operator /( Matrix3<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
-
 };
 
 /// \related Matrix3
@@ -122,7 +128,7 @@ struct Matrix3
 
 /// double-dot product: x = a : b
 template <typename T>
-inline T dot( const Matrix3<T> & a, const Matrix3<T> & b )
+inline auto dot( const Matrix3<T> & a, const Matrix3<T> & b ) -> decltype( dot( a.x, b.x ) )
 {
     return dot( a.x, b.x ) + dot( a.y, b.y ) + dot( a.z, b.z );
 }

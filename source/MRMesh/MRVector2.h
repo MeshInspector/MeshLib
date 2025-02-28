@@ -58,38 +58,45 @@ struct Vector2
         return ( 1 / len ) * (*this);
     }
 
-    constexpr Vector2 operator -() const { return Vector2( -x, -y ); }
-    constexpr const Vector2 & operator +() const { return *this; }
-
     /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
     Vector2 furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> );
 
     /// returns same length vector orthogonal to this (rotated 90 degrees counter-clockwise)
     constexpr Vector2 perpendicular() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector2{ -y, x }; }
 
-    constexpr Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
-    constexpr Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }
-    constexpr Vector2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    constexpr Vector2 & operator /=( T b )
-    {
-        if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; return * this; }
-        else
-            return *this *= ( 1 / b );
-    }
-
     [[nodiscard]] bool isFinite() const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
     {
         return std::isfinite( x ) && std::isfinite( y );
     }
 
-    friend constexpr bool operator ==( const Vector2<T> & a, const Vector2<T> & b ) { return a.x == b.x && a.y == b.y; }
-    friend constexpr bool operator !=( const Vector2<T> & a, const Vector2<T> & b ) { return !( a == b ); }
-    friend constexpr Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y }; }
-    friend constexpr Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y }; }
-    friend constexpr Vector2<T> operator *(               T    a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
-    friend constexpr Vector2<T> operator *( const Vector2<T> & b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y }; }
-    friend constexpr Vector2<T> operator /(       Vector2<T>   b,               T    a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
+    [[nodiscard]] friend constexpr bool operator ==( const Vector2<T> & a, const Vector2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    [[nodiscard]] friend constexpr bool operator !=( const Vector2<T> & a, const Vector2<T> & b ) { return !( a == b ); }
+
+    [[nodiscard]] friend constexpr const Vector2<T> & operator +( const Vector2<T> & a ) { return a; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector2<T> & a ) -> Vector2<decltype( -std::declval<T>() )> { return { -a.x, -a.y }; }
+
+    [[nodiscard]] friend constexpr auto operator +( const Vector2<T> & a, const Vector2<T> & b ) -> Vector2<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y }; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector2<T> & a, const Vector2<T> & b ) -> Vector2<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Vector2<T> & b ) -> Vector2<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y }; }
+    [[nodiscard]] friend constexpr auto operator *( const Vector2<T> & b,               T    a ) -> Vector2<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y }; }
+    [[nodiscard]] friend constexpr auto operator /(       Vector2<T>   b,               T    a ) -> Vector2<decltype( std::declval<T>() / std::declval<T>() )>
+    {
+        if constexpr ( std::is_integral_v<T> )
+            return { b.x / a, b.y / a };
+        else
+            return b * ( 1 / a );
+    }
+
+    friend constexpr Vector2<T> & operator +=( Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; return a; }
+    friend constexpr Vector2<T> & operator -=( Vector2<T> & a, const Vector2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; return a; }
+    friend constexpr Vector2<T> & operator *=( Vector2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; return a; }
+    friend constexpr Vector2<T> & operator /=( Vector2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; return a; }
+        else
+            return a *= ( 1 / b );
+    }
 };
 
 /// \related Vector2
@@ -118,7 +125,7 @@ inline T cross( const Vector2<T> & a, const Vector2<T> & b )
 
 /// dot product
 template <typename T>
-inline T dot( const Vector2<T> & a, const Vector2<T> & b )
+inline auto dot( const Vector2<T> & a, const Vector2<T> & b ) -> decltype( a.x * b.x )
 {
     return a.x * b.x + a.y * b.y;
 }

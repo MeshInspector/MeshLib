@@ -84,16 +84,6 @@ struct Matrix4
 
     constexpr T* data() { return (T*) (&x); };
     constexpr const T* data() const { return (T*) (&x); };
-    constexpr Matrix4 & operator +=( const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x += b.x; y += b.y; z += b.z; w += b.w; return * this; }
-    constexpr Matrix4 & operator -=( const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x -= b.x; y -= b.y; z -= b.z; w -= b.w; return * this; }
-    constexpr Matrix4 & operator *=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { x *= b; y *= b; z *= b; w *= b; return * this; }
-    constexpr Matrix4 & operator /=( T b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
-    {
-        if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; z /= b; w /= b; return * this; }
-        else
-            return *this *= ( 1 / b );
-    }
 
     template <MR_SAME_TYPE_TEMPLATE_PARAM(T, TT)>
     operator AffineXf3<TT>() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
@@ -113,30 +103,47 @@ struct Matrix4
     /// and assuming the result is in homogeneous coordinates returns it as 3d-vector
     Vector3<T> operator ()( const Vector3<T> & b ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
+    [[nodiscard]] friend constexpr bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
+    [[nodiscard]] friend constexpr bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b ) { return !( a == b ); }
+
+    [[nodiscard]] friend constexpr auto operator +( const Matrix4<T> & a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
+    [[nodiscard]] friend constexpr auto operator -( const Matrix4<T> & a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    [[nodiscard]] friend constexpr auto operator *( const Matrix4<T> & b,               T    a ) -> Matrix4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
+    [[nodiscard]] friend constexpr auto operator /(       Matrix4<T>   b,               T    a ) -> Matrix4<decltype( std::declval<T>() / std::declval<T>() )>
+    {
+        if constexpr ( std::is_integral_v<T> )
+            return { b.x / a, b.y / a, b.z / a, b.w / a };
+        else
+            return b * ( 1 / a );
+    }
+
+    friend constexpr Matrix4<T> & operator +=( Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; a.z += b.z; a.w += b.w; return a; }
+    friend constexpr Matrix4<T> & operator -=( Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
+    friend constexpr Matrix4<T> & operator *=( Matrix4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
+    friend constexpr Matrix4<T> & operator /=( Matrix4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
+        else
+            return a *= ( 1 / b );
+    }
 
     /// x = a * b
-    friend Vector4<T> operator *( const Matrix4<T> & a, const Vector4<T> & b )
+    [[nodiscard]] friend constexpr auto operator *( const Matrix4<T> & a, const Vector4<T> & b ) -> Vector4<decltype( dot( std::declval<Vector4<T>>(), std::declval<Vector4<T>>() ) )>
     {
         return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ), dot( a.w, b ) };
     }
 
     /// product of two matrices
-    friend Matrix4<T> operator *( const Matrix4<T> & a, const Matrix4<T> & b )
+    [[nodiscard]] friend constexpr auto operator *( const Matrix4<T> & a, const Matrix4<T> & b ) -> Matrix4<decltype( dot( std::declval<Vector4<T>>(), std::declval<Vector4<T>>() ) )>
     {
-        Matrix4<T> res;
+        Matrix4<decltype( dot( std::declval<Vector4<T>>(), std::declval<Vector4<T>>() ) )> res;
         for ( int i = 0; i < 4; ++i )
             for ( int j = 0; j < 4; ++j )
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
-
-    friend bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
-    friend bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b ) { return !( a == b ); }
-    friend Matrix4<T> operator +( const Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
-    friend Matrix4<T> operator -( const Matrix4<T> & a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
-    friend Matrix4<T> operator *( T a, const Matrix4<T> & b ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
-    friend Matrix4<T> operator *( const Matrix4<T> & b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return { a * b.x, a * b.y, a * b.z, a * b.z }; }
-    friend Matrix4<T> operator /( Matrix4<T> b, T a ) MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { b /= a; return b; }
 };
 
 /// \related Matrix4
@@ -144,7 +151,7 @@ struct Matrix4
 
 /// double-dot product: x = a : b
 template <typename T>
-inline T dot( const Matrix4<T> & a, const Matrix4<T> & b )
+inline auto dot( const Matrix4<T> & a, const Matrix4<T> & b ) -> decltype( dot( a.x, b.x ) )
 {
     return dot( a.x, b.x ) + dot( a.y, b.y ) + dot( a.z, b.z ) + dot( a.w, b.w );
 }

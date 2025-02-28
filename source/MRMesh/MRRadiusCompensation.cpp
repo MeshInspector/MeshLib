@@ -18,6 +18,7 @@
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
 #include "MRBall.h"
+#include "MRRingIterator.h"
 
 namespace MR
 {
@@ -32,11 +33,14 @@ public:
         radiusSq_ = sqr( params_.toolRadius );
     }
 
-    // prepares raw distance map
+    // prepares data for processing
     Expected<void> init();
 
-    // finds tool locations for each pixel and summary compensation cost for each
+    // finds tool locations for each vertex and summary compensation cost for each
     Expected<void> calcCompensations();
+
+    // filters out excessive compensations based on costs
+    Expected<void> filterCompensations();
 
     // apply compensation
     Expected<void> applyCompensation();
@@ -46,7 +50,7 @@ private:
     // returns Vector3f::diagonal(FLT_MAX) if invalid
     Vector3f findToolCenterAtVertId_( VertId pixelCoord );
 
-    // returns compensated shift for given vert out of given toolCenter
+    // returns compensated shift for given vert out of given toolCenter (in )
     // returns -FLT_MAX if invalid
     Vector3f calcCompensationMovementInVertId_( VertId v, const Vector3f& plneToolCenter );
 
@@ -125,6 +129,44 @@ Expected<void> RadiusCompensator::calcCompensations()
     return {};
 }
 
+MR::Expected<void> RadiusCompensator::filterCompensations()
+{
+    auto sb = subprogress( params_.callback, 0.25f, 0.4f );
+    VertBitSet visitedVerts = vertRegion_;
+    int i = 0;
+    for ( auto& [cost, cId] : costs_ )
+    {
+        ++i;
+        if ( ( i % 1024 == 0 ) && !reportProgress( sb, float( i ) / float( costs_.size() ) ) )
+            return unexpectedOperationCanceled();
+
+        if ( cId < 0 )
+            continue;
+
+        visitedVerts.reset( cId );
+        const auto& toolCenter = toolCenters_[cId];
+        if ( toolCenter.x == FLT_MAX || cost == -FLT_MAX )
+        {
+            cId = VertId(); // filter it out
+            continue;
+        }
+        auto planeToolCenter = toPlaneXf_( toolCenter );
+
+        bool validCompensation = false;
+        findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
+                [&] ( VertId v, const Vector3f& )
+        {
+            auto shift = calcCompensationMovementInVertId_( v, planeToolCenter );
+            if ( shift == Vector3f() )
+                return;
+            validCompensation = visitedVerts.test_set( v, false ) || validCompensation;
+        } );
+        if ( !validCompensation )
+            cId = VertId(); // filter it out
+    }
+    return {};
+}
+
 Expected<void> RadiusCompensator::applyCompensation()
 {
     MR_TIMER;
@@ -134,7 +176,6 @@ Expected<void> RadiusCompensator::applyCompensation()
     VertBitSet updatedVerts( vertRegion_.size() );
 
     auto sb = subprogress( params_.callback, 0.25f, 1.0f );
-
     auto maxAllowedShiftSq = sqr( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f );
     for ( int i = 1; i <= params_.maxIterations; ++i )
     {
@@ -145,12 +186,9 @@ Expected<void> RadiusCompensator::applyCompensation()
         updatedVerts.reset();
         for ( auto [cost, cId] : costs_ )
         {
-            if ( cId < 0  || cost == -FLT_MAX )
+            if ( cId < 0 )
                 continue;
-            const auto& toolCenter = toolCenters_[cId];
-            if ( toolCenter.x == FLT_MAX )
-                continue;
-            auto planeToolCenter = toPlaneXf_( toolCenter );
+            auto planeToolCenter = toPlaneXf_( toolCenters_[cId] );
 
             findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
                 [&] ( VertId v, const Vector3f& )
@@ -176,10 +214,8 @@ Expected<void> RadiusCompensator::applyCompensation()
             } );
         }
 
-        auto maxShift = std::sqrt( maxShiftSq );
-        spdlog::info( "MaxShit: {}", maxShift );
         if ( updatedVerts.none() )
-            break;
+            break; // fast return on finish
 
         expand( mesh_.topology, updatedVerts, 1 );
         updatedVerts &= vertRegion_;
@@ -241,17 +277,7 @@ Vector3f RadiusCompensator::calcCompensationMovementInVertId_( VertId v, const V
 
 float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
 {
-    float sumCost = 0.0f;
-    auto planeToolCenter = toPlaneXf_( toolCenter );
-    findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
-        [&] ( VertId v, const Vector3f& )
-    {
-        sumCost += calcCompensationMovementInVertId_( v, planeToolCenter ).length();
-    } );
-    if ( sumCost < 100.0f * std::numeric_limits<float>::epsilon() * params_.toolRadius )
-        return -FLT_MAX; // consider as empty
-
-    return sumCost;
+    return toPlaneXf_( toolCenter ).z; // lets consider tool position as cost for now
 }
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )
@@ -265,6 +291,10 @@ Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& param
         return res;
 
     res = c.calcCompensations();
+    if ( !res.has_value() )
+        return res;
+
+    res = c.filterCompensations();
     if ( !res.has_value() )
         return res;
 

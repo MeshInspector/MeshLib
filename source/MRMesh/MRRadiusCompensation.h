@@ -29,7 +29,7 @@ struct CompensateRadiusParams
 };
 
 /// compensate spherical milling tool radius in given mesh region making it possible to mill it
-/// please note that it will change topology inside region
+/// note that tool milling outer surface of the mesh
 /// also please note that boundaries of the region are fixed
 [[nodiscard]] MRMESH_API Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params );
 

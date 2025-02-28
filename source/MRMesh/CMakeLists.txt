@@ -28,8 +28,8 @@ set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MR_EMSCRIPTEN)
   IF(NOT MRMESH_NO_TIFF)
-    IF(WIN32)
-      find_package(tiff REQUIRED)
+    IF(WIN32 OR MESHLIB_USE_VCPKG)
+      find_package(TIFF REQUIRED)
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
     ELSE()
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
@@ -37,7 +37,7 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF()
 
   IF(NOT MRMESH_NO_GTEST)
-    IF(APPLE OR WIN32)
+    IF(APPLE OR WIN32 OR MESHLIB_USE_VCPKG)
       find_package(GTest REQUIRED)
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
     ELSE()
@@ -84,6 +84,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
       tbb
       ${MRMESH_OPTIONAL_DEPENDENCIES}
       ${COCOA_LIBRARY}
+      ${CMAKE_DL_LIBS}
     )
   ELSE()
     target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
@@ -104,7 +105,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
       ${MRMESH_OPTIONAL_DEPENDENCIES}
     )
   ENDIF()
-ELSEIF(WIN32)
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(tl-expected REQUIRED)
   find_package(libzip REQUIRED)
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
@@ -121,6 +122,7 @@ ELSEIF(WIN32)
     Boost::boost
     JsonCpp::JsonCpp
     TBB::tbb
+    ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
@@ -138,9 +140,9 @@ ELSE()
     spdlog
     zip
     Boost::boost
-    dl
-    jsoncpp
+    JsonCpp::JsonCpp
     tbb
+    ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

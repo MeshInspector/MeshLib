@@ -40,7 +40,7 @@ ELSE()
       MRViewer
       -Wl,--no-whole-archive
     )
-  ELSEIF(WIN32)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(GTest REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
@@ -53,6 +53,9 @@ ELSE()
       GTest::gtest
       spdlog::spdlog
       pybind11nonlimitedapi_stubs
+      $<$<NOT:$<BOOL:${WIN32}>>:
+        Python::Python
+      >
       ${CMAKE_DL_LIBS}
     )
   ELSE()
@@ -62,7 +65,7 @@ ELSE()
       MRPython
       MREmbeddedPython
       MRViewer
-      jsoncpp
+      JsonCpp::JsonCpp
       fmt
       gtest
       spdlog

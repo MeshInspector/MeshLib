@@ -33,7 +33,6 @@ private:
         Sum,
         Mul,
         Div,
-        Replace,
         Count
     };
     void doOperation_( Operation op, bool inPreview );
@@ -44,6 +43,9 @@ private:
     std::shared_ptr<ObjectVoxels> obj2_;
     boost::signals2::scoped_connection conn1_;
     boost::signals2::scoped_connection conn2_;
+
+    std::vector<std::string> enabledOps_;
+    std::vector<std::string> enabledOpsTooltips_;
 
     std::shared_ptr<ObjectVoxels> previewRes_;
     bool previewMode_ = false;

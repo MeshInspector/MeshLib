@@ -520,7 +520,7 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
         else
         {
             assert( false );
-            MR_UNREACHABLE
+            MR_UNREACHABLE_NO_RETURN
         }
 
         LineSegm3f segm;

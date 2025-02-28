@@ -86,10 +86,13 @@ Expected<void> RadiusCompensator::init()
     toPlaneXf_ = toWorldXf_.inverse();
 
     planeVerts_.resize( vertRegion_.endId() );
-    BitSetParallelFor( vertRegion_, [&] ( VertId v )
+    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
     {
         planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );
-    } );
+    }, subprogress( params_.callback, 0.0f, 0.1f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
 
     planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ );
     return {};
@@ -100,20 +103,23 @@ Expected<void> RadiusCompensator::calcCompensations()
     MR_TIMER;
     toolCenters_.resize( vertRegion_.endId(), Vector3f::diagonal( FLT_MAX ) );
     costs_.resize( vertRegion_.endId(), std::make_pair( -FLT_MAX, VertId() ) );
-    BitSetParallelFor( vertRegion_, [&] ( VertId v )
+    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
     {
         auto tc = findToolCenterAtVertId_( v );
         toolCenters_[v] = tc;
         if ( tc.x != FLT_MAX )
             costs_[v] = std::make_pair( sumCompensationCost_( tc ), v );
-    } );
+    }, subprogress( params_.callback, 0.0f, 0.25f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
 
     tbb::parallel_sort( begin( costs_ ), end( costs_ ), [] ( const auto& l, const auto& r )
     {
         return l.first < r.first;
     } );
 
-    if ( !reportProgress( params_.callback, 0.2f ) )
+    if ( !reportProgress( params_.callback, 0.3f ) )
         return unexpectedOperationCanceled();
 
     return {};
@@ -124,13 +130,17 @@ Expected<void> RadiusCompensator::applyCompensation()
     MR_TIMER;
     MR_WRITER( mesh_ );
 
-
     Mesh cpyMesh = mesh_; // for projecting
     VertBitSet updatedVerts( vertRegion_.size() );
 
+    auto sb = subprogress( params_.callback, 0.25f, 1.0f );
+
     auto maxAllowedShiftSq = sqr( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f );
-    for ( int i = 1; i <= 100; ++i )
+    for ( int i = 1; i <= params_.maxIterations; ++i )
     {
+        if ( i == params_.maxIterations )
+            maxAllowedShiftSq = radiusSq_; // allow full move on last iteration
+
         float maxShiftSq = -FLT_MAX;
         updatedVerts.reset();
         for ( auto [cost, cId] : costs_ )
@@ -184,10 +194,15 @@ Expected<void> RadiusCompensator::applyCompensation()
             planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );
         } );
 
-        if ( i % 5 == 0 )
-            planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ );
-        else
-            planeTree_->refit( planeVerts_, updatedVerts );
+        if ( i != params_.maxIterations )
+        {
+            if ( i % 5 == 0 )
+                planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ ); // rebuild tree each 5th iteration
+            else
+                planeTree_->refit( planeVerts_, updatedVerts ); // update tree
+        }
+        if ( !reportProgress( sb, float( i ) / float( params_.maxIterations ) ) )
+            return unexpectedOperationCanceled();
     }
 
     return {};

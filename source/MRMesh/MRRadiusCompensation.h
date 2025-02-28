@@ -22,6 +22,9 @@ struct CompensateRadiusParams
     /// also please note that boundaries of the region are fixed
     FaceBitSet* region{ nullptr };
 
+    /// maximum iteration of applying algorithm (each iteration improves result a little bit)
+    int maxIterations{ 100 };
+
     ProgressCallback callback;
 };
 

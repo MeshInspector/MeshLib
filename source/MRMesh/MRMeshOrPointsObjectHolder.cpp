@@ -9,6 +9,14 @@ namespace MR
 
 
 
+MeshOrPointsObjectHolder::MeshOrPointsObjectHolder( std::shared_ptr<VisualObject> vo )
+{
+    if ( auto objMesh = std::dynamic_pointer_cast< ObjectMesh >( vo ) )
+        set( objMesh );
+    else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( vo ) )
+        set( objPoints );
+}
+
 void MeshOrPointsObjectHolder::set( std::shared_ptr<ObjectMesh> om )
 {
     var_ = om.get();

@@ -92,12 +92,12 @@ jobs:
         working-directory: C:\vcpkg
         run: git clean -ffdx
 
-      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg_version }}
+      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
           git pull --rebase
-          git checkout ${{ matrix.vcpkg_version }}
+          git checkout ${{ matrix.vcpkg-version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -105,7 +105,7 @@ jobs:
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ matrix.vcpkg_version }}
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}
           path: |
             C:\vcpkg\*
 

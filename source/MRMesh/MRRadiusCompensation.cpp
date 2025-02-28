@@ -52,7 +52,7 @@ private:
 
     // returns compensated shift for given vert out of given toolCenter (in )
     // returns -FLT_MAX if invalid
-    Vector3f calcCompensationMovementInVertId_( VertId v, const Vector3f& plneToolCenter );
+    Vector3f calcCompensationMovement_( const Vector3f& planeVertPos, const Vector3f& planeToolCenter );
 
     // calculates summary compensation cost for given tool location
     float sumCompensationCost_( const Vector3f& toolCenter );
@@ -156,7 +156,8 @@ MR::Expected<void> RadiusCompensator::filterCompensations()
         findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
                 [&] ( VertId v, const Vector3f& )
         {
-            auto shift = calcCompensationMovementInVertId_( v, planeToolCenter );
+            auto planePoint = toPlaneXf_( mesh_.points[v] );
+            auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
             if ( shift == Vector3f() )
                 return;
             validCompensation = visitedVerts.test_set( v, false ) || validCompensation;
@@ -193,7 +194,8 @@ Expected<void> RadiusCompensator::applyCompensation()
             findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
                 [&] ( VertId v, const Vector3f& )
             {
-                auto shift = calcCompensationMovementInVertId_( v, planeToolCenter );
+                auto planePoint = toPlaneXf_( mesh_.points[v] );
+                auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
                 if ( shift == Vector3f() )
                     return;
 
@@ -250,9 +252,8 @@ Vector3f RadiusCompensator::findToolCenterAtVertId_( VertId v )
     return mesh_.points[v] + norm * params_.toolRadius;
 }
 
-Vector3f RadiusCompensator::calcCompensationMovementInVertId_( VertId v, const Vector3f& planeToolCenter )
+Vector3f RadiusCompensator::calcCompensationMovement_( const Vector3f& point, const Vector3f& planeToolCenter )
 {
-    auto point = toPlaneXf_( mesh_.points[v] );
     if ( point.z <= planeToolCenter.z )
     {
         auto point2d = to2dim( point );
@@ -277,7 +278,32 @@ Vector3f RadiusCompensator::calcCompensationMovementInVertId_( VertId v, const V
 
 float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
 {
-    return toPlaneXf_( toolCenter ).z; // lets consider tool position as cost for now
+    float sumProjArea = 0.0f;
+    float sumShiftLength = 0.0f;
+    auto planeToolCenter = toPlaneXf_( toolCenter );
+    MinMaxf minmaxZ;
+    findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
+        [&] ( VertId v, const Vector3f& )
+    {
+        auto planePoint = toPlaneXf_( mesh_.points[v] );
+        auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
+        if ( shift == Vector3f() )
+            return;
+
+        for ( auto e : orgRing( mesh_.topology, v ) )
+            if ( auto l = mesh_.topology.left( e ) )
+                sumProjArea += std::abs( dot( mesh_.leftDirDblArea( e ), params_.direction ) );
+        sumShiftLength += shift.length();
+        minmaxZ.include( planePoint.z );
+    } );
+    sumProjArea *= 0.5f; // more area affected - better
+    // sumShiftLength - more shift - worse
+    // minmaxZ.size() - more height affected - worse
+
+    if ( !minmaxZ.valid() )
+        return -FLT_MAX;
+
+    return minmaxZ.size() * sumShiftLength / sumProjArea; // lets consider tool position as cost for now
 }
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )

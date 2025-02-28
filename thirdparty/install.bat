@@ -26,8 +26,8 @@ if not defined vcpkg_path (
     echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
     set VCPKG_TAG=no-tag
 ) else (
-    REM Auto-detect vcpkg version
-    for /f "tokens=2 delims= " %%V in ('vcpkg version 2^>nul') do set VCPKG_TAG=%%V
+    REM Extract the first valid version number (YYYY-MM-DD format)
+    for /f "tokens=4 delims= " %%V in ('vcpkg version 2^>nul ^| findstr /R "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"') do set VCPKG_TAG=%%V
 )
 
 REM Check for --write-s3 option

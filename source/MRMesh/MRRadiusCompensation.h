@@ -16,21 +16,11 @@ struct CompensateRadiusParams
     ///  radius of spherical tool
     float toolRadius{ 0.0f };
 
-    /// resolution of distance map that is used for compensation
-    Vector2i distanceMapResolution = Vector2i( 150, 150 );
-
     /// region of the mesh that will be compensated
     /// it should not contain closed components
     /// it is updated during algorithm
     /// also please note that boundaries of the region are fixed
     FaceBitSet* region{ nullptr };
-
-    /// if this flag is set result mesh is back projected to original one to compensate possible precision issues
-    bool projectToOriginalMesh{ true };
-
-    /// this value will be used for post-process re-meshing
-    /// value less or equal to zero will use average mesh edge length
-    float remeshTargetEdgeLength{ -1.0f };
 
     ProgressCallback callback;
 };

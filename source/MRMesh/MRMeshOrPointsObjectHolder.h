@@ -24,6 +24,7 @@ public:
 
     void reset() { set( std::shared_ptr<ObjectMesh>{} ); }
     const std::shared_ptr<VisualObject>& operator->() const { return visualObject_; }
+    const std::shared_ptr<VisualObject>& get() const { return visualObject_; }
     bool operator==( std::shared_ptr<VisualObject> other ) const { return visualObject_ == other; }
 
 

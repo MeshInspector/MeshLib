@@ -59,7 +59,8 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
+      win19_vcpkg_version:   ${{ needs.config.outputs.win19_vcpkg_version }}
+      win22_vcpkg_version:   ${{ needs.config.outputs.win22_vcpkg_version }}
     secrets: inherit
 
   ubuntu-arm64-build-test:

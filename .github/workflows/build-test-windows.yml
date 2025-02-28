@@ -16,7 +16,10 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
-      vcpkg_version:
+      win19_vcpkg_version:
+        required: true
+        type: string
+      win22_vcpkg_version:
         required: true
         type: string
       mrbind:
@@ -54,11 +57,13 @@ jobs:
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
+            vcpkg-version: ${{ inputs.win22_vcpkg_version }}
           - runner: windows-2019
             vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
+            vcpkg-version: ${{ inputs.win19_vcpkg_version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -87,12 +92,12 @@ jobs:
         working-directory: C:\vcpkg
         run: git clean -ffdx
 
-      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}
+      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg_version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
           git pull --rebase
-          git checkout ${{ inputs.vcpkg_version }}
+          git checkout ${{ matrix.vcpkg_version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -100,7 +105,7 @@ jobs:
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ inputs.vcpkg_version }}
+          key: vcpkg-cache-${{ matrix.vcpkg_version }}
           path: |
             C:\vcpkg\*
 

@@ -11,10 +11,10 @@ REM Check if AWS CLI is installed
 aws --version >nul 2>&1
 if errorlevel 1 (
     echo AWS CLI v2: not found
-    echo Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source
+    echo "Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source"
 ) else (
     echo AWS CLI v2: found
-    echo Vcpkg binary cache (if available) will be downloaded from S3
+    echo "Vcpkg binary cache (if available) will be downloaded from S3"
 )
 
 REM Detect vcpkg path

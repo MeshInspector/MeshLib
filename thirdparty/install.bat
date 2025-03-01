@@ -1,4 +1,6 @@
 @echo off
+REM options: use --write-s3 to push vcpkg binary cache to S3
+
 REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
 REM use "aws s3 ls s3://vcpkg-export/" to ls all available tags
 set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
@@ -12,11 +14,11 @@ REM Check if AWS CLI v2 is installed
 REM AWS CLI is required for using vcpkg binary caching with S3.
 aws --version >nul 2>&1
 if errorlevel 1 (
-    echo AWS CLI v2 is not installed.
-    echo Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source.
+    echo AWS CLI v2: not found
+    echo Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built only from source
 ) else (
-    echo AWS CLI v2 is installed.
-    echo vcpkg can use S3 for binary caching, reducing build times.
+    echo AWS CLI v2: found
+    echo Vcpkg binary cache (if available) will be downloaded from S3
 )
 
 REM Detect vcpkg path
@@ -40,11 +42,11 @@ for %%i in (%*) do (
 
 REM Configure VCPKG_BINARY_SOURCES
 if "!write_s3_option!"=="true" (
+    echo Mode: pull-push vcpkg binary cache. AWS credentials are required, but if invalid, vcpkg cache downloading would be skipped
     set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
-    echo "Using AWS authentication for vcpkg binary caching."
 ) else (
+    echo Mode: pull vcpkg binary cache. No AWS credentials are required
     set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
-    echo "Using no authentication for vcpkg binary caching."
 )
 
 REM Ensure vcpkg downloads folder exists
@@ -69,6 +71,5 @@ goto :EOF
 REM Error handling
 :error
 echo Failed with error #%errorlevel%.
-echo This may be due to missing AWS credentials, incorrect package names, or missing triplets.
 endlocal
 exit /b %errorlevel%

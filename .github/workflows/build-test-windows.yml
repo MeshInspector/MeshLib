@@ -194,6 +194,10 @@ jobs:
         if: ${{ matrix.build_system == 'CMake' }}
         uses: seanmiddleditch/gha-setup-ninja@master
 
+      - name: Debug - List Files in VCPKG Directory (PowerShell)
+        run: Get-ChildItem -Path C:/vcpkg/installed/x64-windows-meshlib/bin -Force
+        shell: pwsh
+
       - name: Build
         shell: cmd
         env:

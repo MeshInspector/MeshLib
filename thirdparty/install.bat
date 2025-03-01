@@ -1,21 +1,17 @@
 @echo off
-REM options: use --write-s3 to push vcpkg binary cache to S3
-
-REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
-REM use "aws s3 ls s3://vcpkg-export/" to ls all available tags
-set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 setlocal enabledelayedexpansion
 
-REM Default settings
-set VCPKG_TAG=no-tag
+REM options: use --write-s3 to push vcpkg binary cache to S3
+REM The VCPKG_TAG variable represents the S3 folder and may not always exist in S3
+REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
+
 set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 
-REM Check if AWS CLI v2 is installed
-REM AWS CLI is required for using vcpkg binary caching with S3.
+REM Check if AWS CLI is installed
 aws --version >nul 2>&1
 if errorlevel 1 (
     echo AWS CLI v2: not found
-    echo Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built only from source
+    echo Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source
 ) else (
     echo AWS CLI v2: found
     echo Vcpkg binary cache (if available) will be downloaded from S3
@@ -32,26 +28,30 @@ if not defined vcpkg_path (
     set VCPKG_TAG=!FULL_VCPKG_TAG:~0,10!
 )
 
-echo Using vcpkg version: %VCPKG_TAG%
+echo Using vcpkg version: !VCPKG_TAG!
 
 REM Check for --write-s3 option
 set "write_s3_option=false"
 for %%i in (%*) do (
-    if /I "%%i"=="--write-s3" set "write_s3_option=true"
+    if /I "%%i"=="--write-s3" (
+        set "write_s3_option=true"
+    )
 )
 
 REM Configure VCPKG_BINARY_SOURCES
 if "!write_s3_option!"=="true" (
-    echo Mode: pull-push vcpkg binary cache. AWS credentials are required, but if invalid, vcpkg cache downloading would be skipped
-    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
+    echo Mode: pull-push vcpkg binary cache. AWS credentials are required.
+    set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
 ) else (
-    echo Mode: pull vcpkg binary cache. No AWS credentials are required
-    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/%VCPKG_TAG%/x64-windows-meshlib/,readwrite;"
+    echo Mode: pull vcpkg binary cache. No AWS credentials are required.
+    set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/x64-windows-meshlib/,readwrite;"
 )
 
 REM Ensure vcpkg downloads folder exists
-if not exist "%vcpkg_path%downloads" mkdir "%vcpkg_path%downloads"
-copy "%~dp0vcpkg\downloads\*" "%vcpkg_path%downloads" 2>nul
+if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"
+if exist "%~dp0vcpkg\downloads\" (
+    xcopy "%~dp0vcpkg\downloads\*" "!vcpkg_path!downloads" /Y /E 2>nul
+)
 
 REM Read package list from requirements file
 set packages=

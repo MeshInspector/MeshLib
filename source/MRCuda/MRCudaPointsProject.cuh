@@ -1,4 +1,5 @@
-#include "MRCudaMath.cuh"
+#pragma once
+
 #include "MRCudaPointCloud.cuh"
 
 namespace MR::Cuda

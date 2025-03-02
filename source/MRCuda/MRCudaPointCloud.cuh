@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MRCudaBasic.cuh"
 #include "MRCudaMath.cuh"
 

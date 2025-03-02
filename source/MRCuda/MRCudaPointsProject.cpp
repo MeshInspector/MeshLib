@@ -16,7 +16,7 @@ namespace MR::Cuda
 
 Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
     const std::vector<Vector3f>& points, const AffineXf3f* pointsXf, const AffineXf3f* refXf, float upDistLimitSq,
-    float loDistLimitSq )
+    float loDistLimitSq, bool skipSameIndex )
 {
     auto cudaPointCloud = copyDataFrom( pointCloud );
     if ( !cudaPointCloud )
@@ -41,7 +41,7 @@ Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const 
     {
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.copyFrom( points.data() + offset, size ) );
 
-        findProjectionOnPointsKernel( cudaResult.data(), (*cudaPointCloud)->data(), cudaPoints.data(), cudaPointsXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size, offset );
+        findProjectionOnPointsKernel( cudaResult.data(), (*cudaPointCloud)->data(), cudaPoints.data(), cudaPointsXf, cudaRefXf, upDistLimitSq, loDistLimitSq, skipSameIndex, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( results.data() + offset, size ) );

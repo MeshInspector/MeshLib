@@ -12,10 +12,10 @@ on:
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
-      win19_vcpkg_version:
+      vs19_vcpkg_version:
         required: true
         type: string
-      win22_vcpkg_version:
+      vs22_vcpkg_version:
         required: true
         type: string
 
@@ -107,9 +107,9 @@ jobs:
         runner: [ windows-2022, windows-2019 ]
         include:
           - runner: windows-2022
-            vcpkg-version: ${{ inputs.win22_vcpkg_version }}
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
           - runner: windows-2019
-            vcpkg-version: ${{ inputs.win19_vcpkg_version }}
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg

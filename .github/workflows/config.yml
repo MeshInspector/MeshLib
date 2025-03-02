@@ -4,10 +4,10 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      win19_vcpkg_version:
+      vs19_vcpkg_version:
         description: "vcpkg version"
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
-      win22_vcpkg_version:
+      vs22_vcpkg_version:
         description: "vcpkg version"
         value: "2025.02.14" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values

@@ -362,6 +362,15 @@ template <typename T> using Ball1 = Ball<T>;
 template <typename T> using Ball2 = Ball<Vector2<T>>;
 template <typename T> using Ball3 = Ball<Vector3<T>>;
 
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), CubicBezierCurve,
+    ( CubicBezierCurve2f,  CubicBezierCurve<Vector2<float>>     )
+    ( CubicBezierCurve2d,  CubicBezierCurve<Vector2<double>>    )
+    ( CubicBezierCurve3f,  CubicBezierCurve<Vector3<float>>     )
+    ( CubicBezierCurve3d,  CubicBezierCurve<Vector3<double>>    )
+)
+template <typename T> using CubicBezierCurve2 = CubicBezierCurve<Vector2<T>>;
+template <typename T> using CubicBezierCurve3 = CubicBezierCurve<Vector3<T>>;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct), QuadraticForm,
     ( QuadraticForm2f, QuadraticForm<Vector2<float>>  )
     ( QuadraticForm2d, QuadraticForm<Vector2<double>> )

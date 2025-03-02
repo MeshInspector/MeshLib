@@ -50,4 +50,12 @@ Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const 
     return results;
 }
 
+size_t findProjectionOnPointsHeapBytes( const PointCloud& pointCloud, size_t pointsCount )
+{
+    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+    return
+          pointCloudHeapBytes( pointCloud )
+        + std::min( ( sizeof( float3 ) + sizeof( PointsProjectionResult ) ) * pointsCount, cMinCudaBufferSize );
+}
+
 } // namespace MR::Cuda

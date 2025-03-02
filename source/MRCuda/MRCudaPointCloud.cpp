@@ -23,4 +23,17 @@ Expected<std::unique_ptr<PointCloudDataHolder>> copyDataFrom( const PointCloud& 
     return result;
 }
 
+size_t pointCloudHeapBytes( const PointCloud& pc, const std::vector<Vector3f>* normals  )
+{
+    const auto& tree = pc.getAABBTree();
+    const auto& nodes = tree.nodes();
+    const auto& points = tree.orderedPoints();
+
+    return
+          nodes.size() * sizeof( Node3 )
+        + points.size() * sizeof( OrderedPoint )
+        + ( normals ? normals->size() : pc.normals.size() ) * sizeof( float3 )
+    ;
+}
+
 } // namespace MR::Cuda

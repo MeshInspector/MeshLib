@@ -13,4 +13,7 @@ MRCUDA_API Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoi
     const std::vector<Vector3f>& points, const AffineXf3f* pointsXf, const AffineXf3f* refXf, float upDistLimitSq,
     float loDistLimitSq );
 
+/// returns the minimal amount of free GPU memory required for \ref MR::Cuda::findProjectionOnPoints
+MRMESH_API size_t findProjectionOnPointsHeapBytes( const PointCloud& pointCloud, size_t pointsCount );
+
 } // namespace MR::Cuda

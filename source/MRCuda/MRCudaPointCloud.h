@@ -14,4 +14,7 @@ struct PointCloudDataHolder;
 MRCUDA_API Expected<std::unique_ptr<PointCloudDataHolder>> copyDataFrom( const PointCloud& pc,
     const std::vector<Vector3f>* normals = nullptr );
 
+/// return the amount of GPU memory required for \ref MR::Cuda::PointCloudDataHolder
+MRCUDA_API size_t pointCloudHeapBytes( const PointCloud& pc, const std::vector<Vector3f>* normals = nullptr );
+
 }

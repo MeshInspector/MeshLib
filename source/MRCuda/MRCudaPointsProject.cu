@@ -73,7 +73,11 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
+        {
+            const auto temp = s1;
+            s1 = s2;
+            s2 = temp;
+        }
         assert( s1.distSq >= s2.distSq );
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first

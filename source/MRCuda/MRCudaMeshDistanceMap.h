@@ -1,18 +1,19 @@
 #pragma once
+
 #include "exports.h"
+
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRMesh.h"
 
-namespace MR
+namespace MR::Cuda
 {
-namespace Cuda
-{
+
 /// computes distance (height) map for given projection parameters
 /// using float-precision for finding ray-mesh intersections, which is faster but less reliable
-MRCUDA_API DistanceMap computeDistanceMap( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, 
-    ProgressCallback cb = {}, std::vector<MR::MeshTriPoint>* outSamples = nullptr );
+MRCUDA_API Expected<DistanceMap> computeDistanceMap( const Mesh& mesh, const MeshToDistanceMapParams& params,
+    ProgressCallback cb = {}, std::vector<MeshTriPoint>* outSamples = nullptr );
 
 /// Computes memory consumption of computeDistanceMap function
-MRCUDA_API size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, bool needOutSamples = false );
-}
-}
+MRCUDA_API size_t computeDistanceMapHeapBytes( const Mesh& mesh, const MeshToDistanceMapParams& params, bool needOutSamples = false );
+
+} // namespace MR::Cuda

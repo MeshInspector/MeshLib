@@ -31,8 +31,7 @@ const std::vector<std::string> operationNames = {
     "Min",
     "Sum",
     "Multiply",
-    "Divide",
-    "Replace"
+    "Divide"
 };
 
 const std::vector<std::string> operationTooltips = {
@@ -43,8 +42,7 @@ const std::vector<std::string> operationTooltips = {
     "Compute min(a, b) per voxel",
     "Compute a + b per voxel",
     "Compute a * b per voxel",
-    "Compute a / b per voxel",
-    "Copy the active voxels of B into A"
+    "Compute a / b per voxel"
 };
 
 void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
@@ -93,7 +91,7 @@ void BinaryOperations::drawDialog(float menuScaling, ImGuiContext*)
         }
     }
 
-    if ( UI::combo( "Operation", (int*)&operation_, operationNames, true, operationTooltips ) )
+    if ( UI::combo( "Operation", (int*)&operation_, enabledOps_, true, enabledOpsTooltips_ ) )
     {
         if ( previewMode_ )
             doOperation_( operation_, true );
@@ -114,6 +112,38 @@ bool BinaryOperations::onEnable_()
     obj2_ = objs[1];
     conn1_ = obj1_->worldXfChangedSignal.connect( [this] { return onTransformChange(); } );
     conn2_ = obj2_->worldXfChangedSignal.connect( [this] { return onTransformChange(); } );
+
+    if ( obj1_->vdbVolume().data->getGridClass() != obj2_->vdbVolume().data->getGridClass() )
+    {
+        showError( "Objects must have the same grid class (e.g. level set or unknown)" );
+        return false;
+    }
+
+    std::vector<Operation> enabledOps;
+    if ( obj1_->vdbVolume().data->getGridClass() == openvdb::GRID_LEVEL_SET )
+    {
+        enabledOps = { Operation::Union, Operation::Intersection, Operation::Difference };
+    }
+    else
+    {
+        enabledOps = {
+            Operation::Max,
+            Operation::Min,
+            Operation::Sum,
+            Operation::Mul,
+            Operation::Div
+        };
+    }
+
+    operation_ = enabledOps[0];
+    enabledOps_.clear();
+    enabledOpsTooltips_.clear();
+    for ( Operation op : enabledOps )
+    {
+        enabledOps_.push_back( operationNames[(int)op] );
+        enabledOpsTooltips_.push_back( operationTooltips[(int)op] );
+    }
+
     return true;
 }
 
@@ -219,10 +249,6 @@ void BinaryOperations::doOperation_( Operation op, bool inPreview )
                     openvdb::tools::compDiv( *resGrid, *copy2 );
                     if ( iso2 != 0 )
                         resIso = iso1 / iso2;
-                    break;
-                case MR::BinaryOperations::Operation::Replace:
-                    openvdb::tools::compReplace( *resGrid, *copy2 );
-                    resIso = iso2;
                     break;
                 default:
                     assert( false );

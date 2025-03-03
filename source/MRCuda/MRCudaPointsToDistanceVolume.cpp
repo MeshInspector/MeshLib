@@ -1,8 +1,12 @@
 #include "MRCudaPointsToDistanceVolume.h"
 #ifndef MRCUDA_NO_VOXELS
 #include "MRCudaPointsToDistanceVolume.cuh"
-#include "MRMesh/MRPointCloud.h"
+
+#include "MRCudaBasic.h"
+
 #include "MRMesh/MRAABBTreePoints.h"
+#include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRPointCloud.h"
 
 namespace MR
 {
@@ -16,13 +20,13 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     const auto& nodes = tree.nodes();
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( nodes.vec_ );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
         
     DynamicArray<OrderedPoint> cudaPoints;
-    cudaPoints.fromVector( tree.orderedPoints() );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
 
     DynamicArray<float3> cudaNormals;
-    cudaNormals.fromVector( params.ptNormals ? params.ptNormals->vec_ : cloud.normals.vec_ );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? params.ptNormals->vec_ : cloud.normals.vec_ ) );
 
     PointsToDistanceVolumeParams cudaParams
     {
@@ -41,18 +45,28 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     cudaParams.dimensions.x = params.dimensions.x;
     cudaParams.dimensions.y = params.dimensions.y;
     cudaParams.dimensions.z = params.dimensions.z;
-       
-    DynamicArray<float> cudaVolume;
-    cudaVolume.resize( size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z );
-    if ( !pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams ) )
-        return unexpected( "CUDA error occurred" );
+
+    const auto totalSize = (size_t)params.dimensions.x * params.dimensions.y * params.dimensions.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
+
+    DynamicArrayF cudaVolume;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );
 
     MR::SimpleVolumeMinMax res;
     res.dims = params.dimensions;
     res.voxelSize = params.voxelSize;
     res.max = params.sigma * std::exp( -0.5f );
     res.min = -res.max;
-    cudaVolume.toVector( res.data );
+    res.data.resize( totalSize );
+
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+    {
+        pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.copyTo( res.data.data() + offset, size ) );
+    }
+
     return res;
 }
 

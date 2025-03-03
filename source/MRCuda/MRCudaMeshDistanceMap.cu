@@ -7,14 +7,15 @@ namespace Cuda
 {
 
 __global__ void kernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
-                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned size, float3 xStep, float3 yStep )
+                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
+    if ( index >= chunkSize )
         return;
 
-    int x = index % params.resolution.x;
-    int y = index / params.resolution.x;
+    size_t gridIndex = index + chunkOffset;
+    int x = gridIndex % params.resolution.x;
+    int y = gridIndex / params.resolution.x;
 
     float3 org = params.orgPoint + xStep * ( x + 0.5f ) + yStep * ( y + 0.5f );
 
@@ -32,22 +33,19 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 }
 
 
-cudaError_t computeMeshDistanceMapKernel( 
+void computeMeshDistanceMapKernel(
     const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
     IntersectionPrecomputes prec, float shift,
-    float* res, MeshTriPoint* outSamples )
+    float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset )
 {
-    unsigned size = unsigned(params.resolution.x) * params.resolution.y;
     constexpr size_t maxThreadsPerBlock = 640;
-    unsigned numBlocks = ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
+    unsigned numBlocks = ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
 
     float3 xStep = params.xRange / float( params.resolution.x );
     float3 yStep = params.yRange / float( params.resolution.y );
 
     // kernel
-    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, size, xStep, yStep );
-
-    return cudaGetLastError();
+    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, chunkSize, xStep, yStep, chunkOffset );
 }
 
 }

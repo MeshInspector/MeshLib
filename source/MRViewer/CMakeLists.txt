@@ -36,7 +36,7 @@ IF(NOT MRVIEWER_NO_VOXELS)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
   IF(APPLE)
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
-  ELSEIF(WIN32)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(OpenVDB REQUIRED)
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
   ELSE()
@@ -45,6 +45,7 @@ IF(NOT MRVIEWER_NO_VOXELS)
 ENDIF()
 
 IF(NOT MRVIEWER_NO_GTK)
+  find_package(PkgConfig REQUIRED)
   pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtkmm)
 ENDIF()
@@ -85,9 +86,10 @@ ELSEIF(APPLE)
     hidapi
     clip
     ${APPKIT_LIBRARY}
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSEIF(WIN32)
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(GDCM CONFIG REQUIRED)
   find_package(GTest REQUIRED)
   find_package(cpr REQUIRED)
@@ -108,9 +110,13 @@ ELSEIF(WIN32)
     spdlog::spdlog
     fmt::fmt
     TBB::tbb
+    $<$<NOT:$<BOOL:${WIN32}>>:
+      clip
+    >
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32
+ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
   find_package(GDCM CONFIG REQUIRED)
 
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -118,17 +124,17 @@ ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32
     MRIOExtras
     MRSymbolMesh
     gtest
-    dl
     cpr
     imgui
     glad
     glfw
     hidapi-hidraw
-    jsoncpp
+    JsonCpp::JsonCpp
     spdlog
     fmt
     tbb
     clip
+    ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ENDIF() # APPLE

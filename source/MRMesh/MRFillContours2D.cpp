@@ -13,7 +13,8 @@
 #include "MRGTest.h"
 #include "MRMeshSave.h"
 #include "MRFillContour.h"
-#include "MRObjectMesh.h"
+#include "MRObjectMeshData.h"
+#include "MRColor.h"
 #include "MRMeshFillHole.h"
 #include <limits>
 
@@ -179,14 +180,14 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeContours )
+Expected<void> fillPlanarHole( ObjectMeshData& data, std::vector<EdgeLoop>& holeContours )
 {
     MR_TIMER
 
-    if ( !obj.varMesh() )
-        return unexpected( "No mesh in object: " + obj.name() );
+    if ( !data.mesh )
+        return unexpected( "fillPlanarHole: no input mesh" );
 
-    auto& mesh = *obj.varMesh();
+    auto& mesh = *data.mesh;
     auto& tp = mesh.topology;
 
     // take first edge from each contour and check that it is a hole boundary
@@ -197,7 +198,7 @@ Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeConto
             continue;
         for ( auto e : path )
             if ( tp.right( e ).valid() )
-                return unexpected( "Not hole contour given to fillPlanarHole: " + obj.name() );
+                return unexpected( "fillPlanarHole: not hole contour given" );
         holesEdges.push_back( path.front().sym() );
     }
 
@@ -220,32 +221,20 @@ Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeConto
         auto fillSuccess = fillContours2D( mesh, holesEdges );
         if ( !fillSuccess.has_value() )
         {
-            return unexpected( "Cannot fill object: " + obj.name() + ". Error: " + fillSuccess.error() );
+            return unexpected( "Cannot fill section: " + fillSuccess.error() );
         }
     }
 
     const auto fsz = tp.faceSize();
-    {
-        auto selFaces = obj.getSelectedFaces();
-        selFaces.resize( fsz );
-        selFaces.set( FaceId{ fsz0 }, fsz - fsz0, true );
-        obj.selectFaces( tp.getValidFaces() & selFaces );
-    }
+    data.selectedFaces.resize( fsz );
+    data.selectedFaces.set( FaceId{ fsz0 }, fsz - fsz0, true );
+    data.selectedFaces &= tp.getValidFaces();
 
-    {
-        auto selEdges = obj.getSelectedEdges();
-        tp.excludeLoneEdges( selEdges );
-        obj.selectEdges( std::move( selEdges ) );
-    }
+    tp.excludeLoneEdges( data.selectedEdges );
+    tp.excludeLoneEdges( data.creases );
 
-    {
-        auto creases = obj.creases();
-        tp.excludeLoneEdges( creases );
-        obj.setCreases( std::move( creases ) );
-    }
-
-    auto fcm = obj.getFacesColorMap();
-    auto tpf = obj.getTexturePerFace();
+    auto& fcm = data.faceColors;
+    auto& tpf = data.texturePerFace;
     if ( fcm.empty() && tpf.empty() )
         return {};
     if ( !fcm.empty() )
@@ -291,8 +280,6 @@ Expected<void> fillPlanarHole( ObjectMesh& obj, std::vector<EdgeLoop>& holeConto
             tpf[f] = tpf[maxAreaF];
     }
 
-    obj.setFacesColorMap( std::move( fcm ) );
-    obj.setTexturePerFace( std::move( tpf ) );
     return {};
 }
 

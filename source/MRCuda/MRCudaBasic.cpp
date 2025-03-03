@@ -1,8 +1,12 @@
 #include "MRCudaBasic.h"
 #include "MRCudaBasic.hpp"
+
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRVector3.h>
+#include <MRPch/MRSpdlog.h>
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <MRPch/MRSpdlog.h>
 
 namespace MR
 {
@@ -64,6 +68,29 @@ size_t getCudaAvailableMemory()
     CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) );
     // minus extra 128 MB
     return memFree - 128 * 1024 * 1024;
+}
+
+size_t getCudaSafeMemoryLimit()
+{
+    constexpr float cMaxGpuMemoryUsage = 0.80f;
+    return size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
+}
+
+size_t maxBufferSize( size_t availableBytes, size_t elementCount, size_t elementBytes )
+{
+    return std::min( availableBytes / elementBytes, elementCount );
+}
+
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector2i& blockDims, size_t elementBytes )
+{
+    const auto rowSize = (size_t)blockDims.x;
+    return std::min( availableBytes / elementBytes / rowSize, (size_t)blockDims.y ) * rowSize;
+}
+
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& blockDims, size_t elementBytes )
+{
+    const auto layerSize = (size_t)blockDims.x * blockDims.y;
+    return std::min( availableBytes / elementBytes / layerSize, (size_t)blockDims.z ) * layerSize;
 }
 
 std::string getError( cudaError_t code )

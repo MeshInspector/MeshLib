@@ -40,9 +40,9 @@ private:
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {
     protected:
-        virtual ObjAndPick pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers ) override;
-        virtual TransformMode modeFromPick_( MouseButton button, int modifiers ) override;
-        virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint ) override;
+        virtual ObjAndPick pickObjects_( std::vector<std::shared_ptr<Object>>& objects, int modifiers ) const override;
+        virtual TransformMode modeFromPickModifiers_( int modifiers ) const override;
+        virtual void setStartPoint_( const ObjAndPick& pick, Vector3f& startPoint ) const override;
     public:
         // Options are provided externally rather than directly from modifiers
         UI::RadioButtonOrModifierState modXfMode{};    // XfMode

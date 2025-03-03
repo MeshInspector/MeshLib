@@ -38,7 +38,7 @@ IF(APPLE)
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
-ELSEIF(WIN32)
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
@@ -55,6 +55,7 @@ ELSE()
     MRViewer
     MRMesh
     MRPython
+    JsonCpp::JsonCpp
     fmt
     glfw
     spdlog
@@ -74,7 +75,7 @@ IF(MESHLIB_BUILD_VOXELS)
       MRVoxels
       OpenVDB
     )
-  ELSEIF(WIN32)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(OpenVDB REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRVoxels

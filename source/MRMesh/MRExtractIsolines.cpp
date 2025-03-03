@@ -520,18 +520,19 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
         else
         {
             assert( false );
+            MR_UNREACHABLE_NO_RETURN
         }
 
         LineSegm3f segm;
         {
             assert ( ( rzs[0] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[0] ) );
             const float x = rzs[0] / ( rzs[0] - rzs[1] );
-            segm.a = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[0]];
+            segm.a = lerp( mp.mesh.points[rvs[0]], mp.mesh.points[rvs[1]], x );
         }
         {
             assert ( ( rzs[2] < 0 && 0 <= rzs[1] ) || ( rzs[1] < 0 && 0 <= rzs[2] ) );
             const float x = rzs[2] / ( rzs[2] - rzs[1] );
-            segm.b = x * mp.mesh.points[rvs[1]] + ( 1 - x ) * mp.mesh.points[rvs[2]];
+            segm.b = lerp( mp.mesh.points[rvs[2]], mp.mesh.points[rvs[1]], x );
         }
         res[i] = segm;
     } );

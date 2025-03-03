@@ -13,6 +13,11 @@
 namespace MR
 {
 
+#ifdef _MSC_VER
+#pragma warning push
+#pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#endif
+
 /// three-dimensional vector
 /// \ingroup VectorGroup
 template <typename T>
@@ -91,6 +96,8 @@ struct Vector3
     [[nodiscard]] friend constexpr bool operator ==( const Vector3<T> & a, const Vector3<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z; }
     [[nodiscard]] friend constexpr bool operator !=( const Vector3<T> & a, const Vector3<T> & b ) { return !( a == b ); }
 
+    // NOTE: We use `std::declval()` in the operators below because libclang 18 in our binding generator is bugged and chokes on decltyping `a.x` and such. TODO fix this when we update libclang.
+
     [[nodiscard]] friend constexpr const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
     [[nodiscard]] friend constexpr auto operator -( const Vector3<T> & a ) -> Vector3<decltype( -std::declval<T>() )> { return { -a.x, -a.y, -a.z }; }
 
@@ -117,7 +124,9 @@ struct Vector3
             return a *= ( 1 / b );
     }
 
-
+    #ifdef _MSC_VER
+    #pragma warning pop
+    #endif
 };
 
 /// \related Vector3
@@ -242,5 +251,9 @@ template <typename T>
 MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 
 /// \}
+
+#ifdef _MSC_VER
+#pragma warning pop
+#endif
 
 } // namespace MR

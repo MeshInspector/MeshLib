@@ -6,6 +6,11 @@
 namespace MR
 {
 
+#ifdef _MSC_VER
+#pragma warning push
+#pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#endif
+
 /// arbitrary 2x2 matrix
 /// \ingroup MatrixGroup
 template <typename T>
@@ -67,6 +72,8 @@ struct Matrix2
 
     [[nodiscard]] friend constexpr bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b ) { return a.x == b.x && a.y == b.y; }
     [[nodiscard]] friend constexpr bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b ) { return !( a == b ); }
+
+    // NOTE: We use `std::declval()` in the operators below because libclang 18 in our binding generator is bugged and chokes on decltyping `a.x` and such. TODO fix this when we update libclang.
 
     [[nodiscard]] friend constexpr auto operator +( const Matrix2<T> & a, const Matrix2<T> & b ) -> Matrix2<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y }; }
     [[nodiscard]] friend constexpr auto operator -( const Matrix2<T> & a, const Matrix2<T> & b ) -> Matrix2<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y }; }
@@ -179,5 +186,9 @@ constexpr Matrix2<T> Matrix2<T>::transposed() const noexcept
 }
 
 /// \}
+
+#ifdef _MSC_VER
+#pragma warning pop
+#endif
 
 } // namespace MR

@@ -7,6 +7,11 @@
 namespace MR
 {
 
+#ifdef _MSC_VER
+#pragma warning push
+#pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#endif
+
 /// arbitrary 4x4 matrix
 /// \ingroup MatrixGroup
 template <typename T>
@@ -106,6 +111,8 @@ struct Matrix4
     [[nodiscard]] friend constexpr bool operator ==( const Matrix4<T> & a, const Matrix4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
     [[nodiscard]] friend constexpr bool operator !=( const Matrix4<T> & a, const Matrix4<T> & b ) { return !( a == b ); }
 
+    // NOTE: We use `std::declval()` in the operators below because libclang 18 in our binding generator is bugged and chokes on decltyping `a.x` and such. TODO fix this when we update libclang.
+
     [[nodiscard]] friend constexpr auto operator +( const Matrix4<T> & a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
     [[nodiscard]] friend constexpr auto operator -( const Matrix4<T> & a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
     [[nodiscard]] friend constexpr auto operator *(               T    a, const Matrix4<T> & b ) -> Matrix4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
@@ -144,6 +151,10 @@ struct Matrix4
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
+
+    #ifdef _MSC_VER
+    #pragma warning pop
+    #endif
 };
 
 /// \related Matrix4
@@ -377,5 +388,9 @@ void Matrix4<T>::setTranslation( const Vector3<T>& t ) noexcept
 }
 
 /// \}
+
+#ifdef _MSC_VER
+#pragma warning pop
+#endif
 
 } // namespace MR

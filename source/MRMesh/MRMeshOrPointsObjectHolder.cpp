@@ -15,6 +15,8 @@ MeshOrPointsObjectHolder::MeshOrPointsObjectHolder( std::shared_ptr<VisualObject
         set( objMesh );
     else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( vo ) )
         set( objPoints );
+    else
+        reset();
 }
 
 void MeshOrPointsObjectHolder::set( std::shared_ptr<ObjectMesh> om )

@@ -63,38 +63,38 @@ struct FindProjectionOnPointsSettings
     const BitSet* valid = nullptr;
     /// affine transformation for input points
     const AffineXf3f* xf = nullptr;
-    /// ...
+    /// upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
     float upDistLimitSq = FLT_MAX;
-    /// ...
+    /// low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
     float loDistLimitSq = 0.f;
-    /// ...
+    /// if true, discards a projection candidate with the same index as the target point
     bool skipSameIndex = false;
     /// progress callback
     ProgressCallback cb;
 };
 
-/// ...
+/// abstract class for computing the closest points of point clouds
 class IPointsProjector
 {
 public:
     virtual ~IPointsProjector() = default;
 
-    /// ...
+    /// sets the reference point cloud
     virtual Expected<void> setPointCloud( const PointCloud& pointCloud ) = 0;
 
-    /// ...
+    /// computes the closest points on point cloud to given points
     [[nodiscard]] virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const = 0;
 };
 
-/// ...
+/// default implementation of IPointsProjector
 class MRMESH_CLASS PointsProjector : public IPointsProjector
 {
 public:
-    /// ...
+    /// sets the reference point cloud
     MRMESH_API Expected<void> setPointCloud( const PointCloud& pointCloud ) override;
 
-    /// ...
+    /// computes the closest points on point cloud to given points
     [[nodiscard]] MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
 

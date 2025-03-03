@@ -11,14 +11,14 @@ namespace MR::Cuda
 // struct from MRPointCloud.cuh
 struct PointCloudDataHolder;
 
-/// ...
+/// CUDA-backed implementation of IPointsProjector
 class PointsProjector : public IPointsProjector
 {
 public:
-    /// ...
+    /// sets the reference point cloud
     MRCUDA_API Expected<void> setPointCloud( const PointCloud& pointCloud ) override;
 
-    /// ...
+    /// computes the closest points on point cloud to given points
     [[nodiscard]] MRCUDA_API Expected<void> findProjections( std::vector<MR::PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
 

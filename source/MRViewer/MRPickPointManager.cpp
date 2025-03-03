@@ -339,6 +339,14 @@ bool PickPointManager::isClosedCountour( const std::shared_ptr<VisualObject>& ob
     return points.size() > 1 && points[0]->getCurrentPosition() == points.back()->getCurrentPosition();
 }
 
+size_t PickPointManager::numPickPoints( const std::shared_ptr<VisualObject>& obj ) const
+{
+    auto pointsIt = pickedPoints_.find( obj );
+    if ( pointsIt == pickedPoints_.end() )
+        return 0;
+    return pointsIt->second.size();
+}
+
 bool PickPointManager::closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed )
 {
     auto pointsIt = pickedPoints_.find( obj );

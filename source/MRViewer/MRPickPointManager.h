@@ -102,6 +102,9 @@ public:
     /// check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
+    /// returns the total number of pick points (including extra point if the contour is closed) on given object
+    [[nodiscard]] MRVIEWER_API size_t numPickPoints( const std::shared_ptr<VisualObject>& obj ) const;
+
     /// returns point widget by index from given object or nullptr if no such widget exists
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;
 

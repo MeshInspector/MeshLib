@@ -250,7 +250,7 @@ TEST( MRMesh, Pdf )
         for ( int j = 0; j < colorMapSizeY; ++j )
         {
             const float c = float( i ) / colorMapSizeX;
-            pixels[i + j * colorMapSizeX] = ( 1 - c ) * colorLeft + c * colorRight;
+            pixels[i + j * colorMapSizeX] = lerp( colorLeft, colorRight, c );
         }
     }
 

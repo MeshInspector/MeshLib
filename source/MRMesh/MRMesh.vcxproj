@@ -19,6 +19,7 @@
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
+    <ClInclude Include="MRBezier.h" />
     <ClInclude Include="MRChangeMeshDataAction.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />

@@ -37,7 +37,8 @@ jobs:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
-      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -59,7 +60,8 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:   ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:   ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   ubuntu-arm64-build-test:

@@ -19,7 +19,7 @@ jobs:
         id: extract-tag
         run: |
           # TODO: call 'config.yml' for predefined values only
-          current_vcpkg_tag=$(yq eval -r '.on.workflow_call.outputs.vcpkg_version.value' .github/workflows/config.yml)
+          current_vcpkg_tag=$(yq eval -r '.on.workflow_call.outputs.vs22_vcpkg_version.value' .github/workflows/config.yml)
           echo "current_vcpkg_tag=${current_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "current vcpkg tag: ${current_vcpkg_tag}"
         shell: bash

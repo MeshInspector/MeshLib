@@ -2191,17 +2191,10 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     return res;
 }
 
-Expected<FaceBitSet> cutMeshByPolyline( Mesh& mesh, const AffineXf3f& meshXf,
-                                        const Polyline3& polyline, const AffineXf3f& lineXf )
+Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
 {
-    const auto xf = meshXf.inverse() * lineXf;
-
     std::vector<MeshTriPoint> surfaceLine;
-    auto contours = polyline.contours();
-    if ( contours.size() != 1 )
-        return unexpected( "Expected polyline to contain exactly one closed contour" );
-
-    for ( const auto& pt : contours[0] )
+    for ( const auto& pt : contour )
     {
         PointOnFace projPt;
         if ( !mesh.projectPoint( xf( pt ), projPt ) )
@@ -2211,11 +2204,11 @@ Expected<FaceBitSet> cutMeshByPolyline( Mesh& mesh, const AffineXf3f& meshXf,
         surfaceLine.push_back( mesh.toTriPoint( projPt ) );
     }
 
-    auto contour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
-    if ( !contour )
-        return unexpected( "Can not convert tri points to mesh contour: " + contour.error() );
+    auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
+    if ( !meshContour )
+        return unexpected( "Can not convert tri points to mesh contour: " + meshContour.error() );
 
-    auto cutRes = cutMesh( mesh, { *contour } );
+    auto cutRes = cutMesh( mesh, { *meshContour } );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
     return sideFbv;
 }

@@ -1281,7 +1281,7 @@
     <ClInclude Include="MRChunkIterator.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshOrPointsObjectHolder.h" />
+    <ClInclude Include="MRMeshOrPointsObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2112,7 +2112,7 @@
     <ClCompile Include="MRChunkIterator.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshOrPointsObjectHolder.cpp" />
+    <ClCompile Include="MRMeshOrPointsObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -1,7 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRMeshOrPoints.h"
-#include "MRVisualObject.h"
 #include <variant>
 
 namespace MR
@@ -9,15 +8,15 @@ namespace MR
 
 /// This class can hold either ObjectMesh or ObjectPoint
 /// It is used for convenient storage and operation with any of them
-class MeshOrPointsObjectHolder
+class MeshOrPointsObject
 {
 public:
-    MeshOrPointsObjectHolder() { reset(); }
+    MeshOrPointsObject() { reset(); }
     /// construct, automatically detecting the object type (ObjectMesh or ObjectPoint)
     /// if set an another type, will be reset
-    MRMESH_API MeshOrPointsObjectHolder( std::shared_ptr<VisualObject> vo );
-    MeshOrPointsObjectHolder( std::shared_ptr<ObjectMesh> om ) { set( std::move( om ) ); }
-    MeshOrPointsObjectHolder( std::shared_ptr<ObjectPoints> op ) { set( std::move( op ) ); }
+    MRMESH_API MeshOrPointsObject( std::shared_ptr<VisualObject> vo );
+    MeshOrPointsObject( std::shared_ptr<ObjectMesh> om ) { set( std::move( om ) ); }
+    MeshOrPointsObject( std::shared_ptr<ObjectPoints> op ) { set( std::move( op ) ); }
 
     /// set to hold ObjectMesh
     MRMESH_API void set( std::shared_ptr<ObjectMesh> om );

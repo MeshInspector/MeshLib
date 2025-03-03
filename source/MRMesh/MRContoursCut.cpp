@@ -2215,12 +2215,8 @@ Expected<FaceBitSet> cutMeshByPolyline( Mesh& mesh, const AffineXf3f& meshXf,
     if ( !contour )
         return unexpected( "Can not convert tri points to mesh contour: " + contour.error() );
 
-    FaceMap faceMap;
-    CutMeshParameters params;
-    params.new2OldMap = &faceMap;
-    auto cutRes = cutMesh( mesh, { *contour }, params );
+    auto cutRes = cutMesh( mesh, { *contour } );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
-
     return sideFbv;
 }
 

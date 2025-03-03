@@ -4,6 +4,7 @@
 #include "MRFewSmallest.h"
 #include "MRBuffer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -252,6 +253,38 @@ VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & pr
     if ( res.second < res.first ) // if not sort we will get dependency on work distribution among threads
         std::swap( res.first, res.second );
     return res;
+}
+
+Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
+{
+    pointCloud_ = &pointCloud;
+    /// force compute AABB tree
+    (void)pointCloud_->getAABBTree();
+    return {};
+}
+
+Expected<std::vector<PointsProjectionResult>> PointsProjector::findProjections( const std::vector<Vector3f>& points,
+    const FindProjectionOnPointsSettings& settings ) const
+{
+    if ( !pointCloud_ )
+        return unexpected( "No reference point cloud is set" );
+
+    std::vector<PointsProjectionResult> results;
+    ParallelFor( (size_t)0, points.size(), [&] ( size_t i )
+    {
+        if ( settings.valid && !settings.valid->test( i ) )
+            return;
+
+        results[i] = findProjectionOnPoints(
+            settings.xf ? ( *settings.xf )( points[i] ) : points[i],
+            *pointCloud_,
+            settings.upDistLimitSq,
+            nullptr,
+            settings.loDistLimitSq,
+            settings.skipSameIndex ? [i] ( VertId v ) { return v == i; } : VertPredicate{}
+        );
+    } );
+    return results;
 }
 
 } //namespace MR

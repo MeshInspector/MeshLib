@@ -6,16 +6,18 @@ namespace MR::Cuda
 {
 
 __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData pc, const float3* __restrict__ points,
-    Matrix4 pointsXf, Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, bool skipSameIndex, size_t chunkSize,
-    size_t chunkOffset )
+    const uint64_t* __restrict__ validPoints, Matrix4 xf, float upDistLimitSq, float loDistLimitSq, bool skipSameIndex,
+    size_t chunkSize, size_t chunkOffset )
 {
     const auto index = blockIdx.x * blockDim.x + threadIdx.x;
     if ( index >= chunkSize )
         return;
 
     const auto globalIndex = index + chunkOffset;
+    if ( !testBit( validPoints, globalIndex ) )
+        return;
 
-    const auto pt = pointsXf.isIdentity ? points[index] : pointsXf.transform( points[index] );
+    const auto pt = xf.isIdentity ? points[index] : xf.transform( points[index] );
 
     PointsProjectionResult result {
         .distSq = upDistLimitSq,
@@ -65,7 +67,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
                 if ( skipSameIndex && i == globalIndex )
                     continue;
 
-                const auto proj = refXf.isIdentity ? pc.points[i].coord : refXf.transform( pc.points[i].coord );
+                const auto proj = pc.points[i].coord;
                 const auto distSq = lengthSq( proj - pt );
                 if ( distSq < result.distSq )
                 {
@@ -94,11 +96,12 @@ exit:
 }
 
 void findProjectionOnPointsKernel( PointsProjectionResult* res, PointCloudData pc, const float3* points,
-    Matrix4 pointsXf, Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, bool skipSameIndex, size_t chunkSize, size_t chunkOffset )
+    const uint64_t* validPoints, Matrix4 xf, float upDistLimitSq, float loDistLimitSq, bool skipSameIndex,
+    size_t chunkSize, size_t chunkOffset )
 {
     constexpr int maxThreadsPerBlock = 640;
     const auto numBlocks = (int)( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    kernel <<< numBlocks, maxThreadsPerBlock >>> ( res, pc, points, pointsXf, refXf, upDistLimitSq, loDistLimitSq, skipSameIndex, chunkSize, chunkOffset );
+    kernel <<< numBlocks, maxThreadsPerBlock >>> ( res, pc, points, validPoints, xf, upDistLimitSq, loDistLimitSq, skipSameIndex, chunkSize, chunkOffset );
 }
 
 } // namespace MR::Cuda

@@ -13,7 +13,7 @@ struct PointsProjectionResult
 };
 
 void findProjectionOnPointsKernel( PointsProjectionResult* __restrict__ res, PointCloudData pc,
-    const float3* __restrict__ points, Matrix4 pointsXf, Matrix4 refXf, float upDistLimitSq, float loDistLimitSq,
-    bool skipSameIndex, size_t chunkSize, size_t chunkOffset );
+    const float3* __restrict__ points, const uint64_t* __restrict__ validPoints, Matrix4 xf, float upDistLimitSq,
+    float loDistLimitSq, bool skipSameIndex, size_t chunkSize, size_t chunkOffset );
 
 } // namespace MR::Cuda

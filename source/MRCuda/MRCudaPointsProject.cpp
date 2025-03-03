@@ -7,6 +7,7 @@
 #include "MRCudaPointCloud.h"
 
 #include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRChunkIterator.h"
 
 static_assert( sizeof( MR::Cuda::PointsProjectionResult ) == sizeof( MR::PointsProjectionResult ) );
@@ -15,12 +16,31 @@ namespace MR::Cuda
 {
 
 Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
-    const std::vector<Vector3f>& points, const AffineXf3f* pointsXf, const AffineXf3f* refXf, float upDistLimitSq,
-    float loDistLimitSq, bool skipSameIndex )
+    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings )
 {
-    auto cudaPointCloud = copyDataFrom( pointCloud );
-    if ( !cudaPointCloud )
-        return unexpected( cudaPointCloud.error() );
+    PointsProjector projector;
+    return projector.setPointCloud( pointCloud )
+        .and_then( [&] { return projector.findProjections( points, settings ); } );
+}
+
+Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
+{
+    if ( auto res = copyDataFrom( pointCloud ) )
+    {
+        data_ = std::move( *res );
+        return {};
+    }
+    else
+    {
+        return unexpected( std::move( res.error() ) );
+    }
+}
+
+Expected<std::vector<MR::PointsProjectionResult>> PointsProjector::findProjections( const std::vector<Vector3f>& points,
+    const FindProjectionOnPointsSettings& settings ) const
+{
+    if ( !data_ )
+        return unexpected( "No reference point cloud is set" );
 
     const auto totalSize = points.size();
     const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float3 ) + sizeof( PointsProjectionResult ) );
@@ -34,14 +54,22 @@ Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const 
     std::vector<MR::PointsProjectionResult> results;
     results.resize( totalSize );
 
-    const auto cudaPointsXf = pointsXf ? fromXf( *pointsXf ) : Matrix4{};
-    const auto cudaRefXf = refXf ? fromXf( *refXf ) : Matrix4{};
+    DynamicArray<uint64_t> cudaValid;
+    if ( settings.valid )
+    {
+        assert( points.size() <= settings.valid->size() );
+        std::vector<uint64_t> validVec;
+        boost::to_block_range( *settings.valid, std::back_inserter( validVec ) );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaValid.fromVector( validVec ) );
+    }
+
+    const auto cudaXf = settings.xf ? fromXf( *settings.xf ) : Matrix4{};
 
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
     {
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.copyFrom( points.data() + offset, size ) );
 
-        findProjectionOnPointsKernel( cudaResult.data(), (*cudaPointCloud)->data(), cudaPoints.data(), cudaPointsXf, cudaRefXf, upDistLimitSq, loDistLimitSq, skipSameIndex, size, offset );
+        findProjectionOnPointsKernel( cudaResult.data(), data_->data(), cudaPoints.data(), settings.valid ? cudaValid.data() : nullptr, cudaXf, settings.upDistLimitSq, settings.loDistLimitSq, settings.skipSameIndex, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( results.data() + offset, size ) );

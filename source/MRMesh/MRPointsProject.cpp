@@ -270,7 +270,7 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
         return unexpected( "No reference point cloud is set" );
 
     results.resize( points.size() );
-    ParallelFor( (size_t)0, points.size(), [&] ( size_t i )
+    ParallelFor( points, [&] ( size_t i )
     {
         if ( settings.valid && !settings.valid->test( i ) )
             return;
@@ -283,7 +283,8 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
             settings.loDistLimitSq,
             settings.skipSameIndex ? [i] ( VertId v ) { return v == i; } : VertPredicate{}
         );
-    } );
+    },
+    settings.cb );
 
     return {};
 }

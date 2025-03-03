@@ -9,6 +9,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRProgressCallback.h"
 
 static_assert( sizeof( MR::Cuda::PointsProjectionResult ) == sizeof( MR::PointsProjectionResult ) );
 
@@ -66,14 +67,27 @@ Expected<void> PointsProjector::findProjections( std::vector<MR::PointsProjectio
 
     const auto cudaXf = settings.xf ? fromXf( *settings.xf ) : Matrix4{};
 
+    if ( !reportProgress( settings.cb, 0.60f ) )
+        return unexpectedOperationCanceled();
+
+    const auto cb1 = subprogress( settings.cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
     {
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
         CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.copyFrom( points.data() + offset, size ) );
 
         findProjectionOnPointsKernel( cudaResult.data(), data_->data(), cudaPoints.data(), settings.valid ? cudaValid.data() : nullptr, cudaXf, settings.upDistLimitSq, settings.loDistLimitSq, settings.skipSameIndex, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        if ( !reportProgress( cb2, 0.33f ) )
+            return unexpectedOperationCanceled();
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( results.data() + offset, size ) );
+        if ( !reportProgress( cb2, 1.00f ) )
+            return unexpectedOperationCanceled();
     }
 
     return {};

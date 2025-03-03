@@ -69,6 +69,8 @@ struct FindProjectionOnPointsSettings
     float loDistLimitSq = 0.f;
     /// ...
     bool skipSameIndex = false;
+    /// progress callback
+    ProgressCallback cb;
 };
 
 /// ...

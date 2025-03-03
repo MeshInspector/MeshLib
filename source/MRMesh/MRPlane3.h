@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 
 #if MR_HAS_REQUIRES
+#include "MRVectorTraits.h"
 #include <concepts>
 #endif
 

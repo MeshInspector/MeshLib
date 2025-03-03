@@ -37,6 +37,9 @@ public:
         /// This is appended to the names of all undo/redo actions
         std::string historyNameSuffix;
 
+        /// Whether to activate dragging new point immediately after its creation on mouse down
+        bool startDraggingJustAddedPoint = true;
+
         /// Parameters for configuring the surface point widget
         /// Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;

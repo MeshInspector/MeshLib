@@ -156,10 +156,10 @@ int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>
         colorLast2Points_( obj );
     if ( params.onPointAdd )
         params.onPointAdd( obj, index );
+    setHoveredPointWidget_( pw.get() );
     if ( startDragging )
     {
         MR_SCOPED_VALUE( params.writeHistory, false );
-        setHoveredPointWidget_( pw.get() );
         pw->startDragging();
     }
     return index;
@@ -473,7 +473,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
             return false;
-        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), true );
+        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), params.startDraggingJustAddedPoint );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {

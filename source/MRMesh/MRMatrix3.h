@@ -9,6 +9,7 @@ namespace MR
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
 #endif
 
 /// arbitrary 3x3 matrix

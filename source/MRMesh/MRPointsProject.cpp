@@ -263,13 +263,13 @@ Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
     return {};
 }
 
-Expected<std::vector<PointsProjectionResult>> PointsProjector::findProjections( const std::vector<Vector3f>& points,
-    const FindProjectionOnPointsSettings& settings ) const
+Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionResult>& results,
+    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const
 {
     if ( !pointCloud_ )
         return unexpected( "No reference point cloud is set" );
 
-    std::vector<PointsProjectionResult> results;
+    results.resize( points.size() );
     ParallelFor( (size_t)0, points.size(), [&] ( size_t i )
     {
         if ( settings.valid && !settings.valid->test( i ) )
@@ -284,7 +284,8 @@ Expected<std::vector<PointsProjectionResult>> PointsProjector::findProjections( 
             settings.skipSameIndex ? [i] ( VertId v ) { return v == i; } : VertPredicate{}
         );
     } );
-    return results;
+
+    return {};
 }
 
 } //namespace MR

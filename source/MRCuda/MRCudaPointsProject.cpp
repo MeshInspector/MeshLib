@@ -18,9 +18,11 @@ namespace MR::Cuda
 Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
     const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings )
 {
+    std::vector<MR::PointsProjectionResult> results;
     PointsProjector projector;
     return projector.setPointCloud( pointCloud )
-        .and_then( [&] { return projector.findProjections( points, settings ); } );
+        .and_then( [&] { return projector.findProjections( results, points, settings ); } )
+        .transform( [&] { return results; } );
 }
 
 Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
@@ -36,8 +38,8 @@ Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
     }
 }
 
-Expected<std::vector<MR::PointsProjectionResult>> PointsProjector::findProjections( const std::vector<Vector3f>& points,
-    const FindProjectionOnPointsSettings& settings ) const
+Expected<void> PointsProjector::findProjections( std::vector<MR::PointsProjectionResult>& results,
+    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const
 {
     if ( !data_ )
         return unexpected( "No reference point cloud is set" );
@@ -51,7 +53,6 @@ Expected<std::vector<MR::PointsProjectionResult>> PointsProjector::findProjectio
     DynamicArray<PointsProjectionResult> cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
 
-    std::vector<MR::PointsProjectionResult> results;
     results.resize( totalSize );
 
     DynamicArray<uint64_t> cudaValid;
@@ -75,7 +76,7 @@ Expected<std::vector<MR::PointsProjectionResult>> PointsProjector::findProjectio
         CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.copyTo( results.data() + offset, size ) );
     }
 
-    return results;
+    return {};
 }
 
 size_t findProjectionOnPointsHeapBytes( const PointCloud& pointCloud, size_t pointsCount )

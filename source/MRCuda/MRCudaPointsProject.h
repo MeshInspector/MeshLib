@@ -19,7 +19,7 @@ public:
     MRCUDA_API Expected<void> setPointCloud( const PointCloud& pointCloud ) override;
 
     /// ...
-    [[nodiscard]] MRCUDA_API Expected<std::vector<MR::PointsProjectionResult>> findProjections(
+    [[nodiscard]] MRCUDA_API Expected<void> findProjections( std::vector<MR::PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
 
 private:

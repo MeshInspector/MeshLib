@@ -2,6 +2,7 @@
 #include "MRVisualObject.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
+#include "MRMeshOrPoints.h"
 
 
 namespace MR

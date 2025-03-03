@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRMeshOrPoints.h"
 #include <variant>
 
 namespace MR

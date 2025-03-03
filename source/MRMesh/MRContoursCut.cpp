@@ -2199,14 +2199,14 @@ Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, con
         PointOnFace projPt;
         if ( !mesh.projectPoint( xf( pt ), projPt ) )
         {
-            return unexpected( "Can not project point into mesh" );
+            return unexpected( "Cannot project point to mesh" );
         }
         surfaceLine.push_back( mesh.toTriPoint( projPt ) );
     }
 
     auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
     if ( !meshContour )
-        return unexpected( "Can not convert tri points to mesh contour: " + meshContour.error() );
+        return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
 
     auto cutRes = cutMesh( mesh, { *meshContour } );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );

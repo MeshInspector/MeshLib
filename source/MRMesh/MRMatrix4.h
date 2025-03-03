@@ -8,7 +8,7 @@ namespace MR
 {
 
 #ifdef _MSC_VER
-#pragma warning push
+#pragma warning(push)
 #pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
 #endif
 
@@ -151,10 +151,6 @@ struct Matrix4
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
-
-    #ifdef _MSC_VER
-    #pragma warning pop
-    #endif
 };
 
 /// \related Matrix4
@@ -390,7 +386,7 @@ void Matrix4<T>::setTranslation( const Vector3<T>& t ) noexcept
 /// \}
 
 #ifdef _MSC_VER
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 } // namespace MR

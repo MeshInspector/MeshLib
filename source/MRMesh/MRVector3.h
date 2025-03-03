@@ -14,7 +14,7 @@ namespace MR
 {
 
 #ifdef _MSC_VER
-#pragma warning push
+#pragma warning(push)
 #pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
 #endif
 
@@ -123,10 +123,6 @@ struct Vector3
         else
             return a *= ( 1 / b );
     }
-
-    #ifdef _MSC_VER
-    #pragma warning pop
-    #endif
 };
 
 /// \related Vector3
@@ -253,7 +249,7 @@ MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 /// \}
 
 #ifdef _MSC_VER
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 } // namespace MR

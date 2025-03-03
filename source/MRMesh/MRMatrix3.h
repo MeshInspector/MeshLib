@@ -7,7 +7,7 @@ namespace MR
 {
 
 #ifdef _MSC_VER
-#pragma warning push
+#pragma warning(push)
 #pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
 #endif
 
@@ -128,10 +128,6 @@ struct Matrix3
                 res[i][j] = dot( a[i], b.col(j) );
         return res;
     }
-
-    #ifdef _MSC_VER
-    #pragma warning pop
-    #endif
 };
 
 /// \related Matrix3
@@ -280,7 +276,7 @@ auto Matrix3<T>::qr() const noexcept -> QR MR_REQUIRES_IF_SUPPORTED( !std::is_in
 /// \}
 
 #ifdef _MSC_VER
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 } // namespace MR

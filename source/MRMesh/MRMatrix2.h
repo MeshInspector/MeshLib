@@ -7,7 +7,7 @@ namespace MR
 {
 
 #ifdef _MSC_VER
-#pragma warning push
+#pragma warning(push)
 #pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
 #endif
 
@@ -188,7 +188,7 @@ constexpr Matrix2<T> Matrix2<T>::transposed() const noexcept
 /// \}
 
 #ifdef _MSC_VER
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 } // namespace MR

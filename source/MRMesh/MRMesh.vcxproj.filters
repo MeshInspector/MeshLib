@@ -43,9 +43,6 @@
     <Filter Include="Source Files\History">
       <UniqueIdentifier>{81c8f6c2-9f7d-4609-9a19-a4aaa5edfbbd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests">
-      <UniqueIdentifier>{2bfe88a4-61f4-4317-8dae-b473f2202be0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Components">
       <UniqueIdentifier>{fdb0ec66-343d-41e6-80ec-44d4360e11a8}</UniqueIdentifier>
     </Filter>
@@ -419,9 +416,6 @@
     </ClInclude>
     <ClInclude Include="MRMeshComponents.h">
       <Filter>Source Files\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="MRGTest.h">
-      <Filter>Source Files\Tests</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectDistanceMap.h">
       <Filter>Source Files\DataModel</Filter>
@@ -1491,17 +1485,11 @@
     <ClCompile Include="MRConfig.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshTests.cpp">
-      <Filter>Source Files\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="MRDenseBox.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
       <Filter>Source Files\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBestFitTests.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectDistanceMap.cpp">
       <Filter>Source Files\DataModel</Filter>
@@ -1511,9 +1499,6 @@
     </ClCompile>
     <ClCompile Include="MRDistanceMapLoad.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRExtractIsolinesTests.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeMaker.cpp">
       <Filter>Source Files\AABBTree</Filter>
@@ -1626,9 +1611,6 @@
     <ClCompile Include="MRIdentifyVertices.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshLoadSaveTest.cpp">
-      <Filter>Source Files\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshTopology.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
@@ -1673,9 +1655,6 @@
     </ClCompile>
     <ClCompile Include="MRPolylineComponents.cpp">
       <Filter>Source Files\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="MRExampleTest.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContourByGraphCut.cpp">
       <Filter>Source Files\Segmentation</Filter>

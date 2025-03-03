@@ -233,4 +233,11 @@ struct CutMeshResult
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
 
+
+/// Cuts \p mesh by \p polyline by projecting all the points
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \return Faces to the left of the polyline
+MRMESH_API Expected<FaceBitSet> cutMeshByPolyline( Mesh& mesh, const AffineXf3f& meshXf,
+                                                   const Polyline3& polyline, const AffineXf3f& lineXf );
+
 } //namespace MR

@@ -1,6 +1,7 @@
 #include "MRContoursCut.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
+#include "MRPolyline.h"
 #include "MRTriangleIntersection.h"
 #include "MRMeshTopology.h"
 #include "MRMeshDelone.h"
@@ -2189,6 +2190,40 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     return res;
 }
+
+Expected<FaceBitSet> cutMeshByPolyline( Mesh& mesh, const AffineXf3f& meshXf,
+                                        const Polyline3& polyline, const AffineXf3f& lineXf )
+{
+    const auto xf = meshXf.inverse() * lineXf;
+
+    std::vector<MeshTriPoint> surfaceLine;
+    auto contours = polyline.contours();
+    if ( contours.size() != 1 )
+        return unexpected( "Expected polyline to contain exactly one closed contour" );
+
+    for ( const auto& pt : contours[0] )
+    {
+        PointOnFace projPt;
+        if ( !mesh.projectPoint( xf( pt ), projPt ) )
+        {
+            return unexpected( "Can not project point into mesh" );
+        }
+        surfaceLine.push_back( mesh.toTriPoint( projPt ) );
+    }
+
+    auto contour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
+    if ( !contour )
+        return unexpected( "Can not convert tri points to mesh contour: " + contour.error() );
+
+    FaceMap faceMap;
+    CutMeshParameters params;
+    params.new2OldMap = &faceMap;
+    auto cutRes = cutMesh( mesh, { *contour }, params );
+    auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
+
+    return sideFbv;
+}
+
 
 TEST( MRMesh, BooleanIntersectionsSort )
 {

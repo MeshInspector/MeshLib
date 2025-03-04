@@ -92,6 +92,7 @@
     <CudaCompile Include="MRCudaSolarRadiation.cu" />
     <CudaCompile Include="MRCudaTest.cu" />
     <CudaCompile Include="MRCudaContoursDistanceMap.cu" />
+    <CudaCompile Include="MRCudaPointsProject.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -116,7 +117,9 @@
     <ClInclude Include="MRCudaContoursDistanceMap.h" />
     <ClInclude Include="MRCudaMath.h" />
     <ClInclude Include="MRCudaPointCloud.h" />
+    <ClInclude Include="MRCudaPointCloud.cuh" />
     <ClInclude Include="MRCudaPointsProject.h" />
+    <ClInclude Include="MRCudaPointsProject.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />

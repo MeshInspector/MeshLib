@@ -33,7 +33,7 @@ size_t pointCloudHeapBytes( const PointCloud& pc, bool copyNormals, const std::v
     return
           nodes.size() * sizeof( Node3 )
         + points.size() * sizeof( OrderedPoint )
-        + copyNormals ? ( ( normals ? normals->size() : pc.normals.size() ) * sizeof( float3 ) ) : 0
+        + ( copyNormals ? ( normals ? normals->size() : pc.normals.size() ) * sizeof( float3 ) : 0 )
     ;
 }
 

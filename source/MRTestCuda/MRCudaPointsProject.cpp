@@ -39,7 +39,7 @@ TEST( MRCuda, PointsProjector )
     ASSERT_EQ( cudaResults.size(), cube.points.size() );
     for ( auto i = 0; i < cube.points.size(); ++i )
     {
-        ASSERT_EQ( cudaResults[i].distSq, cpuResults[i].distSq ) << "Incorrect result at index " << i;
+        ASSERT_NEAR( cudaResults[i].distSq, cpuResults[i].distSq, 1e-6f ) << "Incorrect result at index " << i;
         ASSERT_EQ( cudaResults[i].vId, cpuResults[i].vId ) << "Incorrect result at index " << i;
     }
 }

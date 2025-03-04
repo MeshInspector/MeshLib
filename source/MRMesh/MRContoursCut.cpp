@@ -2194,19 +2194,18 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
 {
     std::vector<MeshTriPoint> surfaceLine( contour.size() );
-    std::atomic<bool> ok = true;
+    tbb::task_group_context ctx;
+    bool ok = true;
     ParallelFor( (size_t)0, contour.size(), [&] ( size_t i )
     {
-        if ( ok )
+        PointOnFace projPt;
+        if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
         {
-            PointOnFace projPt;
-            if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
-            {
+            if ( ctx.cancel_group_execution() )
                 ok = false;
-                return;
-            }
-            surfaceLine[i] = mesh.toTriPoint( projPt );
+            return;
         }
+        surfaceLine[i] = mesh.toTriPoint( projPt );
     } );
     if ( !ok )
         return unexpected( "Cannot project point to mesh" );
@@ -2217,7 +2216,7 @@ Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, con
 
     auto cutRes = cutMesh( mesh, { *meshContour } );
     if ( !cutRes.fbsWithCountourIntersections.none() )
-        return unexpected( "Cannot cut mesh because of self intersections" );
+        return unexpected( "Cannot cut mesh because of contour self intersections" );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
     return sideFbv;
 }

@@ -1,7 +1,9 @@
 #pragma once
+
 #include "MRMeshFwd.h"
+#include "MRExpected.h"
 #include "MRId.h"
-#include "MRProgressCallback.h"
+
 #include <cfloat>
 
 namespace MR
@@ -53,6 +55,52 @@ MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, 
 
 /// finds two closest points (first id < second id) in whole point cloud
 [[nodiscard]] MRMESH_API VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress = {} );
+
+/// settings for \ref IPointsProjector::findProjections
+struct FindProjectionOnPointsSettings
+{
+    /// bitset of valid input points
+    const BitSet* valid = nullptr;
+    /// affine transformation for input points
+    const AffineXf3f* xf = nullptr;
+    /// upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+    float upDistLimitSq = FLT_MAX;
+    /// low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+    float loDistLimitSq = 0.f;
+    /// if true, discards a projection candidate with the same index as the target point
+    bool skipSameIndex = false;
+    /// progress callback
+    ProgressCallback cb;
+};
+
+/// abstract class for computing the closest points of point clouds
+class IPointsProjector
+{
+public:
+    virtual ~IPointsProjector() = default;
+
+    /// sets the reference point cloud
+    virtual Expected<void> setPointCloud( const PointCloud& pointCloud ) = 0;
+
+    /// computes the closest points on point cloud to given points
+    virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
+        const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const = 0;
+};
+
+/// default implementation of IPointsProjector
+class MRMESH_CLASS PointsProjector : public IPointsProjector
+{
+public:
+    /// sets the reference point cloud
+    MRMESH_API Expected<void> setPointCloud( const PointCloud& pointCloud ) override;
+
+    /// computes the closest points on point cloud to given points
+    MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
+        const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
+
+private:
+    const PointCloud* pointCloud_{ nullptr };
+};
 
 /// \}
 }

@@ -36,10 +36,18 @@ def find_missing_entries(vcxproj_path):
             VCXPROJ_NAMESPACES,
         )
     }
+    cuda_compiles = {
+        item.attrib['Include'].lower()
+        for item in project.iterfind(
+            'msbuild:ItemGroup/msbuild:CudaCompile',
+            VCXPROJ_NAMESPACES,
+        )
+    }
 
     result = {
         'ClInclude': [],
         'ClCompile': [],
+        'CudaCompile': [],
     }
     for path in vcxproj_dir.iterdir():
         name, suffix = path.name.lower(), path.suffix.lower()
@@ -48,9 +56,12 @@ def find_missing_entries(vcxproj_path):
         if suffix in {".cpp"}:
             if name not in compiles:
                 result['ClCompile'].append(path)
-        elif suffix in {".h", ".hpp"}:
+        elif suffix in {".h", ".hpp", ".cuh"}:
             if name not in includes:
                 result['ClInclude'].append(path)
+        elif suffix in {".cu"}:
+            if name not in cuda_compiles:
+                result['CudaCompile'].append(path)
 
     return result
 
@@ -58,12 +69,10 @@ def find_missing_entries(vcxproj_path):
 def process_file(vcxproj_path):
     result = find_missing_entries(vcxproj_path)
     ok = True
-    for path in result['ClInclude']:
-        print(f"{vcxproj_path}: missing ClInclude item: {path.name}", file=sys.stderr)
-        ok = False
-    for path in result['ClCompile']:
-        print(f"{vcxproj_path}: missing ClCompile entry: {path.name}", file=sys.stderr)
-        ok = False
+    for group_name, group in result.items():
+        for path in group:
+            print(f"{vcxproj_path}: missing {group_name} item: {path.name}", file=sys.stderr)
+            ok = False
     return ok
 
 

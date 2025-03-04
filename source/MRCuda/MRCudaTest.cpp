@@ -24,6 +24,10 @@ Expected<void> negatePicture( Image& image )
     return {};
 }
 
+void loadMRCudaDll()
+{
+}
+
 } //namespace Cuda
 
 } //namespace MR

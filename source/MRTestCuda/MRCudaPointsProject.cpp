@@ -8,7 +8,7 @@
 
 using namespace MR;
 
-#define ASSERT_EXPECTED( expr ) if ( auto res = ( expr ); !res ) ASSERT_TRUE( res ) << "Unexpected value: " << res.error()
+#define ASSERT_EXPECTED( expr ) if ( auto res = ( expr ); !res ) ASSERT_TRUE( ( (void)#expr, res ) ) << "Unexpected value: " << res.error()
 
 TEST( MRCuda, PointsProjector )
 {

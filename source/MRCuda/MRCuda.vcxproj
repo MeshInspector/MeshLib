@@ -114,6 +114,9 @@
     <ClInclude Include="MRCudaTest.cuh" />
     <ClInclude Include="MRCudaTest.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.h" />
+    <ClInclude Include="MRCudaMath.h" />
+    <ClInclude Include="MRCudaPointCloud.h" />
+    <ClInclude Include="MRCudaPointsProject.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />
@@ -124,6 +127,9 @@
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp" />
     <ClCompile Include="MRCudaSolarRadiation.cpp" />
     <ClCompile Include="MRCudaTest.cpp" />
+    <ClCompile Include="MRCudaMath.cpp" />
+    <ClCompile Include="MRCudaPointCloud.cpp" />
+    <ClCompile Include="MRCudaPointsProject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">

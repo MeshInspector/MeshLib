@@ -1281,6 +1281,9 @@
     <ClInclude Include="MRBezier.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshOrPointsObject.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2095,6 +2098,9 @@
     </ClCompile>
     <ClCompile Include="MRChunkIterator.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPointsObject.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,5 @@
 #pragma once
+#ifndef MR_PARSING_FOR_PB11_BINDINGS
 
 #include "exports.h"
 
@@ -17,3 +18,4 @@ MRCUDA_API float3 fromVec( const Vector3f& v );
 MRCUDA_API Matrix4 fromXf( const MR::AffineXf3f& xf );
 
 } // namespace MR::Cuda
+#endif

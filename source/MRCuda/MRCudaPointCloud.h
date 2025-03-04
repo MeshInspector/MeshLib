@@ -1,4 +1,5 @@
 #pragma once
+#ifndef MR_PARSING_FOR_PB11_BINDINGS
 
 #include "exports.h"
 
@@ -19,3 +20,4 @@ MRCUDA_API size_t pointCloudHeapBytes( const PointCloud& pc, bool copyNormals = 
     const std::vector<Vector3f>* normals = nullptr );
 
 } // namespace MR::Cuda
+#endif

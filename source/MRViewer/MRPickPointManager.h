@@ -37,6 +37,9 @@ public:
         /// This is appended to the names of all undo/redo actions
         std::string historyNameSuffix;
 
+        /// Whether to activate dragging new point immediately after its creation on mouse down
+        bool startDraggingJustAddedPoint = true;
+
         /// Parameters for configuring the surface point widget
         /// Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;
@@ -101,6 +104,9 @@ public:
 
     /// check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
+
+    /// returns the total number of pick points (including extra point if the contour is closed) on given object
+    [[nodiscard]] MRVIEWER_API size_t numPickPoints( const std::shared_ptr<VisualObject>& obj ) const;
 
     /// returns point widget by index from given object or nullptr if no such widget exists
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;

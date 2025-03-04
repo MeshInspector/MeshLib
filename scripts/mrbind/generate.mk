@@ -648,7 +648,7 @@ $(foreach x,$(MODULES),$(foreach y,$($x_ExtraInputFiles),$(eval $(call extra_fil
 # This snippet compiles an extra file as is, without passing it through the parser/generator.
 # $1 is the module name, $2 is the input file name.
 override define extra_pregen_file_snippet =
-$(call var,_object := $(TEMP_OUTPUT_DIR)/$1.custom.$(notdir $(1:.cpp=.o)))
+$(call var,_object := $(TEMP_OUTPUT_DIR)/$1.custom.$(notdir $(2:.cpp=.o)))
 $(call var,$1__ObjectFiles += $(_object))
 $(_object): $2 | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Compiling] $2)

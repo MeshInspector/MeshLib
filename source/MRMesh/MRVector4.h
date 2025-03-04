@@ -1,10 +1,17 @@
 #pragma once
 
 #include <cmath>
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector3.h"
 
 namespace MR
 {
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
+#endif
 
 /// four-dimensional vector
 /// \ingroup VectorGroup
@@ -53,26 +60,6 @@ struct Vector4
         return ( 1 / len ) * ( *this );
     }
 
-    Vector4 operator -() const { return Vector4( -x, -y, -z, -w ); }
-    const Vector4 & operator +() const { return *this; }
-
-    Vector4 & operator +=( const Vector4<T> & b )
-    {
-        x += b.x; y += b.y; z += b.z; w += b.w; return *this;
-    }
-    Vector4 & operator -=( const Vector4<T> & b )
-    {
-        x -= b.x; y -= b.y; z -= b.z; w -= b.w; return *this;
-    }
-    Vector4 & operator *=( T b ) { x *= b; y *= b; z *= b; w *= b; return * this; }
-    Vector4 & operator /=( T b )
-    {
-        if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; z /= b; w /= b; return * this; }
-        else
-            return *this *= ( 1 / b );
-    }
-
     /// assuming this is a point represented in homogeneous 4D coordinates, returns the point as 3D-vector
     Vector3<T> proj3d() const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
     {
@@ -83,51 +70,41 @@ struct Vector4
     {
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z ) && std::isfinite( w );
     }
+
+    [[nodiscard]] friend constexpr bool operator ==( const Vector4<T> & a, const Vector4<T> & b ) { return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w; }
+    [[nodiscard]] friend constexpr bool operator !=( const Vector4<T> & a, const Vector4<T> & b ) { return !( a == b ); }
+
+    // NOTE: We use `std::declval()` in the operators below because libclang 18 in our binding generator is bugged and chokes on decltyping `a.x` and such. TODO fix this when we update libclang.
+
+    [[nodiscard]] friend constexpr const Vector4<T> & operator +( const Vector4<T> & a ) { return a; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector4<T> & a ) -> Vector4<decltype( -std::declval<T>() )> { return { -a.x, -a.y, -a.z, -a.w }; }
+
+    [[nodiscard]] friend constexpr auto operator +( const Vector4<T> & a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w }; }
+    [[nodiscard]] friend constexpr auto operator -( const Vector4<T> & a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Vector4<T> & b ) -> Vector4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    [[nodiscard]] friend constexpr auto operator *( const Vector4<T> & b,               T    a ) -> Vector4<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y, a * b.z, a * b.w }; }
+    [[nodiscard]] friend constexpr auto operator /(       Vector4<T>   b,               T    a ) -> Vector4<decltype( std::declval<T>() / std::declval<T>() )>
+    {
+        if constexpr ( std::is_integral_v<T> )
+            return { b.x / a, b.y / a, b.z / a, b.w / a };
+        else
+            return b * ( 1 / a );
+    }
+
+    friend constexpr Vector4<T> & operator +=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; a.z += b.z; a.w += b.w; return a; }
+    friend constexpr Vector4<T> & operator -=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
+    friend constexpr Vector4<T> & operator *=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
+    friend constexpr Vector4<T> & operator /=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
+        else
+            return a *= ( 1 / b );
+    }
 };
 
 /// \related Vector4
 /// \{
-
-template <typename T>
-inline bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-
-template <typename T>
-inline bool operator !=( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return !( a == b );
-}
-
-template <typename T>
-inline Vector4<T> operator +( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator -( const Vector4<T> & a, const Vector4<T> & b )
-{
-    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator *( T a, const Vector4<T> & b )
-{
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator *( const Vector4<T> & b, T a )
-{
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-template <typename T>
-inline Vector4<T> operator /( Vector4<T> b, T a )
-    { b /= a; return b; }
-
 
 /// squared distance between two points, which is faster to compute than just distance
 template <typename T>
@@ -145,7 +122,7 @@ inline T distance( const Vector4<T> & a, const Vector4<T> & b )
 
 /// dot product
 template <typename T>
-inline T dot( const Vector4<T>& a, const Vector4<T>& b )
+inline auto dot( const Vector4<T> & a, const Vector4<T> & b ) -> decltype( a.x * b.x )
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -172,16 +149,22 @@ inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
 }
 
 
-template <typename T>
-inline auto begin( const Vector4<T> & v ) { return &v[0]; }
-template <typename T>
-inline auto begin( Vector4<T> & v ) { return &v[0]; }
+// We don't need to bind those functions themselves. This doesn't prevent `__iter__` from being generated for the type.
 
 template <typename T>
-inline auto end( const Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE auto begin( const Vector4<T> & v ) { return &v[0]; }
 template <typename T>
-inline auto end( Vector4<T> & v ) { return &v[4]; }
+MR_BIND_IGNORE auto begin( Vector4<T> & v ) { return &v[0]; }
+
+template <typename T>
+MR_BIND_IGNORE auto end( const Vector4<T> & v ) { return &v[4]; }
+template <typename T>
+MR_BIND_IGNORE auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 } // namespace MR

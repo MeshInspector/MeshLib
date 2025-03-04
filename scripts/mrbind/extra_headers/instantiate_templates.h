@@ -4,15 +4,13 @@
 
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
-#include "MRMesh/MRObjectsAccess.h"
 #include "MRVoxels/MRObjectVoxels.h"
 
-#define INST_CAT(x, y) INST_CAT_(x, y)
-#define INST_CAT_(x, y) x##y
-#define INST_IF(cond) INST_CAT(INST_IF_, cond)
+#define INST_IF(cond) MR_CONCAT(INST_IF_, cond)
 #define INST_IF_0(...)
 #define INST_IF_1(...) __VA_ARGS__
 
@@ -21,32 +19,15 @@ namespace MR
 
 #define VEC3(T, isFloatingPoint) \
     template struct Vector3<T>; \
-    template Vector3<T>& operator+=( Vector3<T>& a, const Vector3<T>& b ); \
-    template Vector3<T>& operator-=( Vector3<T>& a, const Vector3<T>& b ); \
-    template Vector3<T>& operator*=( Vector3<T>& a, T b ); \
-    template Vector3<T>& operator/=( Vector3<T>& a, T b ); \
-    template Vector3<T> operator-( const Vector3<T> & a ); \
-    template const Vector3<T> & operator+( const Vector3<T> & a ); \
     template Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b ); \
     template T dot( const Vector3<T> & a, const Vector3<T> & b ); \
     template T sqr( const Vector3<T> & a ); \
     template T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c ); \
     template Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b ); \
     template T angle( const Vector3<T> & a, const Vector3<T> & b ); \
-    template bool operator==( const Vector3<T> & a, const Vector3<T> & b ); \
-    template bool operator!=( const Vector3<T> & a, const Vector3<T> & b ); \
-    template Vector3<T> operator+( const Vector3<T> & a, const Vector3<T> & b ); \
-    template Vector3<T> operator-( const Vector3<T> & a, const Vector3<T> & b ); \
-    template Vector3<T> operator*( T a, const Vector3<T> & b ); \
-    template Vector3<T> operator*( const Vector3<T> & b, T a ); \
-    template Vector3<T> operator/( Vector3<T> b, T a ); \
     INST_IF(isFloatingPoint)( \
         template Vector3<T> unitVector3( T azimuth, T altitude ); \
-    ) \
-    template Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b ); \
-    template Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b ); \
-    template Matrix3<T> operator *( T a, const Matrix3<T> & b ); \
-    template Matrix3<T> operator *( const Matrix3<T> & b, T a ); \
+    )
 
 #define VEC2(T) \
     template struct Vector2<T>; \
@@ -54,18 +35,7 @@ namespace MR
     template T dot( const Vector2<T> & a, const Vector2<T> & b ); \
     template T sqr( const Vector2<T> & a ); \
     template Vector2<T> mult( const Vector2<T>& a, const Vector2<T>& b ); \
-    template T angle( const Vector2<T> & a, const Vector2<T> & b ); \
-    template bool operator ==( const Vector2<T> & a, const Vector2<T> & b ); \
-    template bool operator !=( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b ); \
-    template Vector2<T> operator *( T a, const Vector2<T> & b ); \
-    template Vector2<T> operator *( const Vector2<T> & b, T a ); \
-    template Vector2<T> operator /( Vector2<T> b, T a ); \
-    template Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b ); \
-    template Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b ); \
-    template Matrix2<T> operator *( T a, const Matrix2<T> & b ); \
-    template Matrix2<T> operator *( const Matrix2<T> & b, T a ); \
+    template T angle( const Vector2<T> & a, const Vector2<T> & b );
 
 VEC3(float, 1)
 VEC3(double, 1)
@@ -101,14 +71,14 @@ OBJTYPE(ObjectVoxels)
 // See `MB_PB11_NO_REGISTER_TYPE_DEPS` for more details.
 
 // For generic types. `...` is a type that needs to be instantiated.
-#define FORCE_REGISTER_TYPE(...) using INST_CAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
+#define FORCE_REGISTER_TYPE(...) using MR_CONCAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
 // Specifically for parameter types. `...` is a type that needs to be instantiated.
 // This is needed for some types, for which using them as parameters automatically adjusts them to different types. E.g. for pointers to scalars `T *`,
 //   the parameters become `mrmeshpy.output_T` classes. Since this happens only in parameters, scalar pointers must be registered using this macro.
-#define FORCE_REGISTER_PARAM_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) void INST_CAT(_mrbind_inst_,__LINE__)(__VA_ARGS__)
+#define FORCE_REGISTER_PARAM_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) void MR_CONCAT(_mrbind_inst_,__LINE__)(__VA_ARGS__)
 // Specifically for return types. `...` is a type that needs to be instantiated.
 // This is similar to `FORCE_REGISTER_PARAM_TYPE`. Some types get adjusted only when used as return types.
-#define FORCE_REGISTER_RETURN_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) __VA_ARGS__ INST_CAT(_mrbind_inst_,__LINE__)()
+#define FORCE_REGISTER_RETURN_TYPE(...) __attribute__((__annotate__("mrbind::instantiate_only"))) __VA_ARGS__ MR_CONCAT(_mrbind_inst_,__LINE__)()
 
 // Those are needed for mrviewerpy:
 FORCE_REGISTER_TYPE( std::vector<MR::DistanceMap> );

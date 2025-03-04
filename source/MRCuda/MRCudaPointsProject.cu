@@ -19,10 +19,9 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
 
     const auto pt = xf.isIdentity ? points[index] : xf.transform( points[index] );
 
-    PointsProjectionResult result {
-        .distSq = upDistLimitSq,
-        .vertId = -1,
-    };
+    PointsProjectionResult result;
+    result.distSq = upDistLimitSq;
+    result.vertId = -1;
 
     struct SubTask
     {

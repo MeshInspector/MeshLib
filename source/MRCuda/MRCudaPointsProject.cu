@@ -14,7 +14,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
         return;
 
     const auto globalIndex = index + chunkOffset;
-    if ( !testBit( validPoints, globalIndex ) )
+    if ( validPoints && !testBit( validPoints, globalIndex ) )
         return;
 
     const auto pt = xf.isIdentity ? points[index] : xf.transform( points[index] );

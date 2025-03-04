@@ -258,8 +258,6 @@ VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & pr
 Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
 {
     pointCloud_ = &pointCloud;
-    /// force compute AABB tree
-    (void)pointCloud_->getAABBTree();
     return {};
 }
 
@@ -268,6 +266,9 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
 {
     if ( !pointCloud_ )
         return unexpected( "No reference point cloud is set" );
+
+    /// force compute AABB tree
+    (void)pointCloud_->getAABBTree();
 
     results.resize( points.size() );
     ParallelFor( points, [&] ( size_t i )

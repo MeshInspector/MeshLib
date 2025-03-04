@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRBitSet.h"
 #include "MRIntersectionContour.h"
@@ -232,5 +233,12 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
+
+
+/// Cuts \p mesh by \p contour by projecting all the points
+/// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \return Faces to the left of the polyline
+MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
 
 } //namespace MR

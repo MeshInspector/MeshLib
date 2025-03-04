@@ -11,10 +11,11 @@ namespace MR::Cuda
 struct PointCloudDataHolder;
 
 /// copy point cloud-related data to the GPU memory
-MRCUDA_API Expected<std::unique_ptr<PointCloudDataHolder>> copyDataFrom( const PointCloud& pc,
+MRCUDA_API Expected<std::unique_ptr<PointCloudDataHolder>> copyDataFrom( const PointCloud& pc, bool copyNormals = false,
     const std::vector<Vector3f>* normals = nullptr );
 
 /// return the amount of GPU memory required for \ref MR::Cuda::PointCloudDataHolder
-MRCUDA_API size_t pointCloudHeapBytes( const PointCloud& pc, const std::vector<Vector3f>* normals = nullptr );
+MRCUDA_API size_t pointCloudHeapBytes( const PointCloud& pc, bool copyNormals = false,
+    const std::vector<Vector3f>* normals = nullptr );
 
 } // namespace MR::Cuda

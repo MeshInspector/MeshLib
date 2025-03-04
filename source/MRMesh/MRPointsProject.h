@@ -83,7 +83,7 @@ public:
     virtual Expected<void> setPointCloud( const PointCloud& pointCloud ) = 0;
 
     /// computes the closest points on point cloud to given points
-    [[nodiscard]] virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
+    virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const = 0;
 };
 
@@ -95,7 +95,7 @@ public:
     MRMESH_API Expected<void> setPointCloud( const PointCloud& pointCloud ) override;
 
     /// computes the closest points on point cloud to given points
-    [[nodiscard]] MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
+    MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
 
 private:

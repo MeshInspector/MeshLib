@@ -236,6 +236,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
+    newPoint->setBaseColor( params.ordinaryPointColor );
     newPoint->create( obj, pt );
 
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )

@@ -20,8 +20,8 @@ class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseMoveListener>
 {
 public:
-    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
-    using AllowCallBack = std::function<bool( const std::shared_ptr<MR::VisualObject>& obj, int index )>;
+    using PickerPointCallBack = std::function<void( std::shared_ptr<VisualObject> obj, int index )>;
+    using AllowCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj, int index )>;
 
     struct Params
     {
@@ -44,17 +44,14 @@ public:
         /// Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;
 
-        /// Color for ordinary points in the contour
-        /// Parameters affect to future points only
-        MR::Color ordinaryPointColor = Color::gray();
+        /// The color of all pick spheres except the one with the largest index on each object
+        Color ordinaryPointColor = Color::gray();
 
-        /// Color for the last modified point in the contour
-        /// Parameters affect to future points only
-        MR::Color lastPointColor = Color::green();
+        /// The color of last by index pick sphere in open contour
+        Color lastPointColor = Color::green();
 
-        /// Color for the special point used to close a contour. Better do not change it.
-        /// Parameters affect to future points only
-        MR::Color closeContourPointColor = Color::transparent();
+        /// The color of last by index pick sphere in closed contour, which coincides in position with the first pick sphere
+        Color closeContourPointColor = Color::transparent();
 
         /// Predicate to additionally filter objects that should be treated as pickable.
         Viewport::PickRenderObjectPredicate pickPredicate;
@@ -88,7 +85,7 @@ public:
     struct WidgetHistoryAction : HistoryAction {};
 
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
-    using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
+    using SurfaceContours = std::unordered_map <std::shared_ptr<VisualObject>, SurfaceContour>;
 
     /// create an object and starts listening for mouse events
     MRVIEWER_API PickPointManager();
@@ -97,7 +94,7 @@ public:
     MRVIEWER_API ~PickPointManager();
 
     /// return contour for specific object (creating new one if necessary)
-    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj ) { return pickedPoints_[obj]; }
+    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<VisualObject>& obj ) { return pickedPoints_[obj]; }
 
     /// return all contours, i.e. per object unorderd_map of ordered surface points [vector].
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const { return pickedPoints_; }
@@ -161,7 +158,7 @@ private:
     void colorLast2Points_( const std::shared_ptr<VisualObject>& obj );
 
     // creates point widget for add to contour.
-    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
+    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<VisualObject>& obj, const PickedPoint& pt );
 
     /// removes everything
     void clearNoHistory_();

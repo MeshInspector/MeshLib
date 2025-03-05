@@ -33,7 +33,7 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     spdlog
   )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+ELSEIF(WIN32)
   find_package(glad REQUIRED)
   find_package(OpenVDB REQUIRED)
 
@@ -49,9 +49,6 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     OpenVDB::openvdb
     spdlog::spdlog
     fmt::fmt
-    $<$<NOT:$<BOOL:${WIN32}>>:
-      clip
-    >
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -63,7 +60,7 @@ ELSE()
     glad
     glfw
     imgui
-    JsonCpp::JsonCpp
+    jsoncpp
     openvdb
     spdlog
     fmt

@@ -30,7 +30,7 @@ ELSEIF(APPLE)
     fmt
     spdlog
   )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+ELSEIF(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype
@@ -44,7 +44,7 @@ ELSE()
     Freetype::Freetype
     fmt::fmt
     spdlog::spdlog
-    JsonCpp::JsonCpp
+    PkgConfig::jsoncpp
   )
 ENDIF()
 

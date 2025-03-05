@@ -28,7 +28,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 
-IF(WIN32 OR MESHLIB_USE_VCPKG)
+IF(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog::spdlog

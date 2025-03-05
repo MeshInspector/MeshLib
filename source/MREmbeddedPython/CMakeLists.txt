@@ -20,15 +20,12 @@ IF(APPLE)
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+ELSEIF(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRPython
     spdlog::spdlog
     pybind11nonlimitedapi_stubs
-    $<$<NOT:$<BOOL:${WIN32}>>:
-      Python::Python
-    >
     ${CMAKE_DL_LIBS}
   )
 ELSE()

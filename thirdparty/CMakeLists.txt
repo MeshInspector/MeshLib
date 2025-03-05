@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
-include(ConfigureVcpkg)
-
 IF(MR_EMSCRIPTEN_WASM64)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1")
@@ -37,11 +34,6 @@ ENDIF()
 #imgui build
 add_subdirectory(../source/imgui ./imgui)
 
-IF(APPLE)
-  set(INSTALL_GTEST ON)
-  add_subdirectory(./googletest ./googletest)
-ENDIF()
-
 IF(APPLE OR MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
 ELSE()
@@ -72,19 +64,15 @@ ELSE()
     ENDIF()
   ENDIF()
 
-  find_package(cpr)
-  IF(NOT cpr_FOUND)
-    set(CPR_ENABLE_UNINSTALL "OFF")
-    set(CPR_ENABLE_INSTALL "OFF")
-    set(CPR_USE_SYSTEM_GTEST "ON")
-    set(CPR_BUILD_TESTS "OFF")
-    set(CPR_BUILD_TESTS_SSL "OFF")
-    add_subdirectory(./cpr)
-  ENDIF()
+  set(CPR_ENABLE_UNINSTALL "OFF")
+  set(CPR_ENABLE_INSTALL "OFF")
+  set(CPR_USE_SYSTEM_GTEST "ON")
+  set(CPR_BUILD_TESTS "OFF")
+  set(CPR_BUILD_TESTS_SSL "OFF")
+  add_subdirectory(./cpr)
 ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
-
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
@@ -159,18 +147,13 @@ ELSE() # not MR_EMSCRIPTEN
   add_subdirectory(./libE57Format)
 ENDIF()
 
-find_package(glad)
-IF(NOT glad_FOUND)
-  set(GLAD_INSTALL ON)
-  set(GLAD_REPRODUCIBLE ON)
-  add_subdirectory(./glad)
-ENDIF()
-
+set(GLAD_INSTALL ON)
+set(GLAD_REPRODUCIBLE ON)
+add_subdirectory(./glad)
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)
   add_subdirectory(./mrbind-pybind11)
 ENDIF()
-
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 

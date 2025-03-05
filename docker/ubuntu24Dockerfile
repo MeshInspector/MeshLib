@@ -17,7 +17,6 @@ WORKDIR "/home/MeshLib"
 
 # copy files
 COPY .git .git
-COPY cmake cmake
 COPY thirdparty thirdparty
 COPY scripts scripts
 COPY source source

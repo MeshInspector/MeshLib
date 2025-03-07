@@ -10,6 +10,8 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRTimer.h"
 
+#include <thread>
+
 #define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
 namespace MR

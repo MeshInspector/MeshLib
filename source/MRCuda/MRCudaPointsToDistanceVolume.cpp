@@ -79,7 +79,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 }
 
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
-    std::function<Expected<void> ( const SimpleVolumeMinMax& )> addPart )
+    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart )
 {
     MR_TIMER
 
@@ -125,6 +125,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
         CPU = 1,
     };
 
+    size_t prevOffset = 0;
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
     {
         cudaError_t cudaRes = cudaSuccess;
@@ -140,16 +141,17 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
 
         // process the previous part during GPU computation
         if ( offset != 0 )
-            RETURN_UNEXPECTED( addPart( parts[CPU] ) );
+            RETURN_UNEXPECTED( addPart( parts[CPU], int( prevOffset / layerSize ) ) );
 
         cudaThread.join();
         if ( cudaRes != cudaSuccess )
             return unexpected( getError( cudaRes ) );
 
         std::swap( parts[GPU], parts[CPU] );
+        prevOffset = offset;
     }
     // add the last part
-    RETURN_UNEXPECTED( addPart( parts[CPU] ) );
+    RETURN_UNEXPECTED( addPart( parts[CPU], int( prevOffset / layerSize ) ) );
 
     return {};
 }

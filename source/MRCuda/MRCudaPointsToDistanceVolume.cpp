@@ -104,14 +104,11 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );
 
-    std::array<MR::SimpleVolumeMinMax, 2> volumes;
-    for ( auto& vol : volumes )
-    {
-        vol.dims = params.dimensions;
-        vol.voxelSize = params.voxelSize;
-        vol.max = params.sigma * std::exp( -0.5f );
-        vol.min = -vol.max;
-    }
+    MR::SimpleVolumeMinMax part;
+    part.dims = params.dimensions;
+    part.voxelSize = params.voxelSize;
+    part.max = params.sigma * std::exp( -0.5f );
+    part.min = -part.max;
 
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
     {
@@ -119,18 +116,16 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
 
         // process the previous part during GPU computation
         if ( offset != 0 )
-            RETURN_UNEXPECTED( addPart( volumes[1] ) );
+            RETURN_UNEXPECTED( addPart( part ) );
 
         // sync with GPU
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-        volumes[0].dims.z = int( size / layerSize );
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( volumes[0].data ) );
-
-        std::swap( volumes[0], volumes[1] );
+        part.dims.z = int( size / layerSize );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
     }
     // add the last part
-    RETURN_UNEXPECTED( addPart( volumes[1] ) );
+    RETURN_UNEXPECTED( addPart( part ) );
 
     return {};
 }

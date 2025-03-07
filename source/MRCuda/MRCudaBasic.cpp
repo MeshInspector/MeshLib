@@ -81,6 +81,20 @@ size_t maxBufferSize( size_t availableBytes, size_t elementCount, size_t element
     return std::min( availableBytes / elementBytes, elementCount );
 }
 
+MRCUDA_API Vector2i maxBlockSize( size_t availableBytes, Vector2i totalBlockDims, size_t elementBytes )
+{
+    const auto rowSize = (size_t)totalBlockDims.x;
+    totalBlockDims.y = std::min( availableBytes / elementBytes / rowSize, (size_t)totalBlockDims.y );
+    return totalBlockDims;
+}
+
+MRCUDA_API Vector3i maxBlockSize( size_t availableBytes, Vector3i totalBlockDims, size_t elementBytes )
+{
+    const auto layerSize = (size_t)totalBlockDims.x * totalBlockDims.y;
+    totalBlockDims.z = std::min( availableBytes / elementBytes / layerSize, (size_t)totalBlockDims.z );
+    return totalBlockDims;
+}
+
 size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector2i& blockDims, size_t elementBytes )
 {
     const auto rowSize = (size_t)blockDims.x;

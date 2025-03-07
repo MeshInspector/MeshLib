@@ -10,6 +10,7 @@
 #include "MRMesh/MRLocalTriangulations.h"
 #include "MRMesh/MRPointCloudTriangulationHelpers.h"
 #include "MRMesh/MRPointCloudMakeNormals.h"
+#include "MRMesh/MRTriMesh.h"
 
 namespace MR
 {
@@ -53,7 +54,29 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.lessInside = true;
 
     Expected<Mesh> res;
-    if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
+    if ( params.createVolumeCallback2 )
+    {
+        MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
+        auto setLayersPerBlock = [&] ( int layersPerBlock )
+        {
+            mesher = MarchingCubesByParts( p2vParams.dimensions, vmParams, layersPerBlock );
+        };
+        auto addVolumePart = [&mesher]( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
+        {
+            assert( zOffset == mesher.nextZ() );
+            return mesher.addPart( volume );
+        };
+        res =
+            params.createVolumeCallback2( cloud, p2vParams, setLayersPerBlock, addVolumePart )
+            .and_then( [&mesher] {
+                return mesher.finalize();
+            } )
+            .transform( [] ( TriMesh&& mesh )
+            {
+                return Mesh::fromTriMesh( std::move( mesh ) );
+            } );
+    }
+    else if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
     {
         res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
         {

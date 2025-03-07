@@ -26,6 +26,10 @@ MRCUDA_API size_t getCudaSafeMemoryLimit();
 // Returns maximum buffer size in elements that can be allocated with given memory limit
 MRCUDA_API size_t maxBufferSize( size_t availableBytes, size_t elementCount, size_t elementBytes );
 
+// Returns maximum block size that can be allocated with given memory limit
+MRCUDA_API Vector2i maxBlockSize( size_t availableBytes, Vector2i totalBlockDims, size_t elementBytes );
+MRCUDA_API Vector3i maxBlockSize( size_t availableBytes, Vector3i totalBlockDims, size_t elementBytes );
+
 // Returns maximum buffer size in elements that can be allocated with given memory limit
 // The size is aligned to the block dimensions
 MRCUDA_API size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector2i& blockDims, size_t elementBytes );

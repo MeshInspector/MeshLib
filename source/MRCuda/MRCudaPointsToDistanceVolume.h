@@ -12,6 +12,14 @@ namespace Cuda
 /// makes SimpleVolume filled with signed distances to points with normals
 MRCUDA_API Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params );
 
+/// ...
+MRCUDA_API Expected<void> pointsToDistanceVolumeByParts(
+    const PointCloud& cloud,
+    const MR::PointsToDistanceVolumeParams& params,
+    std::function<void ( int layersPerBlock )> setLayersPerBlock,
+    std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addVolumePart
+);
+
 }
 }
 #endif

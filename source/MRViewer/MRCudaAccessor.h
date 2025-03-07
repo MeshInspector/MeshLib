@@ -27,6 +27,7 @@ public:
 
 #ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+    using CudaPointsToDistanceVolumeCallback2 = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<void ( int layersPerBlock )> setLayersByBlock, std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addVolumePart )>;
 #endif
 
     // setup functions
@@ -37,6 +38,7 @@ public:
 
 #ifndef MRVIEWER_NO_VOXELS
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
+    MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback2( CudaPointsToDistanceVolumeCallback2 callback );
 #endif
 
     // Returns true if CUDA is available on this computer
@@ -66,6 +68,9 @@ public:
 #ifndef MRVIEWER_NO_VOXELS
     // Returns cuda implementation of PointsToDistanceVolumeCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+
+    // Returns cuda implementation of PointsToDistanceVolumeCallback2
+    [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback2 getCudaPointsToDistanceVolumeCallback2();
 #endif
 
     /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
@@ -110,6 +115,7 @@ private:
     CudaMeshProjectorConstructor mpCtor_;
 #ifndef MRVIEWER_NO_VOXELS
     CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
+    CudaPointsToDistanceVolumeCallback2 pointsToDistanceVolumeCallback2_;
 #endif
 };
 

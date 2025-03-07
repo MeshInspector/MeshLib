@@ -27,7 +27,7 @@ public:
 
 #ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
-    using CudaPointsToDistanceVolumeCallback2 = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<void ( int layersPerBlock )> setLayersByBlock, std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addVolumePart )>;
+    using CudaPointsToDistanceVolumeCallback2 = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void> ( const SimpleVolumeMinMax& volume )> addPart )>;
 #endif
 
     // setup functions

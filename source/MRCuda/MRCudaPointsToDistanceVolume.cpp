@@ -71,10 +71,8 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     return res;
 }
 
-MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud,
-    const MR::PointsToDistanceVolumeParams& params,
-    std::function<void ( int )> setLayersPerBlock,
-    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addVolumePart )
+MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
+    std::function<Expected<void> ( const SimpleVolumeMinMax& )> addPart )
 {
     const auto& tree = cloud.getAABBTree();
     const auto& nodes = tree.nodes();
@@ -99,8 +97,6 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
 
     const auto layerSize = (size_t)params.dimensions.x * params.dimensions.y;
     const auto blockSize = maxBlockSize( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) ).z;
-    if ( setLayersPerBlock )
-        setLayersPerBlock( blockSize );
 
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( blockSize * layerSize ) );
@@ -114,15 +110,14 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
         vol.min = -vol.max;
     }
 
-    int prevOffset = -1;
     for ( const auto [offset, size] : splitByChunks( params.dimensions.z, blockSize ) )
     {
         pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size * layerSize, offset * layerSize );
 
-        if ( prevOffset >= 0 )
+        if ( offset != 0 )
         {
             assert( !volumes[1].data.empty() );
-            if ( auto res = addVolumePart( volumes[1], prevOffset ); !res )
+            if ( auto res = addPart( volumes[1] ); !res )
                 return unexpected( res.error() );
         }
 
@@ -132,11 +127,10 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
         CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( volumes[0].data ) );
 
         std::swap( volumes[0], volumes[1] );
-        prevOffset = (int)offset;
     }
     // ...
     assert( !volumes[1].data.empty() );
-    if ( auto res = addVolumePart( volumes[1], prevOffset ); !res )
+    if ( auto res = addPart( volumes[1] ); !res )
         return unexpected( res.error() );
 
     return {};

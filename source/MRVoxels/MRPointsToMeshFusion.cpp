@@ -57,17 +57,11 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     if ( params.createVolumeCallback2 )
     {
         MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
-        auto setLayersPerBlock = [&] ( int layersPerBlock )
-        {
-            mesher = MarchingCubesByParts( p2vParams.dimensions, vmParams, layersPerBlock );
-        };
-        auto addVolumePart = [&mesher]( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
-        {
-            assert( zOffset == mesher.nextZ() );
-            return mesher.addPart( volume );
-        };
         res =
-            params.createVolumeCallback2( cloud, p2vParams, setLayersPerBlock, addVolumePart )
+            params.createVolumeCallback2( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume )
+            {
+                return mesher.addPart( volume );
+            } )
             .and_then( [&mesher] {
                 return mesher.finalize();
             } )

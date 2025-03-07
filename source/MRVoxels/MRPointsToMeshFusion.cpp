@@ -54,11 +54,11 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.lessInside = true;
 
     Expected<Mesh> res;
-    if ( params.createVolumeCallback2 )
+    if ( params.createVolumeCallbackByParts )
     {
         MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
         res =
-            params.createVolumeCallback2( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume )
+            params.createVolumeCallbackByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume )
             {
                 return mesher.addPart( volume );
             } )

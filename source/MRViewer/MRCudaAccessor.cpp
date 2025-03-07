@@ -46,9 +46,9 @@ void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVo
     instance_().pointsToDistanceVolumeCallback_ = callback;
 }
 
-void CudaAccessor::setCudaPointsToDistanceVolumeCallback2( CudaPointsToDistanceVolumeCallback2 callback )
+void CudaAccessor::setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback )
 {
-    instance_().pointsToDistanceVolumeCallback2_ = callback;
+    instance_().pointsToDistanceVolumeByPartsCallback_ = callback;
 }
 #endif
 
@@ -112,13 +112,13 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
     return inst.pointsToDistanceVolumeCallback_;
 }
 
-CudaAccessor::CudaPointsToDistanceVolumeCallback2 CudaAccessor::getCudaPointsToDistanceVolumeCallback2()
+CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPointsToDistanceVolumeByPartsCallback()
 {
     auto& inst = instance_();
-    if ( !inst.pointsToDistanceVolumeCallback2_ )
+    if ( !inst.pointsToDistanceVolumeByPartsCallback_ )
         return {};
 
-    return inst.pointsToDistanceVolumeCallback2_;
+    return inst.pointsToDistanceVolumeByPartsCallback_;
 }
 #endif
 

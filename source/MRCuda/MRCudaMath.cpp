@@ -15,6 +15,15 @@ float3 fromVec( const Vector3f& v )
     };
 }
 
+int3 fromVec( const Vector3i& v )
+{
+    return {
+        .x = v.x,
+        .y = v.y,
+        .z = v.z,
+    };
+}
+
 Matrix4 fromXf( const MR::AffineXf3f& xf )
 {
     if ( xf == AffineXf3f{} )

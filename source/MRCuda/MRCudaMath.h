@@ -6,6 +6,7 @@
 #include "MRMesh/MRMeshFwd.h"
 
 struct float3;
+struct int3;
 
 namespace MR::Cuda
 {
@@ -15,6 +16,7 @@ struct Matrix4;
 
 // copy from CPU to GPU structs
 MRCUDA_API float3 fromVec( const Vector3f& v );
+MRCUDA_API int3 fromVec( const Vector3i& v );
 MRCUDA_API Matrix4 fromXf( const MR::AffineXf3f& xf );
 
 } // namespace MR::Cuda

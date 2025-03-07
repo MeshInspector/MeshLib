@@ -101,7 +101,7 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
 
       - name: Generate and build MRBind bindings
-        if: ${{ inputs.mrbind && matrix.cxx-compiler != '/usr/bin/g++-14' }}
+        if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin

@@ -9,6 +9,8 @@
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRPointCloud.h"
 
+#define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
+
 namespace MR
 {
 
@@ -96,10 +98,11 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     };
 
     const auto layerSize = (size_t)params.dimensions.x * params.dimensions.y;
-    const auto blockSize = maxBlockSize( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) ).z;
+    const auto totalSize = layerSize * params.dimensions.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
 
     DynamicArrayF cudaVolume;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( blockSize * layerSize ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );
 
     std::array<MR::SimpleVolumeMinMax, 2> volumes;
     for ( auto& vol : volumes )
@@ -110,28 +113,24 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
         vol.min = -vol.max;
     }
 
-    for ( const auto [offset, size] : splitByChunks( params.dimensions.z, blockSize ) )
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
     {
-        pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size * layerSize, offset * layerSize );
+        pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
 
+        // process the previous part during GPU computation
         if ( offset != 0 )
-        {
-            assert( !volumes[1].data.empty() );
-            if ( auto res = addPart( volumes[1] ); !res )
-                return unexpected( res.error() );
-        }
+            RETURN_UNEXPECTED( addPart( volumes[1] ) );
 
+        // sync with GPU
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-        volumes[0].dims.z = (int)size;
+        volumes[0].dims.z = int( size / layerSize );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( volumes[0].data ) );
 
         std::swap( volumes[0], volumes[1] );
     }
-    // ...
-    assert( !volumes[1].data.empty() );
-    if ( auto res = addPart( volumes[1] ); !res )
-        return unexpected( res.error() );
+    // add the last part
+    RETURN_UNEXPECTED( addPart( volumes[1] ) );
 
     return {};
 }

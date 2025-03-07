@@ -8,6 +8,7 @@
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRTimer.h"
 
 #define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
@@ -19,6 +20,8 @@ namespace Cuda
 
 Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params )
 {
+    MR_TIMER
+
     const auto& tree = cloud.getAABBTree();
     const auto& nodes = tree.nodes();
 
@@ -76,6 +79,8 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
     std::function<Expected<void> ( const SimpleVolumeMinMax& )> addPart )
 {
+    MR_TIMER
+
     const auto& tree = cloud.getAABBTree();
     const auto& nodes = tree.nodes();
 

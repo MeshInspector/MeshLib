@@ -128,7 +128,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
     {
         cudaError_t cudaRes = cudaSuccess;
-        auto cudaThread = std::jthread( [&]
+        auto cudaThread = std::jthread( [&, offset, size]
         {
             pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
             if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )

@@ -109,28 +109,45 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );
 
-    MR::SimpleVolumeMinMax part;
-    part.dims = params.dimensions;
-    part.voxelSize = params.voxelSize;
-    part.max = params.sigma * std::exp( -0.5f );
-    part.min = -part.max;
+    std::array<MR::SimpleVolumeMinMax, 2> parts;
+    for ( auto& part : parts )
+    {
+        part.dims = params.dimensions;
+        part.voxelSize = params.voxelSize;
+        part.max = params.sigma * std::exp( -0.5f );
+        part.min = -part.max;
+    }
+    enum Device
+    {
+        GPU = 0,
+        CPU = 1,
+    };
 
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
     {
-        pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
+        cudaError_t cudaRes = cudaSuccess;
+        auto cudaThread = std::jthread( [&]
+        {
+            pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
+            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
+                return;
+
+            parts[GPU].dims.z = int( size / layerSize );
+            cudaRes = cudaVolume.toVector( parts[GPU].data );
+        } );
 
         // process the previous part during GPU computation
         if ( offset != 0 )
-            RETURN_UNEXPECTED( addPart( part ) );
+            RETURN_UNEXPECTED( addPart( parts[CPU] ) );
 
-        // sync with GPU
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+        cudaThread.join();
+        if ( cudaRes != cudaSuccess )
+            return unexpected( getError( cudaRes ) );
 
-        part.dims.z = int( size / layerSize );
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
+        std::swap( parts[GPU], parts[CPU] );
     }
     // add the last part
-    RETURN_UNEXPECTED( addPart( part ) );
+    RETURN_UNEXPECTED( addPart( parts[CPU] ) );
 
     return {};
 }

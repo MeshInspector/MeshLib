@@ -25,6 +25,15 @@ struct CompensateRadiusParams
     /// maximum iteration of applying algorithm (each iteration improves result a little bit)
     int maxIterations{ 100 };
 
+    /// how many hops to expand around each moved vertex for relaxation
+    int relaxExpansion = 3;
+
+    /// how many iterations of relax is applied on each compensation iteration
+    int relaxIterations = 5;
+
+    /// force of relaxations on each compensation iteration
+    float relaxForce = 0.3f;
+
     ProgressCallback callback;
 };
 

@@ -176,11 +176,13 @@ Expected<void> RadiusCompensator::applyCompensation()
     Mesh cpyMesh = mesh_; // for projecting
     VertBitSet updatedVerts( vertRegion_.size() );
 
+    int maxIters = std::max( 1, params_.maxIterations );
+
     auto sb = subprogress( params_.callback, 0.25f, 1.0f );
-    auto maxAllowedShiftSq = sqr( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f );
-    for ( int i = 1; i <= params_.maxIterations; ++i )
+    auto maxAllowedShiftSq = sqr( std::min( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f, 2 * params_.toolRadius / float( maxIters ) ) );
+    for ( int i = 1; i <= maxIters; ++i )
     {
-        if ( i == params_.maxIterations )
+        if ( i == maxIters )
             maxAllowedShiftSq = radiusSq_; // allow full move on last iteration
 
         float maxShiftSq = -FLT_MAX;
@@ -219,9 +221,9 @@ Expected<void> RadiusCompensator::applyCompensation()
         if ( updatedVerts.none() )
             break; // fast return on finish
 
-        expand( mesh_.topology, updatedVerts, 1 );
+        expand( mesh_.topology, updatedVerts, params_.relaxExpansion );
         updatedVerts &= vertRegion_;
-        relax( mesh_, { {.iterations = 2, .region = &updatedVerts,.force = 0.2f} } );
+        relax( mesh_, { {.iterations = params_.relaxIterations, .region = &updatedVerts,.force = params_.relaxForce} } );
 
         BitSetParallelFor( updatedVerts, [&] ( VertId v )
         {

@@ -110,7 +110,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     part.max = params.sigma * std::exp( -0.5f );
     part.min = -part.max;
 
-    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
     {
         pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
 

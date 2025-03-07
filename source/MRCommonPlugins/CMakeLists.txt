@@ -49,10 +49,10 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     OpenVDB::openvdb
     spdlog::spdlog
     fmt::fmt
-    $<$<NOT:$<BOOL:${WIN32}>>:
-      clip
-    >
   )
+  IF(NOT WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE clip )
+  ENDIF()
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb

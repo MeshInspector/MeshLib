@@ -202,6 +202,8 @@ jobs:
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
             if errorlevel 1 exit 1
+            cmake --version
+            if errorlevel 1 exit 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j

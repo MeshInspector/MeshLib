@@ -32,10 +32,10 @@ struct PointsToMeshParameters
     /// Progress callback
     ProgressCallback progress;
 
-    /// Callback for volume creation. If null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
+    /// Callback for volume creation. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
     std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
 
-    /// Callback for volume creation by parts. If null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
+    /// Callback for volume creation by parts. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
     std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume )> addPart )> createVolumeCallbackByParts;
 
     /// Callback for checking whether it's possible to use the volume creation function

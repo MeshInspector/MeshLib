@@ -69,7 +69,7 @@ public:
     // Returns cuda implementation of PointsToDistanceVolumeCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
 
-    // Returns cuda implementation of PointsToDistanceVolumeCallback2
+    // Returns cuda implementation of PointsToDistanceVolumeByPartsCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeByPartsCallback getCudaPointsToDistanceVolumeByPartsCallback();
 #endif
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRColor.h"
-#include "MRPch/MRJson.h"
+#include <json/forwards.h>
 #include "exports.h"
 
 namespace MR

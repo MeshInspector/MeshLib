@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRColor.h"
 #include "MRSerializer.h"
-#include <json/forwards.h>
+#include "MRPch/MRJson.h"
 #include "MRVector2.h"
 #include "MRLog.h"
 #include <filesystem>

@@ -12,7 +12,6 @@
 #include "MRUIStyle.h"
 #include "MRViewer.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRJson.h"
 
 namespace MR
 {

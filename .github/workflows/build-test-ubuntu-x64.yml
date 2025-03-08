@@ -139,7 +139,7 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
-          pytest_args: "${{ env.RUN_CUDA_ARG }}"
+          pytest_args: ${{ env.RUN_CUDA_ARG }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.os }}/${{matrix.config}}/${{matrix.compiler}}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}

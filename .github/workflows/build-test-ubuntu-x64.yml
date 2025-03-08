@@ -133,9 +133,9 @@ jobs:
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
-        uses: ./.github/actions/python-regression-tests
         env:
-          RUN_CUDA_ARG: ${{ fromJSON('{"ON":"--run-cuda=negative", "OFF":""}') [matrix.build_mrcuda] }}"
+          RUN_CUDA_ARG: ${{ matrix.build_mrcuda == 'ON' && '--run-cuda=negative' || '' }}
+        uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}

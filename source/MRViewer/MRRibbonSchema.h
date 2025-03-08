@@ -1,8 +1,8 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRPch/MRJson.h"
 #include "MRMesh/MRphmap.h"
+#include <json/forwards.h>
 #include <filesystem>
 #include <vector>
 #include <string>

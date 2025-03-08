@@ -14,12 +14,13 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectDistanceMap.h"
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
+#include "MRPch/MRJson.h"
 #include <fstream>
 
 #ifndef MESHLIB_NO_VOXELS

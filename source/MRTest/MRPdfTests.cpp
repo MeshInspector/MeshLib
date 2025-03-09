@@ -1,5 +1,4 @@
-#ifndef MRIOEXTRAS_NO_PDF
-
+#if !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF
 #include <MRIOExtras/MRPdf.h>
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -47,4 +46,4 @@ TEST( MRMesh, Pdf )
 
 } //namespace MR
 
-#endif //!MRIOEXTRAS_NO_PDF
+#endif // !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF

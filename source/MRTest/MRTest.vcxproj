@@ -18,6 +18,7 @@
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRTestApp.cpp" />

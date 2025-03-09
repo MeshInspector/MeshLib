@@ -1,5 +1,5 @@
 #include "MRPdf.h"
-#ifndef MRIOEXTRAS_NO_PDF
+#if !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRStringConvert.h"
@@ -229,4 +229,4 @@ void Pdf::close()
 }
 
 }
-#endif
+#endif // !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF

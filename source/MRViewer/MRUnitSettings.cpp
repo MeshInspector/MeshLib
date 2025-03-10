@@ -27,6 +27,7 @@ static void forAllUnits( auto&& func )
 {
     forAllLengthUnits( func );
     forAllAngleUnits( func );
+    forAllRatioUnits( func );
     // All non-length/angle-related unit types must be listed here.
     func.template operator()<NoUnit>();
     func.template operator()<TimeUnit>();

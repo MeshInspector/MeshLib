@@ -3,8 +3,6 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
 
-#include "MRPch/MRSpdlog.h"
-
 namespace MR
 {
 
@@ -23,7 +21,7 @@ Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
     } );
     if ( !res.has_value() )
     {
-        spdlog::error( res.error() );
+        assert( false ); //TODO: return Expected<Mesh>
         return {};
     }
     return *res;

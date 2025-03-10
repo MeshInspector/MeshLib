@@ -10,6 +10,7 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
+#include "MRPch/MRSpdlog.h"
 #include <openvdb/version.h>
 
 namespace MR

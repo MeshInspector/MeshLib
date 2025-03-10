@@ -25,6 +25,7 @@ IF(APPLE)
     spdlog
     Python::Python
     pybind11nonlimitedapi_stubs
+    OpenVDB
     tbb
     ${CMAKE_DL_LIBS}
   )
@@ -35,6 +36,7 @@ ELSE()
       gtest
       zip
       jsoncpp
+      openvdb
       tbb
       -Wl,--whole-archive
       MRMesh
@@ -55,6 +57,7 @@ ELSE()
       GTest::gtest
       spdlog::spdlog
       pybind11nonlimitedapi_stubs
+      OpenVDB::openvdb
       TBB::tbb
       ${CMAKE_DL_LIBS}
     )
@@ -74,6 +77,7 @@ ELSE()
       spdlog
       Python::Python
       pybind11nonlimitedapi_stubs
+      openvdb
       tbb
       ${CMAKE_DL_LIBS}
     )

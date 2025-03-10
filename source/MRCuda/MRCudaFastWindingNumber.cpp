@@ -11,8 +11,6 @@
 #include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
 
-#include <thread>
-
 #define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
 namespace MR
@@ -298,26 +296,14 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
-    
-    std::array<std::vector<float>, 2> results;
-    enum Device
-    {
-        GPU = 0,
-        CPU = 1,
-    };
 
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
 
-    size_t prevOffset = 0;
-    size_t prevSize = 0;
-    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
-    {
-        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
-
-        cudaError_t cudaRes = cudaSuccess;
-        auto cudaThread = std::jthread( [&, offset = offset, size = size]
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize );
+    return cudaPipeline( std::vector<float>{}, begin, end,
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
             fastWindingNumberFromGrid(
                 int3 { dims.x, dims.y, dims.z },
@@ -325,37 +311,30 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
                 data_->toData(),
                 cudaResult.data(),
                 beta,
-                size,
-                offset
+                chunk.size,
+                chunk.offset
             );
-            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
-                return;
-            
-            cudaRes = cudaResult.toVector( results[GPU] );
-        } );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-        // process the previous part during GPU computation
-        if ( offset != 0 )
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+
+            return {};
+        },
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
-            RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            RETURN_UNEXPECTED( resFunc(
+                std::move( data ),
+                { dims.x, dims.y, int( chunk.size / layerSize ) },
+                int( chunk.offset / layerSize )
+            ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
             // make sure the vector is valid
-            results[CPU].clear();
+            data.clear();
+            return {};
         }
-
-        cudaThread.join();
-        if ( cudaRes != cudaSuccess )
-            return unexpected( getError( cudaRes ) );
-        if ( !reportProgress( cb2, 1.00f ) )
-            return unexpectedOperationCanceled();
-
-        std::swap( results[GPU], results[CPU] );
-        prevOffset = offset;
-        prevSize = size;
-    }
-    // process the last part
-    RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
-
-    return {};
+    );
 }
 
 Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
@@ -376,63 +355,44 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    std::array<std::vector<float>, 2> results;
-    enum Device
-    {
-        GPU = 0,
-        CPU = 1,
-    };
-
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
 
-    size_t prevOffset = 0;
-    size_t prevSize = 0;
-    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
-    {
-        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
-
-        cudaError_t cudaRes = cudaSuccess;
-        auto cudaThread = std::jthread( [&, offset = offset, size = size]
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize );
+    return cudaPipeline( std::vector<float>{}, begin, end,
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
             signedDistance(
                 int3 { dims.x, dims.y, dims.z },
                 cudaGridToMeshXf,
                 data_->toData(),
                 cudaResult.data(),
-                size,
-                offset,
+                chunk.size,
+                chunk.offset,
                 options
             );
-            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
-                return;
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-            cudaRes = cudaResult.toVector( results[GPU] );
-        } );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
 
-        // process the previous part during GPU computation
-        if ( offset != 0 )
+            return {};
+        },
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
-            RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            RETURN_UNEXPECTED( resFunc(
+                std::move( data ),
+                { dims.x, dims.y, int( chunk.size / layerSize ) },
+                int( chunk.offset / layerSize )
+            ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
             // make sure the vector is valid
-            results[CPU].clear();
+            data.clear();
+            return {};
         }
-
-        cudaThread.join();
-        if ( cudaRes != cudaSuccess )
-            return unexpected( getError( cudaRes ) );
-        if ( !reportProgress( cb2, 1.00f ) )
-            return unexpectedOperationCanceled();
-
-        std::swap( results[GPU], results[CPU] );
-        prevOffset = offset;
-        prevSize = size;
-    }
-    // process the last part
-    RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
-
-    return {};
+    );
 }
 
 } //namespace Cuda

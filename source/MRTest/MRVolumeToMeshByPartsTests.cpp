@@ -1,50 +1,17 @@
-#include "MRVoxels/MRBoolean.h"
+#ifndef MESHLIB_NO_VOXELS
+
 #include "MRVoxels/MRVoxelsConversionsByParts.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #include "MRVoxels/MRMarchingCubes.h"
 #include "MRMesh/MRGTest.h"
-#include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
-#include "MRPch/MRSpdlog.h"
-#include <openvdb/version.h>
 
 namespace MR
 {
-
-TEST( MRMesh, VersionVDB )
-{
-#if defined TBB_VERSION_PATCH
-    spdlog::info( "TBB version: {}.{}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR, TBB_VERSION_PATCH );
-#else
-    spdlog::info( "TBB version: {}.{}", TBB_VERSION_MAJOR, TBB_VERSION_MINOR );
-#endif
-    spdlog::info( "OpenVDB version: {}", OPENVDB_LIBRARY_VERSION_STRING );
-}
-
-TEST( MRMesh, MeshVoxelsConverterSelfIntersections )
-{
-    auto torus = makeTorusWithSelfIntersections( 2.f, 1.f, 10, 10 );
-    MeshVoxelsConverter converter;
-    converter.voxelSize = 0.1f;
-    auto grid = converter( torus );
-    torus = converter( grid );
-    ASSERT_GT( torus.volume(), 0.f );
-}
-
-// global variables with external visibility to avoid compile-time optimizations
-float gTestNaN = cQuietNan;
-float gTestZero = 0;
-
-TEST( MRMesh, NaN )
-{
-    // tests basic precondition for Marching Cubes algorithm to be correct
-    EXPECT_FALSE( gTestNaN < gTestZero || gTestNaN >= gTestZero );
-}
 
 TEST( MRMesh, volumeToMeshByParts )
 {
@@ -194,3 +161,5 @@ TEST( MRMesh, volumeToMeshByParts )
 }
 
 } //namespace MR
+
+#endif //!MESHLIB_NO_VOXELS

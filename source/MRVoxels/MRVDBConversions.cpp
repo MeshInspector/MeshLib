@@ -551,7 +551,7 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
             return {};
         };
         return
-            fwnByParts->calcFromGridByParts( func, indexer.dims(), gridToMeshXf, settings.windingNumberBeta, settings.progress )
+            fwnByParts->calcFromGridByParts( func, indexer.dims(), gridToMeshXf, settings.windingNumberBeta, 0, settings.progress )
             .transform( [&]
             {
                 grid->pruneGrid( 0.f );

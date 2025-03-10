@@ -75,7 +75,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 }
 
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
-    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart )
+    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart, int layerOverlap )
 {
     MR_TIMER
 
@@ -113,7 +113,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     part.max = params.sigma * std::exp( -0.5f );
     part.min = -part.max;
 
-    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize );
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
     return cudaPipeline( part, begin, end,
         [&] ( MR::SimpleVolumeMinMax& part, Chunk chunk ) -> Expected<void>
         {

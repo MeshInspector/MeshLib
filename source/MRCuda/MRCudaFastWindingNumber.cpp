@@ -279,7 +279,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     return {};
 }
 
-Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb )
+Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, int layerOverlap, const ProgressCallback& cb )
 {
     MR_TIMER
 
@@ -301,7 +301,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
 
-    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize );
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
     return cudaPipeline( std::vector<float>{}, begin, end,
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
@@ -337,7 +337,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     );
 }
 
-Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
+Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, int layerOverlap, const ProgressCallback& cb )
 {
     MR_TIMER
 
@@ -359,7 +359,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
 
-    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize );
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
     return cudaPipeline( std::vector<float>{}, begin, end,
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {

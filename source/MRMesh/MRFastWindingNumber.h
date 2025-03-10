@@ -83,10 +83,10 @@ public:
     using GridByPartsFunc = std::function<Expected<void> ( std::vector<float>&& data, const Vector3i& dims, int zOffset )>;
 
     virtual Expected<void> calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims,
-        const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb ) = 0;
+        const AffineXf3f& gridToMeshXf, float beta, int layerOverlap, const ProgressCallback& cb ) = 0;
 
     virtual Expected<void> calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims,
-        const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) = 0;
+        const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, int layerOverlap, const ProgressCallback& cb ) = 0;
 };
 
 } // namespace MR

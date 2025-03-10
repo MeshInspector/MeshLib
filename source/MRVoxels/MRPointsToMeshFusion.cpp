@@ -62,7 +62,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
             {
                 assert( zOffset == mesher.nextZ() );
                 return mesher.addPart( volume );
-            } )
+            }, 1 )
             .and_then( [&mesher] {
                 return mesher.finalize();
             } )

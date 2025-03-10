@@ -204,7 +204,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
             return mesher.addPart( res );
         };
         return
-            fwnByParts->calcFromGridWithDistancesByParts( addPart, vol.dimensions, basis, dist, vol.cb )
+            fwnByParts->calcFromGridWithDistancesByParts( addPart, vol.dimensions, basis, dist, 1, vol.cb )
             .and_then( [&mesher]
             {
                 return mesher.finalize();

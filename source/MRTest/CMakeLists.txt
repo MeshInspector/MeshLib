@@ -25,6 +25,7 @@ IF(APPLE)
     spdlog
     Python::Python
     pybind11nonlimitedapi_stubs
+    tbb
     ${CMAKE_DL_LIBS}
   )
 ELSE()
@@ -34,6 +35,7 @@ ELSE()
       gtest
       zip
       jsoncpp
+      tbb
       -Wl,--whole-archive
       MRMesh
       MRIOExtras
@@ -53,6 +55,7 @@ ELSE()
       GTest::gtest
       spdlog::spdlog
       pybind11nonlimitedapi_stubs
+      TBB::tbb
       ${CMAKE_DL_LIBS}
     )
     IF(NOT WIN32)
@@ -71,6 +74,7 @@ ELSE()
       spdlog
       Python::Python
       pybind11nonlimitedapi_stubs
+      tbb
       ${CMAKE_DL_LIBS}
     )
   ENDIF()

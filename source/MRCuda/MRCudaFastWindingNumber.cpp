@@ -324,6 +324,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            data.resize( chunk.size );
             RETURN_UNEXPECTED( resFunc(
                 std::move( data ),
                 { dims.x, dims.y, int( chunk.size / layerSize ) },
@@ -382,6 +383,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            data.resize( chunk.size );
             RETURN_UNEXPECTED( resFunc(
                 std::move( data ),
                 { dims.x, dims.y, int( chunk.size / layerSize ) },

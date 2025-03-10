@@ -4,6 +4,7 @@
 
 #include "MRCudaBasic.h"
 #include "MRCudaMath.h"
+#include "MRCudaPipeline.h"
 
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRChunkIterator.h"

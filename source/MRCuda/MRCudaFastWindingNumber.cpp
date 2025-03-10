@@ -4,6 +4,7 @@
 #include "MRCudaBasic.h"
 #include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
+#include "MRCudaPipeline.h"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"

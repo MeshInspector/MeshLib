@@ -90,7 +90,7 @@ Expected<void> RadiusCompensator::init()
     toWorldXf_ = AffineXf3f::linear( Matrix3f::fromColumns( xvec, yvec, params_.direction ) );
     toPlaneXf_ = toWorldXf_.inverse();
 
-    planeVerts_.resize( vertRegionWithBounds.endId() );
+    planeVerts_.resize( vertRegionWithBounds.size() );
     bool keepGoing = BitSetParallelFor( vertRegionWithBounds, [&] ( VertId v )
     {
         planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );

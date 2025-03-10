@@ -2,6 +2,7 @@
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
+#include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
 
 #include "MRMesh/MRAABBTree.h"
@@ -9,6 +10,10 @@
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDipole.h"
 #include "MRMesh/MRTimer.h"
+
+#include <thread>
+
+#define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
 namespace MR
 {
@@ -272,6 +277,160 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
         if ( !reportProgress( cb2, 1.00f ) )
             return unexpectedOperationCanceled();
     }
+
+    return {};
+}
+
+Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb )
+{
+    MR_TIMER
+
+    if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )
+        return unexpected( std::move( maybe.error() ) );
+
+    const auto cudaGridToMeshXf = fromXf( gridToMeshXf );
+
+    const auto layerSize = (size_t)dims.x * dims.y;
+    const auto totalSize = layerSize * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+
+    DynamicArrayF cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
+    if ( !reportProgress( cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+    
+    std::array<std::vector<float>, 2> results;
+    enum Device
+    {
+        GPU = 0,
+        CPU = 1,
+    };
+
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
+    size_t prevOffset = 0;
+    size_t prevSize = 0;
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
+    {
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+        cudaError_t cudaRes = cudaSuccess;
+        auto cudaThread = std::jthread( [&, offset = offset, size = size]
+        {
+            fastWindingNumberFromGrid(
+                int3 { dims.x, dims.y, dims.z },
+                cudaGridToMeshXf,
+                data_->toData(),
+                cudaResult.data(),
+                beta,
+                size,
+                offset
+            );
+            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
+                return;
+            
+            cudaRes = cudaResult.toVector( results[GPU] );
+        } );
+
+        // process the previous part during GPU computation
+        if ( offset != 0 )
+        {
+            RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
+            // make sure the vector is valid
+            results[CPU].clear();
+        }
+
+        cudaThread.join();
+        if ( cudaRes != cudaSuccess )
+            return unexpected( getError( cudaRes ) );
+        if ( !reportProgress( cb2, 1.00f ) )
+            return unexpectedOperationCanceled();
+
+        std::swap( results[GPU], results[CPU] );
+        prevOffset = offset;
+        prevSize = size;
+    }
+    // process the last part
+    RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
+
+    return {};
+}
+
+Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
+{
+    MR_TIMER
+
+    if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )
+        return unexpected( std::move( maybe.error() ) );
+
+    const auto cudaGridToMeshXf = fromXf( gridToMeshXf );
+
+    const auto layerSize = (size_t)dims.x * dims.y;
+    const auto totalSize = layerSize * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+
+    DynamicArrayF cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
+    if ( !reportProgress( cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    std::array<std::vector<float>, 2> results;
+    enum Device
+    {
+        GPU = 0,
+        CPU = 1,
+    };
+
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
+    size_t prevOffset = 0;
+    size_t prevSize = 0;
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
+    {
+        const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+
+        cudaError_t cudaRes = cudaSuccess;
+        auto cudaThread = std::jthread( [&, offset = offset, size = size]
+        {
+            signedDistance(
+                int3 { dims.x, dims.y, dims.z },
+                cudaGridToMeshXf,
+                data_->toData(),
+                cudaResult.data(),
+                size,
+                offset,
+                options
+            );
+            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
+                return;
+
+            cudaRes = cudaResult.toVector( results[GPU] );
+        } );
+
+        // process the previous part during GPU computation
+        if ( offset != 0 )
+        {
+            RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
+            // make sure the vector is valid
+            results[CPU].clear();
+        }
+
+        cudaThread.join();
+        if ( cudaRes != cudaSuccess )
+            return unexpected( getError( cudaRes ) );
+        if ( !reportProgress( cb2, 1.00f ) )
+            return unexpectedOperationCanceled();
+
+        std::swap( results[GPU], results[CPU] );
+        prevOffset = offset;
+        prevSize = size;
+    }
+    // process the last part
+    RETURN_UNEXPECTED( resFunc( std::move( results[CPU] ), { dims.x, dims.y, int( prevSize / layerSize ) }, int( prevOffset / layerSize ) ) );
 
     return {};
 }

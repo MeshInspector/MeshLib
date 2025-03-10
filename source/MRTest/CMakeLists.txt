@@ -25,6 +25,8 @@ IF(APPLE)
     spdlog
     Python::Python
     pybind11nonlimitedapi_stubs
+    OpenVDB
+    tbb
     ${CMAKE_DL_LIBS}
   )
 ELSE()
@@ -34,6 +36,8 @@ ELSE()
       gtest
       zip
       jsoncpp
+      openvdb
+      tbb
       -Wl,--whole-archive
       MRMesh
       MRIOExtras
@@ -42,6 +46,7 @@ ELSE()
     )
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     find_package(GTest REQUIRED)
+    find_package(OpenVDB REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
@@ -53,6 +58,8 @@ ELSE()
       GTest::gtest
       spdlog::spdlog
       pybind11nonlimitedapi_stubs
+      OpenVDB::openvdb
+      TBB::tbb
       ${CMAKE_DL_LIBS}
     )
     IF(NOT WIN32)
@@ -71,6 +78,8 @@ ELSE()
       spdlog
       Python::Python
       pybind11nonlimitedapi_stubs
+      openvdb
+      tbb
       ${CMAKE_DL_LIBS}
     )
   ENDIF()
@@ -80,6 +89,14 @@ add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}
 )
+
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
 
 IF(MR_PCH)
   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)

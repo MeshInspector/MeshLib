@@ -676,6 +676,22 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PopItemWidth();
     }
 
+    { // Ratio.
+        ImGui::PushItemWidth( 170.0f * menuScaling );
+        drawSeparator_( "Ratios", menuScaling );
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+
+        // --- Precision
+
+        int precision = UnitSettings::getUiRatioPrecision();
+        if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, 12 ) )
+            UnitSettings::setUiRatioPrecision( precision );
+
+        ImGui::PopStyleVar();
+        ImGui::PopItemWidth();
+    }
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
@@ -1237,7 +1253,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         }
         setDefaultSerializePointsFormat( format );
     }
-    
+
     if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )

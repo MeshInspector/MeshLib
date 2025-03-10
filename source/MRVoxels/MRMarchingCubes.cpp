@@ -10,7 +10,6 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
-#include "MRMesh/MRGTest.h"
 
 #include <thread>
 
@@ -952,16 +951,6 @@ Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& part )
 Expected<TriMesh> MarchingCubesByParts::finalize()
 {
     return impl_->mesher.finalize();
-}
-
-// global variables with external visibility to avoid compile-time optimizations
-float gTestNaN = cQuietNan;
-float gTestZero = 0;
-
-TEST( MRMesh, NaN )
-{
-    // tests basic precondition for the algorithm above to be correct
-    EXPECT_FALSE( gTestNaN < gTestZero || gTestNaN >= gTestZero );
 }
 
 } //namespace MR

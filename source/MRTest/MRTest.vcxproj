@@ -23,6 +23,7 @@
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRVoxelsTests.cpp" />
     <ClCompile Include="MRZlib.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -49,6 +50,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRViewer\MRViewer.vcxproj">
       <Project>{cecb9185-ff38-461f-ba20-654399edc67e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRVoxels\MRVoxels.vcxproj">
+      <Project>{7cc4f0fe-ace6-4441-9dd7-296066b6d69f}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

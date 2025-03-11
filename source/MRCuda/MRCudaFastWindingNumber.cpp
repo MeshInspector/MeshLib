@@ -12,6 +12,7 @@
 #include "MRMesh/MRDipole.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 
 #define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 

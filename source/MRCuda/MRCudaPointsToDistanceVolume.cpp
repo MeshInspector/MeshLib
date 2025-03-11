@@ -11,6 +11,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

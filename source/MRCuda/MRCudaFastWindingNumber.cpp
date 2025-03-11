@@ -10,6 +10,7 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDipole.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 
 #define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
@@ -292,6 +293,16 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     const auto layerSize = (size_t)dims.x * dims.y;
     const auto totalSize = layerSize * dims.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -351,6 +362,16 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     const auto layerSize = (size_t)dims.x * dims.y;
     const auto totalSize = layerSize * dims.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );

@@ -9,6 +9,7 @@
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -104,6 +105,16 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     const auto layerSize = (size_t)params.dimensions.x * params.dimensions.y;
     const auto totalSize = layerSize * params.dimensions.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
 
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );

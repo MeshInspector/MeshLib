@@ -678,7 +678,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
     { // Ratio.
         ImGui::PushItemWidth( 170.0f * menuScaling );
-        drawSeparator_( "Ratios", menuScaling );
+        drawSeparator_( "Scale and Ratios", menuScaling );
 
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
 

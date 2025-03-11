@@ -275,7 +275,6 @@ MRVIEWER_API PaletteChanges Palette(
 enum class PlaneWidgetFlags
 {
     None = 0,   // Default setup
-    DisableVisibility = 1   // Don't show "Show Plane" checkbox (and the preceding separator)
 };
 MR_MAKE_FLAG_OPERATORS( PlaneWidgetFlags )
 

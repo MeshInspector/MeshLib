@@ -1441,7 +1441,7 @@ PaletteChanges Palette(
     return changes;
 }
 
-void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags )
+void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags )
 {
     float dragspeed = planeWidget.box().diagonal() * 1e-3f;
     auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
@@ -1537,19 +1537,6 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
         plane = -plane;
 
     ImGui::PopStyleVar();
-    if ( !bool( flags & PlaneWidgetFlags::DisableVisibility ) )
-        ImGui::Separator();
-
-    auto planeObj = planeWidget.getPlaneObject();
-    if ( planeObj && !bool( flags & PlaneWidgetFlags::DisableVisibility ) )
-    {
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
-        bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::UI::checkbox( "Show Plane", &showPlane ) )
-            planeWidget.getPlaneObject()->setVisible( showPlane );
-        ImGui::PopStyleVar();
-    }
-
     if ( planeWidget.isInLocalMode() && shiftBackUp != shift )
     {
         planeWidget.setLocalShift( shift );

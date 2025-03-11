@@ -4,15 +4,13 @@
 
 #include "MRCudaBasic.h"
 #include "MRCudaMath.h"
+#include "MRCudaPipeline.h"
 
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
-
-#include <thread>
-
-#define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
 namespace MR
 {
@@ -79,7 +77,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 }
 
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
-    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart )
+    std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart, int layerOverlap )
 {
     MR_TIMER
 
@@ -107,53 +105,43 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     const auto layerSize = (size_t)params.dimensions.x * params.dimensions.y;
     const auto totalSize = layerSize * params.dimensions.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
 
     DynamicArrayF cudaVolume;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.resize( bufferSize ) );
 
-    std::array<MR::SimpleVolumeMinMax, 2> parts;
-    for ( auto& part : parts )
-    {
-        part.dims = params.dimensions;
-        part.voxelSize = params.voxelSize;
-        part.max = params.sigma * std::exp( -0.5f );
-        part.min = -part.max;
-    }
-    enum Device
-    {
-        GPU = 0,
-        CPU = 1,
-    };
+    MR::SimpleVolumeMinMax part;
+    part.dims = params.dimensions;
+    part.voxelSize = params.voxelSize;
+    part.max = params.sigma * std::exp( -0.5f );
+    part.min = -part.max;
 
-    size_t prevOffset = 0;
-    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize, layerSize ) )
-    {
-        cudaError_t cudaRes = cudaSuccess;
-        auto cudaThread = std::jthread( [&, offset = offset, size = size]
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
+    return cudaPipeline( part, begin, end,
+        [&] ( MR::SimpleVolumeMinMax& part, Chunk chunk ) -> Expected<void>
         {
-            pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
-            if ( cudaRes = cudaGetLastError(); cudaRes != cudaSuccess )
-                return;
+            pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, chunk.size, chunk.offset );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-            parts[GPU].dims.z = int( size / layerSize );
-            cudaRes = cudaVolume.toVector( parts[GPU].data );
-        } );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
 
-        // process the previous part during GPU computation
-        if ( offset != 0 )
-            RETURN_UNEXPECTED( addPart( parts[CPU], int( prevOffset / layerSize ) ) );
-
-        cudaThread.join();
-        if ( cudaRes != cudaSuccess )
-            return unexpected( getError( cudaRes ) );
-
-        std::swap( parts[GPU], parts[CPU] );
-        prevOffset = offset;
-    }
-    // add the last part
-    RETURN_UNEXPECTED( addPart( parts[CPU], int( prevOffset / layerSize ) ) );
-
-    return {};
+            return {};
+        },
+        [&] ( MR::SimpleVolumeMinMax& part, Chunk chunk )
+        {
+            part.dims.z = int( chunk.size / layerSize );
+            return addPart( part, int( chunk.offset / layerSize ) );
+        }
+    );
 }
 
 } //namespace Cuda

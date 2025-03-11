@@ -73,4 +73,39 @@ private:
     const Dipoles & dipoles_;
 };
 
+/// Abstract class that complements \ref IFastWindingNumber with chunked processing variants of its methods
+class IFastWindingNumberByParts
+{
+public:
+    virtual ~IFastWindingNumberByParts() = default;
+
+    /// callback that gets a block of resulting winding numbers
+    /// \param data - block data
+    /// \param dims - block dimensions
+    /// \param zOffset - block offset in XY dimension
+    using GridByPartsFunc = std::function<Expected<void> ( std::vector<float>&& data, const Vector3i& dims, int zOffset )>;
+
+    /// <summary>
+    /// calculates winding numbers in each point from a three-dimensional grid
+    /// </summary>
+    /// <param name="resFunc">callback that gets a block of resulting winding numbers</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
+    /// <param name="layerOverlap">overlap between two blocks of the grid, set as XY layer count</param>
+    virtual Expected<void> calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims,
+        const AffineXf3f& gridToMeshXf, float beta, int layerOverlap, const ProgressCallback& cb ) = 0;
+
+    /// <summary>
+    /// calculates distances with the sign obtained from generalized winding number in each point from a three-dimensional grid;
+    /// if sqr(res) < minDistSq or sqr(res) >= maxDistSq, then NaN is returned for such point
+    /// </summary>
+    /// <param name="resFunc">callback that gets a block of resulting winding numbers</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
+    /// <param name="layerOverlap">overlap between two blocks of the grid, set as XY layer count</param>
+    virtual Expected<void> calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims,
+        const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, int layerOverlap, const ProgressCallback& cb ) = 0;
+};
+
 } // namespace MR

@@ -1,8 +1,7 @@
 #pragma once
 
 #include "MRMesh/MRExpected.h"
-
-#include <thread>
+#include "MRPch/MRTBB.h"
 
 namespace MR::Cuda
 {
@@ -18,11 +17,13 @@ Expected<void> cudaPipeline( BufferType init, InputIt begin, InputIt end, GPUFun
         CPU = 1,
     };
 
+    tbb::task_group gpuTask;
+
     for ( it[GPU] = begin; it[GPU] != end; it[CPU] = it[GPU]++ )
     {
         // TODO: replace with cudaStream usage
         Expected<void> gpuRes;
-        auto gpuThread = std::jthread( [&]
+        gpuTask.run( [&]
         {
             gpuRes = gpuFunc( buffers[GPU], *it[GPU] );
         } );
@@ -33,7 +34,7 @@ Expected<void> cudaPipeline( BufferType init, InputIt begin, InputIt end, GPUFun
                 return cpuRes;
         }
 
-        gpuThread.join();
+        gpuTask.wait();
         if ( !gpuRes )
             return gpuRes;
 

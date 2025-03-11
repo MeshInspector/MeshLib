@@ -19,14 +19,18 @@ static void forAllAngleUnits( auto&& func )
     // All angle-related unit types must be listed here.
     func.template operator()<AngleUnit>();
 }
+static void forAllRatioUnits( auto&& func )
+{
+    func.template operator()<RatioUnit>();
+}
 static void forAllUnits( auto&& func )
 {
     forAllLengthUnits( func );
     forAllAngleUnits( func );
+    forAllRatioUnits( func );
     // All non-length/angle-related unit types must be listed here.
     func.template operator()<NoUnit>();
     func.template operator()<TimeUnit>();
-    func.template operator()<RatioUnit>();
     func.template operator()<PixelSizeUnit>();
 }
 
@@ -36,6 +40,7 @@ void resetToDefaults()
     UnitSettings::setUiLengthUnit( LengthUnit::mm, true );
     UnitSettings::setUiLengthPrecision( 3 );
     UnitSettings::setDegreesMode( DegreesMode::degrees, true );
+    UnitSettings::setUiRatioPrecision( 3 );
 }
 
 bool getShowLeadingZero()
@@ -196,6 +201,21 @@ int getUiAnglePrecision()
 void setUiAnglePrecision( int precision )
 {
     forAllAngleUnits( [&]<typename E>()
+    {
+        auto params = getDefaultUnitParams<E>();
+        params.precision = precision;
+        setDefaultUnitParams( params );
+    } );
+}
+
+int getUiRatioPrecision()
+{
+    return getDefaultUnitParams<RatioUnit>().precision;
+}
+
+void setUiRatioPrecision( int precision )
+{
+    forAllRatioUnits( [&]<typename E>()
     {
         auto params = getDefaultUnitParams<E>();
         params.precision = precision;

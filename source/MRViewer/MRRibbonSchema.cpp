@@ -43,6 +43,17 @@ void RibbonSchema::sortTabsByPriority()
     } );
 }
 
+void RibbonSchema::updateCaptions()
+{
+    for ( const auto& [name, item] : items )
+    {
+        auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( item.item );
+        if ( !statePlugin )
+            continue;
+        statePlugin->setUIName( item.caption.empty() ? name : item.caption );
+    }
+}
+
 RibbonSchema& RibbonSchemaHolder::schema()
 {
     static RibbonSchema schemaInst;
@@ -362,6 +373,7 @@ void RibbonSchemaLoader::loadSchema() const
 
     RibbonSchemaHolder::schema().eliminateEmptyGroups();
     RibbonSchemaHolder::schema().sortTabsByPriority();
+    RibbonSchemaHolder::schema().updateCaptions();
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )

@@ -57,6 +57,9 @@ struct RibbonSchema
 
     /// re-order items in tabsOrder according to their priority, the order of items having same priority is preserved
     MRVIEWER_API void sortTabsByPriority();
+
+    /// updates inner caption for all StateBasePlugins in schema
+    MRVIEWER_API void updateCaptions();
 };
 
 // This class holds static ribbon schema,

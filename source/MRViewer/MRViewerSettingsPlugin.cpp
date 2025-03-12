@@ -80,12 +80,6 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 #endif
 }
 
-const std::string& ViewerSettingsPlugin::uiName() const
-{
-    static std::string name = std::string( "Settings" ) + UINameSuffix();
-    return name;
-}
-
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 400.0f * menuScaling;

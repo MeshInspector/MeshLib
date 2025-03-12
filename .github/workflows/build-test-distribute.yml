@@ -111,6 +111,7 @@ jobs:
     with:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       full_config_build: ${{ needs.config.outputs.full_config_build == 'true' }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
@@ -274,14 +275,14 @@ jobs:
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber

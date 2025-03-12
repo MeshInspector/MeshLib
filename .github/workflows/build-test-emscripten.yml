@@ -10,6 +10,9 @@ on:
         default: false
         required: false
         type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
 
 jobs:
   emscripten-build:
@@ -89,7 +92,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Test
+      - name: Unit Tests
         timeout-minutes: 5
         run: |
           echo "check the \$HOME dir permissions in case of timeout issues"
@@ -103,3 +106,27 @@ jobs:
             --safe-firefox-profile \
             --kill-exit \
             ./build/Release/bin/MRTest.html
+
+      - name: Create Package
+        run: |
+          cp -a /usr/local/lib/${{ matrix.thirdparty-dir }} ./meshlib_install
+          ./scripts/cmake_install.sh ./meshlib_install
+          ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.target_name }} * )
+
+      - name: Build C++ examples
+        run: |
+          emcmake cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+      
+      - name: Upload Package
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Distributives_${{ matrix.target_name }}
+          path: meshlib_${{ matrix.target_name }}.zip
+          retention-days: 1

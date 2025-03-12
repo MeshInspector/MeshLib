@@ -6,9 +6,8 @@ on:
       docker_image_tag:
         required: true
         type: string
-      full_config_build:
-        default: false
-        required: false
+      upload_artifacts:
+        required: true
         type: boolean
 
 jobs:
@@ -21,22 +20,20 @@ jobs:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
-        full_config_build:
-          - ${{ fromJSON( inputs.full_config_build ) }}
-        exclude:
-          - full_config_build: false
-            config: Multithreaded-64Bit
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
+            package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
             aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
+            package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
             aws-dir: RMI
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
+            package_name: emscripten-multithreaded-64bit
             thirdparty-dir: emscripten-wasm64
             aws-dir: RMI64
 
@@ -89,7 +86,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Test
+      - name: Unit Tests
         timeout-minutes: 5
         run: |
           echo "check the \$HOME dir permissions in case of timeout issues"
@@ -103,3 +100,28 @@ jobs:
             --safe-firefox-profile \
             --kill-exit \
             ./build/Release/bin/MRTest.html
+
+      - name: Create Package
+        run: |
+          cp -a /usr/local/lib/${{ matrix.thirdparty-dir }} ./meshlib_install
+          ./scripts/cmake_install.sh ./meshlib_install
+          ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.package_name }} * )
+
+      - name: Build C++ examples
+        run: |
+          emcmake cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            ${{ matrix.target_name == 'emscripten-wasm64' && '-D CMAKE_C_FLAGS="-sMEMORY64=1" -D CMAKE_CXX_FLAGS="-sMEMORY64=1"' || '' }}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+      
+      - name: Upload Package
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Distributives_${{ matrix.package_name }}
+          path: meshlib_${{ matrix.package_name }}.zip
+          retention-days: 1

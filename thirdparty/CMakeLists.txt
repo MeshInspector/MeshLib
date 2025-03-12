@@ -155,14 +155,15 @@ ELSE() # not MR_EMSCRIPTEN
   file(GLOB CLIP_HEADERS "clip/*.h")
   install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 
+  set(E57_GIT_SUBMODULE_UPDATE OFF)
   set(E57_XML_PARSER TinyXML2 CACHE STRING "")
   add_subdirectory(./libE57Format)
 ENDIF()
 
 find_package(glad)
 IF(NOT glad_FOUND)
-  set(GLAD_INSTALL ON)
-  set(GLAD_REPRODUCIBLE ON)
+  set(GLAD_INSTALL ON CACHE BOOL "")
+  set(GLAD_REPRODUCIBLE ON CACHE BOOL "")
   add_subdirectory(./glad)
 ENDIF()
 

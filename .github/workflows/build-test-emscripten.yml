@@ -23,14 +23,17 @@ jobs:
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
+            package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
             aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
+            package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
             aws-dir: RMI
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
+            package_name: emscripten-multithreaded-64bit
             thirdparty-dir: emscripten-wasm64
             aws-dir: RMI64
 
@@ -102,7 +105,7 @@ jobs:
         run: |
           cp -a /usr/local/lib/${{ matrix.thirdparty-dir }} ./meshlib_install
           ./scripts/cmake_install.sh ./meshlib_install
-          ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.target_name }} * )
+          ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.package_name }} * )
 
       - name: Build C++ examples
         run: |
@@ -119,6 +122,6 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
-          name: Distributives_${{ matrix.target_name }}
-          path: meshlib_${{ matrix.target_name }}.zip
+          name: Distributives_${{ matrix.package_name }}
+          path: meshlib_${{ matrix.package_name }}.zip
           retention-days: 1

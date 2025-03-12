@@ -561,7 +561,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 {
     (void)menuScaling;
 
-    static constexpr int max_precision = 9;
+    static constexpr int cMaxPrecision = 9;
 
     { // Common.
         drawSeparator_( "Common", menuScaling );
@@ -636,7 +636,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
-        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, max_precision ) )
+        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
 
         ImGui::PopStyleVar();
@@ -670,7 +670,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             // --- Precision
 
             int precision = UnitSettings::getUiAnglePrecision();
-            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, max_precision ) )
+            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
         }
 
@@ -687,7 +687,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         // --- Precision
 
         int precision = UnitSettings::getUiRatioPrecision();
-        if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, max_precision ) )
+        if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiRatioPrecision( precision );
 
         ImGui::PopStyleVar();

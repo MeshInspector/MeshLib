@@ -114,6 +114,10 @@ void applyRibbonConfig( const RibbonConfig& config )
                 loader.updateItemsStructure( *itemsOverrides );
 
             loader.recalcItemSizes();
+
+            RibbonSchemaHolder::schema().eliminateEmptyGroups();
+            RibbonSchemaHolder::schema().sortTabsByPriority();
+            RibbonSchemaHolder::schema().updateCaptions();
         } );
     }
     viewer.incrementForceRedrawFrames( viewer.forceRedrawMinimumIncrementAfterEvents, viewer.swapOnLastPostEventsRedraw );

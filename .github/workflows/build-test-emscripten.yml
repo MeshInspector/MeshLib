@@ -109,7 +109,8 @@ jobs:
           emcmake cmake \
             -S examples/cpp-examples \
             -B cpp-examples-build \
-            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            ${{ matrix.target_name == 'emscripten-wasm64' && '-D CMAKE_C_FLAGS="-sMEMORY64=1" -D CMAKE_CXX_FLAGS="-sMEMORY64=1"' || '' }}
           cmake \
             --build cpp-examples-build \
             --parallel $(nproc)

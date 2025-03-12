@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-project(MRCuda CXX CUDA)
+IF(MESHLIB_EXPERIMENTAL_HIP)
+  project(MRCuda CXX HIP)
+ELSE()
+  project(MRCuda CXX CUDA)
+ENDIF()
 
 include(CudaCompilerOptions)
 
@@ -10,8 +14,10 @@ IF(NOT MESHLIB_BUILD_VOXELS)
   set(MRCUDA_NO_VOXELS ON)
 ENDIF()
 
-file(GLOB SOURCES "*.cpp" "*.cu")
-file(GLOB HEADERS "*.h" "*.hpp" "*.cuh")
+file(GLOB SOURCES "*.cpp")
+file(GLOB HEADERS "*.h" "*.hpp")
+file(GLOB CUDA_SOURCES "*.cu")
+file(GLOB CUDA_HEADERS "*.cuh")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
@@ -26,7 +32,6 @@ ENDIF()
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
-
 
 IF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -46,9 +51,28 @@ ELSE()
   )
 ENDIF()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-  ${CUDART_LIBRARY}
-)
+IF(MESHLIB_EXPERIMENTAL_HIP)
+  target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-result)
+
+  set_source_files_properties(${CUDA_SOURCES}
+    PROPERTIES
+    LANGUAGE HIP
+  )
+
+  add_library(${PROJECT_NAME}_device STATIC ${CUDA_SOURCES} ${CUDA_HEADERS})
+  target_link_libraries(${PROJECT_NAME}_device PRIVATE hip::device)
+
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      hip::host
+    PRIVATE
+      ${PROJECT_NAME}_device
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PUBLIC
+    ${CUDART_LIBRARY}
+  )
+ENDIF()
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(

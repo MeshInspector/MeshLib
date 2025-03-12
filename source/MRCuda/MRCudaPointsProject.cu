@@ -1,7 +1,5 @@
 #include "MRCudaPointsProject.cuh"
 
-#include "device_launch_parameters.h"
-
 namespace MR::Cuda
 {
 
@@ -60,7 +58,8 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
 
         if ( node.leaf() )
         {
-            auto [begin, end] = node.getLeafPointRange();
+            auto range = node.getLeafPointRange();
+            auto begin = range.x, end = range.y;
             for ( int i = begin; i < end; ++i )
             {
                 if ( skipSameIndex && i == globalIndex )
@@ -75,6 +74,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
                         goto exit;
                 }
             }
+            continue;
         }
 
         auto s1 = getSubTask( node.l );

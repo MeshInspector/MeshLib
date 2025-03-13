@@ -16,6 +16,7 @@ IF(APPLE)
     MRMesh
     MRPython
     spdlog
+    fmt
     Python::Python
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}

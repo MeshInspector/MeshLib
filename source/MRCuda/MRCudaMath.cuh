@@ -4,7 +4,8 @@
 #include "MRCuda.cuh"
 #include "MRCudaFloat.cuh"
 
-#include <float.h>
+#include <cfloat>
+#include <cstdint>
 
 namespace MR
 {

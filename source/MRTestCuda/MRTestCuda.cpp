@@ -1,5 +1,6 @@
 #include <MRCuda/MRCudaBasic.h>
 #include <MRMesh/MRSystem.h>
+#include <MRPch/MRSpdlog.h>
 
 #include <gtest/gtest.h>
 

@@ -75,6 +75,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
                         goto exit;
                 }
             }
+            continue;
         }
 
         auto s1 = getSubTask( node.l );

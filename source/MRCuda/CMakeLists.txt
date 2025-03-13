@@ -19,7 +19,16 @@ file(GLOB HEADERS "*.h" "*.hpp")
 file(GLOB CUDA_SOURCES "*.cu")
 file(GLOB CUDA_HEADERS "*.cuh")
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+IF(MESHLIB_EXPERIMENTAL_HIP)
+  set_source_files_properties(${CUDA_SOURCES}
+    PROPERTIES
+      LANGUAGE HIP
+  )
+  add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+  add_library(${PROJECT_NAME}_device STATIC ${CUDA_SOURCES} ${CUDA_HEADERS})
+ELSE()
+  add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS} ${CUDA_SOURCES} ${CUDA_HEADERS})
+ENDIF()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
@@ -54,14 +63,7 @@ ENDIF()
 IF(MESHLIB_EXPERIMENTAL_HIP)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-result)
 
-  set_source_files_properties(${CUDA_SOURCES}
-    PROPERTIES
-    LANGUAGE HIP
-  )
-
-  add_library(${PROJECT_NAME}_device STATIC ${CUDA_SOURCES} ${CUDA_HEADERS})
   target_link_libraries(${PROJECT_NAME}_device PRIVATE hip::device)
-
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       hip::host

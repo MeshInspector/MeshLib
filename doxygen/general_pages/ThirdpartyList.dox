@@ -18,7 +18,7 @@ Main library with geometry operations
 |<a rel="nofollow" href="https://libzip.org">libzip</a>                                 |libzip - reading, creating, and modifying zip archives                       |BSD-3-Clause                   |
 |<a rel="nofollow" href="https://www.zlib.net">zlib</a>                                 |A Massively Spiffy Yet Delicately Unobtrusive Compression Library            |zlib                           |
 |<a rel="nofollow" href="https://github.com/vilya/miniply">minply</a>                   |a simple and fast parser for PLY files                                       |MIT                            |
-|<a rel="nofollow" href="https://github.com/oneapi-src/oneTBB">oneTBB</a>               |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
+|<a rel="nofollow" href="https://github.com/uxlfoundation/oneTBB">oneTBB</a>               |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
 |<a rel="nofollow" href="https://github.com/greg7mdp/parallel-hashmap">phmap</a>        |fast and memory-friendly hashmap and btree containers                        |Apache 2.0                     |
 |<a rel="nofollow" href="https://github.com/TartanLlama/expected">expected</a>          |implementation of std::expected with functional-style extensions            |CC0-1.0                        |
 |<a rel="nofollow" href="https://github.com/Mbed-TLS/mbedtls">Mbed TLS</a>              |a C library that implements cryptographic primitives                         |Apache-2.0 or GPL-2.0-or-later |
@@ -68,7 +68,7 @@ Library for voxels operations
 |Name                                                                                      |Description                                                                  |License             |
 |------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
 |<a rel="nofollow" href="https://github.com/AcademySoftwareFoundation/openvdb">OpenVDB</a> |efficient manipulation of sparse, time-varying, volumetric data discretized  |MPL2                |
-|<a rel="nofollow" href="http://gdcm.sourceforge.net">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
+|<a rel="nofollow" href="https://sourceforge.net/projects/gdcm">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
 
 ### MRCuda
 

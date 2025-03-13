@@ -1,5 +1,5 @@
-#include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
+#include "MRCudaMath.h"
 
 #include "MRMesh/MRAffineXf3.h"
 
@@ -8,20 +8,12 @@ namespace MR::Cuda
 
 float3 fromVec( const Vector3f& v )
 {
-    return {
-        .x = v.x,
-        .y = v.y,
-        .z = v.z,
-    };
+    return { v.x, v.y, v.z };
 }
 
 int3 fromVec( const Vector3i& v )
 {
-    return {
-        .x = v.x,
-        .y = v.y,
-        .z = v.z,
-    };
+    return { v.x, v.y, v.z };
 }
 
 Matrix4 fromXf( const MR::AffineXf3f& xf )

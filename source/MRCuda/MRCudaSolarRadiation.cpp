@@ -20,7 +20,7 @@ static std::vector<IntersectionPrecomputes> calcPrecs( const std::vector<MR::Sky
         const auto& dir = skyPatch.dir;
         precs.emplace_back();
         auto& prec = precs.back();
-        prec.dir = { .x = dir.x, .y = dir.y, .z = dir.z };
+        prec.dir = { dir.x, dir.y, dir.z };
 
         findMaxVectorDim( prec.idxX, prec.idxY, prec.maxDimIdxZ, dir );
 

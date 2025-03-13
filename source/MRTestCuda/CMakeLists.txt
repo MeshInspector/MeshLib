@@ -14,12 +14,16 @@ IF(APPLE OR WIN32 OR MESHLIB_USE_VCPKG)
     MRMesh
     MRCuda
     GTest::gtest
+    fmt::fmt
+    spdlog::spdlog
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRCuda
     gtest
+    fmt
+    spdlog
   )
 ENDIF()
 

@@ -2288,9 +2288,17 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
         if ( allVerts && !isLoneEdge( e ) )
             parCheck( v.valid() );
         if ( v )
+        {
             parCheck( validVerts_.test( v ) );
+            // check that vertex v is manifold - there is only one ring of edges around it
+            parCheck( edgePerVertex_[v] && fromSameOriginRing( edgePerVertex_[v], e ) );
+        }
         if ( auto f = edges_[e].left )
+        {
             parCheck( validFaces_.test( f ) );
+            // check that face f is manifold - there is only one ring of edges around it
+            parCheck( edgePerFace_[f] && fromSameLeftRing( edgePerFace_[f], e ) );
+        }
     }, subprogress( cb, 0.0f, 0.3f ) );
 
     if ( !result )

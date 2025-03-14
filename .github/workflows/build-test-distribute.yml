@@ -251,6 +251,11 @@ jobs:
        shell: powershell
        run: aws s3 cp MeshLib.nupkg 's3://test-artifacts-git/MeshLib.nupkg' --quiet
 
+  windows-unity-test:
+    if: ${{ github.event_name == ‘schedule’ }} // triggered by schedule
+    needs: [ windows-build-test ]
+    uses: ./.github/workflows/unity-nuget-test.yml
+    secrets: inherit
 
   upload-distributions:
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}

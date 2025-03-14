@@ -405,7 +405,7 @@ void MouseController::resetAllIfNeeded_()
 
 bool MouseController::tryHoverViewController_()
 {
-    auto hoverSideArows = [] ( RegionId region )
+    auto hoverSideArrows = [] ( RegionId region )
     {
         int reqId = region.get() - int( SideRegions::CCWArrow );
         int childId = 0;
@@ -439,7 +439,7 @@ bool MouseController::tryHoverViewController_()
             getViewerInstance().setSceneDirty();
             getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
         }
-        hoverSideArows( viewControllerHoveredRegion_ );
+        hoverSideArrows( viewControllerHoveredRegion_ );
     };
 
     auto hoveredVpId = getViewerInstance().getHoveredViewportId();

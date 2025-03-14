@@ -1,0 +1,42 @@
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  schedule:
+    - cron: '0 17 * * *'  # Run every day at 17:00 UTC
+    #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
+
+jobs:
+  unity-nuget-test:
+    timeout-minutes: 10
+    runs-on: mesh-win-unity
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
+
+      - name: Copy nupkg from S3
+        shell: powershell
+        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --delete --size-only --quiet
+
+      - name: run test
+        shell: powershell
+        run: |
+          Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force
+          Remove-Item -Path "C:\work\results.xml"
+          nugetforunity restore C:\work\unity_proj\NugetTestProj
+          "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe"  -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\results.xml" -logfile "C:\work\batch_log.txt"
+
+      - name: verify xml
+        shell: powershell
+        run: |
+          [xml]$xml = Get-Content "C:\work\results.xml"
+          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in results.xml found"; exit 1}
+
+      - name: upload logs
+        shell: powershell
+        run: |
+          aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
+          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/results.xml

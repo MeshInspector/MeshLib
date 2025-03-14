@@ -5,8 +5,6 @@
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRLine3.h"
-#include <chrono>
-#include <optional>
 
 namespace MR
 {
@@ -24,7 +22,6 @@ private:
     bool onDisable_() override;
     void preDraw_() override;
 
-    std::optional<std::chrono::time_point<std::chrono::high_resolution_clock>> lastDrawTime_;
     float rotationSpeed_ = 5 * PI_F / 180;
 };
 
@@ -53,26 +50,19 @@ bool RotatorPlugin::onEnable_()
 
 bool RotatorPlugin::onDisable_()
 {
-    lastDrawTime_.reset();
     return true;
 }
 
 void RotatorPlugin::preDraw_()
 {
-    auto now = std::chrono::high_resolution_clock::now();
-    if ( lastDrawTime_ )
-    {
-        auto timePassed = std::chrono::duration<float>( *lastDrawTime_ - now ).count();
-        auto & viewport = Viewport::get();
-        Vector3f sceneCenter;
-        if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
-            sceneCenter = sceneBox.center();
+    auto & viewport = Viewport::get();
+    Vector3f sceneCenter;
+    if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
+        sceneCenter = sceneBox.center();
 
-        viewport.cameraRotateAround(
-            Line3f{ sceneCenter, viewport.getUpDirection() },
-            timePassed * rotationSpeed_ );
-    }
-    lastDrawTime_ = now;
+    viewport.cameraRotateAround(
+        Line3f{ sceneCenter, viewport.getUpDirection() },
+        ImGui::GetIO().DeltaTime * rotationSpeed_ );
     incrementForceRedrawFrames();
 }
 

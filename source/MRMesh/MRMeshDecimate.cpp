@@ -1222,10 +1222,17 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         settings.maxDeletedFaces = int( settings.region ? settings.region->count() : mesh.topology.numValidFaces() ) / 2;
     }
 
+    DecimateResult res;
+#ifndef NDEBUG
+    if ( !mesh.topology.checkValidity() )
+        return res;
+#endif
+
     mesh.invalidateCaches(); // free memory occupied by trees before running the algorithm, which makes them invalid anyway
-    auto res = ( settings.subdivideParts > 1 ) ?
+    res = ( settings.subdivideParts > 1 ) ?
         decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
     assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
+    assert ( mesh.topology.checkValidity() );
     return res;
 }
 

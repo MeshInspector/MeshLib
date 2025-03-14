@@ -9,6 +9,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MR2to3.h"
 #include "MRViewportCornerController.h"
+#include "MRColorTheme.h"
 
 
 #ifdef __EMSCRIPTEN__
@@ -404,21 +405,41 @@ void MouseController::resetAllIfNeeded_()
 
 bool MouseController::tryHoverViewController_()
 {
+    auto hoverSideArows = [] ( RegionId region )
+    {
+        int reqId = region.get() - int( SideRegions::CCWArrow );
+        int childId = 0;
+        for ( auto child : getViewerInstance().basisViewController->children() )
+        {
+            bool reqChild = childId++ == reqId;
+            const Color& colorBg = ColorTheme::getRibbonColor( reqChild ? ColorTheme::RibbonColorsType::GradBtnStart : ColorTheme::RibbonColorsType::Background );
+            const Color& colorBorder = ColorTheme::getRibbonColor( reqChild ? ColorTheme::RibbonColorsType::RibbonButtonActive : ColorTheme::RibbonColorsType::GradBtnDisableStart );
+            if ( auto objMesh = child->asType<ObjectMesh>() )
+            {
+                objMesh->setFrontColor( colorBg, true );
+                objMesh->setFrontColor( colorBg, false );
+                objMesh->setBordersColor( colorBorder );
+            }
+        }
+    };
+
     auto setHovered = [&] ( RegionId region )
     {
         if ( region == viewControllerHoveredRegion_ )
             return;
         viewControllerHoveredRegion_ = region;
-        if ( viewControllerHoveredRegion_ )
+        if ( viewControllerHoveredRegion_ && viewControllerHoveredRegion_ < int( SideRegions::CCWArrow ) )
         {
             getViewerInstance().setSceneDirty();
             getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerHoveredTextureMap( viewControllerHoveredRegion_ ) );
+
         }
         else
         {
             getViewerInstance().setSceneDirty();
             getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
         }
+        hoverSideArows( viewControllerHoveredRegion_ );
     };
 
     auto hoveredVpId = getViewerInstance().getHoveredViewportId();
@@ -435,7 +456,7 @@ bool MouseController::tryHoverViewController_()
     }
     auto screenPos = to2dim( getViewerInstance().viewportToScreen( to3dim( vp.getAxesPosition() ), vp.id ) );
 
-    if ( distanceSq( Vector2f( currentMousePos_ ), screenPos ) > sqr( vp.getAxesSize() ) )
+    if ( distanceSq( Vector2f( currentMousePos_ ), screenPos ) > sqr( vp.getAxesSize() * 2.0f ) )
     {
         setHovered( {} );
         return false;
@@ -449,14 +470,26 @@ bool MouseController::tryHoverViewController_()
     }
 
     auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
-    auto [obj, pick] = vp.pickRenderObject( { { static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ) } }, { .baseRenderParams = &staticRenderParams } );
-    if ( obj != getViewerInstance().basisViewController )
+    auto [obj, pick] = vp.pickRenderObject( { { 
+            static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ), 
+            static_cast< VisualObject* >( getViewerInstance().basisViewController->children().front().get() ),
+            static_cast< VisualObject* >( getViewerInstance().basisViewController->children().back().get() )
+        } }, { .baseRenderParams = &staticRenderParams } );
+    if ( !obj )
     {
         setHovered( {} );
         return false;
     }
 
-    setHovered( getCornerControllerRegionByFace( pick.face ) );
+    RegionId hoveredId;
+    if ( obj == getViewerInstance().basisViewController )
+        hoveredId = getCornerControllerRegionByFace( pick.face );
+    else if ( obj == getViewerInstance().basisViewController->children().front() )
+        hoveredId = RegionId( int( SideRegions::CCWArrow ) );
+    else
+        hoveredId = RegionId( int( SideRegions::CWArrow ) );
+
+    setHovered( hoveredId );
 
     return true;
 }
@@ -469,11 +502,22 @@ bool MouseController::tryPressViewController_()
     // validate pick just in case
     const auto& vp = getViewerInstance().viewport();
     auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
-    auto [obj, pick] = vp.pickRenderObject( { { static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ) } }, { .baseRenderParams = &staticRenderParams } );
-    if ( obj != getViewerInstance().basisViewController )
+    auto [obj, pick] = vp.pickRenderObject( { {
+        static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ),
+        static_cast< VisualObject* >( getViewerInstance().basisViewController->children().front().get() ),
+        static_cast< VisualObject* >( getViewerInstance().basisViewController->children().back().get() )
+    } }, { .baseRenderParams = &staticRenderParams } );
+    if ( !obj )
         return false;
     
-    auto region = getCornerControllerRegionByFace( pick.face );
+    RegionId region;
+    if ( obj == getViewerInstance().basisViewController )
+        region = getCornerControllerRegionByFace( pick.face );
+    else if ( obj == getViewerInstance().basisViewController->children().front() )
+        region = RegionId( int( SideRegions::CCWArrow ) );
+    else
+        region = RegionId( int( SideRegions::CWArrow ) );
+
     updateCurrentViewByControllerRegion( region );
 
     return true;

@@ -38,6 +38,13 @@ TEST(MRMesh, Box)
     auto p12 = getTouchPlanes( b1, Vector3d( 1, 1, 1 ) );
     EXPECT_EQ( p12.min, 0 );
     EXPECT_EQ( p12.max, 3 );
+
+    Box3d b4{ Vector3d{ 1, 2, 3 }, Vector3d{ 4, 5, 6 } };
+    EXPECT_EQ( b4.corner( Vector3b( 1, 0, 1 ) ), Vector3d( 4, 2, 6 ) );
+
+    MinMaxf mm0{ -1, 2 };
+    EXPECT_EQ( mm0.corner( 0 ), -1 );
+    EXPECT_EQ( mm0.corner( 1 ),  2 );
 }
 
 } //namespace MR

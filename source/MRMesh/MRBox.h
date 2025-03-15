@@ -27,6 +27,8 @@ public:
     using VTraits = VectorTraits<V>;
     using T = typename VTraits::BaseType;
     static constexpr int elements = VTraits::size;
+    using Vb = typename VTraits::template ChangeBaseType<bool>; //if V is Vector3<T> then Vb is Vector3b
+    using VbTraits = VectorTraits<Vb>;
 
     V min, max;
 
@@ -61,6 +63,17 @@ public:
 
     /// computes center of the box
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
+
+    /// returns the corner of this box as specified by given bool-vector:
+    /// 1 element in (c) means take min's coordinate,
+    /// 0 element in (c) means take max's coordinate
+    V corner( const Vb& c )
+    {
+        V res;
+        for ( int i = 0; i < elements; ++i )
+            VTraits::getElem( i, res ) = VTraits::getElem( i, operator[]( VbTraits::getElem( i, c ) ) );
+        return res;
+    }
 
     /// computes size of the box in all dimensions
     V size() const { assert( valid() ); return max - min; }

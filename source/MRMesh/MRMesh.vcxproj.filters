@@ -1310,9 +1310,6 @@
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
-    <ClCompile Include="MRBox.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>

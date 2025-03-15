@@ -451,7 +451,6 @@
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
-    <ClCompile Include="MRBox.cpp" />
     <ClCompile Include="MRBase64.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />

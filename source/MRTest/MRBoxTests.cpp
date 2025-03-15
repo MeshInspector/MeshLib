@@ -1,7 +1,7 @@
-#include "MRBox.h"
-#include "MRVector2.h"
-#include "MRVector3.h"
-#include "MRGTest.h"
+#include <MRMesh/MRBox.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRVector3.h>
+#include <MRMesh/MRGTest.h>
 
 namespace MR
 {
@@ -14,7 +14,7 @@ template struct Box<Vector2d>;
 template struct Box<Vector3f>;
 template struct Box<Vector3d>;
 
-TEST(MRMesh, Box) 
+TEST(MRMesh, Box)
 {
     Box3d b1{ Vector3d{ 0, 0, 0 }, Vector3d{ 1, 1, 1 } };
     Box3d b2{ Vector3d{ -1, -1, -1 }, Vector3d{ 1, 1, 1 } };
@@ -31,6 +31,13 @@ TEST(MRMesh, Box)
     Vector3i c = b.center();
     Vector3i r{ 5, 5, 5 };
     EXPECT_EQ( c, r );
+
+    auto p11 = getTouchPlanes( b1, Vector3d( 1, 0, 0 ) );
+    EXPECT_EQ( p11.min, 0 );
+    EXPECT_EQ( p11.max, 1 );
+    auto p12 = getTouchPlanes( b1, Vector3d( 1, 1, 1 ) );
+    EXPECT_EQ( p12.min, 0 );
+    EXPECT_EQ( p12.max, 3 );
 }
 
 } //namespace MR

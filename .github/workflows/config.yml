@@ -132,11 +132,6 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      - name: Get current branch name
-        if: ${{ steps.linux-changes.outputs.src == 'true' }}
-        id: branch-name
-        uses: tj-actions/branch-names@v8.0.1
-
       # if nothing to rebuild: "latest"
       # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
       # example: fix/mesh -> fix-mesh
@@ -144,7 +139,8 @@ jobs:
         id: select-docker-image-tag
         run: |
           if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            IMAGE_TAG=$(echo "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            # https://stackoverflow.com/q/58033366/7325599
+            IMAGE_TAG=$(echo "${GITHUB_REF_NAME}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi

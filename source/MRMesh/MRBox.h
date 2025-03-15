@@ -199,6 +199,7 @@ public:
 template <typename T>
 inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 {
+    assert( box.valid() );
     return
     {
         Vector3<T>{ box.min.x, box.min.y, box.min.z },
@@ -215,6 +216,7 @@ inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 template <typename T>
 inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
 {
+    assert( box.valid() );
     return
     {
         Vector2<T>{ box.min.x, box.min.y },
@@ -222,6 +224,17 @@ inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
         Vector2<T>{ box.min.x, box.max.y },
         Vector2<T>{ box.max.x, box.max.y }
     };
+}
+
+/// among all planes with given normal and arbitrary shift: dot(n,x) = d
+/// finds minimal and maximal touching planes for given box, and returns them as { min_d, max_d }
+template <typename V>
+MinMax<typename Box<V>::T> getTouchPlanes( const Box<V> & box, const V & n )
+{
+    MinMax<typename Box<V>::T> res;
+    for ( const auto & p : getCorners( box ) )
+        res.include( dot( n, p ) );
+    return res;
 }
 
 /// find the tightest box enclosing this one after transformation

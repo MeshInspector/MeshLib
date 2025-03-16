@@ -108,6 +108,15 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& lin
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 
+/// given mesh part and arbitrary plane, outputs
+/// \param fs  triangles from boxes crossed or touched by the plane
+/// \param ues edges of these triangles
+/// \param vs  vertices of these triangles
+/// \param fsVec triangles from boxes crossed or touched by the plane in unspecified order
+MRMESH_API void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs,
+    std::vector<FaceId> * fsVec = nullptr );
+
 /// given mesh part and plane z=zLevel, outputs
 /// \param fs  triangles crossed or touched by the plane
 /// \param ues edges of these triangles

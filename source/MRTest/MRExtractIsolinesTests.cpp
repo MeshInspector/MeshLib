@@ -91,11 +91,17 @@ TEST( MRMesh, ExtractXYPlaneSections )
 {
     Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f() );
 
-    auto res = extractXYPlaneSections( mesh, -0.5f );
+    EXPECT_FALSE( hasAnyXYPlaneSection( mesh, -0.5f, UseAABBTree::No ) );
+    EXPECT_FALSE( hasAnyXYPlaneSection( mesh, -0.5f, UseAABBTree::Yes ) );
+    auto res = extractXYPlaneSections( mesh, -0.5f, UseAABBTree::No );
+    EXPECT_EQ( res, extractXYPlaneSections( mesh, -0.5f, UseAABBTree::Yes ) );
     EXPECT_EQ( res.size(), 0 );
 
     const auto testLevel = 0.5f;
-    res = extractXYPlaneSections( mesh, testLevel );
+    EXPECT_TRUE( hasAnyXYPlaneSection( mesh, testLevel, UseAABBTree::No ) );
+    EXPECT_TRUE( hasAnyXYPlaneSection( mesh, testLevel, UseAABBTree::Yes ) );
+    res = extractXYPlaneSections( mesh, testLevel, UseAABBTree::No );
+    EXPECT_EQ( res, extractXYPlaneSections( mesh, testLevel, UseAABBTree::Yes ) );
     EXPECT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 9 );
     EXPECT_EQ( res[0].front(), res[0].back() );
@@ -110,7 +116,10 @@ TEST( MRMesh, ExtractXYPlaneSections )
     FaceBitSet fs;
     fs.autoResizeSet( 5_f );
     fs.set( 2_f );
-    res = extractXYPlaneSections( { mesh, &fs }, testLevel );
+    EXPECT_TRUE( hasAnyXYPlaneSection( { mesh, &fs }, testLevel, UseAABBTree::No ) );
+    EXPECT_TRUE( hasAnyXYPlaneSection( { mesh, &fs }, testLevel, UseAABBTree::Yes ) );
+    res = extractXYPlaneSections( { mesh, &fs }, testLevel, UseAABBTree::No );
+    EXPECT_EQ( res, extractXYPlaneSections( { mesh, &fs }, testLevel, UseAABBTree::Yes ) );
     EXPECT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 3 );
     EXPECT_NE( res[0].front(), res[0].back() );

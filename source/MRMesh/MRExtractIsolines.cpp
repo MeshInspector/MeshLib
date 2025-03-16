@@ -302,7 +302,8 @@ bool Isoliner::hasAnyLine( const UndirectedEdgeBitSet * potentiallyCrossedEdges 
             auto nd = negativeVerts_.test( d );
             if ( no != nd )
             {
-                assert ( !region_ || contains( *region_, topology_.left( ue ) ) || contains( *region_, topology_.right( ue ) ) );
+                if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
+                    continue;
                 res = true;
                 break;
             }
@@ -417,33 +418,49 @@ bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane )
     return s.hasAnyLine();
 }
 
-PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel )
+PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel, UseAABBTree u )
 {
     MR_TIMER
+    auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    };
+
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    {
+        //brute force
+        Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
+        return s.extract();
+    }
 
     UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
     VertBitSet vertRegion( mp.mesh.topology.vertSize() );
     xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
 
-    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
-    {
-        return points[v].z - zLevel;
-    }, vertRegion );
+    Isoliner s( mp.mesh.topology, valueInPoint, vertRegion );
     return s.extract( std::move( potentiallyCrossedEdges ) );
 }
 
-bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel )
+bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel, UseAABBTree u )
 {
     MR_TIMER
+    auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
+    {
+        return points[v].z - zLevel;
+    };
+
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    {
+        //brute force
+        Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
+        return s.hasAnyLine();
+    }
 
     UndirectedEdgeBitSet potentiallyCrossedEdges( mp.mesh.topology.undirectedEdgeSize() );
     VertBitSet vertRegion( mp.mesh.topology.vertSize() );
     xyPlaneMeshIntersect( mp, zLevel, nullptr, &potentiallyCrossedEdges, &vertRegion );
 
-    Isoliner s( mp.mesh.topology, [&points = mp.mesh.points, zLevel] ( VertId v )
-    {
-        return points[v].z - zLevel;
-    }, vertRegion );
+    Isoliner s( mp.mesh.topology, valueInPoint, vertRegion );
     return s.hasAnyLine( &potentiallyCrossedEdges );
 }
 

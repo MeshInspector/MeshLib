@@ -300,7 +300,7 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
             readTiff( tiff, buffer.data(), buffer.size(), params );
 
             const auto [min, max] = parallelMinMax( buffer.data(), buffer.size() );
-            ParallelFor( (size_t)0, result.pixels.size(), [&] ( size_t i )
+            ParallelFor( (size_t)0, result.pixels.size(), [&, min = min, max = max] ( size_t i )
             {
                 const auto value = (uint8_t)( 255. * (double)( buffer[i] - min ) / (double)( max - min ) );
                 result.pixels[i] = { value, value, value };

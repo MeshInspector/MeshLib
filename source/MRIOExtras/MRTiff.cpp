@@ -178,6 +178,8 @@ void copyFromTiffImpl( T* dst, const U* src, size_t size, const TiffParameters& 
 template <typename Func>
 void visitTiffData( Func f, const uint8_t* data, const TiffParameters& tp )
 {
+#pragma warning( push )
+#pragma warning( disable: 4244 ) // disable false conversion warning
 #define CALL_IF( Type ) \
     if ( tp.bytesPerSample == sizeof( Type ) ) \
         return f( reinterpret_cast<const Type*>( data ) );
@@ -209,6 +211,7 @@ void visitTiffData( Func f, const uint8_t* data, const TiffParameters& tp )
     }
 
 #undef CALL_IF
+#pragma warning( pop )
 }
 
 template <typename T>

@@ -5,6 +5,10 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   unity-nuget-test:
     timeout-minutes: 10
@@ -14,7 +18,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
 
       - name: Copy nupkg from S3

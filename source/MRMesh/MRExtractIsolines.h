@@ -24,10 +24,10 @@ namespace MR
     const VertScalars & vertValues, float isoValue, const FaceBitSet * region = nullptr );
 
 /// extracts all plane sections of given mesh
-[[nodiscard]] MRMESH_API PlaneSections extractPlaneSections( const MeshPart & mp, const Plane3f & plane );
+[[nodiscard]] MRMESH_API PlaneSections extractPlaneSections( const MeshPart & mp, const Plane3f & plane, UseAABBTree u = UseAABBTree::Yes );
 
 /// quickly returns true if extractPlaneSections produce not-empty set for the same arguments
-[[nodiscard]] MRMESH_API bool hasAnyPlaneSection( const MeshPart & mp, const Plane3f & plane );
+[[nodiscard]] MRMESH_API bool hasAnyPlaneSection( const MeshPart & mp, const Plane3f & plane, UseAABBTree u = UseAABBTree::Yes );
 
 /// extracts all sections of given mesh with the plane z=zLevel
 [[nodiscard]] MRMESH_API PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel, UseAABBTree u = UseAABBTree::Yes );

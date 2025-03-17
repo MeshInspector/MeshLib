@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
+  workflow_call:
 
 permissions:
   id-token: write

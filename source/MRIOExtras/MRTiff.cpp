@@ -342,22 +342,29 @@ Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
     TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, image.resolution.y );
 
     // 32-bit RGBA
+    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB );
     TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT );
     TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, 8 );
     TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, 4 );
 
-    // TODO: describe the tags
+    // FIXME: orientation is ignored
+    TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
-    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
 
     for ( auto row = 0u; row < image.resolution.y; ++row )
-        TIFFWriteScanline( tiff, (void*)( image.pixels.data() + row * image.resolution.x ), row );
+    {
+        // FIXME: orientation is ignored
+        const auto* data = image.pixels.data() + ( image.resolution.y - 1 - row ) * image.resolution.x;
+        TIFFWriteScanline( tiff, (void*)data, row );
+    }
     TIFFFlush( tiff );
 
     return {};
 }
 
-MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), toTiff, -1 )
+// FIXME: single filter
+MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff, -1 )
+MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff, -1 )
 
 } // namespace ImageSave
 

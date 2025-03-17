@@ -133,35 +133,19 @@ void copyFromTiffImpl( Color* dst, const U* src, size_t size, const TiffParamete
         else
         {
             for ( auto i = 0u; i < size; ++i )
-            {
-                dst[i] = Color {
-                    (uint8_t)src[i * 4 + 0],
-                    (uint8_t)src[i * 4 + 1],
-                    (uint8_t)src[i * 4 + 2],
-                    (uint8_t)src[i * 4 + 3],
-                };
-            }
+                for ( auto j = 0; j < 4; ++j )
+                    dst[i][j] = Color::valToUint8( src[i * 4 + j] );
         }
         break;
     case TiffParameters::ValueType::RGB:
         for ( auto i = 0u; i < size; ++i )
-        {
-            dst[i] = Color {
-                (uint8_t)src[i * 3 + 0],
-                (uint8_t)src[i * 3 + 1],
-                (uint8_t)src[i * 3 + 2],
-            };
-        }
+            for ( auto j = 0; j < 3; ++j )
+                dst[i][j] = Color::valToUint8( src[i * 3 + j] );
         break;
     case TiffParameters::ValueType::Scalar:
         for ( auto i = 0u; i < size; ++i )
-        {
-            dst[i] = Color {
-                (uint8_t)src[i],
-                (uint8_t)src[i],
-                (uint8_t)src[i],
-            };
-        }
+            for ( auto j = 0; j < 3; ++j )
+                dst[i][j] = Color::valToUint8( src[i] );
         break;
     case TiffParameters::ValueType::Unknown:
         MR_UNREACHABLE_NO_RETURN;

@@ -233,7 +233,7 @@ void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffPar
                 for ( auto tileRow = 0u; tileRow < tileY.size; ++tileRow )
                 {
                     const auto imageOffset = tileX.offset + ( tileY.offset + tileRow ) * tp.imageSize.x;
-                    const auto tileOffset = tileRow * tileX.size;
+                    const auto tileOffset = tileRow * tp.tileSize->x;
                     visitTiffData( [&] <typename U> ( const U* data )
                     {
                         copyFromTiffImpl( bytes + imageOffset, data, tileX.size, tp );

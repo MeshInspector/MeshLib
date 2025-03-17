@@ -179,7 +179,9 @@ template <typename Func>
 void visitTiffData( Func f, const uint8_t* data, const TiffParameters& tp )
 {
 #pragma warning( push )
-#pragma warning( disable: 4244 ) // disable false conversion warning
+// disable false conversion warning
+#pragma warning( disable: 4242 )
+#pragma warning( disable: 4244 )
 #define CALL_IF( Type ) \
     if ( tp.bytesPerSample == sizeof( Type ) ) \
         return f( reinterpret_cast<const Type*>( data ) );

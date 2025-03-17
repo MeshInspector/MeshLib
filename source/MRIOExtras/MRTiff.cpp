@@ -280,7 +280,12 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     };
     result.pixels.resize( (size_t)params.imageSize.x * params.imageSize.y );
 
-    if ( params.valueType == TiffParameters::ValueType::RGB || params.valueType == TiffParameters::ValueType::RGBA )
+    char emsg[21024];
+    if ( TIFFRGBAImageOK( tiff, emsg ) )
+    {
+        TIFFReadRGBAImageOriented( tiff, result.resolution.x, result.resolution.y, (uint32_t*)result.pixels.data(), ORIENTATION_TOPLEFT, 0 );
+    }
+    else if ( params.valueType == TiffParameters::ValueType::RGB || params.valueType == TiffParameters::ValueType::RGBA )
     {
         readTiff( tiff, result.pixels.data(), result.pixels.size(), params );
     }

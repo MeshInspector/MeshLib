@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRFinally.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR::Cuda
@@ -18,6 +19,9 @@ Expected<void> cudaPipeline( BufferType init, InputIt begin, InputIt end, GPUFun
     };
 
     tbb::task_group gpuTask;
+    MR_FINALLY {
+        gpuTask.wait();
+    };
 
     for ( it[GPU] = begin; it[GPU] != end; it[CPU] = it[GPU]++ )
     {

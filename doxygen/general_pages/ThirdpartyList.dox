@@ -9,16 +9,16 @@ Main library with geometry operations
 |Name                                                                                   |Description                                                                  |License                        |
 |---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------|
 |<a rel="nofollow" href="https://www.boost.org">Boost</a>                               |C++ Libraries - provides free peer-reviewed portable C++ source libraries    |Boost Software License         |
-|<a rel="nofollow" href="https://eigen.tuxfamily.org">Eigen</a>                         |a C++ template library for linear algebra                                    |MPL2                           |
+|<a rel="nofollow" href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a>  |a C++ template library for linear algebra                                    |MPL2                           |
 |<a rel="nofollow" href="https://github.com/gabime/spdlog">spdlog</a>                   |very fast, header-only/compiled, C++ logging library                         |MIT                            |
 |<a rel="nofollow" href="https://github.com/fmtlib/fmt">fmt</a>                         |a library providing a fast and safe alternative to C stdio and C++ iostreams |MIT                            |
 |<a rel="nofollow" href="https://github.com/google/googletest">gtest</a>                |Google Test - C++ testing and mocking framework                              |BSD-3-Clause                   |
-|<a rel="nofollow" href="http://www.libtiff.org">tiff</a>                               |provides support for the Tag Image File Format (TIFF)                        |MIT                            |
+|<a rel="nofollow" href="https://libtiff.gitlab.io/libtiff/">tiff</a>                   |provides support for the Tag Image File Format (TIFF)                        |MIT                            |
 |<a rel="nofollow" href="https://github.com/open-source-parsers/jsoncpp">jsoncpp</a>    |manipulating JSON values, including serialization and deserialization        |MIT                            |
 |<a rel="nofollow" href="https://libzip.org">libzip</a>                                 |libzip - reading, creating, and modifying zip archives                       |BSD-3-Clause                   |
 |<a rel="nofollow" href="https://www.zlib.net">zlib</a>                                 |A Massively Spiffy Yet Delicately Unobtrusive Compression Library            |zlib                           |
 |<a rel="nofollow" href="https://github.com/vilya/miniply">minply</a>                   |a simple and fast parser for PLY files                                       |MIT                            |
-|<a rel="nofollow" href="https://github.com/uxlfoundation/oneTBB">oneTBB</a>               |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
+|<a rel="nofollow" href="https://github.com/uxlfoundation/oneTBB">oneTBB</a>            |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
 |<a rel="nofollow" href="https://github.com/greg7mdp/parallel-hashmap">phmap</a>        |fast and memory-friendly hashmap and btree containers                        |Apache 2.0                     |
 |<a rel="nofollow" href="https://github.com/TartanLlama/expected">expected</a>          |implementation of std::expected with functional-style extensions            |CC0-1.0                        |
 |<a rel="nofollow" href="https://github.com/Mbed-TLS/mbedtls">Mbed TLS</a>              |a C library that implements cryptographic primitives                         |Apache-2.0 or GPL-2.0-or-later |
@@ -35,10 +35,10 @@ Library with additional Input/Output formats
 |<a rel="nofollow" href="https://libpng.sourceforge.io">libpng</a>                   |library for use in applications that read, create, and manipulate PNG        |libpng2                                    |
 |<a rel="nofollow" href="https://dev.opencascade.org">opencascade</a>                |open-source full-scale 3D geometry library                                   |LGPL-2.1                                   |
 |<a rel="nofollow" href="https://github.com/syoyo/tinygltf">tinygltf</a>             |is a header only C++11 glTF 2.0                                              |MIT                                        |
-|<a rel="nofollow" href="https://sourceforge.net/projects/openctm">OpenCTM</a>       |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
+|<a rel="nofollow" href="https://sourceforge.net/projects/openctm/">OpenCTM</a>      |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
 |<a rel="nofollow" href="https://github.com/hobuinc/laz-perf">LAZperf</a>            |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
 |<a rel="nofollow" href="https://github.com/asmaloney/libE57Format">libe57format</a> |library for reading & writing the E57 file format                            |Boost Software License                     |
-|<a rel="nofollow" href="http://leethomason.github.io/tinyxml2">tinyxml2</a>         |an efficient, C++ XML parser                                                 |zlib                                       |
+|<a rel="nofollow" href="https://leethomason.github.io/tinyxml2/">tinyxml2</a>       |an efficient, C++ XML parser                                                 |zlib                                       |
 
 ### MRSymbolMesh
 
@@ -68,7 +68,7 @@ Library for voxels operations
 |Name                                                                                      |Description                                                                  |License             |
 |------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
 |<a rel="nofollow" href="https://github.com/AcademySoftwareFoundation/openvdb">OpenVDB</a> |efficient manipulation of sparse, time-varying, volumetric data discretized  |MPL2                |
-|<a rel="nofollow" href="https://sourceforge.net/projects/gdcm">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
+|<a rel="nofollow" href="https://sourceforge.net/projects/gdcm/">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
 
 ### MRCuda
 

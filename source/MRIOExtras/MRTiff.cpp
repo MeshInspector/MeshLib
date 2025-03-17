@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
@@ -330,9 +331,33 @@ namespace ImageSave
 
 Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
-    (void)image, (void)path;
-    return unexpectedUnsupportedFileExtension();
+    auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
+    if ( !tiff )
+        return unexpected( "Cannot write file: " + utf8string( path ) );
+    MR_FINALLY {
+        TIFFClose( tiff );
+    };
+
+    TIFFSetField( tiff, TIFFTAG_IMAGEWIDTH, image.resolution.x );
+    TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, image.resolution.y );
+
+    // 32-bit RGBA
+    TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT );
+    TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, 8 );
+    TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, 4 );
+
+    // TODO: describe the tags
+    TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
+    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
+
+    for ( auto row = 0u; row < image.resolution.y; ++row )
+        TIFFWriteScanline( tiff, (void*)( image.pixels.data() + row * image.resolution.x ), row );
+    TIFFFlush( tiff );
+
+    return {};
 }
+
+MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), toTiff, -1 )
 
 } // namespace ImageSave
 

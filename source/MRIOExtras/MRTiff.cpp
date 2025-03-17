@@ -228,7 +228,7 @@ void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffPar
         {
             for ( auto tileX : splitByChunks( tp.imageSize.x, tp.tileSize->x ) )
             {
-                TIFFReadTile( tiff, buffer.data(), tileX.offset, tileY.offset, 0, 0 );
+                TIFFReadTile( tiff, buffer.data(), (uint32_t)tileX.offset, (uint32_t)tileY.offset, 0, 0 );
 
                 for ( auto tileRow = 0u; tileRow < tileY.size; ++tileRow )
                 {
@@ -246,9 +246,9 @@ void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffPar
     {
         buffer.resize( (size_t)tp.imageSize.x * pixelSize );
 
-        for ( auto row = 0u; row < tp.imageSize.y; ++row )
+        for ( auto row = 0; row < tp.imageSize.y; ++row )
         {
-            TIFFReadScanline( tiff, buffer.data(), row );
+            TIFFReadScanline( tiff, buffer.data(), (uint32_t)row );
 
             const auto offset = (size_t)row * tp.imageSize.x;
             visitTiffData( [&] <typename U> ( const U* data )
@@ -340,10 +340,10 @@ Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
 
-    for ( auto row = 0u; row < image.resolution.y; ++row )
+    for ( auto row = 0; row < image.resolution.y; ++row )
     {
         // FIXME: orientation is ignored
-        const auto* data = image.pixels.data() + ( image.resolution.y - 1 - row ) * image.resolution.x;
+        const auto* data = image.pixels.data() + (size_t)( image.resolution.y - 1 - row ) * image.resolution.x;
         TIFFWriteScanline( tiff, (void*)data, row );
     }
     TIFFFlush( tiff );

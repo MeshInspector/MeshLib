@@ -140,7 +140,7 @@ std::pair<T, T> parallelMinMax( const T* data, size_t size, const T * topExcludi
             {
                 T absVal = val;
                 if constexpr ( !std::is_unsigned_v<T> )
-                    absVal = std::abs( val );
+                    absVal = (T)std::abs( val );
                 if ( absVal >= *topExcluding )
                     continue;
             }

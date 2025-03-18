@@ -31,7 +31,10 @@ Expected<void> cudaPipeline( BufferType init, InputIt begin, InputIt end, GPUFun
         if ( it[GPU] != begin )
         {
             if ( auto cpuRes = cpuFunc( buffers[CPU], *it[CPU] ); !cpuRes )
+            {
+                gpuTask.wait();
                 return cpuRes;
+            }
         }
 
         gpuTask.wait();

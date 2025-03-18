@@ -39,6 +39,7 @@
     <ClCompile Include="MRPng.cpp" />
     <ClCompile Include="MRStep.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRTiff.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
@@ -54,6 +55,7 @@
     <ClInclude Include="MRPng.h" />
     <ClInclude Include="MRStep.h" />
     <ClInclude Include="MRZlib.h" />
+    <ClInclude Include="MRTiff.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

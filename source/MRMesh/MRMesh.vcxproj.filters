@@ -1284,6 +1284,9 @@
     <ClInclude Include="MRMeshOrPointsObject.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDoubleLayer.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2098,6 +2101,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshOrPointsObject.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDoubleLayer.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

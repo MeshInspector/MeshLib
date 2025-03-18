@@ -134,6 +134,7 @@
     <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshOrPointsObject.h" />
+    <ClInclude Include="MRMeshDoubleLayer.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
@@ -408,6 +409,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
+    <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />

@@ -20,6 +20,7 @@ This page contains some examples of using MeshLib
  - \ref ExampleMeshResolveDegenerations
  - \ref ExampleSignedDistance
  - \ref ExampleSignedDistancePointToMesh
+ - \ref ExampleSignedDistances
  - \ref ExampleGlobalRegistration
  - \ref ExampleMeshICP
  - \ref ExampleMeshExtrude

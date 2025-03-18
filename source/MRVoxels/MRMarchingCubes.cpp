@@ -574,7 +574,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
             if ( layerLowerIso.any() )
                 lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
-            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            const auto numProcessedLayers = 1 + cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );
         }
@@ -819,7 +819,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                 lowerIso_[loc.pos.z + 1] = {};
             }
 
-            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            const auto numProcessedLayers = 1 + cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
             {
                 keepGoing.store( false, std::memory_order_relaxed );

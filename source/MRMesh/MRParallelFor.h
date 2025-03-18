@@ -76,7 +76,7 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
                 }
             }
         }
-        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
+        const auto total = myProcessed + s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
         if ( report && !cb( float( total ) / size ) )
             keepGoing.store( false, std::memory_order_relaxed );
     } );

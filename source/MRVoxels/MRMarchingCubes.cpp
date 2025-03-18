@@ -469,13 +469,20 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
     static_assert( alignof(S) == hardware_destructive_interference_size );
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
-    auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
     const int firstBlock = partFirstZ / layersPerBlock_;
     nextZ_ = partFirstZ + part.dims.z - 1;
     const bool lastPart = nextZ_ + 1 == indexer_.dims().z;
     const int lastLayer = lastPart ? nextZ_ : nextZ_ - 1;
     assert( lastLayer < layerCount );
     const int lastBlock = lastLayer / layersPerBlock_;
+
+    const auto cb = subprogress( params_.cb, 0.0f, 0.3f );
+    auto currentSubprogress = subprogress(
+        cb,
+        (float)partFirstZ / (float)indexer_.dims().z,
+        (float)lastLayer / (float)indexer_.dims().z
+    );
+
     ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
     {
         const int layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
@@ -516,7 +523,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
                 {
                     assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                    if ( params_.cb && !keepGoing.load( std::memory_order_relaxed ) )
+                    if ( currentSubprogress && !keepGoing.load( std::memory_order_relaxed ) )
                         return;
 
                     SeparationPointSet set;
@@ -573,7 +580,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
         }
     } );
 
-    if ( params_.cb && !keepGoing )
+    if ( currentSubprogress && !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};

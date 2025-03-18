@@ -187,6 +187,9 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( params.fwn ); fwnByParts && isHoleWindingRule )
     {
+        vol.cb = {};
+        vmParams.cb = subprogress( params.callBack, 0.00f, 0.90f );
+
         assert( !mp.region ); // only whole mesh is supported for now
 
         const AffineXf3f basis { Matrix3f::scale( vol.voxelSize ), origin + 0.5f * vol.voxelSize };
@@ -209,9 +212,9 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
             {
                 return mesher.finalize();
             } )
-            .transform( [] ( TriMesh&& mesh )
+            .transform( [&] ( TriMesh&& mesh )
             {
-                return Mesh::fromTriMesh( std::move( mesh ) );
+                return Mesh::fromTriMesh( std::move( mesh ), {}, subprogress( params.callBack, 0.90f, 1.00f ) );
             } );
     }
 

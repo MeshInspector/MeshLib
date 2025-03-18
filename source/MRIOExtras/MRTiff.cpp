@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRChunkIterator.h"
+#include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRParallelFor.h"
@@ -319,6 +320,32 @@ void readTiff( TIFF* tiff, const TiffParameters& tp, std::byte* data )
 
 namespace MR
 {
+
+namespace DistanceMapLoad
+{
+
+Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld )
+{
+    TiffHolder tiff( path, "r" );
+    if ( !tiff )
+        return unexpected( "Cannot read file: " + utf8string( path ) );
+
+    auto params = readTiffParameters( tiff );
+
+    DistanceMap result { (size_t)params.imageSize.x, (size_t)params.imageSize.y };
+
+    readTiff( tiff, params, [&] ( const std::byte* bytes, size_t size, size_t offsetX, size_t offsetY )
+    {
+        visitData( bytes, params.getDataType(), [&] <typename T> ( const T* data )
+        {
+            copySampledData( result.data() + offsetY * result.resX() + offsetX, data, size / params.getPixelSize(), params.valueType );
+        } );
+    } );
+
+    return result;
+}
+
+} // namespace DistanceMapLoad
 
 namespace ImageLoad
 {

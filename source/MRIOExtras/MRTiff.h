@@ -12,6 +12,16 @@
 namespace MR
 {
 
+struct DistanceMapToWorld;
+
+namespace DistanceMapLoad
+{
+
+/// loads from .tiff format
+MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld = nullptr );
+
+} // namespace DistanceMapLoad
+
 namespace ImageLoad
 {
 

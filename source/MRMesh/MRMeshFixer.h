@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRId.h"
+#include "MRBitSet.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
 #include "MRExpected.h"
@@ -73,6 +74,19 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// hole is complicated if it passes via one vertex more than once;
 /// deleting such faces simplifies the holes and makes them easier to fill
 [[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const Mesh & mesh );
+
+struct DisorientedFaces
+{
+    int numOverlaps{ 0 };
+    float overlapsArea{ 0.0f };
+    int numDisoriented{ 0 };
+    int numDisorientedAmongOverlaps{ 0 };
+    int numFaces{ 0 };
+    float totalArea{ 0.0f };
+    FaceBitSet disoriented;
+};
+MRMESH_API DisorientedFaces countDisorientations( Mesh& mesh );
+
 
 /// \}
 

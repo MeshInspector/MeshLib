@@ -5,6 +5,11 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
 #include "MRParallelFor.h"
+#include "MRMeshSubdivide.h"
+#include "MROverlappingTris.h"
+#include "MRLine3.h"
+#include "MRMeshIntersect.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -156,6 +161,82 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
         result.set( v );
     } );
     return result;
+}
+
+DisorientedFaces countDisorientations( Mesh& mesh )
+{
+    auto box = mesh.computeBoundingBox();
+    SubdivideSettings ss;
+    ss.maxEdgeLen = box.diagonal() * 1e-2f;
+    ss.maxEdgeSplits = INT_MAX;
+    ss.maxDeviationAfterFlip = box.diagonal() * 1e-4f;
+    ss.maxAngleChangeAfterFlip = PI_F / 180.0f * 15.0f;
+    subdivideMesh( mesh, ss );
+
+    DisorientedFaces res;
+    res.numFaces = mesh.topology.numValidFaces();
+    res.totalArea = float( mesh.area() );
+
+    FindOverlappingSettings fs;
+    fs.maxDistSq = box.size().lengthSq() * fs.maxDistSq;
+    auto overlaps = *findOverlappingTris( mesh, fs );
+
+    res.numOverlaps = int( overlaps.count() );
+    res.overlapsArea = float( mesh.area( overlaps ) );
+
+    //auto disorientedOverlaps = overlaps;
+    //BitSetParallelFor( overlaps, [&] ( FaceId f )
+    //{
+    //    auto normal = Vector3d( mesh.normal( f ) );
+    //    auto triCenter = Vector3d( mesh.triCenter( f ) );
+    //    int counter = 0;
+    //    rayMeshIntersectAll( mesh, Line3d( triCenter, normal ), 
+    //        [f,&counter] ( const MeshIntersectionResult& res )->bool
+    //    {
+    //        if ( res.proj.face == f )
+    //            return true;
+    //        ++counter;
+    //        return true;
+    //    } );
+    //    if ( counter % 2 == 0 )
+    //        disorientedOverlaps.reset( f );
+    //} );
+    //res.numDisorientedAmongOverlaps = int( disorientedOverlaps.count() );
+    //
+    //overlaps -= disorientedOverlaps;
+    //Mesh tempMesh;
+    //tempMesh.addMeshPart( { mesh,&overlaps } );
+    //tempMesh.addMeshPart( { mesh,&disorientedOverlaps }, true );
+    //mesh.deleteFaces( overlaps | disorientedOverlaps );
+    //
+    //
+    //
+    //FaceBitSet holeFaces;
+    //fillHoles( mesh, mesh.topology.findHoleRepresentiveEdges(), { .outNewFaces = &holeFaces } );
+    
+    auto disorientedFaces = mesh.topology.getValidFaces();
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto normal = Vector3d( mesh.normal( f ) );
+        auto triCenter = Vector3d( mesh.triCenter( f ) );
+        int counter = 0;
+        rayMeshIntersectAll( mesh, Line3d( triCenter, normal ),
+            [f, &counter] ( const MeshIntersectionResult& res )->bool
+        {
+            if ( res.proj.face == f )
+                return true;
+            ++counter;
+            return true;
+        } );
+        if ( counter % 2 == 0 )
+            disorientedFaces.reset( f );
+    } );
+    //mesh.deleteFaces( holeFaces );
+
+    res.numDisoriented = int( disorientedFaces.count() );
+    res.disoriented = std::move( disorientedFaces );
+
+    return res;
 }
 
 void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges )

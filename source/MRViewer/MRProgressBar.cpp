@@ -510,6 +510,7 @@ bool setProgress( float p )
         spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, newPercents );
     }
 
+    assert( p >= instance.progress_ ); // the progress must not jump backward
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
     return !instance.canceled_;

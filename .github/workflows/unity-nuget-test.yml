@@ -13,7 +13,7 @@ permissions:
 jobs:
   unity-nuget-test:
     timeout-minutes: 10
-    runs-on: mesh-win-unity
+    runs-on: [self-hosted, windows, x64, unity, meshinspector] 
 
     steps:
       - name: Configure AWS Credentials

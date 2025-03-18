@@ -13,7 +13,42 @@
 
 namespace
 {
+
 using namespace MR;
+
+enum class DataType
+{
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Float32,
+    Float64,
+};
+
+template <typename Func>
+auto visitData( const std::byte* data, DataType type, Func&& f )
+{
+#define CALL_IF( enumValue, TypeName ) case DataType::enumValue: return f( reinterpret_cast<const TypeName*>( data ) );
+    switch ( type )
+    {
+        CALL_IF( UInt8, uint8_t )
+        CALL_IF( UInt16, uint16_t )
+        CALL_IF( UInt32, uint32_t )
+        CALL_IF( UInt64, uint64_t )
+        CALL_IF( Int8, int8_t )
+        CALL_IF( Int16, int16_t )
+        CALL_IF( Int32, int32_t )
+        CALL_IF( Int64, int64_t )
+        CALL_IF( Float32, float )
+        CALL_IF( Float64, double )
+    }
+#undef CALL_IF
+}
 
 struct TiffParameters
 {
@@ -43,6 +78,45 @@ struct TiffParameters
     std::optional<Vector2i> tileSize;
 
     bool operator==( const TiffParameters& ) const = default;
+
+    [[nodiscard]] size_t getPixelSize() const
+    {
+        return (size_t)valueType * bytesPerSample;
+    }
+
+    [[nodiscard]] DataType getDataType() const
+    {
+        switch ( sampleType )
+        {
+        case SampleType::UInt:
+            switch ( bytesPerSample )
+            {
+            case 1: return DataType::UInt8;
+            case 2: return DataType::UInt16;
+            case 4: return DataType::UInt32;
+            case 8: return DataType::UInt64;
+            default: MR_UNREACHABLE;
+            }
+        case SampleType::Int:
+            switch ( bytesPerSample )
+            {
+            case 1: return DataType::Int8;
+            case 2: return DataType::Int16;
+            case 4: return DataType::Int32;
+            case 8: return DataType::Int64;
+            default: MR_UNREACHABLE;
+            }
+        case SampleType::Float:
+            switch ( bytesPerSample )
+            {
+            case 4: return DataType::Float32;
+            case 8: return DataType::Float64;
+            default: MR_UNREACHABLE;
+            }
+        case SampleType::Unknown:
+            MR_UNREACHABLE
+        }
+    }
 };
 
 class TiffHolder
@@ -121,31 +195,52 @@ T rgbToScalar( const U* src )
 }
 
 template <typename U>
-void copyFromTiffImpl( Color* dst, const U* src, size_t size, const TiffParameters& tp )
+Color scalarToRgb( U src )
 {
-    switch ( tp.valueType )
+    Color result;
+    for ( auto i = 0; i < 3; ++i )
+        result[i] = Color::valToUint8( src );
+    return result;
+}
+
+template <typename U>
+Color scalarToRgb( U src, U min, U max )
+{
+    return scalarToRgb( (float)( src - min ) / (float)( max - min ) );
+}
+
+template <typename U>
+Color scalarToRgb( const U* src, size_t sampleCount )
+{
+    Color result;
+    for ( auto i = 0; i < sampleCount; ++i )
+        result[i] = Color::valToUint8( src[i] );
+    return result;
+}
+
+template <typename U>
+void copySampledData( Color* dst, const U* src, size_t size, TiffParameters::ValueType valueType )
+{
+    switch ( valueType )
     {
     case TiffParameters::ValueType::RGBA:
         if constexpr ( std::is_same_v<uint8_t, U> )
         {
-            std::copy( (Color*)src, (Color*)src + size, dst );
+            std::copy_n( (Color*)src, size, dst );
         }
         else
         {
             for ( auto i = 0u; i < size; ++i )
-                for ( auto j = 0; j < 4; ++j )
-                    dst[i][j] = Color::valToUint8( src[i * 4 + j] );
+                dst[i] = scalarToRgb( src + i * 4, 4 );
         }
         break;
     case TiffParameters::ValueType::RGB:
         for ( auto i = 0u; i < size; ++i )
-            for ( auto j = 0; j < 3; ++j )
-                dst[i][j] = Color::valToUint8( src[i * 3 + j] );
+            dst[i] = scalarToRgb( src + i * 3, 3 );
         break;
     case TiffParameters::ValueType::Scalar:
         for ( auto i = 0u; i < size; ++i )
-            for ( auto j = 0; j < 3; ++j )
-                dst[i][j] = Color::valToUint8( src[i] );
+            dst[i] = scalarToRgb( src[i] );
         break;
     case TiffParameters::ValueType::Unknown:
         MR_UNREACHABLE_NO_RETURN;
@@ -154,12 +249,12 @@ void copyFromTiffImpl( Color* dst, const U* src, size_t size, const TiffParamete
 }
 
 template <typename T, typename U, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-void copyFromTiffImpl( T* dst, const U* src, size_t size, const TiffParameters& tp )
+void copySampledData( T* dst, const U* src, size_t size, TiffParameters::ValueType valueType )
 {
-    switch ( tp.valueType )
+    switch ( valueType )
     {
     case TiffParameters::ValueType::Scalar:
-        std::copy( src, src + size, dst );
+        std::copy_n( src, size, dst );
         break;
     case TiffParameters::ValueType::RGB:
         for ( auto i = 0u; i < size; ++i )
@@ -175,59 +270,29 @@ void copyFromTiffImpl( T* dst, const U* src, size_t size, const TiffParameters& 
     }
 }
 
-template <typename Func>
-void visitTiffData( Func f, const uint8_t* data, const TiffParameters& tp )
-{
-#pragma warning( push )
-// disable false conversion warning
-#pragma warning( disable: 4242 )
-#pragma warning( disable: 4244 )
-#define CALL_IF( Type ) \
-    if ( tp.bytesPerSample == sizeof( Type ) ) \
-        return f( reinterpret_cast<const Type*>( data ) );
+using ReadTiffCallback = std::function<void ( const std::byte* data, size_t sizeInBytes, size_t offsetX, size_t offsetY )>;
 
-    switch ( tp.sampleType )
+void readTiff( TIFF* tiff, const TiffParameters& tp, ReadTiffCallback cb )
+{
+    const auto pixelSize = tp.getPixelSize();
+    assert( pixelSize != 0 );
+
+    Buffer<std::byte> buffer;
+    if ( !tp.tileSize )
     {
-    case TiffParameters::SampleType::UInt:
-        CALL_IF( uint8_t )
-        CALL_IF( uint16_t )
-        CALL_IF( uint32_t )
-        CALL_IF( uint64_t )
-        MR_UNREACHABLE_NO_RETURN
-        break;
-    case TiffParameters::SampleType::Int:
-        CALL_IF( int8_t )
-        CALL_IF( int16_t )
-        CALL_IF( int32_t )
-        CALL_IF( int64_t )
-        MR_UNREACHABLE_NO_RETURN
-        break;
-    case TiffParameters::SampleType::Float:
-        CALL_IF( float )
-        CALL_IF( double )
-        MR_UNREACHABLE_NO_RETURN
-        break;
-    case TiffParameters::SampleType::Unknown:
-        MR_UNREACHABLE_NO_RETURN
-        break;
+        buffer.resize( (size_t)tp.imageSize.x * pixelSize );
+
+        for ( auto row = 0; row < tp.imageSize.y; ++row )
+        {
+            TIFFReadScanline( tiff, buffer.data(), (uint32_t)row );
+
+            cb( buffer.data(), buffer.size(), 0, row );
+        }
     }
-
-#undef CALL_IF
-#pragma warning( pop )
-}
-
-template <typename T>
-void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffParameters& tp )
-{
-    assert( tp.bytesPerSample != 0 );
-    assert( (int)tp.valueType != 0 );
-    assert( (size_t)tp.imageSize.x * tp.imageSize.y >= size );
-    const auto pixelSize = (size_t)tp.valueType * tp.bytesPerSample;
-
-    Buffer<uint8_t> buffer;
-    if ( tp.tileSize )
+    else
     {
         buffer.resize( (size_t)tp.tileSize->x * tp.tileSize->y * pixelSize );
+        const auto tileRowSize = (size_t)tp.tileSize->x * pixelSize;
 
         for ( auto tileY : splitByChunks( tp.imageSize.y, tp.tileSize->y ) )
         {
@@ -236,32 +301,18 @@ void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffPar
                 TIFFReadTile( tiff, buffer.data(), (uint32_t)tileX.offset, (uint32_t)tileY.offset, 0, 0 );
 
                 for ( auto tileRow = 0u; tileRow < tileY.size; ++tileRow )
-                {
-                    const auto imageOffset = tileX.offset + ( tileY.offset + tileRow ) * tp.imageSize.x;
-                    const auto tileOffset = tileRow * tp.tileSize->x;
-                    visitTiffData( [&] <typename U> ( const U* data )
-                    {
-                        copyFromTiffImpl( bytes + imageOffset, data, tileX.size, tp );
-                    }, buffer.data() + tileOffset * pixelSize, tp );
-                }
+                    cb( buffer.data() + tileRow * tileRowSize, tileX.size * pixelSize, tileX.offset, tileY.offset + tileRow );
             }
         }
     }
-    else
+}
+
+void readTiff( TIFF* tiff, const TiffParameters& tp, std::byte* data )
+{
+    return readTiff( tiff, tp, [&] ( const std::byte* bytes, size_t size, size_t offsetX, size_t offsetY )
     {
-        buffer.resize( (size_t)tp.imageSize.x * pixelSize );
-
-        for ( auto row = 0; row < tp.imageSize.y; ++row )
-        {
-            TIFFReadScanline( tiff, buffer.data(), (uint32_t)row );
-
-            const auto offset = (size_t)row * tp.imageSize.x;
-            visitTiffData( [&] <typename U> ( const U* data )
-            {
-                copyFromTiffImpl( bytes + offset, data, tp.imageSize.x, tp );
-            }, buffer.data(), tp );
-        }
-    }
+        std::copy_n( bytes, size, data + offsetY * tp.imageSize.x + offsetX );
+    } );
 }
 
 } // namespace
@@ -292,25 +343,31 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     }
     else if ( params.valueType == TiffParameters::ValueType::RGB || params.valueType == TiffParameters::ValueType::RGBA )
     {
-        readTiff( tiff, result.pixels.data(), result.pixels.size(), params );
+        readTiff( tiff, params, [&] ( const std::byte* bytes, size_t size, size_t offsetX, size_t offsetY )
+        {
+            visitData( bytes, params.getDataType(), [&] <typename T> ( const T* data )
+            {
+                copySampledData( result.pixels.data() + offsetY * params.imageSize.x + offsetX, data, size / sizeof( T ), params.valueType );
+            } );
+        } );
     }
     else
     {
         assert( params.valueType == TiffParameters::ValueType::Scalar );
-        visitTiffData( [&] <typename U> ( const U* )
+
+        Buffer<std::byte> buffer;
+        buffer.resize( result.pixels.size() * params.getPixelSize() );
+
+        readTiff( tiff, params, buffer.data() );
+
+        visitData( buffer.data(), params.getDataType(), [&] <typename U> ( const U* data )
         {
-            Buffer<U> buffer;
-            buffer.resize( result.pixels.size() );
-
-            readTiff( tiff, buffer.data(), buffer.size(), params );
-
-            const auto [min, max] = parallelMinMax( buffer.data(), buffer.size() );
+            const auto [min, max] = parallelMinMax( data, result.pixels.size() );
             ParallelFor( (size_t)0, result.pixels.size(), [&, min = min, max = max] ( size_t i )
             {
-                const auto value = (uint8_t)( 255. * (double)( buffer[i] - min ) / (double)( max - min ) );
-                result.pixels[i] = { value, value, value };
+                result.pixels[i] = scalarToRgb( data[i], min, max );
             } );
-        }, nullptr, params );
+        } );
     }
 
     return result;

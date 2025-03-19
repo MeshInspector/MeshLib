@@ -9,6 +9,7 @@ namespace MR
 {
 
 /// helper class used to ensure that the specific thread is used only once
+/// use it if you have nested TBB operations (e.g. parallel_for inside another parallel_for)
 class ThreadSemaphore
 {
 public:

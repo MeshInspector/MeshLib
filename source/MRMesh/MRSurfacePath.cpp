@@ -18,7 +18,8 @@ namespace MR
 
 static Vector3f computeGradient( const Vector3f & b, const Vector3f & c, float vb, float vc )
 {
-    return Vector3f{ gradientInTri( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) ) };
+    auto grad = gradientInTri( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) );
+    return grad.has_value() ? Vector3f{ *grad } : Vector3f{};
 }
 
 /// given triangle with scalar field increasing in the direction \param dir;

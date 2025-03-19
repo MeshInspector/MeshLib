@@ -309,28 +309,25 @@ template <typename T>
 }
 
 /// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;
-/// computes and returns field gradient in the triangle
+/// returns field gradient in the triangle or std::nullopt if the triangle is degenerate
 template <typename T>
-[[nodiscard]] Vector3<T> gradientInTri( const Vector3<T> & b, const Vector3<T> & c, T vb, T vc )
+[[nodiscard]] std::optional<Vector3<T>> gradientInTri( const Vector3<T> & b, const Vector3<T> & c, T vb, T vc )
 {
     const auto bb = dot( b, b );
     const auto bc = dot( b, c );
     const auto cc = dot( c, c );
     const auto det = bb * cc - bc * bc;
     if ( det <= 0 )
-    {
-        // degenerate triangle
         return {};
-    }
     const auto kb = ( 1 / det ) * ( cc * vb - bc * vc );
     const auto kc = ( 1 / det ) * (-bc * vb + bb * vc );
     return kb * b + kc * c;
 }
 
 /// Consider triangle ABC, where a linear scalar field is defined in all 3 vertices: v(a) = va, v(b) = vb, v(c) = vc;
-/// computes and returns field gradient in the triangle
+/// returns field gradient in the triangle or std::nullopt if the triangle is degenerate
 template <typename T>
-[[nodiscard]] Vector3<T> gradientInTri( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c, T va, T vb, T vc )
+[[nodiscard]] std::optional<Vector3<T>> gradientInTri( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c, T va, T vb, T vc )
 {
     return gradientInTri( b - a, c - a, vb - va, vc - va );
 }
@@ -370,10 +367,12 @@ template <typename T>
 [[nodiscard]] std::optional<Vector3<T>> tangentPlaneNormalToSpheres( const Vector3<T> & b, const Vector3<T> & c, T rb, T rc )
 {
     auto grad = gradientInTri( b, c, rb, rc );
-    auto gradSq = grad.lengthSq();
-    if ( gradSq <= 0 || gradSq >= 1 )
+    if ( !grad.has_value() )
+        return {}; // degenerate triangle
+    auto gradSq = grad->lengthSq();
+    if ( gradSq >= 1 )
         return {}; // the larger of the spheres contains the origin inside - no touch plane exists
-    return sqrt( 1 - gradSq ) * normal( b, c ) - grad; // unit normal
+    return sqrt( 1 - gradSq ) * normal( b, c ) - *grad; // unit normal
 }
 
 /// Given 3 spheres:

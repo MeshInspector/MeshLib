@@ -385,7 +385,7 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
 
 VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock ) : indexer_( dims ), params_( params )
 {
-    int threadCount = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    int threadCount = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     if ( threadCount == 0 )
         threadCount = std::thread::hardware_concurrency();
     if ( threadCount == 0 )

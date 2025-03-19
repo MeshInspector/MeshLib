@@ -3,9 +3,10 @@
 #include "MRBitSet.h"
 #include "MRParallel.h"
 #include "MRProgressCallback.h"
+#include "MRThreadSemaphore.h"
+
 #include <atomic>
 #include <cassert>
-#include <thread>
 
 namespace MR
 {
@@ -83,7 +84,7 @@ bool ForAllRanged( const IdRange<IndexType> & bitRange, const CM & callMaker, F 
         return true;
     }
 
-    auto callingThreadId = std::this_thread::get_id();
+    ThreadSemaphore callingThreadSemaphore;
     std::atomic<bool> keepGoing{ true };
 
     // avoid false sharing with other local variables
@@ -101,7 +102,8 @@ bool ForAllRanged( const IdRange<IndexType> & bitRange, const CM & callMaker, F 
     {
         const auto bitSubRange = BitSetParallel::bitSubRange( bitRange, range, subRange );
         size_t myProcessedBits = 0;
-        const bool report = std::this_thread::get_id() == callingThreadId;
+        const auto callingThreadLock = callingThreadSemaphore.acquire();
+        const bool report = progressCb && callingThreadLock.acquired();
         auto c = callMaker();
         for ( auto id = bitSubRange.beg; id < bitSubRange.end; ++id )
         {

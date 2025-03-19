@@ -1,12 +1,13 @@
 #pragma once
 
-#include "MRVector.h"
 #include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
+#include "MRThreadSemaphore.h"
+#include "MRVector.h"
+
 #include <atomic>
 #include <limits>
-#include <thread>
 
 namespace MR
 {
@@ -38,7 +39,7 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     if ( size <= 0 )
         return true;
 
-    auto callingThreadId = std::this_thread::get_id();
+    ThreadSemaphore callingThreadSemaphore;
     std::atomic<bool> keepGoing{ true };
     
     // avoid false sharing with other local variables
@@ -54,7 +55,8 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     tbb::parallel_for( tbb::blocked_range( begin, end ),
         [&] ( const tbb::blocked_range<I>& range )
     {
-        const bool report = std::this_thread::get_id() == callingThreadId;
+        const auto callingThreadLock = callingThreadSemaphore.acquire();
+        const bool report = cb && callingThreadLock.acquired();
         size_t myProcessed = 0;
         auto c = callMaker();
         for ( I i = range.begin(); i < range.end(); ++i )

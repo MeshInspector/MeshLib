@@ -122,7 +122,7 @@ bool ForAllRanged( const IdRange<IndexType> & bitRange, const CM & callMaker, F 
                 }
             }
         }
-        const auto total = s.processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
+        const auto total = myProcessedBits + s.processedBits.fetch_add( myProcessedBits, std::memory_order_relaxed );
         if ( report && !progressCb( float( total ) / bitRange.size() ) )
             keepGoing.store( false, std::memory_order_relaxed );
     } );

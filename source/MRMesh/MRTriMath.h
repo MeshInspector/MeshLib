@@ -3,6 +3,7 @@
 
 #include "MRVector3.h"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <optional>

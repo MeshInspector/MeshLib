@@ -26,7 +26,7 @@ namespace MR
 ///     }
 /// } );
 /// \endcode
-class MR_BIND_IGNORE MRMESH_CLASS TbbThreadMutex
+class MR_BIND_IGNORE TbbThreadMutex
 {
 public:
     /// construct class

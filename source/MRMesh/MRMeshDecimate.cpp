@@ -1091,13 +1091,13 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     mesh.topology.stopUpdatingValids();
-    TbbThreadMutex mainThreadMutex;
+    TbbThreadMutex reporterMutex;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
-        const auto mainThreadLock = mainThreadMutex.tryLock();
-        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadLock;
+        const auto reporterLock = reporterMutex.tryLock();
+        const bool reportProgressFromThisThread = settings.progressCallback && reporterLock;
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto reportThreadProgress = [&]( float p )

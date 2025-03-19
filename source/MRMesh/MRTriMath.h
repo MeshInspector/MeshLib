@@ -3,6 +3,7 @@
 
 #include "MRVector3.h"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <optional>
@@ -291,6 +292,58 @@ template <typename T>
     if ( y < 0 || y > c )
         return {};
     return ( *p - *p1 ).length();
+}
+
+/// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;
+/// computes and returns field gradient in the triangle
+template <typename T>
+[[nodiscard]] Vector3<T> gradientInTri( const Vector3<T> & b, const Vector3<T> & c, T vb, T vc )
+{
+    const auto bb = dot( b, b );
+    const auto bc = dot( b, c );
+    const auto cc = dot( c, c );
+    const auto det = bb * cc - bc * bc;
+    if ( det <= 0 )
+    {
+        // degenerate triangle
+        return {};
+    }
+    const auto kb = ( 1 / det ) * ( cc * vb - bc * vc );
+    const auto kc = ( 1 / det ) * (-bc * vb + bb * vc );
+    return kb * b + kc * c;
+}
+
+/// Consider triangle ABC, where a linear scalar field is defined in all 3 vertices: v(a) = va, v(b) = vb, v(c) = vc;
+/// computes and returns field gradient in the triangle
+template <typename T>
+[[nodiscard]] Vector3<T> gradientInTri( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c, T va, T vb, T vc )
+{
+    return gradientInTri( b - a, c - a, vb - va, vc - va );
+}
+
+// consider triangle 0BC, where gradient of linear scalar field is given;
+// computes the intersection of the ray (org=0, dir=-grad) with the open line segment BC
+template <typename T>
+[[nodiscard]] std::optional<T> findTriExitPos( const Vector3<T> & b, const Vector3<T> & c, const Vector3<T> & grad )
+{
+    const auto gradSq = grad.lengthSq();
+    if ( gradSq <= 0 )
+        return {};
+    const auto d = c - b;
+    // gort is a vector in the triangle plane orthogonal to grad
+    const auto gort = d - ( dot( d, grad ) / gradSq ) * grad;
+    const auto god = dot( gort, d );
+    if ( god <= 0 )
+        return {};
+    const auto gob = -dot( gort, b );
+    if ( gob <= 0 || gob >= god )
+        return {};
+    const auto a = gob / god;
+    assert( a < std::numeric_limits<T>::max() );
+    const auto ip = a * c + ( 1 - a ) * b;
+    if ( dot( grad, ip ) >= 0 )
+        return {}; // (b,c) is intersected in the direction +grad
+    return a;
 }
 
 } // namespace MR

@@ -30,6 +30,8 @@ namespace MR
 class MRMESH_CLASS TbbThreadMutex
 {
 public:
+    /// construct class
+    /// \param id - id of thread allowed to lock the mutex
     MRMESH_API explicit TbbThreadMutex( std::thread::id id = std::this_thread::get_id() );
 
     /// RAII-style lock guard for the mutex; releases it on destruction

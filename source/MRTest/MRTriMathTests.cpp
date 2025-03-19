@@ -83,4 +83,18 @@ TEST( MRMesh, gradientInTri )
     EXPECT_FALSE( e.has_value() );
 }
 
+TEST( MRMesh, tangentPlaneToSpheres )
+{
+    auto p0 = tangentPlaneToSpheres( Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 }, Vector3d{ 0, 0, 0 }, 1., 2., 3. );
+    EXPECT_FALSE( p0.has_value() );
+
+    auto p1 = tangentPlaneToSpheres( Vector3d{ 0, 0, 0 }, Vector3d{ 0.1, 0, 0 }, Vector3d{ 0.2, 0, 0 }, 1., 2., 3. );
+    EXPECT_FALSE( p1.has_value() );
+
+    auto p2 = tangentPlaneToSpheres( Vector3d{ 0, 0, -1 }, Vector3d{ 5, 0, -2 }, Vector3d{ 0, 5, -3 }, 1., 2., 3. );
+    EXPECT_TRUE( p2.has_value() );
+    EXPECT_NEAR( distance( p2->n, Vector3d{ 0, 0, 1 } ), 0, 1e-15 );
+    EXPECT_NEAR( p2->d, 0, 1e-15 );
+}
+
 } //namespace MR

@@ -128,18 +128,32 @@ template<typename T>
     return cross( t[1] - t[0], t[2] - t[0] );
 }
 
-/// computes directed double area of given triangle
+/// computes directed double area of triangle 0QR
+template<typename T>
+[[nodiscard]] inline Vector3<T> dirDblArea( const Vector3<T> & q, const Vector3<T> & r )
+{
+    return cross( q, r );
+}
+
+/// computes directed double area of triangle PQR
 template<typename T>
 [[nodiscard]] inline Vector3<T> dirDblArea( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return cross( q - p, r - p );
 }
 
-/// computes unitNormal of given triangle
+/// computes unit normal of triangle 0QR
+template<typename T>
+[[nodiscard]] inline Vector3<T> normal( const Vector3<T> & q, const Vector3<T> & r )
+{
+    return dirDblArea( q, r ).normalized();
+}
+
+/// computes unit normal of triangle PQR
 template<typename T>
 [[nodiscard]] inline Vector3<T> normal( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
-    return dirDblArea( p, q, r ).normalized();
+    return normal( q - p, r - p );
 }
 
 /// computes the square of double area of given triangle
@@ -344,6 +358,36 @@ template <typename T>
     if ( dot( grad, ip ) >= 0 )
         return {}; // (b,c) is intersected in the direction +grad
     return a;
+}
+
+/// Given 3 spheres:
+/// 1) sphere with center at b and radius rb
+/// 2) sphere with center at c and radius rc
+/// 3) sphere with center at the origin and zero radius (actually point);
+/// finds the plane touching all 3 spheres: dot(n,x) = 0, such that cross( n, b, c ) > 0 (to select one of two planes)
+/// returns n or std::nullopt if no touch plane exists
+template <typename T>
+[[nodiscard]] std::optional<Vector3<T>> tangentPlaneNormalToSpheres( const Vector3<T> & b, const Vector3<T> & c, T rb, T rc )
+{
+    auto grad = gradientInTri( b, c, rb, rc );
+    auto gradSq = grad.lengthSq();
+    if ( gradSq <= 0 || gradSq >= 1 )
+        return {}; // the larger of the spheres contains the origin inside - no touch plane exists
+    return sqrt( 1 - gradSq ) * normal( b, c ) - grad; // unit normal
+}
+
+/// Given 3 spheres:
+/// 1) sphere with center at a and radius ra
+/// 2) sphere with center at b and radius rb
+/// 3) sphere with center at c and radius rc
+/// finds the plane touching all 3 spheres: dot(n,x) = d, such that cross( n, b-a, c-a ) > 0 (to select one of two planes)
+/// returns found plane or std::nullopt if no touch plane exists
+template <typename T>
+[[nodiscard]] std::optional<Plane3<T>> tangentPlaneToSpheres( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c, T ra, T rb, T rc )
+{
+    if ( auto n = tangentPlaneNormalToSpheres( b - a, c - a, rb - ra, rc - ra ) )
+        return Plane3<T>( *n, dot( *n, a ) + ra );
+    return {}; // the larger of the spheres contains another sphere inside - no touch plane exists
 }
 
 } // namespace MR

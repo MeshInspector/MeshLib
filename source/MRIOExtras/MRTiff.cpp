@@ -185,16 +185,16 @@ TiffParameters readTiffParameters( TIFF* tiff )
     return params;
 }
 
+// http://geotiff.maptools.org/spec/geotiff2.6.html
+enum GeoTiff : uint32_t
+{
+    ModelTiepointTag = 33922,
+    ModelPixelScaleTag = 33550,
+    ModelTransformationTag = 34264,
+};
+
 std::optional<AffineXf3f> readGeoTiffParameters( TIFF* tiff )
 {
-    // http://geotiff.maptools.org/spec/geotiff2.6.html
-    enum GeoTiff : uint32_t
-    {
-        ModelTiepointTag = 33922,
-        ModelPixelScaleTag = 33550,
-        ModelTransformationTag = 34264,
-    };
-
     Matrix4d matrix;
     if ( TIFFGetField( tiff, GeoTiff::ModelTransformationTag, &matrix ) )
         return AffineXf3f { Matrix4f( matrix ) };
@@ -392,6 +392,50 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
 }
 
 } // namespace DistanceMapLoad
+
+namespace DistanceMapSave
+{
+
+Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld )
+{
+    auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
+    if ( !tiff )
+        return unexpected( "Cannot write file: " + utf8string( path ) );
+    MR_FINALLY {
+        TIFFClose( tiff );
+    };
+
+    TIFFSetField( tiff, TIFFTAG_IMAGEWIDTH, dmap.resX() );
+    TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, dmap.resY() );
+
+    // 32-bit float
+    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE );
+    TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP );
+    TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, 32 );
+    TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, 1 );
+
+    // FIXME: orientation is ignored
+    TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
+    TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
+
+    if ( dmapToWorld )
+    {
+        const Matrix4d matrix { AffineXf3d( dmapToWorld->xf() ) };
+        TIFFSetField( tiff, GeoTiff::ModelTransformationTag, 16, (double*)&matrix );
+    }
+
+    for ( auto row = 0; row < dmap.resY(); ++row )
+    {
+        // FIXME: orientation is ignored
+        const auto* data = dmap.data() + ( dmap.resY() - 1 - row ) * dmap.resX();
+        TIFFWriteScanline( tiff, (void*)data, row );
+    }
+    TIFFFlush( tiff );
+
+    return {};
+}
+
+} // namespace DistanceMapSave
 
 namespace ImageLoad
 {

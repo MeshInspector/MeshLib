@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 
 #include <atomic>
+#include <optional>
 #include <thread>
 
 namespace MR

@@ -1,21 +1,22 @@
 #include "MRMeshDecimate.h"
+#include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
+#include "MRCylinder.h"
+#include "MRFinally.h"
+#include "MRGTest.h"
+#include "MRLineSegm.h"
+#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
+#include "MRMeshDelone.h"
+#include "MRMeshRelax.h"
+#include "MRMeshSubdivide.h"
+#include "MRParallelFor.h"
+#include "MRPriorityQueue.h"
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
-#include "MRBitSetParallelFor.h"
-#include "MRParallelFor.h"
 #include "MRRingIterator.h"
-#include "MRTriMath.h"
 #include "MRTimer.h"
-#include "MRCylinder.h"
-#include "MRGTest.h"
-#include "MRMeshDelone.h"
-#include "MRMeshSubdivide.h"
-#include "MRMeshRelax.h"
-#include "MRLineSegm.h"
-#include "MRPriorityQueue.h"
-#include "MRMakeSphereMesh.h"
-#include "MRBuffer.h"
+#include "MRTriMath.h"
 
 namespace MR
 {
@@ -1093,9 +1094,19 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     const auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
+    std::atomic<int> mainThreadSemaphore;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
-        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadId == std::this_thread::get_id();
+        bool reportProgressFromThisThread = settings.progressCallback && mainThreadId == std::this_thread::get_id();
+        // a thread can be re-used when its TBB task is waiting for another TBB operation
+        // to prevent mixing progress values among different tasks of the same thread, a semaphore is used
+        if ( mainThreadSemaphore.fetch_add( 1, std::memory_order_relaxed ) )
+            reportProgressFromThisThread = false;
+        MR_FINALLY {
+            if ( reportProgressFromThisThread )
+                mainThreadSemaphore.fetch_sub( 1, std::memory_order_relaxed );
+        };
+
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto reportThreadProgress = [&]( float p )

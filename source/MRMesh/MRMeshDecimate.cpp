@@ -14,7 +14,7 @@
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
-#include "MRThreadSemaphore.h"
+#include "MRTbbThreadMutex.h"
 #include "MRTimer.h"
 #include "MRTriMath.h"
 
@@ -1091,13 +1091,13 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     mesh.topology.stopUpdatingValids();
-    ThreadSemaphore mainThreadSemaphore;
+    TbbThreadMutex mainThreadMutex;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
-        const auto mainThreadLock = mainThreadSemaphore.acquire();
-        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadLock.acquired();
+        const auto mainThreadLock = mainThreadMutex.tryLock();
+        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadLock;
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto reportThreadProgress = [&]( float p )

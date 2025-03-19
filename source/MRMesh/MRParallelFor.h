@@ -3,7 +3,7 @@
 #include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
-#include "MRThreadSemaphore.h"
+#include "MRTbbThreadMutex.h"
 #include "MRVector.h"
 
 #include <atomic>
@@ -39,9 +39,9 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     if ( size <= 0 )
         return true;
 
-    ThreadSemaphore callingThreadSemaphore;
+    TbbThreadMutex callingThreadMutex;
     std::atomic<bool> keepGoing{ true };
-    
+
     // avoid false sharing with other local variables
     // by putting processedBits in its own cache line
     constexpr int hardware_destructive_interference_size = 64;
@@ -55,8 +55,8 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     tbb::parallel_for( tbb::blocked_range( begin, end ),
         [&] ( const tbb::blocked_range<I>& range )
     {
-        const auto callingThreadLock = callingThreadSemaphore.acquire();
-        const bool report = cb && callingThreadLock.acquired();
+        const auto callingThreadLock = callingThreadMutex.tryLock();
+        const bool report = cb && callingThreadLock;
         size_t myProcessed = 0;
         auto c = callMaker();
         for ( I i = range.begin(); i < range.end(); ++i )

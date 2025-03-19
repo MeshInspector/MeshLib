@@ -406,6 +406,7 @@
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />
+    <ClInclude Include="MRTbbThreadMutex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
@@ -679,6 +680,7 @@
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
     <ClCompile Include="MRWasmHelpers.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

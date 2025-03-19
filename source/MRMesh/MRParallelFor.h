@@ -1,10 +1,10 @@
 #pragma once
 
+#include "MRVector.h"
 #include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
 #include "MRTbbThreadMutex.h"
-#include "MRVector.h"
 
 #include <atomic>
 #include <limits>

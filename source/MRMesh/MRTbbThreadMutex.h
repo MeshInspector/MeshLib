@@ -25,7 +25,7 @@ namespace MR
 ///     }
 /// } );
 /// \endcode
-class TbbThreadMutex
+class MRMESH_CLASS TbbThreadMutex
 {
 public:
     MRMESH_API explicit TbbThreadMutex( std::thread::id id = std::this_thread::get_id() );

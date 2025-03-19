@@ -2,6 +2,8 @@
 
 #include "MRMeshFwd.h"
 
+#include "MRPch/MRBindingMacros.h"
+
 #include <atomic>
 #include <optional>
 #include <thread>

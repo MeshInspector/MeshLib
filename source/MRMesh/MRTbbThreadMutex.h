@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#ifndef MR_PARSING_FOR_PB11_BINDINGS
 
 #include <atomic>
 #include <optional>
@@ -53,3 +54,4 @@ private:
 };
 
 } // namespace MR
+#endif

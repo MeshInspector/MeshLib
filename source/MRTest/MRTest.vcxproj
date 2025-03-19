@@ -31,6 +31,7 @@
     <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRProgressCallback.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

@@ -2,7 +2,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRCylinder.h"
-#include "MRFinally.h"
 #include "MRGTest.h"
 #include "MRLineSegm.h"
 #include "MRMakeSphereMesh.h"
@@ -15,6 +14,7 @@
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
+#include "MRThreadSemaphore.h"
 #include "MRTimer.h"
 #include "MRTriMath.h"
 
@@ -1091,22 +1091,13 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     mesh.topology.stopUpdatingValids();
-    const auto mainThreadId = std::this_thread::get_id();
+    ThreadSemaphore mainThreadSemaphore;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
-    std::atomic<int> mainThreadSemaphore;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
-        bool reportProgressFromThisThread = settings.progressCallback && mainThreadId == std::this_thread::get_id();
-        // a thread can be re-used when its TBB task is waiting for another TBB operation
-        // to prevent mixing progress values among different tasks of the same thread, a semaphore is used
-        if ( mainThreadSemaphore.fetch_add( 1, std::memory_order_relaxed ) )
-            reportProgressFromThisThread = false;
-        MR_FINALLY {
-            if ( reportProgressFromThisThread )
-                mainThreadSemaphore.fetch_sub( 1, std::memory_order_relaxed );
-        };
-
+        const auto mainThreadLock = mainThreadSemaphore.acquire();
+        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadLock.acquired();
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto reportThreadProgress = [&]( float p )

@@ -1724,9 +1724,6 @@
     <ClCompile Include="MROrder.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRTriMath.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>

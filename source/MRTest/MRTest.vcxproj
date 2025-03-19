@@ -24,9 +24,11 @@
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
+    <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
+    <ClCompile Include="MRTriMathTests.cpp" />
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
     <ClCompile Include="MRZlib.cpp" />
   </ItemGroup>

@@ -40,10 +40,10 @@ public:
         friend class TbbThreadMutex;
         TbbThreadMutex& mutex_;
 
-        MRMESH_API explicit LockGuard( TbbThreadMutex& mutex );
+        explicit LockGuard( TbbThreadMutex& mutex ) : mutex_( mutex ) {}
 
     public:
-        MRMESH_API ~LockGuard();
+        ~LockGuard() { mutex_.lockFlag_.clear(); }
     };
 
     /// try to lock the mutex

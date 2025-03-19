@@ -6,6 +6,7 @@
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRFmt.h"
@@ -184,6 +185,47 @@ TiffParameters readTiffParameters( TIFF* tiff )
     return params;
 }
 
+std::optional<AffineXf3f> readGeoTiffParameters( TIFF* tiff )
+{
+    // http://geotiff.maptools.org/spec/geotiff2.6.html
+    enum GeoTiff : uint32_t
+    {
+        ModelTiepointTag = 33922,
+        ModelPixelScaleTag = 33550,
+        ModelTransformationTag = 34264,
+    };
+
+    Matrix4d matrix;
+    if ( TIFFGetField( tiff, GeoTiff::ModelTransformationTag, &matrix ) )
+        return AffineXf3f { Matrix4f( matrix ) };
+
+    double* dataTiepoint, * dataScale; // will be freed with tiff
+    uint32_t count;
+    if ( !TIFFGetField( tiff, GeoTiff::ModelTiepointTag, &count, &dataTiepoint ) || count != 6 )
+        return {};
+    if ( !TIFFGetField( tiff, GeoTiff::ModelPixelScaleTag, &count, &dataScale ) || count != 3 )
+        return {};
+
+    std::array tiepoints {
+        Vector3d { dataTiepoint[0], dataTiepoint[1], dataTiepoint[2] },
+        Vector3d { dataTiepoint[3], dataTiepoint[4], dataTiepoint[5] },
+    };
+    Vector3d scale { dataScale[0], dataScale[1], dataScale[2] };
+
+    // TODO: explain the operations
+    scale.y *= -1.;
+    if ( scale.z == 0. )
+    {
+        tiepoints[0].z = 0.;
+        scale.z = 1.;
+    }
+
+    return AffineXf3f {
+        Matrix3f::scale( Vector3f( scale ) ),
+        Vector3f( tiepoints[0] + tiepoints[1] )
+    };
+}
+
 template <typename T, typename U>
 T rgbToScalar( const U* src )
 {
@@ -331,6 +373,10 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
         return unexpected( "Cannot read file: " + utf8string( path ) );
 
     auto params = readTiffParameters( tiff );
+
+    if ( dmapToWorld )
+        if ( const auto xf = readGeoTiffParameters( tiff ) )
+            *dmapToWorld = *xf;
 
     DistanceMap result { (size_t)params.imageSize.x, (size_t)params.imageSize.y };
 

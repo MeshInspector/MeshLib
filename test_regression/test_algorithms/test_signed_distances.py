@@ -22,3 +22,14 @@ def test_signed_distance_point():
     a = mrmeshpy.findSignedDistance(point, mesh1)
     print(a.dist)
     assert a.dist == pytest.approx(-2.8215560)
+
+@pytest.mark.bindingsV3
+def test_signed_distances_meshes():
+    input_folder = Path(test_files_path) / "algorithms" / "signed_distance"
+    mesh1 = mrmeshpy.loadMesh(input_folder / "beethoven.ctm")
+    mesh2 = mrmeshpy.loadMesh(input_folder / "Torus.ctm")
+    a = mrmeshpy.findSignedDistances(mesh1, mesh2)
+
+    assert a.data() == pytest.approx(0.17844390869140625)
+    assert a.front() == pytest.approx(0.17844390869140625)
+    assert a.back() == pytest.approx(0.5686243772506714)

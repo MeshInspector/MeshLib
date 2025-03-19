@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
 
 #include <atomic>
 #include <optional>
@@ -27,7 +26,7 @@ namespace MR
 ///     }
 /// } );
 /// \endcode
-class MRMESH_CLASS TbbThreadMutex
+class MR_BIND_IGNORE MRMESH_CLASS TbbThreadMutex
 {
 public:
     /// construct class
@@ -56,4 +55,3 @@ private:
 };
 
 } // namespace MR
-#endif

@@ -89,7 +89,7 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
                     .distSq = distanceSq( coord, ball.center ),
                     .vId = orderedPoints[i].id
                 };
-                if ( candidate.distSq < ball.radiusSq )
+                if ( candidate.distSq <= ball.radiusSq )
                 {
                     if ( foundCallback( candidate, coord, ball ) == Processing::Stop )
                         return;

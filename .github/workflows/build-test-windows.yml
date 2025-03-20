@@ -111,7 +111,7 @@ jobs:
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
@@ -160,7 +160,7 @@ jobs:
 
       - name: Add msbuild to PATH
         if: ${{ matrix.build_system == 'MSBuild' }}
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -170,14 +170,14 @@ jobs:
 
       - name: Restore Dependencies
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@v2
+        uses: codebeltnet/dotnet-restore@1cf30dd0fdddac25bc7dcb559c6d0c310fb0d472 # v2
         with:
           projects: 'source/**/*.csproj'
 
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
@@ -192,7 +192,7 @@ jobs:
 
       - name: Install Ninja for CMake
         if: ${{ matrix.build_system == 'CMake' }}
-        uses: seanmiddleditch/gha-setup-ninja@master
+        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
 
       - name: Build
         shell: cmd

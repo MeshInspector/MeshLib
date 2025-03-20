@@ -632,7 +632,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         return pos.x + pos.y * size_t( resX );
     };
 
-    size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+    size_t threadCount = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     if ( threadCount == 0 )
         threadCount = std::thread::hardware_concurrency();
     if ( threadCount == 0 )

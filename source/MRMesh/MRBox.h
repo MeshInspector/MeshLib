@@ -121,11 +121,20 @@ public:
         }
     }
 
-    /// checks whether given point is inside (including the surface) of the box
+    /// checks whether given point is inside (including the surface) of this box
     bool contains( const V & pt ) const
     {
         for ( int i = 0; i < elements; ++i )
             if ( VTraits::getElem( i, min ) > VTraits::getElem( i, pt ) || VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) )
+                return false;
+        return true;
+    }
+
+    /// checks whether given box is fully inside (the surfaces may touch) of this box
+    bool contains( const Box& otherbox ) const
+    {
+        for ( int i = 0; i < elements; ++i )
+            if ( VTraits::getElem( i, min ) > VTraits::getElem( i, otherbox.min ) || VTraits::getElem( i, otherbox.max ) > VTraits::getElem( i, max ) )
                 return false;
         return true;
     }

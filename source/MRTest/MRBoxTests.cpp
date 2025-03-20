@@ -27,6 +27,10 @@ TEST(MRMesh, Box)
     EXPECT_FALSE( b1.intersects( b3 ) );
     EXPECT_FALSE( b1.intersection( b3 ).valid() );
 
+    EXPECT_TRUE( b1.contains( b1 ) );
+    EXPECT_TRUE( b2.contains( b1 ) );
+    EXPECT_FALSE( b1.contains( b2 ) );
+
     Box3i b = { {0, 0, 0}, {10, 10, 10} };
     Vector3i c = b.center();
     Vector3i r{ 5, 5, 5 };

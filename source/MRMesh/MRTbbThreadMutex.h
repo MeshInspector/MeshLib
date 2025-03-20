@@ -39,12 +39,15 @@ public:
     class LockGuard
     {
         friend class TbbThreadMutex;
-        TbbThreadMutex& mutex_;
+        TbbThreadMutex* mutex_{ nullptr };
 
-        explicit LockGuard( TbbThreadMutex& mutex ) : mutex_( mutex ) {}
+        explicit LockGuard( TbbThreadMutex& mutex ) : mutex_( &mutex ) {}
 
     public:
-        ~LockGuard() { mutex_.lockFlag_.clear(); }
+        LockGuard( const LockGuard& ) = delete;
+        MRMESH_API LockGuard( LockGuard&& other );
+
+        MRMESH_API ~LockGuard();
     };
 
     /// try to lock the mutex

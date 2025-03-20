@@ -18,7 +18,6 @@
 #pragma warning(pop)
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
-#include "MRMesh/MRMeshFixer.h"
 
 // Fix parsing std::filesystem::path with spaces (see https://github.com/boostorg/program_options/issues/69)
 namespace boost
@@ -33,21 +32,7 @@ inline std::filesystem::path lexical_cast<std::filesystem::path, std::string>( c
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
     namespace po = boost::program_options;
-    if ( option.string_key == "count-disorientations" )
-    { 
-        auto res = MR::countDisorientations( mesh );
-        std::cout << "RESULT:" <<
-            res.overlapsArea << ";" << res.totalArea << ";" <<
-            res.numOverlaps << ";" << res.numFaces << ";" <<
-            res.numDisorientedAmongOverlaps << ";" << res.numDisoriented << std::endl;
-
-        MR::Mesh disorientedMesh;
-        disorientedMesh.addMeshPart( { mesh,&res.disoriented } );
-        disorientedMesh.topology.flipOrientation();
-        mesh.deleteFaces( res.disoriented );
-        mesh.addMesh( std::move( disorientedMesh ) );
-    }
-    else if ( option.string_key == "convex-hull" )
+    if ( option.string_key == "convex-hull" )
     {
         mesh = MR::makeConvexHull( mesh );
         std::cout << "convex hull computed successfully" << std::endl;
@@ -124,7 +109,6 @@ static int mainInternal( int argc, char **argv )
         ( "subtract", po::value<std::filesystem::path>(), "subtract given mesh from input file mesh given mesh" )
         ( "intersect", po::value<std::filesystem::path>(), "intersect mesh from input file and given mesh" )
         ( "convex-hull", "construct convex hull of input mesh" )
-        ( "count-disorientations", "counts disorientation stats on subdivided mesh" )
         ;
 
     po::options_description allCommands( "Available options" );

@@ -642,6 +642,8 @@ void Viewport::drawAxesAndViewController() const
         auto transBase = fullInversedM( viewportSpaceToClipSpace( pos ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( pos + to3dim( Vector2f::diagonal( basisAxesSize_ ) ) ) );
 
+        auto invRot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) ).inverse();
+
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
         if ( basisVisible )
@@ -658,7 +660,20 @@ void Viewport::drawAxesAndViewController() const
         {
             getViewerInstance().basisViewController->setXf( basisAxesXf, id );
             draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            for ( const auto& child : getViewerInstance().basisViewController->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                {
+                    visualChild->setXf( invRot, id );
+                    draw( *visualChild, basisAxesXf * invRot, axesProjMat_, DepthFunction::Always );
+                }
+            }
             draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_ );
+            for ( const auto& child : getViewerInstance().basisViewController->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf * invRot, axesProjMat_ );
+            }
         }
         if ( basisVisible )
         {

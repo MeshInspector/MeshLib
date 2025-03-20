@@ -19,25 +19,31 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
 {
     MR_TIMER
 
+    auto cb = params.progress;
+
     PointsToDistanceVolumeParams p2vParams;
 
     VertNormals normals;
     if ( !cloud.hasNormals() )
     {
         auto optTriang = TriangulationHelpers::buildUnitedLocalTriangulations( cloud,
-            { .radius = params.sigma }, subprogress( params.progress, 0.0f, 0.2f ) );
+            { .radius = params.sigma }, subprogress( cb, 0.0f, 0.2f ) );
 
         if ( !optTriang )
             return unexpectedOperationCanceled();
 
-        auto norms = makeOrientedNormals( cloud, *optTriang, subprogress( params.progress, 0.2f, 0.4f ) );
+        auto norms = makeOrientedNormals( cloud, *optTriang, subprogress( cb, 0.2f, 0.4f ) );
         if ( !norms )
             return unexpectedOperationCanceled();
         normals = std::move( *norms );
         p2vParams.ptNormals = &normals;
+
+        cb = subprogress( cb, 0.40f, 1.00f );
     }
 
-    p2vParams.cb = p2vParams.ptNormals ? subprogress( params.progress, 0.4f, 0.65f ) : subprogress( params.progress, 0.0f, 0.5f );
+    const auto triCb = ( params.ptColors && params.vColors ) ? subprogress( cb, 0.90f, 1.00f ) : cb;
+
+    p2vParams.cb = subprogress( triCb, 0.00f, 0.50f );
     // fused surface can deviate from original points proportionally to params.sigma value
     const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( 2 * params.sigma ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
@@ -50,12 +56,15 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;
     vmParams.iso = 0;
-    vmParams.cb = subprogress( params.progress, p2vParams.ptNormals ? 0.65f : 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
+    vmParams.cb = subprogress( triCb, 0.50f, 1.00f );
     vmParams.lessInside = true;
 
     Expected<Mesh> res;
     if ( params.createVolumeCallbackByParts && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
     {
+        p2vParams.cb = {};
+        vmParams.cb = subprogress( triCb, 0.00f, 0.90f );
+
         MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
         res =
             params.createVolumeCallbackByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
@@ -66,9 +75,9 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
             .and_then( [&mesher] {
                 return mesher.finalize();
             } )
-            .transform( [] ( TriMesh&& mesh )
+            .transform( [&] ( TriMesh&& mesh )
             {
-                return Mesh::fromTriMesh( std::move( mesh ) );
+                return Mesh::fromTriMesh( std::move( mesh ), {}, subprogress( triCb, 0.90f, 1.00f ) );
             } );
     }
     else if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
@@ -91,7 +100,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     if ( res && params.ptColors && params.vColors )
     {
         auto optColors = calcAvgColors( cloud, *params.ptColors, res->points, res->topology.getValidVerts(),
-            params.sigma, subprogress( params.progress, 0.9f, 1.0f ) );
+            params.sigma, subprogress( cb, 0.9f, 1.0f ) );
         if ( optColors )
             *params.vColors = std::move( optColors.value() );
         else

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen
-        uses: ssciwr/doxygen-install@v1
+        uses: ssciwr/doxygen-install@527824132256e685f03ec80c0851fe79937eb1d6 # v1
         with:
           version: "1.11.0"
 

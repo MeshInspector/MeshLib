@@ -179,7 +179,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
@@ -364,31 +364,31 @@ jobs:
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
         # .NET
       - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Distributives*
           failOnError: false
 
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Wheelhouse*
           failOnError: false
 
       - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: RunnerSysStats*
           failOnError: false
@@ -419,13 +419,13 @@ jobs:
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
           failOnError: false

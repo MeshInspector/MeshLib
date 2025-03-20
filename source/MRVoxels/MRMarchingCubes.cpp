@@ -385,7 +385,7 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
 
 VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock ) : indexer_( dims ), params_( params )
 {
-    int threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+    int threadCount = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     if ( threadCount == 0 )
         threadCount = std::thread::hardware_concurrency();
     if ( threadCount == 0 )
@@ -469,13 +469,20 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
     static_assert( alignof(S) == hardware_destructive_interference_size );
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
-    auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
     const int firstBlock = partFirstZ / layersPerBlock_;
     nextZ_ = partFirstZ + part.dims.z - 1;
     const bool lastPart = nextZ_ + 1 == indexer_.dims().z;
     const int lastLayer = lastPart ? nextZ_ : nextZ_ - 1;
     assert( lastLayer < layerCount );
     const int lastBlock = lastLayer / layersPerBlock_;
+
+    const auto cb = subprogress( params_.cb, 0.0f, 0.3f );
+    auto currentSubprogress = subprogress(
+        cb,
+        (float)partFirstZ / (float)indexer_.dims().z,
+        (float)lastLayer / (float)indexer_.dims().z
+    );
+
     ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
     {
         const int layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
@@ -516,7 +523,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
                 {
                     assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                    if ( params_.cb && !keepGoing.load( std::memory_order_relaxed ) )
+                    if ( currentSubprogress && !keepGoing.load( std::memory_order_relaxed ) )
                         return;
 
                     SeparationPointSet set;
@@ -567,13 +574,13 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
             if ( layerLowerIso.any() )
                 lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
-            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            const auto numProcessedLayers = 1 + cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
 
-    if ( params_.cb && !keepGoing )
+    if ( currentSubprogress && !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};
@@ -812,7 +819,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                 lowerIso_[loc.pos.z + 1] = {};
             }
 
-            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            const auto numProcessedLayers = 1 + cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
             {
                 keepGoing.store( false, std::memory_order_relaxed );

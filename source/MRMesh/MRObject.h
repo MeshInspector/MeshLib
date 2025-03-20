@@ -149,7 +149,16 @@ public:
     MRMESH_API virtual bool detachFromParent();
     /// an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
+
+    #ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
+    #endif
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
+    #ifdef __GNUC__
+    #pragma GCC diagnostic pop
+    #endif
+
     /// adds given object at the end of children (recognized or not);
     /// returns false if it was already child of this, of if given pointer is empty;
     /// child object will always report this as parent after the call;

@@ -2,10 +2,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MREdgePaths.h"
 #include "MRExtractIsolines.h"
-#include "MRGTest.h"
 #include "MRLaplacian.h"
 #include "MRMesh.h"
-#include "MRMeshBuilder.h"
 #include "MRMeshComponents.h"
 #include "MRMeshPart.h"
 #include "MRGeodesicPath.h"
@@ -13,31 +11,15 @@
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"
 #include "MRTimer.h"
+#include "MRTriMath.h"
 
 namespace MR
 {
 
-// consider triangle 0bc, where a linear scalar field is defined in all vertices: v(0) = 0, v(b) = vb, v(c) = vc;
-// computes field gradient in the triangle
-static Vector3d computeGradient( const Vector3d & b, const Vector3d & c, double vb, double vc )
-{
-    const auto bb = dot( b, b );
-    const auto bc = dot( b, c );
-    const auto cc = dot( c, c );
-    const auto det = bb * cc - bc * bc;
-    if ( det <= 0 )
-    {
-        // degenerate triangle
-        return {};
-    }
-    const auto kb = ( 1 / det ) * ( cc * vb - bc * vc );
-    const auto kc = ( 1 / det ) * (-bc * vb + bb * vc );
-    return kb * b + kc * c;
-}
-
 static Vector3f computeGradient( const Vector3f & b, const Vector3f & c, float vb, float vc )
 {
-    return Vector3f{ computeGradient( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) ) };
+    auto grad = gradientInTri( Vector3d( b ), Vector3d( c ), double( vb ), double( vc ) );
+    return grad.has_value() ? Vector3f{ *grad } : Vector3f{};
 }
 
 /// given triangle with scalar field increasing in the direction \param dir;
@@ -76,30 +58,6 @@ static bool computeEnter01Cross( const Triangle3f & t, const Vector3f & unitDir,
     if ( !dirEnters01( t, unitDir ) )
         return false;
     return computeLineLineCross( t[0] - p, t[1] - p, unitDir, a );
-}
-
-// consider triangle 0bc, where gradient is given;
-// computes the intersection of the ray (org=0, dir=-grad) with the open segment (b,c)
-static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f & c, const Vector3f & grad )
-{
-    const auto gradSq = grad.lengthSq();
-    if ( gradSq <= 0 )
-        return {};
-    const auto d = c - b;
-    // gort is a vector in the triangle plane orthogonal to grad
-    const auto gort = d - ( dot( d, grad ) / gradSq ) * grad;
-    const auto god = dot( gort, d );
-    if ( god <= 0 )
-        return {};
-    const auto gob = -dot( gort, b );
-    if ( gob <= 0 || gob >= god )
-        return {};
-    const auto a = gob / god;
-    assert( a < FLT_MAX );
-    const auto ip = a * c + ( 1 - a ) * b;
-    if ( dot( grad, ip ) >= 0 )
-        return {}; // (b,c) is intersected in the direction +grad
-    return a;
 }
 
 MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars & field, VertId v )
@@ -146,7 +104,7 @@ MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars &
                 const auto triGradSq = triGrad.lengthSq();
                 if ( triGradSq > maxGradSq )
                 {
-                    if ( auto a = computeExitPos( pd, px, triGrad ) )
+                    if ( auto a = findTriExitPos( pd, px, triGrad ) )
                     {
                         maxGradSq = triGradSq;
                         res = MeshEdgePoint{ eBd, *a };
@@ -692,80 +650,6 @@ Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lin
     for ( const auto& l : lines )
         res.push_back( surfacePathToContour3f( mesh, l ) );
     return res;
-}
-
-TEST(MRMesh, SurfacePath) 
-{
-    Vector3f g;
-
-    g = computeGradient( Vector3f{ 1, 0, 0 }, Vector3f{ 0.5f, 1, 0 }, 0, 1 );
-    EXPECT_NEAR( ( g - Vector3f{ 0, 1, 0 } ).length(), 0, 1e-5f );
-
-    g = computeGradient( Vector3f{ 1, 0, 0 }, Vector3f{ 0.1f, 1, 0 }, 0, 1 );
-    EXPECT_NEAR( ( g - Vector3f{ 0, 1, 0 } ).length(), 0, 1e-5f );
-
-    g = computeGradient( Vector3f{ 1, 0, 0 }, Vector3f{ 0.9f, 1, 0 }, 0, 1 );
-    EXPECT_NEAR( ( g - Vector3f{ 0, 1, 0 } ).length(), 0, 1e-5f );
-
-    std::optional<float> e;
-    g = computeGradient( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, 1, 1 );
-    EXPECT_NEAR( ( g - Vector3f{ 1, 1, 0 } ).length(), 0, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, g );
-    EXPECT_FALSE( e.has_value() );
-    e = computeExitPos ( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, -g );
-    EXPECT_NEAR( *e, 0.5f, 1e-5f );
-
-    g = computeGradient( Vector3f{ 1, -1, 0 }, Vector3f{ 1, 1, 0 }, -1, -1 );
-    EXPECT_NEAR( ( g - Vector3f{ -1, 0, 0 } ).length(), 0, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, -1, 0 }, Vector3f{ 1, 1, 0 }, g );
-    EXPECT_NEAR( *e, 0.5f, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, -1, 0 }, Vector3f{ 1, 1, 0 }, -g );
-    EXPECT_FALSE( e.has_value() );
-
-    g = computeGradient( Vector3f{ 1, -0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, -1, -1 );
-    EXPECT_NEAR( ( g - Vector3f{ -1, 0, 0 } ).length(), 0, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, -0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, g );
-    EXPECT_NEAR( *e, 0.1f, 1e-5f );
-
-    g = computeGradient( Vector3f{ 1, -0.9f, 0 }, Vector3f{ 1, 0.1f, 0 }, -1, -1 );
-    EXPECT_NEAR( ( g - Vector3f{ -1, 0, 0 } ).length(), 0, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, -0.9f, 0 }, Vector3f{ 1, 0.1f, 0 }, g );
-    EXPECT_NEAR( *e, 0.9f, 1e-5f );
-
-    g = computeGradient( Vector3f{ 1, 0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, -1, -1 );
-    EXPECT_NEAR( ( g - Vector3f{ -1, 0, 0 } ).length(), 0, 1e-5f );
-    e = computeExitPos ( Vector3f{ 1, 0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, g );
-    EXPECT_FALSE( e.has_value() );
-    e = computeExitPos ( Vector3f{ 1, 0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, -g );
-    EXPECT_FALSE( e.has_value() );
-}
-
-TEST( MRMesh, SurfacePathTargets )
-{
-    Triangulation t{
-        { 0_v, 1_v, 2_v }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-
-    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // 0_v
-    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // 1_v
-    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // 2_v
-
-    VertBitSet starts(3);
-    starts.set( 1_v );
-    starts.set( 2_v );
-
-    VertBitSet ends(3);
-    ends.set( 0_v );
-
-    const auto map = computeClosestSurfacePathTargets( mesh, starts, ends );
-    EXPECT_EQ( map.size(), starts.count() );
-    for ( const auto & [start, end] : map )
-    {
-        EXPECT_TRUE( starts.test( start ) );
-        EXPECT_TRUE( ends.test( end ) );
-    }
 }
 
 } //namespace MR

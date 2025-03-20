@@ -1284,6 +1284,9 @@
     <ClInclude Include="MRMeshOrPointsObject.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDoubleLayer.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1309,9 +1312,6 @@
     </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBox.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
@@ -1724,9 +1724,6 @@
     <ClCompile Include="MROrder.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRTriMath.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
@@ -2101,6 +2098,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshOrPointsObject.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDoubleLayer.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

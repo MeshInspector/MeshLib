@@ -158,7 +158,7 @@ jobs:
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -170,7 +170,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/c-examples \

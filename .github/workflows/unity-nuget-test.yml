@@ -23,24 +23,30 @@ jobs:
         shell: powershell
         run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --quiet
 
-      - name: run test
+      - name: rm previous data
         shell: powershell
         run: |
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\test_results.xml" -ErrorAction SilentlyContinue
+
+      - name: run test
+        shell: powershell
+        run: |
           nugetforunity restore C:\work\unity_proj\NugetTestProj
-          & "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\results.xml" -logfile "C:\work\batch_log.txt"
+          & "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\test_results.xml" -logfile "C:\work\batch_log.txt"
 
 
       - name: verify xml
         shell: powershell
         run: |
-          [xml]$xml = Get-Content "C:\work\results.xml"
-          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in results.xml found"; exit 1}
+          [xml]$xml = Get-Content "C:\work\test_results.xml"
+          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in test_results.xml found"; exit 1}
 
       - name: upload logs
         if: always()
         shell: powershell
         run: |
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
-          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/results.xml
+          aws s3 cp C:\work\test_results.xml s3://test-artifacts-git/test_results.xml
+          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt

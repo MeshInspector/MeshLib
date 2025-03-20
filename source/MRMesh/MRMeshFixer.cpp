@@ -167,6 +167,7 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
 
 FaceBitSet findDisorientedFaces( const Mesh& mesh )
 {
+    MR_TIMER
     auto disorientedFaces = mesh.topology.getValidFaces();
     BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
     {
@@ -176,9 +177,8 @@ FaceBitSet findDisorientedFaces( const Mesh& mesh )
         rayMeshIntersectAll( mesh, Line3d( triCenter, normal ),
             [f, &counter] ( const MeshIntersectionResult& res )->bool
         {
-            if ( res.proj.face == f )
-                return true;
-            ++counter;
+            if ( res.proj.face != f )
+                ++counter;
             return true;
         } );
         if ( counter % 2 == 0 )

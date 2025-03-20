@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRId.h"
-#include "MRBitSet.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
 #include "MRExpected.h"

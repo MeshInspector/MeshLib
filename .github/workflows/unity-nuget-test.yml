@@ -24,7 +24,7 @@ jobs:
 
       - name: Copy nupkg from S3
         shell: powershell
-        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --delete --size-only --quiet
+        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --quiet
 
       - name: run test
         shell: powershell

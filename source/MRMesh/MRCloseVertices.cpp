@@ -23,11 +23,11 @@ std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & po
         VertId smallestCloseVert = v;
         if ( !valid || valid->test( v ) )
         {
-            findPointsInBall( tree, { points[v], closeDistSq }, [&]( VertId cv, const Vector3f& )
+            findPointsInBall( tree, { points[v], closeDistSq }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
             {
-                if ( cv == v )
-                    return;
-                smallestCloseVert = std::min( smallestCloseVert, cv );
+                if ( found.vId != v )
+                    smallestCloseVert = std::min( smallestCloseVert, found.vId );
+                return Processing::Continue;
             } );
         }
         res[v] = smallestCloseVert;
@@ -48,13 +48,15 @@ std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & po
 
         // find another closest
         smallestCloseVert = v;
-        findPointsInBall( tree, { points[v], closeDistSq }, [&]( VertId cv, const Vector3f& )
+        findPointsInBall( tree, { points[v], closeDistSq }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
+            const auto cv = found.vId;
             if ( cv == v )
-                return;
+                return Processing::Continue;
             if ( res[cv] != cv )
-                return; // cv vertex is removed by itself
+                return Processing::Continue; // cv vertex is removed by itself
             smallestCloseVert = std::min( smallestCloseVert, cv );
+            return Processing::Continue;
         } );
         res[v] = smallestCloseVert;
     }

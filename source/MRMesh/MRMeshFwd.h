@@ -425,6 +425,7 @@ struct PointOnObject;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;
+struct PointsProjectionResult;
 template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;

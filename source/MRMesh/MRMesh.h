@@ -415,9 +415,13 @@ struct [[nodiscard]] Mesh
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
 
-    /// tightly packs all arrays eliminating lone edges and invalid face, verts and points,
+    /// tightly packs all arrays eliminating lone edges and invalid faces, vertices and points,
     /// optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+
+    /// tightly packs all arrays eliminating lone edges and invalid faces, vertices and points,
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
+    MRMESH_API Expected<void> pack( const PackMapping & map, ProgressCallback cb = {} );
 
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)

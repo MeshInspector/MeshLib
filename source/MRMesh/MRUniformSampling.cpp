@@ -37,15 +37,14 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, co
         sampled.set( v );
         const auto c = pointCloud.points[v];
         float localMaxDistSq = sqr( settings.distance );
-        findPointsInBall( pointCloud, { c, localMaxDistSq }, [&] ( VertId u, const Vector3f& pu )
+        findPointsInBall( pointCloud, { c, localMaxDistSq }, [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            const auto distSq = ( c - pu ).lengthSq();
+            const auto u = found.vId;
             if ( pNormals && std::abs( dot( (*pNormals)[v], (*pNormals)[u] ) ) < settings.minNormalDot )
-            {
-                localMaxDistSq = std::min( localMaxDistSq, distSq );
-                return;
-            }
-            nearVerts.push_back( { u, distSq } );
+                localMaxDistSq = std::min( localMaxDistSq, found.distSq );
+            else
+                nearVerts.push_back( { u, found.distSq } );
+            return Processing::Continue;
         } );
         for ( const auto & [ u, distSq ] : nearVerts )
         {

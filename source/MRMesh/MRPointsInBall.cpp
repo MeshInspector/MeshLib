@@ -2,7 +2,6 @@
 #include "MRPointCloud.h"
 #include "MRMesh.h"
 #include "MRAABBTreePoints.h"
-#include "MRPointsProject.h"
 
 namespace MR
 {
@@ -64,18 +63,20 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
         return xf ? transformed( box, *xf ).getDistanceSq( ball.center ) : box.getDistanceSq( ball.center );
     };
 
-    auto addSubTask = [&]( NodeId n, float boxDistSq )
+    auto addSubTask = [&]( NodeId n )
     {
-        if ( boxDistSq <= ball.radiusSq )
-            subtasks[stackSize++] = n;
+        assert( stackSize < MaxStackSize );
+        subtasks[stackSize++] = n;
     };
 
-    addSubTask( tree.rootNodeId(), boxDistSq( tree.rootNodeId() ) );
+    addSubTask( tree.rootNodeId() );
 
     while ( stackSize > 0 )
     {
         const auto n = subtasks[--stackSize];
         const auto& node = tree[n];
+        if ( !( boxDistSq( n ) <= ball.radiusSq ) )
+            continue;
 
         if ( node.leaf() )
         {
@@ -103,13 +104,13 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
         if ( lDistSq <= rDistSq )
         {
-            addSubTask( node.rightOrLast, rDistSq );
-            addSubTask( node.leftOrFirst, lDistSq );
+            addSubTask( node.rightOrLast );
+            addSubTask( node.leftOrFirst );
         }
         else
         {
-            addSubTask( node.leftOrFirst, lDistSq );
-            addSubTask( node.rightOrLast, rDistSq );
+            addSubTask( node.leftOrFirst );
+            addSubTask( node.rightOrLast );
         }
     }
 }

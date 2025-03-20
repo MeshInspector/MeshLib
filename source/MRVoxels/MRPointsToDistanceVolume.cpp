@@ -31,8 +31,7 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
             float sumWeight = 0;
             findPointsInBall( cloud, { voxelCenter, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f & p, Ball3f & )
             {
-                const auto distSq = ( voxelCenter - p ).lengthSq();
-                const auto w = std::exp( distSq * inv2SgSq );
+                const auto w = std::exp( found.distSq * inv2SgSq );
                 sumWeight += w;
                 sumDist += dot( normals[found.vId], voxelCenter - p ) * w;
                 return Processing::Continue;
@@ -68,10 +67,9 @@ Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors &
 
         Vector4f sumColors;
         float sumWeight = 0;
-        findPointsInBall( cloud, { pos, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f & p, Ball3f & )
+        findPointsInBall( cloud, { pos, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
-            const auto distSq = ( pos - p ).lengthSq();
-            const auto w = std::exp( distSq * inv2SgSq );
+            const auto w = std::exp( found.distSq * inv2SgSq );
             sumWeight += w;
             sumColors += Vector4f( colors[found.vId] ) * w;
             return Processing::Continue;

@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 
 #include <cassert>
+#include <cmath>
 
 namespace MR
 {
@@ -49,7 +50,7 @@ inline ProgressCallback subprogress( ProgressCallback cb, float from, float to )
 {
     ProgressCallback res;
     if ( cb )
-        res = [cb, from, to]( float v ) { return cb( ( 1 - v ) * from + v * to ); };
+        res = [cb, from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
     return res;
 }
 

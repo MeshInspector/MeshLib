@@ -4,7 +4,6 @@
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonButtonDrawer.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRRibbonSchema.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
@@ -12,6 +11,7 @@
 #include "imgui_internal.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

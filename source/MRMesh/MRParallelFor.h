@@ -4,9 +4,10 @@
 #include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
+#include "MRTbbThreadMutex.h"
+
 #include <atomic>
 #include <limits>
-#include <thread>
 
 namespace MR
 {
@@ -38,9 +39,9 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     if ( size <= 0 )
         return true;
 
-    auto callingThreadId = std::this_thread::get_id();
+    TbbThreadMutex callingThreadMutex;
     std::atomic<bool> keepGoing{ true };
-    
+
     // avoid false sharing with other local variables
     // by putting processedBits in its own cache line
     constexpr int hardware_destructive_interference_size = 64;
@@ -54,7 +55,8 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     tbb::parallel_for( tbb::blocked_range( begin, end ),
         [&] ( const tbb::blocked_range<I>& range )
     {
-        const bool report = std::this_thread::get_id() == callingThreadId;
+        const auto callingThreadLock = callingThreadMutex.tryLock();
+        const bool report = cb && callingThreadLock;
         size_t myProcessed = 0;
         auto c = callMaker();
         for ( I i = range.begin(); i < range.end(); ++i )
@@ -76,7 +78,7 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
                 }
             }
         }
-        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
+        const auto total = myProcessed + s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
         if ( report && !cb( float( total ) / size ) )
             keepGoing.store( false, std::memory_order_relaxed );
     } );
@@ -128,16 +130,22 @@ inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 /// finds minimal and maximal elements in given vector in parallel;
 /// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
 template<typename T>
-std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
+std::pair<T, T> parallelMinMax( const T* data, size_t size, const T * topExcluding = nullptr )
 {
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
+    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, size ), MinMax<T>{},
     [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
     {
         for ( size_t i = range.begin(); i < range.end(); i++ )
         {
-            T val = vec[i];
-            if ( topExcluding && std::abs( val ) >= *topExcluding )
-                continue;
+            T val = data[i];
+            if ( topExcluding )
+            {
+                T absVal = val;
+                if constexpr ( !std::is_unsigned_v<T> )
+                    absVal = (T)std::abs( val );
+                if ( absVal >= *topExcluding )
+                    continue;
+            }
             if ( val < curMinMax.min )
                 curMinMax.min = val;
             if ( val > curMinMax.max )
@@ -168,6 +176,14 @@ std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcludin
     } );
 
     return { minmax.min, minmax.max };
+}
+
+/// finds minimal and maximal elements in given vector in parallel;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T>
+std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
+{
+    return parallelMinMax( vec.data(), vec.size(), topExcluding );
 }
 
 /// finds minimal and maximal elements and their indices in given vector in parallel;

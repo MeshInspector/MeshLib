@@ -56,6 +56,7 @@ const std::string cUnitsLenUnit = "units.unitLength";
 const std::string cUnitsDegreesMode = "units.degreesMode";
 const std::string cUnitsPrecisionLen = "units.precisionLength";
 const std::string cUnitsPrecisionAngle = "units.precisionAngle";
+const std::string cUnitsPrecisionRatio = "units.precisionRatio";
 const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 const std::string cGlobalBasisKey = "globalBasis";
 const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
@@ -492,6 +493,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             UnitSettings::setUiLengthPrecision( p );
         if ( int p = loadInt( cUnitsPrecisionAngle, -1 ); p >= 0 )
             UnitSettings::setUiAnglePrecision( p );
+        if ( int p = loadInt( cUnitsPrecisionRatio, -1 ); p >= 0 )
+            UnitSettings::setUiRatioPrecision( p );
     }
 
     // Save Scene inner formats
@@ -637,6 +640,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         saveString( cUnitsDegreesMode, std::string( toString( UnitSettings::getDegreesMode() ) ) );
         saveInt( cUnitsPrecisionLen, UnitSettings::getUiLengthPrecision() );
         saveInt( cUnitsPrecisionAngle, UnitSettings::getUiAnglePrecision() );
+        saveInt( cUnitsPrecisionRatio, UnitSettings::getUiRatioPrecision() );
     }
 
     // Save Scene inner formats

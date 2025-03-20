@@ -2,13 +2,19 @@
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
+#include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
+#include "MRCudaPipeline.h"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDipole.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
+#include "MRPch/MRSpdlog.h"
+
+#define RETURN_UNEXPECTED( expr ) if ( auto res = ( expr ); !res ) return MR::unexpected( std::move( res.error() ) )
 
 namespace MR
 {
@@ -274,6 +280,144 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>&
     }
 
     return {};
+}
+
+Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, int layerOverlap, const ProgressCallback& cb )
+{
+    MR_TIMER
+
+    if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )
+        return unexpected( std::move( maybe.error() ) );
+
+    const auto cudaGridToMeshXf = fromXf( gridToMeshXf );
+
+    const auto layerSize = (size_t)dims.x * dims.y;
+    const auto totalSize = layerSize * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
+
+    DynamicArrayF cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
+    if ( !reportProgress( cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
+    return cudaPipeline( std::vector<float>{}, begin, end,
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        {
+            fastWindingNumberFromGrid(
+                int3 { dims.x, dims.y, dims.z },
+                cudaGridToMeshXf,
+                data_->toData(),
+                cudaResult.data(),
+                beta,
+                chunk.size,
+                chunk.offset
+            );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+
+            return {};
+        },
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        {
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            data.resize( chunk.size );
+            RETURN_UNEXPECTED( resFunc(
+                std::move( data ),
+                { dims.x, dims.y, int( chunk.size / layerSize ) },
+                int( chunk.offset / layerSize )
+            ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
+            // make sure the vector is valid
+            data.clear();
+            return {};
+        }
+    );
+}
+
+Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsFunc resFunc, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, int layerOverlap, const ProgressCallback& cb )
+{
+    MR_TIMER
+
+    if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )
+        return unexpected( std::move( maybe.error() ) );
+
+    const auto cudaGridToMeshXf = fromXf( gridToMeshXf );
+
+    const auto layerSize = (size_t)dims.x * dims.y;
+    const auto totalSize = layerSize * dims.z;
+    const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
+    if ( bufferSize != totalSize )
+    {
+        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
+        spdlog::debug(
+            "Required memory: {}, available memory: {}, iterations: {}",
+            bytesString( totalSize * sizeof( float ) ),
+            bytesString( bufferSize * sizeof( float ) ),
+            chunkCount( totalSize, bufferSize )
+        );
+    }
+
+    DynamicArrayF cudaResult;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
+    if ( !reportProgress( cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    const auto cb1 = subprogress( cb, 0.60f, 1.00f );
+    const auto iterCount = chunkCount( totalSize, bufferSize );
+    size_t iterIndex = 0;
+
+    const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
+    return cudaPipeline( std::vector<float>{}, begin, end,
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        {
+            signedDistance(
+                int3 { dims.x, dims.y, dims.z },
+                cudaGridToMeshXf,
+                data_->toData(),
+                cudaResult.data(),
+                chunk.size,
+                chunk.offset,
+                options
+            );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
+
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+
+            return {};
+        },
+        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        {
+            const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
+            data.resize( chunk.size );
+            RETURN_UNEXPECTED( resFunc(
+                std::move( data ),
+                { dims.x, dims.y, int( chunk.size / layerSize ) },
+                int( chunk.offset / layerSize )
+            ) );
+            if ( !reportProgress( cb2, 1.00f ) )
+                return unexpectedOperationCanceled();
+            // make sure the vector is valid
+            data.clear();
+            return {};
+        }
+    );
 }
 
 } //namespace Cuda

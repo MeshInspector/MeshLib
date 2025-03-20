@@ -46,13 +46,14 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             Vector3d sumPos;
             int count = 0;
             findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
-                [&] ( VertId newV, const Vector3f& position )
+                [&] ( const PointsProjectionResult & found, const Vector3f & foundPos, Ball3f & )
             {
-                if ( newV != v )
+                if ( found.vId != v )
                 {
-                    sumPos += Vector3d( position );
+                    sumPos += Vector3d( foundPos );
                     count++;
                 }
+                return Processing::Continue;
             } );
             if ( count == 0 )
                 return;
@@ -112,13 +113,14 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             Vector3d sumPos;
             int count = 0;
             findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
-                [&] ( VertId nv, const Vector3f& position )
+                [&] ( const PointsProjectionResult & found, const Vector3f & foundPos, Ball3f & )
             {
-                if ( nv != v && zone.test( nv ) )
+                if ( found.vId != v && zone.test( found.vId ) )
                 {
-                    sumPos += Vector3d( position );
+                    sumPos += Vector3d( foundPos );
                     ++count;
                 }
+                return Processing::Continue;
             } );
             if ( count <= 0 )
                 return;
@@ -131,13 +133,15 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             Vector3d sumForces;
             int count = 0;
             findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
-                [&] ( VertId nv, const Vector3f& )
+                [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
             {
+                const auto nv = found.vId;
                 if ( nv != v && zone.test( nv ) )
                 {
                     sumForces += Vector3d( vertPushForces[nv] );
                     ++count;
                 }
+                return Processing::Continue;
             } );
             if ( count <= 0 )
                 return;
@@ -192,16 +196,18 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             std::vector<std::pair<VertId, double>> weightedNeighbors;
 
             findPointsInBall( pointCloud, { pointCloud.points[v], radiusSq },
-                [&] ( VertId newV, const Vector3f& position )
+                [&] ( const PointsProjectionResult & found, const Vector3f & foundPos, Ball3f & )
             {
+                const auto newV = found.vId;
                 double w = 1.0;
                 if ( hasNormals )
                     w = dot( pointCloud.normals[v], pointCloud.normals[newV] );
                 if ( w > 0.0 )
                 {
                     weightedNeighbors.push_back( { newV,w } );
-                    accum.addPoint( Vector3d( position ), w );
+                    accum.addPoint( Vector3d( foundPos ), w );
                 }
+                return Processing::Continue;
             } );
             if ( weightedNeighbors.size() < 6 )
                 return;

@@ -5,8 +5,16 @@
 
 #include "MRMesh/MRMeshFwd.h"
 
+#ifndef __HIP_PLATFORM_AMD__
 struct float3;
 struct int3;
+#else
+template<typename T, unsigned int rank>
+struct HIP_vector_type;
+
+using float3 = HIP_vector_type<float, 3>;
+using int3 = HIP_vector_type<int, 3>;
+#endif
 
 namespace MR::Cuda
 {

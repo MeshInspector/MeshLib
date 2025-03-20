@@ -134,6 +134,7 @@
     <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshOrPointsObject.h" />
+    <ClInclude Include="MRMeshDoubleLayer.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
@@ -405,9 +406,11 @@
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />
+    <ClInclude Include="MRTbbThreadMutex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
+    <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
@@ -451,7 +454,6 @@
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
-    <ClCompile Include="MRBox.cpp" />
     <ClCompile Include="MRBase64.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
@@ -614,7 +616,6 @@
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTerrainTriangulation.cpp" />
-    <ClCompile Include="MRTriMath.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
@@ -679,6 +680,7 @@
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
     <ClCompile Include="MRWasmHelpers.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

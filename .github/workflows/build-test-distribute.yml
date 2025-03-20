@@ -109,8 +109,8 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
-      full_config_build: ${{ needs.config.outputs.full_config_build == 'true' }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
@@ -175,7 +175,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
@@ -274,14 +274,14 @@ jobs:
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
@@ -344,31 +344,31 @@ jobs:
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
         # .NET
       - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Distributives*
           failOnError: false
 
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Wheelhouse*
           failOnError: false
 
       - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: RunnerSysStats*
           failOnError: false
@@ -399,13 +399,13 @@ jobs:
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
           failOnError: false

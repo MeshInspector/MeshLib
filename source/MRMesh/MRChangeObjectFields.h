@@ -70,13 +70,26 @@ class ChangeObjectSelectedAction : public HistoryAction
 {
 public:
     using Obj = Object;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's isSelected property before making any changes in it
     ChangeObjectSelectedAction( const std::string& name, const std::shared_ptr<Object>& obj ) :
         obj_{ obj },
         name_{ name }
     {
         if ( obj )
             selected_ = obj_->isSelected();
+    }
+
+    /// use this constructor to remember object's isSelected property and immediately set new value
+    ChangeObjectSelectedAction( const std::string& name, const std::shared_ptr<Object>& obj, bool newValue ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj )
+        {
+            selected_ = obj_->isSelected();
+            obj_->select( newValue );
+        }
     }
 
     virtual std::string name() const override
@@ -113,13 +126,26 @@ class ChangeObjectVisibilityAction : public HistoryAction
 {
 public:
     using Obj = Object;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's visibility mask before making any changes in it
     ChangeObjectVisibilityAction( const std::string& name, const std::shared_ptr<Object>& obj ) :
         obj_{ obj },
         name_{ name }
     {
         if ( obj )
             visibilityMask_ = obj_->visibilityMask();
+    }
+
+    /// use this constructor to remember object's visibility mask and immediately set new mask
+    ChangeObjectVisibilityAction( const std::string& name, const std::shared_ptr<Object>& obj, ViewportMask newVisibilityMask ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj )
+        {
+            visibilityMask_ = obj_->visibilityMask();
+            obj_->setVisibilityMask( newVisibilityMask );
+        }
     }
 
     virtual std::string name() const override

@@ -14,7 +14,7 @@ static auto newCallback( const FoundPointCallback& foundCallback )
         foundCallback( found.vId, foundXfPos );
         return Processing::Continue;
     };
-};
+}
 
 MRMESH_API void findPointsInBall( const PointCloud& pointCloud, const Ball3f & ball,
     const OnPointInBallFound& foundCallback, const AffineXf3f* xf )

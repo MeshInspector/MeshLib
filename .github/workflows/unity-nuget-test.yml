@@ -1,0 +1,20 @@
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  unity-nuget-test:
+    timeout-minutes: 10
+    runs-on: [self-hosted, windows, x64, unity, meshinspector] 
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/EC2Github
+          aws-region: us-east-1

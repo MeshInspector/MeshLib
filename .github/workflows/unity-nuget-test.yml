@@ -39,6 +39,7 @@ jobs:
           if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in results.xml found"; exit 1}
 
       - name: upload logs
+        if: always()
         shell: powershell
         run: |
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml

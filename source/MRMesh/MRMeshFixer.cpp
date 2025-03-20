@@ -5,13 +5,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
 #include "MRParallelFor.h"
-#include "MRMeshSubdivide.h"
-#include "MROverlappingTris.h"
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
-#include "MRMeshFillHole.h"
-#include "MRMeshComponents.h"
-#include "MRRegionBoundary.h"
 
 namespace MR
 {

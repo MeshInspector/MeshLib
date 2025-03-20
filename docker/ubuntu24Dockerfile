@@ -72,7 +72,6 @@ RUN apt update && apt install -y \
     && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
     && apt update \
     && apt install -y gcc-14 g++-14 \
-    && apt clean && rm -rf /var/lib/apt/lists/* \
     && apt clean && rm -rf /var/lib/apt/lists/*
 
 # install aws cli

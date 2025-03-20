@@ -24,7 +24,7 @@ MRMESH_API void findPointsInBall( const PointCloud& pointCloud, const Ball3f & b
 /// Finds all valid points of pointCloud that are inside or on the surface of given ball
 /// \ingroup AABBTreeGroup
 /// \param xf points-to-center transformation, if not specified then identity transformation is assumed
-/*[[deprecated]]*/ MRMESH_API void findPointsInBall( const PointCloud& pointCloud, const Ball3f& ball,
+[[deprecated]] MRMESH_API void findPointsInBall( const PointCloud& pointCloud, const Ball3f& ball,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf = nullptr );
 
 /// Finds all valid vertices of the mesh that are inside or on the surface of given ball until callback returns Stop;
@@ -37,7 +37,7 @@ MRMESH_API void findPointsInBall( const Mesh& mesh, const Ball3f& ball,
 /// Finds all valid vertices of the mesh that are inside or on the surface of given ball
 /// \ingroup AABBTreeGroup
 /// \param xf points-to-center transformation, if not specified then identity transformation is assumed
-/*[[deprecated]]*/ MRMESH_API void findPointsInBall( const Mesh& mesh, const Ball3f& ball,
+[[deprecated]] MRMESH_API void findPointsInBall( const Mesh& mesh, const Ball3f& ball,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf = nullptr );
 
 /// Finds all points in tree that are inside or on the surface of given ball until callback returns Stop;
@@ -50,7 +50,7 @@ MRMESH_API void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
 /// Finds all points in tree that are inside or on the surface of given ball
 /// \ingroup AABBTreeGroup
 /// \param xf points-to-center transformation, if not specified then identity transformation is assumed
-/*[[deprecated]]*/ MRMESH_API void findPointsInBall( const AABBTreePoints& tree, const Ball3f& ball,
+[[deprecated]] MRMESH_API void findPointsInBall( const AABBTreePoints& tree, const Ball3f& ball,
     const FoundPointCallback& foundCallback, const AffineXf3f* xf = nullptr );
 
 } //namespace MR

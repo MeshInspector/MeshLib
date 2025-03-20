@@ -29,12 +29,13 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
 
             float sumDist = 0;
             float sumWeight = 0;
-            findPointsInBall( cloud, { voxelCenter, ballRadiusSq }, [&]( VertId v, const Vector3f& p )
+            findPointsInBall( cloud, { voxelCenter, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f & p, Ball3f & )
             {
                 const auto distSq = ( voxelCenter - p ).lengthSq();
                 const auto w = std::exp( distSq * inv2SgSq );
                 sumWeight += w;
-                sumDist += dot( normals[v], voxelCenter - p ) * w;
+                sumDist += dot( normals[found.vId], voxelCenter - p ) * w;
+                return Processing::Continue;
             } );
 
             return sumWeight >= params.minWeight ? sumDist / sumWeight : cQuietNan;
@@ -67,12 +68,13 @@ Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors &
 
         Vector4f sumColors;
         float sumWeight = 0;
-        findPointsInBall( cloud, { pos, ballRadiusSq }, [&]( VertId v, const Vector3f& p )
+        findPointsInBall( cloud, { pos, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f & p, Ball3f & )
         {
             const auto distSq = ( pos - p ).lengthSq();
             const auto w = std::exp( distSq * inv2SgSq );
             sumWeight += w;
-            sumColors += Vector4f( colors[v] ) * w;
+            sumColors += Vector4f( colors[found.vId] ) * w;
+            return Processing::Continue;
         } );
         if ( sumWeight > 0 )
             res[tv] = Color( sumColors / sumWeight );

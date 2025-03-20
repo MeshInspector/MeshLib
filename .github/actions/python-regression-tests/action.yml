@@ -58,7 +58,7 @@ runs:
         key: ${{ inputs.autotest_data_s3_url }}
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@e3dd6a4 # v4
       with:
         role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
         aws-region: us-east-1

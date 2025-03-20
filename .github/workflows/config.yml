@@ -107,7 +107,7 @@ jobs:
           submodules: true
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6 # v3
         id: linux-changes
         with:
           filters: |
@@ -123,7 +123,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6 # v3
         id: windows-changes
         with:
           filters: |
@@ -154,7 +154,7 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@v5.4.0
+        uses: paulhatch/semantic-version@a8f8f59 # v5.4.0
         id: version
         with:
           tag_prefix: "v"

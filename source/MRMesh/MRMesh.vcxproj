@@ -216,6 +216,7 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
@@ -581,6 +582,7 @@
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRRadiusCompensation.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />

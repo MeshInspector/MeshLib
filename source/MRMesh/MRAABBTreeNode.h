@@ -48,6 +48,7 @@ struct NodeNode
 {
     NodeId aNode;
     NodeId bNode;
+    NodeNode( NodeId a, NodeId b ) : aNode( a ), bNode( b ) { }
 };
 
 /// \}

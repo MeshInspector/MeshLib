@@ -182,7 +182,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.cxx-compiler == '/usr/bin/g++-13' }}
+        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

@@ -511,6 +511,7 @@ bool setProgress( float p )
     }
 
     assert( p >= instance.progress_ ); // the progress must not jump backward
+    assert( p <= 1 ); // the progress must not exceed 100%
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
     return !instance.canceled_;

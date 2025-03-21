@@ -45,8 +45,15 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( data_.mesh ); }
 
+    #ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
+    #endif
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( data_.mesh ); } // reinterpret_cast to avoid making a copy of shared_ptr
+    #ifdef __GNUC__
+    #pragma GCC diagnostic pop
+    #endif
 
     /// \return the pair ( mesh, selected triangles ) if any triangle is selected or whole mesh otherwise
     MeshPart meshPart() const { return data_.selectedFaces.any() ? MeshPart{ *data_.mesh, &data_.selectedFaces } : *data_.mesh; }
@@ -129,7 +136,7 @@ public:
     const Color& getEdgesColor( ViewportId id = {} ) const { return edgesColor_.get(id); }
     virtual void setEdgesColor( const Color& color, ViewportId id = {} )
     { edgesColor_.set( color, id ); needRedraw_ = true; }
-    
+
     const Color& getPointsColor( ViewportId id = {} ) const { return pointsColor_.get(id); }
     virtual void setPointsColor( const Color& color, ViewportId id = {} )
     { pointsColor_.set( color, id ); needRedraw_ = true; }
@@ -157,7 +164,7 @@ public:
     virtual void updateTexturePerFace( Vector<TextureId, FaceId>& texturePerFace ) { std::swap( data_.texturePerFace, texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     const TexturePerFace& getTexturePerFace() const { return data_.texturePerFace; }
-    
+
     const VertUVCoords& getUVCoords() const { return data_.uvCoordinates; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { data_.uvCoordinates = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( data_.uvCoordinates, updated ); dirty_ |= DIRTY_UV; }

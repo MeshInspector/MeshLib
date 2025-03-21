@@ -1287,6 +1287,10 @@
     <ClInclude Include="MRMeshDoubleLayer.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2100,6 +2104,10 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDoubleLayer.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>

@@ -29,6 +29,7 @@ jobs:
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\test_results.xml" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
 
       - name: Install nuget package
         shell: powershell
@@ -38,12 +39,12 @@ jobs:
       - name: Run test
         shell: powershell
         run: |
-          C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\test_results.xml" -logfile "C:\work\batch_log.txt"
+          C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\results.xml" -logfile "C:\work\batch_log.txt"
 
       - name: verify xml
         shell: powershell
         run: |
-          [xml]$xml = Get-Content "C:\work\test_results.xml"
+          [xml]$xml = Get-Content "C:\work\results.xml"
           if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in test_results.xml found"; exit 1}
 
       - name: upload logs

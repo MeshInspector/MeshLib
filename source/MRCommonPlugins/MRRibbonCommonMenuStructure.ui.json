@@ -86,6 +86,9 @@
 						},
 						{
 							"Name": "Isometric View"
+						},
+						{
+							"Name": "Invert View"
 						}
 					]
 				},
@@ -153,6 +156,19 @@
 						},
 						{
 							"Name": "Open Voxels From TIFF"
+						}
+					]
+				},
+				{
+					"Name": "Basic",
+					"List": [
+					]
+				},
+				{
+					"Name": "Binary",
+					"List": [
+						{
+							"Name": "Binary Operations"
 						}
 					]
 				}

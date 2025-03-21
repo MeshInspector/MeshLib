@@ -248,8 +248,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshMeshSignedDistanceResult, [] ( pybind11:
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
 {
+    pybind11::enum_<MR::UseAABBTree>( m, "UseAABBTree", "Determines the usage of AABB-tree in a function" ).
+        value( "No", MR::UseAABBTree::No, "AABB-tree of the mesh will not be used, even if it is available" ).
+        value( "Yes", MR::UseAABBTree::Yes, "AABB-tree of the mesh will be used even if it has to be constructed" ).
+        value( "YesIfAlreadyConstructed", MR::UseAABBTree::YesIfAlreadyConstructed, "AABB-tree of the mesh will be used if it was previously constructed and available, and will not be used otherwise" );
+
     m.def( "extractPlaneSections", &extractPlaneSections,
-        pybind11::arg( "mp" ), pybind11::arg( "plane" ),
+        pybind11::arg( "mp" ), pybind11::arg( "plane" ), pybind11::arg( "u" ) = MR::UseAABBTree::Yes,
         "extracts all plane sections of given mesh" );
 
     m.def( "planeSectionsToContours2f", &planeSectionsToContours2f,
@@ -354,7 +359,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "projectOnOriginalMesh", &SubdivideSettings::projectOnOriginalMesh,
             "If true, then every new vertex will be projected on the original mesh (before smoothing)" );
 
-    m.def( "subdivideMesh", &MR::subdivideMesh,
+    m.def( "subdivideMesh", (int(*)( Mesh &, const SubdivideSettings & )) &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),
         "Split edges in mesh region according to the settings;\n"
         "return The total number of edge splits performed" );

@@ -16,7 +16,10 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
-      vcpkg_version:
+      vs19_vcpkg_version:
+        required: true
+        type: string
+      vs22_vcpkg_version:
         required: true
         type: string
       mrbind:
@@ -32,30 +35,41 @@ jobs:
       fail-fast: false
       matrix:
         config: [ "Debug", "Release" ]
+        build_system: [ MSBuild, CMake ]
         runner: [ windows-2022, windows-2019 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             runner: windows-2022
+            build_system: MSBuild
             config: "Debug"
+          - full_config_build: false
+            runner: windows-2019
+            build_system: CMake
+          - full_config_build: false
+            runner: windows-2022
+            build_system: CMake
+            config: "Release"
         include:
           - runner: windows-2022
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
           - runner: windows-2019
             vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' }}
+      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -65,6 +79,7 @@ jobs:
           submodules: true
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -72,24 +87,32 @@ jobs:
           target_arch: x64
           cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
+          build_system: ${{ matrix.build_system }}
 
-      - name: Checkout Vcpkg ${{ inputs.vcpkg_version }}
+      - name: Clean Vcpkg Directory
+        working-directory: C:\vcpkg
+        run: git clean -ffdx
+
+      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{ inputs.vcpkg_version }}
+          git pull --rebase
+          git checkout ${{ matrix.vcpkg-version }}
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ inputs.vcpkg_version }}
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}
           path: |
             C:\vcpkg\*
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
@@ -137,7 +160,8 @@ jobs:
         run: py -3 scripts\check_vcxproj.py source\
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        if: ${{ matrix.build_system == 'MSBuild' }}
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -147,14 +171,14 @@ jobs:
 
       - name: Restore Dependencies
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@v2
+        uses: codebeltnet/dotnet-restore@1cf30dd0fdddac25bc7dcb559c6d0c310fb0d472 # v2
         with:
           projects: 'source/**/*.csproj'
 
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
@@ -167,8 +191,32 @@ jobs:
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
 
+      - name: Install Ninja for CMake
+        if: ${{ matrix.build_system == 'CMake' }}
+        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
+            call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+            if errorlevel 1 exit 1
+            cmake --version
+            if errorlevel 1 exit 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            if errorlevel 1 exit 1
+            cmake --build source\TempOutput -j
+            if errorlevel 1 exit 1
+            if not exist source\x64 mkdir source\x64
+            if errorlevel 1 exit 1
+            move source\TempOutput\bin source\x64\${{matrix.config}}
+            if errorlevel 1 exit 1
+          ) else (
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+            if errorlevel 1 exit 1
+          )
 
       - name: Build .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -198,18 +246,19 @@ jobs:
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
 
       - name: Run Start-and-Exit Tests
+        timeout-minutes: 3
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
 
       - name: Unit Tests
-        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: source\x64\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
-        if:   matrix.runner == 'windows-2022'
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests
@@ -227,16 +276,23 @@ jobs:
           test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
+      - name: Delete unwanted files
+        # Those files should not exist when using CMake.
+        shell: cmd
+        run: |
+          if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
+
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -244,7 +300,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

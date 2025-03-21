@@ -3,6 +3,8 @@
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRAABBTreePoints.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRAABBTreeMaker.h"
 #include "MRMesh/MRDipole.h"
 
@@ -42,6 +44,11 @@ void CudaAccessor::setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor
 void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback )
 {
     instance_().pointsToDistanceVolumeCallback_ = callback;
+}
+
+void CudaAccessor::setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback )
+{
+    instance_().pointsToDistanceVolumeByPartsCallback_ = callback;
 }
 #endif
 
@@ -104,6 +111,15 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
 
     return inst.pointsToDistanceVolumeCallback_;
 }
+
+CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPointsToDistanceVolumeByPartsCallback()
+{
+    auto& inst = instance_();
+    if ( !inst.pointsToDistanceVolumeByPartsCallback_ )
+        return {};
+
+    return inst.pointsToDistanceVolumeByPartsCallback_;
+}
 #endif
 
 size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
@@ -118,17 +134,41 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
 
 size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& dims )
 {
-    return fastWindingNumberMeshMemory( mesh ) + size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+    constexpr size_t cMinLayerCount = 10;
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float );
 }
 
 size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
 {
-    return fastWindingNumberMeshMemory( mesh ) + inputSize * ( sizeof( float ) + sizeof( Vector3f ) );
+    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( inputSize * ( sizeof( float ) + sizeof( Vector3f ) ), cMinCudaBufferSize );
 }
 
 size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
 {
-    return fastWindingNumberMeshMemory( mesh ) + mesh.topology.faceSize() * sizeof( float );
+    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+    return
+        fastWindingNumberMeshMemory( mesh )
+        + std::min( mesh.topology.faceSize() * sizeof( float ), cMinCudaBufferSize );
+}
+
+size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )
+{
+    constexpr size_t cMinLayerCount = 10;
+
+    const auto& tree = pointCloud.getAABBTree();
+    const auto& nodes = tree.nodes();
+
+    return
+        nodes.size() * sizeof( AABBTreePoints::Node )
+        + tree.orderedPoints().size() * sizeof( AABBTreePoints::Point )
+        + ( ptNormals ? ptNormals->size() : pointCloud.normals.size() ) * sizeof( Vector3f )
+        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float )
+    ;
 }
 
 CudaAccessor& CudaAccessor::instance_()

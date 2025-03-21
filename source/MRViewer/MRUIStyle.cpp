@@ -65,7 +65,7 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::GetIO().WantCaptureKeyboard )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() )
         return false;
 
     reserveKeyEvent( passedKey );
@@ -1782,7 +1782,7 @@ void transparentTextWrapped( const char* fmt, ... )
 
 void setTooltipIfHovered( const std::string& text, float scaling )
 {
-    if ( !ImGui::IsItemHovered() || ImGui::IsItemActive() )
+    if ( !ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) || ImGui::IsItemActive() )
         return;
     assert( scaling > 0.f );
 

@@ -68,6 +68,7 @@ jobs:
           submodules: true
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -115,11 +116,11 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
-            EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}
+        timeout-minutes: 3
         run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests

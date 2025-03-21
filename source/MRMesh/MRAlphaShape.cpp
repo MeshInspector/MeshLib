@@ -18,11 +18,12 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
     const auto r = double( radius );
     const auto rr = sqr( r );
     neis.clear();
-    findPointsInBall( cloud, cloud.points[v], 2 * radius,
-        [&neis, v]( VertId n, const Vector3f& )
+    findPointsInBall( cloud, { cloud.points[v], sqr( 2 * radius ) },
+        [&neis, v]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( v != n )
-                neis.push_back( n );
+            if ( v != found.vId )
+                neis.push_back( found.vId );
+            return Processing::Continue;
         } );
     for ( int i = 0; i + 1 < neis.size(); ++i )
     {

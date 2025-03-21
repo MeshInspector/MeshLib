@@ -5,8 +5,11 @@
 #include "MRViewport.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRQuaternion.h"
-#include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRWasm.h"
+#include "MRMesh/MR2to3.h"
+#include "MRViewportCornerController.h"
+#include "MRColorTheme.h"
 
 
 #ifdef __EMSCRIPTEN__
@@ -113,11 +116,14 @@ void MouseController::connect()
     downState_.resize( 3 );
     auto& viewer = getViewerInstance();
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::preMouseDown_ ), boost::signals2::at_front );
+    // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
+    viewer.mouseDownSignal.connect( 5, MAKE_SLOT( &MouseController::cornerControllerMouseDown_ ) );
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
     viewer.mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
     viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
+    viewer.preDrawSignal.connect( MAKE_SLOT( &MouseController::preDraw_ ) );
 }
 
 void MouseController::cursorEntrance_( bool entered )
@@ -156,6 +162,13 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
         dragButton_ = btn;
 
     downState_.set( int( btn ) );
+    return false;
+}
+
+bool MouseController::cornerControllerMouseDown_( MouseButton btn, int mod )
+{
+    if ( btn == MouseButton::Left && mod == 0 && tryPressViewController_() )
+        return true;
     return false;
 }
 
@@ -376,12 +389,138 @@ bool MouseController::mouseScroll_( float delta )
     return true;
 }
 
+void MouseController::preDraw_()
+{
+    if ( downState_.none() )
+        tryHoverViewController_();
+}
+
 void MouseController::resetAllIfNeeded_()
 {
     if ( !dropOldEventsOnNew_ )
         return;
     for ( auto btn : downState_ )
         getViewerInstance().mouseUp( MouseButton( btn ), 0 );
+}
+
+bool MouseController::tryHoverViewController_()
+{
+    auto hoverSideArrows = [] ( RegionId region )
+    {
+        int reqId = region.get() - int( SideRegions::CCWArrow );
+        int childId = 0;
+        for ( auto child : getViewerInstance().basisViewController->children() )
+        {
+            bool reqChild = childId++ == reqId;
+            const Color& colorBg = ColorTheme::getRibbonColor( reqChild ? ColorTheme::RibbonColorsType::GradBtnStart : ColorTheme::RibbonColorsType::Background );
+            const Color& colorBorder = ColorTheme::getRibbonColor( reqChild ? ColorTheme::RibbonColorsType::RibbonButtonActive : ColorTheme::RibbonColorsType::GradBtnDisableStart );
+            if ( auto objMesh = child->asType<ObjectMesh>() )
+            {
+                objMesh->setFrontColor( colorBg, true );
+                objMesh->setFrontColor( colorBg, false );
+                objMesh->setBordersColor( colorBorder );
+            }
+        }
+    };
+
+    auto setHovered = [&] ( RegionId region )
+    {
+        if ( region == viewControllerHoveredRegion_ )
+            return;
+        viewControllerHoveredRegion_ = region;
+        if ( viewControllerHoveredRegion_ && viewControllerHoveredRegion_ < int( SideRegions::CCWArrow ) )
+        {
+            getViewerInstance().setSceneDirty();
+            getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerHoveredTextureMap( viewControllerHoveredRegion_ ) );
+
+        }
+        else
+        {
+            getViewerInstance().setSceneDirty();
+            getViewerInstance().basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
+        }
+        hoverSideArrows( viewControllerHoveredRegion_ );
+    };
+
+    auto hoveredVpId = getViewerInstance().getHoveredViewportId();
+    if ( !hoveredVpId.valid() )
+    {
+        setHovered( {} );
+        return false;
+    }
+    const auto& vp = getViewerInstance().viewport( hoveredVpId );
+    if ( !getViewerInstance().basisViewController->isVisible( vp.id ) )
+    {
+        setHovered( {} );
+        return false;
+    }
+    auto screenPos = to2dim( getViewerInstance().viewportToScreen( to3dim( vp.getAxesPosition() ), vp.id ) );
+
+    if ( distanceSq( Vector2f( currentMousePos_ ), screenPos ) > sqr( vp.getAxesSize() * 2.0f ) )
+    {
+        setHovered( {} );
+        return false;
+    }
+
+    if ( !getViewerInstance().basisViewController->parent() )
+    {
+        // make fictive parent so picker works as expected (we need to make getSharedPtr() work)
+        static std::shared_ptr<Object> fictiveParent = std::make_shared<Object>();
+        fictiveParent->addChild( getViewerInstance().basisViewController );
+    }
+
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto [obj, pick] = vp.pickRenderObject( { { 
+            static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ), 
+            static_cast< VisualObject* >( getViewerInstance().basisViewController->children().front().get() ),
+            static_cast< VisualObject* >( getViewerInstance().basisViewController->children().back().get() )
+        } }, { .baseRenderParams = &staticRenderParams } );
+    if ( !obj )
+    {
+        setHovered( {} );
+        return false;
+    }
+
+    RegionId hoveredId;
+    if ( obj == getViewerInstance().basisViewController )
+        hoveredId = getCornerControllerRegionByFace( pick.face );
+    else if ( obj == getViewerInstance().basisViewController->children().front() )
+        hoveredId = RegionId( int( SideRegions::CCWArrow ) );
+    else
+        hoveredId = RegionId( int( SideRegions::CWArrow ) );
+
+    setHovered( hoveredId );
+
+    return true;
+}
+
+bool MouseController::tryPressViewController_()
+{
+    if ( !viewControllerHoveredRegion_ )
+        return false;
+
+    // validate pick just in case
+    const auto& vp = getViewerInstance().viewport();
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto [obj, pick] = vp.pickRenderObject( { {
+        static_cast< VisualObject* >( getViewerInstance().basisViewController.get() ),
+        static_cast< VisualObject* >( getViewerInstance().basisViewController->children().front().get() ),
+        static_cast< VisualObject* >( getViewerInstance().basisViewController->children().back().get() )
+    } }, { .baseRenderParams = &staticRenderParams } );
+    if ( !obj )
+        return false;
+    
+    RegionId region;
+    if ( obj == getViewerInstance().basisViewController )
+        region = getCornerControllerRegionByFace( pick.face );
+    else if ( obj == getViewerInstance().basisViewController->children().front() )
+        region = RegionId( int( SideRegions::CCWArrow ) );
+    else
+        region = RegionId( int( SideRegions::CWArrow ) );
+
+    updateCurrentViewByControllerRegion( region );
+
+    return true;
 }
 
 }

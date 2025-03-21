@@ -171,6 +171,15 @@ public:
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     TaggedBitSet & subtract( const TaggedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    bool is_subset_of( const TaggedBitSet& a ) const { return base::is_subset_of( a ); }
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
+    bool is_proper_subset_of( const TaggedBitSet& a ) const { return base::is_proper_subset_of( a ); }
+
+    /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    bool intersects( const TaggedBitSet & a ) const { return base::intersects( a ); }
+
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
@@ -236,7 +245,7 @@ template <typename T>
 
 /// iterator to enumerate all indices with set bits in BitSet class or its derivatives
 template <typename T>
-class SetBitIteratorT
+class MR_BIND_IGNORE SetBitIteratorT
 {
 public:
     using IndexType = typename T::IndexType;
@@ -275,24 +284,24 @@ private:
 };
 
 template <typename T>
-[[nodiscard]] inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
+[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
     { return *a == *b; }
 
 template <typename T>
-[[nodiscard]] inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
+[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
     { return *a != *b; }
 
 
-[[nodiscard]] inline auto begin( const BitSet & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )
     { return SetBitIteratorT<BitSet>(a); }
-[[nodiscard]] inline auto end( const BitSet & )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( const BitSet & )
     { return SetBitIteratorT<BitSet>(); }
 
 template <typename T>
-[[nodiscard]] inline auto begin( const TaggedBitSet<T> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( const TaggedBitSet<T> & a )
     { return SetBitIteratorT<TaggedBitSet<T>>(a); }
 template <typename T>
-[[nodiscard]] inline auto end( const TaggedBitSet<T> & )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( const TaggedBitSet<T> & )
     { return SetBitIteratorT<TaggedBitSet<T>>(); }
 
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits

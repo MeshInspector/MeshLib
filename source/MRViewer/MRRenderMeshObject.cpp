@@ -109,7 +109,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
-    GL_EXEC( auto fixed_colori = glGetUniformLocation( shader, "fixed_color" ) );
+    auto fixed_colori = GL_EXEC( glGetUniformLocation( shader, "fixed_color" ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
     float ambient = objMesh_->getAmbientStrength() * ( objMesh_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj ) : 1.0f );
@@ -133,7 +133,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
 
         // Texture
-        GL_EXEC( auto useTexture = glGetUniformLocation( shader, "useTexture" ) );
+        auto useTexture = GL_EXEC( glGetUniformLocation( shader, "useTexture" ) );
         GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) ||
             objMesh_->hasAncillaryTexture() ) );
 
@@ -341,7 +341,7 @@ void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, 
 }
 
 void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, bool alphaSort )
-{    
+{
     bindPoints_( alphaSort );
 
     // Send transformations to the GPU
@@ -419,7 +419,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    
+
     if ( bool( dirty_ & DIRTY_TEXTURE ) )
     {
         if ( objMesh_->hasAncillaryTexture() )
@@ -502,7 +502,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     // Texture per faces
     auto texturePerFaces = loadTexturePerFaceTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE4 ) );
-    texturePerFace_.loadDataOpt( 
+    texturePerFace_.loadDataOpt(
         texturePerFaces.dirty(),
         { .resolution = GlTexture2::ToResolution( texturePerFaceSize_ ), .internalFormat = GL_R8UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_BYTE },
         texturePerFaces );
@@ -605,6 +605,8 @@ void RenderMeshObject::bindSelectedEdges_()
 {
     if ( !( dirty_ & DIRTY_EDGES_SELECTION ) || !objMesh_->mesh() )
     {
+        if ( !selEdgesTexture_.valid() )
+            selEdgesTexture_.gen();
         selEdgesTexture_.bind();
         return;
     }
@@ -652,7 +654,7 @@ void RenderMeshObject::bindPoints_( bool alphaSort )
     auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-            
+
     const auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
@@ -914,7 +916,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false ); // use updated color map
     if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_ = 0 ); // clear color map if not used
-    
+
     MR_NAMED_TIMER( "vert_colormap" );
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -1041,7 +1043,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
+        return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, !faceSelectionTex_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -1075,7 +1077,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
+        return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, !facesNormalsTex_.valid() );
 
     MR_NAMED_TIMER( "dirty_faces_normals" )
 
@@ -1096,7 +1098,7 @@ RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_TEXTURE_PER_FACE ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, false );
+        return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, !texturePerFace_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;

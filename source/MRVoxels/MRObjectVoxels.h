@@ -27,7 +27,7 @@ public:
     MRVOXELS_API virtual void applyScale( float scaleFactor ) override;
 
     /// Returns iso surface, empty if iso value is not set
-    const std::shared_ptr<Mesh>& surface() const { return mesh_; }
+    const std::shared_ptr<Mesh>& surface() const { return data_.mesh; }
 
     /// Return VdbVolume
     const VdbVolume& vdbVolume() const { return vdbVolume_; };
@@ -206,10 +206,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRVOXELS_API virtual size_t heapBytes() const override;
 
-    /// returns file extension used to serialize the voxels
+    /// returns overriden file extension used to serialize voxels inside this object, nullptr means defaultSerializeVoxelsFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
-    /// sets file extension used to serialize the voxels: must be not null and must start from '.'
+    /// overrides file extension used to serialize voxels inside this object: must start from '.',
+    /// nullptr means serialize in defaultSerializeVoxelsFormat()
     MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
     /// signal about Iso-surface changes (from updateIsoSurface)
@@ -229,7 +230,7 @@ private:
     mutable std::optional<Box3i> activeBounds_;
     mutable std::optional<size_t> activeVoxels_;
 
-    const char * serializeFormat_ = ".vdb";
+    const char * serializeFormat_ = nullptr; //means defaultSerializeVoxelsFormat()
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );
@@ -266,5 +267,12 @@ protected:
     MRVOXELS_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
+/// returns file extension used to serialize ObjectVoxels by default (if not overridden in specific object),
+/// the string starts with '.'
+[[nodiscard]] MRVOXELS_API const std::string & defaultSerializeVoxelsFormat();
 
-}
+/// sets file extension used to serialize serialize ObjectVoxels by default (if not overridden in specific object),
+/// the string must start from '.'
+MRVOXELS_API void setDefaultSerializeVoxelsFormat( std::string newFormat );
+
+} //namespace MR

@@ -64,6 +64,18 @@ public:
 
     [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
 
+    /// returns per-point colors of the object
+    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
+
+    /// sets per-point colors of the object
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
+    /// swaps per-point colors of the object with given argument
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+
+    /// copies point colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyColors( const ObjectPointsHolder & src, const VertMap & thisToSrc, const FaceMap& thisToSrcFaces = {} );
+
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
@@ -113,11 +125,14 @@ public:
     /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
-    /// returns file extension used to serialize the points
-    [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
+    /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSerializePointsFormat()
+    [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
+    [[deprecated]] const char * savePointsFormat() const { return serializeFormat(); }
 
-    /// sets file extension used to serialize the points: must be not null and must start from '.'
-    MRMESH_API void setSavePointsFormat( const char * newFormat );
+    /// overrides file extension used to serialize point cloud inside this object: must start from '.',
+    /// nullptr means serialize in defaultSerializePointsFormat()
+    MRMESH_API void setSerializeFormat( const char * newFormat );
+    [[deprecated]] void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;
@@ -132,6 +147,7 @@ protected:
     mutable std::optional<size_t> numSelectedPoints_;
     ViewportProperty<Color> selectedVerticesColor_;
     ViewportMask showSelectedVertices_ = ViewportMask::all();
+    VertColors vertsColorMap_;
 
     /// swaps signals, used in `swap` function to return back signals after `swapBase_`
     /// pls call Parent::swapSignals_ first when overriding this function
@@ -178,9 +194,17 @@ private:
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 
-    // falls back to the PLY format if no CTM format support is available
-    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
-    const char * savePointsFormat_ = ".ctm";
+    const char * serializeFormat_ = nullptr; // means use defaultSerializePointsFormat()
 };
 
-}
+/// returns file extension used to serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// the string starts with '.'
+[[nodiscard]] MRMESH_API const std::string & defaultSerializePointsFormat();
+
+/// sets file extension used to serialize serialize ObjectPointsHolder by default (if not overridden in specific object),
+/// the string must start from '.';
+// serialization falls back to the PLY format if given format support is available
+// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+MRMESH_API void setDefaultSerializePointsFormat( std::string newFormat );
+
+} //namespace MR

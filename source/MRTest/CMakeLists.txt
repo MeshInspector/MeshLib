@@ -17,39 +17,70 @@ IF(APPLE)
     MRMesh
     MRIOExtras
     MRPython
+    MREmbeddedPython
     MRViewer
     jsoncpp
     fmt
-    GTest::gtest
+    gtest
     spdlog
     Python::Python
+    pybind11nonlimitedapi_stubs
+    OpenVDB
+    tbb
     ${CMAKE_DL_LIBS}
   )
 ELSE()
-  IF(NOT MR_EMSCRIPTEN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRPython
-      MRViewer
-      jsoncpp
-      fmt
-      gtest
-      spdlog
-      Python::Python
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
+  IF(MR_EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
     target_link_libraries(${PROJECT_NAME} PRIVATE
       gtest
       zip
       jsoncpp
+      openvdb
+      tbb
       -Wl,--whole-archive
       MRMesh
       MRIOExtras
       MRViewer
       -Wl,--no-whole-archive
+    )
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+    find_package(GTest REQUIRED)
+    find_package(OpenVDB REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRMesh
+      MRIOExtras
+      MRPython
+      MREmbeddedPython
+      MRViewer
+      JsonCpp::JsonCpp
+      fmt::fmt
+      GTest::gtest
+      spdlog::spdlog
+      pybind11nonlimitedapi_stubs
+      OpenVDB::openvdb
+      TBB::tbb
+      ${CMAKE_DL_LIBS}
+    )
+    IF(NOT WIN32)
+      target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python )
+    ENDIF()
+  ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRMesh
+      MRIOExtras
+      MRPython
+      MREmbeddedPython
+      MRViewer
+      JsonCpp::JsonCpp
+      fmt
+      gtest
+      spdlog
+      Python::Python
+      pybind11nonlimitedapi_stubs
+      openvdb
+      tbb
+      ${CMAKE_DL_LIBS}
     )
   ENDIF()
 ENDIF()
@@ -58,6 +89,14 @@ add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}
 )
+
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
 
 IF(MR_PCH)
   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)

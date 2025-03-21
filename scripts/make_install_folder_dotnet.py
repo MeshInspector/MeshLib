@@ -11,7 +11,7 @@ it.path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__fil
 it.path_to_sources = os.path.join(it.base_path,'source')
 it.path_to_objects = os.path.join(os.path.join(it.base_path,'source'), 'x64')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC','c-sharp-examples']
 
 def create_directories():
 	os.makedirs(it.path_to_app,exist_ok=True)

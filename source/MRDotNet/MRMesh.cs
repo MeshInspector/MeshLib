@@ -330,6 +330,9 @@ namespace MR
             [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMeshToPointCloud(IntPtr mesh, byte saveNormals, IntPtr verts);
 
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            private static extern void mrMeshInvalidateCaches(IntPtr mesh, bool pointsChanged);
+
 
             #endregion
             #region Constructors
@@ -574,6 +577,12 @@ namespace MR
             static public PointCloud MeshToPointCloud(Mesh mesh, bool saveNormals = true, VertBitSet? region = null)
             {
                 return new PointCloud(mrMeshToPointCloud(mesh.mesh_, saveNormals ? (byte)1 : (byte)0, region is null ? (IntPtr)null : region.bs_));
+            }
+            /// invalidates caches (aabb-trees) after any change in mesh geometry or topology
+            /// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
+            public void InvalidateCaches(bool pointsChanged = true)
+            {
+                mrMeshInvalidateCaches(mesh_, pointsChanged);
             }
 
             #endregion

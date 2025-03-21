@@ -1114,6 +1114,24 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
+Expected<void> Mesh::pack( const PackMapping & map, ProgressCallback cb )
+{
+    MR_TIMER
+    topology.pack( map );
+    if ( !reportProgress( cb, 0.8f ) )
+        return unexpectedOperationCanceled();
+
+    VertCoords newPoints( map.v.tsize );
+    if ( !ParallelFor( 0_v, VertId{ map.v.b.size() }, [&]( VertId oldv )
+    {
+        if ( auto newv = map.v.b[oldv] )
+            newPoints[newv] = points[oldv];
+    }, subprogress( cb, 0.8f, 1.0f ) ) )
+        return unexpectedOperationCanceled();
+    points = std::move( newPoints );
+    return {};
+}
+
 PackMapping Mesh::packOptimally( bool preserveAABBTree )
 {
     auto exp = packOptimally( preserveAABBTree, {} );
@@ -1138,7 +1156,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+        AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
     }
     else
     {
@@ -1156,25 +1174,8 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
     if ( !reportProgress( cb, 0.7f ) )
         return unexpectedOperationCanceled();
 
-    topology.pack( map );
-    if ( !reportProgress( cb, 0.9f ) )
-        return unexpectedOperationCanceled();
-
-    VertCoords newPoints( map.v.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId{ map.v.b.size() } ),
-        [&]( const tbb::blocked_range<VertId> & range )
-    {
-        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
-        {
-            auto newv = map.v.b[oldv];
-            if ( !newv )
-                continue;
-            newPoints[newv] = points[oldv];
-        }
-    } );
-    points = std::move( newPoints );
-    if ( !reportProgress( cb, 1.0f ) )
-        return unexpectedOperationCanceled();
+    if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
+        return unexpected( std::move( r.error() ) );
 
     return map;
 }

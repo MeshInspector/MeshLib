@@ -1,8 +1,9 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRIOFilters.h"
 #include "MRExpected.h"
+#include "MRIOFilters.h"
+
 #include <filesystem>
 
 namespace MR
@@ -19,14 +20,6 @@ namespace ImageSave
 
 /// saves in .bmp format
 MRMESH_API Expected<void> toBmp( const Image& image, const std::filesystem::path& path );
-
-#ifndef __EMSCRIPTEN__
-
-#ifndef MRMESH_NO_TIFF
-MRMESH_API Expected<void> toTiff( const Image& image, const std::filesystem::path& path );
-#endif
-
-#endif
 
 /// detects the format from file extension and save image to it  
 MRMESH_API Expected<void> toAnySupportedFormat( const Image& image, const std::filesystem::path& path );

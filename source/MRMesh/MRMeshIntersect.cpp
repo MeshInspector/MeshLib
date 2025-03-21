@@ -7,8 +7,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRVector3.h"
 #include "MRLine3.h"
-#include "MRMakeSphereMesh.h"
-#include "MRGTest.h"
+#include "MRPlane3.h"
 #include "MRMeshBuilder.h"
 #include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"
@@ -23,10 +22,9 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     T rayStart, T rayEnd, const IntersectionPrecomputes<T>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
     const auto& m = meshPart.mesh;
-    constexpr int maxTreeDepth = 32;
     const auto& tree = m.getAABBTree();
     MeshIntersectionResult res;
-    if( tree.nodes().size() == 0 )
+    if( tree.nodes().empty() )
         return res;
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -34,6 +32,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
         return res;
 
+    constexpr int maxTreeDepth = 32;
     std::pair< NodeId,T> nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
@@ -256,9 +255,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         return;
 
     const auto& m = meshPart.mesh;
-    constexpr int maxTreeDepth = 32;
     const auto& tree = m.getAABBTree();
-    if( tree.nodes().size() == 0 )
+    if( tree.nodes().empty() )
         return;
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -268,6 +266,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         return;
     }
 
+    constexpr int maxTreeDepth = 32;
     NodeId nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = tree.rootNodeId();
@@ -387,21 +386,101 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
     }
 }
 
-void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
-    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs )
+void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
-    assert( fs || ues || vs );
+    MR_TIMER
+    assert( fs || ues || vs || fsVec );
 
     const auto& m = meshPart.mesh;
-    constexpr int maxTreeDepth = 32;
     const auto& tree = m.getAABBTree();
-    if( tree.nodes().size() == 0 )
+    if( tree.nodes().empty() )
         return;
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
     assert( !vs  || vs->size()  >= m.topology.vertSize() );
 
+    constexpr int maxTreeDepth = 32;
+    NodeId nodesStack[maxTreeDepth];
+    int currentNode = -1;
+
+    auto minCorner = Box3f::getMinBoxCorner( plane.n );
+    auto maxCorner = minCorner;
+    for ( auto & v : maxCorner )
+        v = !v;
+
+    auto addNode = [&]( NodeId nid )
+    {
+        const auto & box = tree[nid].box;
+        if ( dot( plane.n, box.corner( minCorner ) ) > plane.d )
+            return;
+        if ( dot( plane.n, box.corner( maxCorner ) ) < plane.d )
+            return;
+        nodesStack[++currentNode] = nid;
+    };
+    addNode( tree.rootNodeId() );
+
+    while( currentNode >= 0 )
+    {
+        if( currentNode >= maxTreeDepth ) // max depth exceeded
+        {
+            spdlog::critical( "Maximal AABBTree depth reached!" );
+            assert( false );
+            break;
+        }
+
+        const auto& node = tree[nodesStack[currentNode--]];
+        if( node.leaf() )
+        {
+            auto face = node.leafId();
+            if( !meshPart.region || meshPart.region->test( face ) )
+            {
+                if ( fs )
+                    fs->set( face );
+                if ( fsVec )
+                    fsVec->push_back( face );
+                if ( ues || vs )
+                {
+                    EdgeId e0, e1, e2;
+                    m.topology.getTriEdges( face, e0, e1, e2 );
+                    if ( ues )
+                    {
+                        ues->set( e0 );
+                        ues->set( e1 );
+                        ues->set( e2 );
+                    }
+                    if ( vs )
+                    {
+                        vs->set( m.topology.org( e0 ) );
+                        vs->set( m.topology.org( e1 ) );
+                        vs->set( m.topology.org( e2 ) );
+                    }
+                }
+            }
+            continue;
+        }
+        addNode( node.r ); // push first to go there later
+        addNode( node.l );
+    }
+}
+
+void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
+{
+    MR_TIMER
+    assert( fs || ues || vs || fsVec );
+
+    const auto& m = meshPart.mesh;
+    const auto& tree = m.getAABBTree();
+    if( tree.nodes().empty() )
+        return;
+
+    assert( !fs  || fs->size()  >= m.topology.faceSize() );
+    assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
+    assert( !vs  || vs->size()  >= m.topology.vertSize() );
+
+    constexpr int maxTreeDepth = 32;
     NodeId nodesStack[maxTreeDepth];
     int currentNode = -1;
 
@@ -430,6 +509,8 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
             {
                 if ( fs )
                     fs->set( face );
+                if ( fsVec )
+                    fsVec->push_back( face );
                 if ( ues || vs )
                 {
                     EdgeId e0, e1, e2;
@@ -452,26 +533,6 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
         }
         addNode( node.r ); // push first to go there later
         addNode( node.l );
-    }
-}
-
-TEST(MRMesh, MeshIntersect) 
-{
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
-
-    std::vector<MeshIntersectionResult> allFound;
-    auto callback = [&allFound]( const MeshIntersectionResult & found ) -> bool
-    {
-        allFound.push_back( found );
-        return true;
-    };
-
-    Vector3f d{ 1, 2, 3 };
-    rayMeshIntersectAll( sphere, { 2.0f * d, -d.normalized() }, callback );
-    ASSERT_EQ( allFound.size(), 2 );
-    for ( const auto & found : allFound )
-    {
-        ASSERT_NEAR( found.proj.point.length(), 1.0f, 0.05f ); //our sphere is very approximate
     }
 }
 

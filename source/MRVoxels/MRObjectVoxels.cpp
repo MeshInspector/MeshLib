@@ -31,7 +31,7 @@ constexpr size_t cVoxelsHistogramBinsNumber = 256;
 
 void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optional<Vector2f> & minmax, ProgressCallback cb, bool normalPlusGrad )
 {
-    mesh_.reset();
+    data_.mesh.reset();
     activeVoxels_.reset();
     activeBounds_.reset();
     if ( minmax )
@@ -104,13 +104,13 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 
     evalGridMinMax( vdbVolume_.data, min, max );
 
-    const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
+    const float progressTo = ( data_.mesh && cb ) ? 0.5f : 1.f;
     updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
     vdbVolume_.min = min;
     vdbVolume_.max = max;
-    if ( mesh_ )
+    if ( data_.mesh )
     {
-        mesh_.reset();
+        data_.mesh.reset();
 
         const float progressFrom = cb ? 0.5f : 0.f;
         setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
@@ -121,7 +121,7 @@ Expected<bool> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool u
 {
     if ( !vdbVolume_.data )
         return false; // no volume presented in this
-    if ( mesh_ && iso == isoValue_ )
+    if ( data_.mesh && iso == isoValue_ )
         return false; // current iso surface represents required iso value
 
     isoValue_ = iso;
@@ -139,9 +139,9 @@ Expected<bool> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool u
 
 std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh )
 {
-    if ( mesh != mesh_ )
+    if ( mesh != data_.mesh )
     {
-        mesh_.swap( mesh );
+        data_.mesh.swap( mesh );
         setDirtyFlags( DIRTY_ALL );
         isoSurfaceChangedSignal();
     }
@@ -486,7 +486,7 @@ bool ObjectVoxels::hasVisualRepresentation() const
 {
     if ( isVolumeRenderingEnabled() )
         return false;
-    return bool( mesh_ );
+    return bool( data_.mesh );
 }
 
 void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
@@ -494,17 +494,17 @@ void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
     if ( maxVerts == maxSurfaceVertices_ )
         return;
     maxSurfaceVertices_ = maxVerts;
-    if ( !mesh_ || mesh_->topology.numValidVerts() <= maxSurfaceVertices_ )
+    if ( !data_.mesh || data_.mesh->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
-    mesh_.reset();
+    data_.mesh.reset();
     setIsoValue( isoValue_ );
 }
 
 std::shared_ptr<Object> ObjectVoxels::clone() const
 {
     auto res = std::make_shared<ObjectVoxels>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
+    if ( data_.mesh )
+        res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
     if ( vdbVolume_.data )
         res->vdbVolume_.data = MakeFloatGrid( vdbVolume_.data->deepCopy() );
     return res;
@@ -513,8 +513,8 @@ std::shared_ptr<Object> ObjectVoxels::clone() const
 std::shared_ptr<Object> ObjectVoxels::shallowClone() const
 {
     auto res = std::make_shared<ObjectVoxels>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
+    if ( data_.mesh )
+        res->data_.mesh = data_.mesh;
     if ( vdbVolume_.data )
         res->vdbVolume_ = vdbVolume_;
     return res;
@@ -524,8 +524,8 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
     ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
 
-    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
-        mesh_->invalidateCaches();
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        data_.mesh->invalidateCaches();
 }
 
 size_t ObjectVoxels::activeVoxels() const
@@ -545,7 +545,7 @@ size_t ObjectVoxels::heapBytes() const
 
 void ObjectVoxels::setSerializeFormat( const char * newFormat )
 {
-    if ( !newFormat || *newFormat != '.' )
+    if ( newFormat && *newFormat != '.' )
     {
         assert( false );
         return;
@@ -625,7 +625,7 @@ Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = std::filesystem::path( path ) += serializeFormat_] ()
+        [this, filename = std::filesystem::path( path ) += serializeFormat_ ? serializeFormat_ : defaultSerializeVoxelsFormat()] ()
     {
         return MR::VoxelsSave::toAnySupportedFormat( vdbVolume_, filename );
     } );
@@ -740,4 +740,17 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     return res;
 }
 
+static std::string sDefaultSerializeVoxelsFormat = ".vdb";
+
+const std::string & defaultSerializeVoxelsFormat()
+{
+    return sDefaultSerializeVoxelsFormat;
 }
+
+void setDefaultSerializeVoxelsFormat( std::string newFormat )
+{
+    assert( !newFormat.empty() && newFormat[0] == '.' );
+    sDefaultSerializeVoxelsFormat = std::move( newFormat );
+}
+
+} //namespace MR

@@ -7,7 +7,16 @@
 #include "MRVDBConversions.h"
 #include "MRVDBFloatGrid.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRTimer.h"
 #include <filesystem>
+
+#pragma warning(push)
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4464) // relative include path contains '..'
+#pragma warning(disable: 4706) // assignment within conditional expression
+#include <openvdb/tools/Morphology.h>
+#include <openvdb/tools/LevelSetUtil.h>
+#pragma warning(pop)
 
 namespace MR
 {
@@ -342,6 +351,144 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
     }
 
     seedsInVolumePartSpace_[Outside] -= seedsInVolumePartSpace_[Inside];
+}
+
+
+// Auxiliary functions for instance segmentation
+namespace
+{
+/// Convert \p mask to bitset according to the active values
+/// \note Values in grid are discarded, only active / not active status is taken into account
+VoxelBitSet mask2set( const VdbVolume& mask )
+{
+    MR_TIMER
+    VolumeIndexer indexer( mask.dims );
+    auto accessor = mask.data->getConstAccessor();
+    auto activeBB = mask.data->evalActiveVoxelBoundingBox();
+    auto min = activeBB.min();
+    auto max = activeBB.max();
+    VoxelBitSet res;
+    res.resize( size_t( mask.dims.x ) * size_t( mask.dims.y ) * size_t( mask.dims.z ) );
+    for ( int z = std::max( 0, min.z() ); z < std::min( mask.dims.z, max.z() ); ++z )
+        for ( int y = std::max( 0, min.y() ); y < std::min( mask.dims.y, max.y() ); ++y )
+            for ( int x = std::max( 0, min.x() ); x < std::min( mask.dims.x, max.x() ); ++x )
+            {
+                Vector3i coords{ x, y, z };
+                if ( accessor.isValueOn( toVdb( coords ) ) )
+                    res.set( indexer.toVoxelId( coords ) );
+            }
+    return res;
+}
+
+
+/// Get instance seeds by eroding the \p maskOrig and segmenting it into separate connected components
+Expected<std::vector<VdbVolume>> getInstanceSeeds( const VdbVolume& maskOrig )
+{
+    MR_TIMER
+    openvdb::FloatGrid mask( *maskOrig.data );
+    openvdb::tools::foreach( mask.beginValueOn(), [] ( openvdb::FloatGrid::ValueOnIter it )
+    {
+        if ( it.getValue() == 0 )
+            it.setValueOff();
+    } );
+    openvdb::tools::erodeActiveValues( mask.tree(), 5 );
+
+    std::vector<openvdb::FloatGrid::Ptr> seedObjs;
+    openvdb::tools::segmentActiveVoxels( mask, seedObjs );
+
+    std::vector<VdbVolume> res;
+    for ( auto& s : seedObjs )
+    {
+        auto& r = res.emplace_back();
+        auto mnMx = openvdb::tools::minMax( s->tree() );
+        r.min = mnMx.min();
+        r.max = mnMx.max();
+        r.voxelSize = maskOrig.voxelSize;
+        r.data = MakeFloatGrid( std::move( s ) );
+        r.dims = maskOrig.dims;
+    }
+    return res;
+}
+
+/// Dilate \p maskOrig
+VdbVolume dilateMask( const VdbVolume& maskOrig )
+{
+    MR_TIMER
+    openvdb::FloatGrid mask( *maskOrig.data );
+    openvdb::tools::foreach( mask.beginValueOn(), [] ( openvdb::FloatGrid::ValueOnIter it )
+    {
+        if ( it.getValue() == 0 )
+            it.setValueOff();
+    } );
+    openvdb::tools::dilateActiveValues( mask.tree(), 5 );
+
+    VdbVolume res;
+    res.data = MakeFloatGrid( std::make_shared<openvdb::FloatGrid>( std::move( mask ) ) );
+    res.voxelSize = maskOrig.voxelSize;
+    evalGridMinMax( res.data, res.min, res.max );
+    res.dims = maskOrig.dims;
+
+    return res;
+}
+
+Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std::vector<VdbVolume>& voxelSeeds, size_t minSize, ProgressCallback cb = {} )
+{
+    MR_TIMER
+    std::vector<VoxelBitSet> seeds;
+    VoxelBitSet allSeeds;
+    for ( auto& seedObj : voxelSeeds )
+    {
+        auto s = mask2set( seedObj );
+        allSeeds |= s;
+        if ( s.count() > minSize )
+            seeds.push_back( s );
+    }
+
+    auto dilatedMask = mask2set( dilateMask( mask ) );
+    allSeeds = allSeeds | dilatedMask.flip();
+
+    auto maybeSimpleMask = vdbVolumeToSimpleVolume( mask );
+    if ( !maybeSimpleMask )
+        return unexpected( maybeSimpleMask.error() );
+    auto& simpleMask = *maybeSimpleMask;
+
+    std::vector<Mesh> res;
+    auto t = simpleMask; // temporary volume for segmentation
+    std::fill( t.data.begin(), t.data.end(), 0.f );
+    for ( size_t i = 0; i < seeds.size(); ++i )
+    {
+        reportProgress( cb, (float)i / seeds.size() );
+        const auto& s = seeds[i];
+        if ( s.count() < minSize )
+            continue;
+
+        auto maybeSegm = segmentVolumeByGraphCut( simpleMask, 3000.f, s, allSeeds - s );
+        if ( !maybeSegm )
+            return unexpected( maybeSegm.error() );
+
+        std::fill( t.data.begin(), t.data.end(), 0.f );
+        for ( auto j : *maybeSegm )
+            t.data[static_cast<size_t>( j )] = 1.f;
+
+        auto grid = simpleVolumeToDenseGrid( t );
+        auto mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
+            .voxelSize = t.voxelSize,
+            .isoValue = 0.5f,
+        } ).value();
+
+        res.push_back( std::move( mesh ) );
+    }
+
+    return res;
+}
+
+}
+
+Expected<std::vector<Mesh>> segmentVoxelMaskToInstances( const VdbVolume& mask, size_t minSize, ProgressCallback cb )
+{
+    return getInstanceSeeds( mask ).and_then( [&] ( const auto& seeds ) {
+        return convertToInstances( mask, seeds, minSize, cb );
+    } );
 }
 
 }

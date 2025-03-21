@@ -1,6 +1,6 @@
 #pragma once
 #ifdef _WIN32
-#   ifdef MRCOMMONPLUGINS_EXPORT
+#   ifdef MRCommonPlugins_EXPORTS
 #       define MRCOMMONPLUGINS_API __declspec(dllexport)
 #   else
 #       define MRCOMMONPLUGINS_API __declspec(dllimport)

@@ -119,7 +119,7 @@ public:
     void push_back( T && t ) { vec_.push_back( std::move( t ) ); }
     void pop_back() { vec_.pop_back(); }
 
-    template<typename... Args>
+    template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
     T& emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
 
     [[nodiscard]] const_reference front() const { return vec_.front(); }

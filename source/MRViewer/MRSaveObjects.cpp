@@ -1,4 +1,5 @@
 #include "MRSaveObjects.h"
+#include "MRUnitSettings.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
@@ -107,7 +108,17 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         for ( auto& c : ext )
             c = ( char )tolower( c );
 
-        result = VoxelsSave::toAnySupportedFormat( objVoxels->vdbVolume(), filename, settings.callback );
+        VdbVolume vol = objVoxels->vdbVolume();
+        if ( ext == u8".dcm" )
+        {
+            // always save DICOM in meters because the format supports units information
+            if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
+            {
+                vol.voxelSize *= getUnitInfo( *maybeUserScale ).conversionFactor / getUnitInfo( LengthUnit::meters ).conversionFactor;
+            }
+        }
+
+        result = VoxelsSave::toAnySupportedFormat( vol, filename, settings.callback );
     }
 #endif
 

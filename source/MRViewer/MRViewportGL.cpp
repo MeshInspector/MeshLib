@@ -130,7 +130,7 @@ void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::ViewportBorder );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( GLint colorid = glGetUniformLocation( shader, "user_color" ) );
+    GLint colorid = GL_EXEC( glGetUniformLocation( shader, "user_color" ) );
     const auto borderColor = Color( Vector4f( color ) );
     GL_EXEC( glUniform4f( colorid,
                           borderColor[0],

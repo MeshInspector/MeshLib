@@ -1,30 +1,33 @@
 #include "MRCudaPointsToDistanceVolume.cuh"
-#include "device_launch_parameters.h"
 
 namespace MR
 {
 namespace Cuda
 {
-    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
+    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
-        const size_t size = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
-        if ( size == 0 )
+        const size_t gridSize = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
+        if ( gridSize == 0 )
         {
             assert( false );
             return;
         }
 
-        const size_t id = blockIdx.x * blockDim.x + threadIdx.x;
-        if ( id >= size )
+        const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+        if ( index >= chunkSize )
+            return;
+
+        size_t gridIndex = index + chunkOffset;
+        if ( gridIndex >= gridSize )
             return;
 
         const unsigned char quietNan[4] = { 0x00 , 0x00, 0xc0, 0x7f };
-        volume[id] = *( float* ) quietNan;
+        volume[index] = *( float* ) quietNan;
 
         const size_t sizeXY = size_t( params.dimensions.x ) * params.dimensions.y;
         float3 coord;
-        coord.z = int( id / sizeXY ) + 0.5f;
-        int sumZ = int( id % sizeXY );
+        coord.z = int( gridIndex / sizeXY ) + 0.5f;
+        int sumZ = int( gridIndex % sizeXY );
         coord.y = sumZ / params.dimensions.x + 0.5f;
         coord.x = sumZ % params.dimensions.x + 0.5f;
 
@@ -60,7 +63,8 @@ namespace Cuda
 
             if ( node.leaf() )
             {
-                auto [first, last] = node.getLeafPointRange();
+                auto range = node.getLeafPointRange();
+                auto first = range.x, last = range.y;
                 for ( int i = first; i < last; ++i )
                 {
                     auto coord = orderedPoints[i].coord;
@@ -80,17 +84,15 @@ namespace Cuda
         }
 
         if ( sumWeight >= params.minWeight )
-            volume[id] = sumDist / sumWeight;
+            volume[index] = sumDist / sumWeight;
     }
 
-    bool pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
+    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
         constexpr int maxThreadsPerBlock = 640;
-        const size_t size = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
 
-        auto numBlocks = (unsigned int)( ( size_t( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-        kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume, params );
-        return ( cudaGetLastError() == cudaSuccess );
+        auto numBlocks = (unsigned int)( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+        kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, points, normals, volume, params, chunkSize, chunkOffset );
     }
 } // namespace Cuda
 } // namespace MR

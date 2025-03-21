@@ -24,12 +24,13 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 
     VertNormals normals;
     normals.resizeNoInit( pointCloud.points.size() );
-    if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId vid )
+    if ( !BitSetParallelFor( pointCloud.validPoints, [&, radiusSq = sqr( radius )]( VertId vid )
     {
         PointAccumulator accum;
-        findPointsInBall( pointCloud, pointCloud.points[vid], radius, [&]( VertId, const Vector3f& coord )
+        findPointsInBall( pointCloud, { pointCloud.points[vid], radiusSq }, [&]( const PointsProjectionResult &, const Vector3f & foundPos, Ball3f & )
         {
-            accum.addPoint( Vector3d( coord ) );
+            accum.addPoint( Vector3d( foundPos ) );
+            return Processing::Continue;
         } );
         auto n = Vector3f( accum.getBestPlane().n );
         if ( orient != OrientNormals::Smart )
@@ -183,14 +184,14 @@ bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, cons
 bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, float radius, const ProgressCallback & progress )
 {
     return orientNormalsCore( pointCloud, normals,
-        [&]( VertId base, auto callback )
+        [&, radiusSq = sqr( radius )]( VertId base, auto callback )
         {
-            findPointsInBall( pointCloud, pointCloud.points[base], radius,
-                [&]( VertId v, const Vector3f& )
+            findPointsInBall( pointCloud, { pointCloud.points[base], radiusSq },
+                [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
                 {
-                    if ( v == base )
-                        return;
-                    callback( v );
+                    if ( found.vId != base )
+                        callback( found.vId );
+                    return Processing::Continue;
                 } );
         }, progress );
 }

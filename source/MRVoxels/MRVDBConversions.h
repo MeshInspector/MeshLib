@@ -69,6 +69,11 @@ MRVOXELS_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume
 // set the simpleVolume.min as the background value
 MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb = {} );
 
+// make VdbVolume from FunctionVolume
+// make copy of data
+// set minimum value as the background value
+MRVOXELS_API VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, ProgressCallback cb = {} );
+
 /// @brief Copy given \p simpleVolume into the \p grid, starting at \p minCoord
 /// Instantiated for AccessorOrGrid in { openvdb::FloatGrid::Accessor, FloatGrid, openvdb::FloatGrid }.
 /// The template is used to not include openvdb's mess into this header (forward declaring classes in openvdb is also non-trivial).
@@ -79,9 +84,6 @@ MRVOXELS_API void putSimpleVolumeInDenseGrid(
         AccessorOrGrid& gridAccessor,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
     );
-
-/// Make \p volume dense without setting any values
-MRVOXELS_API void makeVdbTopologyDense( VdbVolume& volume );
 
 // make SimpleVolume from VdbVolume
 // make copy of data

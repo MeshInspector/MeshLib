@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRMacros.h"
 #include "MRViewer/exports.h"
 #include "MRViewer/MRVectorTraits.h"
 
@@ -105,12 +106,12 @@ enum class InvLengthUnit
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
-    X(float       ,##__VA_ARGS__) X(double              ,##__VA_ARGS__) X(long double ,##__VA_ARGS__) \
-    X(signed char ,##__VA_ARGS__) X(unsigned char       ,##__VA_ARGS__) \
-    X(short       ,##__VA_ARGS__) X(unsigned short      ,##__VA_ARGS__) \
-    X(int         ,##__VA_ARGS__) X(unsigned int        ,##__VA_ARGS__) \
-    X(long        ,##__VA_ARGS__) X(unsigned long       ,##__VA_ARGS__) \
-    X(long long   ,##__VA_ARGS__) X(unsigned long long  ,##__VA_ARGS__)
+    X(float       ,__VA_ARGS__) X(double              ,__VA_ARGS__) X(long double ,__VA_ARGS__) \
+    X(signed char ,__VA_ARGS__) X(unsigned char       ,__VA_ARGS__) \
+    X(short       ,__VA_ARGS__) X(unsigned short      ,__VA_ARGS__) \
+    X(int         ,__VA_ARGS__) X(unsigned int        ,__VA_ARGS__) \
+    X(long        ,__VA_ARGS__) X(unsigned long       ,__VA_ARGS__) \
+    X(long long   ,__VA_ARGS__) X(unsigned long long  ,__VA_ARGS__)
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -318,12 +319,8 @@ struct UnitToStringParams
 
 // The `std::variant` of `UnitToStringParams<E>` for all known `E`s (unit kinds).
 using VarUnitToStringParams = std::variant<
-    #define MR_TRIM_LEADING_COMMA(...) MR_TRIM_LEADING_COMMA_(__VA_ARGS__)
-    #define MR_TRIM_LEADING_COMMA_(x, ...) __VA_ARGS__
     #define MR_X(E) , UnitToStringParams<E>
     MR_TRIM_LEADING_COMMA(DETAIL_MR_UNIT_ENUMS(MR_X))
-    #undef MR_TRIM_LEADING_COMMA
-    #undef MR_TRIM_LEADING_COMMA_
     #undef MR_X
 >;
 
@@ -342,8 +339,8 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 template <detail::Units::Scalar T>
 [[nodiscard]] MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
 
-#define MR_X(T) extern template MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#define MR_X(T, unused) extern template MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
@@ -377,10 +374,10 @@ requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTrai
     return ret;
 }
 
-#define MR_X(T) \
+#define MR_X(T, unused) \
     extern template MRVIEWER_API int guessPrecision( T value ); \
     extern template MRVIEWER_API int guessPrecision( T min, T max );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 // Generates a printf-style format string for `value`, for use with ImGui widgets.
@@ -399,8 +396,8 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 template <detail::Units::Scalar T>
 [[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
 
-#define MR_X(T) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#define MR_X(T, unused) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 }

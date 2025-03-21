@@ -36,22 +36,19 @@ IF(NOT MRVIEWER_NO_VOXELS)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
   IF(APPLE)
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+    find_package(OpenVDB REQUIRED)
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB::openvdb)
   ELSE()
     list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
   ENDIF()
 ENDIF()
 
 IF(NOT MRVIEWER_NO_GTK)
+  find_package(PkgConfig REQUIRED)
   pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
   list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtkmm)
 ENDIF()
-
-file(GLOB JSONS "*.json")
-IF(MR_EMSCRIPTEN)
-  file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
-ELSE() # MR_EMSCRIPTEN
-  file(COPY ${JSONS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ENDIF() # MR_EMSCRIPTEN
 
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -64,63 +61,90 @@ IF(MR_EMSCRIPTEN)
     glfw
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
-ELSE() # NOT MR_EMSCRIPTEN
-  IF(APPLE)
-    set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
-      COMPILE_FLAGS "-x objective-c++"
-      SKIP_PRECOMPILE_HEADERS ON
-    )
-    find_library(APPKIT_LIBRARY AppKit REQUIRED)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      _GNU_SOURCE
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      GTest::gtest
-      fmt
-      tbb
-      spdlog
-      jsoncpp
-      cpr
-      imgui
-      glad
-      glfw
-      hidapi
-      clip
-      ${APPKIT_LIBRARY}
-      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-    )
-  ELSE() # NOT APPLE and NOT EMPSCRIPTEN
-    find_package(GDCM CONFIG REQUIRED)
+ELSEIF(APPLE)
+  set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
+    COMPILE_FLAGS "-x objective-c++"
+    SKIP_PRECOMPILE_HEADERS ON
+  )
+  find_library(APPKIT_LIBRARY AppKit REQUIRED)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    GTest::gtest
+    fmt
+    tbb
+    spdlog
+    jsoncpp
+    cpr
+    imgui
+    glad
+    glfw
+    hidapi
+    clip
+    ${APPKIT_LIBRARY}
+    ${CMAKE_DL_LIBS}
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  find_package(GDCM CONFIG REQUIRED)
+  find_package(GTest REQUIRED)
+  find_package(cpr REQUIRED)
+  find_package(glad REQUIRED)
+  find_package(hidapi REQUIRED)
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      MRMesh
-      MRIOExtras
-      MRSymbolMesh
-      gtest
-      dl
-      cpr
-      imgui
-      glad
-      glfw
-      hidapi-hidraw
-      jsoncpp
-      spdlog
-      fmt
-      tbb
-      clip
-      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
-    )
-  ENDIF() # APPLE
-ENDIF() # MR_EMSCRIPTEN
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    GTest::gtest
+    cpr::cpr
+    imgui
+    glad::glad
+    glfw
+    hidapi::hidapi
+    JsonCpp::JsonCpp
+    spdlog::spdlog
+    fmt::fmt
+    TBB::tbb
+    ${CMAKE_DL_LIBS}
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+  IF(NOT WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE clip )
+  ENDIF()
+ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
+  find_package(GDCM CONFIG REQUIRED)
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRIOExtras
+    MRSymbolMesh
+    gtest
+    cpr
+    imgui
+    glad
+    glfw
+    hidapi-hidraw
+    JsonCpp::JsonCpp
+    spdlog
+    fmt
+    tbb
+    clip
+    ${CMAKE_DL_LIBS}
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
+  )
+ENDIF() # APPLE
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
 IF(MR_EMSCRIPTEN)
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.ttf")
+  file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   file(COPY ${MAIN_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   file(COPY ${AWESOME_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   file(COPY ${IMGUI_FONTS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
@@ -128,6 +152,7 @@ IF(MR_EMSCRIPTEN)
   file(COPY "wasm_async_func_list.txt" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 ELSE() # MR_EMSCRIPTEN
   file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
+  file(COPY ${JSONS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${MAIN_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${AWESOME_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${IMGUI_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -157,7 +182,7 @@ install(FILES ${MAIN_FONTS} DESTINATION "${MR_FONTS_DIR}")
 install(FILES ${AWESOME_FONTS} DESTINATION "${MR_FONTS_DIR}")
 install(FILES ${IMGUI_FONTS} DESTINATION "${MR_FONTS_DIR}")
 install(FILES ${JSONS} DESTINATION "${MR_RESOURCES_DIR}")
-install(DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resource DESTINATION "${MR_RESOURCES_DIR}")
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource DESTINATION "${MR_RESOURCES_DIR}")
 
 install(
   EXPORT ${PROJECT_NAME}

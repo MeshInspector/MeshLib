@@ -84,7 +84,7 @@ void Viewport::init()
     updateSceneBox_();
     setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
     setupProjMatrix_();
-    setupStaticProjMatrix_();
+    setupAxesProjMatrix_();
 }
 
 void Viewport::shut()
@@ -126,7 +126,7 @@ static ObjAndPick pickRenderObjectImpl( const Viewport& v, std::span<VisualObjec
     int radius = params.pickRadius >= 0 ? params.pickRadius : viewer.glPickRadius;
 
     if ( radius == 0 )
-        return v.multiPickObjects( objects, { vp } ).front();
+        return v.multiPickObjects( objects, { vp }, params.baseRenderParams ).front();
     else
     {
         std::vector<Vector2f> pixels;
@@ -140,7 +140,7 @@ static ObjAndPick pickRenderObjectImpl( const Viewport& v, std::span<VisualObjec
             if ( i * i + j * j <= radius * radius + 1 )
                 pixels.push_back( Vector2f( vp.x + i, vp.y + j ) );
         }
-        auto res = v.multiPickObjects( objects, pixels );
+        auto res = v.multiPickObjects( objects, pixels, params.baseRenderParams );
         if ( res.empty() )
             return {};
         if ( params.exactPickFirst && bool( res.front().first ) )
@@ -237,13 +237,13 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
     return multiPickObjects( renderVector, {viewportPoint} ).front();
 }
 
-std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* const> renderVector, const std::vector<Vector2f>& viewportPoints ) const
+std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* const> renderVector, const std::vector<Vector2f>& viewportPoints, const BaseRenderParams* overrideRenderParams ) const
 {
     MR_TIMER;
     if ( viewportPoints.empty() )
         return {};
     std::vector<Vector2i> picks( viewportPoints.size() );
-    ViewportGL::PickParameters params{ renderVector, getBaseRenderParams(), params_.clippingPlane };
+    ViewportGL::PickParameters params{ renderVector, overrideRenderParams ? *overrideRenderParams : getBaseRenderParams(), params_.clippingPlane };
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
         picks[i] = Vector2i( viewportPoints[i] );
@@ -450,7 +450,7 @@ void Viewport::setupView()
 {
     setupViewMatrix_();
     setupProjMatrix_();
-    setupStaticProjMatrix_();
+    setupAxesProjMatrix_();
 }
 
 void Viewport::preDraw()
@@ -467,7 +467,7 @@ void Viewport::postDraw() const
     draw_clipping_plane();
 
     // important to be last
-    drawAxes();
+    drawAxesAndViewController();
 }
 
 void Viewport::updateSceneBox_()
@@ -578,6 +578,16 @@ void Viewport::setAxesSize( const int axisPixSize )
     initBaseAxes();
 }
 
+const Vector2f& Viewport::getAxesPosition() const
+{
+    return basisAxesPos_;
+}
+
+float Viewport::getAxesSize() const
+{
+    return basisAxesSize_;
+}
+
 void Viewport::setAxesPos( const int pixelXoffset, const int pixelYoffset )
 {
     if ( pixelXoffset_ == pixelXoffset &&
@@ -616,27 +626,63 @@ void Viewport::initBaseAxes()
     else
         axesY = float( pixelYoffset_ * scaling );
     const float pixSize = float( axisPixSize_ * scaling ) / sqrtf( 2 );
-    relPoseBase = { axesX, axesY, 0.5f };
-    relPoseSide = { axesX + pixSize, axesY + pixSize, 0.5f };
+    basisAxesPos_ = { axesX, axesY };
+    basisAxesSize_ = pixSize;
 }
 
-void Viewport::drawAxes() const
+void Viewport::drawAxesAndViewController() const
 {
-    if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
+    bool basisVisible = getViewerInstance().basisAxes->isVisible( id );
+    bool controllerVisible = getViewerInstance().basisViewController->isVisible( id );
+    if ( basisVisible || controllerVisible )
     {
         // compute inverse in double precision to avoid NaN for very small scales
-        auto fullInversedM = Matrix4f( ( Matrix4d( staticProj_ ) * Matrix4d( viewM_ ) ).inverse() );
-        auto transBase = fullInversedM( viewportSpaceToClipSpace( relPoseBase ) );
-        auto transSide = fullInversedM( viewportSpaceToClipSpace( relPoseSide ) );
+        auto fullInversedM = Matrix4f( ( Matrix4d( axesProjMat_ ) * Matrix4d( viewM_ ) ).inverse() );
+        auto pos = to3dim( basisAxesPos_ ); pos.z = 0.5f;
+        auto transBase = fullInversedM( viewportSpaceToClipSpace( pos ) );
+        auto transSide = fullInversedM( viewportSpaceToClipSpace( pos + to3dim( Vector2f::diagonal( basisAxesSize_ ) ) ) );
+
+        auto invRot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) ).inverse();
 
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
-        for ( const auto& child : getViewerInstance().basisAxes->children() )
+        if ( basisVisible )
         {
-            if ( auto visualChild = child->asType<VisualObject>() )
-                draw( *visualChild, basisAxesXf, staticProj_ );
+            getViewerInstance().basisAxes->setXf( basisAxesXf, id );
+            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            for ( const auto& child : getViewerInstance().basisAxes->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            }
+        }
+        if ( controllerVisible )
+        {
+            getViewerInstance().basisViewController->setXf( basisAxesXf, id );
+            draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            for ( const auto& child : getViewerInstance().basisViewController->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                {
+                    visualChild->setXf( invRot, id );
+                    draw( *visualChild, basisAxesXf * invRot, axesProjMat_, DepthFunction::Always );
+                }
+            }
+            draw( *getViewerInstance().basisViewController, basisAxesXf, axesProjMat_ );
+            for ( const auto& child : getViewerInstance().basisViewController->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf * invRot, axesProjMat_ );
+            }
+        }
+        if ( basisVisible )
+        {
+            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_ );
+            for ( const auto& child : getViewerInstance().basisAxes->children() )
+            {
+                if ( auto visualChild = child->asType<VisualObject>() )
+                    draw( *visualChild, basisAxesXf, axesProjMat_ );
+            }
         }
     }
 }

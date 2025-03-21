@@ -20,8 +20,8 @@ class MRVIEWER_CLASS PickPointManager : public MultiListener<
     MouseMoveListener>
 {
 public:
-    using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> obj, int index )>;
-    using AllowCallBack = std::function<bool( const std::shared_ptr<MR::VisualObject>& obj, int index )>;
+    using PickerPointCallBack = std::function<void( std::shared_ptr<VisualObject> obj, int index )>;
+    using AllowCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj, int index )>;
 
     struct Params
     {
@@ -37,21 +37,21 @@ public:
         /// This is appended to the names of all undo/redo actions
         std::string historyNameSuffix;
 
+        /// Whether to activate dragging new point immediately after its creation on mouse down
+        bool startDraggingJustAddedPoint = true;
+
         /// Parameters for configuring the surface point widget
         /// Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;
 
-        /// Color for ordinary points in the contour
-        /// Parameters affect to future points only
-        MR::Color ordinaryPointColor = Color::gray();
+        /// The color of all pick spheres except the one with the largest index on each object
+        Color ordinaryPointColor = Color::gray();
 
-        /// Color for the last modified point in the contour
-        /// Parameters affect to future points only
-        MR::Color lastPointColor = Color::green();
+        /// The color of last by index pick sphere in open contour
+        Color lastPointColor = Color::green();
 
-        /// Color for the special point used to close a contour. Better do not change it.
-        /// Parameters affect to future points only
-        MR::Color closeContourPointColor = Color::transparent();
+        /// The color of last by index pick sphere in closed contour, which coincides in position with the first pick sphere
+        Color closeContourPointColor = Color::transparent();
 
         /// Predicate to additionally filter objects that should be treated as pickable.
         Viewport::PickRenderObjectPredicate pickPredicate;
@@ -85,7 +85,7 @@ public:
     struct WidgetHistoryAction : HistoryAction {};
 
     using SurfaceContour = std::vector<std::shared_ptr<SurfacePointWidget>>;
-    using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
+    using SurfaceContours = std::unordered_map <std::shared_ptr<VisualObject>, SurfaceContour>;
 
     /// create an object and starts listening for mouse events
     MRVIEWER_API PickPointManager();
@@ -94,7 +94,7 @@ public:
     MRVIEWER_API ~PickPointManager();
 
     /// return contour for specific object (creating new one if necessary)
-    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<MR::VisualObject>& obj ) { return pickedPoints_[obj]; }
+    [[nodiscard]] const SurfaceContour& getSurfaceContour( const std::shared_ptr<VisualObject>& obj ) { return pickedPoints_[obj]; }
 
     /// return all contours, i.e. per object unorderd_map of ordered surface points [vector].
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const { return pickedPoints_; }
@@ -102,14 +102,26 @@ public:
     /// check whether the contour is closed for a particular object.
     [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
 
+    /// returns the total number of pick points (including extra point if the contour is closed) on given object
+    [[nodiscard]] MRVIEWER_API size_t numPickPoints( const std::shared_ptr<VisualObject>& obj ) const;
+
     /// returns point widget by index from given object or nullptr if no such widget exists
     [[nodiscard]] MRVIEWER_API std::shared_ptr<SurfacePointWidget> getPointWidget( const std::shared_ptr<VisualObject>& obj, int index ) const;
+
+    /// returns index of given point widget on given object or -1 if this widget is not from given object
+    [[nodiscard]] MRVIEWER_API int getPointIndex( const std::shared_ptr<VisualObject>& obj, SurfacePointWidget& pointWidget ) const;
 
     /// returns point widget currently dragged by mouse
     [[nodiscard]] SurfacePointWidget* draggedPointWidget() const { return draggedPointWidget_; }
 
     /// Add a point to the end of non closed contour connected with obj
-    MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint );
+    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is over new point and is down
+    MRVIEWER_API bool appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint, bool startDragging = false );
+
+    /// Inserts a point into contour connected with obj
+    /// \param index point index before which to insert new point
+    /// \param startDragging if true then new point widget is immediately made draggable by mouse, please be sure that mouse is over new point and is down
+    MRVIEWER_API bool insertPoint( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& triPoint, bool startDragging = false );
 
     /// Remove point with pickedIndex index from contour connected with obj.
     MRVIEWER_API bool removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex );
@@ -146,7 +158,7 @@ private:
     void colorLast2Points_( const std::shared_ptr<VisualObject>& obj );
 
     // creates point widget for add to contour.
-    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt );
+    [[nodiscard]] std::shared_ptr<SurfacePointWidget> createPickWidget_( const std::shared_ptr<VisualObject>& obj, const PickedPoint& pt );
 
     /// removes everything
     void clearNoHistory_();
@@ -157,7 +169,7 @@ private:
 
     /// \param index point index before which to insert new point, -1 here means insert after last one
     /// \return index of just inserted point
-    int insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point );
+    int insertPointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index, const PickedPoint& point, bool startDragging );
 
     /// \return location of just removed point
     PickedPoint removePointNoHistory_( const std::shared_ptr<VisualObject>& obj, int index );
@@ -168,6 +180,9 @@ private:
 
     /// if history writing is enabled, appends given history action to global store
     void appendHistory_( std::shared_ptr<HistoryAction> action ) const;
+
+    /// setup new hovered point widget, and removes hovering from the previous one
+    void setHoveredPointWidget_( SurfacePointWidget* newHoveredPoint );
 
     // whether the contour was closed before dragging of point #0, so we need to move the last point on end drag
     bool moveClosedPoint_ = false;

@@ -54,6 +54,7 @@ private:
     AABBTreePolyline & operator =( const AABBTreePolyline & ) = default;
 
     friend class UniqueThreadSafeOwner<AABBTreePolyline>;
+    friend class SharedThreadSafeOwner<AABBTreePolyline>;
 
     using Base::nodes_;
 };

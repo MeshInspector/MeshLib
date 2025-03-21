@@ -4,8 +4,8 @@
 #include "MRMesh/MRSystem.h"
 #include "MRCommandLoop.h"
 #include "MRMesh/MRConfig.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_internal.h"
+#include "imgui.h"
+#include "imgui_internal.h"
 
 namespace MR
 {
@@ -91,13 +91,10 @@ const char* StateBasePlugin::UINameSuffix()
     return "##CustomStatePlugin";
 }
 
-void StateBasePlugin::setUINameDeferred( std::string name )
+void StateBasePlugin::setUIName( std::string name )
 {
-    CommandLoop::appendCommand( [this, pn = std::move( name )] ()
-    {
-        plugin_name = pn;
-        plugin_name += UINameSuffix();
-    }, CommandLoop::StartPosition::AfterPluginInit );
+    plugin_name = std::move( name );
+    plugin_name += UINameSuffix();
 }
 
 StatePluginTabs  StateBasePlugin::getTab() const

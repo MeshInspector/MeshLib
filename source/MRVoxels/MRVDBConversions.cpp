@@ -12,6 +12,7 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
 #include "MRVDBProgressInterrupter.h"
+#include "MRVoxelsVolumeAccess.h"
 
 namespace MR
 {
@@ -296,45 +297,40 @@ void putSimpleVolumeInDenseGrid(
     putSimpleVolumeInDenseGrid( gridRef, minCoord, simpleVolume, cb );
 }
 
+template <typename VolumeType>
+void putVolumeInDenseGrid(
+        openvdb::FloatGrid::Accessor& gridAccessor,
+        const Vector3i& minCoord, const VolumeType& volume, ProgressCallback cb )
+{
+    MR_TIMER
+    if ( cb )
+        cb( 0.0f );
+
+    VoxelsVolumeAccessor<VolumeType> volumeAccessor( volume );
+
+    for ( int z = 0; z < volume.dims.z; ++z )
+    {
+        if ( subprogress( cb, ( size_t )z, ( size_t )volume.dims.z ) )
+            return;
+        for ( int y = 0; y < volume.dims.y; ++y )
+        {
+            for ( int x = 0; x < volume.dims.x; ++x )
+            {
+                auto loc = Vector3i{ x, y, z };
+                auto coord = toVdb( minCoord + loc );
+                gridAccessor.setValue( coord, volumeAccessor.get( loc ) );
+            }
+        }
+    }
+}
+
 template <>
 void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid::Accessor& gridAccessor,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    MR_TIMER
-    if ( cb )
-        cb( 0.0f );
-
-    auto dimsXY = size_t( simpleVolume.dims.x ) * size_t( simpleVolume.dims.y );
-    for ( int z = 0; z < simpleVolume.dims.z; ++z )
-    {
-        if ( subprogress( cb, (size_t)z, (size_t)simpleVolume.dims.z ) )
-            return;
-        for ( int y = 0; y < simpleVolume.dims.y; ++y )
-        {
-            for ( int x = 0; x < simpleVolume.dims.x; ++x )
-            {
-                auto coord = toVdb( minCoord + Vector3i{ x, y, z } );
-                gridAccessor.setValue( coord, simpleVolume.data[x + y * size_t( simpleVolume.dims.x ) + z * dimsXY] );
-            }
-        }
-    }
-}
-
-void makeVdbTopologyDense( openvdb::FloatGrid& grid, const Box3i& rect )
-{
-    MR_TIMER
-    auto& tree = grid.tree();
-    for ( int z = rect.min.x; z <= rect.max.z; ++z )
-        for ( int y = rect.min.y; y <= rect.max.y; ++y )
-            for ( int x = rect.min.x; x <= rect.max.x; ++x )
-                tree.touchLeaf( toVdb( Vector3i{ x, y, z } ) );
-}
-
-void makeVdbTopologyDense( VdbVolume& volume )
-{
-    makeVdbTopologyDense( *volume.data, Box3i{{0, 0, 0 }, volume.dims - Vector3i::diagonal( 1 ) } );
+    putVolumeInDenseGrid( gridAccessor, minCoord, simpleVolume, cb );
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
@@ -356,6 +352,24 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, Progr
     res.voxelSize = simpleVolume.voxelSize;
     res.min = simpleVolume.min;
     res.max = simpleVolume.max;
+    return res;
+}
+
+VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, ProgressCallback cb /*= {} */ )
+{
+    MR_TIMER
+    VdbVolume res;
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    auto gridAccessor = grid->getAccessor();
+    putVolumeInDenseGrid( gridAccessor, { 0, 0, 0 }, functoinVolume, cb );
+    auto minMax = openvdb::tools::minMax( grid->tree() );
+    res.min = minMax.min();
+    res.max = minMax.max();
+    openvdb::tools::changeBackground( grid->tree(), res.min );
+    res.data = MakeFloatGrid( std::move( grid ) );
+    res.dims = functoinVolume.dims;
+    res.voxelSize = functoinVolume.voxelSize;
+
     return res;
 }
 
@@ -500,37 +514,61 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
     VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
     const size_t volume = activeBox.volume();
 
-    std::vector<float> windVals;
     auto fwn = settings.fwn ? settings.fwn : std::make_shared<FastWindingNumber>( refMesh );
 
     const auto gridToMeshXf = settings.meshToGridXf.inverse()
         * AffineXf3f::linear( Matrix3f::scale( voxelSize ) )
         * AffineXf3f::translation( Vector3f{ fromVdb( minCoord ) } );
+
+    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
+    auto updateGrid = [&] ( VoxelId vox, float windVal )
+    {
+        auto & accessor = perThreadAccessor.local();
+
+        auto pos = indexer.toPos( vox );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
+
+        if ( windVal > settings.windingNumberThreshold )
+        {
+            accessor.modifyValue( coord, [] ( float& val )
+            {
+                val = -val;
+            } );
+        }
+    };
+
+    if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( fwn ) )
+    {
+        auto func = [&] ( std::vector<float>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
+        {
+            const auto offset = indexer.sizeXY() * zOffset;
+            ParallelFor( size_t( 0 ), vals.size(), [&] ( size_t i )
+            {
+                updateGrid( VoxelId( i + offset ), vals[i] );
+            } );
+            return {};
+        };
+        return
+            fwnByParts->calcFromGridByParts( func, indexer.dims(), gridToMeshXf, settings.windingNumberBeta, 0, settings.progress )
+            .transform( [&]
+            {
+                grid->pruneGrid( 0.f );
+            } );
+    }
+
+    std::vector<float> windVals;
     if ( auto res = fwn->calcFromGrid( windVals,
         Vector3i{ dims.x(),  dims.y(), dims.z() },
         gridToMeshXf, settings.windingNumberBeta, subprogress( settings.progress, 0.0f, 0.8f ) ); !res )
     {
         return res;
     }
-    
-    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
 
     if ( !ParallelFor( size_t( 0 ), volume, [&]( size_t i )
         {
-            auto & accessor = perThreadAccessor.local();
-
-            auto pos = indexer.toPos( VoxelId( i ) );
-            auto coord = minCoord;
-            for ( int j = 0; j < 3; ++j )
-                coord[j] += pos[j];
-
-            if ( windVals[i] > settings.windingNumberThreshold )
-            {
-                accessor.modifyValue( coord, [] ( float& val )
-                {
-                    val = -val;
-                } );
-            }
+            updateGrid( VoxelId( i ), windVals[i] );
         }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
     {
         return unexpectedOperationCanceled();

@@ -258,7 +258,7 @@ VertBMap PointCloud::pack( Reorder reoder )
     case Reorder::AABBTree:
     {
         getAABBTree(); // ensure that tree is constructed
-        AABBTreeOwner_.get()->getLeafOrderAndReset( map );
+        AABBTreeOwner_.update( [&map]( AABBTreePoints& t ) { t.getLeafOrderAndReset( map ); } );
         if ( !wasPacked )
         {
             ParallelFor( 0_v, map.b.endId(), [&]( VertId v )

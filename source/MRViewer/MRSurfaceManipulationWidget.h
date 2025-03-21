@@ -33,41 +33,63 @@ public:
         Patch
     };
 
+    /// Method for calculating mesh changes
+    enum class DeviationCalculationMethod
+    {
+        PointToPoint, ///< distance between the start and end points
+        PointToPlane, ///< distance between the initial plane (starting point and normal to it) and the end point
+        ExactDistance ///< distance between the start and end meshes
+    };
+
+
     /// Mesh change settings
     struct Settings
     {
         WorkMode workMode = WorkMode::Add;
-        float radius = 1.f; // radius of editing region
-        float relaxForce = 0.2f; // speed of relaxing, typical values (0 - 0.5]
-        float editForce = 1.f; // the force of changing mesh
-        float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
-        float relaxForceAfterEdit = 0.25f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
-        EdgeWeights edgeWeights = EdgeWeights::Cotan; // edge weights for Laplacian and Patch
+        float radius = 1.f; ///< radius of editing region
+        float relaxForce = 0.2f; ///< speed of relaxing, typical values (0 - 0.5]
+        float editForce = 1.f; ///< the force of changing mesh
+        float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
+        float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
+        EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
     };
 
     /// initialize widget according ObjectMesh
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
     /// reset widget state
     MRVIEWER_API void reset();
+    /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
+    /// @note boundary edges can be splitted to improve quality of the patch
+    MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
     MRVIEWER_API void setSettings( const Settings& settings );
     /// get widget settings 
-    MRVIEWER_API const Settings& getSettings() { return settings_; };
+    MRVIEWER_API const Settings& getSettings() { return settings_; }
 
-    // mimum radius of editing area.
-    MRVIEWER_API float getMinRadius() { return minRadius_; };
+    /// mimum radius of editing area.
+    MRVIEWER_API float getMinRadius() { return minRadius_; }
 
-    // get palette used for visualization point shifts
+    /// get palette used for visualization point shifts
     Palette& palette() { return *palette_; }
-    // update texture used for colorize surface (use after change colorMap in palette)
+    /// update texture used for colorize surface (use after change colorMap in palette)
     MRVIEWER_API void updateTexture();
-    // update texture uv coords used for colorize surface (use after change ranges in palette)
+    /// update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
-    // enable visualization of mesh deviations
+    /// enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
-    // get min / max point shifts for (usefull for setup palette)
+    /// set method for calculating mesh changes
+    MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
+    /// get method for calculating mesh changes
+    MRVIEWER_API DeviationCalculationMethod deviationCalculationMethod() const { return deviationCalculationMethod_; }
+    /// checks for a one-to-one correspondence between the vertices of the original grid and the modified one
+    MRVIEWER_API bool sameValidVerticesAsInOriginMesh() const { return sameValidVerticesAsInOriginMesh_; }
+    /// get min / max point shifts for (usefull for setup palette)
     MRVIEWER_API Vector2f getMinMax();
+
+    /// allow the user to edit parts of object that are hidden in the current view by other objects
+    MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
+    MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -88,7 +110,7 @@ private:
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
     void abortEdit_();
-    // Laplacian
+    /// Laplacian
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
@@ -96,7 +118,9 @@ private:
 
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
-    void updateValueChangesByDistance_( const VertBitSet& region );
+    void updateValueChangesPointToPoint_( const VertBitSet& region );
+    void updateValueChangesPointToPlane_( const VertBitSet& region );
+    void updateValueChangesExactDistance_( const VertBitSet& region );
     void createLastStableObjMesh_();
     void removeLastStableObjMesh_();
 
@@ -107,6 +131,7 @@ private:
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
+    VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
@@ -121,8 +146,8 @@ private:
     std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
     VertBitSet unknownSign_; ///< cached data to avoid reallocating memory
     std::shared_ptr<ObjectMesh> lastStableObjMesh_;
-    bool firstInit_ = true; // need to save settings in re-initial
-    bool badRegion_ = false; // in selected region less than 3 points
+    bool firstInit_ = true; /// need to save settings in re-initial
+    bool badRegion_ = false; /// in selected region less than 3 points
 
     bool mousePressed_ = false;
 
@@ -132,21 +157,27 @@ private:
 
     bool connectionsInitialized_ = false;
 
-    // Laplacian
-    VertId touchVertId_; // we fix this vertex in Laplacian and move it manually
-    Vector3f touchVertIniPos_; // initial position of fixed vertex
+    /// Laplacian
+    VertId touchVertId_; /// we fix this vertex in Laplacian and move it manually
+    Vector3f touchVertIniPos_; /// initial position of fixed vertex
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
 
-    // prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
+    /// prior to add/remove/smooth/deform modification, this action is created and current mesh coordinate are copied here
     class SmartChangeMeshPointsAction;
     std::shared_ptr<SmartChangeMeshPointsAction> historyAction_;
 
-    // true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
+    /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
 
     std::shared_ptr<Palette> palette_;
-    bool enableDeviationTexture_ = true;
+    bool enableDeviationTexture_ = false;
+    DeviationCalculationMethod deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
+    bool sameValidVerticesAsInOriginMesh_ = true;
+
+    /// allow the user to edit parts of object that are hidden in the current view by other objects
+    bool ignoreOcclusion_ = false;
 };
 
 }
+

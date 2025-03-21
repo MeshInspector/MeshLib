@@ -32,6 +32,7 @@ def decimate_2(size, pos1, pos2, pos3):
     bOperation = mrmesh.BooleanOperation.Intersection
     bResMapper = mrmesh.BooleanResultMapper()
     bResult = mrmesh.boolean(meshA, meshB, bOperation, None, bResMapper)
+    assert bResult.valid(), bResult.errorString
 
     mesh = bResult.mesh
     settings = mrmesh.DecimateSettings()

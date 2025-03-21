@@ -87,7 +87,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .targetUnit = RatioUnit::percents,
             .unitSuffix = true,
             .style = NumberStyle::normal,
-            .precision = 1,
+            .precision = 3,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
@@ -580,8 +580,8 @@ std::string valueToString( T value, const VarUnitToStringParams& params )
     }, params );
 }
 
-#define MR_X(T) template std::string valueToString<T>( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#define MR_X(T, unused) template std::string valueToString<T>( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 template <detail::Units::Scalar T>
@@ -649,10 +649,10 @@ int guessPrecision( T min, T max )
     }
 }
 
-#define MR_X(T) \
+#define MR_X(T, unused) \
     template int guessPrecision( T value ); \
     template int guessPrecision( T min, T max );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 template <UnitEnum E, detail::Units::Scalar T>
@@ -730,8 +730,8 @@ std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& para
     }, params );
 }
 
-#define MR_X(T) template std::string valueToImGuiFormatString<T>( T value, const VarUnitToStringParams& params );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#define MR_X(T, unused) template std::string valueToImGuiFormatString<T>( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 }

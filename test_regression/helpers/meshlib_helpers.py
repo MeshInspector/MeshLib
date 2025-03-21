@@ -1,9 +1,10 @@
+import pytest
+
 from constants import DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.file_helpers import get_reference_files_list
 from module_helper import *
 from pytest_check import check
 from pathlib import Path
-
 
 
 def relative_hausdorff(mesh1: mrmeshpy.Mesh or mrmeshpy.PointCloud or Path or str,
@@ -33,6 +34,7 @@ def compare_meshes_similarity(mesh1: mrmeshpy.Mesh, mesh2: mrmeshpy.Mesh,
                               vol_thresh=0.005,
                               area_thresh=0.005,
                               verts_thresh=0.005,
+                              edges_thresh=0.005,
                               skip_volume=False):
     """
     Compare two meshes and assert them to similarity by different params.
@@ -58,22 +60,36 @@ def compare_meshes_similarity(mesh1: mrmeshpy.Mesh, mesh2: mrmeshpy.Mesh,
     if not skip_volume:
         with check:
             #  check on meshes volume
-            assert abs(mesh1.volume() - mesh2.volume()) / min(mesh1.volume(), mesh2.volume()) < vol_thresh, (
-                f"Volumes of result and reference differ too much, \nvol1={mesh1.volume()}\nvol2={mesh2.volume()}\n"
+            vol_1 = mesh1.volume()
+            vol_2 = mesh2.volume()
+            assert abs(vol_1 - vol_2) / min(vol_1, vol_2) < vol_thresh, (
+                f"Volumes of result and reference differ too much, \nvol1={vol_1}\nvol2={vol_2}\n"
                 f"relative threshold is {vol_thresh}")
     with check:
         #  check on meshes area
-        assert abs(mesh1.area() - mesh2.area()) / min(mesh1.area(), mesh2.area()) < area_thresh, (
-            f"Areas of result and reference differ too much, \narea1={mesh1.area()}\narea2={mesh2.area()}\n"
+        area_1 = mesh1.area()
+        area_2 = mesh2.area()
+        assert abs(area_1 - area_2) / min(area_1, area_2) < area_thresh, (
+            f"Areas of result and reference differ too much, \narea1={area_1}\narea2={area_2}\n"
             f"relative threshold is {area_thresh}")
         #  check on meshes vertices number
     with check:
-        if mesh1.topology.numValidVerts() - mesh2.topology.numValidVerts() != 0:
-            assert abs(mesh1.topology.numValidVerts() - mesh2.topology.numValidVerts()) / min(mesh1.topology.numValidVerts(),
-                                                                        mesh2.topology.numValidVerts()) < verts_thresh, (
+        verts_1 = mesh1.topology.numValidVerts()
+        verts_2 = mesh2.topology.numValidVerts()
+        if verts_1 != verts_2:
+            assert abs(verts_1 - mesh2.topology.numValidVerts()) / min(verts_1,
+                                                                        verts_2) < verts_thresh, (
                 f"Vertex numbers of result and reference differ too much, \n"
-                f"verts1={mesh1.topology.numValidVerts()}\nverts2={mesh2.topology.numValidVerts()}\n"
+                f"verts1={verts_1}\nverts2={verts_2}\n"
                 f"relative threshold is {verts_thresh}")
+    with check:
+        edges_1 = mesh1.topology.computeNotLoneUndirectedEdges()
+        edges_2 = mesh2.topology.computeNotLoneUndirectedEdges()
+        if edges_1 != edges_2:
+            assert abs(edges_1 - edges_2) / min(edges_1, edges_2) < edges_thresh, (
+                f"Edge numbers of result and reference differ too much, \n"
+                f"edges1={edges_1}\nedges2={edges_2}\n"
+                f"relative threshold is {edges_thresh}")
 
 
 def compare_mesh(mesh1: mrmeshpy.Mesh or Path or str, ref_file_path: Path, multi_ref=True):
@@ -153,22 +169,23 @@ def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
     test_report = f"Testname is {testname}\n" if testname else ""
     # load voxels if required
     if isinstance(voxels_a, str) or isinstance(voxels_a, Path):
-        voxels_a = mrmeshpy.loadVoxelsRaw(Path(voxels_a))
+        # voxels_a = mrmeshpy.loadVoxelsRaw(Path(voxels_a))
+        voxels_a = mrmeshpy.loadVoxels(voxels_a)[0]
     if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
-        voxels_b = mrmeshpy.loadVoxelsRaw(Path(voxels_b))
+        voxels_b = mrmeshpy.loadVoxels(voxels_b)[0]
     with check:
         for dim in ["x", "y", "z"]:
             val_a = voxels_a.voxelSize.__getattribute__(dim)
             val_b = voxels_b.voxelSize.__getattribute__(dim)
             # dcm format sometimes has very small difference in voxel sizes, so we need to check it with threshold
-            assert (val_a - val_b) / val_a < 0.00001, (
+            assert val_a == pytest.approx(val_b), (
                     f"{test_report}Voxel sizes are differs for dimension {dim}, \n"
                     f"voxel_a:{val_a}\nvoxel_b:{val_b}\n")
-        assert voxels_a.min == voxels_b.min, (
+        assert voxels_a.min == pytest.approx(voxels_b.min), (
             f"{test_report}voxels.min of voxels are differs, \n"
             f"voxel_a:{voxels_a.min}\nvoxel_b:{voxels_b.min}\n")
-        assert voxels_a.max == voxels_b.max, (
-            f"{test_report}voxels.min of voxels are differs, \n"
+        assert voxels_a.max == pytest.approx(voxels_b.max), (
+            f"{test_report}voxels.max of voxels are differs, \n"
             f"voxel_a:{voxels_a.max}\nvoxel_b:{voxels_b.max}\n")
         assert voxels_a.dims == voxels_b.dims, (
             f"{test_report}voxels.dims of voxels are differs, \n"

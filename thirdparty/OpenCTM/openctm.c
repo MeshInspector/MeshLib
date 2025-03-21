@@ -1335,7 +1335,7 @@ CTMEXPORT void CTMCALL ctmSave(CTMcontext aContext, const char * aFileName)
   }
 
   // Save the file
-  ctmSaveCustom(self, _ctmDefaultWrite, (void *) f);
+  ctmSaveCustom(self, _ctmDefaultWrite, NULL, (void *) f);
 
   // Close file stream
   fclose(f);
@@ -1344,7 +1344,7 @@ CTMEXPORT void CTMCALL ctmSave(CTMcontext aContext, const char * aFileName)
 //-----------------------------------------------------------------------------
 // ctmSaveCustom()
 //-----------------------------------------------------------------------------
-void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
+void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn, CTMcompressProgress aProgressFn,
   void * aUserData)
 {
   _CTMcontext * self = (_CTMcontext *) aContext;
@@ -1367,6 +1367,7 @@ void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
 
   // Initialize stream
   self->mWriteFn = aWriteFn;
+  self->mCompressProgressFn = aProgressFn;
   self->mUserData = aUserData;
 
   // Determine flags
@@ -1393,7 +1394,7 @@ void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
 
     default:
       self->mError = CTM_INTERNAL_ERROR;
-      return;
+      goto end;
   }
   _ctmStreamWriteUINT(self, self->mVertexCount);
   _ctmStreamWriteUINT(self, self->mTriangleCount);
@@ -1419,6 +1420,9 @@ void CTMCALL ctmSaveCustom(CTMcontext aContext, CTMwritefn aWriteFn,
 
     default:
       self->mError = CTM_INTERNAL_ERROR;
-      return;
+      goto end;
   }
+
+end:
+  self->mCompressProgressFn = NULL;
 }

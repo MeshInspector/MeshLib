@@ -1,0 +1,80 @@
+/**
+
+\page FloatVSDouble Float vs Double
+
+\tableofcontents
+
+# Float vs Double: A Design Choice for Precision and Performance in C++
+
+In computational geometry and graphics, the decision to use single-precision (float, 32-bit) or double-precision (double, 64-bit) data types can significantly impact the performance, memory usage, and precision of your application. 
+In C++, these types are critical for representing point coordinates in structures like clouds, lines, or meshes. 
+This article examines the trade-offs between float and double and explains the design rationale in the context of the MeshLib library.
+
+
+## Precision vs. Performance: Key Considerations
+### Precision
+ - double provides approximately **15 significant decimal digits**, compared to float, which offers **7 significant decimal digits**.
+ - This enhanced precision is vital in scenarios requiring high accuracy, such as solving large systems of linear equations or representing geospatial data.
+
+### Performance and Memory
+#### Processing Speed:
+ - While the CPU handles double-precision arithmetic at a modest slowdown (e.g., 10-50% slower than single-precision), the GPU impact is far greater. 
+ On CUDA-enabled GPUs, double-precision arithmetic can be **orders of magnitude slower** or even unsupported on certain hardware.
+ - **Memory Bandwidth:** Doubles take **twice as long** to transfer between the processor and memory compared to floats, reducing the likelihood of cache hits and further slowing computation.
+
+#### Memory Consumption:
+ - Doubles consume **twice the memory** of floats, which is particularly significant in memory-constrained environments such as **32-bit WebAssembly applications** or **high-performance GPUs with limited memory**.
+
+### Algorithm Compatibility
+Algorithms written for float can often be straightforwardly adapted to double. 
+However, converting double-precision algorithms to single-precision may lead to precision errors, particularly in computations with accumulated rounding errors or high dynamic range requirements.
+
+## Design Philosophy in MeshLib
+
+The design of MeshLib aims to balance precision and performance, leveraging the strengths of both float and double where they are most appropriate:
+
+1. **Template-Based Fundamental Structures**
+ - Core data structures like Vector3 and Matrix3, as well as fundamental algorithms (e.g., distance calculations), are implemented as C++ templates. This allows them to be instantiated with both float and double, offering flexibility for different use cases.
+2. **Specialized Templates for Complex Objects**
+ - Advanced geometric structures such as Polyline are also templated, enabling developers to choose precision based on the application.
+3. **Standardized Use of Floats**
+ - Key data structures, such as **point clouds** and **meshes**, store coordinates using float. This ensures optimal performance and simplifies development, particularly for:
+  - **CUDA integration**, where single-precision computations are faster and more widely supported.
+  - **WebAssembly (WASM)** applications, where memory usage is a critical constraint.
+4. **Precision-Intensive Algorithms**
+ - For algorithms requiring higher precision, such as the **Laplacian Deformer**, intermediate computations are performed in double-precision, and the results are converted back to single-precision for storage.
+
+## Case Studies: Applications in Practice
+### Mesh Simplification (Decimation)
+ - Testing revealed that double-precision versions of simplification algorithms are:
+  - **15% slower** than their single-precision counterparts.
+  - Consume significantly more memory.
+  - Show **no measurable improvement** in the quality of results.
+ - **Conclusion:** Floats are the clear choice for this application, prioritizing speed and memory efficiency.
+
+### Geopositioned Terrain Data
+ - Terrain meshes and point clouds often use absolute geo-coordinates, which share up to **5 significant digits** among points. This exceeds the precision limit of floats.
+ - **Solution:** The library preprocesses such data by:
+  - Applying a global shift to the reference frame.
+  - Storing points relative to the shifted origin, ensuring sufficient precision for single-precision representation.
+ - This approach maintains compatibility with floats while preserving accuracy.
+
+### Boolean operations on meshes: union, intersection, difference.
+These operations in their core depend on fundamental predicates like Triangle-Segment intersection. 
+And although the computation of the predicates can be inaccurate in float-arithmetic (e. g. return “intersection” when there is none) due to rounding errors, the computation in **double-arithmetic just reduces the probability of inaccuracies**, but it does not eliminate them at all. 
+And if input to Boolean operations is degenerate like exactly coinciding triangles, both float and double computations will have the same issues. 
+That is why **MeshLib utilizes intermediate conversion of point coordinates into integers**, and performs evaluation of predicates in integer numbers as well, **where no inaccuracies are possible**. 
+On top of that, **Simulation-of-Simplicity (SoS)** approach is utilized to avoid numerous corner-cases, otherwise extremely hard to tackle correctly. 
+\note In the example of a triangle and a segment, SoS ensures that they can either intersect or not-intersect, but never just touch one another.
+
+## Conclusion
+The decision between float and double depends on the specific requirements of the application. 
+While double excels in scenarios demanding high precision, float often provides better performance, lower memory usage, and easier compatibility with platforms like CUDA and WASM.
+
+MeshLib adopts a balanced strategy:
+ - **Floats** are the default for most data structures, prioritizing performance and memory efficiency.
+ - **Doubles** are selectively employed for precision-critical algorithms, ensuring accuracy where needed without compromising the overall system's efficiency.
+
+This design allows MeshLib to meet diverse application requirements while maintaining a high standard of performance and usability.
+
+*/

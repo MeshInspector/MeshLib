@@ -9,10 +9,11 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRPch/MRJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRPython/MRPython.h"
-#include "MRPython/MREmbeddedPython.h"
+#include "MREmbeddedPython/MREmbeddedPython.h"
 #endif
 
 #if !defined(__EMSCRIPTEN__) && !defined(_WIN32)
@@ -63,6 +64,19 @@ int main( int argc, char** argv )
 #else
     spdlog::info( "MSVC {}", _MSC_FULL_VER );
 #endif
+
+    // print standard library info
+#ifdef _MSVC_STL_UPDATE
+    // https://github.com/microsoft/STL/wiki/Macro-_MSVC_STL_UPDATE
+    spdlog::info( "Microsoft's STL version {}", _MSVC_STL_UPDATE );
+#endif
+#ifdef __GLIBCXX__
+    spdlog::info( "GNU libstdc++ version {}", __GLIBCXX__ );
+#endif
+#ifdef _LIBCPP_VERSION
+    spdlog::info( "Clang's libc++ version {}", _LIBCPP_VERSION );
+#endif
+
     spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef __EMSCRIPTEN__
     if ( !consumeFlag( "--no-python-tests" ) )
@@ -95,9 +109,18 @@ int main( int argc, char** argv )
                 "for f in funcs :\n"
                 " if not f.startswith( '_' ) :\n"
                 "  print( \"mrmeshpy.\" + f )\n"
-                "print( \"\\n\" )";
+                "print()"; // one empty line
 
-            if ( !MR::EmbeddedPython::runString( str ) )
+            spdlog::info( "Running embedded python" );
+            bool ok = MR::EmbeddedPython::runString( str );
+            if ( ok )
+                spdlog::info( "Embedded python run passed" );
+            else
+                spdlog::error( "Embedded python run failed" );
+            MR::EmbeddedPython::shutdown();
+            spdlog::info( "Embedded python shut down" );
+
+            if ( !ok )
                 return 1;
         }
 

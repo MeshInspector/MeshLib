@@ -116,9 +116,9 @@ TEST( MRMesh, ExpandShrinkVoxels )
 
     auto storeMask = mask;
     expandVoxelsMask( mask, indexer );
-    EXPECT_FALSE( ( mask - refMask ).any() );
+    EXPECT_TRUE( mask.is_subset_of( refMask ) );
     shrinkVoxelsMask( mask, indexer );
-    EXPECT_FALSE( ( mask - storeMask ).any() );
+    EXPECT_TRUE( mask.is_subset_of( storeMask ) );
 }
 
 } //namespace MR

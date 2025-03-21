@@ -17,9 +17,35 @@ namespace MR
 namespace VoxelsLoad
 {
 
+
+enum class DicomStatusEnum : int
+{
+    Ok = 0,         // valid DICOM and we can open it
+    Invalid,        // not a valid DICOM
+    Unsupported,    // a valid DICOM, but we do not support it (e.g. some MediaStorages)
+};
+
+struct DicomStatus
+{
+    // implicit by design
+    DicomStatus( DicomStatusEnum st, std::string_view rs = "" ):
+        status( st ),
+        reason( rs )
+    {}
+
+    explicit operator bool() const
+    { return status == DicomStatusEnum::Ok; }
+
+    bool operator==( DicomStatusEnum s ) const
+    { return status == s; }
+
+    DicomStatusEnum status = DicomStatusEnum::Invalid;
+    std::string reason;     // if status is Unsupported, specify reason why
+};
+
 /// check if file is a valid DICOM dataset file
 /// \param seriesUid - if set, the extracted series instance UID is copied to the variable
-MRVOXELS_API bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
+MRVOXELS_API DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
 
 /// check if given folder contains at least one DICOM file
 MRVOXELS_API bool isDicomFolder( const std::filesystem::path& dirPath );
@@ -32,21 +58,23 @@ struct DicomVolumeT
     AffineXf3f xf;
 };
 
-using DicomVolume = DicomVolumeT<SimpleVolumeMinMax>;
-using DicomVolumeAsVdb = DicomVolumeT<VdbVolume>;
+/// Loads full volume from single DICOM file (not a slice file) as SimpleVolumeMinMax
+MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
+/// Loads full volume from single DICOM file (not a slice file) as VdbVolume
+MRVOXELS_API Expected<DicomVolumeAsVdb> loadDicomFileAsVdb( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
-/// Loads 3D all volumetric data from DICOM files in a folder
-/// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume
-template <typename T = SimpleVolumeMinMax>
-MRVOXELS_API std::vector<Expected<DicomVolumeT<T>>> loadDicomsFolder( const std::filesystem::path& path,
-                                                                      unsigned maxNumThreads = 4, const ProgressCallback& cb = {}  );
+/// Loads one volume from DICOM files located in given folder as SimpleVolumeMinMax
+MRVOXELS_API Expected<DicomVolume> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb = {} );
 
-/// Loads 3D first volumetric data from DICOM files in a folder
-/// @note Explicitly instantiated for T = SimpleVolumeMinMax and T = VdbVolume
-template <typename T = SimpleVolumeMinMax>
-MRVOXELS_API Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path,
-                                                    unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
+/// Loads one volume from DICOM files located in given folder as VdbVolume
+MRVOXELS_API Expected<DicomVolumeAsVdb> loadDicomFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb = {} );
+
+/// Loads all volumes from DICOM files located in given folder as a number of SimpleVolumeMinMax
+MRVOXELS_API std::vector<Expected<DicomVolume>> loadDicomsFolder( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb = {} );
+
+/// Loads all volumes from DICOM files located in given folder as a number of VdbVolume
+MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
 MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path,
@@ -56,11 +84,7 @@ MRVOXELS_API std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( 
 MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsVdb & dcm, const ProgressCallback & cb = {} );
 
 /// Loads 3D volumetric data from dicom-files in given folder, and converts them into an ObjectVoxels
-MRVOXELS_API Expected<LoadedObjectVoxels> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback = {} );
-
-/// Loads 3D volumetric data from a single DICOM file
-template <typename T = SimpleVolumeMinMax>
-MRVOXELS_API Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback = {} );
 
 } // namespace VoxelsLoad
 
@@ -73,6 +97,8 @@ MRVOXELS_API Expected<void> toDicom( const VdbVolume& vdbVolume, const std::file
 /// which will be saved with "slope" and "intercept" parameters of the output dicom.
 template <typename T>
 MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
+
+extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<std::uint16_t>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
 
 } // namespace VoxelsSave
 

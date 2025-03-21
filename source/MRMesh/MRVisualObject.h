@@ -7,6 +7,7 @@
 #include "MRPositionedText.h"
 #include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -14,17 +15,6 @@ namespace MR
 /// \defgroup VisualObjectGroup Visual Object group
 /// \ingroup DataModelGroup
 /// \{
-
-/// Type of mesh coloring,
-/// \note that texture are applied over main coloring
-enum class ColoringType
-{
-    SolidColor,   ///< Use simple color for whole mesh
-    PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each ptimitive
-    FacesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each face (primitive for object mesh)
-    LinesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each line (primitive for object lines)
-    VertsColorMap  ///< Use different color (taken from verts colormap) for each vert
-};
 
 // Note! Must use `MRMESH_CLASS` on this enum and all enums that extend this one,
 // otherwise you'll get silent wrong behavior on Mac.
@@ -243,21 +233,11 @@ public:
     /// sets the object as can/cannot be picked (by mouse) in all of given viewports
     MRMESH_API virtual void setPickable( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
-    /// returns per-vertex colors of the object
-    const VertColors& getVertsColorMap() const { return vertsColorMap_; }
-    /// sets per-vertex colors of the object
-    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
-    /// swaps per-vertex colors of the object with given argument
-    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
-
     /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
 
     /// sets coloring mode of the object with given argument
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
-
-    /// copies point colors from given source object \param src using given map \param thisToSrc
-    MRMESH_API virtual void copyColors( const VisualObject & src, const VertMap & thisToSrc, const FaceMap& thisToSrcFaces = {} );
 
     /// returns the current shininess visual value
     float getShininess() const { return shininess_; }
@@ -342,7 +322,6 @@ protected:
 
     /// Main coloring options
     ColoringType coloringType_{ColoringType::SolidColor};
-    VertColors vertsColorMap_;
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;

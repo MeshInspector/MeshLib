@@ -45,4 +45,7 @@ MRVIEWER_API void setUiLengthPrecision( int precision );
 [[nodiscard]] MRVIEWER_API int getUiAnglePrecision();
 MRVIEWER_API void setUiAnglePrecision( int precision );
 
+[[nodiscard]] MRVIEWER_API int getUiRatioPrecision();
+MRVIEWER_API void setUiRatioPrecision( int precision );
+
 }

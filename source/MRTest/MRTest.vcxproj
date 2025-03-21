@@ -11,12 +11,36 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRBezierTests.cpp" />
+    <ClCompile Include="MRBoxTests.cpp" />
+    <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MRExampleTest.cpp" />
+    <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRMeshIntersectTests.cpp" />
+    <ClCompile Include="MRMeshLoadSaveTest.cpp" />
+    <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRNaNTest.cpp" />
+    <ClCompile Include="MRPdfTests.cpp" />
+    <ClCompile Include="MRPolyline2IntersectTests.cpp" />
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
+    <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRMeshVoxelsConverter.cpp" />
+    <ClCompile Include="MRTriMathTests.cpp" />
+    <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRProgressCallback.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
+      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">
+      <Project>{e0202297-edb2-4cdc-9cd0-8921eff08da0}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
     </ProjectReference>
@@ -34,6 +58,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRViewer\MRViewer.vcxproj">
       <Project>{cecb9185-ff38-461f-ba20-654399edc67e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRVoxels\MRVoxels.vcxproj">
+      <Project>{7cc4f0fe-ace6-4441-9dd7-296066b6d69f}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 #include "MRContoursCut.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
+#include "MRPolyline.h"
 #include "MRTriangleIntersection.h"
 #include "MRMeshTopology.h"
 #include "MRMeshDelone.h"
@@ -558,6 +559,67 @@ OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& m
                     outIntersection.coordinate = inverseXf( outIntersection.coordinate );
             }
         } );
+    }
+    return res;
+}
+
+OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const ContinuousContours& contours, const CoordinateConverters& converters, const AffineXf3f* rigidB2A /*= nullptr */ )
+{
+    MR_TIMER;
+    OneMeshContours res;
+    AffineXf3f inverseXf;
+    if ( rigidB2A )
+        inverseXf = rigidB2A->inverse();
+    res.resize( contours.size() );
+    for ( int j = 0; j < contours.size(); ++j )
+    {
+        auto& curOutContour = res[j].intersections;
+        const auto& curInContour = contours[j];
+        res[j].closed = isClosed( curInContour );
+        curOutContour.resize( curInContour.size() );
+
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, curInContour.size() ),
+            [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            Vector3f a, b, c, d, e;
+            for ( size_t i = range.begin(); i < range.end(); ++i )
+            {
+                const auto& inIntersection = curInContour[i];
+                auto& outIntersection = curOutContour[i];
+                if ( !rigidB2A == inIntersection.isEdgeATriB )
+                    outIntersection.primitiveId = inIntersection.edge;
+                else
+                    outIntersection.primitiveId = inIntersection.tri;
+                mesh.getTriPoints( inIntersection.tri, a, b, c );
+                d = mesh.orgPnt( inIntersection.edge );
+                e = mesh.destPnt( inIntersection.edge );
+
+                // always calculate in mesh A space
+                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
+                    rigidB2A ? ( *rigidB2A )( a ) : a,
+                    rigidB2A ? ( *rigidB2A )( b ) : b,
+                    rigidB2A ? ( *rigidB2A )( c ) : c,
+                    rigidB2A ? ( *rigidB2A )( d ) : d,
+                    rigidB2A ? ( *rigidB2A )( e ) : e, converters );
+
+                if ( rigidB2A )
+                    outIntersection.coordinate = inverseXf( outIntersection.coordinate );
+            }
+        } );
+    }
+    return res;
+}
+
+Contours3f extractMeshContours( const OneMeshContours& meshContours )
+{
+    Contours3f res( meshContours.size() );
+    for ( int i = 0; i < res.size(); ++i )
+    {
+        auto& resI = res[i];
+        const auto& imputI = meshContours[i].intersections;
+        resI.resize( imputI.size() );
+        for ( int j = 0; j < resI.size(); ++j )
+            resI[j] = imputI[j].coordinate;
     }
     return res;
 }
@@ -1138,30 +1200,116 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
     return convertMeshTriPointsToMeshContour( mesh, meshTriPointsOrg, conFn, pivotIndices );
 }
 
-Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
+Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
 {
-    auto initCutContours = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings );
-    if ( !initCutContours.has_value() )
-        return unexpected( initCutContours.error() );
+    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints, 
+        [isoValue] ( int )
+    {
+        return isoValue;
+    }, searchSettings );
+}
 
-    if ( isoValue == 0.0f )
-        return OneMeshContours{ std::move( *initCutContours ) };
+Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
+    const std::function<float( int )>& offsetAtPoint, SearchPathSettings searchSettings /*= {}*/ )
+{
+    if ( !offsetAtPoint )
+    {
+        assert( false );
+        return {};
+    }
+    MinMaxf mmOffset;
+    for ( int i = 0; i < meshTriPoints.size(); ++i )
+        mmOffset.include( std::abs( offsetAtPoint( i ) ) );
 
-    // need to set non-cut vertices too
-    VertBitSet startVertices( mesh.topology.lastValidVert() + 1 );
-    for ( const auto& i : initCutContours->intersections )
-        if ( i.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
-            startVertices.set( std::get<VertId>( i.primitiveId ) );
+    std::vector<int> pivotIndices; // only used if offset is variable
+    auto initCutContourRes = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings, mmOffset.min == mmOffset.max ? nullptr : &pivotIndices );
+    if ( !initCutContourRes.has_value() )
+        return unexpected( initCutContourRes.error() );
+
+    OneMeshContours initCutContoursVec = OneMeshContours{ std::move( *initCutContourRes ) };
+
+    if ( mmOffset.min == 0.0f && mmOffset.max == 0.0f )
+        return initCutContoursVec;
 
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
     // .forceFillMode = CutMeshParameters::ForceFill::All
     // because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, { std::move( *initCutContours ) }, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
 
-    startVertices |= ( meshAfterCut.topology.getValidVerts() - mesh.topology.getValidVerts() );
-    auto distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
-    auto isoLines = extractIsolines( meshAfterCut.topology, distances, isoValue );
+    const auto& initCutContours = initCutContoursVec[0];
+
+    // setup start vertices
+    VertBitSet startVertices( meshAfterCut.topology.lastValidVert() + 1 );
+    HashMap<VertId, float> startVerticesValues; // only used if offset is variable
+    std::vector<float> sumLength; // only used if offset is variable
+    struct InterInfo
+    {
+        float length{ 0.0f };
+        int startPivot{ -1 };
+        int endPivot{ -1 };
+    };
+    std::vector<InterInfo> singleSegmentInfo; // only used if offset is variable
+    if ( !pivotIndices.empty() ) // if offset is variable
+    {
+        sumLength.resize( pivotIndices.size(), 0.0f );
+        singleSegmentInfo.resize( initCutContours.intersections.size() );
+        int startPivot = 0;
+        int endPivot = 0;
+        while ( pivotIndices[startPivot] == -1 )
+            startPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
+        while ( pivotIndices[endPivot] == -1 )
+            endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
+        bool lastSegment = false;
+        for ( int i = 0; i < initCutContours.intersections.size(); ++i )
+        {
+            if ( !lastSegment && pivotIndices[endPivot] <= i )
+            {
+                startPivot = endPivot;
+                endPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
+                while ( pivotIndices[endPivot] == -1 )
+                    endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
+                if ( endPivot < startPivot )
+                    lastSegment = true;
+            }
+            float length = 0.0f;
+            if ( pivotIndices[startPivot] != i )
+            {
+                int prevI = ( i - 1 + int( singleSegmentInfo.size() ) ) % int( singleSegmentInfo.size() );
+                length = ( initCutContours.intersections[i].coordinate - initCutContours.intersections[prevI].coordinate ).length();
+            }
+            singleSegmentInfo[i].length += length;
+            singleSegmentInfo[i].startPivot = startPivot;
+            singleSegmentInfo[i].endPivot = endPivot;
+            sumLength[startPivot] += length;
+        }
+    }
+    VertId currentId = mesh.topology.lastValidVert() + 1;
+    for ( int i = 0; i < initCutContours.intersections.size(); ++i )
+    {
+        const auto inter = initCutContours.intersections[i];
+        VertId interVertId;
+        if ( inter.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
+            interVertId = std::get<VertId>( inter.primitiveId );
+        else
+            interVertId = currentId++;
+        startVertices.set( interVertId );
+        if ( !pivotIndices.empty() ) // if offset is variable
+        {
+            auto curSumLength = sumLength[singleSegmentInfo[i].startPivot];
+            float ratio = curSumLength > 0.0f ? singleSegmentInfo[i].length / curSumLength : 0.5f;
+            float offsetValue = ( 1.0f - ratio ) * offsetAtPoint( singleSegmentInfo[i].startPivot ) + ratio * offsetAtPoint( singleSegmentInfo[i].endPivot );
+            startVerticesValues[interVertId] = mmOffset.max - offsetValue;
+        }
+    }
+
+    // calculate isolines
+    VertScalars distances;
+    if ( pivotIndices.empty() ) // if offset is static
+        distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
+    else
+        distances = computeSurfaceDistances( meshAfterCut, startVerticesValues, FLT_MAX );
+    auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
 
     OneMeshContours res;
     res.resize( isoLines.size() );
@@ -2089,6 +2237,37 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     return res;
 }
+
+Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
+{
+    std::vector<MeshTriPoint> surfaceLine( contour.size() );
+    tbb::task_group_context ctx;
+    bool ok = true;
+    ParallelFor( (size_t)0, contour.size(), [&] ( size_t i )
+    {
+        PointOnFace projPt;
+        if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
+        {
+            if ( ctx.cancel_group_execution() )
+                ok = false;
+            return;
+        }
+        surfaceLine[i] = mesh.toTriPoint( projPt );
+    } );
+    if ( !ok )
+        return unexpected( "Cannot project point to mesh" );
+
+    auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
+    if ( !meshContour )
+        return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
+
+    auto cutRes = cutMesh( mesh, { *meshContour } );
+    if ( !cutRes.fbsWithCountourIntersections.none() )
+        return unexpected( "Cannot cut mesh because of contour self intersections" );
+    auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
+    return sideFbv;
+}
+
 
 TEST( MRMesh, BooleanIntersectionsSort )
 {

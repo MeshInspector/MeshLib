@@ -16,8 +16,11 @@ struct SaveSettings
     /// false - save all points/vertices preserving their indices
     bool saveValidOnly = true;
 
-    /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed;
-    /// currently affects .ctm format only
+    /// whether to allow the pack or shuffle of triangles;
+    /// if it is turned on, then ids of invalid triangles are reused by the following valid triangles
+    /// and higher compression (in .ctm format) can be reached but the order of triangles is changed;
+    /// if it is turned off then all triangles maintain their ids, and invalid triangles are saved as (0,0,0) vertex triples;
+    /// currently affects .ctm and .ply formats only
     bool rearrangeTriangles = true;
 
     /// optional per-vertex color to save with the geometry

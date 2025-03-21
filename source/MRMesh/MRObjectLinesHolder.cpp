@@ -116,6 +116,7 @@ size_t ObjectLinesHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
         + linesColorMap_.heapBytes()
+        + vertsColorMap_.heapBytes()
         + MR::heapBytes( polyline_ );
 }
 

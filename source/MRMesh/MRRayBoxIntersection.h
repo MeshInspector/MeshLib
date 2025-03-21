@@ -82,7 +82,7 @@ template <typename T = float>
 bool rayBoxIntersect( const Box3<T>& box, const Line3<T>& line, T t0, T t1 )
 {
     IntersectionPrecomputes<T> prec( line.d );
-    return rayBoxIntersect( box, line, t0, t1, prec );
+    return rayBoxIntersect( box, RayOrigin<T>( line.p ), t0, t1, prec );
 }
 
 /// \}

@@ -24,6 +24,21 @@ struct MeshProjectionResult
     float distSq = 0;
 };
 
+struct MeshProjectionTransforms
+{
+    const AffineXf3f* rigidXfPoint{ nullptr }; ///< this xf is applied to point to move it into projection space
+    const AffineXf3f* nonRigidXfTree{ nullptr }; ///< this xf is applied to AABB tree to move it into projection space
+};
+
+/// <summary>
+/// Creates structure with simplified transforms for projection functions, with `rigidXfPoint` applied to point, and `nonRigidXfTree` applied to tree
+/// </summary>
+/// <param name="storageXf">this argument will hold modified transfrom</param>
+/// <param name="pointXf">transform for points to be projected</param>
+/// <param name="treeXf">transform for tree's boxes</param>
+/// <returns>structure with simplified transforms</returns>
+MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf );
+
 /**
  * \brief computes the closest point on mesh (or its region) to given point
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
@@ -56,18 +71,12 @@ struct MeshProjectionResult
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
-struct Ball
-{
-    Vector3f center;
-    float radiusSq = 0;
-};
-
 /// this callback is invoked on every triangle at least partially in the ball, and allows to change the ball
-using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball & ball )>;
+using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball3f & ball )>;
 
 /// enumerates all triangles within the ball until callback returns Stop;
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
-MRMESH_API void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
+MRMESH_API void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
 
 struct SignedDistanceToMeshResult
 {

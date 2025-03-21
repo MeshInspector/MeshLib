@@ -28,13 +28,13 @@ jobs:
 
       - name: Get latests release
         id: get_release
-        uses: kaliber5/action-get-release@v1
+        uses: kaliber5/action-get-release@953a6dd072cb35590892a224b72ba0ec6bef03a1 # v1
         with:
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           latest: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -46,7 +46,7 @@ jobs:
           echo "file_url=https://github.com/MeshInspector/MeshLib/releases/download/${{steps.get_release.outputs.tag_name}}" >> $GITHUB_OUTPUT
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
         with:
           file: ./docker/app/${{matrix.image-tag}}Dockerfile
           push: true

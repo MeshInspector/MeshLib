@@ -36,7 +36,7 @@ jobs:
 
       - name: run test
         shell: powershell
-        run: "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\test_results.xml" -logfile "C:\work\batch_log.txt"
+        run: "C:\\work\\unity_editor\\6000.0.40f1\\Editor\\Unity.exe" -runTests -batchmode -projectPath "C:\work\unity_proj\NugetTestProj" -testPlatform playmode -testResults "C:\work\test_results.xml" -logfile "C:\work\batch_log.txt"
 
 
       - name: verify xml

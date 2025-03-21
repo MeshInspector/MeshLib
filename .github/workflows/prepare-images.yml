@@ -48,7 +48,7 @@ jobs:
             os: ubuntu-latest
           - arch: arm64
             image-suffix: '-arm64'
-            os: [ self-hosted, linux-arm64 ]
+            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
     runs-on: ${{ matrix.os }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile

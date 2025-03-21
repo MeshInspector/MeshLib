@@ -33,7 +33,6 @@ MR_INSTALL_RES_DIR="/usr/local/share/MeshLib"
 # Install the generated bindings, if needed.
 if [ ! -f "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib/mrmeshpy.so" ] && [ -f "build/Release/bin/meshlib/mrmeshpy.so" ]; then
   echo "Installing the generated bindings..."
-
   if [ -f "build/Release/bin/meshlib/mrcudapy.so" ]; then
     echo "CUDA bindings found, installing with mrcudapy.so..."
     install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,mrcudapy.so,__init__.py}

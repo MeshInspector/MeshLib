@@ -69,7 +69,7 @@ void SelectObjectByClick::select_( bool up )
 
     std::vector<std::shared_ptr<VisualObject>> newSelection;
     const auto& viewport = viewer->viewport();
-    bool smallPick = ( downPos - currPos ).lengthSq() < 9;
+    bool smallPick = distanceSq( downPos, currPos ) < 9;
     if ( smallPick ) // 3*3
     {
         const auto [obj, pick] = viewport.pick_render_object();

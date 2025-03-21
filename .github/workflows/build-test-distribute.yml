@@ -27,7 +27,7 @@ jobs:
 
   debug-config:
     needs: config
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     steps:
       - name: Print config
         run: |
@@ -42,7 +42,8 @@ jobs:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
-      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -64,7 +65,8 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:   ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:   ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -113,6 +115,8 @@ jobs:
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
@@ -177,7 +181,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
@@ -276,14 +280,14 @@ jobs:
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
@@ -297,7 +301,9 @@ jobs:
       release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
 
   update-dev-documentation:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.update_doc == 'true' }}
+    # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
+    # and if this variant failed this job also will fail
+    if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && always() }}
     needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
@@ -305,15 +311,17 @@ jobs:
     secrets: inherit
 
   test-pip-build:
-    needs: config
+    needs: [ config, prepare-image ]
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
+    with:
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     needs: [ upload-distributions ]
-    if: always()
+    if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
     steps:
       - name: Checkout
@@ -342,38 +350,38 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: aws-micro
     needs: [ collect-stats, update-dev-documentation ]
     if: always()
     continue-on-error: true
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
         # .NET
       - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Distributives*
           failOnError: false
 
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Wheelhouse*
           failOnError: false
 
       - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: RunnerSysStats*
           failOnError: false
@@ -404,13 +412,13 @@ jobs:
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
           failOnError: false

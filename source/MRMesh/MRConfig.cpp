@@ -4,7 +4,6 @@
 #include <iostream>
 #include <fstream>
 #include "MRSystem.h"
-#include "MRPch/MRJson.h"
 #include "MRPch/MRWasm.h"
 
 namespace MR

@@ -37,29 +37,34 @@ fi
 MR_EMSCRIPTEN_SINGLETHREAD=0
 if [[ $OSTYPE == "linux"* ]] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
   if [ ! -n "$MR_EMSCRIPTEN" ]; then
-    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
+    read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N) (s - singlethreaded, l - 64-bit)" -rsn 1
     echo;
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      MR_EMSCRIPTEN="ON"
-    else
-      if [[ $REPLY =~ ^[Ss]$ ]]; then
+    case $REPLY in
+      Y|y)
+        MR_EMSCRIPTEN="ON";;
+      S|s)
         MR_EMSCRIPTEN="ON"
-        MR_EMSCRIPTEN_SINGLETHREAD=1
-      else
-        MR_EMSCRIPTEN="OFF"
-      fi
-    fi
+        MR_EMSCRIPTEN_SINGLETHREAD=1;;
+      L|l)
+        MR_EMSCRIPTEN="ON"
+        MR_EMSCRIPTEN_WASM64=1;;
+      *)
+        MR_EMSCRIPTEN="OFF";;
+    esac
   fi  
 else
   if [ ! -n "$MR_EMSCRIPTEN" ]; then
     MR_EMSCRIPTEN="OFF"
   fi
 fi
-echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}"
+echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}, 64-bit ${MR_EMSCRIPTEN_WASM64}"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
   if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
     MR_EMSCRIPTEN_SINGLETHREAD=1
+  fi
+  if [[ $MR_EMSCRIPTEN_WASM64 == "ON" ]]; then
+    MR_EMSCRIPTEN_WASM64=1
   fi
 elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
   echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
@@ -95,15 +100,22 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 
   export CFLAGS=""
   export CXXFLAGS=""
+  export LDFLAGS=""
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
+    -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
     CFLAGS="${CFLAGS} -pthread"
     CXXFLAGS="${CFLAGS} -pthread"
+  fi
+  if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
+    CFLAGS="${CFLAGS} -s MEMORY64=1"
+    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
+    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
   fi
 fi
 

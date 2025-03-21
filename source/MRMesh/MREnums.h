@@ -41,4 +41,22 @@ enum class OffsetMode : int
     Sharpening  ///< create mesh using standard marching cubes with additional sharpening implemented in MeshLib
 };
 
+/// Type of object coloring,
+/// \note that texture are applied over main coloring
+enum class ColoringType
+{
+    SolidColor,   ///< Use one color for whole object
+    PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each primitive
+    FacesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each face (primitive for object mesh)
+    LinesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each line (primitive for object lines)
+    VertsColorMap  ///< Use different color (taken from verts colormap) for each vertex
+};
+
+enum class UseAABBTree : char
+{
+    No,  // AABB-tree of the mesh will not be used, even if it is available
+    Yes, // AABB-tree of the mesh will be used even if it has to be constructed
+    YesIfAlreadyConstructed, // AABB-tree of the mesh will be used if it was previously constructed and available, and will not be used otherwise
+};
+
 } //namespace MR

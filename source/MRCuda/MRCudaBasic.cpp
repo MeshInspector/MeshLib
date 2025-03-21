@@ -1,7 +1,10 @@
 #include "MRCudaBasic.h"
 #include "MRCudaBasic.hpp"
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+
+#include "MRCuda.cuh"
+
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRVector3.h>
 #include <MRPch/MRSpdlog.h>
 
 namespace MR
@@ -13,28 +16,28 @@ namespace Cuda
 bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
 {
     int n;
-    cudaError err = cudaGetDeviceCount( &n );
-    if ( err != cudaError::cudaSuccess )
+    cudaError_t err = cudaGetDeviceCount( &n );
+    if ( err != cudaSuccess )
         return false;
     if ( n <= 0 )
         return false;
     int driverVersion{ 0 };
     int runtimeVersion{ 0 };
     err = cudaDriverGetVersion( &driverVersion );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
     
     err = cudaRuntimeGetVersion( &runtimeVersion );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
 
     int computeMajor{ 0 };
     int computeMinor{ 0 };
     err = cudaDeviceGetAttribute( &computeMajor, cudaDevAttrComputeCapabilityMajor, 0 );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
     err = cudaDeviceGetAttribute( &computeMinor, cudaDevAttrComputeCapabilityMinor, 0 );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
 
     if ( driverVersionOut )
@@ -64,6 +67,29 @@ size_t getCudaAvailableMemory()
     CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) );
     // minus extra 128 MB
     return memFree - 128 * 1024 * 1024;
+}
+
+size_t getCudaSafeMemoryLimit()
+{
+    constexpr float cMaxGpuMemoryUsage = 0.80f;
+    return size_t( (float)getCudaAvailableMemory() * cMaxGpuMemoryUsage );
+}
+
+size_t maxBufferSize( size_t availableBytes, size_t elementCount, size_t elementBytes )
+{
+    return std::min( availableBytes / elementBytes, elementCount );
+}
+
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector2i& blockDims, size_t elementBytes )
+{
+    const auto rowSize = (size_t)blockDims.x;
+    return std::min( availableBytes / elementBytes / rowSize, (size_t)blockDims.y ) * rowSize;
+}
+
+size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& blockDims, size_t elementBytes )
+{
+    const auto layerSize = (size_t)blockDims.x * blockDims.y;
+    return std::min( availableBytes / elementBytes / layerSize, (size_t)blockDims.z ) * layerSize;
 }
 
 std::string getError( cudaError_t code )

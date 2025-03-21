@@ -30,8 +30,9 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
         return;
     }
 
-    auto sIt = RibbonSchemaHolder::schema().items.find( item->name() );
-    if ( sIt == RibbonSchemaHolder::schema().items.end() )
+    const auto& schema = RibbonSchemaHolder::schema();
+    auto sIt = schema.items.find( item->name() );
+    if ( sIt == schema.items.end() )
     {
         // no need to assert here, we could fall int this function from LambdaRibbonItem that is not present in scheme
         //assert( false );
@@ -40,6 +41,8 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
 
     RibbonSchemaHolder::SearchResult res;
     res.item = &sIt->second;
+    res.tabIndex = RibbonSchemaHolder::findItemTab( item );
+
     if ( recentItems_.size() < 10 )
         recentItems_.insert( recentItems_.begin(), std::move( res ) );
     else
@@ -146,7 +149,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
         for ( int i = 0; i < resultsList.size(); ++i )
         {
             const auto& foundItem = resultsList[i];
-            if ( captionCount_ == i )
+            if ( captionCount_ == i && !searchLine_.empty() )
             {
                 if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
                 {
@@ -171,6 +174,33 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             dbParams.forcePressed = dbParams.forceHovered &&
                 ( ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter ) );
             const bool pluginActive = foundItem.item->item->isActive();
+            const float tabBtnWidth = 76 * params.scaling;
+            const float tabBtnPadding = 8 * params.scaling;
+            if ( foundItem.tabIndex != -1 )
+            {
+                auto storePos = ImGui::GetCursorPos();
+                auto numColors = params.btnDrawer.pushRibbonButtonColors( true, false, false, dbParams.rootType );
+
+                auto name = "##" + RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name + "##" + foundItem.item->item->name();
+
+                if ( ImGui::Button( name.c_str(), ImVec2( tabBtnWidth, dbParams.itemSize.y ) ) )
+                    params.changeTabFunc( foundItem.tabIndex );
+
+                auto textSize = ImGui::CalcTextSize( RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+
+                ImGui::SetCursorPosX( storePos.x + ( tabBtnWidth - textSize.x ) * 0.5f );
+                ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );
+                ImGui::Text( "%s", RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+
+                ImGui::SetCursorPosX( storePos.x + tabBtnWidth + 0.5f * tabBtnPadding - params.scaling );
+                ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );
+                ImGui::Text( ":" );
+
+                if ( numColors > 0 )
+                    ImGui::PopStyleColor( numColors );
+                ImGui::SetCursorPosY( storePos.y );
+            }
+            ImGui::SetCursorPosX( tabBtnWidth + tabBtnPadding );
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
             {

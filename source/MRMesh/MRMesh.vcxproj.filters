@@ -43,9 +43,6 @@
     <Filter Include="Source Files\History">
       <UniqueIdentifier>{81c8f6c2-9f7d-4609-9a19-a4aaa5edfbbd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Tests">
-      <UniqueIdentifier>{2bfe88a4-61f4-4317-8dae-b473f2202be0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Components">
       <UniqueIdentifier>{fdb0ec66-343d-41e6-80ec-44d4360e11a8}</UniqueIdentifier>
     </Filter>
@@ -57,9 +54,6 @@
     </Filter>
     <Filter Include="Source Files\DataModel\Measurements">
       <UniqueIdentifier>{744e0637-b69b-442b-b0f8-19f0f815c033}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\DataModel\ModelHolder">
-      <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\MeshBuilder">
       <UniqueIdentifier>{c83e4212-7072-40c2-8354-827c896c1628}</UniqueIdentifier>
@@ -423,9 +417,6 @@
     <ClInclude Include="MRMeshComponents.h">
       <Filter>Source Files\Components</Filter>
     </ClInclude>
-    <ClInclude Include="MRGTest.h">
-      <Filter>Source Files\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="MRObjectDistanceMap.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -543,9 +534,6 @@
     <ClInclude Include="MRSphereObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRObjectMeshHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
-    </ClInclude>
     <ClInclude Include="MR2to3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -554,9 +542,6 @@
     </ClInclude>
     <ClInclude Include="MRPolyline.h">
       <Filter>Source Files\Polyline</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectLinesHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRLineObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -569,9 +554,6 @@
     </ClInclude>
     <ClInclude Include="MRHeapBytes.h">
       <Filter>Source Files\Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectPointsHolder.h">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePointCloudAction.h">
       <Filter>Source Files\History</Filter>
@@ -1257,6 +1239,58 @@
     <ClInclude Include="MRRadiusCompensation.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>
+    <ClInclude Include="MRPriorityQueue.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurfaceLineOffset.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSharedThreadSafeOwner.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBall.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsInBox.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MROutlierPoints.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectLinesHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectMeshHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectPointsHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectMeshData.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRChangeMeshDataAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRChunkIterator.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGTest.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBezier.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrPointsObject.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDoubleLayer.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1282,9 +1316,6 @@
     </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBox.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
@@ -1460,17 +1491,11 @@
     <ClCompile Include="MRConfig.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshTests.cpp">
-      <Filter>Source Files\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="MRDenseBox.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
       <Filter>Source Files\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBestFitTests.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectDistanceMap.cpp">
       <Filter>Source Files\DataModel</Filter>
@@ -1480,9 +1505,6 @@
     </ClCompile>
     <ClCompile Include="MRDistanceMapLoad.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRExtractIsolinesTests.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeMaker.cpp">
       <Filter>Source Files\AABBTree</Filter>
@@ -1568,17 +1590,11 @@
     <ClCompile Include="MRSphereObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRObjectMeshHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
-    </ClCompile>
     <ClCompile Include="MRPlaneObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline.cpp">
       <Filter>Source Files\Polyline</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectLinesHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRLineObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -1588,9 +1604,6 @@
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp">
       <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectPointsHolder.cpp">
-      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRPointObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -1603,9 +1616,6 @@
     </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshLoadSaveTest.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTopology.cpp">
       <Filter>Source Files\Mesh</Filter>
@@ -1651,9 +1661,6 @@
     </ClCompile>
     <ClCompile Include="MRPolylineComponents.cpp">
       <Filter>Source Files\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="MRExampleTest.cpp">
-      <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContourByGraphCut.cpp">
       <Filter>Source Files\Segmentation</Filter>
@@ -1720,9 +1727,6 @@
     </ClCompile>
     <ClCompile Include="MROrder.cpp">
       <Filter>Source Files\Mesh</Filter>
-    </ClCompile>
-    <ClCompile Include="MRTriMath.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
@@ -2065,6 +2069,46 @@
     </ClCompile>
     <ClCompile Include="MRRadiusCompensation.cpp">
       <Filter>Source Files\Gcode</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSurfaceLineOffset.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWasmHelpers.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSharedThreadSafeOwner.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsInBox.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MROutlierPoints.cpp">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectLinesHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectMeshHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectPointsHolder.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectMeshData.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRChunkIterator.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPointsObject.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDoubleLayer.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

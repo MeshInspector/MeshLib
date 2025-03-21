@@ -8,6 +8,9 @@ find_package(MeshLib CONFIG REQUIRED)
 find_package(TBB REQUIRED)
 
 set(EXAMPLES
+  FreeFormDeformation
+  GlobalRegistration
+  LaplacianDeformation
   MeshBoolean
   MeshDecimate
   MeshExport
@@ -18,7 +21,10 @@ set(EXAMPLES
   MeshLoadSave
   MeshModification
   MeshOffset
+  MeshResolveDegenerations
   MeshStitchHole
+  NoiseDenoise
+  Triangulation
 )
 
 foreach(TARGET ${EXAMPLES})
@@ -29,8 +35,9 @@ foreach(TARGET ${EXAMPLES})
 endforeach()
 # MeshFromText additionally depends on MRSymbolMesh
 target_link_libraries(MeshFromText PRIVATE MeshLib::MRSymbolMesh)
-# MeshOffset additionally depends on MRVoxels
+# MeshOffset and Triangulation additionally depend on MRVoxels
 target_link_libraries(MeshOffset PRIVATE MeshLib::MRVoxels)
+target_link_libraries(Triangulation PRIVATE MeshLib::MRVoxels)
 # MeshLoadSave additionally depends on MRIOExtras
 target_link_libraries(MeshLoadSave PRIVATE MeshLib::MRIOExtras)
 
@@ -42,3 +49,9 @@ target_compile_definitions(MRBasedMainFunc PRIVATE SPDLOG_FMT_EXTERNAL)
 target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer fmt::fmt spdlog::spdlog)
 target_link_directories(MRBasedMainFunc PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
+if(EMSCRIPTEN)
+  target_link_options(MRBasedMainFunc PRIVATE -sUSE_WEBGL2=1)
+  target_link_options(MRBasedMainFunc PRIVATE -sUSE_GLFW=3)
+  target_link_options(MRBasedMainFunc PRIVATE -sUSE_LIBPNG=1)
+  target_compile_definitions(MRBasedMainFunc PRIVATE SPDLOG_WCHAR_FILENAMES)
+endif()

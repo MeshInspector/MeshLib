@@ -28,6 +28,8 @@ MRMESHC_API size_t mrPointCloudNormalsNum( const MRPointCloud* pc );
 /// only points and normals corresponding to set bits here are valid
 MRMESHC_API const MRVertBitSet* mrPointCloudValidPoints( const MRPointCloud* pc );
 
+MRMESHC_API void mrPointCloudSetValidPoints( MRPointCloud* pc, const MRVertBitSet* validPoints );
+
 /// passes through all valid points and finds the minimal bounding box containing all of them;
 /// if toWorld transformation is given then returns minimal bounding box in world space
 MRMESHC_API MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc, const MRAffineXf3f* toWorld );
@@ -39,5 +41,8 @@ MRMESHC_API MRVertId mrPointCloudAddPointWithNormal( MRPointCloud* pc, const MRV
 
 /// deallocates a PointCloud object
 MRMESHC_API void mrPointCloudFree( MRPointCloud* pc );
+
+/// Invalidates caches (e.g. aabb-tree) after a change in point cloud
+MRMESHC_API void mrPointCloudInvalidateCaches( MRPointCloud* pc );
 
 MR_EXTERN_C_END

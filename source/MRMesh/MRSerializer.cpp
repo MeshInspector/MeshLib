@@ -540,10 +540,10 @@ Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors 
     return MeshLoad::fromPly( in, { .colors = colors } );
 }
 
-Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
+Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * serializeFormat )
 {
     ObjectMesh obj;
-    obj.setSaveMeshFormat( saveMeshFormat );
+    obj.setSerializeFormat( serializeFormat );
     obj.setMesh( std::make_shared<Mesh>( mesh ) );
     if ( selection )
         obj.selectFaces( *selection );

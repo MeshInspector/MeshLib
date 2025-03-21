@@ -192,6 +192,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
 
     VertBitSet bdVerts;
     ProgressCallback subPc = subprogress( pc, 0.f, 1.0f );
+    const auto maxDistSq = sqr( maxDist );
     if ( numThreads > 1 )
     {
         bdVerts.resize( numVerts );
@@ -201,9 +202,10 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
         {
             if ( !contains( vertsRegion, v0 ) )
                 return;
-            findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
-                [&] ( VertId v1, const Vector3f& )
+            findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], maxDistSq },
+                [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
             {
+                const auto v1 = found.vId;
                 if ( v0 < v1 && contains( vertsRegion, v1 ) )
                 {
                     if ( v1 >= range.end )
@@ -211,6 +213,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
                     else
                         unionFindStructure.unite( v0, v1 );
                 }
+                return Processing::Continue;
             } );
         }, subPc );
         if ( !reportProgress( subPc, 1.f ) )
@@ -223,13 +226,15 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
     const int counterDivider = int( lastPassVerts->count() ) / 100;
     for ( auto v0 : *lastPassVerts )
     {
-        findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
-            [&] ( VertId v1, const Vector3f& )
+        findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], maxDistSq },
+            [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
+            const auto v1 = found.vId;
             if ( v0 < v1 && contains( vertsRegion, v1 ) )
             {
                 unionFindStructure.unite( v0, v1 );
             }
+            return Processing::Continue;
         } );
         ++counterProcessedVerts;
         if ( !reportProgress( subPc, counterProcessedVerts / counterMax, counterProcessedVerts, counterDivider ) )

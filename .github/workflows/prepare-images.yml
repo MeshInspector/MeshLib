@@ -12,7 +12,10 @@ on:
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
-      vcpkg_version:
+      vs19_vcpkg_version:
+        required: true
+        type: string
+      vs22_vcpkg_version:
         required: true
         type: string
 
@@ -21,7 +24,7 @@ on:
 
 jobs:
   always-success:
-    runs-on: ubuntu-latest
+    runs-on: aws-micro
     steps:
       - name: Do nothing
         run: echo
@@ -51,8 +54,28 @@ jobs:
       dockerfile: ${{ matrix.distro }}Dockerfile
       image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
     steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
+
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +83,7 @@ jobs:
           submodules: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -77,13 +100,22 @@ jobs:
   windows-vcpkg-build-upload:
     if: ${{ inputs.need_windows_vcpkg_rebuild }}
     timeout-minutes: 240
-    runs-on: windows-2019
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ windows-2022, windows-2019 ]
+        include:
+          - runner: windows-2022
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+          - runner: windows-2019
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{ inputs.vcpkg_version }}
+          git checkout ${{ matrix.vcpkg-version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -93,7 +125,7 @@ jobs:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

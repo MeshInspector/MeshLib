@@ -87,4 +87,34 @@ MRMESHC_API void mrFillHole( MRMesh* mesh, MREdgeId a, const MRFillHoleParams* p
 /// fill all holes given by their representative edges in \param as
 MRMESHC_API void mrFillHoles( MRMesh* mesh, const MREdgeId* as, size_t asNum, const MRFillHoleParams* params );
 
+/** \struct MRStitchHolesParams
+  * \brief Parameters structure for mrBuildCylinderBetweenTwoHoles\n
+  * Structure has some options to control mrBuildCylinderBetweenTwoHoles
+  */
+typedef struct MRStitchHolesParams
+{
+    /** Specifies triangulation metric\n
+      * default for mrBuildCylinderBetweenTwoHoles: getComplexStitchMetric
+      * \sa \ref MRFillHoleMetric
+      */
+    const MRFillHoleMetric* metric;
+    /// If not NULL accumulate new faces
+    MRFaceBitSet* outNewFaces;
+} MRStitchHolesParams;
+
+/** \brief Stitches two holes in Mesh\n
+  *
+  * Build cylindrical patch to fill space between two holes represented by one of their edges each,\n
+  * default metric: ComplexStitchMetric
+  *
+  * \param mesh mesh with hole
+  * \param a EdgeId which represents 1st hole (should not have valid left FaceId)
+  * \param b EdgeId which represents 2nd hole (should not have valid left FaceId)
+  * \param params parameters of holes stitching
+  *
+  * \sa \ref mrFillHole
+  * \sa \ref MRStitchHolesParams
+  */
+MRMESHC_API void mrBuildCylinderBetweenTwoHoles( MRMesh* mesh, MREdgeId a, MREdgeId b, const MRStitchHolesParams* params );
+
 MR_EXTERN_C_END

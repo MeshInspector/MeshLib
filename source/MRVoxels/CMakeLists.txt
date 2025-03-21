@@ -18,14 +18,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(fmt REQUIRED)
-  find_package(spdlog REQUIRED)
-
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
-ENDIF()
-
 set(MRVOXELS_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MRVOXELS_NO_DICOM)
@@ -34,14 +26,11 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(NOT MRVOXELS_NO_TIFF)
-  list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
-ENDIF()
-
-IF(BUILD_TESTING)
-  IF(APPLE)
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
+  IF(WIN32 OR MESHLIB_USE_VCPKG)
+    find_package(TIFF REQUIRED)
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
   ELSE()
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
   ENDIF()
 ENDIF()
 
@@ -64,28 +53,30 @@ ELSEIF(APPLE)
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  find_package(OpenVDB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    OpenVDB::openvdb
+    fmt::fmt
+    spdlog::spdlog
+    JsonCpp::JsonCpp
+    TBB::tbb
+    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     openvdb
     fmt::fmt
     spdlog::spdlog
-    PkgConfig::jsoncpp
+    JsonCpp::JsonCpp
     tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
 
-IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MRVOXELS_EXPORT)
-ENDIF()
-
 IF(MR_PCH)
-  # TODO: compare performance
-  #target_precompile_headers(${PROJECT_NAME} PRIVATE
-  #  "$<$<COMPILE_LANGUAGE:CXX>:MRPch/MRPch.h>"
-  #  "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MROpenVDB.h>"
-  #)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 

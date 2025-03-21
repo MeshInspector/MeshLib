@@ -12,7 +12,7 @@ MRMESHC_API MREdgeLoop* mrTrackRightBoundaryLoop( const MRMeshTopology* topology
 
 typedef struct MREdgeLoops MREdgeLoops;
 
-MRMESHC_API const MREdgeLoop mrEdgeLoopsGet( const MREdgeLoops* loops, size_t index );
+MRMESHC_API MREdgeLoop mrEdgeLoopsGet( const MREdgeLoops* loops, size_t index );
 
 MRMESHC_API size_t mrEdgeLoopsSize( const MREdgeLoops* loops );
 

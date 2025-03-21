@@ -1,7 +1,16 @@
-# to force update thirdparty touch this line 
+# to force update thirdparty touch this line
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
+include(ConfigureVcpkg)
+
+IF(MR_EMSCRIPTEN_WASM64)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MEMORY64=1")
+ENDIF()
 
 project(MeshLib_thirdparty CXX)
 
@@ -26,29 +35,11 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 #imgui build
-file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp" "./imgui/misc/freetype/*.cpp" "./imgui/misc/cpp/*.cpp" "./imgui/backends/imgui_impl_opengl3.cpp" "./imgui/backends/imgui_impl_glfw.cpp")
-file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h" "./imgui/misc/freetype/*.h" "./imgui/backends/imgui_impl_opengl3.h" "./imgui/backends/imgui_impl_glfw.h" "./imgui/backends/imgui_impl_opengl3_loader.h")
-include_directories("../source/")
-include_directories("../thirdparty/imgui/")
-include_directories("../thirdparty/parallel-hashmap/")
-add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
-add_compile_definitions(IMGUI_ENABLE_FREETYPE)
-add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
-IF(MR_EMSCRIPTEN)
-  add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
-ELSE()
-  set(BUILD_SHARED_LIBS ON)
-  find_package(glfw3 CONFIG REQUIRED)
-  find_package(Freetype REQUIRED)
-  include_directories(${FREETYPE_INCLUDE_DIRS})
-  IF(APPLE)
-    target_link_libraries(imgui PRIVATE ${FREETYPE_LIBRARIES} glfw)
-    set(INSTALL_GTEST ON)
-    add_subdirectory(./googletest)
-  ELSE()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
-  ENDIF()
+add_subdirectory(../source/imgui ./imgui)
+
+IF(APPLE)
+  set(INSTALL_GTEST ON)
+  add_subdirectory(./googletest ./googletest)
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
@@ -81,15 +72,19 @@ ELSE()
     ENDIF()
   ENDIF()
 
-  set(CPR_ENABLE_UNINSTALL "OFF")
-  set(CPR_ENABLE_INSTALL "OFF")
-  set(CPR_USE_SYSTEM_GTEST "ON")
-  set(CPR_BUILD_TESTS "OFF")
-  set(CPR_BUILD_TESTS_SSL "OFF")
-  add_subdirectory(./cpr)
+  find_package(cpr)
+  IF(NOT cpr_FOUND)
+    set(CPR_ENABLE_UNINSTALL "OFF")
+    set(CPR_ENABLE_INSTALL "OFF")
+    set(CPR_USE_SYSTEM_GTEST "ON")
+    set(CPR_BUILD_TESTS "OFF")
+    set(CPR_BUILD_TESTS_SSL "OFF")
+    add_subdirectory(./cpr)
+  ENDIF()
 ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
+
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
@@ -154,24 +149,34 @@ ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)
   set(CLIP_X11_WITH_PNG OFF)
+  set(BUILD_SHARED_LIBS ON)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip)
   file(GLOB CLIP_HEADERS "clip/*.h")
   install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 
+  set(E57_GIT_SUBMODULE_UPDATE OFF)
   set(E57_XML_PARSER TinyXML2 CACHE STRING "")
   add_subdirectory(./libE57Format)
 ENDIF()
 
-set(GLAD_INSTALL ON)
-set(GLAD_REPRODUCIBLE ON)
-add_subdirectory(./glad)
-set(PYBIND11_INSTALL ON)
-add_subdirectory(./pybind11)
+find_package(glad)
+IF(NOT glad_FOUND)
+  set(GLAD_INSTALL ON CACHE BOOL "")
+  set(GLAD_REPRODUCIBLE ON CACHE BOOL "")
+  add_subdirectory(./glad)
+ENDIF()
+
+IF(NOT MR_EMSCRIPTEN)
+  set(PYBIND11_INSTALL ON)
+  add_subdirectory(./mrbind-pybind11)
+ENDIF()
+
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
 set(WITH_TESTS OFF CACHE BOOL "")
+set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
 file(GLOB IMGUI_HEADERS "imgui/*.h")
@@ -180,4 +185,3 @@ install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/i
 install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-

@@ -577,7 +577,7 @@ private:
             {
                 auto point = feature.triangulation->Node( i );
                 point.Transform( xf );
-                points.emplace_back( point.X(), point.Y(), point.Z() );
+                points.emplace_back( float( point.X() ), float( point.Y() ), float( point.Z() ) );
             }
 
             // faces

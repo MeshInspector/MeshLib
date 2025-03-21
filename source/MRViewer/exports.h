@@ -1,6 +1,6 @@
 #pragma once
 #ifdef _WIN32
-#   ifdef MRVIEWER_EXPORT
+#   ifdef MRViewer_EXPORTS
 #       define MRVIEWER_API __declspec(dllexport)
 #   else
 #       define MRVIEWER_API __declspec(dllimport)

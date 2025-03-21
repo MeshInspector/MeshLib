@@ -48,4 +48,9 @@ Expected<void> addNoise( VertCoords& points, const VertBitSet& validVerts, Noise
     return {};
 }
 
+Expected<void> addNoise( Mesh& mesh, const VertBitSet* region, const NoiseSettings& settings )
+{
+    return addNoise( mesh.points, mesh.topology.getVertIds( region ), settings );
+}
+
 }

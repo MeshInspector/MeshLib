@@ -6,6 +6,12 @@ on:
       docker_image_tag:
         required: true
         type: string
+      internal_build:
+        required: false
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
 
 jobs:
   emscripten-build:
@@ -16,14 +22,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Singlethreaded, Multithreaded]
+        config: [Singlethreaded, Multithreaded, Multithreaded-64Bit]
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
+            package_name: emscripten-singlethreaded
+            thirdparty-dir: emscripten-single
             aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
+            package_name: emscripten-multithreaded
+            thirdparty-dir: emscripten
             aws-dir: RMI
+          - config: Multithreaded-64Bit
+            target_name: emscripten-wasm64
+            package_name: emscripten-multithreaded-64bit
+            thirdparty-dir: emscripten-wasm64
+            aws-dir: RMI64
 
     steps:
       - name: Work-around possible permission issues
@@ -40,6 +55,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -54,14 +70,12 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Install thirdparty libs
-        env:
-          MESHLIB_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
         run: |
-          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/lib ./lib
-          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/include ./include
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
 
       - name: Build
         env:
@@ -69,15 +83,49 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
+          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Multithreaded-64Bit'] }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Test
+      - name: Unit Tests
         timeout-minutes: 5
         run: |
-          Xvfb -ac :99 -screen 0 1280x1024x16 > /dev/null 2>&1 &
-          export DISPLAY=:99
-          emrun ./build/Release/bin/MRTest.html
+          echo "check the \$HOME dir permissions in case of timeout issues"
+          echo ls -al \$HOME
+          ls -al $HOME
+          echo
+          
+          emrun \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./build/Release/bin/MRTest.html
+
+      - name: Create Package
+        run: |
+          cp -a /usr/local/lib/${{ matrix.thirdparty-dir }} ./meshlib_install
+          ./scripts/cmake_install.sh ./meshlib_install
+          ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.package_name }} * )
+
+      - name: Build C++ examples
+        run: |
+          emcmake cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            ${{ matrix.target_name == 'emscripten-wasm64' && '-D CMAKE_C_FLAGS="-sMEMORY64=1" -D CMAKE_CXX_FLAGS="-sMEMORY64=1"' || '' }}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+      
+      - name: Upload Package
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Distributives_${{ matrix.package_name }}
+          path: meshlib_${{ matrix.package_name }}.zip
+          retention-days: 1

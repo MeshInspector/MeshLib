@@ -10,6 +10,7 @@
 #include "MRMesh/MRSignal.h"
 #include "MRPch/MREigen.h"
 #include "MRPch/MRJson.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
 
 #include <boost/multiprecision/number.hpp>
 
@@ -35,7 +36,7 @@ namespace MR::MrbindDetail
         IsSignal<T>::value
     > {};
 
-    // Recurse into `tl::Expected`.
+    // Recurse into `Expected`.
     template <typename T, typename U>
     struct IgnoreTypeInBindings<Expected<T, U>> : std::bool_constant<IgnoreTypeInBindings<T>::value || IgnoreTypeInBindings<U>::value> {};
 
@@ -67,5 +68,12 @@ struct MRBind::pb11::ParamTraits<T>
 
 template <typename T> requires MR::MrbindDetail::IgnoreTypeInBindings<T>::value
 struct MRBind::pb11::IgnoreFieldsWithType<T> : std::true_type {};
+
+// Disable trying to print OpenVDB `FloatGrid`s to fix the following error on Windows:
+//     lld-link: error: undefined symbol: class std::basic_ostream<char, struct std::char_traits<char>> & __cdecl openvdb::v11_0::operator<<(class std::basic_ostream<char, struct std::char_traits<char>> &, class openvdb::v11_0::MetaMap const &)
+//     >>> referenced by source/TempOutput/PythonBindings/x64/Release/mrmeshpy.fragment.40.o:(public: <auto> __cdecl `void __cdecl MRBind::pb11::TryMakePrintable<struct MR::OpenVdbFloatGrid, class pybind11::class_<struct MR::OpenVdbFloatGrid, class std::shared_ptr<struct MR::OpenVdbFloatGrid>>>(class pybind11::class_<struct MR::OpenVdbFloatGrid, class std::shared_ptr<struct MR::OpenVdbFloatGrid>> &)'::`1'::<lambda_1>::operator()(struct MR::OpenVdbFloatGrid const &) const)
+// This is weird, but we don't particularly care about printing the grids.
+template <>
+struct MRBind::pb11::AllowAutomaticPrinting<MR::OpenVdbFloatGrid> : std::false_type {};
 
 #endif

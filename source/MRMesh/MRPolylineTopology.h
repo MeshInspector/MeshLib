@@ -31,7 +31,7 @@ public:
     /// creates an edge not associated with any vertex
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
     /// makes an edge from vertex a to b (both must be within reserved capacity for vertices)
-    /// \details if either of the vertices already has 2 incident edges, then makeEdge(a,b) fails and returns invalid edge
+    /// \details if a==b, either a or b already has 2 incident edges, then makeEdge(a,b) does nothing and returns invalid edge
     MRMESH_API EdgeId makeEdge( VertId a, VertId b );
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;

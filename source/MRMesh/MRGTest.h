@@ -12,6 +12,8 @@
 #undef EXPECT_LE
 #undef ASSERT_GE
 #undef EXPECT_GE
+#undef ASSERT_LT
+#undef EXPECT_LT
 #undef ASSERT_GT
 #undef EXPECT_GT
 #undef ASSERT_TRUE
@@ -30,6 +32,8 @@
 #define EXPECT_LE( a, b ) (void)( a <= b );
 #define ASSERT_GE( a, b ) (void)( a >= b );
 #define EXPECT_GE( a, b ) (void)( a >= b );
+#define ASSERT_LT( a, b ) (void)( a < b );
+#define EXPECT_LT( a, b ) (void)( a < b );
 #define ASSERT_GT( a, b ) (void)( a > b );
 #define EXPECT_GT( a, b ) (void)( a > b );
 #define ASSERT_TRUE( a ) (void)( a );

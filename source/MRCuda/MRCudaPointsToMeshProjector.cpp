@@ -1,8 +1,12 @@
 #include "MRCudaPointsToMeshProjector.h"
 #include "MRCudaPointsToMeshProjector.cuh"
-#include "MRMesh/MRMesh.h"
+
+#include "MRCudaBasic.h"
+
 #include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -14,14 +18,9 @@ namespace Cuda
 
 struct MeshProjectorData
 {
-    DynamicArray<float3> cudaPoints;
-    DynamicArray<MeshProjectionResult> cudaResult;
     DynamicArray<float3> cudaMeshPoints;
     DynamicArray<Node3> cudaNodes;
     DynamicArray<FaceToThreeVerts> cudaFaces;
-
-    Matrix4 xf;
-    Matrix4 refXf;
 };
 
 PointsToMeshProjector::PointsToMeshProjector()
@@ -89,22 +88,32 @@ void PointsToMeshProjector::findProjections(
         xfPtr = &xf;
     }
 
-    meshData_->refXf = Matrix4();
-    meshData_->xf = Matrix4();
+    Matrix4 cudaRefXf;
+    Matrix4 cudaXf;
     if ( notRigidRefXf )
-        meshData_->refXf = getCudaMatrix( *notRigidRefXf );
+        cudaRefXf = getCudaMatrix( *notRigidRefXf );
     if ( xfPtr )
-        meshData_->xf = getCudaMatrix( *xfPtr );
-    
-    const size_t size = points.size();
-    res.resize( size );
-    meshData_->cudaPoints.fromVector( points );
-    meshData_->cudaResult.resize( size );
+        cudaXf = getCudaMatrix( *xfPtr );
 
-    meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
-    CUDA_EXEC( cudaGetLastError() );
+    const auto totalSize = points.size();
+    const auto bufferSize = maxBufferSize( getCudaSafeMemoryLimit(), totalSize, sizeof( float3 ) + sizeof( MeshProjectionResult ) );
 
-    meshData_->cudaResult.toVector( res );
+    DynamicArray<float3> cudaPoints;
+    cudaPoints.resize( bufferSize );
+
+    DynamicArray<MeshProjectionResult> cudaResult;
+    cudaResult.resize( bufferSize );
+    res.resize( totalSize );
+
+    for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
+    {
+        cudaPoints.copyFrom( points.data() + offset, size );
+
+        meshProjectionKernel( cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), cudaResult.data(), cudaXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size );
+        CUDA_EXEC( cudaGetLastError() );
+
+        cudaResult.copyTo( res.data() + offset, size );
+    }
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -120,16 +129,7 @@ void PointsToMeshProjector::findProjections(
 
 size_t PointsToMeshProjector::projectionsHeapBytes( size_t numProjections ) const
 {
-    size_t currentSize = 0;
-    if ( meshData_ )
-    {
-        currentSize += meshData_->cudaPoints.size() * sizeof( float3 );
-        currentSize += meshData_->cudaResult.size() * sizeof( MeshProjectionResult );
-    }
-    size_t newSize = numProjections * ( sizeof( float3 ) + sizeof( MeshProjectionResult ) );
-    if ( newSize <= currentSize )
-        return 0;
-    return newSize - currentSize;
+    return numProjections * ( sizeof( float3 ) + sizeof( MeshProjectionResult ) );
 }
 
 }

@@ -3,7 +3,7 @@
 #include "MRVector.h"
 #include "MRBitSet.h"
 #include "MRMeshFwd.h"
-#include "MRUniqueThreadSafeOwner.h"
+#include "MRSharedThreadSafeOwner.h"
 #include "MRCloudPartMapping.h"
 
 namespace MR
@@ -92,7 +92,7 @@ struct PointCloud
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 private:
-    mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreeOwner_;
+    mutable SharedThreadSafeOwner<AABBTreePoints> AABBTreeOwner_;
 };
 
 } // namespace MR

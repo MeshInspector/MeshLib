@@ -14,6 +14,46 @@
 namespace MR
 {
 
+void RibbonSchema::eliminateEmptyGroups()
+{
+    // eliminate empty groups
+    for ( auto it = groupsMap.begin(); it != groupsMap.end(); )
+    {
+        if ( it->second.empty() )
+        {
+            spdlog::info( "Empty group {} eliminated", it->first );
+            it = groupsMap.erase( it );
+        }
+        else
+            ++it;
+    }
+
+    // eliminate references on not-existing groups
+    for ( auto & [tabName, groups] : tabsMap )
+    {
+        std::erase_if( groups, [this, &tabName = tabName]( const std::string & groupName ) { return !groupsMap.contains( tabName + groupName ); } );
+    }
+}
+
+void RibbonSchema::sortTabsByPriority()
+{
+    std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )
+    {
+        return a.priority < b.priority;
+    } );
+}
+
+void RibbonSchema::updateCaptions()
+{
+    for ( const auto& [name, item] : items )
+    {
+        auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( item.item );
+        if ( !statePlugin )
+            continue;
+        statePlugin->setUIName( item.caption.empty() ? name : item.caption );
+    }
+}
+
 RibbonSchema& RibbonSchemaHolder::schema()
 {
     static RibbonSchema schemaInst;
@@ -281,23 +321,59 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     return res;
 }
 
+int RibbonSchemaHolder::findItemTab( const std::shared_ptr<RibbonMenuItem>& item )
+{
+    if ( !item )
+        return -1;
+
+    const auto& schema = RibbonSchemaHolder::schema();
+    for ( int t = 0; t < schema.tabsOrder.size(); ++t )
+    {
+        if ( schema.tabsOrder[t].experimental && !getViewerInstance().experimentalFeatures )
+            continue;
+        auto gpIt = schema.tabsMap.find( schema.tabsOrder[t].name );
+        if ( gpIt == schema.tabsMap.end() )
+            continue;
+        for ( const auto& gp : gpIt->second )
+        {
+            auto itmesIt = schema.groupsMap.find( schema.tabsOrder[t].name + gp );
+            if ( itmesIt == schema.groupsMap.end() )
+                continue;
+            for ( const auto& itemName : itmesIt->second )
+            {
+                if ( item->name() == itemName )
+                    return t;
+            }
+        }
+    }
+    return -1;
+}
+
 void RibbonSchemaLoader::loadSchema() const
 {
     auto files = getStructureFiles_( ".items.json" );
+    if ( files.empty() )
+        spdlog::error( "No Ribbon Items files found" );
     for ( const auto& file : files )
+    {
+        spdlog::info( "Reading {}", utf8string( file ) );
         readItemsJson_( file );
+    }
 
     files = getStructureFiles_( ".ui.json" );
+    if ( files.empty() )
+        spdlog::error( "No Ribbon UI files found" );
     sortFilesByOrder_( files );
     for ( const auto& file : files )
-        readUIJson_( file );
-
-
-    auto& tabsOrder = RibbonSchemaHolder::schema().tabsOrder;
-    std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )
     {
-        return a.priority < b.priority;
-    } );
+        spdlog::info( "Reading {}", utf8string( file ) );
+        readUIJson_( file );
+    }
+    spdlog::info( "Reading Ribbon Schema done" );
+
+    RibbonSchemaHolder::schema().eliminateEmptyGroups();
+    RibbonSchemaHolder::schema().sortTabsByPriority();
+    RibbonSchemaHolder::schema().updateCaptions();
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
@@ -617,25 +693,11 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
                 assert( false );
                 continue;
             }
-            auto listSize = int( list.size() );
-            if ( listSize == 0 )
-            {
-                spdlog::warn( "\"List\" array is empty in group: \"{}\", in tab: \"{}\"", groupName.asString(), tabName.asString() );
-                assert( false );
-                continue;
-            }
             MenuItemsList items;
             readMenuItemsList( list, items );
-            if ( items.empty() )
-            {
-#ifndef __EMSCRIPTEN__
-                spdlog::warn( "\"List\" array has no valid items in group: \"{}\", in tab: \"{}\"", groupName.asString(), tabName.asString() );
-                assert( false );
-#endif
-                continue;
-            }
-            auto& groupsMapRef = RibbonSchemaHolder::schema().groupsMap[tabName.asString() + groupName.asString()];
-            if ( groupsMapRef.empty() )
+            auto [it, inserted] = RibbonSchemaHolder::schema().groupsMap.insert( { tabName.asString() + groupName.asString(), MenuItemsList{} } );
+            auto& groupsMapRef = it->second;
+            if ( inserted )
             {
                 groupsMapRef = std::move( items );
                 newGroupsVec.push_back( groupName.asString() );

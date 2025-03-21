@@ -27,6 +27,7 @@ public:
 
 #ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+    using CudaPointsToDistanceVolumeByPartsCallback = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )>;
 #endif
 
     // setup functions
@@ -37,6 +38,7 @@ public:
 
 #ifndef MRVIEWER_NO_VOXELS
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
+    MRVIEWER_API static void setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback );
 #endif
 
     // Returns true if CUDA is available on this computer
@@ -66,6 +68,9 @@ public:
 #ifndef MRVIEWER_NO_VOXELS
     // Returns cuda implementation of PointsToDistanceVolumeCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+
+    // Returns cuda implementation of PointsToDistanceVolumeByPartsCallback
+    [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeByPartsCallback getCudaPointsToDistanceVolumeByPartsCallback();
 #endif
 
     /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
@@ -87,6 +92,13 @@ public:
     /// </summary>
     /// <param name="mesh">input mesh</param>
     [[nodiscard]] MRVIEWER_API static size_t selfIntersectionsMemory( const Mesh& mesh );
+
+    /// \brief returns amount of required GPU memory for Cuda::pointsToDistanceVolume
+    /// \param pointCloud - input point cloud
+    /// \param dims - dimensions of the volume
+    /// \param ptNormals - (optional) point normals
+    [[nodiscard]] MRVIEWER_API static size_t pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals );
+
 private:
     CudaAccessor() = default;
     ~CudaAccessor() = default;
@@ -103,6 +115,7 @@ private:
     CudaMeshProjectorConstructor mpCtor_;
 #ifndef MRVIEWER_NO_VOXELS
     CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
+    CudaPointsToDistanceVolumeByPartsCallback pointsToDistanceVolumeByPartsCallback_;
 #endif
 };
 

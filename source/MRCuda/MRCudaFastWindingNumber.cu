@@ -1,8 +1,8 @@
 #include "MRCudaFastWindingNumber.cuh"
-#include "MRMesh/MRAABBTree.h"
+
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRDistanceToMeshOptions.h"
-#include "device_launch_parameters.h"
+
 #include <limits>
 
 namespace MR
@@ -154,68 +154,79 @@ __global__ void fastWindingNumberFromVectorKernel( const float3* points,
 
 __global__ void fastWindingNumberFromMeshKernel( const Dipole* __restrict__ dipoles,
     const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
-    float* resVec, float beta, size_t size )
+    float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
-    if ( size == 0 )
+    if ( chunkSize == 0 )
     {
         assert( false );
         return;
     }
 
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
-        return;        
+    if ( index >= chunkSize )
+        return;
 
-    const auto& face = faces[index];
+    const size_t faceIndex = index + chunkOffset;
+    const auto& face = faces[faceIndex];
     if ( face.verts[0] < 0 || face.verts[1] < 0 || face.verts[2] < 0 )
         return;
 
     const auto q = ( meshPoints[face.verts[0]] + meshPoints[face.verts[1]] + meshPoints[face.verts[2]] ) / 3.0f;
-    processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
+    processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, faceIndex );
 }
 
 __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
-    float* resVec, float beta, size_t size )
+    float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
-    if ( size == 0 )
+    if ( chunkSize == 0 )
     {
         assert( false );
         return;
     }
 
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
+    if ( index >= chunkSize )
+        return;
+
+    const size_t gridIndex = index + chunkOffset;
+    const size_t gridSize = size_t( dims.x ) * dims.y * dims.z;
+    if ( gridIndex >= gridSize )
         return;
 
     const int sizeXY = dims.x * dims.y;
-    const int sumZ = int( index % sizeXY );
-    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( index / sizeXY ) };
+    const int sumZ = int( gridIndex % sizeXY );
+    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( gridIndex / sizeXY ) };
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
-    processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
+    processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta );
 }
 
 static constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
 
 __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
-    float* resVec, DistanceToMeshOptions options, size_t size ) // pass options by value to avoid reference on CPU memory
+    float* resVec, DistanceToMeshOptions options, size_t chunkSize, size_t chunkOffset ) // pass options by value to avoid reference on CPU memory
 {
-    if ( size == 0 )
+    if ( chunkSize == 0 )
     {
         assert( false );
         return;
     }
 
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( index >= size )
+    if ( index >= chunkSize )
+        return;
+
+    const size_t gridIndex = index + chunkOffset;
+    const size_t gridSize = size_t( dims.x ) * dims.y * dims.z;
+    if ( gridIndex >= gridSize )
         return;
 
     const int sizeXY = dims.x * dims.y;
-    const int sumZ = int( index % sizeXY );
-    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( index / sizeXY ) };
+    const int sumZ = int( gridIndex % sizeXY );
+    const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( gridIndex / sizeXY ) };
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
@@ -227,47 +238,44 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     }
 
     float fwn{ 0 };
-    processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, options.windingNumberBeta, index );
+    processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, options.windingNumberBeta );
     float res = sqrt( resSq );
     if ( fwn > options.windingNumberThreshold )
         res = -res;
     resVec[index] = res;
 }
 
-void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,
-                                const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
+void fastWindingNumberFromVector( const float3* points,
+                                FastWindingNumberData data,
                                 float* resVec, float beta, int skipFace, size_t size )
 {
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, dipoles, nodes, meshPoints, faces, resVec, beta, skipFace, size );
+    int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, skipFace, size );
 }
 
-void fastWindingNumberFromMesh( const Dipole* dipoles,
-                                        const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                        float* resVec, float beta, size_t size )
+void fastWindingNumberFromMesh( FastWindingNumberData data,
+                                        float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( dipoles, nodes, meshPoints, faces, resVec, beta, size );
+    int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
 }
 
 void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
-                                        const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                        float* resVec, float beta )
+                                        FastWindingNumberData data,
+                                        float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
+    int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
 }
 
 void signedDistance( int3 dims, Matrix4 gridToMeshXf,
-                                        const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                        float* resVec, const DistanceToMeshOptions& options )
+                     FastWindingNumberData data,
+                     float* resVec, size_t chunkSize, size_t chunkOffset, const DistanceToMeshOptions& options )
 {
-    const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, options, size );
+    int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.meshPoints, data.faces, resVec, options, chunkSize, chunkOffset );
 }
 
-} //namespece Cuda
+} //namespace Cuda
 
 } //namespace MR

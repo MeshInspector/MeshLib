@@ -4,7 +4,7 @@ inputs:
   autotest_data_s3_url:
     required: false
     type: string
-    default: "s3://data-autotest/test_data_2024-12-19"
+    default: "s3://data-autotest/test_data_2025-01-21"
   build_config:
     description: "Build config (Release, Debug)"
     required: true
@@ -58,7 +58,7 @@ runs:
         key: ${{ inputs.autotest_data_s3_url }}
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
       with:
         role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
         aws-region: us-east-1

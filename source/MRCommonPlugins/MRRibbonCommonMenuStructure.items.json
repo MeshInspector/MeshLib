@@ -29,6 +29,12 @@
       "HelpLink": "https://meshinspector.com/inappvideo/openrawvoxels"
     },
     {
+      "Name": "Binary Operations",
+      "Tooltip": "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference, Max, Min, Sum, Multiply, Divide, Replace.",
+      "Icon": "\uF15C",
+      "HelpLink": "https://meshinspector.com/inappvideo/voxelsoperations"
+    },
+    {
       "Name": "Open Voxels From TIFF",
       "Tooltip": "Load voxels from a set of TIFF images",
       "Icon": "\uF1C5",
@@ -117,38 +123,43 @@
     },
     {
       "Name": "Front View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of XZ plane with camera looking along Y.",
       "Icon": "\uF102"
     },
     {
       "Name": "Top View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of XY plane with Z axis looking in camera.",
       "Icon": "\uF107"
     },
     {
       "Name": "Bottom View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of XY plane with camera looking along Z.",
       "Icon": "\uF106"
     },
     {
       "Name": "Left View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of YZ plane with camera looking along X.",
       "Icon": "\uF105"
     },
     {
       "Name": "Back View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of XZ plane with Y axis looking in camera.",
       "Icon": "\uF103"
     },
     {
       "Name": "Right View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "A view of YZ plane with X axis looking in camera.",
       "Icon": "\uF104"
     },
     {
       "Name": "Isometric View",
-      "Tooltip": "Set active viewport view.",
+      "Tooltip": "Look at the object so the axes X,Y,Z form 120 degree angles on the view.",
       "Icon": "\uF1B2"
+    },
+    {
+      "Name": "Invert View",
+      "Tooltip": "Rotates the camera 180 degrees around the current vertical axis.",
+      "Icon": "\uF2F1"
     },
     {
       "Name": "Single Viewport",

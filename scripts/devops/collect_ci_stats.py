@@ -4,6 +4,7 @@ import json
 import os
 import pprint
 from pathlib import Path
+from typing import List
 
 import boto3
 from botocore.auth import SigV4Auth
@@ -54,6 +55,7 @@ def parse_job(job: dict):
             'runner_group_name': job['runner_group_name'],
             'runner_cpu_count':  runner_stats['cpu_count'],
             'runner_ram_mb':     runner_stats['ram_mb'],
+            'build_system':      runner_stats['build_system'],
         }
     except:
         print("Something went wrong while parsing the job/runner info. Debug info:")
@@ -62,7 +64,7 @@ def parse_job(job: dict):
         # re-throw the exception
         raise
 
-def parse_jobs(jobs: list[dict]):
+def parse_jobs(jobs: List[dict]):
     return [
         job
         for job in [

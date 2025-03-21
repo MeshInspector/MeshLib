@@ -64,13 +64,23 @@
 #define CONTROL_OR_SUPER GLFW_MOD_SUPER
 #endif
 
-namespace
-{
-constexpr auto cTransformContextName = "TransformContextWindow";
-}
-
 namespace MR
 {
+
+namespace
+{
+
+constexpr auto cTransformContextName = "TransformContextWindow";
+
+auto getItemCaption( const std::string& name )->const std::string&
+{
+    auto it = RibbonSchemaHolder::schema().items.find( name );
+    if ( it == RibbonSchemaHolder::schema().items.end() )
+        return name;
+    return  it->second.caption.empty() ? name : it->second.caption;
+}
+
+} //anonymous namespace
 
 std::shared_ptr<RibbonMenu> RibbonMenu::instance()
 {
@@ -99,34 +109,39 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        switch ( layoutMode_ )
+        const bool cShowTopPanel = menuUIConfig_.topLayout != RibbonTopPanelLayoutMode::None;
+        const bool cShowAny = cShowTopPanel || menuUIConfig_.drawScenePanel;
+
+        if ( cShowTopPanel )
         {
-        case MR::RibbonLayoutMode::All:
-            drawTopPanel_();
+            drawTopPanel_( menuUIConfig_.topLayout == RibbonTopPanelLayoutMode::RibbonWithTabs, menuUIConfig_.centerRibbonItems );
 
             drawActiveBlockingDialog_();
             drawActiveNonBlockingDialogs_();
+        }
 
+        if ( cShowTopPanel && menuUIConfig_.drawToolbar )
+        {
             toolbar_.drawToolbar();
             toolbar_.drawCustomize();
+        }
 
+        if ( menuUIConfig_.drawScenePanel )
             drawRibbonSceneList_();
+
+        if ( menuUIConfig_.drawViewportTags )
             drawRibbonViewportsLabels_();
 
+        if ( cShowTopPanel )
             drawActiveList_();
+
+        if ( cShowAny )
             draw_helpers();
 
+        if ( menuUIConfig_.drawNotifications )
             drawNotifications_();
 
-            prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-            break;
-        case MR::RibbonLayoutMode::SceneTree:
-            drawRibbonSceneList_();
-            draw_helpers();
-            break;
-        case MR::RibbonLayoutMode::None:
-            break;
-        }
+        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
 
     buttonDrawer_.setMenu( this );
@@ -571,7 +586,7 @@ void RibbonMenu::drawHeaderPannel_()
     {
         ImGui::SetCursorPosX( cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrowButton( "\xef\x81\x88", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             tabPanelScroll_ -= cTopPanelScrollStep * menuScaling;
             if ( tabPanelScroll_ < 0.0f )
@@ -658,7 +673,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImGui::SameLine();
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + cTabsInterval * menuScaling );
         const float btnSize = 0.5f * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( buttonDrawer_.drawTabArrawButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
+        if ( buttonDrawer_.drawTabArrowButton( "\xef\x81\x91", ImVec2( cTopPanelScrollBtnSize * menuScaling, ( cTabYOffset + cTabHeight ) * menuScaling ), btnSize ) )
         {
             if ( !needFwdBtn )
                 tabPanelScroll_ += tabsWindowPosX * menuScaling;//size of back btn
@@ -778,13 +793,6 @@ void RibbonMenu::drawActiveList_()
 
         ImVec2 btnSize = ImVec2( 56.0f * scaling, 24.0f * scaling );
         float maxSize = 0.0f;
-        auto getItemCaption = [] ( const std::string& name )->const std::string&
-        {
-            auto it = RibbonSchemaHolder::schema().items.find( name );
-            if ( it == RibbonSchemaHolder::schema().items.end() )
-                return name;
-            return  it->second.caption.empty() ? name : it->second.caption;
-        };
 
         auto sbFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
         if ( sbFont )
@@ -870,10 +878,12 @@ void RibbonMenu::drawNotifications_()
     notifier_.draw( scaling, limitRect );
 }
 
-void RibbonMenu::setLayoutMode( RibbonLayoutMode mode )
+void RibbonMenu::setMenuUIConfig( const RibbonMenuUIConfig& newConfig )
 {
-    layoutMode_ = mode;
-    fixViewportsSize_( Viewer::instanceRef().framebufferSize.x, Viewer::instanceRef().framebufferSize.y );
+    if ( menuUIConfig_ == newConfig )
+        return;
+    menuUIConfig_ = newConfig;
+    fixViewportsSize_( getViewerInstance().framebufferSize.x, getViewerInstance().framebufferSize.y );
 }
 
 bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected )
@@ -974,10 +984,8 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
         if ( !obj )
             continue;
         auto cloneObj = obj->cloneTree();
-        AppendHistory<ChangeObjectSelectedAction>( "unselect base obj", obj );
-        obj->select( false );
-        AppendHistory<ChangeObjectVisibilityAction>( "make base obj invisible", obj );
-        obj->setVisible( false );
+        AppendHistory<ChangeObjectSelectedAction>( "unselect original", obj, false );
+        AppendHistory<ChangeObjectVisibilityAction>( "hide original", obj, ViewportMask() );
         auto name = obj->name();
         if ( std::regex_match( name, pattern ) )
         {
@@ -1006,6 +1014,7 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
 
 void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
 {
+    SCOPED_HISTORY( "Clone Selection" );
     std::shared_ptr<VisualObject> newObj;
     std::string name;
     if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
@@ -1023,8 +1032,12 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
         name = "ObjectPoints";
     }
 
+    AppendHistory<ChangeObjectSelectedAction>( "unselect original", object, false );
+    AppendHistory<ChangeObjectVisibilityAction>( "hide original", object, ViewportMask() );
+
     newObj->setName( object->name() + " Partial" );
     newObj->setXf( object->xf() );
+    newObj->select( true );
     AppendHistory<ChangeSceneAction>( "Selection to New object: add " + name, newObj, ChangeSceneAction::Type::AddObject );
     object->parent()->addChild( newObj );
 }
@@ -1614,7 +1627,8 @@ void RibbonMenu::drawRibbonSceneList_()
     auto& viewerRef = Viewer::instanceRef();
 
     float topShift = 0.0f;
-    if ( layoutMode_ == RibbonLayoutMode::All )
+    const bool hasTopPanel = menuUIConfig_.topLayout != RibbonTopPanelLayoutMode::None;
+    if ( hasTopPanel )
         topShift = float( currentTopPanelHeight_ );
 
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, topShift * scaling - 1 ), ImGuiCond_Always );
@@ -1634,7 +1648,7 @@ void RibbonMenu::drawRibbonSceneList_()
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
-    if ( layoutMode_ == RibbonLayoutMode::All )
+    if ( hasTopPanel )
         drawSceneListButtons_();
     sceneObjectsList_->draw( -( informationHeight_ + transformHeight_ ), menu_scaling() );
     drawRibbonSceneInformation_( selectedObjs );
@@ -2017,15 +2031,17 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
     auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
     if ( itemIt != RibbonSchemaHolder::schema().items.end() )
     {
-        auto caption = itemIt->second.caption.empty() ? itemIt->first : itemIt->second.caption;
-        shortcutManager_->setShortcut( key, { category, caption,[item = itemIt->second.item, this]()
+        shortcutManager_->setShortcut( key, { category, itemIt->first, [item = itemIt->second.item, this]()
         {
             itemPressed_( item, getRequirements_( item ) );
         } } );
     }
 #ifndef __EMSCRIPTEN__
     else
+    {
+        spdlog::error( "Ribbon item not found: {}", itemName );
         assert( !"item not found" );
+    }
 #endif
 }
 
@@ -2091,7 +2107,7 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_O,0 }, { ShortcutManager::Category::View, "Toggle orthographic in current viewport",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_KP_5,0 }, { ShortcutManager::Category::View, "Toggle Orthographic/Perspective View",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
@@ -2137,6 +2153,13 @@ void RibbonMenu::setupShortcuts_()
     }
 
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Top View", { GLFW_KEY_KP_7, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Front View", { GLFW_KEY_KP_1, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Right View", { GLFW_KEY_KP_3, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Invert View", { GLFW_KEY_KP_9, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Bottom View", { GLFW_KEY_KP_7, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Back View", { GLFW_KEY_KP_1, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Left View", { GLFW_KEY_KP_3, CONTROL_OR_SUPER }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
@@ -2247,7 +2270,8 @@ void RibbonMenu::drawShortcutsWindow_()
         lastCategory = ShortcutManager::Category::Count;// invalid for first one
         for ( int i = 0; i < shortcutList.size(); ++i )
         {
-            const auto& [key, category, text] = shortcutList[i];
+            const auto& [key, category, name] = shortcutList[i];
+            const auto& caption = getItemCaption( name );
 
             if ( !secondColumnStarted && int( category ) >= int( ShortcutManager::Category::Count ) / 2 )
             {
@@ -2269,10 +2293,10 @@ void RibbonMenu::drawShortcutsWindow_()
             auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
             transparentColor.w *= 0.5f;
             ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
-            ImGui::Text( "%s", text.c_str() );
+            ImGui::Text( "%s", caption.c_str() );
             ImGui::PopStyleColor();
 
-            float textSize = ImGui::CalcTextSize( text.c_str() ).x;
+            float textSize = ImGui::CalcTextSize( caption.c_str() ).x;
             ImGui::SameLine( 0, 260 * scaling - textSize );
 
             if ( key.mod & GLFW_MOD_CONTROL )
@@ -2499,7 +2523,7 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
     auto minMaxDiff = viewportsBounds.max - viewportsBounds.min;
 
     float topPanelHeightScaled = 0.0f;
-    if ( layoutMode_ == RibbonLayoutMode::All )
+    if ( menuUIConfig_.topLayout != RibbonTopPanelLayoutMode::None )
     {
         topPanelHeightScaled =
             ( collapseState_ == CollapseState::Pinned ? topPanelOpenedHeight_ : topPanelHiddenHeight_ ) *
@@ -2510,7 +2534,7 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
         auto rect = vp.getViewportRect();
 
         float sceneWidth = 0.0f;
-        if ( layoutMode_ != RibbonLayoutMode::None )
+        if ( menuUIConfig_.drawScenePanel )
             sceneWidth = sceneSize_.x;
 
         auto widthRect = MR::width( rect );

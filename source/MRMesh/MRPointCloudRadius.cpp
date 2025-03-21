@@ -58,20 +58,21 @@ bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilat
 {
     auto regionCopy = region;
 
-    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    const auto res =  BitSetParallelForAll( region, [&, dilationSq = sqr( dilation )] ( VertId testVertex )
     {
         if ( regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? (*xf)( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
-        findPointsInBall( pointCloud, point, dilation, [&] ( VertId v, const Vector3f& )
+        findPointsInBall( pointCloud, { point, dilationSq }, [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( regionCopy.test( testVertex ) )
-                return;
-
-            if ( region.test( v ) )
+            if ( region.test( found.vId ) )
+            {
                 regionCopy.set( testVertex, true );
+                return Processing::Stop;
+            }
+            return Processing::Continue;
         }, xf );
     }, cb );
 
@@ -86,20 +87,21 @@ bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosio
 {
     auto regionCopy = region;
 
-    const auto res =  BitSetParallelForAll( region, [&] ( VertId testVertex )
+    const auto res =  BitSetParallelForAll( region, [&, erosionSq = sqr( erosion )] ( VertId testVertex )
     {
         if ( !regionCopy.test( testVertex ) )
             return;
 
         const Vector3f point = xf ? ( *xf )( pointCloud.points[testVertex] ) : pointCloud.points[testVertex];
 
-        findPointsInBall( pointCloud, point, erosion, [&] ( VertId v, const Vector3f& )
+        findPointsInBall( pointCloud, { point, erosionSq }, [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( !regionCopy.test( testVertex ) )
-                return;
-
-            if ( !region.test( v ) )
+            if ( region.test( found.vId ) )
+            {
                 regionCopy.set( testVertex, false );
+                return Processing::Stop;
+            }
+            return Processing::Continue;
         }, xf );
     }, cb );
 

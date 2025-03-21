@@ -2,7 +2,9 @@
 #include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
+#include "MRBall.h"
 #include "MRTimer.h"
+#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -106,13 +108,31 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     return res;
 }
 
+MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
+{
+    MeshProjectionTransforms res;
+    if ( treeXf && !isRigid( treeXf->A ) )
+        res.nonRigidXfTree = treeXf;
+
+    if ( res.nonRigidXfTree || !treeXf )
+        res.rigidXfPoint = pointXf;
+    else
+    {
+        storageXf = treeXf->inverse();
+        if ( pointXf )
+            storageXf = storageXf * ( *pointXf );
+        res.rigidXfPoint = &storageXf;
+    }
+    return res;
+}
+
 MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
     const auto & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
@@ -127,22 +147,19 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
         return tree.nodes()[n].box.getDistanceSq( ball.center );
     };
 
-    auto addSubTask = [&]( NodeId n, float boxDistSq )
+    auto addSubTask = [&]( NodeId n )
     {
-        if ( boxDistSq < ball.radiusSq ) // ball intersects the box
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
+        assert( stackSize < MaxStackSize );
+        subtasks[stackSize++] = n;
     };
 
-    addSubTask( tree.rootNodeId(), boxDistSq( tree.rootNodeId() ) );
+    addSubTask( tree.rootNodeId() );
 
     while( stackSize > 0 )
     {
         const auto n = subtasks[--stackSize];
         const auto & node = tree[n];
-        if ( !( boxDistSq( n ) < ball.radiusSq ) ) // check again in case the ball has changed
+        if ( !( boxDistSq( n ) < ball.radiusSq ) )
             continue;
 
         if ( node.leaf() )
@@ -177,13 +194,13 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
         if ( lDistSq <= rDistSq )
         {
-            addSubTask( node.r, rDistSq );
-            addSubTask( node.l, lDistSq );
+            addSubTask( node.r );
+            addSubTask( node.l );
         }
         else
         {
-            addSubTask( node.l, lDistSq );
-            addSubTask( node.r, rDistSq );
+            addSubTask( node.l );
+            addSubTask( node.r );
         }
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRBitSet.h"
 #include "MRIntersectionContour.h"
@@ -52,23 +53,32 @@ using OneMeshContours = std::vector<OneMeshContour>;
 MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 // Converts ordered continuous contours of two meshes to OneMeshContours
-// converters is required for better precision in case of degenerations
+// converters are required for better precision in case of degenerations
 // note that contours should not have intersections
 [[nodiscard]]
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+// Converts ordered continuous self contours of single meshes to OneMeshContours
+// converters are required for better precision in case of degenerations
+[[nodiscard]]
+MRMESH_API OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const ContinuousContours& contours,
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
+
+// Converts OneMeshContours contours representation to Contours3f: set of coordinates
+[[nodiscard]]
+MRMESH_API Contours3f extractMeshContours( const OneMeshContours& meshContours );
 
 using MeshTriPointsConnector = std::function<Expected<SurfacePath>( const MeshTriPoint& start, const MeshTriPoint& end, int startIndex, int endIndex )>;
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds paths between neighbor \p meshTriPoints with MeshTriPointsConnector function and build contour MR::cutMesh input
-  * \param connectorFn function to build path between neighbor meshTriPoints, if not present simple geodesic path function is used
-  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
+  * Finds paths between neighbor \p surfaceLine with MeshTriPointsConnector function and build contour MR::cutMesh input
+  * \param connectorFn function to build path between neighbor surfaceLine, if not present simple geodesic path function is used
+  * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
   */
 [[nodiscard]]
-MR_BIND_IGNORE MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MR_BIND_IGNORE MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     MeshTriPointsConnector connectorFn, std::vector<int>* pivotIndices = nullptr );
 
 /// Geo path search settings
@@ -81,34 +91,45 @@ struct SearchPathSettings
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
+  * Finds shortest paths between neighbor \p surfaceLine and build contour MR::cutMesh input
   * \param searchSettings settings for search geo path 
-  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
+  * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p meshTriPoints and build contour MR::cutMesh input
-  * \param isoValue amount of offset form given point, note that absolute value is used and isoline in both direction returned
-  * \param searchSettings settings for search geo path
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * \param offset amount of offset form given point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geodesic path
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsIsoLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
-    float isoValue, SearchPathSettings searchSettings = {} );
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    float offset, SearchPathSettings searchSettings = {} );
+
+/** \ingroup BooleanGroup
+  * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
+  *
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * \param offsetAtPoint functor that returns amount of offset form arg point, note that absolute value is used and isoline in both direction returned
+  * \param searchSettings settings for search geodesic path
+  */
+[[nodiscard]]
+MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {});
 
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points, note that first and last meshTriPoint should not be same
   * 
-  * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
-  * \param pivotIndices optional output indices of given meshTriPoints in result OneMeshContour
+  * Finds shortest paths between neighbor \p surfaceLine and build closed contour MR::cutMesh input
+  * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
   * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
@@ -217,5 +238,12 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
+
+
+/// Cuts \p mesh by \p contour by projecting all the points
+/// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \return Faces to the left of the polyline
+MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
 
 } //namespace MR

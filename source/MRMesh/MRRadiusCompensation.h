@@ -16,20 +16,29 @@ struct CompensateRadiusParams
     ///  radius of spherical tool
     float toolRadius{ 0.0f };
 
-    /// resolution of distance map that is used for compensation
-    Vector2i distanceMapResolution = Vector2i( 100, 100 );
-
     /// region of the mesh that will be compensated
     /// it should not contain closed components
     /// it is updated during algorithm
     /// also please note that boundaries of the region are fixed
     FaceBitSet* region{ nullptr };
 
+    /// maximum iteration of applying algorithm (each iteration improves result a little bit)
+    int maxIterations{ 100 };
+
+    /// how many hops to expand around each moved vertex for relaxation
+    int relaxExpansion = 3;
+
+    /// how many iterations of relax is applied on each compensation iteration
+    int relaxIterations = 5;
+
+    /// force of relaxations on each compensation iteration
+    float relaxForce = 0.3f;
+
     ProgressCallback callback;
 };
 
 /// compensate spherical milling tool radius in given mesh region making it possible to mill it
-/// please note that it will change topology inside region
+/// note that tool milling outer surface of the mesh
 /// also please note that boundaries of the region are fixed
 [[nodiscard]] MRMESH_API Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params );
 

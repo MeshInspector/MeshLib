@@ -14,12 +14,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
 )
 
-# This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-# to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
-add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
+IF(WIN32)
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    SUFFIX ".pyd"
+  )
 
-if(APPLE)
+  # We build directly in `bin`, then copy to `bin/meshlib`, to prevent Vcpkg from polluting `bin/meshlib` with the dependency DLLs.
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
+  )
+ENDIF()
+
+IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
@@ -27,6 +33,17 @@ if(APPLE)
     spdlog
     tbb
     pybind11::module
+    pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
+  )
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    MRPython
+    spdlog::spdlog
+    TBB::tbb
+    pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -34,9 +51,14 @@ ELSE()
     MRPython
     spdlog
     tbb
-    Python::Python
+    pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
   )
 ENDIF()
+
+# Don't emit undefined references. We need this because we don't want to link to a specific Python version.
+# The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
+string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
 IF(MESHLIB_BUILD_VOXELS)
   target_link_libraries(${PROJECT_NAME} PRIVATE

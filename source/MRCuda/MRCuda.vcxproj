@@ -49,7 +49,7 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>MRCUDA_EXPORT;WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCuda_EXPORTS;WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -69,7 +69,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>MRCUDA_EXPORT;WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRCuda_EXPORTS;WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -92,6 +92,7 @@
     <CudaCompile Include="MRCudaSolarRadiation.cu" />
     <CudaCompile Include="MRCudaTest.cu" />
     <CudaCompile Include="MRCudaContoursDistanceMap.cu" />
+    <CudaCompile Include="MRCudaPointsProject.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -114,6 +115,15 @@
     <ClInclude Include="MRCudaTest.cuh" />
     <ClInclude Include="MRCudaTest.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.h" />
+    <ClInclude Include="MRCudaMath.h" />
+    <ClInclude Include="MRCudaPointCloud.h" />
+    <ClInclude Include="MRCudaPointCloud.cuh" />
+    <ClInclude Include="MRCudaPointsProject.h" />
+    <ClInclude Include="MRCudaPointsProject.cuh" />
+    <ClInclude Include="MRCudaPipeline.h" />
+    <ClInclude Include="MRCudaPipeline.hpp" />
+    <ClInclude Include="MRCuda.cuh" />
+    <ClInclude Include="MRCudaProfiling.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />
@@ -124,6 +134,9 @@
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp" />
     <ClCompile Include="MRCudaSolarRadiation.cpp" />
     <ClCompile Include="MRCudaTest.cpp" />
+    <ClCompile Include="MRCudaMath.cpp" />
+    <ClCompile Include="MRCudaPointCloud.cpp" />
+    <ClCompile Include="MRCudaPointsProject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">

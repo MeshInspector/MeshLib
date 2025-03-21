@@ -4,6 +4,8 @@
 #include <string>
 #include <filesystem>
 
+#include "MRPch/MRWinapi.h"
+
 namespace MR
 {
 

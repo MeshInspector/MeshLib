@@ -1,7 +1,8 @@
 #pragma once
 
-#include "MRCudaBasic.cuh"
 #include "exports.h"
+#include "MRCudaBasic.cuh"
+
 #include <cassert>
 #include <string>
 
@@ -23,15 +24,15 @@ MRCUDA_API cudaError_t logError( cudaError_t code, const char * file = nullptr, 
 #define CUDA_EXEC( expr ) CUDA_LOGE( expr )
 
 /// evaluates given expression, logs if it fails and returns error code
-#define CUDA_LOGE_RETURN( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaError::cudaSuccess ) return code
+#define CUDA_LOGE_RETURN( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaSuccess ) return code
 // deprecated
 #define CUDA_EXEC_RETURN( expr ) CUDA_LOGE_RETURN( expr )
 
 /// if given expression evaluates to not cudaError::cudaSuccess, then returns MR::unexpected with the error string without logging
-#define CUDA_RETURN_UNEXPECTED( expr ) if ( auto code = ( expr ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
+#define CUDA_RETURN_UNEXPECTED( expr ) if ( auto code = ( expr ); code != cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
 
 /// evaluates given expression, logs if it fails and returns MR::unexpected with the error string
-#define CUDA_LOGE_RETURN_UNEXPECTED( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaError::cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
+#define CUDA_LOGE_RETURN_UNEXPECTED( expr ) if ( auto code = CUDA_LOGE( expr ); code != cudaSuccess ) return MR::unexpected( MR::Cuda::getError( code ) )
 
 template<typename T>
 DynamicArray<T>::DynamicArray( size_t size )
@@ -75,6 +76,22 @@ template <typename T>
 inline cudaError_t DynamicArray<T>::toBytes( uint8_t* data )
 {
     return CUDA_LOGE( cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost ) );
+}
+
+template <typename T>
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyFrom( const U* data, size_t size )
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data_, data, std::min( size_, size ) * sizeof( T ), cudaMemcpyHostToDevice ) );
+}
+
+template <typename T>
+template <typename U>
+inline cudaError_t DynamicArray<T>::copyTo( U* data, size_t size ) const
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    return CUDA_LOGE( cudaMemcpy( data, data_, std::min( size, size_ ) * sizeof( T ), cudaMemcpyDeviceToHost ) );
 }
 
 template<typename T>

@@ -18,6 +18,6 @@ CMAKE_OPTIONS="${CMAKE_OPTIONS} \
   -D Tbb_VERSION=2021.12 \
 "
 
-cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" ${CMAKE_OPTIONS}
+cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -D CMAKE_C_FLAGS="${CFLAGS}" ${CMAKE_OPTIONS}
 cmake --build "${BUILD_DIR}" -j `nproc`
 cmake --install "${BUILD_DIR}"

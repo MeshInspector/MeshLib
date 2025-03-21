@@ -2,6 +2,18 @@ var pointerCounter = 0;
 var mouseState = [0, 0, 0];
 var touchId = [-1, -1];
 var reinterpretEvent = false;
+var pointerSize = 0;
+
+var getPointerSize = function () {
+    if (!pointerSize) {
+        pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
+    }
+    return pointerSize;
+}
+
+var toPointer = function (value) {
+    return getPointerSize() == 8 ? BigInt(value) : value;
+}
 
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
@@ -140,12 +152,12 @@ var updateEvents = function () {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
         if (!GLFW.active.mouseButtonFunc) return;
-        if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+        if (typeof (dynCall_viiii) == 'function')
+            dynCall_viiii(GLFW.active.mouseButtonFunc, GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+        else if (typeof (dynCall_vjiii) == 'function')
+            dynCall_vjiii(GLFW.active.mouseButtonFunc, BigInt(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
         else
-            (function (a1, a2, a3, a4) {
-                dynCall_viiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
-            })(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+            getWasmTableEntry(GLFW.active.mouseButtonFunc)(toPointer(GLFW.active.id), eventButton, status, GLFW.getModBits(GLFW.active));
     }
 
     GLFW.onMousemove = function (event) {
@@ -154,12 +166,12 @@ var updateEvents = function () {
         if (!Browser.calculateMouseEvent(event)) return;
         if (event.target != Module["canvas"] || !GLFW.active.cursorPosFunc)
             return;
-        if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.cursorPosFunc)(GLFW.active.id, Browser.mouseX, Browser.mouseY);
+        if (typeof (dynCall_vidd) == 'function')
+            dynCall_vidd(GLFW.active.cursorPosFunc, GLFW.active.id, Browser.mouseX, Browser.mouseY);
+        else if (typeof (dynCall_vjdd) == 'function')
+            dynCall_vjdd(GLFW.active.cursorPosFunc, BigInt(GLFW.active.id), Browser.mouseX, Browser.mouseY);
         else
-            (function (a1, a2, a3) {
-                dynCall_vidd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);
-            })(GLFW.active.id, Browser.mouseX, Browser.mouseY);
+            getWasmTableEntry(GLFW.active.cursorPosFunc)(toPointer(GLFW.active.id), Browser.mouseX, Browser.mouseY);
     }
 
     GLFW.onMouseWheel = function (event) {
@@ -180,12 +192,12 @@ var updateEvents = function () {
         } else {
             sx = event.deltaX
         }
-        if (typeof (dynCall_vidd) == 'undefined')
-            getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
+        if (typeof (dynCall_vidd) == 'function')
+            dynCall_vidd(GLFW.active.scrollFunc, GLFW.active.id, sx, sy)
+        else if (typeof (dynCall_vjdd) == 'function')
+            dynCall_vjdd(GLFW.active.scrollFunc, BigInt(GLFW.active.id), sx, sy)
         else
-            (function (a1, a2, a3) {
-                dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
-            })(GLFW.active.id, sx, sy);
+            getWasmTableEntry(GLFW.active.scrollFunc)(toPointer(GLFW.active.id), sx, sy);
         preventFunc(event)
     }
 
@@ -219,10 +231,12 @@ var updateEvents = function () {
             win.height = height;
         }
         if (win.windowSizeFunc) {
-            if (typeof (dynCall_viii) == 'undefined')
-                getWasmTableEntry(win.windowSizeFunc)(win.id, width, height);
+            if (typeof (dynCall_viii) == 'function')
+                dynCall_viii(win.windowSizeFunc, win.id, width, height);
+            else if (typeof (dynCall_vjii) == 'function')
+                dynCall_vjii(win.windowSizeFunc, win.id, width, height);
             else
-                ((a1, a2, a3) => dynCall_viii.apply(null, [win.windowSizeFunc, a1, a2, a3]))(win.id, width, height);
+                getWasmTableEntry(win.windowSizeFunc)(win.id, width, height);
         }
     }
 }

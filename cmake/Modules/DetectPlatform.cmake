@@ -26,3 +26,10 @@ ENDIF()
 
 add_compile_definitions(MR_PLATFORM="${MR_PLATFORM}")
 message("platform: ${MR_PLATFORM}")
+
+# TODO: __aarch64__ ?
+IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+  message("CMAKE_SYSTEM_PROCESSOR is ${CMAKE_SYSTEM_PROCESSOR}")
+  add_compile_definitions(__ARM_CPU__)
+  message("ARM cpu detected")
+ENDIF()

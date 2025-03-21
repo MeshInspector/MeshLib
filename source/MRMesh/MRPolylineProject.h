@@ -13,17 +13,22 @@ namespace MR
 template<typename V>
 struct PolylineProjectionResult
 {
-    /// closest line id on polyline
+    /// polyline's edge containing the closest point
     UndirectedEdgeId line;
+
     /// closest point on polyline, transformed by xf if it is given
     V point;
+
     /// squared distance from pt to proj
     float distSq = 0;
+
+    /// check for validity
+    explicit operator bool() const { return line.valid(); }
 };
 
 /**
  * \brief computes the closest point on polyline to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -32,7 +37,7 @@ MRMESH_API PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& 
 
 /**
  * \brief computes the closest point on polyline to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -41,7 +46,7 @@ MRMESH_API PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& p
 
 /**
  * \brief computes the closest point on polyline to given straight line
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -62,7 +67,7 @@ struct PolylineProjectionWithOffsetResult
 /**
  * \brief computes the closest point on polyline to given point, respecting each edge offset
  * \param offsetPerEdge offset for each edge of polyline
- * \param upDistLimit upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point
+ * \param upDistLimit upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimit and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimit low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -72,7 +77,7 @@ MRMESH_API Polyline2ProjectionWithOffsetResult findProjectionOnPolyline2WithOffs
 /**
  * \brief computes the closest point on polyline to given point, respecting each edge offset
  * \param offsetPerEdge offset for each edge of polyline
- * \param upDistLimit upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point
+ * \param upDistLimit upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimit and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimit low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -95,7 +100,7 @@ MRMESH_API void findMeshEdgesInBall( const Mesh& mesh, const AABBTreePolyline3& 
 
 /**
  * \brief computes the closest point on the mesh edges (specified by the tree) to given point
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */
@@ -104,7 +109,7 @@ MRMESH_API PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& 
 
 /**
  * \brief computes the closest point on the mesh edges (specified by the tree) to given straight line
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exists returning upDistLimitSq and no valid point or edge
  * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  */

@@ -1,6 +1,4 @@
 #include "MRCudaPointsToMeshProjector.cuh"
-#include "MRMesh/MRAABBTree.h"
-#include "device_launch_parameters.h"
 
 namespace MR { namespace Cuda {
 
@@ -108,7 +106,7 @@ void meshProjectionKernel( const float3* points,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
     constexpr int maxThreadsPerBlock = 640;
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
+    int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
     kernel<<< numBlocks, maxThreadsPerBlock >>>( points, nodes, meshPoints, faces, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
 }
 

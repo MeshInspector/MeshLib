@@ -21,7 +21,7 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
 
     return FunctionVolume
     {
-        .data = [&cloud, params, inv2SgSq = -0.5f / sqr( params.sigma ),
+        .data = [&cloud, params, inv2SgSq = -0.5f / sqr( params.sigma ), ballRadiusSq = sqr( 3 * params.sigma ),
             &normals = params.ptNormals ? *params.ptNormals : cloud.normals] ( const Vector3i& pos ) -> float
         {
             auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
@@ -29,12 +29,12 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
 
             float sumDist = 0;
             float sumWeight = 0;
-            findPointsInBall( cloud, voxelCenter, 3 * params.sigma, [&]( VertId v, const Vector3f& p )
+            findPointsInBall( cloud, { voxelCenter, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f & p, Ball3f & )
             {
-                const auto distSq = ( voxelCenter - p ).lengthSq();
-                const auto w = std::exp( distSq * inv2SgSq );
+                const auto w = std::exp( found.distSq * inv2SgSq );
                 sumWeight += w;
-                sumDist += dot( normals[v], voxelCenter - p ) * w;
+                sumDist += dot( normals[found.vId], voxelCenter - p ) * w;
+                return Processing::Continue;
             } );
 
             return sumWeight >= params.minWeight ? sumDist / sumWeight : cQuietNan;
@@ -60,18 +60,19 @@ Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors &
     res.resizeNoInit( tgtPoints.size() );
 
     const auto inv2SgSq = -0.5f / sqr( sigma );
+    const auto ballRadiusSq = sqr( 3 * sigma );
     if ( !BitSetParallelFor( tgtVerts, [&]( VertId tv )
     {
         const auto pos = tgtPoints[tv];
 
         Vector4f sumColors;
         float sumWeight = 0;
-        findPointsInBall( cloud, pos, 3 * sigma, [&]( VertId v, const Vector3f& p )
+        findPointsInBall( cloud, { pos, ballRadiusSq }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
-            const auto distSq = ( pos - p ).lengthSq();
-            const auto w = std::exp( distSq * inv2SgSq );
+            const auto w = std::exp( found.distSq * inv2SgSq );
             sumWeight += w;
-            sumColors += Vector4f( colors[v] ) * w;
+            sumColors += Vector4f( colors[found.vId] ) * w;
+            return Processing::Continue;
         } );
         if ( sumWeight > 0 )
             res[tv] = Color( sumColors / sumWeight );

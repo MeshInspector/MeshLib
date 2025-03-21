@@ -60,6 +60,7 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
+#include "MRViewportCornerController.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -126,6 +127,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRMesh/MRCube.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -176,11 +178,26 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+static bool gWindowSizeInitialized = false;
+
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->postResize( width, height );
-    viewer->postEmptyEvent();
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
+    if ( gWindowSizeInitialized )
+    {
+        // on Linux some (or all?) window managers send resize events in batch, processing all of them hits performance
+        viewer->emplaceEvent( "Window resize", [width, height, viewer]
+        {
+            viewer->postResize( width, height );
+        }, true );
+    }
+    else
+#endif
+    {
+        viewer->postResize( width, height );
+        viewer->postEmptyEvent();
+    }
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
@@ -318,6 +335,10 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     label->setLabel( { str, pos } );
     label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
     label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
+    float fontSize = 20.0f;
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        fontSize *= menu->menu_scaling();
+    label->setFontHeight( fontSize );
     obj.addChild( label );
 }
 
@@ -943,6 +964,7 @@ void Viewer::launchShut()
     clippingPlaneObject.reset();
     globalBasisAxes.reset();
     globalHistoryStore_.reset();
+    basisViewController.reset();
 
     GLStaticHolder::freeAllShaders();
 
@@ -1006,6 +1028,7 @@ void Viewer::launchShut()
 void Viewer::init_()
 {
     initBasisAxesObject_();
+    initBasisViewControllerObject_();
     initClippingPlaneObject_();
     initRotationCenterObject_();
     initGlobalBasisAxesObject_();
@@ -1597,6 +1620,9 @@ bool Viewer::needRedraw_() const
     if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
         return true;
 
+    if ( basisViewController && basisViewController->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
@@ -1612,6 +1638,9 @@ void Viewer::resetRedraw_()
 
     if ( basisAxes )
         basisAxes->resetRedrawFlag();
+
+    if ( basisViewController )
+        basisViewController->resetRedrawFlag();
 
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
@@ -1897,6 +1926,8 @@ void Viewer::postResize( int w, int h )
 
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
+
+    gWindowSizeInitialized = true;
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
@@ -1997,7 +2028,7 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
     globalBasisAxes->setFlatShading( true );
 
-    updateGlobalBasis_ = ColorTheme::instance().onChanged( [this] ()
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !globalBasisAxes )
             return;
@@ -2010,14 +2041,18 @@ void Viewer::initGlobalBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
-    } );
+    } ) );
 }
 
 void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner
-    const float size = 0.8f;
-    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size ) );
+    const float cubeSzie = 0.8f;
+    const float size = 1.0f;
+    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size, size * 0.03f, size * 0.03f, 0.0f ) );
+    const Vector3f translation = Vector3f::diagonal( -cubeSzie * 0.5f );
+    basisAxesMesh->transform( AffineXf3f::translation( translation ) );
+
     basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
@@ -2038,14 +2073,15 @@ void Viewer::initBasisAxesObject_()
     }
     const float labelPos = size + 0.2f;
 
-    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX(), false );
-    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), false );
-    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), false );
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() + translation, true );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() + translation, true );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() + translation, true );
 
-    basisAxes->setFacesColorMap( colorMap );
+    basisAxes->setFacesColorMap( std::move( colorMap ) );
+    basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    updateBasisAxes_ = ColorTheme::instance().onChanged( [this] ()
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
     {
         if ( !basisAxes )
             return;
@@ -2058,7 +2094,70 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
-    } );
+    } ) );
+}
+
+void Viewer::initBasisViewControllerObject_()
+{
+    std::shared_ptr<Mesh> arrowMeshCCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.1f ), true ) );
+    std::shared_ptr<Mesh> arrowMeshCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.0f ), false ) );
+    auto arrowCCW = std::make_shared<ObjectMesh>();
+    auto arrowCW = std::make_shared<ObjectMesh>();
+    arrowCCW->setMesh( arrowMeshCCW );
+    arrowCCW->setName( "CCW" );
+    arrowCW->setMesh( arrowMeshCW );
+    arrowCW->setName( "CW" );
+
+    std::shared_ptr<Mesh> basisControllerMesh = std::make_shared<Mesh>( makeCornerControllerMesh( 0.8f ) );
+    basisViewController = std::make_shared<ObjectMesh>();
+    basisViewController->setMesh( basisControllerMesh );
+    basisViewController->setName( "Corner View Controller" );
+    basisViewController->setTextures( loadCornerControllerTextures() );
+    basisViewController->setUVCoords( makeCornerControllerUVCoords() );
+    if ( !basisViewController->getTextures().empty() )
+    {
+        basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
+        basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+    }
+    basisViewController->setFlatShading( true );
+    arrowCCW->setFlatShading( true );
+    arrowCW->setFlatShading( true );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    arrowCCW->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    arrowCW->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+    arrowCCW->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+    arrowCW->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+    basisViewController->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+    arrowCCW->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+    arrowCW->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+    basisViewController->setEdgeWidth( 0.2f );
+    arrowCCW->setEdgeWidth( 0.3f );
+    arrowCW->setEdgeWidth( 0.3f );
+
+    basisViewController->addChild( arrowCCW );
+    basisViewController->addChild( arrowCW );
+
+    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    {
+        if ( !basisViewController )
+            return;
+
+        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
+        basisViewController->setFrontColor( colorBg, true );
+        basisViewController->setFrontColor( colorBg, false );
+        basisViewController->setBordersColor( colorBorder );
+        for ( auto child : basisViewController->children() )
+        {
+            if ( auto visObj = child->asType<ObjectMesh>() )
+            {
+                visObj->setFrontColor( colorBg, true );
+                visObj->setFrontColor( colorBg, false );
+                visObj->setBordersColor( colorBorder );
+            }
+        }
+    } ) );
 }
 
 void Viewer::initClippingPlaneObject_()

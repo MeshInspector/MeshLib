@@ -1,5 +1,6 @@
 #include "MRCNCMachineSettings.h"
 #include "MRSerializer.h"
+#include "MRPch/MRJson.h"
 
 namespace MR
 {

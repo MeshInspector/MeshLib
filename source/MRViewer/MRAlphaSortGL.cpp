@@ -63,7 +63,7 @@ void AlphaSortGL::clearTransparencyTextures() const
     GL_EXEC( glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, transparency_shared_shader_data_vbo ) );
     GL_EXEC( glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 ) ); // unbind
 
-    constexpr GLuint zero = 0;
+    const GLuint zero = 0;
     GL_EXEC( glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, transparency_atomic_counter_vbo ) );
     GL_EXEC( glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof( GLuint ), &zero, GL_DYNAMIC_DRAW ) );
     GL_EXEC( glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, transparency_atomic_counter_vbo ) );
@@ -98,7 +98,7 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 
     GL_EXEC( glViewport( (GLsizei) 0, (GLsizei) 0, (GLsizei) width_, (GLsizei) height_ ) );
 
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( transparency_quad_vao ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::TransparencyOverlayQuad );

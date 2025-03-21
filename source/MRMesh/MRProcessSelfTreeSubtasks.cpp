@@ -22,9 +22,9 @@ void processSelfSubtasks(
         {
             if ( !aNode.leaf() )
             {
-                nextSubtasks.emplace_back( aNode.l, aNode.l );
-                nextSubtasks.emplace_back( aNode.r, aNode.r );
-                nextSubtasks.emplace_back( aNode.l, aNode.r );
+                nextSubtasks.push_back( { aNode.l, aNode.l } );
+                nextSubtasks.push_back( { aNode.r, aNode.r } );
+                nextSubtasks.push_back( { aNode.l, aNode.r } );
             }
             continue;
         }
@@ -43,15 +43,15 @@ void processSelfSubtasks(
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
-            nextSubtasks.emplace_back( aNode.l, s.bNode );
-            nextSubtasks.emplace_back( aNode.r, s.bNode );
+            nextSubtasks.push_back( { aNode.l, s.bNode } );
+            nextSubtasks.push_back( { aNode.r, s.bNode } );
         }
         else
         {
             assert( !bNode.leaf() );
             // split bNode
-            nextSubtasks.emplace_back( s.aNode, bNode.l );
-            nextSubtasks.emplace_back( s.aNode, bNode.r );
+            nextSubtasks.push_back( { s.aNode, bNode.l } );
+            nextSubtasks.push_back( { s.aNode, bNode.r } );
         }
     }
 }

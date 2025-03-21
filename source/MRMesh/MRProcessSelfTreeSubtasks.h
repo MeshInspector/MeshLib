@@ -18,7 +18,7 @@ namespace MR
 /// <param name="nextSubtasks">subtasks to process next, could be same as `subtasks`</param>
 /// <param name="processLeaf">function that is called for two different leafs</param>
 /// <param name="processNodes">function that determines how to process boxes</param>
-void processSelfSubtasks( const AABBTree& tree,
+MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
     std::vector<NodeNode>& subtasks,
     std::vector<NodeNode>& nextSubtasks, ///< may be same as subtasks
     std::function<Processing( const NodeNode& )> processLeaf,

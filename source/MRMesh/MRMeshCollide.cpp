@@ -67,15 +67,15 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
-            subtasks.emplace_back( aNode.l, s.bNode );
-            subtasks.emplace_back( aNode.r, s.bNode );
+            subtasks.push_back( { aNode.l, s.bNode } );
+            subtasks.push_back( { aNode.r, s.bNode } );
         }
         else
         {
             assert( !bNode.leaf() );
             // split bNode
-            subtasks.emplace_back( s.aNode, bNode.l );
-            subtasks.emplace_back( s.aNode, bNode.r );
+            subtasks.push_back( { s.aNode, bNode.l } );
+            subtasks.push_back( { s.aNode, bNode.r } );
         }
     }
 

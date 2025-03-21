@@ -52,15 +52,15 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
             if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
             {
                 // split aNode
-                nextSubtasks.emplace_back( aNode.l, s.bNode );
-                nextSubtasks.emplace_back( aNode.r, s.bNode );
+                nextSubtasks.push_back( { aNode.l, s.bNode } );
+                nextSubtasks.push_back( { aNode.r, s.bNode } );
             }
             else
             {
                 assert( !bNode.leaf() );
                 // split bNode
-                nextSubtasks.emplace_back( s.aNode, bNode.l );
-                nextSubtasks.emplace_back( s.aNode, bNode.r );
+                nextSubtasks.push_back( { s.aNode, bNode.l } );
+                nextSubtasks.push_back( { s.aNode, bNode.r } );
             }
             ++numSplits;
         }
@@ -204,15 +204,15 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                 if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
                 {
                     // split aNode
-                    mySubtasks.emplace_back( aNode.l, s.bNode );
-                    mySubtasks.emplace_back( aNode.r, s.bNode );
+                    mySubtasks.push_back( { aNode.l, s.bNode } );
+                    mySubtasks.push_back( { aNode.r, s.bNode } );
                 }
                 else
                 {
                     assert( !bNode.leaf() );
                     // split bNode
-                    mySubtasks.emplace_back( s.aNode, bNode.l );
-                    mySubtasks.emplace_back( s.aNode, bNode.r );
+                    mySubtasks.push_back( { s.aNode, bNode.l } );
+                    mySubtasks.push_back( { s.aNode, bNode.r } );
                 }
             }
             subtaskRes[is] = std::move( myRes );

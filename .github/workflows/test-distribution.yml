@@ -22,7 +22,7 @@ jobs:
           - platform: 'x86-64'
             runner: ubuntu-latest
           - platform: 'arm64'
-            runner: [ self-hosted, linux-arm64 ]
+            runner: [ self-hosted, linux-arm64, spot, meshinspector ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
             c-compiler: /usr/bin/clang-11

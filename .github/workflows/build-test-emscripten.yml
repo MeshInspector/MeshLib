@@ -16,7 +16,7 @@ on:
 jobs:
   emscripten-build:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
     strategy:

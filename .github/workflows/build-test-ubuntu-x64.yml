@@ -145,7 +145,7 @@ jobs:
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.build_mrcuda == 'ON' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -154,11 +154,11 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Extract Deb
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.build_mrcuda == 'ON' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
       - name: Build C++ examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.build_mrcuda == 'ON' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -170,7 +170,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' && matrix.build_mrcuda == 'ON' }}
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
             -S examples/c-examples \

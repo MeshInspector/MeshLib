@@ -16,6 +16,7 @@
 #include "MRPriorityQueue.h"
 #include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
+#include "MRTbbThreadMutex.h"
 
 namespace MR
 {
@@ -1090,12 +1091,13 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     mesh.topology.stopUpdatingValids();
-    const auto mainThreadId = std::this_thread::get_id();
+    TbbThreadMutex reporterMutex;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
-        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadId == std::this_thread::get_id();
+        const auto reporterLock = reporterMutex.tryLock();
+        const bool reportProgressFromThisThread = settings.progressCallback && reporterLock;
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto reportThreadProgress = [&]( float p )
@@ -1222,10 +1224,17 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         settings.maxDeletedFaces = int( settings.region ? settings.region->count() : mesh.topology.numValidFaces() ) / 2;
     }
 
+    DecimateResult res;
+#ifndef NDEBUG
+    if ( !mesh.topology.checkValidity() )
+        return res;
+#endif
+
     mesh.invalidateCaches(); // free memory occupied by trees before running the algorithm, which makes them invalid anyway
-    auto res = ( settings.subdivideParts > 1 ) ?
+    res = ( settings.subdivideParts > 1 ) ?
         decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
     assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
+    assert ( mesh.topology.checkValidity() );
     return res;
 }
 

@@ -272,10 +272,14 @@ std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false
 
 std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params = {} )
 {
-    // Gtk has a nasty habit of overriding the locale to "".
-    std::string locale = std::setlocale( LC_ALL, "" );
+    // Gtk has a nasty habit of overriding the locale to "".s
+    auto locale = std::setlocale( LC_ALL, nullptr );
+    std::string localeStr;
+    if ( locale )
+        localeStr = std::string( locale );
     auto kit = Gtk::Application::create();
-    std::setlocale( LC_ALL, locale.c_str() );
+    if ( locale )
+        std::setlocale( LC_ALL, localeStr.c_str() );
 
     Gtk::FileChooserAction action;
     if ( params.folderDialog )

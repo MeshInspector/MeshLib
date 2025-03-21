@@ -1,8 +1,8 @@
 #include "MRCudaFastWindingNumber.cuh"
-#include "MRMesh/MRAABBTree.h"
+
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRDistanceToMeshOptions.h"
-#include "device_launch_parameters.h"
+
 #include <limits>
 
 namespace MR

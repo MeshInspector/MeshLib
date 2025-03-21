@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.73-arm64
+FROM emscripten/emsdk:4.0.5-arm64
 
 # Update and install req
 # install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
@@ -29,30 +29,22 @@ COPY . .
 #build thirdparty
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-RUN ./scripts/build_thirdparty.sh
-
-RUN mkdir /usr/local/lib/emscripten/ && \
-    cp -r lib /usr/local/lib/emscripten/ && \
-    cp -r include /usr/local/lib/emscripten/
-
-RUN rm -rf ./lib
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /usr/local/lib/emscripten && \
+    rm -rf bin include lib share thirdparty_build
 
 ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh
-
-RUN mkdir /usr/local/lib/emscripten-single/ && \
-    cp -r lib /usr/local/lib/emscripten-single/ && \
-    cp -r include /usr/local/lib/emscripten-single/
-
-RUN rm -rf ./lib
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /usr/local/lib/emscripten-single && \
+    rm -rf bin include lib share thirdparty_build
 
 ENV MR_EMSCRIPTEN_SINGLE=OFF
 ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh
+RUN ./scripts/build_thirdparty.sh && \
+    ./scripts/cmake_install.sh /usr/local/lib/emscripten-wasm64 && \
+    rm -rf bin include lib share thirdparty_build
 
-RUN mkdir /usr/local/lib/emscripten-wasm64/ && \
-    cp -r lib /usr/local/lib/emscripten-wasm64/ && \
-    cp -r include /usr/local/lib/emscripten-wasm64/
+ENV MR_EMSCRIPTEN_WASM64=OFF
 
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \

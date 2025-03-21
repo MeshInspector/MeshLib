@@ -1,16 +1,12 @@
 #include "MRImageSave.h"
+
+#include "MRFile.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRImage.h"
-#include "MRFile.h"
 #include "MRStringConvert.h"
-#include <fstream>
-#include <filesystem>
 
-#ifndef __EMSCRIPTEN__
-#ifndef MRMESH_NO_TIFF
-#include "MRTiffIO.h"
-#endif
-#endif
+#include <filesystem>
+#include <fstream>
 
 namespace MR
 {
@@ -65,22 +61,6 @@ Expected<void> toBmp( const Image& image, const std::filesystem::path& file )
     return {};
 }
 
-#ifndef __EMSCRIPTEN__
-
-#ifndef MRMESH_NO_TIFF
-Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
-{
-    BaseTiffParameters btParams;
-    btParams.bytesPerSample = 1;
-    btParams.sampleType = BaseTiffParameters::SampleType::Uint;
-    btParams.valueType = BaseTiffParameters::ValueType::RGBA;
-    btParams.imageSize = image.resolution;
-    return writeRawTiff( ( const uint8_t* )image.pixels.data(), path, btParams );
-}
-#endif
-
-#endif
-
 Expected<void> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
@@ -95,12 +75,6 @@ Expected<void> toAnySupportedFormat( const Image& image, const std::filesystem::
     return saver( image, file );
 }
 
-#ifndef __EMSCRIPTEN__
-#ifndef MRMESH_NO_TIFF
-MR_ADD_IMAGE_SAVER( IOFilter( "TIFF (.tif)",  "*.tif" ), toTiff )
-MR_ADD_IMAGE_SAVER( IOFilter( "TIFF (.tiff)",  "*.tiff" ), toTiff )
-#endif
-#endif
 MR_ADD_IMAGE_SAVER( IOFilter( "BitMap Picture (.bmp)",  "*.bmp" ), toBmp )
 
 }

@@ -123,6 +123,9 @@ namespace MR
                 public MRVector3i() { }
             };
 
+            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            private static extern MRVector3i mrVector3iDiagonal(int a);
+
             internal MRVector3i vec_;
             /// creates a new vector with zero coordinates
             public Vector3i()
@@ -140,6 +143,11 @@ namespace MR
                 vec_.x = x;
                 vec_.y = y;
                 vec_.z = z;
+            }
+            /// creates a new vector with same coordinates
+            static public Vector3i Diagonal(int a)
+            {
+                return new Vector3i(mrVector3iDiagonal(a));
             }
 
             /// returns first coordinate

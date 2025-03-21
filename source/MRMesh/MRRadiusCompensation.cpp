@@ -81,6 +81,7 @@ Expected<void> RadiusCompensator::init()
     const auto& faceRegion = &mesh_.topology.getFaceIds( params_.region );
     assert( faceRegion );
     vertRegion_ = getInnerVerts( mesh_.topology, *faceRegion );
+    auto vertRegionWithBounds = getIncidentVerts( mesh_.topology, *faceRegion );
 
     if ( MeshComponents::hasFullySelectedComponent( mesh_, vertRegion_ - mesh_.topology.findBoundaryVerts( &vertRegion_ ) ) )
         return unexpected( "MeshPart should not contain closed components" );
@@ -89,8 +90,8 @@ Expected<void> RadiusCompensator::init()
     toWorldXf_ = AffineXf3f::linear( Matrix3f::fromColumns( xvec, yvec, params_.direction ) );
     toPlaneXf_ = toWorldXf_.inverse();
 
-    planeVerts_.resize( vertRegion_.endId() );
-    bool keepGoing = BitSetParallelFor( vertRegion_, [&] ( VertId v )
+    planeVerts_.resize( vertRegionWithBounds.size() );
+    bool keepGoing = BitSetParallelFor( vertRegionWithBounds, [&] ( VertId v )
     {
         planeVerts_[v] = to3dim( to2dim( toPlaneXf_( mesh_.points[v] ) ) );
     }, subprogress( params_.callback, 0.0f, 0.1f ) );
@@ -98,7 +99,7 @@ Expected<void> RadiusCompensator::init()
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 
-    planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ );
+    planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegionWithBounds );
     return {};
 }
 
@@ -154,13 +155,14 @@ MR::Expected<void> RadiusCompensator::filterCompensations()
 
         bool validCompensation = false;
         findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
-                [&] ( VertId v, const Vector3f& )
+                [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
+            const auto v = found.vId;
             auto planePoint = toPlaneXf_( mesh_.points[v] );
             auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
-            if ( shift == Vector3f() )
-                return;
-            validCompensation = visitedVerts.test_set( v, false ) || validCompensation;
+            if ( shift != Vector3f() )
+                validCompensation = visitedVerts.test_set( v, false ) || validCompensation;
+            return Processing::Continue;
         } );
         if ( !validCompensation )
             cId = VertId(); // filter it out
@@ -174,7 +176,7 @@ Expected<void> RadiusCompensator::applyCompensation()
     MR_WRITER( mesh_ );
 
     Mesh cpyMesh = mesh_; // for projecting
-    VertBitSet updatedVerts( vertRegion_.size() );
+    VertBitSet updatedVerts( planeVerts_.size() );
 
     int maxIters = std::max( 1, params_.maxIterations );
 
@@ -194,12 +196,15 @@ Expected<void> RadiusCompensator::applyCompensation()
             auto planeToolCenter = toPlaneXf_( toolCenters_[cId] );
 
             findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
-                [&] ( VertId v, const Vector3f& )
+                [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
             {
+                const auto v = found.vId;
+                if ( !vertRegion_.test( v ) )
+                    return Processing::Continue; // boundary vert
                 auto planePoint = toPlaneXf_( mesh_.points[v] );
                 auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
                 if ( shift == Vector3f() )
-                    return;
+                    return Processing::Continue;
 
                 auto shiftLenSq = shift.lengthSq();
                 if ( shiftLenSq > maxShiftSq )
@@ -208,13 +213,14 @@ Expected<void> RadiusCompensator::applyCompensation()
                 {
                     mesh_.points[v] += shift;
                     if ( shiftLenSq < maxAllowedShiftSq * 1e-4f )
-                        return;
+                        return Processing::Continue;
                 }
                 else
                 {
                     mesh_.points[v] += shift.normalized() * maxAllowedShiftSq;
                 }
                 updatedVerts.set( v );
+                return Processing::Continue;
             } );
         }
 
@@ -284,19 +290,25 @@ float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
     float sumShiftLength = 0.0f;
     auto planeToolCenter = toPlaneXf_( toolCenter );
     MinMaxf minmaxZ;
+    bool touchBoundary = false;
     findPointsInBall( *planeTree_, { .center = to3dim( to2dim( planeToolCenter ) ),.radiusSq = radiusSq_ },
-        [&] ( VertId v, const Vector3f& )
+        [&] ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
     {
+        const auto v = found.vId;
         auto planePoint = toPlaneXf_( mesh_.points[v] );
         auto shift = calcCompensationMovement_( planePoint, planeToolCenter );
         if ( shift == Vector3f() )
-            return;
+            return Processing::Continue;
+
+        if ( !touchBoundary && !vertRegion_.test( v ) )
+            touchBoundary = true; // boundary vert
 
         for ( auto e : orgRing( mesh_.topology, v ) )
             if ( auto l = mesh_.topology.left( e ) )
                 sumProjArea += std::abs( dot( mesh_.leftDirDblArea( e ), params_.direction ) );
         sumShiftLength += shift.length();
         minmaxZ.include( planePoint.z );
+        return Processing::Continue;
     } );
     sumProjArea *= 0.5f; // more area affected - better
     // sumShiftLength - more shift - worse
@@ -305,7 +317,8 @@ float RadiusCompensator::sumCompensationCost_( const Vector3f& toolCenter )
     if ( !minmaxZ.valid() )
         return -FLT_MAX;
 
-    return minmaxZ.size() * sumShiftLength / sumProjArea; // lets consider tool position as cost for now
+    // also 1e2 fine for touching boundary vert
+    return minmaxZ.size() * sumShiftLength / sumProjArea + ( touchBoundary ? 1e2f : 0.0f ); // lets consider tool position as cost for now
 }
 
 Expected<void> compensateRadius( Mesh& mesh, const CompensateRadiusParams& params )

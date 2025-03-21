@@ -120,6 +120,9 @@
     <ClInclude Include="MRCudaPointCloud.cuh" />
     <ClInclude Include="MRCudaPointsProject.h" />
     <ClInclude Include="MRCudaPointsProject.cuh" />
+    <ClInclude Include="MRCudaPipeline.h" />
+    <ClInclude Include="MRCudaPipeline.hpp" />
+    <ClInclude Include="MRCuda.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />

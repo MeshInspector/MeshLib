@@ -45,11 +45,16 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
+option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
 IF(MR_EMSCRIPTEN OR APPLE)
   set(MESHLIB_BUILD_MRCUDA OFF)
 ENDIF()
 IF(MESHLIB_BUILD_MRCUDA)
-  include(ConfigureCuda)
+  IF(MESHLIB_EXPERIMENTAL_HIP)
+    include(ConfigureHip)
+  ELSE()
+    include(ConfigureCuda)
+  ENDIF()
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
@@ -331,7 +336,7 @@ ENDIF()
 include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
-  PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR MR_INCLUDE_DIR MR_MAIN_LIB_DIR
 )
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake

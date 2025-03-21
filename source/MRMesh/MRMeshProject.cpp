@@ -147,22 +147,19 @@ void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& f
         return tree.nodes()[n].box.getDistanceSq( ball.center );
     };
 
-    auto addSubTask = [&]( NodeId n, float boxDistSq )
+    auto addSubTask = [&]( NodeId n )
     {
-        if ( boxDistSq < ball.radiusSq ) // ball intersects the box
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
+        assert( stackSize < MaxStackSize );
+        subtasks[stackSize++] = n;
     };
 
-    addSubTask( tree.rootNodeId(), boxDistSq( tree.rootNodeId() ) );
+    addSubTask( tree.rootNodeId() );
 
     while( stackSize > 0 )
     {
         const auto n = subtasks[--stackSize];
         const auto & node = tree[n];
-        if ( !( boxDistSq( n ) < ball.radiusSq ) ) // check again in case the ball has changed
+        if ( !( boxDistSq( n ) < ball.radiusSq ) )
             continue;
 
         if ( node.leaf() )
@@ -197,13 +194,13 @@ void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& f
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
         if ( lDistSq <= rDistSq )
         {
-            addSubTask( node.r, rDistSq );
-            addSubTask( node.l, lDistSq );
+            addSubTask( node.r );
+            addSubTask( node.l );
         }
         else
         {
-            addSubTask( node.l, lDistSq );
-            addSubTask( node.r, rDistSq );
+            addSubTask( node.l );
+            addSubTask( node.r );
         }
     }
 }

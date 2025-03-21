@@ -80,12 +80,6 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 #endif
 }
 
-const std::string& ViewerSettingsPlugin::uiName() const
-{
-    static std::string name = std::string( "Settings" ) + UINameSuffix();
-    return name;
-}
-
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 400.0f * menuScaling;
@@ -561,6 +555,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 {
     (void)menuScaling;
 
+    static constexpr int cMaxPrecision = 9;
+
     { // Common.
         drawSeparator_( "Common", menuScaling );
 
@@ -634,7 +630,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Precision
         int precision = UnitSettings::getUiLengthPrecision();
-        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, 12 ) )
+        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, cMaxPrecision ) )
             UnitSettings::setUiLengthPrecision( precision );
 
         ImGui::PopStyleVar();
@@ -668,9 +664,25 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             // --- Precision
 
             int precision = UnitSettings::getUiAnglePrecision();
-            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, 12 ) )
+            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, cMaxPrecision ) )
                 UnitSettings::setUiAnglePrecision( precision );
         }
+
+        ImGui::PopStyleVar();
+        ImGui::PopItemWidth();
+    }
+
+    { // Ratio.
+        ImGui::PushItemWidth( 170.0f * menuScaling );
+        drawSeparator_( "Scale and Ratios", menuScaling );
+
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+
+        // --- Precision
+
+        int precision = UnitSettings::getUiRatioPrecision();
+        if ( UI::drag<NoUnit>( "Precision##ratio", precision, 1, 0, cMaxPrecision ) )
+            UnitSettings::setUiRatioPrecision( precision );
 
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
@@ -1237,7 +1249,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth, float menuScal
         }
         setDefaultSerializePointsFormat( format );
     }
-    
+
     if ( UI::combo( "Voxels Format", ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )

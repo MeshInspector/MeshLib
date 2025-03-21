@@ -514,37 +514,61 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
     VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
     const size_t volume = activeBox.volume();
 
-    std::vector<float> windVals;
     auto fwn = settings.fwn ? settings.fwn : std::make_shared<FastWindingNumber>( refMesh );
 
     const auto gridToMeshXf = settings.meshToGridXf.inverse()
         * AffineXf3f::linear( Matrix3f::scale( voxelSize ) )
         * AffineXf3f::translation( Vector3f{ fromVdb( minCoord ) } );
+
+    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
+    auto updateGrid = [&] ( VoxelId vox, float windVal )
+    {
+        auto & accessor = perThreadAccessor.local();
+
+        auto pos = indexer.toPos( vox );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
+
+        if ( windVal > settings.windingNumberThreshold )
+        {
+            accessor.modifyValue( coord, [] ( float& val )
+            {
+                val = -val;
+            } );
+        }
+    };
+
+    if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( fwn ) )
+    {
+        auto func = [&] ( std::vector<float>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
+        {
+            const auto offset = indexer.sizeXY() * zOffset;
+            ParallelFor( size_t( 0 ), vals.size(), [&] ( size_t i )
+            {
+                updateGrid( VoxelId( i + offset ), vals[i] );
+            } );
+            return {};
+        };
+        return
+            fwnByParts->calcFromGridByParts( func, indexer.dims(), gridToMeshXf, settings.windingNumberBeta, 0, settings.progress )
+            .transform( [&]
+            {
+                grid->pruneGrid( 0.f );
+            } );
+    }
+
+    std::vector<float> windVals;
     if ( auto res = fwn->calcFromGrid( windVals,
         Vector3i{ dims.x(),  dims.y(), dims.z() },
         gridToMeshXf, settings.windingNumberBeta, subprogress( settings.progress, 0.0f, 0.8f ) ); !res )
     {
         return res;
     }
-    
-    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
 
     if ( !ParallelFor( size_t( 0 ), volume, [&]( size_t i )
         {
-            auto & accessor = perThreadAccessor.local();
-
-            auto pos = indexer.toPos( VoxelId( i ) );
-            auto coord = minCoord;
-            for ( int j = 0; j < 3; ++j )
-                coord[j] += pos[j];
-
-            if ( windVals[i] > settings.windingNumberThreshold )
-            {
-                accessor.modifyValue( coord, [] ( float& val )
-                {
-                    val = -val;
-                } );
-            }
+            updateGrid( VoxelId( i ), windVals[i] );
         }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
     {
         return unexpectedOperationCanceled();

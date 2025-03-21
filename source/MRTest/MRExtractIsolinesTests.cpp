@@ -89,13 +89,29 @@ TEST( MRMesh, ExtractPlaneSections )
 
 TEST( MRMesh, ExtractXYPlaneSections )
 {
+    auto testSection = []( const MeshPart & mp, float zLevel )
+    {
+        auto res = extractXYPlaneSections( mp, zLevel, UseAABBTree::No );
+        EXPECT_EQ( res, extractXYPlaneSections( mp, zLevel, UseAABBTree::Yes ) );
+        bool has = !res.empty();
+        EXPECT_EQ( has, hasAnyXYPlaneSection( mp, zLevel, UseAABBTree::No ) );
+        EXPECT_EQ( has, hasAnyXYPlaneSection( mp, zLevel, UseAABBTree::Yes ) );
+
+        Plane3f plane( Vector3f( 0, 0, 1 ), zLevel );
+        EXPECT_EQ( res, extractPlaneSections( mp, plane, UseAABBTree::No ) );
+        EXPECT_EQ( res, extractPlaneSections( mp, plane, UseAABBTree::Yes ) );
+        EXPECT_EQ( has, hasAnyPlaneSection( mp, plane, UseAABBTree::No ) );
+        EXPECT_EQ( has, hasAnyPlaneSection( mp, plane, UseAABBTree::Yes ) );
+        return res;
+    };
+
     Mesh mesh = MR::makeCube( Vector3f::diagonal( 1.F ), Vector3f() );
 
-    auto res = extractXYPlaneSections( mesh, -0.5f );
+    auto res = testSection( mesh, -0.5f );
     EXPECT_EQ( res.size(), 0 );
 
     const auto testLevel = 0.5f;
-    res = extractXYPlaneSections( mesh, testLevel );
+    res = testSection( mesh, testLevel );
     EXPECT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 9 );
     EXPECT_EQ( res[0].front(), res[0].back() );
@@ -110,7 +126,7 @@ TEST( MRMesh, ExtractXYPlaneSections )
     FaceBitSet fs;
     fs.autoResizeSet( 5_f );
     fs.set( 2_f );
-    res = extractXYPlaneSections( { mesh, &fs }, testLevel );
+    res = testSection( { mesh, &fs }, testLevel );
     EXPECT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 3 );
     EXPECT_NE( res[0].front(), res[0].back() );
@@ -124,7 +140,7 @@ TEST( MRMesh, ExtractXYPlaneSections )
 
     // make a hole in mesh to extract not closed contour
     mesh.deleteFaces( fs );
-    res = extractXYPlaneSections( mesh, testLevel );
+    res = testSection( mesh, testLevel );
     EXPECT_EQ( res.size(), 1 );
     EXPECT_EQ( res[0].size(), 7 );
     EXPECT_NE( res[0].front(), res[0].back() );

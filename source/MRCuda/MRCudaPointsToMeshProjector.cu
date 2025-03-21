@@ -1,6 +1,4 @@
 #include "MRCudaPointsToMeshProjector.cuh"
-#include "MRMesh/MRAABBTree.h"
-#include "device_launch_parameters.h"
 
 namespace MR { namespace Cuda {
 

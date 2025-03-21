@@ -110,6 +110,7 @@ jobs:
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   macos-build-test:
@@ -315,7 +316,7 @@ jobs:
     timeout-minutes: 5
     runs-on: aws-micro
     needs: [ upload-distributions ]
-    if: always()
+    if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
     steps:
       - name: Checkout

@@ -346,7 +346,7 @@ std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
 }
 
 
-inline std::pair<int, int> sharedPVC( const PreciseVertCoords av[3], const PreciseVertCoords bv[3] )
+inline std::pair<int, int> sharedPreciseVertCoord( const PreciseVertCoords av[3], const PreciseVertCoords bv[3] )
 {
     for ( int i = 0; i < 3; ++i )
     {
@@ -423,7 +423,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             rvc[j].id += aVertsSize;
         }
 
-        auto [sharedLV, sharedRV] = sharedPVC( lvc, rvc );
+        auto sharedVerts = sharedPreciseVertCoord( lvc, rvc );
 
         // check edges from A
         int numL = 0;
@@ -431,7 +431,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         auto lEdgeCheck = [&] ( int v0, int v1 )
         {
             // skip incident to shared vert
-            if ( sharedLV == v0 || sharedLV == v1 )
+            if ( sharedVerts.first == v0 || sharedVerts.first == v1 )
                 return EdgeId{};
             if ( !checkEdge( lEdge ) )
                 return EdgeId{};
@@ -462,7 +462,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         auto rEdgeCheck = [&] ( int v0, int v1 )
         {
             // skip incident to shared vert
-            if ( sharedRV == v0 || sharedRV == v1 )
+            if ( sharedVerts.second == v0 || sharedVerts.second == v1 )
                 return EdgeId{};
             if ( !checkEdge( rEdge ) )
                 return EdgeId{};

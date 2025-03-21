@@ -469,7 +469,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             auto isect = doTriangleSegmentIntersect( { lvc[0], lvc[1], lvc[2], rvc[v0], rvc[v1] } );
             if ( !isect )
                 return EdgeId{};
-            return isect.dIsLeftFromABC ? rEdge : rEdge.sym(); // TODO: need flip?
+            return isect.dIsLeftFromABC ? rEdge : rEdge.sym();
         };
         if ( auto e = rEdgeCheck( 0, 1 ) )
         {

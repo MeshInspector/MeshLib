@@ -5,6 +5,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
 #include "MRParallelFor.h"
+#include "MRLine3.h"
+#include "MRMeshIntersect.h"
 
 namespace MR
 {
@@ -156,6 +158,28 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
         result.set( v );
     } );
     return result;
+}
+
+FaceBitSet findDisorientedFaces( const Mesh& mesh )
+{
+    MR_TIMER
+    auto disorientedFaces = mesh.topology.getValidFaces();
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto normal = Vector3d( mesh.normal( f ) );
+        auto triCenter = Vector3d( mesh.triCenter( f ) );
+        int counter = 0;
+        rayMeshIntersectAll( mesh, Line3d( triCenter, normal ),
+            [f, &counter] ( const MeshIntersectionResult& res )->bool
+        {
+            if ( res.proj.face != f )
+                ++counter;
+            return true;
+        } );
+        if ( counter % 2 == 0 )
+            disorientedFaces.reset( f );
+    } );
+    return disorientedFaces;
 }
 
 void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges )

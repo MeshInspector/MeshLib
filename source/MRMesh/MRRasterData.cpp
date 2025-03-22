@@ -26,9 +26,9 @@ void RasterToWorld::setXf( const AffineXf3f& xf )
 
 size_t RasterData::sizeOf( DataType type )
 {
-    return visit( type, [] <typename T> ( T )
+    return visit( type, [] <typename T> ( T* )
     {
-        return sizeof(T);
+        return sizeof( T );
     } );
 }
 
@@ -50,6 +50,10 @@ RasterData::RasterData( DataType type, SampleType samples )
     : type_( type )
     , samples_( samples )
 {
+    visit( type_, [this] <typename T> ( T* )
+    {
+        variant_.emplace<T*>( (T*)nullptr );
+    } );
 }
 
 RasterData::RasterData( const Vector2i& dims, DataType type, SampleType samples )
@@ -73,6 +77,10 @@ void RasterData::resize( const Vector2i& dims )
 {
     RectIndexer::resize( dims );
     data_.resize( bytes() );
+    visit( type_, [this] <typename T> ( T* )
+    {
+        variant_.emplace<T*>( reinterpret_cast<T*>( data_.data() ) );
+    } );
 }
 
 Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld ) const
@@ -82,10 +90,10 @@ Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld
 
     DistanceMap result( dims_.x, dims_.y );
     assert( result.size() == size_ );
-    visit( [&] <typename T> ( const T* data )
+    std::visit( [&] <typename T> ( const T* data )
     {
         std::copy_n( data, size_, result.data() );
-    } );
+    }, variant_ );
 
     if ( dmapToWorld )
         *dmapToWorld = xf();
@@ -103,7 +111,7 @@ Expected<Image> RasterData::toImage() const
     };
     result.pixels.resize( size_ );
 
-    visit( [&] <typename T> ( const T* data )
+    std::visit( [&] <typename T> ( const T* data )
     {
         switch ( samples_ )
         {
@@ -123,7 +131,7 @@ Expected<Image> RasterData::toImage() const
         default:
             MR_UNREACHABLE_NO_RETURN
         }
-    } );
+    }, variant_ );
 
     return result;
 }

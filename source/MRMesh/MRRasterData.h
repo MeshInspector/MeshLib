@@ -10,6 +10,18 @@
 namespace MR
 {
 
+/// ...
+template <typename... Args>
+constexpr auto makeVariantArray( std::variant<Args...> )
+{
+    return std::array<std::variant<Args...>, sizeof...( Args )> { Args{}... };
+}
+template <typename Variant>
+constexpr auto makeVariantArray()
+{
+    return makeVariantArray( Variant{} );
+}
+
 /// This structure store data to transform raster to world coordinates
 class RasterToWorld
 {
@@ -65,11 +77,32 @@ public:
         Float64,
     };
     /// ...
-    template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-    static DataType from();
+    using DataTypeVariant = std::variant<
+        uint8_t*,
+        uint16_t*,
+        uint32_t*,
+        uint64_t*,
+        int8_t*,
+        int16_t*,
+        int32_t*,
+        int64_t*,
+        float*,
+        double*
+    >;
+    /// ...
+    template <typename T>
+    static DataType from()
+    {
+        static constexpr auto variant = DataTypeVariant( (T*)nullptr );
+        return DataType( variant.index() );
+    }
     /// ...
     template <typename Visitor>
-    static auto visit( DataType type, Visitor&& visitor );
+    static auto visit( DataType type, Visitor&& vis )
+    {
+        static constexpr auto variants = makeVariantArray<DataTypeVariant>();
+        return std::visit( vis, variants.at( (size_t)type ) );
+    }
     /// ...
     MRMESH_API static size_t sizeOf( DataType type );
 
@@ -103,23 +136,6 @@ public:
     /// ...
     void resize( const Vector2i& dims );
 
-    template <typename Visitor>
-    auto visit( Visitor&& visitor ) const
-    {
-        return visit( type_, [&] <typename T> ( T )
-        {
-            return visitor( reinterpret_cast<const T*>( data_.data() ) );
-        } );
-    }
-    template <typename Visitor>
-    auto visit( Visitor&& visitor )
-    {
-        return visit( type_, [&] <typename T> ( T )
-        {
-            return visitor( reinterpret_cast<T*>( data_.data() ) );
-        } );
-    }
-
     /// ...
     [[nodiscard]] MRMESH_API Expected<DistanceMap> toDistanceMap( DistanceMapToWorld* dmapToWorld = nullptr ) const;
 
@@ -128,47 +144,9 @@ public:
 
 private:
     Buffer<std::byte> data_;
-    DataType type_{ DataType::UInt8 };
+    DataTypeVariant variant_;
+    DataType type_;
     SampleType samples_{ SampleType::Scalar };
 };
-
-template <typename T, typename>
-RasterData::DataType RasterData::from()
-{
-#define RETURN_IF( TypeName, enumValue ) if constexpr ( std::is_same_v<T, TypeName> ) return DataType::enumValue;
-    RETURN_IF( uint8_t, UInt8 )
-    RETURN_IF( uint16_t, UInt16 )
-    RETURN_IF( uint32_t, UInt32 )
-    RETURN_IF( uint64_t, UInt64 )
-    RETURN_IF( int8_t, Int8 )
-    RETURN_IF( int16_t, Int16 )
-    RETURN_IF( int32_t, Int32 )
-    RETURN_IF( int64_t, Int64 )
-    RETURN_IF( float, Float32 )
-    RETURN_IF( double, Float64 )
-#undef RETURN_IF
-    MR_UNREACHABLE
-}
-
-template <typename Visitor>
-auto RasterData::visit( DataType type, Visitor&& visitor )
-{
-#define VISIT_IF( enumValue, TypeName ) case DataType::enumValue: return visitor( TypeName() );
-    switch ( type )
-    {
-        VISIT_IF( UInt8, uint8_t )
-        VISIT_IF( UInt16, uint16_t )
-        VISIT_IF( UInt32, uint32_t )
-        VISIT_IF( UInt64, uint64_t )
-        VISIT_IF( Int8, int8_t )
-        VISIT_IF( Int16, int16_t )
-        VISIT_IF( Int32, int32_t )
-        VISIT_IF( Int64, int64_t )
-        VISIT_IF( Float32, float )
-        VISIT_IF( Float64, double )
-    }
-    MR_UNREACHABLE_NO_RETURN
-#undef VISIT_IF
-}
 
 } // namespace MR

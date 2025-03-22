@@ -8,7 +8,7 @@
       "c-compiler": "/usr/bin/clang-11",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu20",
@@ -18,7 +18,7 @@
       "c-compiler": "/usr/bin/gcc-10",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu20",
@@ -28,7 +28,7 @@
       "c-compiler": "/usr/bin/clang-11",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu20",
@@ -38,7 +38,7 @@
       "c-compiler": "/usr/bin/gcc-10",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "ON",
+      "upload_release": "ON"
     },
     {
       "os": "ubuntu22",
@@ -48,7 +48,7 @@
       "c-compiler": "/usr/bin/clang-14",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu22",
@@ -58,7 +58,7 @@
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu22",
@@ -68,7 +68,7 @@
       "c-compiler": "/usr/bin/clang-14",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu22",
@@ -78,7 +78,7 @@
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "ON",
+      "upload_release": "ON"
     },
     {
       "os": "ubuntu24",
@@ -88,7 +88,7 @@
       "c-compiler": "/usr/bin/clang-18",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu24",
@@ -98,7 +98,7 @@
       "c-compiler": "/usr/bin/clang-18",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu24",
@@ -108,7 +108,7 @@
       "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "ON",
+      "upload_release": "ON"
     },
     {
       "os": "ubuntu24",
@@ -118,7 +118,7 @@
       "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu24",
@@ -128,7 +128,7 @@
       "c-compiler": "/usr/bin/gcc-14",
       "cxx-standard": 23,
       "build_mrcuda": "OFF",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     },
     {
       "os": "ubuntu24",
@@ -138,7 +138,7 @@
       "c-compiler": "/usr/bin/gcc-14",
       "cxx-standard": 23,
       "build_mrcuda": "OFF",
-      "upload_release": "OFF",
+      "upload_release": "OFF"
     }
   ]
 }

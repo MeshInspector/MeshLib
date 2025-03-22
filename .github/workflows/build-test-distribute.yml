@@ -340,6 +340,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
 
+      - name: Install dependencies
+        run: python3 -m pip install boto3 botocore
+
       - name: Collect stats
         env:
           CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}

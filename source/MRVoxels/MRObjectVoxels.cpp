@@ -13,7 +13,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"

@@ -2,7 +2,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 
 namespace MR
 {
@@ -26,4 +26,4 @@ Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume&
     return res;
 }
 
-}
+} //namespace MR

@@ -123,13 +123,16 @@ public:
     /// ...
     [[nodiscard]] MRMESH_API Expected<DistanceMap> toDistanceMap( DistanceMapToWorld* dmapToWorld = nullptr ) const;
 
+    /// ...
+    [[nodiscard]] MRMESH_API Expected<Image> toImage() const;
+
 private:
     Buffer<std::byte> data_;
     DataType type_{ DataType::UInt8 };
     SampleType samples_{ SampleType::Scalar };
 };
 
-template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+template <typename T, typename>
 RasterData::DataType RasterData::from()
 {
 #define RETURN_IF( TypeName, enumValue ) if constexpr ( std::is_same_v<T, TypeName> ) return DataType::enumValue;
@@ -164,6 +167,7 @@ auto RasterData::visit( DataType type, Visitor&& visitor )
         VISIT_IF( Float32, float )
         VISIT_IF( Float64, double )
     }
+    MR_UNREACHABLE_NO_RETURN
 #undef VISIT_IF
 }
 

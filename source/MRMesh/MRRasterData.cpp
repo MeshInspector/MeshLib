@@ -93,4 +93,39 @@ Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld
     return result;
 }
 
+Expected<Image> RasterData::toImage() const
+{
+    if ( samples_ != SampleType::RGB && samples_ != SampleType::RGBA )
+        return unexpected( "Cannot convert non-RGB raster to image" );
+
+    Image result {
+        .resolution = dims_,
+    };
+    result.pixels.resize( size_ );
+
+    visit( [&] <typename T> ( const T* data )
+    {
+        switch ( samples_ )
+        {
+        case SampleType::RGBA:
+            std::copy_n( data, size_ * 4, reinterpret_cast<uint8_t*>( result.pixels.data() ) );
+            break;
+        case SampleType::RGB:
+            for ( auto i = 0u; i < size_; ++i )
+            {
+                result.pixels[i] = Color {
+                    Color::valToUint8( data[i * 3 + 0] ),
+                    Color::valToUint8( data[i * 3 + 1] ),
+                    Color::valToUint8( data[i * 3 + 2] ),
+                };
+            }
+            break;
+        default:
+            MR_UNREACHABLE_NO_RETURN
+        }
+    } );
+
+    return result;
+}
+
 } // namespace MR

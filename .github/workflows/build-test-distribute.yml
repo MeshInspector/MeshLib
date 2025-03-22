@@ -14,6 +14,11 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
@@ -327,6 +332,16 @@ jobs:
         with:
           pattern: RunnerSysStats*
           merge-multiple: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        id: aws-creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
+          output-credentials: true
+
+      - name: Install dependencies
+        run: python3 -m pip install boto3 botocore
 
       - name: Collect stats
         env:

@@ -98,7 +98,7 @@ public:
     }
     /// ...
     template <typename Visitor>
-    static auto visit( DataType type, Visitor&& vis )
+    static auto visit( Visitor&& vis, DataType type )
     {
         static constexpr auto variants = makeVariantArray<DataTypeVariant>();
         return std::visit( vis, variants.at( (size_t)type ) );

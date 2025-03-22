@@ -26,10 +26,10 @@ void RasterToWorld::setXf( const AffineXf3f& xf )
 
 size_t RasterData::sizeOf( DataType type )
 {
-    return visit( type, [] <typename T> ( T* )
+    return visit( [] <typename T> ( T* )
     {
         return sizeof( T );
-    } );
+    }, type );
 }
 
 size_t RasterData::sizeOf( SampleType type )
@@ -50,10 +50,10 @@ RasterData::RasterData( DataType type, SampleType samples )
     : type_( type )
     , samples_( samples )
 {
-    visit( type_, [this] <typename T> ( T* )
+    visit( [this] <typename T> ( T* )
     {
         variant_.emplace<T*>( (T*)nullptr );
-    } );
+    }, type_ );
 }
 
 RasterData::RasterData( const Vector2i& dims, DataType type, SampleType samples )
@@ -77,10 +77,10 @@ void RasterData::resize( const Vector2i& dims )
 {
     RectIndexer::resize( dims );
     data_.resize( bytes() );
-    visit( type_, [this] <typename T> ( T* )
+    visit( [this] <typename T> ( T* )
     {
         variant_.emplace<T*>( reinterpret_cast<T*>( data_.data() ) );
-    } );
+    }, type_ );
 }
 
 Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld ) const

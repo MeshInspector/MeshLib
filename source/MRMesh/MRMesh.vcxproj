@@ -153,6 +153,7 @@
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
     <ClInclude Include="MRParallel.h" />
+    <ClInclude Include="MRParallelMinMax.h" />
     <ClInclude Include="MRPartialChangeMeshAction.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />

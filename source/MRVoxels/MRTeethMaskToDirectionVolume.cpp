@@ -2,7 +2,7 @@
 
 #include "MRVDBConversions.h"
 #include "MRMesh/MRVolumeIndexer.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMeshToDistanceVolume.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRMesh.h"

@@ -31,6 +31,10 @@ jobs:
             name: "ubuntu22"
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
+          - os: "ubuntu:24.04"
+            name: "ubuntu24"
+            c-compiler: /usr/bin/clang-18
+            cxx-compiler: /usr/bin/clang++-18
           - os: "fedora:39"
             name: "fedora39"
             c-compiler: /usr/bin/clang-17

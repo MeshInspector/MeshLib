@@ -22,11 +22,10 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
         maxDistSq = FLT_MAX;
     }
     const auto proj = findProjection( p, mp, maxDistSq, nullptr, minDistSq );
-    if ( !proj )
+    if ( !proj && op.signMode == SignDetectionMode::ProjectionNormal )
         return {}; // no projection point found
-    assert( proj.distSq < maxDistSq );
 
-    if ( op.nullOutsideMinMax && proj.distSq < minDistSq ) // note that proj.distSq == minDistSq (e.g. == 0) is a valid situation
+    if ( op.nullOutsideMinMax && ( proj.distSq < minDistSq || proj.distSq >= maxDistSq ) ) // note that proj.distSq == minDistSq (e.g. == 0) is a valid situation
         return {}; // distance is too small or too large, discard them
 
     float dist = std::sqrt( proj.distSq );

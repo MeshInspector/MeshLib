@@ -32,9 +32,9 @@ size_t RasterData::sizeOf( DataType type )
     }, type );
 }
 
-size_t RasterData::sizeOf( SampleType type )
+size_t RasterData::sizeOf( SampleType samples )
 {
-    switch ( type )
+    switch ( samples )
     {
     case SampleType::Scalar:
         return 1;
@@ -83,16 +83,31 @@ void RasterData::resize( const Vector2i& dims )
     }, type_ );
 }
 
-Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld ) const
+DistanceMap RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld ) const
 {
-    if ( samples_ != SampleType::Scalar )
-        return unexpected( "Cannot convert non-scalar raster to distance map" );
-
     DistanceMap result( dims_.x, dims_.y );
-    assert( result.size() == size_ );
+
     std::visit( [&] <typename T> ( const T* data )
     {
-        std::copy_n( data, size_, result.data() );
+        iterateSamples( samples_, data, size_, [&] ( size_t i, const T* sample )
+        {
+            auto& value = result.data()[i];
+            switch ( samples_ )
+            {
+            case SampleType::Scalar:
+                value = sample[0];
+                break;
+            case SampleType::RGB:
+            case SampleType::RGBA:
+                // luma/brightness component from the YCbCr color space
+                value =
+                      (float)sample[0] * 0.299f
+                    + (float)sample[1] * 0.587f
+                    + (float)sample[2] * 0.114f
+                ;
+                break;
+            }
+        } );
     }, variant_ );
 
     if ( dmapToWorld )
@@ -101,11 +116,8 @@ Expected<DistanceMap> RasterData::toDistanceMap( DistanceMapToWorld* dmapToWorld
     return result;
 }
 
-Expected<Image> RasterData::toImage() const
+Image RasterData::toImage() const
 {
-    if ( samples_ != SampleType::RGB && samples_ != SampleType::RGBA )
-        return unexpected( "Cannot convert non-RGB raster to image" );
-
     Image result {
         .resolution = dims_,
     };
@@ -113,24 +125,35 @@ Expected<Image> RasterData::toImage() const
 
     std::visit( [&] <typename T> ( const T* data )
     {
-        switch ( samples_ )
+        iterateSamples( samples_, data, size_, [&] ( size_t i, const T* sample )
         {
-        case SampleType::RGBA:
-            std::copy_n( data, size_ * 4, reinterpret_cast<uint8_t*>( result.pixels.data() ) );
-            break;
-        case SampleType::RGB:
-            for ( auto i = 0u; i < size_; ++i )
+            auto& pixel = result.pixels[i];
+            switch ( samples_ )
             {
-                result.pixels[i] = Color {
-                    Color::valToUint8( data[i * 3 + 0] ),
-                    Color::valToUint8( data[i * 3 + 1] ),
-                    Color::valToUint8( data[i * 3 + 2] ),
+            case SampleType::Scalar:
+                pixel = Color {
+                    Color::valToUint8( sample[0] ),
+                    Color::valToUint8( sample[0] ),
+                    Color::valToUint8( sample[0] ),
                 };
+                break;
+            case SampleType::RGB:
+                pixel = Color {
+                    Color::valToUint8( sample[0] ),
+                    Color::valToUint8( sample[1] ),
+                    Color::valToUint8( sample[2] ),
+                };
+                break;
+            case SampleType::RGBA:
+                pixel = Color {
+                    Color::valToUint8( sample[0] ),
+                    Color::valToUint8( sample[1] ),
+                    Color::valToUint8( sample[2] ),
+                    Color::valToUint8( sample[3] ),
+                };
+                break;
             }
-            break;
-        default:
-            MR_UNREACHABLE_NO_RETURN
-        }
+        } );
     }, variant_ );
 
     return result;

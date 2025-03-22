@@ -117,7 +117,15 @@ public:
         RGBA,
     };
     /// ...
-    static size_t sizeOf( SampleType type );
+    static size_t sizeOf( SampleType samples );
+    /// ...
+    template <typename T, typename Func>
+    static void iterateSamples( SampleType samples, T* data, size_t size, Func&& f )
+    {
+        const auto step = sizeOf( samples );
+        for ( auto i = 0u; i < size / step; ++i )
+            f( i, data + i * step );
+    }
 
     MRMESH_API explicit RasterData( DataType type = DataType::UInt8, SampleType samples = SampleType::Scalar );
     MRMESH_API explicit RasterData( const Vector2i& dims, DataType type = DataType::UInt8, SampleType samples = SampleType::Scalar );
@@ -137,10 +145,10 @@ public:
     void resize( const Vector2i& dims );
 
     /// ...
-    [[nodiscard]] MRMESH_API Expected<DistanceMap> toDistanceMap( DistanceMapToWorld* dmapToWorld = nullptr ) const;
+    [[nodiscard]] MRMESH_API DistanceMap toDistanceMap( DistanceMapToWorld* dmapToWorld = nullptr ) const;
 
     /// ...
-    [[nodiscard]] MRMESH_API Expected<Image> toImage() const;
+    [[nodiscard]] MRMESH_API Image toImage() const;
 
 private:
     Buffer<std::byte> data_;

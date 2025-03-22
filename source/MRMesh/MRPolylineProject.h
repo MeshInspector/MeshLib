@@ -22,8 +22,9 @@ struct PolylineProjectionResult
     /// squared distance from pt to proj
     float distSq = 0;
 
-    /// check for validity
-    explicit operator bool() const { return line.valid(); }
+    /// check for validity, otherwise the projection was not found
+    [[nodiscard]] bool valid() const { return line.valid(); }
+    [[nodiscard]] explicit operator bool() const { return line.valid(); }
 };
 
 /**

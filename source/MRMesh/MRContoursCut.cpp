@@ -869,8 +869,11 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
             auto nVId = std::get<VertId>( next.primitiveId );
             if ( topology.dest( topology.next( pEId ) ) == nVId )
                 return {};
-            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId )
-                return OneMeshIntersection{findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr )};
+            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
+            {
+                assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
+                return OneMeshIntersection{ findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr ) };
+            }
         }
         else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
         {

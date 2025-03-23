@@ -1,11 +1,57 @@
 #pragma once
 
 #include "MRParallelFor.h"
+#include "MRMinMaxArg.h"
 #include "MRBox.h"
-#include <limits>
 
 namespace MR
 {
+
+/// finds minimal and maximal elements and their indices in given vector in parallel;
+/// \param region if provided, only vector values with indices corresponding to set bits here will be checked;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T, typename Itag>
+MinMaxArg<T, Id<Itag>> parallelMinMaxArg( const Vector<T, Id<Itag>>& vec, const TaggedBitSet<Itag>* region = nullptr, const T* topExcluding = nullptr )
+{
+    using I = Id<Itag>;
+    return tbb::parallel_reduce( tbb::blocked_range<I>( I(0), vec.endId() ), MinMaxArg<T, I>{},
+    [&] ( const tbb::blocked_range<I> range, MinMaxArg<T, I> curr )
+    {
+        for ( I i = range.begin(); i < range.end(); i++ )
+        {
+            if ( region && !region->test( i ) )
+                continue;
+            T val = vec[i];
+            if ( topExcluding && std::abs( val ) >= *topExcluding )
+                continue;
+            if ( val < curr.min )
+            {
+                curr.min = val;
+                curr.minArg = i;
+            }
+            if ( val > curr.max )
+            {
+                curr.max = val;
+                curr.maxArg = i;
+            }
+        }
+        return curr;
+    },
+    [&] ( MinMaxArg<T, I> a, const MinMaxArg<T, I>& b )
+    {
+        if ( b.min < a.min )
+        {
+            a.min = b.min;
+            a.minArg = b.minArg;
+        }
+        if ( b.max > a.max )
+        {
+            a.max = b.max;
+            a.maxArg = b.maxArg;
+        }
+        return a;
+    } );
+}
 
 /// finds minimal and maximal elements in given vector in parallel;
 /// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
@@ -64,55 +110,6 @@ template<typename T>
 std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
 {
     return parallelMinMax( vec.data(), vec.size(), topExcluding );
-}
-
-/// finds minimal and maximal elements and their indices in given vector in parallel;
-/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
-template<typename T, typename I>
-auto parallelMinMaxArg( const Vector<T, I>& vec, const T * topExcluding = nullptr )
-{
-    struct MinMaxArg
-    {
-        T min = std::numeric_limits<T>::max();
-        T max = std::numeric_limits<T>::lowest();
-        I minArg, maxArg;
-    };
-
-    return tbb::parallel_reduce( tbb::blocked_range<I>( I(0), vec.endId() ), MinMaxArg{},
-    [&] ( const tbb::blocked_range<I> range, MinMaxArg curr )
-    {
-        for ( I i = range.begin(); i < range.end(); i++ )
-        {
-            T val = vec[i];
-            if ( topExcluding && std::abs( val ) >= *topExcluding )
-                continue;
-            if ( val < curr.min )
-            {
-                curr.min = val;
-                curr.minArg = i;
-            }
-            if ( val > curr.max )
-            {
-                curr.max = val;
-                curr.maxArg = i;
-            }
-        }
-        return curr;
-    },
-    [&] ( MinMaxArg a, const MinMaxArg& b )
-    {
-        if ( b.min < a.min )
-        {
-            a.min = b.min;
-            a.minArg = b.minArg;
-        }
-        if ( b.max > a.max )
-        {
-            a.max = b.max;
-            a.maxArg = b.maxArg;
-        }
-        return a;
-    } );
 }
 
 } //namespace MR

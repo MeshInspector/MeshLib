@@ -12,7 +12,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     assert( params.maxWeightGrad >= 0 );
     // if params.maxWeightGrad == 0 then you need to find euclidean closest point - a much simpler algorithm than below
 
-    PointAndDistance res;
+    PointAndDistance res{ .dist = params.maxDistance };
     auto maxSearchRadius = params.maxDistance + params.maxWeight;
     if ( maxSearchRadius < 0 )
         return res;
@@ -27,7 +27,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
         assert( w <= params.maxWeight );
         assert( w <= maxLocWeight + r * params.maxWeightGrad );
         auto dist = r - w;
-        if ( !res || res.dist > dist )
+        if ( dist < res.dist )
         {
             res.dist = dist;
             res.vId = found.vId;

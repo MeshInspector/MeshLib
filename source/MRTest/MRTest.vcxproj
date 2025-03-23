@@ -22,6 +22,7 @@
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
+    <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />

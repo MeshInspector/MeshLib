@@ -140,6 +140,7 @@
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
+    <ClInclude Include="MRMinMaxArg.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMultiwayAligningTransform.h" />

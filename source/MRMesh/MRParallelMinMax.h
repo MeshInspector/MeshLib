@@ -1,22 +1,26 @@
 #pragma once
 
 #include "MRParallelFor.h"
-#include "MRBox.h"
-#include <limits>
+#include "MRMinMaxArg.h"
+#include "MRBitSet.h"
 
 namespace MR
 {
 
-/// finds minimal and maximal elements in given vector in parallel;
+/// finds minimal and maximal elements and their indices in given range [data, data+size) in parallel;
+/// \param region if provided, only range values with indices corresponding to set bits here will be checked;
 /// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
 template<typename T>
-std::pair<T, T> parallelMinMax( const T* data, size_t size, const T * topExcluding = nullptr )
+MinMaxArg<T, size_t> parallelMinMaxArg( const T* data, size_t size, const BitSet* region = nullptr, const T* topExcluding = nullptr )
 {
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, size ), MinMax<T>{},
-    [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
+    using I = size_t;
+    return tbb::parallel_reduce( tbb::blocked_range<I>( I(0), size ), MinMaxArg<T, I>{},
+    [&] ( const tbb::blocked_range<I> range, MinMaxArg<T, I> curr )
     {
-        for ( size_t i = range.begin(); i < range.end(); i++ )
+        for ( I i = range.begin(); i < range.end(); i++ )
         {
+            if ( region && !region->test( i ) )
+                continue;
             T val = data[i];
             if ( topExcluding )
             {
@@ -26,66 +30,6 @@ std::pair<T, T> parallelMinMax( const T* data, size_t size, const T * topExcludi
                 if ( absVal >= *topExcluding )
                     continue;
             }
-            if ( val < curMinMax.min )
-                curMinMax.min = val;
-            if ( val > curMinMax.max )
-                curMinMax.max = val;
-        }
-        return curMinMax;
-    },
-    [&] ( const MinMax<T>& a, const MinMax<T>& b )
-    {
-        MinMax<T> res;
-        if ( a.min < b.min )
-        {
-            res.min = a.min;
-        }
-        else
-        {
-            res.min = b.min;
-        }
-        if ( a.max > b.max )
-        {
-            res.max = a.max;
-        }
-        else
-        {
-            res.max = b.max;
-        }
-        return res;
-    } );
-
-    return { minmax.min, minmax.max };
-}
-
-/// finds minimal and maximal elements in given vector in parallel;
-/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
-template<typename T>
-std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
-{
-    return parallelMinMax( vec.data(), vec.size(), topExcluding );
-}
-
-/// finds minimal and maximal elements and their indices in given vector in parallel;
-/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
-template<typename T, typename I>
-auto parallelMinMaxArg( const Vector<T, I>& vec, const T * topExcluding = nullptr )
-{
-    struct MinMaxArg
-    {
-        T min = std::numeric_limits<T>::max();
-        T max = std::numeric_limits<T>::lowest();
-        I minArg, maxArg;
-    };
-
-    return tbb::parallel_reduce( tbb::blocked_range<I>( I(0), vec.endId() ), MinMaxArg{},
-    [&] ( const tbb::blocked_range<I> range, MinMaxArg curr )
-    {
-        for ( I i = range.begin(); i < range.end(); i++ )
-        {
-            T val = vec[i];
-            if ( topExcluding && std::abs( val ) >= *topExcluding )
-                continue;
             if ( val < curr.min )
             {
                 curr.min = val;
@@ -99,7 +43,7 @@ auto parallelMinMaxArg( const Vector<T, I>& vec, const T * topExcluding = nullpt
         }
         return curr;
     },
-    [&] ( MinMaxArg a, const MinMaxArg& b )
+    [&] ( MinMaxArg<T, I> a, const MinMaxArg<T, I>& b )
     {
         if ( b.min < a.min )
         {
@@ -113,6 +57,50 @@ auto parallelMinMaxArg( const Vector<T, I>& vec, const T * topExcluding = nullpt
         }
         return a;
     } );
+}
+
+/// finds minimal and maximal elements and their indices in given vector in parallel;
+/// \param region if provided, only vector values with indices corresponding to set bits here will be checked;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T, typename Itag>
+MinMaxArg<T, Id<Itag>> parallelMinMaxArg( const Vector<T, Id<Itag>>& vec, const TaggedBitSet<Itag>* region = nullptr, const T* topExcluding = nullptr )
+{
+    auto mma = parallelMinMaxArg( vec.data(), vec.size(), region, topExcluding );
+    return
+    {
+        .min = mma.min,
+        .max = mma.max,
+        .minArg = Id<Itag>( mma.minArg ),
+        .maxArg = Id<Itag>( mma.maxArg )
+    };
+}
+
+/// finds minimal and maximal elements in given range [data, data+size) in parallel;
+/// \param region if provided, only range values with indices corresponding to set bits here will be checked;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T>
+std::pair<T, T> parallelMinMax( const T* data, size_t size, const BitSet* region = nullptr, const T * topExcluding = nullptr )
+{
+    auto mma = parallelMinMaxArg( data, size, region, topExcluding );
+    return { mma.min, mma.max };
+}
+
+/// finds minimal and maximal elements in given vector in parallel;
+/// \param region if provided, only vector values with indices corresponding to set bits here will be checked;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T>
+std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const BitSet* region = nullptr, const T * topExcluding = nullptr )
+{
+    return parallelMinMax( vec.data(), vec.size(), region, topExcluding );
+}
+
+/// finds minimal and maximal elements in given vector in parallel;
+/// \param region if provided, only vector values with indices corresponding to set bits here will be checked;
+/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
+template<typename T, typename Itag>
+std::pair<T, T> parallelMinMax( const Vector<T, Id<Itag>>& vec, const TaggedBitSet<Itag>* region = nullptr, const T* topExcluding = nullptr )
+{
+    return parallelMinMax( vec.data(), vec.size(), region, topExcluding );
 }
 
 } //namespace MR

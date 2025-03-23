@@ -55,8 +55,6 @@ jobs:
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-10-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
@@ -71,6 +69,16 @@ jobs:
           dnf --refresh -y upgrade
           dnf -y --setopt=install_weak_deps=False install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel util-linux python3 python3-pip
           dnf -y --setopt=install_weak_deps=False install ./*.rpm
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Install Python requirements
+        run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install supported compiler
@@ -139,17 +147,17 @@ jobs:
         include:
           - os: "ubuntu:20.04"
             name: "ubuntu20"
-            complier: clang-11
+            compiler: clang-11
             c-compiler: /usr/bin/clang-11
             cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
-            complier: clang-14
+            compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
           - os: "ubuntu:24.04"
             name: "ubuntu24"
-            complier: clang-18
+            compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
 
@@ -171,12 +179,20 @@ jobs:
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-10-dev && \
             apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Install Python requirements
+        run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install supported compiler
-        run: |
-          apt-get -y install ${{ matrix.compiler }}
+        run: apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
         if: always()

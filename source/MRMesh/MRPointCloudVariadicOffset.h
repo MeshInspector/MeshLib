@@ -21,13 +21,18 @@ struct PointAndDistance
 
 struct VariadicOffsetParams
 {
-    /// find closest point only if the distance to it is less than given value
+    /// stop searching as soon as any point within this distance is found
+    float minDistance = 0;
+
+    /// find the closest point only if the distance to it is less than given value
     float maxDistance = 0;
 
-    /// maximal weight among all points in the cloud; too big value here results in more computations
+    /// maximal weight among all points in the cloud;
+    /// if this value is imprecise, then more computations will be made by algorithm
     float maxWeight = 0;
 
-    /// maximal magnitude of gradient of points' weight in the cloud; too big value here results in more computations
+    /// maximal magnitude of gradient of points' weight in the cloud, >=0;
+    /// if maxWeightGrad < 1 then more search optimizations can be done
     float maxWeightGrad = 0;
 };
 

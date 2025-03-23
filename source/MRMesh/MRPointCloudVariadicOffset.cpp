@@ -7,9 +7,10 @@ namespace MR
 PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     const AABBTreePoints& tree, const VertMetric& pointWeights, const VariadicOffsetParams& params )
 {
+    assert( params.minDistance <= params.maxDistance );
+    assert( params.maxDistance >= 0 );
     assert( params.maxWeightGrad >= 0 );
     // if params.maxWeightGrad == 0 then you need to find euclidean closest point - a much simpler algorithm than below
-    assert( params.maxWeightGrad < 1 ); // otherwise some points with smaller weights can be completely ignored
 
     PointAndDistance res;
     auto maxSearchRadius = params.maxDistance + params.maxWeight;
@@ -23,23 +24,30 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     {
         const auto r = std::sqrt( found.distSq );
         const auto w = pointWeights( found.vId );
+        assert( w <= params.maxWeight );
+        assert( w <= maxLocWeight + r * params.maxWeightGrad );
         auto dist = r - w;
         if ( !res || res.dist > dist )
         {
             res.dist = dist;
             res.vId = found.vId;
+            if ( dist < params.minDistance )
+                return Processing::Stop;
         }
-        // assess the maximal weight of hypothetical point at loc
-        const auto locWeight = w + r * params.maxWeightGrad;
-        if ( locWeight < maxLocWeight )
+        if ( params.maxWeightGrad < 1 )
         {
-            // try to reduce search radius knowing that the weights of nearby points are limited by known gradient
-            maxLocWeight = locWeight;
-            const auto searchRadius = ( params.maxDistance + maxLocWeight ) / ( 1 - params.maxWeightGrad );
-            if ( searchRadius < maxSearchRadius )
+            // assess the maximal weight of hypothetical point at loc
+            const auto locWeight = w + r * params.maxWeightGrad;
+            if ( locWeight < maxLocWeight )
             {
-                maxSearchRadius = searchRadius;
-                ball.radiusSq = sqr( maxSearchRadius );
+                // try to reduce search radius knowing that the weights of nearby points are limited by known gradient
+                maxLocWeight = locWeight;
+                const auto searchRadius = ( params.maxDistance + maxLocWeight ) / ( 1 - params.maxWeightGrad );
+                if ( searchRadius < maxSearchRadius )
+                {
+                    maxSearchRadius = searchRadius;
+                    ball.radiusSq = sqr( maxSearchRadius );
+                }
             }
         }
         return Processing::Continue;

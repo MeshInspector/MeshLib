@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #ifndef MR_PARSING_FOR_PB11_BINDINGS
+#include "MRDistanceMapParams.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
@@ -356,6 +357,36 @@ MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver ); };
 MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver, priority ); };
 
 } // namespace SceneSave
+
+namespace DistanceMapLoad
+{
+
+using DistanceMapLoader = Expected<DistanceMap>( * )( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback cb );
+
+MR_FORMAT_REGISTRY_DECL( DistanceMapLoader )
+
+#define MR_ADD_DISTANCE_MAP_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::DistanceMapLoad; setDistanceMapLoader( filter, loader ); };
+
+#define MR_ADD_DISTANCE_MAP_LOADER_WITH_PRIORITY( filter, loader, priority ) \
+MR_ON_INIT { using namespace MR::DistanceMapLoad; setDistanceMapLoader( filter, loader, priority ); };
+
+} // namespace DistanceMapLoad
+
+namespace DistanceMapSave
+{
+
+using DistanceMapSaver = Expected<void>( * )( const DistanceMap& distanceMap, const std::filesystem::path& path, const AffineXf3f* xf );
+
+MR_FORMAT_REGISTRY_DECL( DistanceMapSaver )
+
+#define MR_ADD_DISTANCE_MAP_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::DistanceMapSave; setDistanceMapSaver( filter, saver ); };
+
+#define MR_ADD_DISTANCE_MAP_SAVER_WITH_PRIORITY( filter, saver, priority ) \
+MR_ON_INIT { using namespace MR::DistanceMapSave; setDistanceMapSaver( filter, saver, priority ); };
+
+} // namespace DistanceMapSave
 
 } // namespace MR
 #endif

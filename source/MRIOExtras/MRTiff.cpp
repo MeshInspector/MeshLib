@@ -367,7 +367,7 @@ namespace MR
 namespace DistanceMapLoad
 {
 
-Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld )
+Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld, ProgressCallback )
 {
     TiffHolder tiff( path, "r" );
     if ( !tiff )
@@ -392,12 +392,14 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
     return result;
 }
 
+MR_ADD_DISTANCE_MAP_LOADER( IOFilter( "GeoTIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff )
+
 } // namespace DistanceMapLoad
 
 namespace DistanceMapSave
 {
 
-Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld )
+Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f* xf )
 {
     auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
     if ( !tiff )
@@ -419,9 +421,9 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
 
-    if ( dmapToWorld )
+    if ( xf )
     {
-        const Matrix4d matrix { AffineXf3d( dmapToWorld->xf() ) };
+        const Matrix4d matrix { AffineXf3d( *xf ) };
         TIFFSetField( tiff, GeoTiff::ModelTransformationTag, 16, (double*)&matrix );
     }
 
@@ -435,6 +437,10 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
 
     return {};
 }
+
+// FIXME: single filter
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "GeoTIFF (.tif)", "*.tif" ), toTiff )
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "GeoTIFF (.tiff)", "*.tiff" ), toTiff )
 
 } // namespace DistanceMapSave
 

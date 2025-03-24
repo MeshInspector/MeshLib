@@ -148,7 +148,7 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     };
 }
 
-// ab - line
+// ab - segment
 // cd - segment
 // if segments intersects - returns intersection point, nullopt otherwise
 std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
@@ -160,14 +160,14 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
     auto abd = cross( ab, ad );
 
     if ( dot( abc, abd ) > 0 )
-        return std::nullopt; // on same side
+        return std::nullopt; // CD is on one side of AB
 
     auto cd = Vector3hp{ di - ci };
     auto cb = Vector3hp{ bi - ci };
     auto cda = cross( cd, -ac );
     auto cdb = cross( cd, cb );
     if ( dot( cda, cdb ) > 0 )
-        return std::nullopt; // on same side
+        return std::nullopt; // AB is on one side of CD
 
     auto abcHSq = abc.lengthSq();
     auto abdHSq = abd.lengthSq();
@@ -176,12 +176,12 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
         auto dAC = dot( ab, ac );
         auto dAD = dot( ab, ad );
         if ( dAC < 0 && dAD < 0 )
-            return std::nullopt; // not touching
+            return std::nullopt; // both C and D are lower then A (on the AB segment)
 
         auto dBC = dot( -ab, -cb );
         auto dBD = dot( -ab, Vector3hp{ di - bi } );
         if ( dBC < 0 && dBD < 0 )
-            return std::nullopt; // not touching
+            return std::nullopt; // both C and D are greater then B (on the AB segment)
 
         // have common points
         auto onePoint = dAC < 0 ? ai : ci; // find point that is closer to B
@@ -237,7 +237,7 @@ Vector3f findTriangleSegmentIntersectionPrecise(
         return converters.toFloat( Vector3i{ Vector3d( sumVec ) / double( numSum ) } );
 
     // rare case when `numSum == 0` - segment is fully inside face
-    return converters.toFloat( Vector3i{ Vector3d( Vector3hp{ei} + Vector3hp {di} ) / 2.0 } );
+    return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
 }
 
 TEST( MRMesh, PrecisePredicates3 )

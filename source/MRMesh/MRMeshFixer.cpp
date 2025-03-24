@@ -172,7 +172,7 @@ FaceBitSet findDisorientedFaces( const Mesh& mesh )
         int counter = 0;
         auto interPred = [f, &counter] ( const MeshIntersectionResult& res )->bool
         {
-            if ( res.proj.face != f ) // we should also try grouping intersections, to ignore too close ones (by some epsilon), to filter several layered areas
+            if ( res.proj.face != f ) // TODO: we should also try grouping intersections, to ignore too close ones (by some epsilon), to filter several layered areas
                 ++counter;
             return true;
         };
@@ -182,7 +182,7 @@ FaceBitSet findDisorientedFaces( const Mesh& mesh )
         counter = 0;
         rayMeshIntersectAll( mesh, Line3d( triCenter, -normal ), interPred );
         bool nValid = counter % 2 == 1;
-        auto nCounter = counter - 1;
+        auto nCounter = counter - 1; // ideal face has 0-pCounter and 1-nCounter: so we decrement nCounter for fair compare
 
         bool valid = pValid;
         if ( pValid != nValid )

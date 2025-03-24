@@ -34,7 +34,7 @@ struct VariadicOffsetParams
 
     /// maximal magnitude of gradient of points' weight in the cloud, >=0;
     /// if maxWeightGrad < 1 then more search optimizations can be done
-    float maxWeightGrad = 1;
+    float maxWeightGrad = FLT_MAX;
 };
 
 /// consider a point cloud where each point has additive weight,

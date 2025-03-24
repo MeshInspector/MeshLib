@@ -13,7 +13,7 @@ TEST( MRMesh, findClosestWeightedPoint )
     pc.validPoints.resize( 2, true );
 
     {
-        VariadicOffsetParams params;
+        VariadicOffsetParams params{ .maxWeightGrad = 0 };
         auto ws = []( VertId ) { return 0.f; };
         auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
         ASSERT_TRUE( res.valid() );
@@ -26,8 +26,8 @@ TEST( MRMesh, findClosestWeightedPoint )
     }
 
     {
-        VariadicOffsetParams params;
-        auto ws = []( VertId v ) { return v == 0_v ? -2.f : 0.f; };
+        VariadicOffsetParams params{ .maxWeightGrad = 0.5f };
+        auto ws = []( VertId v ) { return v == 0_v ? -1.5f : 0.f; };
         auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
         ASSERT_TRUE( res.valid() );
         ASSERT_EQ( res.vId,  1_v );

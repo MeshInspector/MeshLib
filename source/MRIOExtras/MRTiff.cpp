@@ -118,6 +118,7 @@ struct TiffParameters
         case SampleType::Unknown:
             MR_UNREACHABLE
         }
+        MR_UNREACHABLE
     }
 };
 

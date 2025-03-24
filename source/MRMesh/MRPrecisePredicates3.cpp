@@ -176,12 +176,12 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
         auto dAC = dot( ab, ac );
         auto dAD = dot( ab, ad );
         if ( dAC < 0 && dAD < 0 )
-            return std::nullopt; // both C and D are lower then A (on the AB segment)
+            return std::nullopt; // both C and D are lower than A (on the AB segment)
 
         auto dBC = dot( -ab, -cb );
         auto dBD = dot( -ab, Vector3hp{ di - bi } );
         if ( dBC < 0 && dBD < 0 )
-            return std::nullopt; // both C and D are greater then B (on the AB segment)
+            return std::nullopt; // both C and D are greater than B (on the AB segment)
 
         // have common points
         auto onePoint = dAC < 0 ? ai : ci; // find point that is closer to B

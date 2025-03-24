@@ -18,10 +18,16 @@ struct MeshProjectionResult
 {
     /// the closest point on mesh, transformed by xf if it is given
     PointOnFace proj;
+
     /// its barycentric representation
     MeshTriPoint mtp;
-    /// squared distance from pt to proj
+
+    /// squared distance from original projected point to proj
     float distSq = 0;
+
+    /// check for validity, otherwise the projection was not found
+    [[nodiscard]] bool valid() const { return proj.valid(); }
+    [[nodiscard]] explicit operator bool() const { return proj.valid(); }
 };
 
 struct MeshProjectionTransforms

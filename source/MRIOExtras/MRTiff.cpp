@@ -7,7 +7,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMatrix4.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 

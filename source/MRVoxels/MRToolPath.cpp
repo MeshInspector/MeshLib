@@ -8,7 +8,7 @@
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRSurfaceDistance.h"
 #include "MRMesh/MRMeshDirMax.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshIntersect.h"
@@ -24,8 +24,6 @@
 #include "MRMesh/MRInnerShell.h"
 #include "MRMesh/MRRingIterator.h"
 
-#include "MRMesh/MRParallelFor.h"
-#include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
 
@@ -276,7 +274,7 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
 
     const float topExcluded = FLT_MAX;
-    const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
+    const auto [min, max] = parallelMinMax( distances, &res.meshAfterCut.topology.getValidVerts(), &topExcluded );
     
     size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
     if ( numIsolines == 0 )

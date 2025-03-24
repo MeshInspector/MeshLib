@@ -33,7 +33,7 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
 {
     MR_TIMER
 
-    const auto box = cloud.getBoundingBox();
+    const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
 
     WeightedPointsToDistanceVolumeParams wp2vparams

@@ -1297,6 +1297,9 @@
     <ClInclude Include="MRMinMaxArg.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudVariadicOffset.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2115,6 +2118,9 @@
     <ClCompile Include="MRTbbThreadMutex.cpp" />
     <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudVariadicOffset.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

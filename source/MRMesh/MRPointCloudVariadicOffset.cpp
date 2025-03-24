@@ -5,7 +5,7 @@ namespace MR
 {
 
 PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
-    const AABBTreePoints& tree, const VertMetric& pointWeights, const VariadicOffsetParams& params )
+    const AABBTreePoints& tree, const DistanceFromWeightedPointsComputeParams& params )
 {
     assert( params.minDistance <= params.maxDistance );
     assert( params.maxDistance >= 0 );
@@ -13,6 +13,9 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     // if params.maxWeightGrad == 0 then you need to find euclidean closest point - a much simpler algorithm than below
 
     PointAndDistance res{ .dist = params.maxDistance };
+    assert( params.pointWeight );
+    if ( !params.pointWeight )
+        return res;
     auto maxSearchRadius = params.maxDistance + params.maxWeight;
     if ( maxSearchRadius < 0 )
         return res;
@@ -23,7 +26,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     findPointsInBall( tree, { loc, sqr( maxSearchRadius ) }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & ball )
     {
         const auto r = std::sqrt( found.distSq );
-        const auto w = pointWeights( found.vId );
+        const auto w = params.pointWeight( found.vId );
         assert( w <= params.maxWeight );
         assert( w <= maxLocWeight + r * params.maxWeightGrad );
         auto dist = r - w;

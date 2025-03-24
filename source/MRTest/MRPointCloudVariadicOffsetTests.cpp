@@ -13,28 +13,34 @@ TEST( MRMesh, findClosestWeightedPoint )
     pc.validPoints.resize( 2, true );
 
     {
-        VariadicOffsetParams params{ .maxWeightGrad = 0 };
-        auto ws = []( VertId ) { return 0.f; };
-        auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
+        DistanceFromWeightedPointsComputeParams params
+        { {
+            .pointWeight = []( VertId ) { return 0.f; },
+            .maxWeightGrad = 0
+        } };
+        auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_TRUE( res.valid() );
         ASSERT_EQ( res.vId,  0_v );
         ASSERT_EQ( res.dist, 1 );
 
         params.maxDistance = 0.5f;
-        res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
+        res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
 
     {
-        VariadicOffsetParams params{ .maxWeightGrad = 0.5f };
-        auto ws = []( VertId v ) { return v == 0_v ? -1.5f : 0.f; };
-        auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
+        DistanceFromWeightedPointsComputeParams params
+        { {
+            .pointWeight = []( VertId v ) { return v == 0_v ? -1.5f : 0.f; },
+            .maxWeightGrad = 0.5f
+        } };
+        auto res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_TRUE( res.valid() );
         ASSERT_EQ( res.vId,  1_v );
         ASSERT_EQ( res.dist, 2 );
 
         params.maxDistance = 1.5f;
-        res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), ws, params );
+        res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
 }

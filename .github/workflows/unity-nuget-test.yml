@@ -39,7 +39,7 @@ jobs:
       - name: Run test
         shell: powershell
         run: |
-          Start-Process -FilePath "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -ArgumentList "-runTests", "-batchmode", "-projectPath", "C:\work\unity_proj\NugetTestProj", "-testPlatform", "playmode", "-testResults", "C:\work\results.xml", "-logfile", "C:\work\batch_log.txt" -Wait
+          Start-Process -FilePath "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -ArgumentList "-runTests", "-batchmode", "-projectPath", "C:\work\unity_proj\NugetTestProj", "-testPlatform", "playmode", "-testResults", "C:\work\results.xml", "-logfile", "C:\work\batch_log.txt", "-username", "Anton.Chernobrovkin@meshinspector.com", "-password", "ChernUnityPswd8" -Wait
 
 
       - name: verify xml

@@ -52,6 +52,7 @@ jobs:
         if: always()
         shell: powershell
         run: |
+          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
           aws s3 cp C:\work\test_results.xml s3://test-artifacts-git/test_results.xml
-          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt
+

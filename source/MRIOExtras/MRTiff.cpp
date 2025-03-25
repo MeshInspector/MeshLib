@@ -79,6 +79,9 @@ struct TiffParameters
     // size of tile if tiled, otherwise zero
     std::optional<Vector2i> tileSize;
 
+    // optional NoData value
+    std::optional<std::string> noDataValue;
+
     bool operator==( const TiffParameters& ) const = default;
 
     [[nodiscard]] size_t getPixelSize() const
@@ -182,6 +185,10 @@ TiffParameters readTiffParameters( TIFF* tiff )
         TIFFGetField( tiff, TIFFTAG_TILEWIDTH, &params.tileSize->x );
         TIFFGetField( tiff, TIFFTAG_TILELENGTH, &params.tileSize->y );
     }
+
+    char *gdalNoData;
+    if ( TIFFGetField( tiff, TIFFTAG_GDAL_NODATA, &gdalNoData ) )
+        params.noDataValue.emplace( gdalNoData );
 
     return params;
 }

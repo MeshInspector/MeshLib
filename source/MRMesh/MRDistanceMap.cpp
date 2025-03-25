@@ -237,7 +237,7 @@ MRMESH_API Image convertDistanceMapToImage( const DistanceMap& dm, float thresho
     return { std::move( pixels ), { int( dm.resX() ), int( dm.resY() ) } };
 }
 
-Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
+Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float threshold, bool invert )
 {
     threshold = std::clamp( threshold * 255, 0.f, 255.f );
     DistanceMap dm( image.resolution.x, image.resolution.y );
@@ -254,7 +254,7 @@ Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float t
         }
         if ( value < threshold )
             continue;
-        dm.set( i, 255.0f - value );
+        dm.set( i, invert ? 255.0f - value : value );
     }
     return dm;
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #ifndef MR_PARSING_FOR_PB11_BINDINGS
-#include "MRDistanceMapParams.h"
+#include "MRDistanceMap.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"

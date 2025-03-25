@@ -14,25 +14,29 @@ shutil.copyfile("temp_nuget/content/MRMeshC.dll","dummy_wheel/dummy.libs/MRMeshC
 shutil.make_archive("dummy-1.0-py3-none-any","zip","dummy_wheel")
 os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")
 
-subprocess.check_call(
-    [
-        sys.executable, "-m", "delvewheel",
-        "repair",
-        # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
-        # that happens if we pack these dlls into whl.
-        # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
-        # to pack these dlls with original names and let system solve conflicts on import
-        # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-        "--no-mangle", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
-        "--add-path", "temp_nuget/content",
-        "--extract-dir", "content",
+try:
+    subprocess.check_call(
+        [
+            sys.executable, "-m", "delvewheel",
+            "repair",
+            # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
+            # that happens if we pack these dlls into whl.
+            # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
+            # to pack these dlls with original names and let system solve conflicts on import
+            # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
+            "--no-mangle", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
+            "--add-path", "temp_nuget/content",
+            "--extract-dir", "content",
 
-        # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
-        # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
-        "--analyze-existing",
-        "dummy-1.0-py3-none-any.whl"
-    ]
-)
+            # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
+            # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
+            "--analyze-existing",
+            "dummy-1.0-py3-none-any.whl"
+        ]
+    )
+except subprocess.CalledProcessError as e:
+    print(e)
+    sys.exit(e.returncode)
 
 shutil.rmtree("temp_nuget/content")
 shutil.copytree("content/dummy.libs/","temp_nuget/content/")

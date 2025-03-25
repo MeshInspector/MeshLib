@@ -1,6 +1,7 @@
 #include "MRTiff.h"
 #ifndef MRIOEXTRAS_NO_TIFF
 
+#include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDistanceMap.h"
@@ -18,6 +19,18 @@ namespace
 
 using namespace MR;
 
+template <typename... Args>
+constexpr auto makeVariantArray( std::variant<Args...> )
+{
+    return std::array<std::variant<Args...>, sizeof...( Args )> { Args{}... };
+}
+
+template <typename Variant>
+constexpr auto makeVariantArray()
+{
+    return makeVariantArray( Variant{} );
+}
+
 enum class DataType
 {
     UInt8,
@@ -32,24 +45,92 @@ enum class DataType
     Float64,
 };
 
-template <typename Func>
-auto visitData( const std::byte* data, DataType type, Func&& f )
+using DataVariant = std::variant<
+    uint8_t,
+    uint16_t,
+    uint32_t,
+    uint64_t,
+    int8_t,
+    int16_t,
+    int32_t,
+    int64_t,
+    float,
+    double
+>;
+
+using DataPtrVariant = std::variant<
+    uint8_t*,
+    uint16_t*,
+    uint32_t*,
+    uint64_t*,
+    int8_t*,
+    int16_t*,
+    int32_t*,
+    int64_t*,
+    float*,
+    double*
+>;
+
+template <typename T>
+DataType from()
 {
-#define CALL_IF( enumValue, TypeName ) case DataType::enumValue: return f( reinterpret_cast<const TypeName*>( data ) );
-    switch ( type )
+    static constexpr auto variant = DataVariant( T() );
+    return DataType( variant.index() );
+}
+
+template <typename Visitor>
+auto visit( Visitor&& vis, DataType type )
+{
+    static constexpr auto variants = makeVariantArray<DataVariant>();
+    return std::visit( vis, variants.at( (size_t)type ) );
+}
+
+template <typename Visitor>
+auto visit( const std::byte* data, size_t size, Visitor&& vis, DataType type )
+{
+    return visit( [=] <typename T> ( T )
     {
-        CALL_IF( UInt8, uint8_t )
-        CALL_IF( UInt16, uint16_t )
-        CALL_IF( UInt32, uint32_t )
-        CALL_IF( UInt64, uint64_t )
-        CALL_IF( Int8, int8_t )
-        CALL_IF( Int16, int16_t )
-        CALL_IF( Int32, int32_t )
-        CALL_IF( Int64, int64_t )
-        CALL_IF( Float32, float )
-        CALL_IF( Float64, double )
+        return vis( reinterpret_cast<const T*>( data ), size / sizeof( T ) );
+    }, type );
+}
+
+template <typename Visitor>
+auto visit( std::byte* data, size_t size, Visitor&& vis, DataType type )
+{
+    return visit( [=] <typename T> ( T )
+    {
+        return vis( reinterpret_cast<T*>( data ), size / sizeof( T ) );
+    }, type );
+}
+
+enum class SampleType
+{
+    Scalar,
+    RGB,
+    RGBA,
+};
+
+size_t sizeOf( SampleType samples )
+{
+    using enum SampleType;
+    switch ( samples )
+    {
+    case Scalar:
+        return 1;
+    case RGB:
+        return 3;
+    case RGBA:
+        return 4;
     }
-#undef CALL_IF
+    MR_UNREACHABLE
+}
+
+template <typename T, typename Func>
+void iterateSamples( SampleType samples, T* data, size_t size, Func&& f )
+{
+    const auto step = sizeOf( samples );
+    for ( auto i = 0u; i < size / step; ++i )
+        f( i, data + i * step );
 }
 
 struct TiffParameters
@@ -123,6 +204,36 @@ struct TiffParameters
         }
         MR_UNREACHABLE
     }
+
+    [[nodiscard]] ::SampleType getSampleType() const
+    {
+        switch ( valueType )
+        {
+        case ValueType::Scalar:
+            return ::SampleType::Scalar;
+        case ValueType::RGB:
+            return ::SampleType::RGB;
+        case ValueType::RGBA:
+            return ::SampleType::RGBA;
+        case ValueType::Unknown:
+            MR_UNREACHABLE
+        }
+    }
+
+    [[nodiscard]] std::optional<DataVariant> getNoDataValue() const
+    {
+        if ( !noDataValue )
+            return std::nullopt;
+
+        const auto& s = *noDataValue;
+        return visit( [&] <typename T> ( T value ) -> std::optional<DataVariant>
+        {
+            if ( std::from_chars( s.data(), s.data() + s.size(), value ).ec != std::errc{} )
+                return std::nullopt;
+
+            return DataVariant( value );
+        }, getDataType() );
+    }
 };
 
 class TiffHolder
@@ -186,8 +297,9 @@ TiffParameters readTiffParameters( TIFF* tiff )
         TIFFGetField( tiff, TIFFTAG_TILELENGTH, &params.tileSize->y );
     }
 
-    char *gdalNoData;
-    if ( TIFFGetField( tiff, TIFFTAG_GDAL_NODATA, &gdalNoData ) )
+    char *gdalNoData {};
+    uint32_t count {};
+    if ( TIFFGetField( tiff, TIFFTAG_GDAL_NODATA, &count, &gdalNoData ) && count != 0 )
         params.noDataValue.emplace( gdalNoData );
 
     return params;
@@ -232,93 +344,6 @@ std::optional<AffineXf3f> readGeoTiffParameters( TIFF* tiff )
         Matrix3f::scale( Vector3f( scale ) ),
         Vector3f( tiepoints[0] + tiepoints[1] )
     };
-}
-
-template <typename T, typename U>
-T rgbToScalar( const U* src )
-{
-    // luma/brightness component from the YCbCr color space
-    return T(
-          (float)src[0] * 0.299f
-        + (float)src[1] * 0.587f
-        + (float)src[2] * 0.114f
-    );
-}
-
-template <typename U>
-Color scalarToRgb( U src )
-{
-    Color result;
-    for ( auto i = 0; i < 3; ++i )
-        result[i] = Color::valToUint8( src );
-    return result;
-}
-
-template <typename U>
-Color scalarToRgb( U src, U min, U max )
-{
-    return scalarToRgb( (float)( src - min ) / (float)( max - min ) );
-}
-
-template <typename U>
-Color scalarToRgb( const U* src, size_t sampleCount )
-{
-    Color result;
-    for ( auto i = 0; i < sampleCount; ++i )
-        result[i] = Color::valToUint8( src[i] );
-    return result;
-}
-
-template <typename U>
-void copySampledData( Color* dst, const U* src, size_t size, TiffParameters::ValueType valueType )
-{
-    switch ( valueType )
-    {
-    case TiffParameters::ValueType::RGBA:
-        if constexpr ( std::is_same_v<uint8_t, U> )
-        {
-            std::copy_n( (Color*)src, size, dst );
-        }
-        else
-        {
-            for ( auto i = 0u; i < size; ++i )
-                dst[i] = scalarToRgb( src + i * 4, 4 );
-        }
-        break;
-    case TiffParameters::ValueType::RGB:
-        for ( auto i = 0u; i < size; ++i )
-            dst[i] = scalarToRgb( src + i * 3, 3 );
-        break;
-    case TiffParameters::ValueType::Scalar:
-        for ( auto i = 0u; i < size; ++i )
-            dst[i] = scalarToRgb( src[i] );
-        break;
-    case TiffParameters::ValueType::Unknown:
-        MR_UNREACHABLE_NO_RETURN;
-        break;
-    }
-}
-
-template <typename T, typename U, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-void copySampledData( T* dst, const U* src, size_t size, TiffParameters::ValueType valueType )
-{
-    switch ( valueType )
-    {
-    case TiffParameters::ValueType::Scalar:
-        std::copy_n( src, size, dst );
-        break;
-    case TiffParameters::ValueType::RGB:
-        for ( auto i = 0u; i < size; ++i )
-            dst[i] = rgbToScalar<T>( src + i * 3 );
-        break;
-    case TiffParameters::ValueType::RGBA:
-        for ( auto i = 0u; i < size; ++i )
-            dst[i] = rgbToScalar<T>( src + i * 4 );
-        break;
-    case TiffParameters::ValueType::Unknown:
-        MR_UNREACHABLE_NO_RETURN;
-        break;
-    }
 }
 
 using ReadTiffCallback = std::function<void ( const std::byte* data, size_t sizeInBytes, size_t offsetX, size_t offsetY )>;
@@ -388,12 +413,37 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
 
     DistanceMap result { (size_t)params.imageSize.x, (size_t)params.imageSize.y };
 
-    readTiff( tiff, params, [&] ( const std::byte* bytes, size_t size, size_t offsetX, size_t offsetY )
+    readTiff( tiff, params, [&] ( const std::byte* bytes, size_t bytesSize, size_t offsetX, size_t offsetY )
     {
-        visitData( bytes, params.getDataType(), [&] <typename T> ( const T* data )
+        visit( bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
         {
-            copySampledData( result.data() + offsetY * result.resX() + offsetX, data, size / params.getPixelSize(), params.valueType );
-        } );
+            const T* noDataValue = nullptr;
+            if ( const auto variant = params.getNoDataValue() )
+                noDataValue = std::get_if<T>( &(*variant) );
+
+            iterateSamples( params.getSampleType(), data, size, [&] ( size_t i, const T* sample )
+            {
+                if ( noDataValue && sample[0] == *noDataValue )
+                    return;
+
+                float value;
+                switch ( params.getSampleType() )
+                {
+                case SampleType::Scalar:
+                    value = sample[0];
+                    break;
+                case SampleType::RGB:
+                case SampleType::RGBA:
+                    // luma/brightness component from the YCbCr color space
+                    value =
+                          (float)sample[0] * 0.299f
+                        + (float)sample[1] * 0.587f
+                        + (float)sample[2] * 0.114f
+                    ;
+                }
+                result.set( offsetX + i, offsetY, value );
+            } );
+        }, params.getDataType() );
     } );
 
     return result;
@@ -474,12 +524,21 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     }
     else if ( params.valueType == TiffParameters::ValueType::RGB || params.valueType == TiffParameters::ValueType::RGBA )
     {
-        readTiff( tiff, params, [&] ( const std::byte* bytes, size_t size, size_t offsetX, size_t offsetY )
+        readTiff( tiff, params, [&] ( const std::byte* bytes, size_t bytesSize, size_t offsetX, size_t offsetY )
         {
-            visitData( bytes, params.getDataType(), [&] <typename T> ( const T* data )
+            visit( bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
             {
-                copySampledData( result.pixels.data() + offsetY * params.imageSize.x + offsetX, data, size / sizeof( T ), params.valueType );
-            } );
+                const auto offset = offsetY * params.imageSize.x + offsetX;
+                iterateSamples( params.getSampleType(), data, size, [&] ( size_t i, const T* sample )
+                {
+                    result.pixels[offset + i] = Color {
+                        Color::valToUint8( sample[0] ),
+                        Color::valToUint8( sample[1] ),
+                        Color::valToUint8( sample[2] ),
+                        params.getSampleType() == SampleType::RGBA ? Color::valToUint8( sample[3] ) : 255,
+                    };
+                } );
+            }, params.getDataType() );
         } );
     }
     else
@@ -491,14 +550,38 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
 
         readTiff( tiff, params, buffer.data() );
 
-        visitData( buffer.data(), params.getDataType(), [&] <typename U> ( const U* data )
+        visit( buffer.data(), buffer.size(), [&] <typename T> ( const T* data, size_t size )
         {
-            const auto [min, max] = parallelMinMax( data, result.pixels.size() );
+            assert( size == result.pixels.size() );
+
+            const T* noDataValue = nullptr;
+            if ( const auto variant = params.getNoDataValue() )
+                noDataValue = std::get_if<T>( &(*variant) );
+
+            BitSet valid;
+            if ( noDataValue )
+            {
+                valid.resize( result.pixels.size() );
+                BitSetParallelForAll( valid, [&] ( size_t i )
+                {
+                    valid.set( i, data[i] != *noDataValue );
+                } );
+            }
+
+            const auto [min, max] = parallelMinMax( data, result.pixels.size(), valid.count() != 0 ? &valid : nullptr );
             ParallelFor( (size_t)0, result.pixels.size(), [&, min = min, max = max] ( size_t i )
             {
-                result.pixels[i] = scalarToRgb( data[i], min, max );
+                if ( noDataValue && data[i] == *noDataValue )
+                    return;
+
+                const auto value = (float)( data[i] - min ) / (float)( max - min );
+                result.pixels[i] = Color {
+                    Color::valToUint8( value ),
+                    Color::valToUint8( value ),
+                    Color::valToUint8( value ),
+                };
             } );
-        } );
+        }, params.getDataType() );
     }
 
     return result;

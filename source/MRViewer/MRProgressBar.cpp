@@ -497,10 +497,8 @@ const std::string& getLastOperationTitle()
 bool setProgress( float p )
 {
     auto& instance = ProgressBarImpl::instance();
-
-    // this assert is not really needed
-    // leave it in comment: we don't expect progress from different threads
-    //assert( instance.thread_.get_id() == std::this_thread::get_id() );
+    if ( p == instance.progress_ )
+        return !instance.canceled_; // fast path if the progress value has not changed
 
     int newPercents = int( p * 100.0f );
     int percents = instance.percents_;
@@ -511,6 +509,7 @@ bool setProgress( float p )
     }
 
     assert( p >= instance.progress_ ); // the progress must not jump backward
+    assert( p <= 1 ); // the progress must not exceed 100%
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
     return !instance.canceled_;
@@ -571,7 +570,11 @@ void resetTaskName()
 bool callBackSetProgress( float p )
 {
     auto& instance = ProgressBarImpl::instance();
-    instance.allowCancel_ = true;
+
+    // set instance.allowCancel_ = true but write in memory only if it was false
+    bool expected = false;
+    instance.allowCancel_.compare_exchange_strong( expected, true, std::memory_order_relaxed );
+
     setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return !instance.canceled_;
 }
@@ -579,7 +582,11 @@ bool callBackSetProgress( float p )
 bool simpleCallBackSetProgress( float p )
 {
     auto& instance = ProgressBarImpl::instance();
-    instance.allowCancel_ = false;
+
+    // set instance.allowCancel_ = false but write in memory only if it was true
+    bool expected = true;
+    instance.allowCancel_.compare_exchange_strong( expected, false, std::memory_order_relaxed );
+
     setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
 }

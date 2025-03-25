@@ -52,6 +52,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:

@@ -41,7 +41,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
         cb = subprogress( cb, 0.40f, 1.00f );
     }
 
-    const auto triCb = ( params.ptColors && params.vColors ) ? subprogress( cb, 0.90f, 1.00f ) : cb;
+    const auto triCb = ( params.ptColors && params.vColors ) ? subprogress( cb, 0.00f, 0.90f ) : cb;
 
     p2vParams.cb = subprogress( triCb, 0.00f, 0.50f );
     // fused surface can deviate from original points proportionally to params.sigma value

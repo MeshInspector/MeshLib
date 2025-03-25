@@ -490,8 +490,26 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
             return;
         const int layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
 
+        ProgressCallback myProgress;
+        if ( currentSubprogress )
+        {
+            if ( std::this_thread::get_id() == callingThreadId )
+            {
+                // from dedicated thread only: actually report progress proportional to the number of processed layers
+                myProgress = [&]( float ) // input value is ignored
+                {
+                    auto l = cacheLineStorage.numProcessedLayers.load( std::memory_order_relaxed );
+                    bool res = currentSubprogress( float( l ) / layerCount );
+                    if ( !res )
+                        keepGoing.store( false, std::memory_order_relaxed );
+                    return res;
+                };
+            }
+            else // from other threads just check that the operation was not canceled
+                myProgress = [&]( float ) { return keepGoing.load( std::memory_order_relaxed ); };
+        }
+
         auto & block = sepStorage_.getBlock( blockIndex );
-        const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
         const VoxelsVolumeAccessor<V> acc( part );
         /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
@@ -504,7 +522,8 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
             cache.emplace( acc, partIndexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( layerBegin - partFirstZ );
+            if ( !cache->preloadLayer( layerBegin - partFirstZ, myProgress ) )
+                return;
         }
 
         VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, layerBegin - partFirstZ ) );
@@ -512,7 +531,8 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
         {
             if ( cache && loc.pos.z != cache->currentLayer() )
             {
-                cache->preloadNextLayer();
+                if ( !cache->preloadNextLayer( myProgress ) )
+                    return;
                 assert( loc.pos.z == cache->currentLayer() );
             }
             BitSet layerInvalids( layerSize );
@@ -574,9 +594,9 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
             if ( layerLowerIso.any() )
                 lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
-            const auto numProcessedLayers = 1 + cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
-            if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
-                keepGoing.store( false, std::memory_order_relaxed );
+            cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            if ( !reportProgress( myProgress, 1.f ) ) // 1. is ignored anyway
+                return;
         }
     } );
 

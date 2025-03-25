@@ -1287,6 +1287,19 @@
     <ClInclude Include="MRMeshDoubleLayer.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRParallelMinMax.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMinMaxArg.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudVariadicOffset.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2101,6 +2114,13 @@
     </ClCompile>
     <ClCompile Include="MRMeshDoubleLayer.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudVariadicOffset.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

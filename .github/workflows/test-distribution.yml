@@ -130,7 +130,7 @@ jobs:
 
   linux-arm64-test:
     timeout-minutes: 30
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [self-hosted, linux-arm64, spot, meshinspector]
     container:
       image: ${{ matrix.os }}
     strategy:

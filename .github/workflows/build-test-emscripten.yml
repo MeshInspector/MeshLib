@@ -6,6 +6,9 @@ on:
       docker_image_tag:
         required: true
         type: string
+      internal_build:
+        required: false
+        type: boolean
       upload_artifacts:
         required: true
         type: boolean
@@ -13,7 +16,7 @@ on:
 jobs:
   emscripten-build:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
     strategy:
@@ -52,6 +55,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:

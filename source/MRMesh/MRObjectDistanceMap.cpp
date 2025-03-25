@@ -174,7 +174,7 @@ Expected<std::future<Expected<void>>> ObjectDistanceMap::serializeModel_( const 
 
     return std::async( getAsyncLaunchType(), [this, filename = utf8string( path ) + saveDistanceMapFormat_] ()
     {
-        return DistanceMapSave::toAnySupportedFormat( pathFromUtf8( filename ), *dmap_ );
+        return DistanceMapSave::toAnySupportedFormat( *dmap_, pathFromUtf8( filename ) );
     } );
 }
 

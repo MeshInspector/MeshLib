@@ -177,7 +177,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifndef __EMSCRIPTEN__
             AllFilter |
 #endif
-            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters | ObjectLoad::getFilters();
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif
@@ -445,7 +445,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
-    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
+    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
 #ifndef MESHLIB_NO_VOXELS
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
 #endif

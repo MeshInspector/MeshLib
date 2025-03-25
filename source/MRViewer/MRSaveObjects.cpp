@@ -94,7 +94,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     {
         if ( auto distanceMap = objDistanceMap->getDistanceMap() )
         {
-            result = DistanceMapSave::toAnySupportedFormat( filename, *distanceMap, &objDistanceMap->getToWorldParameters() );
+            result = DistanceMapSave::toAnySupportedFormat( *distanceMap, filename, &objDistanceMap->getToWorldParameters() );
         }
         else
         {

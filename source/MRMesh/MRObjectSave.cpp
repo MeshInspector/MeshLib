@@ -165,19 +165,19 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
         const auto polyline = mergeToLines( object );
         return LinesSave::toAnySupportedFormat( polyline, file, { .progress = callback } );
     }
-    else if ( findFilter( DistanceMapSave::Filters, extension ) )
+    else if ( findFilter( DistanceMapSave::getFilters(), extension ) )
     {
         const auto objDmaps = getAllObjectsInTree<ObjectDistanceMap>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
         if ( objDmaps.empty() )
-            return DistanceMapSave::toAnySupportedFormat( file, {} );
+            return DistanceMapSave::toAnySupportedFormat( {}, file );
         else if ( objDmaps.size() > 1 )
             return unexpected( "Multiple distance maps in the given object" );
 
         const auto& objDmap = objDmaps.front();
         if ( !objDmap || !objDmap->getDistanceMap() )
-            return DistanceMapSave::toAnySupportedFormat( file, {} );
+            return DistanceMapSave::toAnySupportedFormat( {}, file );
 
-        return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
+        return DistanceMapSave::toAnySupportedFormat( *objDmap->getDistanceMap(), file, &objDmap->getToWorldParameters() );
     }
     else
     {

@@ -1,9 +1,11 @@
 #pragma once
+
 #include "MRMeshFwd.h"
+#include "MRDistanceMap.h"
+#include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
-#include "MRDistanceMapParams.h"
-#include "MRExpected.h"
+
 #include <filesystem>
 
 namespace MR

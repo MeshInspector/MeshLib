@@ -20,14 +20,17 @@ jobs:
         include:
           - os: "ubuntu:20.04"
             name: "ubuntu20"
+            compiler: clang-11
             c-compiler: /usr/bin/clang-11
             cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
+            compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
           - os: "ubuntu:24.04"
             name: "ubuntu24"
+            compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
           - os: "fedora:39"
@@ -82,19 +85,9 @@ jobs:
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install supported compiler
-        if: ${{ matrix.os == 'ubuntu:20.04' }}
+        if: ${{ matrix.os != 'fedora:39' }}
         run: |
-          apt-get -y install clang-11
-
-      - name: Install supported compiler
-        if: ${{ matrix.os == 'ubuntu:22.04' }}
-        run: |
-          apt-get -y install clang-14
-
-      - name: Install supported compiler
-        if: ${{ matrix.os == 'ubuntu:24.04' }}
-        run: |
-          apt-get -y install clang-18
+          apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
         if: always()

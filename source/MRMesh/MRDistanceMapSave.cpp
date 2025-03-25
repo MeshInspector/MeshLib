@@ -1,9 +1,12 @@
 #include "MRDistanceMapSave.h"
-#include "MRObjectDistanceMap.h"
+
 #include "MRDistanceMap.h"
+#include "MRIOFormatsRegistry.h"
+#include "MRObjectDistanceMap.h"
 #include "MRStringConvert.h"
-#include <fstream>
+
 #include <filesystem>
+#include <fstream>
 
 namespace MR
 {
@@ -11,13 +14,7 @@ namespace MR
 namespace DistanceMapSave
 {
 
-const IOFilters Filters =
-{
-    {"Raw (.raw)","*.raw"},
-    {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
-};
-
-Expected<void> toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
+Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -57,7 +54,7 @@ Expected<void> toRAW( const std::filesystem::path& path, const DistanceMap& dmap
     return {};
 }
 
-Expected<void> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
+Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -80,7 +77,10 @@ Expected<void> toMrDistanceMap( const std::filesystem::path& path, const Distanc
     const std::string writeError = "Cannot write file: " + utf8string( path );
     if ( !outFile )
         return unexpected( writeError );
-    
+
+    DistanceMapToWorld params;
+    if ( xf )
+        params = *xf;
     if ( !outFile.write( ( const char* )&params, sizeof( DistanceMapToWorld ) ) )
         return unexpected( writeError );
 
@@ -100,25 +100,20 @@ Expected<void> toMrDistanceMap( const std::filesystem::path& path, const Distanc
     return {};
 }
 
-Expected<void> toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmap, const AffineXf3f * xf )
+Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf )
 {
-    auto ext = utf8string( path.extension() );
-    for ( auto& c : ext )
-        c = ( char )tolower( c );
-    
+    auto ext = toLower( utf8string( path.extension() ) );
     ext.insert( std::begin( ext ), '*' );
-    auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( itF == Filters.end() )
+
+    auto saver = getDistanceMapSaver( ext );
+    if ( !saver )
         return unexpectedUnsupportedFileExtension();
 
-    if ( ext == "*.raw" )
-        return toRAW( path, dmap );
-
-    return toMrDistanceMap( path, dmap, xf ? *xf : AffineXf3f{} );
+    return saver( dmap, path, xf );
 }
+
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "MRDistanceMap (.mrdistancemap)", "*.mrdistancemap" ), toMrDistanceMap )
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRAW )
 
 } // namespace DistanceMapSave
 

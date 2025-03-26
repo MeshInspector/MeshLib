@@ -4,7 +4,7 @@
 #include "MRDistanceVolumeParams.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
-#include "MRMesh/MRPointCloudVariadicOffset.h"
+#include "MRMesh/MRClosestWeightedPoint.h"
 
 namespace MR
 {

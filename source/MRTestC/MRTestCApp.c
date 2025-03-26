@@ -18,6 +18,9 @@
 #include "MRExpandShrink.h"
 #include "MRPointCloud.h"
 #include "MRVDBConversions.h"
+#include "MRColor.h"
+#include "MRMatrix3.h"
+#include "MRAffineXf.h"
 
 int main( void )
 {
@@ -74,6 +77,30 @@ int main( void )
     RUN_TEST( testMrMeshTopologyFindNumHoles )
     RUN_TEST( testMrMeshTopologyFaceSize )
     RUN_TEST( testMrMeshTopologyGetTriangulation )
-      
+
+    // MRColor
+    RUN_TEST( testMrColorNew )
+    RUN_TEST( testMrColorFromComponents )
+    RUN_TEST( testMrColorFromFloatComponents )
+    RUN_TEST( testMrColorGetUInt32 )
+    RUN_TEST( testMrVertColorsNewSized )
+
+    // MRMatrix3
+
+    RUN_TEST( testMrMatrix3fIdentity )
+    RUN_TEST( testMrMatrix3fRotationScalar )
+    RUN_TEST( testMrMatrix3fRotationVector )
+    RUN_TEST( testMrMatrix3fAdd )
+    RUN_TEST( testMrMatrix3fSub )
+    RUN_TEST( testMrMatrix3fMul )
+    RUN_TEST( testMrMatrix3fMulVector )
+    RUN_TEST( testMrMatrix3fEqual )
+
+    RUN_TEST( testMrAffineXf3fNew );
+    RUN_TEST( testMrAffineXf3fTranslation );
+    RUN_TEST( testMrAffineXf3fLinear );
+    RUN_TEST( testMrAffineXf3fMul );
+    RUN_TEST( testMrAffineXf3fApply );
+
     printf("Tests finished\n");
 }

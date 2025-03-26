@@ -12,7 +12,13 @@ project(MRTestC C)
 file(GLOB HEADERS "*.h")
 file(GLOB SOURCES "*.c")
 
-add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
+add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES}
+        MRColor.c
+        MRColor.h
+        MRMatrix3.c
+        MRMatrix3.h
+        MRAffineXf.c
+        MRAffineXf.h)
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")

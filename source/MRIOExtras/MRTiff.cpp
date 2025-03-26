@@ -218,6 +218,7 @@ struct TiffParameters
         case ValueType::Unknown:
             MR_UNREACHABLE
         }
+        MR_UNREACHABLE
     }
 
     [[nodiscard]] std::optional<DataVariant> getNoDataValue() const
@@ -550,7 +551,7 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
 
         readTiff( tiff, params, buffer.data() );
 
-        visit( buffer.data(), buffer.size(), [&] <typename T> ( const T* data, size_t size )
+        visit( buffer.data(), buffer.size(), [&] <typename T> ( const T* data, [[maybe_unused]] size_t size )
         {
             assert( size == result.pixels.size() );
 

@@ -235,6 +235,12 @@ jobs:
      - name: Build NuGet package
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
 
+     - name: Install package for Patch step
+       run: py -3 -m pip install delvewheel
+
+     - name: Patch NuGet package
+       run: py -3 scripts\nuget_package_patch.py MeshLib.nupkg
+
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4
        with:

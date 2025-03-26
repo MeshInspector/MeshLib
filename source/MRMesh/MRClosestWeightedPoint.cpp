@@ -1,4 +1,4 @@
-#include "MRPointCloudVariadicOffset.h"
+#include "MRClosestWeightedPoint.h"
 #include "MRPointsInBall.h"
 
 namespace MR

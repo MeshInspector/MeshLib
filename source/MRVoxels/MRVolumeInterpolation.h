@@ -42,7 +42,7 @@ public:
     /// get value at specified coordinates
     ValueType get( const Vector3f& pos ) const
     {
-        IndexAndPos index = getIndexAndPos(pos);
+        IndexAndPos index = getIndexAndPos(pos - accessor_.shift());
         ValueType value{};
         float cx[2] = { 1.0f - index.pos.x, index.pos.x };
         float cy[2] = { 1.0f - index.pos.y, index.pos.y };

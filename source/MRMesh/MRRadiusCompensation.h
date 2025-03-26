@@ -18,9 +18,8 @@ struct CompensateRadiusParams
 
     /// region of the mesh that will be compensated
     /// it should not contain closed components
-    /// it is updated during algorithm
     /// also please note that boundaries of the region are fixed
-    FaceBitSet* region{ nullptr };
+    const FaceBitSet* region{ nullptr };
 
     /// maximum iteration of applying algorithm (each iteration improves result a little bit)
     int maxIterations{ 100 };

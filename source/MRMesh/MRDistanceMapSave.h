@@ -15,34 +15,36 @@ namespace DistanceMapSave
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /**
  * @brief Save DistanceMap to binary file
  * Format: 
  * 2 integer - DistanceMap.resX & DistanceMap.resY
  * [resX * resY] float - matrix of values
  */
-MRMESH_API Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf = nullptr );
-[[deprecated( "Use toRAW( dmap, path, xf )")]]
+MRMESH_API Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings = {} );
+[[deprecated( "Use toRAW( dmap, path, settings )")]]
 inline Expected<void> toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
 {
     return toRAW( dmap, path );
 }
 
-MRMESH_API Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf = nullptr );
-[[deprecated( "Use toMrDistanceMap( dmap, path, xf )")]]
+MRMESH_API Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings = {} );
+[[deprecated( "Use toMrDistanceMap( dmap, path, settings )")]]
 inline Expected<void> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmapObject, const DistanceMapToWorld& params )
 {
     const auto xf = params.xf();
-    return toMrDistanceMap( dmapObject, path, &xf );
+    return toMrDistanceMap( dmapObject, path, {
+        .xf = &xf,
+    } );
 }
 
-MRMESH_API Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf = nullptr );
-[[deprecated( "Use toAnySupportedFormat( dmap, path, xf )")]]
+MRMESH_API Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings = {} );
+[[deprecated( "Use toAnySupportedFormat( dmap, path, settings )")]]
 inline Expected<void> toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmapObject, const AffineXf3f * xf = nullptr )
 {
-    return toAnySupportedFormat( dmapObject, path, xf );
+    return toAnySupportedFormat( dmapObject, path, {
+        .xf = xf,
+    } );
 }
 
 /// \}

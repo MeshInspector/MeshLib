@@ -1,4 +1,4 @@
-#include <MRMesh/MRPointCloudVariadicOffset.h>
+#include <MRMesh/MRClosestWeightedPoint.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRGTest.h>
 

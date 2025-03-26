@@ -14,7 +14,7 @@ namespace MR
 namespace DistanceMapSave
 {
 
-Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * )
+Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -54,7 +54,7 @@ Expected<void> toRAW( const DistanceMap& dmap, const std::filesystem::path& path
     return {};
 }
 
-Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf )
+Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -79,8 +79,8 @@ Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::
         return unexpected( writeError );
 
     DistanceMapToWorld params;
-    if ( xf )
-        params = *xf;
+    if ( settings.xf )
+        params = *settings.xf;
     if ( !outFile.write( ( const char* )&params, sizeof( DistanceMapToWorld ) ) )
         return unexpected( writeError );
 
@@ -100,7 +100,7 @@ Expected<void> toMrDistanceMap( const DistanceMap& dmap, const std::filesystem::
     return {};
 }
 
-Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f * xf )
+Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
 {
     auto ext = toLower( utf8string( path.extension() ) );
     ext.insert( std::begin( ext ), '*' );
@@ -109,7 +109,7 @@ Expected<void> toAnySupportedFormat( const DistanceMap& dmap, const std::filesys
     if ( !saver )
         return unexpectedUnsupportedFileExtension();
 
-    return saver( dmap, path, xf );
+    return saver( dmap, path, settings );
 }
 
 MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "MRDistanceMap (.mrdistancemap)", "*.mrdistancemap" ), toMrDistanceMap )

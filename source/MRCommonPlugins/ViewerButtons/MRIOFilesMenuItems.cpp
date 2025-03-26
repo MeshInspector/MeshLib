@@ -115,7 +115,7 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
 {
     using namespace MR;
-    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters
+    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
 #ifndef MRMESH_NO_OPENVDB
         | VoxelsLoad::getFilters()
 #endif

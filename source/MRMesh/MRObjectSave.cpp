@@ -177,7 +177,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
         if ( !objDmap || !objDmap->getDistanceMap() )
             return DistanceMapSave::toAnySupportedFormat( {}, file );
 
-        return DistanceMapSave::toAnySupportedFormat( *objDmap->getDistanceMap(), file, &objDmap->getToWorldParameters() );
+        return DistanceMapSave::toAnySupportedFormat( *objDmap->getDistanceMap(), file, { .xf = &objDmap->getToWorldParameters() } );
     }
     else
     {

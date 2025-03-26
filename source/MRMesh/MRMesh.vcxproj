@@ -411,6 +411,7 @@
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />
     <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRBinaryUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRMeshOrPointsObject.cpp" />

@@ -7,7 +7,8 @@
       "cxx-compiler": "/usr/bin/g++-10",
       "c-compiler": "/usr/bin/gcc-10",
       "cxx-standard": 20,
-      "build_mrcuda": "ON"
+      "build_mrcuda": "ON",
+      "upload_release": "ON",
     },
     {
       "os": "ubuntu22",
@@ -16,7 +17,8 @@
       "cxx-compiler": "/usr/bin/g++-12",
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
-      "build_mrcuda": "ON"
+      "build_mrcuda": "ON",
+      "upload_release": "ON"
     },
     {
       "os": "ubuntu24",
@@ -25,7 +27,18 @@
       "cxx-compiler": "/usr/bin/g++-13",
       "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
-      "build_mrcuda": "ON"
+      "build_mrcuda": "ON",
+      "upload_release": "ON"
+    },
+    {
+      "os": "ubuntu24",
+      "config": "Release",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-14",
+      "c-compiler": "/usr/bin/gcc-14",
+      "cxx-standard": 23,
+      "build_mrcuda": "OFF",
+      "upload_release": "OFF"
     }
   ]
 }

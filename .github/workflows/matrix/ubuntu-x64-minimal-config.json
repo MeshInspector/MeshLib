@@ -8,7 +8,7 @@
       "c-compiler": "/usr/bin/gcc-10",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
-      "upload_release": "ON",
+      "upload_release": "ON"
     },
     {
       "os": "ubuntu22",

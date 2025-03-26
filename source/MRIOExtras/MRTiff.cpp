@@ -399,7 +399,7 @@ namespace MR
 namespace DistanceMapLoad
 {
 
-Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld, ProgressCallback )
+Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings )
 {
     TiffHolder tiff( path, "r" );
     if ( !tiff )
@@ -407,9 +407,9 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapTo
 
     auto params = readTiffParameters( tiff );
 
-    if ( dmapToWorld )
+    if ( settings.distanceMapToWorld )
         if ( const auto xf = readGeoTiffParameters( tiff ) )
-            *dmapToWorld = *xf;
+            *settings.distanceMapToWorld = *xf;
 
     DistanceMap result { (size_t)params.imageSize.x, (size_t)params.imageSize.y };
 
@@ -456,7 +456,7 @@ MR_ADD_DISTANCE_MAP_LOADER( IOFilter( "GeoTIFF (.tif,.tiff)", "*.tif;*.tiff" ), 
 namespace DistanceMapSave
 {
 
-Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f* xf )
+Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
 {
     auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
     if ( !tiff )
@@ -478,9 +478,9 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
 
-    if ( xf )
+    if ( settings.xf )
     {
-        const Matrix4d matrix { AffineXf3d( *xf ) };
+        const Matrix4d matrix { AffineXf3d( *settings.xf ) };
         TIFFSetField( tiff, GeoTiff::ModelTransformationTag, 16, (double*)&matrix );
     }
 

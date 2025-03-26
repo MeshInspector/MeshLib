@@ -17,7 +17,7 @@ namespace DistanceMapLoad
 {
 
 /// loads from .tiff format
-MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld = nullptr, ProgressCallback cb = {} );
+MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 
 } // namespace DistanceMapLoad
 
@@ -25,7 +25,7 @@ namespace DistanceMapSave
 {
 
 /// saves to .tiff format
-MRIOEXTRAS_API Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f* xf = nullptr );
+MRIOEXTRAS_API Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings = {} );
 
 } // namespace DistanceMapSave
 

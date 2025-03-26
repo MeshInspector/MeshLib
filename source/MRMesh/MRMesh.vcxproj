@@ -158,7 +158,7 @@
     <ClInclude Include="MRPartialChangeMeshAction.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
-    <ClInclude Include="MRPointCloudVariadicOffset.h" />
+    <ClInclude Include="MRClosestWeightedPoint.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
@@ -532,7 +532,7 @@
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
-    <ClCompile Include="MRPointCloudVariadicOffset.cpp" />
+    <ClCompile Include="MRClosestWeightedPoint.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />

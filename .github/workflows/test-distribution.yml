@@ -8,36 +8,35 @@ on:
         type: string
 
 jobs:
-  linux-test:
+  linux-x64-test:
     timeout-minutes: 30
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        platform: [ 'x86-64', 'arm64']
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:39"]
+        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04", "fedora:39" ]
         include:
-          - platform: 'x86-64'
-            runner: ubuntu-latest
-          - platform: 'arm64'
-            runner: [ self-hosted, linux-arm64, spot, meshinspector ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
+            compiler: clang-11
             c-compiler: /usr/bin/clang-11
             cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
+            compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
+          - os: "ubuntu:24.04"
+            name: "ubuntu24"
+            compiler: clang-18
+            c-compiler: /usr/bin/clang-18
+            cxx-compiler: /usr/bin/clang++-18
           - os: "fedora:39"
             name: "fedora39"
             c-compiler: /usr/bin/clang-17
             cxx-compiler: /usr/bin/clang++-17
-        exclude:
-          - os: "fedora:39"
-            platform: 'arm64'
 
     steps:
       - name: Checkout
@@ -46,38 +45,19 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Ubuntu x86-64 Release
-        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'x86-64' }}
+        if: ${{ matrix.os != 'fedora:39' }}
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         with:
           releaseId: ${{inputs.release_id}}
           fileName: "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
-        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'x86-64' }}
+        if: ${{ matrix.os != 'fedora:39' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-10-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
-
-      - name: Download Ubuntu arm64 Release
-        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'arm64' }}
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          releaseId: ${{inputs.release_id}}
-          fileName: "*${{matrix.name}}-arm64-dev.deb"
-
-      - name: Install Ubuntu arm64 Release
-        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'arm64' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
-            apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install libstdc++-10-dev && \
-            apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
@@ -92,17 +72,22 @@ jobs:
           dnf --refresh -y upgrade
           dnf -y --setopt=install_weak_deps=False install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel util-linux python3 python3-pip
           dnf -y --setopt=install_weak_deps=False install ./*.rpm
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Install Python requirements
+        run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install supported compiler
-        if: ${{ matrix.os == 'ubuntu:20.04' }}
+        if: ${{ matrix.os != 'fedora:39' }}
         run: |
-          apt-get -y install clang-11
-
-      - name: Install supported compiler
-        if: ${{ matrix.os == 'ubuntu:22.04' }}
-        run: |
-          apt-get -y install clang-14
+          apt-get -y install ${{ matrix.compiler }}
 
       - name: Run MeshViewer
         if: always()
@@ -143,6 +128,96 @@ jobs:
         working-directory: test_python
         run: python3 -m pytest -s -v
 
+  linux-arm64-test:
+    timeout-minutes: 30
+    runs-on: [self-hosted, linux-arm64, spot, meshinspector]
+    container:
+      image: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
+        include:
+          - os: "ubuntu:20.04"
+            name: "ubuntu20"
+            compiler: clang-11
+            c-compiler: /usr/bin/clang-11
+            cxx-compiler: /usr/bin/clang++-11
+          - os: "ubuntu:22.04"
+            name: "ubuntu22"
+            compiler: clang-14
+            c-compiler: /usr/bin/clang-14
+            cxx-compiler: /usr/bin/clang++-14
+          - os: "ubuntu:24.04"
+            name: "ubuntu24"
+            compiler: clang-18
+            c-compiler: /usr/bin/clang-18
+            cxx-compiler: /usr/bin/clang++-18
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Ubuntu arm64 Release
+        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
+        with:
+          releaseId: ${{inputs.release_id}}
+          fileName: "*${{matrix.name}}-arm64-dev.deb"
+
+      - name: Install Ubuntu arm64 Release
+        run: |
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
+            apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
+            apt-get -y install libstdc++-10-dev && \
+            apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Install Python requirements
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Install supported compiler
+        run: apt-get -y install ${{ matrix.compiler }}
+
+      - name: Run MeshViewer
+        if: always()
+        run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Show meshconv help
+        if: always()
+        run: meshconv --help
+
+      - name: Build C++ examples
+        if: always()
+        working-directory: examples/cpp-examples
+        run: |
+          mkdir build && \
+          cd build && \
+          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
+          cmake --build . && \
+          ./MeshModification
+
+      - name: Build C examples
+        if: always()
+        working-directory: examples/c-examples
+        run: |
+          cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
+          cmake --build build
+
+      - name: Ubuntu python test
+        if: always()
+        env:
+          PYTHONPATH: /usr/local/lib/MeshLib/
+        working-directory: test_python
+        run: python3 -m pytest -s -v
 
   macos-test:
     runs-on: macos-13

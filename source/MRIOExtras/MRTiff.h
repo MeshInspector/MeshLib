@@ -4,7 +4,6 @@
 #ifndef MRIOEXTRAS_NO_TIFF
 #include "exports.h"
 
-#include <MRMesh/MRDistanceMap.h>
 #include <MRMesh/MRExpected.h>
 #include <MRMesh/MRImage.h>
 
@@ -12,22 +11,6 @@
 
 namespace MR
 {
-
-namespace DistanceMapLoad
-{
-
-/// loads from .tiff format
-MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* dmapToWorld = nullptr, ProgressCallback cb = {} );
-
-} // namespace DistanceMapLoad
-
-namespace DistanceMapSave
-{
-
-/// saves to .tiff format
-MRIOEXTRAS_API Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const AffineXf3f* xf = nullptr );
-
-} // namespace DistanceMapSave
 
 namespace ImageLoad
 {

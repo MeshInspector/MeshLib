@@ -37,6 +37,15 @@ inline Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& pat
     return fromMrDistanceMap( path, &params, progressCb );
 }
 
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+MRMESH_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} );
+[[deprecated( "Use fromMrDistanceMap( path, params, progressCb )")]]
+inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
+{
+    return fromTiff( path, &params, progressCb );
+}
+#endif
+
 MRMESH_API Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} );
 
 /// \}

@@ -27,7 +27,7 @@ MRMESH_API Expected<DistanceMap> fromRaw( const std::filesystem::path& path, con
 [[deprecated( "Use fromRaw( path, settings )")]]
 inline Expected<DistanceMap> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    return fromRaw( path, {
+    return fromRaw( path, DistanceMapLoadSettings {
         .progress = progressCb,
     } );
 }

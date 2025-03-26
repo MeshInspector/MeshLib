@@ -64,7 +64,7 @@ struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParam
 
 /// consider a mesh where each vertex has additive weight, and this weight is linearly interpolated in mesh triangles,
 /// and the distance to a point is considered equal to (euclidean distance - weight),
-/// finds the point on given mesh part with minimal distance to given 3D location
+/// finds the point on given mesh with minimal distance to given 3D location
 [[nodiscard]] MRMESH_API MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params );
 

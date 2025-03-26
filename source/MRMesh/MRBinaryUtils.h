@@ -88,6 +88,14 @@ auto visit( BinaryDataType type, Byte* data, size_t size, Visitor&& vis )
     } );
 }
 
+inline size_t binaryDataSize( BinaryDataType type )
+{
+    return visit( type, [] <typename T> ( T )
+    {
+        return sizeof( T );
+    } );
+}
+
 enum class BinaryRecordType
 {
     Scalar,

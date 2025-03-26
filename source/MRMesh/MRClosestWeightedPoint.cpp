@@ -1,5 +1,6 @@
 #include "MRClosestWeightedPoint.h"
 #include "MRPointsInBall.h"
+#include "MRMesh.h"
 
 namespace MR
 {
@@ -55,6 +56,21 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
         }
         return Processing::Continue;
     } );
+    return res;
+}
+
+MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
+    const MeshPart& mp, const DistanceFromWeightedPointsComputeParams& params )
+{
+    MeshPointAndDistance res;
+    // first consider only mesh vertices ignoring triangles
+    {
+        auto ptRes = findClosestWeightedPoint( loc, mp.mesh.getAABBTreePoints(), params );
+        res.dist = ptRes.dist;
+        if ( ptRes.vId )
+            res.mtp = MeshTriPoint( mp.mesh.topology, ptRes.vId );
+    }
+
     return res;
 }
 

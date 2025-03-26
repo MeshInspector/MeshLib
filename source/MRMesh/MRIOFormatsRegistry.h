@@ -361,7 +361,7 @@ MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver, priori
 namespace DistanceMapLoad
 {
 
-using DistanceMapLoader = Expected<DistanceMap>( * )( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback cb );
+using DistanceMapLoader = Expected<DistanceMap>( * )( const std::filesystem::path& path, const DistanceMapLoadSettings& settings );
 
 MR_FORMAT_REGISTRY_DECL( DistanceMapLoader )
 
@@ -376,7 +376,7 @@ MR_ON_INIT { using namespace MR::DistanceMapLoad; setDistanceMapLoader( filter, 
 namespace DistanceMapSave
 {
 
-using DistanceMapSaver = Expected<void>( * )( const DistanceMap& distanceMap, const std::filesystem::path& path, const AffineXf3f* xf );
+using DistanceMapSaver = Expected<void>( * )( const DistanceMap& distanceMap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings );
 
 MR_FORMAT_REGISTRY_DECL( DistanceMapSaver )
 

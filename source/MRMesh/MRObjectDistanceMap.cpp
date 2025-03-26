@@ -159,7 +159,7 @@ Expected<void> ObjectDistanceMap::deserializeModel_( const std::filesystem::path
             return unexpected( "No distance map file found: " + utf8string( path ) );
     }
 
-    auto res = DistanceMapLoad::fromAnySupportedFormat( modelPath, nullptr, progressCb );
+    auto res = DistanceMapLoad::fromAnySupportedFormat( modelPath, { .progress = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
     

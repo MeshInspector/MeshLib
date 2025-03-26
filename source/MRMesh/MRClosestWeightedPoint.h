@@ -66,6 +66,6 @@ struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParam
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// finds the point on given mesh part with minimal distance to given 3D location
 [[nodiscard]] MRMESH_API MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
-    const MeshPart& mp, const DistanceFromWeightedPointsComputeParams& params );
+    const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params );
 
 } //namespace MR

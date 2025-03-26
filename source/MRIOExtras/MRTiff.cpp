@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRBuffer.h"
+#include "MRMesh/MRBinaryUtils.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRFinally.h"
@@ -18,120 +19,6 @@ namespace
 {
 
 using namespace MR;
-
-template <typename... Args>
-constexpr auto makeVariantArray( std::variant<Args...> )
-{
-    return std::array<std::variant<Args...>, sizeof...( Args )> { Args{}... };
-}
-
-template <typename Variant>
-constexpr auto makeVariantArray()
-{
-    return makeVariantArray( Variant{} );
-}
-
-enum class DataType
-{
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    Float32,
-    Float64,
-};
-
-using DataVariant = std::variant<
-    uint8_t,
-    uint16_t,
-    uint32_t,
-    uint64_t,
-    int8_t,
-    int16_t,
-    int32_t,
-    int64_t,
-    float,
-    double
->;
-
-using DataPtrVariant = std::variant<
-    uint8_t*,
-    uint16_t*,
-    uint32_t*,
-    uint64_t*,
-    int8_t*,
-    int16_t*,
-    int32_t*,
-    int64_t*,
-    float*,
-    double*
->;
-
-template <typename T>
-DataType from()
-{
-    static constexpr auto variant = DataVariant( T() );
-    return DataType( variant.index() );
-}
-
-template <typename Visitor>
-auto visit( Visitor&& vis, DataType type )
-{
-    static constexpr auto variants = makeVariantArray<DataVariant>();
-    return std::visit( vis, variants.at( (size_t)type ) );
-}
-
-template <typename Visitor>
-auto visit( const std::byte* data, size_t size, Visitor&& vis, DataType type )
-{
-    return visit( [=] <typename T> ( T )
-    {
-        return vis( reinterpret_cast<const T*>( data ), size / sizeof( T ) );
-    }, type );
-}
-
-template <typename Visitor>
-auto visit( std::byte* data, size_t size, Visitor&& vis, DataType type )
-{
-    return visit( [=] <typename T> ( T )
-    {
-        return vis( reinterpret_cast<T*>( data ), size / sizeof( T ) );
-    }, type );
-}
-
-enum class SampleType
-{
-    Scalar,
-    RGB,
-    RGBA,
-};
-
-size_t sizeOf( SampleType samples )
-{
-    using enum SampleType;
-    switch ( samples )
-    {
-    case Scalar:
-        return 1;
-    case RGB:
-        return 3;
-    case RGBA:
-        return 4;
-    }
-    MR_UNREACHABLE
-}
-
-template <typename T, typename Func>
-void iterateSamples( SampleType samples, T* data, size_t size, Func&& f )
-{
-    const auto step = sizeOf( samples );
-    for ( auto i = 0u; i < size / step; ++i )
-        f( i, data + i * step );
-}
 
 struct TiffParameters
 {
@@ -170,33 +57,34 @@ struct TiffParameters
         return (size_t)valueType * bytesPerSample;
     }
 
-    [[nodiscard]] DataType getDataType() const
+    [[nodiscard]] BinaryDataType getBinaryDataType() const
     {
+        using enum BinaryDataType;
         switch ( sampleType )
         {
         case SampleType::UInt:
             switch ( bytesPerSample )
             {
-            case 1: return DataType::UInt8;
-            case 2: return DataType::UInt16;
-            case 4: return DataType::UInt32;
-            case 8: return DataType::UInt64;
+            case 1: return UInt8;
+            case 2: return UInt16;
+            case 4: return UInt32;
+            case 8: return UInt64;
             default: MR_UNREACHABLE;
             }
         case SampleType::Int:
             switch ( bytesPerSample )
             {
-            case 1: return DataType::Int8;
-            case 2: return DataType::Int16;
-            case 4: return DataType::Int32;
-            case 8: return DataType::Int64;
+            case 1: return Int8;
+            case 2: return Int16;
+            case 4: return Int32;
+            case 8: return Int64;
             default: MR_UNREACHABLE;
             }
         case SampleType::Float:
             switch ( bytesPerSample )
             {
-            case 4: return DataType::Float32;
-            case 8: return DataType::Float64;
+            case 4: return Float32;
+            case 8: return Float64;
             default: MR_UNREACHABLE;
             }
         case SampleType::Unknown:
@@ -205,35 +93,35 @@ struct TiffParameters
         MR_UNREACHABLE
     }
 
-    [[nodiscard]] ::SampleType getSampleType() const
+    [[nodiscard]] BinaryRecordType getBinaryRecordType() const
     {
         switch ( valueType )
         {
         case ValueType::Scalar:
-            return ::SampleType::Scalar;
+            return BinaryRecordType::Scalar;
         case ValueType::RGB:
-            return ::SampleType::RGB;
+            return BinaryRecordType::RGB;
         case ValueType::RGBA:
-            return ::SampleType::RGBA;
+            return BinaryRecordType::RGBA;
         case ValueType::Unknown:
             MR_UNREACHABLE
         }
         MR_UNREACHABLE
     }
 
-    [[nodiscard]] std::optional<DataVariant> getNoDataValue() const
+    [[nodiscard]] std::optional<BinaryDataVariant> getNoDataValue() const
     {
         if ( !noDataValue )
             return std::nullopt;
 
         const auto& s = *noDataValue;
-        return visit( [&] <typename T> ( T value ) -> std::optional<DataVariant>
+        return visit( getBinaryDataType(), [&] <typename T> ( T value ) -> std::optional<BinaryDataVariant>
         {
             if ( std::from_chars( s.data(), s.data() + s.size(), value ).ec != std::errc{} )
                 return std::nullopt;
 
-            return DataVariant( value );
-        }, getDataType() );
+            return value;
+        } );
     }
 };
 
@@ -416,35 +304,38 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const Distanc
 
     readTiff( tiff, params, [&] ( const std::byte* bytes, size_t bytesSize, size_t offsetX, size_t offsetY )
     {
-        visit( bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
+        visit( params.getBinaryDataType(), bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
         {
             const T* noDataValue = nullptr;
             if ( const auto variant = params.getNoDataValue() )
                 noDataValue = std::get_if<T>( &(*variant) );
 
-            iterateSamples( params.getSampleType(), data, size, [&] ( size_t i, const T* sample )
+            forEach( params.getBinaryRecordType(), data, size, [&] ( size_t i, const T* rec, size_t )
             {
-                if ( noDataValue && sample[0] == *noDataValue )
+                if ( noDataValue && rec[0] == *noDataValue )
                     return;
 
                 float value;
-                switch ( params.getSampleType() )
+                using enum BinaryRecordType;
+                switch ( params.getBinaryRecordType() )
                 {
-                case SampleType::Scalar:
-                    value = sample[0];
+                case Scalar:
+                    value = rec[0];
                     break;
-                case SampleType::RGB:
-                case SampleType::RGBA:
+                case RGB:
+                case RGBA:
                     // luma/brightness component from the YCbCr color space
                     value =
-                          (float)sample[0] * 0.299f
-                        + (float)sample[1] * 0.587f
-                        + (float)sample[2] * 0.114f
+                          (float)rec[0] * 0.299f
+                        + (float)rec[1] * 0.587f
+                        + (float)rec[2] * 0.114f
                     ;
+                    break;
                 }
+
                 result.set( offsetX + i, offsetY, value );
             } );
-        }, params.getDataType() );
+        } );
     } );
 
     return result;
@@ -527,19 +418,19 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     {
         readTiff( tiff, params, [&] ( const std::byte* bytes, size_t bytesSize, size_t offsetX, size_t offsetY )
         {
-            visit( bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
+            visit( params.getBinaryDataType(), bytes, bytesSize, [&] <typename T> ( const T* data, size_t size )
             {
                 const auto offset = offsetY * params.imageSize.x + offsetX;
-                iterateSamples( params.getSampleType(), data, size, [&] ( size_t i, const T* sample )
+                forEach( params.getBinaryRecordType(), data, size, [&] ( size_t i, const T* rec, size_t recSize )
                 {
                     result.pixels[offset + i] = Color {
-                        Color::valToUint8( sample[0] ),
-                        Color::valToUint8( sample[1] ),
-                        Color::valToUint8( sample[2] ),
-                        params.getSampleType() == SampleType::RGBA ? Color::valToUint8( sample[3] ) : 255,
+                        Color::valToUint8( rec[0] ),
+                        Color::valToUint8( rec[1] ),
+                        Color::valToUint8( rec[2] ),
+                        recSize == 4 ? Color::valToUint8( rec[3] ) : 255,
                     };
                 } );
-            }, params.getDataType() );
+            } );
         } );
     }
     else
@@ -551,7 +442,7 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
 
         readTiff( tiff, params, buffer.data() );
 
-        visit( buffer.data(), buffer.size(), [&] <typename T> ( const T* data, [[maybe_unused]] size_t size )
+        visit( params.getBinaryDataType(), buffer.data(), buffer.size(), [&] <typename T> ( const T* data, [[maybe_unused]] size_t size )
         {
             assert( size == result.pixels.size() );
 
@@ -582,7 +473,7 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
                     Color::valToUint8( value ),
                 };
             } );
-        }, params.getDataType() );
+        } );
     }
 
     return result;

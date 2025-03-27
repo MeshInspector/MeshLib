@@ -268,11 +268,9 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
           aws-region: us-east-1
       - name: Start Instance
-        with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
         run: |
           aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
 
@@ -293,12 +291,10 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-      - name: Start Instance
-        with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
-        run:
+          aws-region: us-east-1
+      - name: Stop Instance
+        run: |
           aws ec2 stop-instances --instance-ids i-0987d7b35b21ad1f1
 
   upload-distributions:

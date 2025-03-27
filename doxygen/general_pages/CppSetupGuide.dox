@@ -217,11 +217,11 @@ The new window with a viewer must appear.
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-\subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
+\subsection CppSetupWASM WebAssembly/Emscripten
 
-This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
+MeshLib can also be built and run for WebAssembly (WASM) using Emscripten.
 
-#### Install Emscripten
+### Installing Emscripten
 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
@@ -256,9 +256,23 @@ source ./emsdk_env.sh
 \note **For Windows Users:**
 \n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
-#### Building MeshLib
+### Installing the release build
+ 1. **Download the Built Version**
+ \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest Emscripten built version.
+ 2. **Extract the Package**
+ \n Extract the package using an archiving tool or with the unzip command:
+\code{.sh}
+unzip -d path_to_install meshlib_package.zip
+\endcode
+ 3. **Integrate Using CMake**
+ \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
+\code{.sh}
+emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
+\endcode
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-Now that Emscripten is set up, you can proceed to build MeshLib for WebAssembly.
+### Compile locally
+
  - Navigate to the MeshLib directory:
 \code{.sh}
 cd ~/MeshLib

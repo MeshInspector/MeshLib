@@ -271,6 +271,8 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
       - name: Start Instance
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
         run:
           aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
 
@@ -280,7 +282,7 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     secrets: inherit
 
-  stop-and-start-instance:
+  stop-instance:
     runs-on: aws-micro
     needs: [ start-unity-instance, windows-unity-test ]
     if: always()
@@ -294,6 +296,8 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
       - name: Start Instance
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
         run:
           aws ec2 stop-instances --instance-ids i-0987d7b35b21ad1f1
 

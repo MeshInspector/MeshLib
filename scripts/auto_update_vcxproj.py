@@ -9,7 +9,7 @@ VCXPROJ_NAMESPACES = {
 }
 
 KNOWN_ITEM_GROUPS = {
-    'ClCompile': {".cpp"},
+    'ClCompile': {".c", ".cpp"},
     'ClInclude': {".h", ".hpp", ".cuh"},
     'CudaCompile': {".cu"},
 }

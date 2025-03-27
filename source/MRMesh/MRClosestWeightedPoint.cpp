@@ -143,26 +143,13 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
 MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params )
 {
-    MeshPointAndDistance res;
+    MeshPointAndDistance res{ .dist = params.maxDistance };
     assert( params.pointWeight );
     if ( !params.pointWeight )
         return res;
     BallRadiusAssessor ballRadiusAssessor( params );
     if ( ballRadiusAssessor.maxSearchRadius() < 0 )
         return res;
-
-    // first consider only mesh vertices ignoring triangles
-    {
-        auto ptRes = findClosestWeightedPoint( loc, mesh.getAABBTreePoints(), params );
-        res.dist = ptRes.dist;
-        if ( ptRes.vId )
-        {
-            res.mtp = MeshTriPoint( mesh.topology, ptRes.vId );
-            const auto r = distance( loc, mesh.points[ptRes.vId] );
-            const auto w = params.pointWeight( ptRes.vId );
-            ballRadiusAssessor.pointFound( r, w );
-        }
-    }
 
     const Vector3d locd( loc );
     findTrisInBall( mesh, { loc, sqr( ballRadiusAssessor.maxSearchRadius() ) }, [&]( const MeshProjectionResult & found, Ball3f & ball )

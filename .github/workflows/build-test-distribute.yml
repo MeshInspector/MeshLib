@@ -258,6 +258,7 @@ jobs:
   start-unity-instance:
     name: Start unity instance
     runs-on: aws-micro
+    needs: [ windows-build-test ]
     outputs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     permissions:
@@ -275,13 +276,13 @@ jobs:
 
   windows-unity-test:
     if: ${{ github.event_name == 'schedule' }} // triggered by schedule
-    needs: [ windows-build-test, check-and-start-instance ]
+    needs: [ start-unity-instance ]
     uses: ./.github/workflows/unity-nuget-test.yml
     secrets: inherit
 
-  check-and-start-instance:
+  stop-and-start-instance:
     runs-on: aws-micro
-    needs: [ check-and-start-instance, windows-unity-test ]
+    needs: [ start-unity-instance, windows-unity-test ]
     if: always()
     permissions:
       id-token: write

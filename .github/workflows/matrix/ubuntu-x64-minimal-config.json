@@ -32,17 +32,17 @@
     },
     {
       "os": "ubuntu24",
-      "config": "Release",
+      "config": "Debug",
       "compiler": "GCC",
-      "cxx-compiler": "/usr/bin/g++-14",
-      "c-compiler": "/usr/bin/gcc-14",
+      "cxx-compiler": "/usr/bin/g++-13",
+      "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
-      "build_mrcuda": "OFF",
+      "build_mrcuda": "ON",
       "upload_release": "OFF"
     },
     {
       "os": "ubuntu24",
-      "config": "Debug",
+      "config": "Release",
       "compiler": "GCC",
       "cxx-compiler": "/usr/bin/g++-14",
       "c-compiler": "/usr/bin/gcc-14",

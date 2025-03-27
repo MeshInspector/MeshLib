@@ -15,11 +15,11 @@ struct TbbTaskArenaAndGroup
 
     /// runs given function within this task group and task arena
     template<typename F>
-    void execute( F f )
+    void execute( F&& f )
     {
-        arena.execute( [this, f = std::move( f )]() mutable
+        arena.execute( [this, f]()
         {
-            group.run( [f = std::move( f )]
+            group.run( [f]
             {
                 f();
             } );

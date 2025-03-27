@@ -2,7 +2,7 @@
 #include "MRMeshC/MRMatrix3.h"
 
 
-void testMrMatrix3fIdentity() {
+void testMrMatrix3fIdentity(void) {
     MRMatrix3f identityMatrix = mrMatrix3fIdentity();
 
     // Check that the diagonal values are 1 and off-diagonal are 0
@@ -18,7 +18,7 @@ void testMrMatrix3fIdentity() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(identityMatrix.z.y, 0.0f, 0.001f);
 }
 
-void testMrMatrix3fRotationScalar() {
+void testMrMatrix3fRotationScalar(void) {
     MRVector3f axis = {1.0f, 0.0f, 0.0f}; // Rotation around X-axis
     float angle = 3.14159f / 2.0f; // 90 degrees
 
@@ -32,7 +32,7 @@ void testMrMatrix3fRotationScalar() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(rotationMatrix.z.z, 0.0f, 0.001f);
 }
 
-void testMrMatrix3fRotationVector() {
+void testMrMatrix3fRotationVector(void) {
     MRVector3f from = {1.0f, 0.0f, 0.0f}; // Initial vector (x-axis)
     MRVector3f to = {0.0f, 1.0f, 0.0f}; // Target vector (y-axis)
 
@@ -52,7 +52,7 @@ void testMrMatrix3fRotationVector() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(rotationMatrix.z.z, 1.0f, 0.001f);
 }
 
-void testMrMatrix3fAdd() {
+void testMrMatrix3fAdd(void) {
     MRMatrix3f matrixA = {
         {1.0f, 2.0f, 3.0f},
         {4.0f, 5.0f, 6.0f},
@@ -78,7 +78,7 @@ void testMrMatrix3fAdd() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.z.z, 10.0f, 0.001f);
 }
 
-void testMrMatrix3fSub() {
+void testMrMatrix3fSub(void) {
     MRMatrix3f matrixA = {
         {1.0f, 2.0f, 3.0f},
         {4.0f, 5.0f, 6.0f},
@@ -105,7 +105,7 @@ void testMrMatrix3fSub() {
 }
 
 
-void testMrMatrix3fMul() {
+void testMrMatrix3fMul(void) {
     MRMatrix3f matrixA = {
         {1.0f, 0.0f, 0.0f},
         {0.0f, 1.0f, 0.0f},
@@ -133,7 +133,7 @@ void testMrMatrix3fMul() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.z.z, 3.0f, 0.001f);
 }
 
-void testMrMatrix3fMulVector() {
+void testMrMatrix3fMulVector(void) {
     MRMatrix3f matrix = {
         {2.0f, 0.0f, 0.0f},
         {0.0f, 2.0f, 0.0f},
@@ -149,7 +149,7 @@ void testMrMatrix3fMulVector() {
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.z, 6.0f, 0.001f);
 }
 
-void testMrMatrix3fEqual() {
+void testMrMatrix3fEqual(void) {
     MRMatrix3f matrixA = {
         {1.0f, 0.0f, 0.0f},
         {0.0f, 1.0f, 0.0f},

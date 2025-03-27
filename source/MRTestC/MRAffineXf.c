@@ -3,7 +3,7 @@
 
 
 /// Test function for mrAffineXf3fNew
-void testMrAffineXf3fNew() {
+void testMrAffineXf3fNew(void) {
     const MRAffineXf3f result = mrAffineXf3fNew();
 
     // Check if the matrix A is an identity matrix
@@ -17,7 +17,7 @@ void testMrAffineXf3fNew() {
 }
 
 /// Test function for mrAffineXf3fTranslation
-void testMrAffineXf3fTranslation() {
+void testMrAffineXf3fTranslation(void) {
     const MRVector3f translation = {1.0f, 2.0f, 3.0f};
     const MRAffineXf3f result = mrAffineXf3fTranslation(&translation);
 
@@ -32,7 +32,7 @@ void testMrAffineXf3fTranslation() {
 }
 
 /// Test function for mrAffineXf3fLinear
-void testMrAffineXf3fLinear() {
+void testMrAffineXf3fLinear(void) {
     const MRMatrix3f linearMatrix = {{1.0f, 2.0f, 3.0f}, {4.0f, 5.0f, 6.0f}, {7.0f, 8.0f, 9.0f}};
     const MRAffineXf3f result = mrAffineXf3fLinear(&linearMatrix);
 
@@ -46,7 +46,7 @@ void testMrAffineXf3fLinear() {
 }
 
 /// Test function for mrAffineXf3fMul
-void testMrAffineXf3fMul() {
+void testMrAffineXf3fMul(void) {
     const MRAffineXf3f xf1 = mrAffineXf3fTranslation(&(MRVector3f){1.0f, 2.0f, 3.0f});
     const MRAffineXf3f xf2 = mrAffineXf3fLinear(&(MRMatrix3f){{2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f}});
     const MRAffineXf3f result = mrAffineXf3fMul(&xf1, &xf2);
@@ -69,7 +69,7 @@ void testMrAffineXf3fMul() {
 }
 
 /// Test function for mrAffineXf3fApply
-void testMrAffineXf3fApply() {
+void testMrAffineXf3fApply(void) {
     const MRAffineXf3f xf = mrAffineXf3fTranslation(&(MRVector3f){1.0f, 2.0f, 3.0f});
     const MRVector3f point = {4.0f, 5.0f, 6.0f};
     const MRVector3f result = mrAffineXf3fApply(&xf, &point);

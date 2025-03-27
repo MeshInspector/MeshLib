@@ -60,6 +60,9 @@
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestFunctions.h" />
     <ClInclude Include="TestMacros.h" />
+    <ClInclude Include="MRAffineXf.h" />
+    <ClInclude Include="MRColor.h" />
+    <ClInclude Include="MRMatrix3.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -8,7 +9,7 @@ namespace MR
 /// allows several threads to work on a group of tasks in isolation (in one arena):
 /// they cannot steal outside tasks until the all these tasks are finished;
 /// this solves the issue of recursive calling of the function where TbbTaskArenaAndGroup was created
-struct TbbTaskArenaAndGroup
+MR_BIND_IGNORE struct TbbTaskArenaAndGroup
 {
     tbb::task_arena arena;
     tbb::task_group group;

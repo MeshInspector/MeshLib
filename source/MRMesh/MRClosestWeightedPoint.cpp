@@ -63,6 +63,46 @@ bool BallRadiusAssessor::pointFound( float r, float w )
     return false;
 }
 
+struct ClosestTriPoint
+{
+    Vector3f pos;
+    TriPointf tp;
+    float w = 0;
+};
+
+std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd, const Mesh& mesh, FaceId f, const VertMetric& pointWeight )
+{
+    auto vs = mesh.topology.getTriVerts( f );
+
+    // compute the closest point in double-precision, because float might be not enough
+    Triangle3d ps;
+    double ws[3];
+    for ( int i = 0; i < 3; ++i )
+    {
+        ps[i] = Vector3d( mesh.points[vs[i]] );
+        ws[i] = pointWeight( vs[i] );
+    }
+
+    const auto maybePlane = ( dot( locd - ps[0], dirDblArea( ps ) ) >= 0 ) ?
+        tangentPlaneToSpheres( ps[0], ps[1], ps[2], ws[0], ws[1], ws[2] ) :
+        tangentPlaneToSpheres( ps[1], ps[0], ps[2], ws[1], ws[0], ws[2] );
+    if ( !maybePlane )
+        return {};
+
+    Triangle3d tanPs;
+    for ( int i = 0; i < 3; ++i )
+        tanPs[i] = maybePlane->project( ps[i] );
+
+    const auto [projD, baryD] = closestPointInTriangle( locd, tanPs[0], tanPs[1], tanPs[2] );
+
+    return ClosestTriPoint
+    {
+        .pos = Vector3f( baryD.interpolate( ps[0], ps[1], ps[2] ) ), // not projD, since it is on tangent plane
+        .tp = TriPointf( baryD ),
+        .w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) )
+    };
+}
+
 } // anonymous namespace
 
 PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
@@ -128,42 +168,20 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     findTrisInBall( mesh, { loc, sqr( ballRadiusAssessor.maxSearchRadius() ) }, [&]( const MeshProjectionResult & found, Ball3f & ball )
     {
         auto f = found.proj.face;
-        auto vs = mesh.topology.getTriVerts( f );
-
-        // compute the closest point in double-precision, because float might be not enough
-        Triangle3d ps;
-        double ws[3];
-        for ( int i = 0; i < 3; ++i )
-        {
-            ps[i] = Vector3d( mesh.points[vs[i]] );
-            ws[i] = params.pointWeight( vs[i] );
-        }
-
-        const auto maybePlane = ( dot( locd - ps[0], dirDblArea( ps ) ) >= 0 ) ?
-            tangentPlaneToSpheres( ps[0], ps[1], ps[2], ws[0], ws[1], ws[2] ) :
-            tangentPlaneToSpheres( ps[1], ps[0], ps[2], ws[1], ws[0], ws[2] );
-        if ( !maybePlane )
+        auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight );
+        if ( !c )
             return Processing::Continue;
 
-        Triangle3d tanPs;
-        for ( int i = 0; i < 3; ++i )
-            tanPs[i] = maybePlane->project( ps[i] );
-
-        const auto [projD, baryD] = closestPointInTriangle( locd, tanPs[0], tanPs[1], tanPs[2] );
-
-        const auto w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) );
-        const auto pos = Vector3f( baryD.interpolate( ps[0], ps[1], ps[2] ) ); // not projD, since it is on tangent plane
-        const auto r = distance( loc, pos );
-
-        auto dist = r - w;
+        const auto r = distance( loc, c->pos );
+        const auto dist = r - c->w;
         if ( dist < res.dist )
         {
             res.dist = dist;
-            res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), TriPointf( baryD ) };
+            res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
             if ( dist < params.minDistance )
                 return Processing::Stop;
         }
-        if ( ballRadiusAssessor.pointFound( r, w ) )
+        if ( ballRadiusAssessor.pointFound( r, c->w ) )
             ball.radiusSq = sqr( ballRadiusAssessor.maxSearchRadius() );
         return Processing::Continue;
     } );

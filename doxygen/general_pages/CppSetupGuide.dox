@@ -220,7 +220,6 @@ The new window with a viewer must appear.
 \subsection CppSetupWASM WebAssembly/Emscripten
 
 MeshLib can also be built and run for WebAssembly (WASM) using Emscripten.
-\note Only web and worker environments (i.e. web browsers) are officially supported.
 
 ### Installing Emscripten
 

@@ -84,34 +84,34 @@ namespace MR
             };
 
             ///
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern float mrSuggestVoxelSize(MRMeshPart mp, float approxNumVoxels);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrDoubleOffsetMesh(MRMeshPart mp, float offsetA, float offsetB, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMcOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMcShellMeshRegion(IntPtr mesh, IntPtr region, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrSharpOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGeneralOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrThickenMesh(IntPtr mesh, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
             /// computes size of a cubical voxel to get approximately given number of voxels during rasterization

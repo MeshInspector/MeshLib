@@ -11,22 +11,22 @@ namespace MR
 {
     public partial class DotNet
     {        
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFloatGridResampledUniformly( IntPtr grid, float voxelScale, IntPtr cb );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFloatGridResampled( IntPtr grid, ref MRVector3f voxelScale, IntPtr cb );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFloatGridCropped( IntPtr grid, ref MRBox3i box, IntPtr cb );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern float mrFloatGridGetValue( IntPtr grid, ref MRVector3i p );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrFloatGridSetValue(IntPtr grid, ref MRVector3i p, float value );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrFloatGridSetValueForRegion(IntPtr grid, IntPtr region, float value );
 
         /// stores a pointer to a native OpenVDB object
@@ -110,15 +110,15 @@ namespace MR
         public class VdbVolumes : List<VdbVolume>, IDisposable 
         {
             /// gets the volumes' value at index
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRVdbVolume mrVdbVolumesGet( IntPtr volumes, ulong index );
 
             /// gets the volumes' size
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrVdbVolumesSize( IntPtr volumes );
 
             /// deallocates the VdbVolumes object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrVdbVolumesFree(IntPtr volumes);
 
             internal IntPtr mrVdbVolumes_;

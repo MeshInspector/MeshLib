@@ -51,35 +51,35 @@ namespace MR
                 public MRVectorAffineXf3f() { }
             }
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrMultiwayICPNew(IntPtr objects, ulong objectsNum, ref MRMultiwayICPSamplingParameters samplingParams);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations(IntPtr mwicp, IntPtr cb);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern bool mrMultiwayICPResamplePoints(IntPtr mwicp, ref MRMultiwayICPSamplingParameters samplingParams);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern bool mrMultiwayICPUpdateAllPointPairs(IntPtr mwicp, IntPtr cb);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrMultiwayICPSetParams(IntPtr mwicp, ref MRICPProperties prop);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern float mrMultiWayICPGetMeanSqDistToPoint(IntPtr mwicp, double* value);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern float mrMultiWayICPGetMeanSqDistToPlane(IntPtr mwicp, double* value);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrMultiWayICPGetNumSamples(IntPtr mwicp);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrMultiWayICPGetNumActivePairs(IntPtr mwicp);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrMultiwayICPFree(IntPtr mwicp);
 
             unsafe public MultiwayICP(List<MeshOrPointsXf> objs, MultiwayICPSamplingParameters samplingParams)

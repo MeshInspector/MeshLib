@@ -1194,7 +1194,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : DistanceMapLoad::Filters )
+    for ( auto& filter : DistanceMapLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;

@@ -29,6 +29,9 @@
     <ClCompile Include="MRMeshSubdivide.c" />
     <ClCompile Include="MRMeshTopology.c" />
     <ClCompile Include="MRPointCloud.c" />
+    <ClCompile Include="MRAffineXf.c" />
+    <ClCompile Include="MRColor.c" />
+    <ClCompile Include="MRMatrix3.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
     <ClCompile Include="TestFunctions.c" />

@@ -43,10 +43,6 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
 {
     MR_TIMER
 
-    // prepare tree before they will be used during FunctionVolume evaluation
-    mesh.getAABBTreePoints();
-    mesh.getAABBTree();
-
     return FunctionVolume
     {
         .data = [params, &mesh] ( const Vector3i& pos ) -> float

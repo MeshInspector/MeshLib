@@ -255,11 +255,46 @@ jobs:
        shell: powershell
        run: aws s3 cp MeshLib.nupkg 's3://test-artifacts-git/MeshLib.nupkg' --quiet
 
+  start-unity-instance:
+    name: Start unity instance
+    runs-on: aws-micro
+    outputs:
+      instance_started: ${{ steps.set-output.outputs.instance_started }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
+      - name: Start Instance
+        run:
+          aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
+
   windows-unity-test:
     if: ${{ github.event_name == 'schedule' }} // triggered by schedule
-    needs: [ windows-build-test ]
+    needs: [ windows-build-test, check-and-start-instance ]
     uses: ./.github/workflows/unity-nuget-test.yml
     secrets: inherit
+
+  check-and-start-instance:
+    runs-on: aws-micro
+    needs: [ check-and-start-instance, windows-unity-test ]
+    if: always()
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
+      - name: Start Instance
+        run:
+          aws ec2 stop-instances --instance-ids i-0987d7b35b21ad1f1
 
   upload-distributions:
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}

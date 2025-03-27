@@ -273,7 +273,7 @@ jobs:
       - name: Start Instance
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
-        run:
+        run: |
           aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
 
   windows-unity-test:

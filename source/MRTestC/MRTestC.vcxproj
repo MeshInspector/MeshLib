@@ -29,6 +29,9 @@
     <ClCompile Include="MRMeshSubdivide.c" />
     <ClCompile Include="MRMeshTopology.c" />
     <ClCompile Include="MRPointCloud.c" />
+    <ClCompile Include="MRAffineXf.c" />
+    <ClCompile Include="MRColor.c" />
+    <ClCompile Include="MRMatrix3.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
     <ClCompile Include="TestFunctions.c" />
@@ -60,6 +63,9 @@
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestFunctions.h" />
     <ClInclude Include="TestMacros.h" />
+    <ClInclude Include="MRAffineXf.h" />
+    <ClInclude Include="MRColor.h" />
+    <ClInclude Include="MRMatrix3.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

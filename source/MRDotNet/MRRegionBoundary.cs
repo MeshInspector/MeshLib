@@ -19,7 +19,7 @@ namespace MR
 
         public class EdgeLoop : List<EdgeId>, IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             unsafe private static extern void mrEdgePathFree(MREdgeLoop* loop);
 
             unsafe internal EdgeLoop(MREdgeLoop* mrLoop)
@@ -61,13 +61,13 @@ namespace MR
 
         public class EdgeLoops : List<List<EdgeId>>, IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MREdgeLoop mrEdgeLoopsGet(IntPtr loops, ulong index);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrEdgeLoopsSize(IntPtr loops);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrEdgeLoopsFree(IntPtr loops);
 
             public EdgeLoops(IntPtr mrLoops)
@@ -116,43 +116,43 @@ namespace MR
 
         public class RegionBoundary
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrFindRightBoundary(IntPtr topology, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             unsafe private static extern MREdgeLoop* mrTrackRightBoundaryLoop(IntPtr topology, EdgeId e0, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentFacesFromVerts(IntPtr topology, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentFacesFromEdges(IntPtr topology, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentVertsFromFaces(IntPtr topology, IntPtr faces);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentVertsFromEdges(IntPtr topology, IntPtr edges);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetInnerVertsFromFaces(IntPtr topology, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetInnerVertsFromEdges(IntPtr topology, IntPtr edges);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetInnerFacesFromVerts(IntPtr topology, IntPtr verts);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentEdgesFromFaces(IntPtr topology, IntPtr faces);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentEdgesFromEdges(IntPtr topology, IntPtr edges);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetInnerEdgesFromVerts(IntPtr topology, IntPtr verts);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetInnerEdgesFromFaces(IntPtr topology, IntPtr region);
 
             /// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);

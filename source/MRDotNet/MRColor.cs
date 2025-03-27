@@ -17,11 +17,11 @@ namespace MR
                 public MRColor() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRColor mrColorFromComponents(byte r, byte g, byte b, byte a);            
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRColor mrColorFromFloatComponents(float r, float g, float b, float a);
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern uint mrColorGetUInt32( ref MRColor color );
 
             internal MRColor color_;
@@ -58,13 +58,13 @@ namespace MR
                 public IntPtr reserved;
             }
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrVertColorsNew();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrVertColorsNewSized(ulong size);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrVertColorsFree(IntPtr colors);
 
 

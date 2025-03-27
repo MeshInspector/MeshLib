@@ -116,13 +116,13 @@ namespace MR
             public MRFillHoleNicelyParams() { }
         };
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrFillHole(IntPtr mesh, EdgeId a, ref MRFillHoleParams parameters);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrFillHoles(IntPtr mesh, IntPtr pAs, ulong asNum, ref MRFillHoleParams parameters);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFillHoleNicely(IntPtr mesh, EdgeId holeEdge, ref MRFillHoleNicelyParams parameters);
 
         /** \brief Fills hole in mesh\n

@@ -66,5 +66,23 @@
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm.pkg">arm pkg</a>
       </td>
     </tr>
+    <tr>
+      <td align="center">Emscripten multi-thread (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-multithreaded.zip">zip</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Emscripten single-thread (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-singlethreaded.zip">zip</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Emscripten multi-thread Wasm64 (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-multithreaded-64bit.zip">zip</a>
+      </td>
+    </tr>
   </tbody>
 </table>

@@ -17,7 +17,7 @@ namespace MR
         };
         public class PreciseCollisionResult : IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern bool mrEdgeTriEq(ref EdgeTri a, ref EdgeTri b);
 
             [StructLayout(LayoutKind.Sequential)]
@@ -30,15 +30,15 @@ namespace MR
             };
 
             /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB(IntPtr result);
 
             /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA(IntPtr result);
 
             /// deallocates the PreciseCollisionResult object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrPreciseCollisionResultFree(IntPtr result);
 
 
@@ -119,7 +119,7 @@ namespace MR
          * \param rigidB2A rigid transformation from B-mesh space to A mesh space, NULL considered as identity transformation
          * \param anyIntersection if true then the function returns as fast as it finds any intersection
          */
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [DllImport("MRMeshC", CharSet = CharSet.Auto)]
         private static extern IntPtr mrFindCollidingEdgeTrisPrecise(ref MRMeshPart a, ref MRMeshPart b, IntPtr conv, IntPtr rigidB2A, bool anyIntersection);
 
         public static PreciseCollisionResult FindCollidingEdgeTrisPrecise(MeshPart meshA, MeshPart meshB, CoordinateConverters conv, AffineXf3f? rigidB2A = null, bool anyIntersection = false)

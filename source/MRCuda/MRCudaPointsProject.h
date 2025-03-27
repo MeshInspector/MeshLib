@@ -9,7 +9,7 @@ namespace MR::Cuda
 {
 
 // struct from MRPointCloud.cuh
-MR_BIND_IGNORE struct PointCloudDataHolder;
+struct MR_BIND_IGNORE PointCloudDataHolder;
 
 /// CUDA-backed implementation of IPointsProjector
 class MRCUDA_CLASS PointsProjector : public IPointsProjector

@@ -96,6 +96,8 @@ int main( void )
     RUN_TEST( testMrMatrix3fMulVector )
     RUN_TEST( testMrMatrix3fEqual )
 
+    // MRAffineXf
+
     RUN_TEST( testMrAffineXf3fNew );
     RUN_TEST( testMrAffineXf3fTranslation );
     RUN_TEST( testMrAffineXf3fLinear );

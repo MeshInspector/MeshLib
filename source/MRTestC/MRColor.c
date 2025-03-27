@@ -44,5 +44,5 @@ void testMrVertColorsNewSized( void ) {
     MRVertColors* vertColors = mrVertColorsNewSized(size);
     TEST_ASSERT(vertColors != NULL);
     TEST_ASSERT(vertColors->size == size); // Assuming struct contains `size` member
-    // Add cleanup for vertColors if needed
+    mrVertColorsFree(vertColors);
 }

@@ -221,7 +221,7 @@ The new window with a viewer must appear.
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
-### Installing Emscripten
+### Install Emscripten
 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).

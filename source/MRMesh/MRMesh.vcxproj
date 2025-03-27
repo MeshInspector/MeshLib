@@ -235,6 +235,7 @@
     <ClInclude Include="MRSurfaceLineOffset.h" />
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRSystemPath.h" />
+    <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />

@@ -1300,6 +1300,9 @@
     <ClInclude Include="MRClosestWeightedPoint.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRTbbTaskArenaAndGroup.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

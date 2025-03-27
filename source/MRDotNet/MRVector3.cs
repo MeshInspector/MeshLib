@@ -16,31 +16,31 @@ namespace MR
                 public MRVector3f() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fDiagonal(float a);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fPlusX();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fPlusY();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fPlusZ();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fAdd(ref MRVector3f a, ref MRVector3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fSub(ref MRVector3f a, ref MRVector3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrVector3fMulScalar(ref MRVector3f a, float b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrVector3fLength(ref MRVector3f a);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrVector3fLengthSq(ref MRVector3f a);
 
             internal MRVector3f vec_;
@@ -123,7 +123,7 @@ namespace MR
                 public MRVector3i() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3i mrVector3iDiagonal(int a);
 
             internal MRVector3i vec_;

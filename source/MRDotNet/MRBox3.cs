@@ -18,25 +18,25 @@ namespace MR
             };
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRBox3f mrBox3fNew();
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             [return: MarshalAs(UnmanagedType.I1)]
             private static extern bool mrBox3fValid(ref MRBox3f box);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrBox3fSize(ref MRBox3f box);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrBox3fDiagonal(ref MRBox3f box);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrBox3fVolume(ref MRBox3f box);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrBox3fCenter(ref MRBox3f box);
 
             MRBox3f box_;
@@ -105,22 +105,22 @@ namespace MR
             };
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRBox3i mrBox3iNew();
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             [return: MarshalAs(UnmanagedType.I1)]
             private static extern bool mrBox3iValid(ref MRBox3i box);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3i mrBox3iSize(ref MRBox3i box);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern int mrBox3iVolume(ref MRBox3i box);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3i mrBox3iCenter(ref MRBox3i box);
 
             MRBox3i box_;

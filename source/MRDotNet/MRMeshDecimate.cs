@@ -204,15 +204,15 @@ namespace MR
             public MRResolveMeshDegenParameters() { }
         };
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern DecimateResult mrDecimateMesh(IntPtr mesh, ref MRDecimateParameters settings);
 
         /// Splits too long and eliminates too short edges from the mesh
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
         private static extern bool mrRemesh(IntPtr mesh, ref MRRemeshParameters settings);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
         private static extern bool mrResolveMeshDegenerations(IntPtr mesh, ref MRResolveMeshDegenParameters settings );
 

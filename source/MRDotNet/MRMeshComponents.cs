@@ -33,7 +33,7 @@ namespace MR
 
                 public int NumComponents = 0;
 
-                [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+                [DllImport("MRMeshC", CharSet = CharSet.Auto)]
                 unsafe private static extern void mrMeshComponentsAllComponentsMapFree(MRMeshComponentsMap* map);
 
                 unsafe internal MeshComponentsMap(MRMeshComponentsMap mrMap)
@@ -95,22 +95,22 @@ namespace MR
                 public MRMeshRegions() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrMeshComponentsGetComponent(ref MRMeshPart mp, FaceId id, FaceIncidence incidence, IntPtr cb);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern IntPtr mrMeshComponentsGetLargestComponent(ref MRMeshPart mp, FaceIncidence incidence, IntPtr cb, float minArea, int* numSmallerComponents);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrMeshComponentsGetLargeByAreaComponents(ref MRMeshPart mp, float minArea, IntPtr cb);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMeshComponentsMap mrMeshComponentsGetAllComponentsMap(ref MRMeshPart mp, FaceIncidence incidence);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRMeshRegions mrMeshComponentsGetLargeByAreaRegions(ref MRMeshPart mp, MRFace2RegionMap* face2RegionMap, int numRegions, float minArea);
 
             /// gets all connected components of mesh part as

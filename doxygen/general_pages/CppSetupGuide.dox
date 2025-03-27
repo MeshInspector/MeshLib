@@ -217,9 +217,9 @@ The new window with a viewer must appear.
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-\subsection CppSetupWASM WebAssembly/Emscripten
+\subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 
-MeshLib can also be built and run for WebAssembly (WASM) using Emscripten.
+This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
 ### Installing Emscripten
 

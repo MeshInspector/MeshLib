@@ -16,7 +16,9 @@
 
 #ifndef _WIN32
   #ifndef MRVIEWER_NO_GTK
-    #include <gtk/gtk.h>
+    #include <gtk/gtkfilechooserdialog.h>
+    #include <gtk/gtkfilechoosernative.h>
+    #include <gtk/gtkmain.h>
   #endif
 #else
 #  define GLFW_EXPOSE_NATIVE_WIN32

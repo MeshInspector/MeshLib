@@ -2677,8 +2677,8 @@ void Viewer::enableGlobalHistory( bool on )
         globalHistoryStore_ = std::make_shared<HistoryStore>();
         globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
         {
-            if ( type == HistoryStore::ChangeType::Undo ||
-                 type == HistoryStore::ChangeType::Redo ||
+            if ( type == HistoryStore::ChangeType::PostUndo ||
+                 type == HistoryStore::ChangeType::PostRedo ||
                  type == HistoryStore::ChangeType::AppendAction )
                 makeTitleFromSceneRootPath();
         } );

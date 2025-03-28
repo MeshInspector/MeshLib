@@ -10,7 +10,7 @@ gcc-c++
 gdcm-devel
 glfw-devel
 gtest-devel
-gtk3-devel
+gtkmm30-devel
 hidapi-devel
 ilmbase-devel
 jsoncpp-devel

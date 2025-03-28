@@ -1,4 +1,4 @@
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"

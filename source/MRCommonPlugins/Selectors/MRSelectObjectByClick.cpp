@@ -1,7 +1,7 @@
 #include "MRSelectObjectByClick.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRViewer.h"
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"

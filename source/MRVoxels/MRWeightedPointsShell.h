@@ -23,6 +23,9 @@ struct WeightedPointsToDistanceVolumeParams
 /// makes FunctionVolume representing minimal distance to weighted points
 [[nodiscard]] MRVOXELS_API FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud, const WeightedPointsToDistanceVolumeParams& params );
 
+/// makes FunctionVolume representing minimal distance to mesh with weighted vertices
+[[nodiscard]] MRVOXELS_API FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params );
+
 struct WeightedPointsShellParameters
 {
     /// build iso-surface of minimal distance to points corresponding to this value
@@ -48,5 +51,10 @@ struct WeightedPointsShellParameters
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParameters& params );
+
+/// consider a mesh where each vertex has additive weight, and this weight is linearly interpolated in mesh triangles,
+/// and the distance to a point is considered equal to (euclidean distance - weight),
+/// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
+[[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params );
 
 } //namespace MR

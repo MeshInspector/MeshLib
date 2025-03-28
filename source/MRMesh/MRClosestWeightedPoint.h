@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRId.h"
+#include "MRMeshTriPoint.h"
 #include <cfloat>
 
 namespace MR
@@ -18,6 +18,19 @@ struct PointAndDistance
     /// check for validity, otherwise there is no point closer than maxDistance
     [[nodiscard]] bool valid() const { return vId.valid(); }
     [[nodiscard]] explicit operator bool() const { return vId.valid(); }
+};
+
+struct MeshPointAndDistance
+{
+    /// a point on mesh in barycentric representation
+    MeshTriPoint mtp;
+
+    /// the distance from input location to mtp considering point's weight
+    float dist = 0;
+
+    /// check for validity, otherwise there is no point closer than maxDistance
+    [[nodiscard]] bool valid() const { return mtp.valid(); }
+    [[nodiscard]] explicit operator bool() const { return mtp.valid(); }
 };
 
 struct DistanceFromWeightedPointsParams
@@ -48,5 +61,11 @@ struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParam
 /// finds the point with minimal distance to given 3D location
 [[nodiscard]] MRMESH_API PointAndDistance findClosestWeightedPoint( const Vector3f& loc,
     const AABBTreePoints& tree, const DistanceFromWeightedPointsComputeParams& params );
+
+/// consider a mesh where each vertex has additive weight, and this weight is linearly interpolated in mesh triangles,
+/// and the distance to a point is considered equal to (euclidean distance - weight),
+/// finds the point on given mesh with minimal distance to given 3D location
+[[nodiscard]] MRMESH_API MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
+    const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params );
 
 } //namespace MR

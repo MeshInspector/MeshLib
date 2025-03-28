@@ -691,6 +691,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 class IPointsToMeshProjector;
+class IPointsProjector;
 
 namespace MeshBuilder
 {

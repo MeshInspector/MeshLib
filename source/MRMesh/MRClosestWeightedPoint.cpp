@@ -152,9 +152,8 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         return res;
 
     const Vector3d locd( loc );
-    findTrisInBall( mesh, { loc, sqr( ballRadiusAssessor.maxSearchRadius() ) }, [&]( const MeshProjectionResult & found, Ball3f & ball )
+    findBoxedTrisInBall( mesh, { loc, sqr( ballRadiusAssessor.maxSearchRadius() ) }, [&]( FaceId f, Ball3f & ball )
     {
-        auto f = found.proj.face;
         auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight );
         if ( !c )
             return Processing::Continue;

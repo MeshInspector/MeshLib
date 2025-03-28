@@ -1,6 +1,6 @@
 #include "MROpenRawVoxelsPlugin.h"
 #ifndef MESHLIB_NO_VOXELS
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"

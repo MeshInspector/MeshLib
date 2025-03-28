@@ -46,8 +46,8 @@ ENDIF()
 
 IF(NOT MRVIEWER_NO_GTK)
   find_package(PkgConfig REQUIRED)
-  pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
-  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtkmm)
+  pkg_check_modules(gtk REQUIRED IMPORTED_TARGET gtk+-3.0)
+  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtk)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)

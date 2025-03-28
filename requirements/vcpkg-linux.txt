@@ -17,6 +17,7 @@ gdcm
 glad
 glfw3
 gtest
+gtk3
 hidapi
 jsoncpp
 libe57format

@@ -6,7 +6,7 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf-archive libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel mesa-libGL-devel perl-core \
+        autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
         && \
     dnf clean all
 

@@ -53,14 +53,6 @@ namespace MR
 namespace
 {
 
-// needed to be able to call progress bar from any point, not only from ImGui frame scope
-struct DeferredInit
-{
-    int taskCount;
-    std::string name;
-    std::function<void ()> postInit;
-};
-
 class ProgressBarImpl
 {
 public:
@@ -69,7 +61,7 @@ public:
     ProgressBarImpl();
     ~ProgressBarImpl();
 
-    void initialize_();
+    void initialize_( std::string title, int taskCount, std::function<void()> postInit);
 
     // cover task execution with try catch block (in release only)
     // if catches exception shows error in main thread overriding user defined main thread post-processing
@@ -92,15 +84,16 @@ public:
     std::thread thread_;
     std::function<void()> onFinish_;
 
-    std::unique_ptr<DeferredInit> deferredInit_;
-
     std::atomic<bool> allowCancel_;
     std::atomic<bool> canceled_;
     std::atomic<bool> finished_;
     ImGuiID setupId_ = ImGuiID( -1 );
 
     bool isOrdered_{ false };
-    bool isInit_{ false };
+
+    // needed to be able to call progress bar from any point, not only from ImGui frame scope
+    bool deferredOpenPopup_{ false };
+
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
 
@@ -126,18 +119,16 @@ ProgressBarImpl::~ProgressBarImpl()
         thread_.join();
 }
 
-void ProgressBarImpl::initialize_()
+void ProgressBarImpl::initialize_( std::string title, int taskCount, std::function<void()> postInit)
 {
-    assert( deferredInit_ );
-
     if ( finished_ && thread_.joinable() )
         thread_.join();
 
-    ImGui::CloseCurrentPopup();
+    deferredOpenPopup_ = true;
 
     progress_ = 0.0f;
 
-    taskCount_ = deferredInit_->taskCount;
+    taskCount_ = taskCount;
     currentTask_ = 0;
     if ( taskCount_ == 1 )
         currentTask_ = 1;
@@ -148,17 +139,13 @@ void ProgressBarImpl::initialize_()
 
     {
         std::unique_lock lock( mutex_ );
-        title_ = deferredInit_->name;
+        title_ = std::move( title );
     }
 
-    ImGui::OpenPopup( setupId_ );
-    frameRequest_.reset();
-
+    frameRequest_.reset();    
     operationStartTime_ = std::chrono::system_clock::now();
-    if ( deferredInit_->postInit )
-        deferredInit_->postInit();
-
-    deferredInit_.reset();
+    if ( postInit )
+        postInit();
 }
 
 bool ProgressBarImpl::tryRun_( const std::function<bool ()>& task )
@@ -223,22 +210,23 @@ void setup( float scaling )
 {
     auto& instance = ProgressBarImpl::ProgressBarImpl::instance();
 
-    if ( instance.deferredInit_ )
-        instance.initialize_();
-
-    constexpr size_t bufSize = 256;
-    char buf[bufSize];
-
+    if ( instance.deferredOpenPopup_ && instance.setupId_ != ImGuiID( -1 ) )
     {
-        std::unique_lock lock( instance.mutex_ );
-        snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
+        instance.deferredOpenPopup_ = false;
+        bool thisOpen = ImGui::IsPopupOpen( instance.setupId_, 0 );
+        bool isAnyOpen = ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+        if ( isAnyOpen && !thisOpen )
+            ImGui::CloseCurrentPopup();
+        if ( !thisOpen )
+            ImGui::OpenPopup( instance.setupId_ );
     }
-    instance.setupId_ = ImGui::GetID( buf );
+
+    instance.setupId_ = ImGui::GetID( "###GlobalProgressBarPopup" );
     const Vector2f windowSize( 440.0f * scaling, 144.0f * scaling );
     auto& viewer = getViewerInstance();
     ImGui::SetNextWindowPos( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    if ( ImGui::BeginModalNoAnimation( "###GlobalProgressBarPopup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         UI::TestEngine::pushTree( "ProgressBar" );
         MR_FINALLY{ UI::TestEngine::popTree(); };
@@ -261,8 +249,7 @@ void setup( float scaling )
             {
                 ImGui::Text( "%s :", instance.title_.c_str() );
                 ImGui::SameLine();
-                snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), (int)instance.currentTask_, (int)instance.taskCount_ );
-                ImGui::Text( "%s", buf );
+                ImGui::Text( "%s (%d/%d)\n", instance.taskName_.c_str(), ( int )instance.currentTask_, ( int )instance.taskCount_ );
             }
             else
             {
@@ -316,18 +303,19 @@ void setup( float scaling )
                 pushNotification( { .header = fmt::format( "{:.1f} sec", time < 5.e-3f ? 0.f : time ),
                                     .text = instance.title_, .type = NotificationType::Time,.tags = NotificationTags::Report } );
             }
+            instance.isOrdered_ = false;
+            instance.closeDialogNextFrame_ = true;
+            // important to be after `isOrdered_=false` and `closeDialogNextFrame_=true`
+            // to handle progress bar ordered in `onFinish_`
             if ( instance.onFinish_ )
             {
                 instance.onFinish_();
                 instance.onFinish_ = {};
             }
-            instance.isOrdered_ = false;
-            instance.closeDialogNextFrame_ = true;
             getViewerInstance().incrementForceRedrawFrames();
         }
         ImGui::EndPopup();
     }
-    instance.isInit_ = true;
 }
 
 void onFrameEnd()
@@ -365,12 +353,6 @@ void order( const char* name, const std::function<void()>& task, int taskCount )
 void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
-    if ( !instance.isInit_ )
-    {
-        auto res = task();
-        res();
-        return;
-    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
@@ -408,11 +390,7 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 #endif
     };
 
-    instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {
-        .taskCount = taskCount,
-        .name = name,
-        .postInit = postInit,
-    } );
+    instance.initialize_( name, taskCount, postInit );
 
     getViewerInstance().incrementForceRedrawFrames();
 }
@@ -420,9 +398,6 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
-
-    if ( !instance.isInit_ )
-        return;
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
@@ -460,11 +435,7 @@ void orderWithManualFinish( const char* name, std::function<void ()> task, int t
 #endif
     };
 
-    instance.deferredInit_ = std::make_unique<DeferredInit>( DeferredInit {
-        .taskCount = taskCount,
-        .name = name,
-        .postInit = postInit,
-    } );
+    instance.initialize_( name, taskCount, postInit );
 
     getViewerInstance().incrementForceRedrawFrames();
 }

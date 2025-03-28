@@ -33,6 +33,6 @@ public:
 
 /// registers plugin on module loading, and unregister plugin on module unloading
 #define MR_REGISTER_RIBBON_ITEM(pluginType) \
-    static MR::RibbonMenuItemAdderT<pluginType> ribbonMenuItemAdder##pluginType##_;
+    static RibbonMenuItemAdderT<pluginType> ribbonMenuItemAdder##pluginType##_;
 
 } //namespace MR

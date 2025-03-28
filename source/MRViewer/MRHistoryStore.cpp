@@ -80,10 +80,11 @@ bool HistoryStore::undo()
     if ( stack_[firstRedoIndex_ - 1] )
     {
         spdlog::info( "History action undo: \"{}\"", stack_[firstRedoIndex_ - 1]->name() );
+        changedSignal( *this, ChangeType::PreUndo );
         stack_[firstRedoIndex_ - 1]->action( HistoryAction::Type::Undo );
     }
     --firstRedoIndex_;
-    changedSignal( *this, ChangeType::Undo );
+    changedSignal( *this, ChangeType::PostUndo );
     return true;
 }
 
@@ -100,10 +101,11 @@ bool HistoryStore::redo()
     if ( stack_[firstRedoIndex_] )
     {
         spdlog::info( "History action redo: \"{}\"", stack_[firstRedoIndex_]->name() );
+        changedSignal( *this, ChangeType::PreRedo );
         stack_[firstRedoIndex_]->action( HistoryAction::Type::Redo );
     }
     ++firstRedoIndex_;
-    changedSignal( *this, ChangeType::Redo );
+    changedSignal( *this, ChangeType::PostRedo );
     return true;
 }
 

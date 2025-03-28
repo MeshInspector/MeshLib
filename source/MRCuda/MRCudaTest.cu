@@ -1,6 +1,4 @@
 ﻿#include "MRCudaTest.cuh"
-#include "device_launch_parameters.h"
-
 
 namespace MR
 {

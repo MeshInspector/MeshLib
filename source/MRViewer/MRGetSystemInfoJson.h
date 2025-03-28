@@ -1,6 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
-#include "MRPch/MRJson.h"
+#include <json/forwards.h>
 
 namespace MR
 {

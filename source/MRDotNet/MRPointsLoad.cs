@@ -8,10 +8,10 @@ namespace MR
     {
         public class PointsLoad
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointsLoadFromAnySupportedFormat(string filename, ref MRPointsLoadSettings settings, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
 
             /// loads point cloud from file of any supported format

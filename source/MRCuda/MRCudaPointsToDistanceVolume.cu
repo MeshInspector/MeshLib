@@ -1,5 +1,4 @@
 #include "MRCudaPointsToDistanceVolume.cuh"
-#include "device_launch_parameters.h"
 
 namespace MR
 {
@@ -64,7 +63,8 @@ namespace Cuda
 
             if ( node.leaf() )
             {
-                auto [first, last] = node.getLeafPointRange();
+                auto range = node.getLeafPointRange();
+                auto first = range.x, last = range.y;
                 for ( int i = first; i < last; ++i )
                 {
                     auto coord = orderedPoints[i].coord;

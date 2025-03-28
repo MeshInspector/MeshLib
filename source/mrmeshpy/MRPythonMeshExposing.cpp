@@ -263,7 +263,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "volume", &Mesh::volume, pybind11::arg( "region" ) = nullptr,
             "returns volume of closed mesh region, if region is not closed DBL_MAX is returned\n"
             "if region is nullptr - whole mesh is region" ).
-        def( "pack", &Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
+        def( "pack", ( void( Mesh::* )( FaceMap *, VertMap *, WholeEdgeMap *, bool ) )&Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
         def( "packOptimally", ( PackMapping( Mesh::* )( bool ) ) &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true,

@@ -57,10 +57,11 @@ Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float ra
             PointAccumulator plane;
             Vector3f normalSum;
             findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], sqr( radius_ ) },
-                              [&] ( VertId v1, const Vector3f& )
+                              [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
             {
+                const auto v1 = found.vId;
                 if ( !contains( validPoints_, v1 ) )
-                    return;
+                    return Processing::Continue;
                 if ( v1 != v0 )
                 {
                     ++count;
@@ -76,6 +77,7 @@ Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float ra
                     else
                         unionFindStructure_.unite( v0, v1 );
                 }
+                return Processing::Continue;
             } );
             if ( calcWeaklyConnectedCached )
                 weaklyConnectedStat_[int( v0 )] = uint8_t( std::min( count, 255 ) );
@@ -107,12 +109,14 @@ Expected<void> OutliersDetector::prepare( const PointCloud& pointCloud, float ra
         for ( auto v0 : *lastPassVerts )
         {
             findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], sqr( radius_ ) },
-                              [&] ( VertId v1, const Vector3f& )
+                              [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
             {
+                const auto v1 = found.vId;
                 if ( v0 < v1 && contains( validPoints_, v1 ) )
                 {
                     unionFindStructure_.unite( v0, v1 );
                 }
+                return Processing::Continue;
             } );
             ++counterProcessedVerts;
             if ( !reportProgress( subProgress, counterProcessedVerts / counterMax, counterProcessedVerts, counterDivider ) )

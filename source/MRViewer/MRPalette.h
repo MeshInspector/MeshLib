@@ -89,7 +89,7 @@ public:
     // return color according val and setting filter type
     // Discrete: returns color for given value
     // Linear: get interpolated color from the init vector
-    MRVIEWER_API Color getColor( float val );
+    MRVIEWER_API Color getColor( float val ) const;
 
     const MeshTexture& getTexture() const
     {

@@ -8,20 +8,21 @@
 namespace MR
 {
 
-/// This function constructs history action and appends it to viewer's global history store
-template<class HistoryActionType, typename... Args>
-void AppendHistory( Args&&... args )
-{
-    static_assert( std::is_base_of_v<HistoryAction, HistoryActionType> );
-    if ( const auto & s = HistoryStore::getViewerInstance() )
-        s->appendAction( std::make_shared<HistoryActionType>( std::forward<Args>( args )... ) );
-}
-
-/// This function appends given history action to viewer's global history store
+/// Appends given history action to viewer's global history store
 inline void AppendHistory( std::shared_ptr<HistoryAction> action )
 {
     if ( const auto & s = HistoryStore::getViewerInstance() )
         s->appendAction( std::move( action ) );
+}
+
+/// Constructs history action from given arguments, than appends it to viewer's global history store
+template<class HistoryActionType, typename... Args>
+void AppendHistory( Args&&... args )
+{
+    static_assert( std::is_base_of_v<HistoryAction, HistoryActionType> );
+    // even if there is no HistoryStore::getViewerInstance(), we still need to make new action,
+    // because some actions make modifications visible outside in their constructors
+    AppendHistory( std::make_shared<HistoryActionType>( std::forward<Args>( args )... ) );
 }
 
 // if undo history is enabled, creates given action in the constructor;

@@ -355,6 +355,8 @@ std::filesystem::path GetWindowsInstallDirectory()
 std::string GetCpuId()
 {
 #ifdef __EMSCRIPTEN__
+    if constexpr ( sizeof( void* ) == 8 )
+        return "Web Browser (Memory64 enabled)";
     return "Web Browser";
 #elif defined(__APPLE__)
     char CPUBrandString[0x40] = {};

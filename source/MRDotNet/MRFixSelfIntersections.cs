@@ -42,15 +42,15 @@ namespace MR
                 public MRFixSelfIntersectionsSettings() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrFixSelfIntersectionsGetFaces(IntPtr mesh, IntPtr cb, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrFixSelfIntersectionsFix(IntPtr mesh, ref MRFixSelfIntersectionsSettings settings, ref IntPtr errorString);
 
             /// Find all self-intersections faces component-wise

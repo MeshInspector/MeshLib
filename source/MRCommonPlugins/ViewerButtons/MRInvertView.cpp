@@ -1,5 +1,4 @@
-#include <MRViewer/MRRibbonMenuItem.h>
-#include <MRViewer/MRRibbonSchema.h>
+#include <MRViewer/MRRibbonRegisterItem.h>
 #include <MRViewer/MRViewport.h>
 
 namespace MR

@@ -16,6 +16,9 @@ Example of using Free Form deformation of the mesh
 - <b class="tab-title">C</b>
 \include FreeFormDeformation.dox.c
 
+- <b class="tab-title">C#</b>
+\include FreeFormDeformation.dox.cs
+
 </div>
 
  */

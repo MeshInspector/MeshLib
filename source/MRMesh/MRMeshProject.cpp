@@ -132,7 +132,7 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
 {
     const auto & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
@@ -147,48 +147,28 @@ void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& f
         return tree.nodes()[n].box.getDistanceSq( ball.center );
     };
 
-    auto addSubTask = [&]( NodeId n, float boxDistSq )
+    auto addSubTask = [&]( NodeId n )
     {
-        if ( boxDistSq < ball.radiusSq ) // ball intersects the box
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
+        assert( stackSize < MaxStackSize );
+        subtasks[stackSize++] = n;
     };
 
-    addSubTask( tree.rootNodeId(), boxDistSq( tree.rootNodeId() ) );
+    addSubTask( tree.rootNodeId() );
 
     while( stackSize > 0 )
     {
         const auto n = subtasks[--stackSize];
         const auto & node = tree[n];
-        if ( !( boxDistSq( n ) < ball.radiusSq ) ) // check again in case the ball has changed
+        if ( !( boxDistSq( n ) < ball.radiusSq ) )
             continue;
 
         if ( node.leaf() )
         {
             const auto face = node.leafId();
-            if ( validFaces && !validFaces( face ) )
-                continue;
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            Vector3f a, b, c;
-            mp.mesh.getTriPoints( face, a, b, c );
-            
-            // compute the closest point in double-precision, because float might be not enough
-            const auto [projD, baryD] = closestPointInTriangle( Vector3d( ball.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
-            const Vector3f proj( projD );
-            const MeshProjectionResult candidate
-            {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-                .distSq = ( proj - ball.center ).lengthSq()
-            };
-            if ( candidate.distSq < ball.radiusSq )
-            {
-                if ( foundCallback( candidate, ball ) == Processing::Stop )
-                    break;
-            }
+            if ( foundCallback( face, ball ) == Processing::Stop )
+                break;
             continue;
         }
         
@@ -197,15 +177,39 @@ void findTrisInBall( const MeshPart & mp, Ball3f ball, const FoundTriCallback& f
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
         if ( lDistSq <= rDistSq )
         {
-            addSubTask( node.r, rDistSq );
-            addSubTask( node.l, lDistSq );
+            addSubTask( node.r );
+            addSubTask( node.l );
         }
         else
         {
-            addSubTask( node.l, lDistSq );
-            addSubTask( node.r, rDistSq );
+            addSubTask( node.l );
+            addSubTask( node.r );
         }
     }
+}
+
+void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+{
+    findBoxedTrisInBall( mp, ball, [&]( FaceId face, Ball3f & ball )
+    {
+        if ( validFaces && !validFaces( face ) )
+            return Processing::Continue;
+        Vector3f a, b, c;
+        mp.mesh.getTriPoints( face, a, b, c );
+            
+        // compute the closest point in double-precision, because float might be not enough
+        const auto [projD, baryD] = closestPointInTriangle( Vector3d( ball.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
+        const Vector3f proj( projD );
+        const MeshProjectionResult candidate
+        {
+            .proj = PointOnFace{ face, proj },
+            .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
+            .distSq = ( proj - ball.center ).lengthSq()
+        };
+        if ( candidate.distSq < ball.radiusSq )
+            return foundCallback( candidate, ball );
+        return Processing::Continue;
+    } );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

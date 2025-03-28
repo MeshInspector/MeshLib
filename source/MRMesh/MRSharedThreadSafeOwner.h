@@ -8,8 +8,6 @@
 namespace MR
 {
 
-struct TaskGroup;
-
 /// \addtogroup AABBTreeGroup
 /// \{
 
@@ -46,7 +44,7 @@ private:
     std::shared_ptr<T> obj_;
 
     /// not-null during creation of owned instance only
-    std::shared_ptr<TaskGroup> construction_;
+    std::shared_ptr<TbbTaskArenaAndGroup> construction_;
 };
 
 /// \}

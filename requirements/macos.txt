@@ -4,7 +4,7 @@ cpr
 fmt
 gdcm
 glfw
-gtkmm3
+gtk+3
 hidapi
 jpeg-turbo
 jsoncpp

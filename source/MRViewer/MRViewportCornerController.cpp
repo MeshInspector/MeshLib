@@ -10,6 +10,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRVector.h"
 #include "MRMesh/MRImageLoad.h"
+#include "MRMesh/MR2DContoursTriangulation.h"
 
 namespace MR
 {
@@ -150,6 +151,49 @@ Mesh makeCornerControllerMesh( float size, float cornerRatio /*= 0.15f */ )
 
     outMesh.topology = MeshBuilder::fromTriangles( t );
     return outMesh;
+}
+
+Mesh makeCornerControllerRotationArrowMesh( float size, const Vector2f& shift, bool ccw )
+{
+    Contours2d conts;
+    auto& cont = conts.emplace_back();
+    const int cAngleSteps = 10;
+    cont.resize( 2 * cAngleSteps + 4 );
+    double r1 = 1.2 * size;
+    double r2 = 1.4 * size;
+    double r3 = 0.9 * size;
+    Vector2d center = Vector2d( shift ) - Vector2d( r1, 0.0 );
+
+    double currentAngle = 0.0f;
+
+    double angleStep = PI * 0.25 / float( cAngleSteps - 1 );    
+    for ( int i = 0; i < cAngleSteps; ++i )
+    {
+        currentAngle = i * angleStep;
+        cont[i] = center + Vector2d( r1 * std::cos( currentAngle ), r1 * std::sin( currentAngle ) );
+    }
+    cont[cAngleSteps] = center + Vector2d( r2 * std::cos( currentAngle ), r2 * std::sin( currentAngle ) );
+    auto arrowR = ( r1 + r3 + 0.15 * size ) * 0.5;
+    auto arrowAng = PI / 2.5;
+    cont[cAngleSteps + 1] = center + Vector2d( arrowR * std::cos( arrowAng ), arrowR * std::sin( arrowAng ) );
+    cont[cAngleSteps + 2] = center + Vector2d( ( r3 - r2 + r1 ) * std::cos( currentAngle ), ( r3 - r2 + r1 ) * std::sin( currentAngle ) );
+    for ( int i = 0; i < cAngleSteps; ++i )
+    {
+        currentAngle = ( cAngleSteps - i - 1 ) * angleStep;
+        cont[cAngleSteps + 3 + i] = center + Vector2d( r3 * std::cos( currentAngle ), r3 * std::sin( currentAngle ) );
+    }
+    cont.back() = cont.front();
+    Mesh mesh = PlanarTriangulation::triangulateContours( conts );
+    for ( auto& p : mesh.points )
+        p.z = -2 * size;
+
+    if ( ccw )
+        return mesh;
+
+    for ( auto& p : mesh.points )
+        p.y = 2 * shift.y - p.y;
+    mesh.topology.flipOrientation();
+    return mesh;
 }
 
 VertUVCoords makeCornerControllerUVCoords( float cornerRatio /*= 0.2f */ )
@@ -476,6 +520,13 @@ void updateCurrentViewByControllerRegion( RegionId rId )
         vp.cameraLookAlong( { -1,-1,-1 }, { -1,-1,2 } );
         break;
 
+    // side axes rotation
+    case int( SideRegions::CCWArrow ): // rotation
+        vp.transformView( AffineXf3f::xfAround( Matrix3f::rotation( vp.getBackwardDirection(), PI2_F ), vp.getCameraPoint() ) );
+        break;
+    case int( SideRegions::CWArrow ) : // rotation other way
+        vp.transformView( AffineXf3f::xfAround( Matrix3f::rotation( vp.getBackwardDirection(), -PI2_F ), vp.getCameraPoint() ) );
+        break;
     default:
         return;
     }

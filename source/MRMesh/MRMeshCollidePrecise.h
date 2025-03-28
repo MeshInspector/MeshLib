@@ -41,6 +41,15 @@ struct PreciseCollisionResult
 MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
 
+/**
+ * \brief finds all pairs of colliding edges and triangle within one mesh
+ * \param anyIntersection if true then the function returns as fast as it finds any intersection
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation, might be useful to obtain same result as in boolean operation would for mesh B
+ * \param aVertsSize used in float to int conversion, might be useful to obtain same result as in boolean operation would for mesh B
+ */
+MRMESH_API std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp,
+    ConvertToIntVector conv, bool anyIntersection = false, const AffineXf3f* rigidB2A = nullptr, int aVertSizes = 0 );
+
 /// finds all intersections between every given edge from A and given triangles from B
 MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<EdgeId> & edgesA,

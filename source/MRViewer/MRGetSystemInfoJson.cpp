@@ -6,6 +6,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
 #ifdef _WIN32

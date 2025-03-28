@@ -99,8 +99,8 @@ public:
 
     virtual const std::string& uiName() const override { return plugin_name; }
 
-    // deferred set plugin name that will be used for dialog in `ImGuiBeginWindow_`
-    MRVIEWER_API void setUINameDeferred( std::string name );
+    // set plugin name that will be used for dialog in `ImGuiBeginWindow_`
+    MRVIEWER_API void setUIName( std::string name );
 
     MRVIEWER_API StatePluginTabs getTab() const;
 

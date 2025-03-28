@@ -984,10 +984,8 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
         if ( !obj )
             continue;
         auto cloneObj = obj->cloneTree();
-        AppendHistory<ChangeObjectSelectedAction>( "unselect base obj", obj );
-        obj->select( false );
-        AppendHistory<ChangeObjectVisibilityAction>( "make base obj invisible", obj );
-        obj->setVisible( false );
+        AppendHistory<ChangeObjectSelectedAction>( "unselect original", obj, false );
+        AppendHistory<ChangeObjectVisibilityAction>( "hide original", obj, ViewportMask() );
         auto name = obj->name();
         if ( std::regex_match( name, pattern ) )
         {
@@ -1016,6 +1014,7 @@ void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selected
 
 void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
 {
+    SCOPED_HISTORY( "Clone Selection" );
     std::shared_ptr<VisualObject> newObj;
     std::string name;
     if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
@@ -1033,8 +1032,12 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
         name = "ObjectPoints";
     }
 
+    AppendHistory<ChangeObjectSelectedAction>( "unselect original", object, false );
+    AppendHistory<ChangeObjectVisibilityAction>( "hide original", object, ViewportMask() );
+
     newObj->setName( object->name() + " Partial" );
     newObj->setXf( object->xf() );
+    newObj->select( true );
     AppendHistory<ChangeSceneAction>( "Selection to New object: add " + name, newObj, ChangeSceneAction::Type::AddObject );
     object->parent()->addChild( newObj );
 }

@@ -5,8 +5,6 @@
 #include "MRAABBTreePolyline.h"
 #include "MRIntersectionPrecomputes2.h"
 #include "MRRayBoxIntersection2.h"
-#include "MRGTest.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -41,7 +39,6 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
     {
         if ( currentNode >= maxTreeDepth ) // max depth exceeded
         {
-            spdlog::critical( "Maximal AABBTree depth reached!" );
             assert( false );
             break;
         }
@@ -79,28 +76,32 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
 }
 
 template<typename T>
-std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline2& polyline, const Line2<T>& line,
-    T rayStart, T rayEnd, const IntersectionPrecomputes2<T>& prec, bool closestIntersect )
+void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, const PolylineIntersectionCallback2<T>& callback,
+    T rayStart, T rayEnd, const IntersectionPrecomputes2<T>& prec )
 {
-    constexpr int maxTreeDepth = 32;
+    if ( !callback )
+    {
+        assert( false );
+        return;
+    }
+
     const auto& tree = polyline.getAABBTree();
-    std::optional<PolylineIntersectionResult2> res;
-    if( tree.nodes().empty() )
-        return res;
+    if ( tree.nodes().empty() )
+        return;
 
     T s = rayStart, e = rayEnd;
     if( !rayBoxIntersect( Box2<T>{ tree[tree.rootNodeId()].box }, line.p, s, e, prec ) )
-        return res;
+        return;
 
+    constexpr int maxTreeDepth = 32;
     std::pair< NodeId,T> nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
-    while( currentNode >= 0 && ( closestIntersect || !res ) )
+    while( currentNode >= 0 )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {
-            spdlog::critical( "Maximal AABBTree depth reached!" );
             assert( false );
             break;
         }
@@ -112,15 +113,12 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline
             {
                 EdgeId edge = node.leafId();
                 auto segm = polyline.edgeSegment( edge );
-                T segmPos = 0, linePos = 0;
-                if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, &segmPos, &linePos )
-                    && linePos < rayEnd && linePos > rayStart )
+                T segmPos = 0, rayPos = 0;
+                if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, &segmPos, &rayPos )
+                    && rayPos < rayEnd && rayPos > rayStart )
                 {
-                    res = PolylineIntersectionResult2{
-                        .edgePoint = EdgePoint{ edge, float( segmPos ) },
-                        .distanceAlongLine = float( linePos )
-                    };
-                    rayEnd = linePos;
+                    if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayEnd ) == Processing::Stop )
+                        return;
                 }
             }
             else
@@ -157,6 +155,47 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline
             }
         }
     }
+}
+
+void rayPolylineIntersectAll( const Polyline2& polyline, const Line2f& line, const PolylineIntersectionCallback2f& callback,
+    float rayStart, float rayEnd, const IntersectionPrecomputes2<float>* prec )
+{
+    if( prec )
+    {
+        return rayPolylineIntersectAll_<float>( polyline, line, callback, rayStart, rayEnd, *prec );
+    }
+    else
+    {
+        const IntersectionPrecomputes2<float> precNew( line.d );
+        return rayPolylineIntersectAll_<float>( polyline, line, callback, rayStart, rayEnd, precNew );
+    }
+}
+
+void rayPolylineIntersectAll( const Polyline2& polyline, const Line2d& line, const PolylineIntersectionCallback2d& callback,
+    double rayStart, double rayEnd, const IntersectionPrecomputes2<double>* prec )
+{
+    if( prec )
+    {
+        return rayPolylineIntersectAll_<double>( polyline, line, callback, rayStart, rayEnd, *prec );
+    }
+    else
+    {
+        const IntersectionPrecomputes2<double> precNew( line.d );
+        return rayPolylineIntersectAll_<double>( polyline, line, callback, rayStart, rayEnd, precNew );
+    }
+}
+
+template<typename T>
+std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline2& polyline, const Line2<T>& line,
+    T rayStart, T rayEnd, const IntersectionPrecomputes2<T>& prec, bool closestIntersect )
+{
+    std::optional<PolylineIntersectionResult2> res;
+    rayPolylineIntersectAll_<T>( polyline, line, [&res, closestIntersect]( const EdgePoint & polylinePoint, T rayPos, T & currRayEnd )
+    {
+        res = { .edgePoint = polylinePoint, .distanceAlongLine = float( rayPos ) };
+        currRayEnd = rayPos;
+        return closestIntersect ? Processing::Stop : Processing::Continue;
+    }, rayStart, rayEnd, prec );
     return res;
 }
 
@@ -186,21 +225,6 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect( const Polyline2
         const IntersectionPrecomputes2<double> precNew( line.d );
         return rayPolylineIntersect_<double>( polyline, line, rayStart, rayEnd, precNew, closestIntersect );
     }
-}
-
-TEST( MRMesh, Polyline2RayIntersect )
-{
-    Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
-    Polyline2 polyline;
-    polyline.addFromPoints( as, 2, false );
-
-    Line2f line( { 0, 2 }, { 2, -2 } );
-
-    auto res = rayPolylineIntersect( polyline, line );
-    ASSERT_TRUE( !!res );
-    ASSERT_EQ( res->edgePoint.e, 0_e );
-    ASSERT_EQ( res->edgePoint.a, 1.0f / 8 );
-    ASSERT_EQ( res->distanceAlongLine, 1.0f / 4 );
 }
 
 } //namespace MR

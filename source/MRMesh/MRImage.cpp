@@ -42,10 +42,10 @@ Color Image::sampleBilinear( const UVCoord & pos ) const
 
     const float dx = x - xlowf;
     const float dy = y - ylowf;
-    return c(
-        ( v( lowlow ) * ( 1 - dy ) + v( lowhigh ) * dy ) * ( 1 - dx ) +
-        ( v( highlow ) * ( 1 - dy ) + v( highhigh ) * dy ) * dx
-    );
+    return c( lerp(
+        lerp( v( lowlow ), v( lowhigh ), dy ),
+        lerp( v( highlow ), v( highhigh ), dy ),
+        dx ) );
 }
 
 } //namespace MR

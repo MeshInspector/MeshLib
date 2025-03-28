@@ -9,6 +9,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRPch/MRJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRPython/MRPython.h"

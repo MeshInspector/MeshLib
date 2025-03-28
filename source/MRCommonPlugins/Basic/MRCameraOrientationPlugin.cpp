@@ -1,5 +1,5 @@
 #include "MRCameraOrientationPlugin.h"
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/ImGuiHelpers.h"

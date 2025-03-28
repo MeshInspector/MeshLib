@@ -9,10 +9,10 @@ namespace MR
     {
         public class PointsSave
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrPointsSaveToAnySupportedFormat(IntPtr pc, string file, ref MRSaveSettings settings, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
 
             /// saves point cloud to file of any supported format

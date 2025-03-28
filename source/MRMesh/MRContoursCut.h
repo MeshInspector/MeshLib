@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRBitSet.h"
 #include "MRIntersectionContour.h"
@@ -52,12 +53,17 @@ using OneMeshContours = std::vector<OneMeshContour>;
 MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 // Converts ordered continuous contours of two meshes to OneMeshContours
-// converters is required for better precision in case of degenerations
+// converters are required for better precision in case of degenerations
 // note that contours should not have intersections
 [[nodiscard]]
 MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours, bool getMeshAIntersections,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+// Converts ordered continuous self contours of single meshes to OneMeshContours
+// converters are required for better precision in case of degenerations
+[[nodiscard]]
+MRMESH_API OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const ContinuousContours& contours,
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
 // Converts OneMeshContours contours representation to Contours3f: set of coordinates
 [[nodiscard]]
@@ -232,5 +238,12 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
+
+
+/// Cuts \p mesh by \p contour by projecting all the points
+/// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \return Faces to the left of the polyline
+MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
 
 } //namespace MR

@@ -2,12 +2,17 @@
 
 #include "MRVector3.h"
 
+#if MR_HAS_REQUIRES
+#include "MRVectorTraits.h"
+#include <concepts>
+#endif
+
 namespace MR
 {
- 
+
 /// 3-dimensional plane: dot(n,x) - d = 0
 /// \ingroup MathGroup
-template <typename T> 
+template <typename T>
 struct Plane3
 {
     Vector3<T> n;
@@ -27,7 +32,7 @@ struct Plane3
     /// returns same representation
     [[nodiscard]] const Plane3 & operator +() const { return *this; }
     /// returns same plane represented with unit n-vector
-    [[nodiscard]] Plane3 normalized() const 
+    [[nodiscard]] Plane3 normalized() const
     {
         const auto len = n.length();
         if ( len <= 0 )
@@ -56,18 +61,19 @@ template <typename T>
 /// returns the same plane in y reference frame: pl'(y) = 0;
 /// if given transformation is not rigid, then it is a good idea to normalize returned plane
 template <typename T>
+MR_REQUIRES_IF_SUPPORTED( VectorTraits<T>::size == 1 ) // Fixes ambiguity in the old bindings on VS2019 only. TODO remove when wropping old bindings. Remove `#if MR_HAS_CONCEPTS` above too.
 [[nodiscard]] inline Plane3<T> transformed( const Plane3<T> & plane, const AffineXf3<T> & xf )
 {
     return invTransformed( plane, xf.inverse() );
 }
 
-template <typename T> 
+template <typename T>
 [[nodiscard]] inline bool operator == ( const Plane3<T> & a, const Plane3<T> & b )
 {
     return a.n == b.n && a.d == b.d;
 }
 
-template <typename T> 
+template <typename T>
 [[nodiscard]] inline bool operator != ( const Plane3<T> & a, const Plane3<T> & b )
 {
     return !( a == b );

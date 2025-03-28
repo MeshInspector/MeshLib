@@ -17,6 +17,7 @@
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MRTriMesh.h"
 
 namespace MR
 {
@@ -117,18 +118,23 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER
+
     if ( params.voxelSize <= 0 )
     {
         assert( false );
         return unexpected( "invalid voxelSize value" );
     }
-    auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
+
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
         auto offsetInVoxels = offset / params.voxelSize;
-        auto voxelRes = meshToLevelSet( mp, AffineXf3f(),
+        auto voxelRes = meshToLevelSet(
+            mp,
+            AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
-            std::abs( offsetInVoxels ) + 2, meshToLSCb );
+            std::abs( offsetInVoxels ) + 2,
+            subprogress( params.callBack, 0.0f, 0.4f )
+        );
         if ( !voxelRes )
             return unexpectedOperationCanceled();
 
@@ -147,50 +153,89 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         };
         return marchingCubes( volume, vmParams );
     }
-    else
+
+    const auto isHoleWindingRule = params.signDetectionMode == SignDetectionMode::HoleWindingRule;
+    const auto isFuncVolume = params.memoryEfficient && !( isHoleWindingRule && params.fwn );
+
+    const auto absOffset = std::abs( offset );
+    const auto box = mp.mesh.computeBoundingBox( mp.region ).expanded( Vector3f::diagonal( absOffset ) );
+    const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+
+    DistanceVolumeParams vol {
+        .origin = origin,
+        .cb = subprogress( params.callBack, 0.0f, 0.4f ),
+        .voxelSize = Vector3f::diagonal( params.voxelSize ),
+        .dimensions = dimensions,
+    };
+
+    DistanceToMeshOptions dist {
+        // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
+        .minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ),
+        .maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ),
+        .nullOutsideMinMax = !isHoleWindingRule || !params.closeHolesInHoleWindingNumber,
+        .windingNumberThreshold = params.windingNumberThreshold,
+        .windingNumberBeta = params.windingNumberBeta,
+    };
+
+    MarchingCubesParams vmParams {
+        .origin = origin,
+        .cb = subprogress( params.callBack, 0.4f, 1.0f ),
+        .iso = offset,
+        .lessInside = true,
+        .outVoxelPerFaceMap = outMap,
+    };
+
+    if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( params.fwn ); fwnByParts && isHoleWindingRule )
     {
-        const bool funcVolume = ( params.signDetectionMode != SignDetectionMode::HoleWindingRule || !params.fwn ) && params.memoryEfficient;
-        MeshToDistanceVolumeParams msParams;
-        if ( !funcVolume )
-            msParams.vol.cb = meshToLSCb;
-        auto absOffset = std::abs( offset );
-        const auto box = mp.mesh.computeBoundingBox( mp.region ).expanded( Vector3f::diagonal( absOffset ) );
-        const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
-        msParams.vol.origin = origin;
-        msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
-        msParams.vol.dimensions = dimensions;
-        msParams.dist.signMode = params.signDetectionMode;
-        msParams.dist.maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
-        msParams.dist.minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
-        msParams.dist.nullOutsideMinMax = params.signDetectionMode != SignDetectionMode::HoleWindingRule || !params.closeHolesInHoleWindingNumber;
-        msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
-        msParams.dist.windingNumberBeta = params.windingNumberBeta;
-        msParams.fwn = params.fwn;
+        vol.cb = {};
+        vmParams.cb = subprogress( params.callBack, 0.00f, 0.90f );
 
-        MarchingCubesParams vmParams;
-        vmParams.origin = msParams.vol.origin;
-        vmParams.iso = offset;
-        vmParams.cb = funcVolume ? params.callBack : subprogress( params.callBack, 0.4f, 1.0f );
-        vmParams.lessInside = true;
-        vmParams.outVoxelPerFaceMap = outMap;
+        assert( !mp.region ); // only whole mesh is supported for now
 
-        if ( funcVolume )
+        const AffineXf3f basis { Matrix3f::scale( vol.voxelSize ), origin + 0.5f * vol.voxelSize };
+
+        MarchingCubesByParts mesher( vol.dimensions, vmParams );
+        const auto addPart = [&] ( std::vector<float>&& data, const Vector3i& dims, [[maybe_unused]] int zOffset )
         {
-            return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
-        }
-        else
-        {
-            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
+            assert( data.size() <= (size_t)dims.x * dims.y * dims.z );
+            assert( zOffset == mesher.nextZ() );
+            SimpleVolume res {
+                .data = std::move( data ),
+                .dims = dims,
+                .voxelSize = vol.voxelSize,
+            };
+            return mesher.addPart( res );
+        };
+        return
+            fwnByParts->calcFromGridWithDistancesByParts( addPart, vol.dimensions, basis, dist, 1, vol.cb )
+            .and_then( [&mesher]
             {
-                vmParams.freeVolume = [&volume]
-                {
-                    Timer t( "~SimpleVolume" );
-                    volume = {};
-                };
-                return marchingCubes( volume, vmParams );
+                return mesher.finalize();
+            } )
+            .transform( [&] ( TriMesh&& mesh )
+            {
+                return Mesh::fromTriMesh( std::move( mesh ), {}, subprogress( params.callBack, 0.90f, 1.00f ) );
             } );
-        }
     }
+
+    MeshToDistanceVolumeParams msParams { vol, { dist, params.signDetectionMode }, params.fwn };
+
+    if ( isFuncVolume )
+    {
+        msParams.vol.cb = {};
+        vmParams.cb = params.callBack;
+        return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
+    }
+
+    return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
+    {
+        vmParams.freeVolume = [&volume]
+        {
+            Timer t( "~SimpleVolume" );
+            volume = {};
+        };
+        return marchingCubes( volume, vmParams );
+    } );
 }
 
 Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,

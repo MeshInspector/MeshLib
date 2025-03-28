@@ -1,12 +1,11 @@
 #pragma once
 
 #include "MRVector.h"
-#include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
+#include "MRTbbThreadMutex.h"
+
 #include <atomic>
-#include <limits>
-#include <thread>
 
 namespace MR
 {
@@ -38,9 +37,9 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     if ( size <= 0 )
         return true;
 
-    auto callingThreadId = std::this_thread::get_id();
+    TbbThreadMutex callingThreadMutex;
     std::atomic<bool> keepGoing{ true };
-    
+
     // avoid false sharing with other local variables
     // by putting processedBits in its own cache line
     constexpr int hardware_destructive_interference_size = 64;
@@ -54,7 +53,8 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
     tbb::parallel_for( tbb::blocked_range( begin, end ),
         [&] ( const tbb::blocked_range<I>& range )
     {
-        const bool report = std::this_thread::get_id() == callingThreadId;
+        const auto callingThreadLock = callingThreadMutex.tryLock();
+        const bool report = cb && callingThreadLock;
         size_t myProcessed = 0;
         auto c = callMaker();
         for ( I i = range.begin(); i < range.end(); ++i )
@@ -76,7 +76,7 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
                 }
             }
         }
-        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
+        const auto total = myProcessed + s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
         if ( report && !cb( float( total ) / size ) )
             keepGoing.store( false, std::memory_order_relaxed );
     } );
@@ -123,100 +123,6 @@ template <typename T, typename I, typename ...F>
 inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 {
     return ParallelFor( v.beginId(), v.endId(), std::forward<F>( f )... );
-}
-
-/// finds minimal and maximal elements in given vector in parallel;
-/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
-template<typename T>
-std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
-{
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
-    [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
-    {
-        for ( size_t i = range.begin(); i < range.end(); i++ )
-        {
-            T val = vec[i];
-            if ( topExcluding && std::abs( val ) >= *topExcluding )
-                continue;
-            if ( val < curMinMax.min )
-                curMinMax.min = val;
-            if ( val > curMinMax.max )
-                curMinMax.max = val;
-        }
-        return curMinMax;
-    },
-    [&] ( const MinMax<T>& a, const MinMax<T>& b )
-    {
-        MinMax<T> res;
-        if ( a.min < b.min )
-        {
-            res.min = a.min;
-        }
-        else
-        {
-            res.min = b.min;
-        }
-        if ( a.max > b.max )
-        {
-            res.max = a.max;
-        }
-        else
-        {
-            res.max = b.max;
-        }
-        return res;
-    } );
-
-    return { minmax.min, minmax.max };
-}
-
-/// finds minimal and maximal elements and their indices in given vector in parallel;
-/// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
-template<typename T, typename I>
-auto parallelMinMaxArg( const Vector<T, I>& vec, const T * topExcluding = nullptr )
-{
-    struct MinMaxArg
-    {
-        T min = std::numeric_limits<T>::max();
-        T max = std::numeric_limits<T>::lowest();
-        I minArg, maxArg;
-    };
-
-    return tbb::parallel_reduce( tbb::blocked_range<I>( I(0), vec.endId() ), MinMaxArg{},
-    [&] ( const tbb::blocked_range<I> range, MinMaxArg curr )
-    {
-        for ( I i = range.begin(); i < range.end(); i++ )
-        {
-            T val = vec[i];
-            if ( topExcluding && std::abs( val ) >= *topExcluding )
-                continue;
-            if ( val < curr.min )
-            {
-                curr.min = val;
-                curr.minArg = i;
-            }
-            if ( val > curr.max )
-            {
-                curr.max = val;
-                curr.maxArg = i;
-            }
-        }
-        return curr;
-    },
-    [&] ( MinMaxArg a, const MinMaxArg& b )
-    {
-        if ( b.min < a.min )
-        {
-            a.min = b.min;
-            a.minArg = b.minArg;
-        }
-        if ( b.max > a.max )
-        {
-            a.max = b.max;
-            a.maxArg = b.maxArg;
-        }
-        return a;
-    } );
 }
 
 /// \}

@@ -1278,6 +1278,31 @@
     <ClInclude Include="MRGTest.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRBezier.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrPointsObject.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDoubleLayer.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRParallelMinMax.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMinMaxArg.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRClosestWeightedPoint.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTbbTaskArenaAndGroup.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1303,9 +1328,6 @@
     </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBox.cpp">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
@@ -1718,9 +1740,6 @@
     <ClCompile Include="MROrder.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRTriMath.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
@@ -2092,6 +2111,19 @@
     </ClCompile>
     <ClCompile Include="MRChunkIterator.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPointsObject.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDoubleLayer.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRClosestWeightedPoint.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

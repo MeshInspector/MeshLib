@@ -3,7 +3,7 @@
 #if defined( __EMSCRIPTEN__ ) || !defined( MRMESH_NO_CPR )
 #include "MRViewerFwd.h"
 #include "MRMesh/MRExpected.h"
-#include "MRPch/MRJson.h"
+#include <json/forwards.h>
 #include <unordered_map>
 #include <string>
 #include <functional>

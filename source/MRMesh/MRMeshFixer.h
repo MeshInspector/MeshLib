@@ -74,6 +74,10 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// deleting such faces simplifies the holes and makes them easier to fill
 [[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const Mesh & mesh );
 
+/// returns all faces that are oriented inconsistently, based on number of ray intersections
+MRMESH_API FaceBitSet findDisorientedFaces( const Mesh& mesh );
+
+
 /// \}
 
 } // namespace MR

@@ -12,6 +12,21 @@ namespace MR
 /// <returns>Cube mesh with specified face structure</returns>
 MRVIEWER_API Mesh makeCornerControllerMesh( float size, float cornerRatio = 0.2f );
 
+enum class SideRegions
+{
+    CCWArrow = 26,
+    CWArrow = 27
+};
+
+/// <summary>
+/// Makes planar arrow mesh that will be used for controlling in plane rotation in corner near cube controller
+/// </summary>
+/// <param name="size">vertical length projection of Arrow</param>
+/// <param name="shift">shift in XY plane in world units (unis same as size)</param>
+/// <param name="ccw">direction of arrow</param>
+/// <returns><Planar arrow mesh/returns>
+MRVIEWER_API Mesh makeCornerControllerRotationArrowMesh( float size, const Vector2f& shift, bool ccw );
+
 /// <summary>
 /// Creates UV coordinates for `makeCornerControllerMesh` output mesh for texture like:\n
 /// "Right"" Left "\n

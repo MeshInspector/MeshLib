@@ -618,7 +618,7 @@ int getContourPlaneIntersections( const Contour3f & path, const Plane3f & plane,
             if ( outIntersections )
             {
                 const float a = o / ( o - d );
-                outIntersections->emplace_back( a * path[i + 1] + ( 1 - a ) * path[i] );
+                outIntersections->emplace_back( lerp( path[i], path[i + 1], a ) );
             }
             ++found;
         }

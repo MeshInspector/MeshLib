@@ -1,8 +1,9 @@
 #pragma once
 #include "MRViewerFwd.h"
+#include "MRRibbonRegisterItem.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRPch/MRJson.h"
 #include "MRMesh/MRphmap.h"
+#include <json/forwards.h>
 #include <filesystem>
 #include <vector>
 #include <string>
@@ -57,6 +58,9 @@ struct RibbonSchema
 
     /// re-order items in tabsOrder according to their priority, the order of items having same priority is preserved
     MRVIEWER_API void sortTabsByPriority();
+
+    /// updates inner caption for all StateBasePlugins in schema
+    MRVIEWER_API void updateCaptions();
 };
 
 // This class holds static ribbon schema,
@@ -130,27 +134,6 @@ protected:
 
 
 template<typename T>
-class RibbonMenuItemAdder
-{
-public:
-    static_assert( std::is_base_of_v<RibbonMenuItem, T> );
-
-    template<typename... Args>
-    RibbonMenuItemAdder( Args&&... args ) : item_( std::make_shared<T>( std::forward<Args>( args )... ) )
-    {
-        RibbonSchemaHolder::addItem( item_ );
-    }
-
-    ~RibbonMenuItemAdder()
-    {
-        RibbonSchemaHolder::delItem( item_ );
-    }
-
-private:
-    std::shared_ptr<T> item_;
-};
-
-template<typename T>
 class RibbonMenuItemCall
 {
     static_assert( std::is_base_of_v<RibbonMenuItem, T> );
@@ -178,12 +161,8 @@ private:
     std::function<void(std::shared_ptr<T>)> g_;
 };
 
-/// registers plugin on module loading, and unregister plugin on module unloading
-#define MR_REGISTER_RIBBON_ITEM(pluginType) \
-    static MR::RibbonMenuItemAdder<pluginType> ribbonMenuItemAdder##pluginType##_;
-
 /// calls f(const std::shared_ptr<plugin> &) on module loading, and calls g(const std::shared_ptr<plugin> &) on module unloading
 #define MR_RIBBON_ITEM_CALL(pluginType,f,g) \
     static MR::RibbonMenuItemCall<pluginType> ribbonMenuItemCall##func##pluginType##_( f, g );
 
-}
+} //namespace MR

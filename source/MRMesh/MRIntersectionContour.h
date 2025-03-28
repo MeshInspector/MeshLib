@@ -23,6 +23,11 @@ using ContinuousContours = std::vector<ContinuousContour>;
 /// c. each intersected edge has origin inside meshes intersection and destination outside of it
 MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections );
 
+/// Combines individual self intersections into ordered contours with the properties:
+/// a. left  of contours on mesh is inside
+/// b. each intersected edge has origin inside meshes intersection and destination outside of it
+MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections );
+
 /// extracts coordinates from two meshes intersection contours
 MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
 const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );

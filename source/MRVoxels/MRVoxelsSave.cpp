@@ -10,7 +10,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRTimer.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectsAccess.h"
 
 #include "MRPch/MRJson.h"

@@ -299,7 +299,8 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 
 /// load distance map from a grayscale image:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-[[nodiscard]] MRMESH_API Expected<DistanceMap> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
+/// \param invert - whether to invert values (min is white) or leave them as is (min is block)
+[[nodiscard]] MRMESH_API Expected<DistanceMap> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255, bool invert = true );
 
 /// \}
 

@@ -16,7 +16,10 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
-      vcpkg_version:
+      vs19_vcpkg_version:
+        required: true
+        type: string
+      vs22_vcpkg_version:
         required: true
         type: string
       mrbind:
@@ -54,11 +57,13 @@ jobs:
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
+            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
           - runner: windows-2019
             vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
+            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -74,6 +79,7 @@ jobs:
           submodules: true
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -87,12 +93,12 @@ jobs:
         working-directory: C:\vcpkg
         run: git clean -ffdx
 
-      - name: Checkout & Update Vcpkg ${{ inputs.vcpkg_version }}
+      - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
         working-directory: C:\vcpkg
         run: |
           git fetch
           git pull --rebase
-          git checkout ${{ inputs.vcpkg_version }}
+          git checkout ${{ matrix.vcpkg-version }}
           bootstrap-vcpkg.bat
           vcpkg.exe integrate install
 
@@ -100,13 +106,13 @@ jobs:
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{ inputs.vcpkg_version }}
+          key: vcpkg-cache-${{ matrix.vcpkg-version }}
           path: |
             C:\vcpkg\*
 
       - name: Configure AWS Credentials
         if: ${{ inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
@@ -155,7 +161,7 @@ jobs:
 
       - name: Add msbuild to PATH
         if: ${{ matrix.build_system == 'MSBuild' }}
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
@@ -165,14 +171,14 @@ jobs:
 
       - name: Restore Dependencies
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@v2
+        uses: codebeltnet/dotnet-restore@1cf30dd0fdddac25bc7dcb559c6d0c310fb0d472 # v2
         with:
           projects: 'source/**/*.csproj'
 
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
         if: ${{inputs.mrbind}}
         with:
           msystem: clang64
@@ -187,7 +193,7 @@ jobs:
 
       - name: Install Ninja for CMake
         if: ${{ matrix.build_system == 'CMake' }}
-        uses: seanmiddleditch/gha-setup-ninja@master
+        uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
 
       - name: Build
         shell: cmd
@@ -196,6 +202,8 @@ jobs:
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+            if errorlevel 1 exit 1
+            cmake --version
             if errorlevel 1 exit 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
             if errorlevel 1 exit 1

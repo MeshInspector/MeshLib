@@ -1,4 +1,4 @@
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"

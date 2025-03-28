@@ -156,10 +156,10 @@ int PickPointManager::insertPointNoHistory_( const std::shared_ptr<VisualObject>
         colorLast2Points_( obj );
     if ( params.onPointAdd )
         params.onPointAdd( obj, index );
+    setHoveredPointWidget_( pw.get() );
     if ( startDragging )
     {
         MR_SCOPED_VALUE( params.writeHistory, false );
-        setHoveredPointWidget_( pw.get() );
         pw->startDragging();
     }
     return index;
@@ -236,6 +236,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     auto newPoint = std::make_shared<SurfacePointWidget>();
     newPoint->setAutoHover( false );
     newPoint->setParameters( params.surfacePointParams );
+    newPoint->setBaseColor( params.ordinaryPointColor );
     newPoint->create( obj, pt );
 
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
@@ -337,6 +338,14 @@ bool PickPointManager::isClosedCountour( const std::shared_ptr<VisualObject>& ob
         return false;
     auto & points = pointsIt->second;
     return points.size() > 1 && points[0]->getCurrentPosition() == points.back()->getCurrentPosition();
+}
+
+size_t PickPointManager::numPickPoints( const std::shared_ptr<VisualObject>& obj ) const
+{
+    auto pointsIt = pickedPoints_.find( obj );
+    if ( pointsIt == pickedPoints_.end() )
+        return 0;
+    return pointsIt->second.size();
 }
 
 bool PickPointManager::closeContour( const std::shared_ptr<VisualObject>& obj, bool makeClosed )
@@ -465,7 +474,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
             return false;
-        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), true );
+        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), params.startDraggingJustAddedPoint );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {

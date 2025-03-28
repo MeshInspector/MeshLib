@@ -478,12 +478,12 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     ImGui::End();
 }
 
-Color Palette::getColor( float val )
+Color Palette::getColor( float val ) const
 {
     assert( val >= 0.f && val <= 1.f );
 
     // only the first row represents the actual palette colours; see `Palette::updateDiscretizatedColors_' for more info
-    const std::span<Color> colors( texture_.pixels.data(), texture_.resolution.x );
+    const std::span<const Color> colors( texture_.pixels.data(), texture_.resolution.x );
     if ( val == 1.f )
         return colors.back();
 

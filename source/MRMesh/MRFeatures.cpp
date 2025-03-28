@@ -1437,7 +1437,7 @@ TEST( Features, Distance_ConeSegment_Sphere )
 
                         for ( float t : { 0.f, 1.f, 0.5f, 0.2f, 0.8f } )
                         {
-                            Primitives::Sphere sphere( cone.referencePoint + a * ( 1 - t ) + b * t, 1 );
+                            Primitives::Sphere sphere( cone.referencePoint + lerp( a, b, t ), 1 );
                             auto r = measure( cone, sphere ).distance;
                             ASSERT_NEAR( r.distance, std::abs( dist ) - sphere.radius, testEps );
                             ASSERT_LE( ( r.closestPointA - ( sphere.center - offset * dist ) ).length(), testEps );

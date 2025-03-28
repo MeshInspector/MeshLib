@@ -1,8 +1,10 @@
 #include "MRCudaTest.h"
-#include "MRCudaBasic.h"
 #include "MRCudaTest.cuh"
+
+#include "MRCuda.cuh"
+#include "MRCudaBasic.h"
+
 #include "MRMesh/MRImage.h"
-#include "cuda_runtime.h"
 
 namespace MR
 {
@@ -22,6 +24,10 @@ Expected<void> negatePicture( Image& image )
     CUDA_LOGE_RETURN_UNEXPECTED( cudaArray.toVector( image.pixels ) );
 
     return {};
+}
+
+void loadMRCudaDll()
+{
 }
 
 } //namespace Cuda

@@ -51,7 +51,7 @@
 // #endif
 
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Warray-bounds"
   #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -59,7 +59,7 @@
 
 #include <array>
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
   #pragma GCC diagnostic pop
 #endif
 
@@ -362,6 +362,15 @@ template <typename T> using Ball1 = Ball<T>;
 template <typename T> using Ball2 = Ball<Vector2<T>>;
 template <typename T> using Ball3 = Ball<Vector3<T>>;
 
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), CubicBezierCurve,
+    ( CubicBezierCurve2f,  CubicBezierCurve<Vector2<float>>     )
+    ( CubicBezierCurve2d,  CubicBezierCurve<Vector2<double>>    )
+    ( CubicBezierCurve3f,  CubicBezierCurve<Vector3<float>>     )
+    ( CubicBezierCurve3d,  CubicBezierCurve<Vector3<double>>    )
+)
+template <typename T> using CubicBezierCurve2 = CubicBezierCurve<Vector2<T>>;
+template <typename T> using CubicBezierCurve3 = CubicBezierCurve<Vector3<T>>;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct), QuadraticForm,
     ( QuadraticForm2f, QuadraticForm<Vector2<float>>  )
     ( QuadraticForm2d, QuadraticForm<Vector2<double>> )
@@ -416,6 +425,7 @@ struct PointOnObject;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;
+struct PointsProjectionResult;
 template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;
@@ -621,6 +631,8 @@ class FewSmallest;
 class Graph;
 class WatershedGraph;
 
+struct TbbTaskArenaAndGroup;
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
@@ -647,17 +659,25 @@ enum class Reorder : char
     AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
 };
 
+/// squared value
 template <typename T>
 constexpr inline T sqr( T x ) noexcept { return x * x; }
 
+/// sign of given value in { -1, 0, 1 }
 template <typename T>
 constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
+/// absolute difference between two value
 template <typename T>
 constexpr inline T distance( T x, T y ) noexcept { return x >= y ? x - y : y - x; }
 
+/// squared difference between two value
 template <typename T>
 constexpr inline T distanceSq( T x, T y ) noexcept { return sqr( x - y ); }
+
+/// Linear interpolation: returns v0 when t==0 and v1 when t==1
+template <typename V, typename T>
+constexpr inline auto lerp( V v0, V v1, T t ) noexcept { return ( 1 - t ) * v0 + t * v1; }
 
 template<typename...>
 inline constexpr bool dependent_false = false;
@@ -671,6 +691,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 class IPointsToMeshProjector;
+class IPointsProjector;
 
 namespace MeshBuilder
 {

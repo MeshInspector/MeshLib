@@ -141,7 +141,19 @@ Expected<MR::Image> fromPng( std::istream& in )
     result.pixels.resize( result.resolution.x * result.resolution.y );
 
     std::vector<unsigned char*> ptrs( result.resolution.y );
-    if ( colorType == PNG_COLOR_TYPE_RGBA )
+    if ( colorType == PNG_COLOR_TYPE_GRAY )
+    {
+        std::vector<unsigned char> rawPixels( result.resolution.x * result.resolution.y );
+        for ( int i = 0; i < result.resolution.y; ++i )
+            ptrs[result.resolution.y - i - 1] = rawPixels.data() + result.resolution.x * i;
+        png_read_image( png.pngPtr, ptrs.data() );
+        for ( size_t i = 0; i < result.pixels.size(); ++i )
+        {
+            auto v = rawPixels[i];
+            result.pixels[i] = Color( v, v, v );
+        }
+    }
+    else if ( colorType == PNG_COLOR_TYPE_RGBA )
     {
         for ( int i = 0; i < result.resolution.y; ++i )
             ptrs[result.resolution.y - i - 1] = ( unsigned char* )( result.pixels.data() + result.resolution.x * i );

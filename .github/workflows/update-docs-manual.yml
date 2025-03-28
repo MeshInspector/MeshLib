@@ -12,7 +12,7 @@ on:
 jobs:
   create-stubs:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
       options: --user root
@@ -107,7 +107,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
           failOnError: false

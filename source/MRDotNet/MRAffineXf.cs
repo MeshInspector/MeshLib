@@ -18,10 +18,10 @@ namespace MR
         /// affine transformation: y = A*x + b, where A in VxV, and b in V
         public class AffineXf3f
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRAffineXf3f mrAffineXf3fMul(ref MRAffineXf3f a, ref MRAffineXf3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrAffineXf3fApply(ref MRAffineXf3f xf, ref MRVector3f v);
 
             internal MRAffineXf3f xf_;

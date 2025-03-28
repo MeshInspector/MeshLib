@@ -765,11 +765,15 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
     ms.SetFromFile( ir.GetFile() );
 
     // skip unsupported media storage
-    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage
-        || ms == gdcm::MediaStorage::BasicTextSR )
+    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::BasicTextSR )
     {
         spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
         return { DicomStatusEnum::Unsupported, "unsupported media storage" };
+    }
+
+    if ( ms == gdcm::MediaStorage::SecondaryCaptureImageStorage )
+    {
+        spdlog::warn( "DICOM file {} has media storage type: SecondaryCaptureImageStorage, which may not be fully supported" );
     }
 
     // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file

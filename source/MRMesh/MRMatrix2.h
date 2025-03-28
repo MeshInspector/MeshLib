@@ -6,6 +6,12 @@
 namespace MR
 {
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4804) // unsafe use of type 'bool' in operation
+#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
+#endif
+
 /// arbitrary 2x2 matrix
 /// \ingroup MatrixGroup
 template <typename T>
@@ -65,44 +71,59 @@ struct Matrix2
     /// computes transposed matrix
     constexpr Matrix2<T> transposed() const noexcept;
 
-    Matrix2 & operator +=( const Matrix2<T> & b ) { x += b.x; y += b.y; return * this; }
-    Matrix2 & operator -=( const Matrix2<T> & b ) { x -= b.x; y -= b.y; return * this; }
-    Matrix2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    Matrix2 & operator /=( T b )
+    [[nodiscard]] friend constexpr bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b ) { return a.x == b.x && a.y == b.y; }
+    [[nodiscard]] friend constexpr bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b ) { return !( a == b ); }
+
+    // NOTE: We use `std::declval()` in the operators below because libclang 18 in our binding generator is bugged and chokes on decltyping `a.x` and such. TODO fix this when we update libclang.
+
+    [[nodiscard]] friend constexpr auto operator +( const Matrix2<T> & a, const Matrix2<T> & b ) -> Matrix2<decltype( std::declval<T>() + std::declval<T>() )> { return { a.x + b.x, a.y + b.y }; }
+    [[nodiscard]] friend constexpr auto operator -( const Matrix2<T> & a, const Matrix2<T> & b ) -> Matrix2<decltype( std::declval<T>() - std::declval<T>() )> { return { a.x - b.x, a.y - b.y }; }
+    [[nodiscard]] friend constexpr auto operator *(               T    a, const Matrix2<T> & b ) -> Matrix2<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y }; }
+    [[nodiscard]] friend constexpr auto operator *( const Matrix2<T> & b,               T    a ) -> Matrix2<decltype( std::declval<T>() * std::declval<T>() )> { return { a * b.x, a * b.y }; }
+    [[nodiscard]] friend constexpr auto operator /(       Matrix2<T>   b,               T    a ) -> Matrix2<decltype( std::declval<T>() / std::declval<T>() )>
     {
         if constexpr ( std::is_integral_v<T> )
-            { x /= b; y /= b; return * this; }
+            return { b.x / a, b.y / a };
         else
-            return *this *= ( 1 / b );
+            return b * ( 1 / a );
+    }
+
+    friend constexpr Matrix2<T> & operator +=( Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; return a; }
+    friend constexpr Matrix2<T> & operator -=( Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; return a; }
+    friend constexpr Matrix2<T> & operator *=( Matrix2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; return a; }
+    friend constexpr Matrix2<T> & operator /=( Matrix2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    {
+        if constexpr ( std::is_integral_v<T> )
+            { a.x /= b; a.y /= b; return a; }
+        else
+            return a *= ( 1 / b );
+    }
+
+    /// x = a * b
+    [[nodiscard]] friend constexpr auto operator *( const Matrix2<T> & a, const Vector2<T> & b ) -> Vector2<decltype( dot( std::declval<Vector2<T>>(), std::declval<Vector2<T>>() ) )>
+    {
+        return { dot( a.x, b ), dot( a.y, b ) };
+    }
+
+    /// product of two matrices
+    [[nodiscard]] friend constexpr auto operator *( const Matrix2<T> & a, const Matrix2<T> & b ) -> Matrix2<decltype( dot( std::declval<Vector2<T>>(), std::declval<Vector2<T>>() ) )>
+    {
+        Matrix2<decltype( dot( std::declval<Vector2<T>>(), std::declval<Vector2<T>>() ) )> res;
+        for ( int i = 0; i < 2; ++i )
+            for ( int j = 0; j < 2; ++j )
+                res[i][j] = dot( a[i], b.col(j) );
+        return res;
     }
 };
 
 /// \related Matrix2
 /// \{
 
-/// x = a * b
-template <typename T>
-inline Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
-{
-    return { dot( a.x, b ), dot( a.y, b ) };
-}
-
 /// double-dot product: x = a : b
 template <typename T>
-inline T dot( const Matrix2<T> & a, const Matrix2<T> & b )
+inline auto dot( const Matrix2<T> & a, const Matrix2<T> & b ) -> decltype( dot( a.x, b.x ) )
 {
     return dot( a.x, b.x ) + dot( a.y, b.y );
-}
-
-/// product of two matrices
-template <typename T>
-inline Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
-{
-    Matrix2<T> res;
-    for ( int i = 0; i < 2; ++i )
-        for ( int j = 0; j < 2; ++j )
-            res[i][j] = dot( a[i], b.col(j) );
-    return res;
 }
 
 /// x = a * b^T
@@ -111,34 +132,6 @@ inline Matrix2<T> outer( const Vector2<T> & a, const Vector2<T> & b )
 {
     return { a.x * b, a.y * b };
 }
-
-template <typename T>
-inline bool operator ==( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return a.x == b.x && a.y == b.y; }
-
-template <typename T>
-inline bool operator !=( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return !( a == b ); }
-
-template <typename T>
-inline Matrix2<T> operator +( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return { a.x + b.x, a.y + b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator -( const Matrix2<T> & a, const Matrix2<T> & b )
-    { return { a.x - b.x, a.y - b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator *( T a, const Matrix2<T> & b )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator *( const Matrix2<T> & b, T a )
-    { return { a * b.x, a * b.y }; }
-
-template <typename T>
-inline Matrix2<T> operator /( Matrix2<T> b, T a )
-    { b /= a; return b; }
 
 template <typename T>
 constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
@@ -194,5 +187,9 @@ constexpr Matrix2<T> Matrix2<T>::transposed() const noexcept
 }
 
 /// \}
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 } // namespace MR

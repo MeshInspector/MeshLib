@@ -7,18 +7,12 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include "MRExpected.h"
+#include "MRProcessSelfTreeSubtasks.h"
 #include <atomic>
 #include <thread>
 
 namespace MR
 {
-
-struct NodeNode
-{
-    NodeId aNode;
-    NodeId bNode;
-    NodeNode( NodeId a, NodeId b ) : aNode( a ), bNode( b ) { }
-};
 
 std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A, bool firstIntersectionOnly )
 {
@@ -73,15 +67,15 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
-            subtasks.emplace_back( aNode.l, s.bNode );
-            subtasks.emplace_back( aNode.r, s.bNode );
+            subtasks.push_back( { aNode.l, s.bNode } );
+            subtasks.push_back( { aNode.r, s.bNode } );
         }
         else
         {
             assert( !bNode.leaf() );
             // split bNode
-            subtasks.emplace_back( s.aNode, bNode.l );
-            subtasks.emplace_back( s.aNode, bNode.r );
+            subtasks.push_back( { s.aNode, bNode.l } );
+            subtasks.push_back( { s.aNode, bNode.r } );
         }
     }
 
@@ -172,56 +166,6 @@ inline std::pair<int, int> sharedVertex( const VertId av[3], const VertId bv[3] 
     return { -1, -1 };
 }
 
-static void processSelfSubtasks( const AABBTree & tree,
-    std::vector<NodeNode> & subtasks,
-    std::vector<NodeNode> & nextSubtasks, // may be same as subtasks
-    std::function<Processing(const NodeNode&)> processLeaf )
-{
-    while( !subtasks.empty() )
-    {
-        const auto s = subtasks.back();
-        subtasks.pop_back();
-        const auto & aNode = tree[s.aNode];
-        const auto & bNode = tree[s.bNode];
-
-        if ( s.aNode == s.bNode )
-        {
-            if ( !aNode.leaf() )
-            {
-                nextSubtasks.emplace_back( aNode.l, aNode.l );
-                nextSubtasks.emplace_back( aNode.r, aNode.r );
-                nextSubtasks.emplace_back( aNode.l, aNode.r );
-            }
-            continue;
-        }
-
-        const auto overlap = aNode.box.intersection( bNode.box );
-        if ( !overlap.valid() )
-            continue;
-
-        if ( aNode.leaf() && bNode.leaf() )
-        {
-            if ( processLeaf( s ) == Processing::Stop )
-                return;
-            continue;
-        }
-        
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
-        {
-            // split aNode
-            nextSubtasks.emplace_back( aNode.l, s.bNode );
-            nextSubtasks.emplace_back( aNode.r, s.bNode );
-        }
-        else
-        {
-            assert( !bNode.leaf() );
-            // split bNode
-            nextSubtasks.emplace_back( s.aNode, bNode.l );
-            nextSubtasks.emplace_back( s.aNode, bNode.r );
-        }
-    }
-}
-
 Expected<bool> findSelfCollidingTriangles(
     const MeshPart& mp,
     std::vector<FaceFace> * outCollidingPairs,
@@ -242,7 +186,8 @@ Expected<bool> findSelfCollidingTriangles(
     for( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
-            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; } );
+            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; }, 
+            [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
@@ -315,7 +260,8 @@ Expected<bool> findSelfCollidingTriangles(
                         return Processing::Stop;
                     }
                     return Processing::Continue;
-                }
+                },
+                [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; }
             );
 
             subtaskRes[is] = std::move( myRes );

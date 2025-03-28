@@ -27,6 +27,8 @@ public:
     using VTraits = VectorTraits<V>;
     using T = typename VTraits::BaseType;
     static constexpr int elements = VTraits::size;
+    using Vb = typename VTraits::template ChangeBaseType<bool>; //if V is Vector3<T> then Vb is Vector3b
+    using VbTraits = VectorTraits<Vb>;
 
     V min, max;
 
@@ -61,6 +63,27 @@ public:
 
     /// computes center of the box
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
+
+    /// returns the corner of this box as specified by given bool-vector:
+    /// 1 element in (c) means take min's coordinate,
+    /// 0 element in (c) means take max's coordinate
+    V corner( const Vb& c ) const
+    {
+        V res;
+        for ( int i = 0; i < elements; ++i )
+            VTraits::getElem( i, res ) = VTraits::getElem( i, operator[]( VbTraits::getElem( i, c ) ) );
+        return res;
+    }
+
+    /// considering all planes with given normal and arbitrary shift: dot(n,x) = d
+    /// finds the box's corner for which d is minimal
+    static Vb getMinBoxCorner( const V & n )
+    {
+        Vb res;
+        for ( int i = 0; i < elements; ++i )
+            VbTraits::getElem( i, res ) = VTraits::getElem( i, n ) < 0;
+        return res;
+    }
 
     /// computes size of the box in all dimensions
     V size() const { assert( valid() ); return max - min; }
@@ -98,11 +121,20 @@ public:
         }
     }
 
-    /// checks whether given point is inside (including the surface) of the box
+    /// checks whether given point is inside (including the surface) of this box
     bool contains( const V & pt ) const
     {
         for ( int i = 0; i < elements; ++i )
             if ( VTraits::getElem( i, min ) > VTraits::getElem( i, pt ) || VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) )
+                return false;
+        return true;
+    }
+
+    /// checks whether given box is fully inside (the surfaces may touch) of this box
+    bool contains( const Box& otherbox ) const
+    {
+        for ( int i = 0; i < elements; ++i )
+            if ( VTraits::getElem( i, min ) > VTraits::getElem( i, otherbox.min ) || VTraits::getElem( i, otherbox.max ) > VTraits::getElem( i, max ) )
                 return false;
         return true;
     }
@@ -199,6 +231,7 @@ public:
 template <typename T>
 inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 {
+    assert( box.valid() );
     return
     {
         Vector3<T>{ box.min.x, box.min.y, box.min.z },
@@ -215,12 +248,29 @@ inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 template <typename T>
 inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
 {
+    assert( box.valid() );
     return
     {
         Vector2<T>{ box.min.x, box.min.y },
         Vector2<T>{ box.max.x, box.min.y },
         Vector2<T>{ box.min.x, box.max.y },
         Vector2<T>{ box.max.x, box.max.y }
+    };
+}
+
+/// among all planes with given normal and arbitrary shift: dot(n,x) = d
+/// finds minimal and maximal touching planes for given box, and returns them as { min_d, max_d }
+template <typename V>
+MinMax<typename Box<V>::T> getTouchPlanes( const Box<V> & box, const V & n )
+{
+    auto minCorner = box.getMinBoxCorner( n );
+    auto maxCorner = minCorner;
+    for ( auto & v : maxCorner )
+        v = !v;
+    return
+    {
+        dot( n, box.corner( minCorner ) ),
+        dot( n, box.corner( maxCorner ) )
     };
 }
 

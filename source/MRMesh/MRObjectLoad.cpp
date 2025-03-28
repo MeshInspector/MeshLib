@@ -26,6 +26,7 @@
 #include "MRVoxels/MRDicom.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRJson.h"
 
 namespace MR
 {
@@ -271,7 +272,10 @@ Expected<ObjectDistanceMap> makeObjectDistanceMapFromFile( const std::filesystem
     MR_TIMER;
 
     DistanceMapToWorld params;
-    auto distanceMap = DistanceMapLoad::fromAnySupportedFormat( file, &params, callback );
+    auto distanceMap = DistanceMapLoad::fromAnySupportedFormat( file, {
+        .distanceMapToWorld = &params,
+        .progress = callback,
+    } );
     if ( !distanceMap.has_value() )
     {
         return unexpected( distanceMap.error() );

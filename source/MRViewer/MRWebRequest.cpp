@@ -6,6 +6,7 @@
 #include "MRMesh/MRProgressCallback.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>

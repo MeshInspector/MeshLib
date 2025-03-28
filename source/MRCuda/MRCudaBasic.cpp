@@ -1,12 +1,11 @@
 #include "MRCudaBasic.h"
 #include "MRCudaBasic.hpp"
 
+#include "MRCuda.cuh"
+
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRVector3.h>
 #include <MRPch/MRSpdlog.h>
-
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
 
 namespace MR
 {
@@ -17,28 +16,28 @@ namespace Cuda
 bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
 {
     int n;
-    cudaError err = cudaGetDeviceCount( &n );
-    if ( err != cudaError::cudaSuccess )
+    cudaError_t err = cudaGetDeviceCount( &n );
+    if ( err != cudaSuccess )
         return false;
     if ( n <= 0 )
         return false;
     int driverVersion{ 0 };
     int runtimeVersion{ 0 };
     err = cudaDriverGetVersion( &driverVersion );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
     
     err = cudaRuntimeGetVersion( &runtimeVersion );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
 
     int computeMajor{ 0 };
     int computeMinor{ 0 };
     err = cudaDeviceGetAttribute( &computeMajor, cudaDevAttrComputeCapabilityMajor, 0 );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
     err = cudaDeviceGetAttribute( &computeMinor, cudaDevAttrComputeCapabilityMinor, 0 );
-    if ( err != cudaError::cudaSuccess )
+    if ( err != cudaSuccess )
         return false;
 
     if ( driverVersionOut )

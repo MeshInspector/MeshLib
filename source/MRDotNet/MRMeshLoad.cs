@@ -34,7 +34,7 @@ namespace MR
         // inherits List<NamedMesh> and correctly disposes native resource
         public class NamedMeshList : List<NamedMesh>, IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrVectorMeshLoadNamedMeshFree(IntPtr vector);
 
             internal NamedMeshList(IntPtr nativeList) : base()
@@ -98,25 +98,25 @@ namespace MR
 
         public class MeshLoad
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRMeshLoadNamedMesh mrVectorMeshLoadNamedMeshGet(IntPtr vector, ulong index);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrVectorMeshLoadNamedMeshSize(IntPtr vector);
 
 
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMeshLoadFromSceneObjFile(string file, bool combineAllObjects, ref MRMeshLoadObjLoadSettings settings, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             unsafe private static extern IntPtr mrMeshLoadFromAnySupportedFormat(string file, IntPtr* errorStr);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
             /// loads mesh from file of any supported format
             unsafe public static Mesh FromAnySupportedFormat(string path)

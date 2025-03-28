@@ -13,6 +13,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSuppressWarning.h"

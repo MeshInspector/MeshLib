@@ -1,6 +1,7 @@
 #include "MRContoursCut.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
+#include "MRPolyline.h"
 #include "MRTriangleIntersection.h"
 #include "MRMeshTopology.h"
 #include "MRMeshDelone.h"
@@ -562,6 +563,53 @@ OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& m
     return res;
 }
 
+OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const ContinuousContours& contours, const CoordinateConverters& converters, const AffineXf3f* rigidB2A /*= nullptr */ )
+{
+    MR_TIMER;
+    OneMeshContours res;
+    AffineXf3f inverseXf;
+    if ( rigidB2A )
+        inverseXf = rigidB2A->inverse();
+    res.resize( contours.size() );
+    for ( int j = 0; j < contours.size(); ++j )
+    {
+        auto& curOutContour = res[j].intersections;
+        const auto& curInContour = contours[j];
+        res[j].closed = isClosed( curInContour );
+        curOutContour.resize( curInContour.size() );
+
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, curInContour.size() ),
+            [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            Vector3f a, b, c, d, e;
+            for ( size_t i = range.begin(); i < range.end(); ++i )
+            {
+                const auto& inIntersection = curInContour[i];
+                auto& outIntersection = curOutContour[i];
+                if ( !rigidB2A == inIntersection.isEdgeATriB )
+                    outIntersection.primitiveId = inIntersection.edge;
+                else
+                    outIntersection.primitiveId = inIntersection.tri;
+                mesh.getTriPoints( inIntersection.tri, a, b, c );
+                d = mesh.orgPnt( inIntersection.edge );
+                e = mesh.destPnt( inIntersection.edge );
+
+                // always calculate in mesh A space
+                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
+                    rigidB2A ? ( *rigidB2A )( a ) : a,
+                    rigidB2A ? ( *rigidB2A )( b ) : b,
+                    rigidB2A ? ( *rigidB2A )( c ) : c,
+                    rigidB2A ? ( *rigidB2A )( d ) : d,
+                    rigidB2A ? ( *rigidB2A )( e ) : e, converters );
+
+                if ( rigidB2A )
+                    outIntersection.coordinate = inverseXf( outIntersection.coordinate );
+            }
+        } );
+    }
+    return res;
+}
+
 Contours3f extractMeshContours( const OneMeshContours& meshContours )
 {
     Contours3f res( meshContours.size() );
@@ -821,8 +869,11 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
             auto nVId = std::get<VertId>( next.primitiveId );
             if ( topology.dest( topology.next( pEId ) ) == nVId )
                 return {};
-            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId )
-                return OneMeshIntersection{findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr )};
+            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
+            {
+                assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
+                return OneMeshIntersection{ findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr ) };
+            }
         }
         else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
         {
@@ -2189,6 +2240,37 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     return res;
 }
+
+Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
+{
+    std::vector<MeshTriPoint> surfaceLine( contour.size() );
+    tbb::task_group_context ctx;
+    bool ok = true;
+    ParallelFor( (size_t)0, contour.size(), [&] ( size_t i )
+    {
+        PointOnFace projPt;
+        if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
+        {
+            if ( ctx.cancel_group_execution() )
+                ok = false;
+            return;
+        }
+        surfaceLine[i] = mesh.toTriPoint( projPt );
+    } );
+    if ( !ok )
+        return unexpected( "Cannot project point to mesh" );
+
+    auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
+    if ( !meshContour )
+        return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
+
+    auto cutRes = cutMesh( mesh, { *meshContour } );
+    if ( !cutRes.fbsWithCountourIntersections.none() )
+        return unexpected( "Cannot cut mesh because of contour self intersections" );
+    auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
+    return sideFbv;
+}
+
 
 TEST( MRMesh, BooleanIntersectionsSort )
 {

@@ -1,7 +1,7 @@
 #ifndef MESHLIB_NO_VOXELS
 #include "MRPython/MRPython.h"
 #include "MRMesh/MRVector3.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 
 MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )

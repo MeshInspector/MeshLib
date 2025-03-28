@@ -1,8 +1,11 @@
 #pragma once
+
 #include "exports.h"
-#include "cuda_runtime.h"
+#include "MRCuda.cuh"
 #include "MRCudaFloat.cuh"
-#include <float.h>
+
+#include <cfloat>
+#include <cstdint>
 
 namespace MR
 {

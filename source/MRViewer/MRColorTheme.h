@@ -2,7 +2,7 @@
 #include "exports.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRSignal.h"
-#include "MRPch/MRJson.h"
+#include <json/forwards.h>
 #include <filesystem>
 #include <vector>
 #include <array>

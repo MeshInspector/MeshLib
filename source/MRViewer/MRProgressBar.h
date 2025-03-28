@@ -44,9 +44,6 @@ MRVIEWER_API  float getLastOperationTime();
 /// returns title of the last operation
 MRVIEWER_API  const std::string& getLastOperationTitle();
 
-/// sets the current progress and returns false if the user has pressed Cancel button
-MRVIEWER_API  bool setProgress(float p);
-
 MRVIEWER_API  void nextTask();
 MRVIEWER_API  void nextTask(const char * s);
 
@@ -61,10 +58,19 @@ MRVIEWER_API  void finish();
 /// returns true if progress bar was ordered and not finished
 MRVIEWER_API  bool isOrdered();
 
-/// these callbacks allow canceling
-MRVIEWER_API  bool callBackSetProgress(float p);
+/// sets new progress value (ignoring tasks) in [0,1], which must be not smaller than the previous value;
+/// returns false if the user has pressed Cancel button;
+/// thread-safe
+MRVIEWER_API  bool setProgress( float p );
 
-/// these callbacks do not allow canceling
+/// sets new progress value of the current task in [0,1], which must be not smaller than the previous value;
+/// enables drawing Cancel button in Progress dialog, and returns false if the user has pressed it;
+/// thread-safe
+MRVIEWER_API  bool callBackSetProgress( float p );
+
+/// sets new progress value of the current task in [0,1], which must be not smaller than the previous value;
+/// disables drawing Cancel button in Progress dialog, always returns true;
+/// thread-safe
 MRVIEWER_API  bool simpleCallBackSetProgress( float p );
 
 /// prints time tree of progress bar thread

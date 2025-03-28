@@ -139,10 +139,10 @@ public:
     /// Manually set callback function
     MRVIEWER_API void setOnDirectionChangedCallback( OnDirectionChangedCallback cb );
 
-    /// Updates the direction of the arrow
+    /// Updates the direction of the arrow, in world space
     MRVIEWER_API void updateDirection( const Vector3f& dir );
 
-    /// Updates the base of the arrow
+    /// Updates the base of the arrow, in world space
     MRVIEWER_API void updateBase( const Vector3f& base );
 
     /// Updates the length of the arrow
@@ -168,8 +168,8 @@ public:
     /// Returns the base of the widget
     MRVIEWER_API const Vector3f& getBase() const;
 
-    /// Returns the direction of the widget
-    MRVIEWER_API const Vector3f& getDirection() const;
+    /// Returns the direction of the widget, in world space
+    MRVIEWER_API Vector3f getDirection() const;
 
     /// Returns pointer to parent object
     MRVIEWER_API const VisualObject* getParentPtr() const;
@@ -182,6 +182,8 @@ private:
     MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
+
+    AffineXf3f builtXf_;
 };
 
 }

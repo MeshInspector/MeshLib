@@ -62,7 +62,7 @@ namespace MR
             public MRBooleanResult() { }
         }
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern MRBooleanResult mrBoolean(IntPtr meshA, IntPtr meshB, BooleanOperation operation, ref MRBooleanParameters parameters);
 
         /// Makes new mesh - result of boolean operation on mesh `A` and mesh `B`

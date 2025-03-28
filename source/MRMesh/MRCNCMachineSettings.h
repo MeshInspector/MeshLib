@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRVector2.h"
-#include "MRPch/MRJson.h"
+#include <json/forwards.h>
 #include <array>
 #include <optional>
 

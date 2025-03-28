@@ -1,7 +1,7 @@
 #include "MRMoveObjectByMouse.h"
 #include "MRViewer/MRMouse.h"
 #include "MRViewer/MRViewer.h"
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"

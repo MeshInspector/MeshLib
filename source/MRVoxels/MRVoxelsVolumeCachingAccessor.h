@@ -40,21 +40,25 @@ public:
         return z_;
     }
 
-    /// preload layers, starting from z
-    void preloadLayer( int z )
+    /// preload layers, starting from z;
+    /// return false if the operation was cancelled from callback
+    bool preloadLayer( int z, const ProgressCallback& cb = {} )
     {
         assert( 0 <= z && z < indexer_.dims().z );
         z_ = z;
-        for ( auto layerIndex = 0; layerIndex < layers_.size(); ++layerIndex )
+        for ( size_t layerIndex = 0; layerIndex < layers_.size(); ++layerIndex )
         {
             if ( indexer_.dims().z <= z_ + layerIndex )
                 break;
-            preloadLayer_( layerIndex );
+            if ( !preloadLayer_( layerIndex, subprogress( cb, layerIndex, layers_.size() ) ) )
+                return false;
         }
+        return true;
     }
 
-    /// preload the next layer
-    void preloadNextLayer()
+    /// preload the next layer;
+    /// return false if the operation was cancelled from callback
+    bool preloadNextLayer( const ProgressCallback& cb = {} )
     {
         z_ += 1;
         for ( auto i = 0; i + 1 < layers_.size(); ++i )
@@ -63,7 +67,8 @@ public:
             firstLayerVoxelId_[i] = firstLayerVoxelId_[i + 1];
         }
         if ( z_ + params_.preloadedLayerCount - 1 < indexer_.dims().z )
-            preloadLayer_( params_.preloadedLayerCount - 1 );
+            return preloadLayer_( params_.preloadedLayerCount - 1, cb );
+        return true;
     }
 
     /// get voxel volume data
@@ -82,7 +87,7 @@ private:
         return indexer_.toVoxelId( { pos.x, pos.y, 0 } );
     }
 
-    void preloadLayer_( size_t layerIndex )
+    bool preloadLayer_( size_t layerIndex, const ProgressCallback& cb )
     {
         MR_TIMER
         assert( layerIndex < layers_.size() );
@@ -91,14 +96,14 @@ private:
         const auto& dims = indexer_.dims();
         assert( 0 <= z && z < dims.z );
         firstLayerVoxelId_[layerIndex] = indexer_.toVoxelId( Vector3i{ 0, 0, z } );
-        ParallelFor( 0, dims.y, [&]( int y )
+        return ParallelFor( 0, dims.y, [&]( int y )
         {
             auto accessor = accessor_; // only for OpenVDB accessor, which is not thread-safe
             auto loc = indexer_.toLoc( Vector3i{ 0, y, z } );
             size_t n = size_t( y ) * dims.x;
             for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
                 layer[n] = accessor.get( loc );
-        } );
+        }, cb, 1 );
     }
 
 private:

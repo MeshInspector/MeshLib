@@ -5,7 +5,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include <tuple>

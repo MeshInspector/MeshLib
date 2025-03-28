@@ -17,28 +17,28 @@ namespace MR
                 public Vector3f.MRVector3f z;
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fIdentity();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fRotationScalar(ref MRVector3f axis, float angle);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fRotationVector(ref MRVector3f from, ref MRVector3f to);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fAdd(ref MRMatrix3f a, ref MRMatrix3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fSub(ref MRMatrix3f a, ref MRMatrix3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRMatrix3f mrMatrix3fMul(ref MRMatrix3f a, ref MRMatrix3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrMatrix3fMulVector(ref MRMatrix3f a, ref MRVector3f b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             [return: MarshalAs(UnmanagedType.I1)]
             private static extern bool mrMatrix3fEqual(ref MRMatrix3f a, ref MRMatrix3f b);
 

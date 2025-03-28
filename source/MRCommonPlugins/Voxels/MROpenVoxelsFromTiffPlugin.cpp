@@ -2,7 +2,7 @@
 #include <MRVoxels/MRVoxelsFwd.h>
 #ifndef MRVOXELS_NO_TIFF
 
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonConstants.h"

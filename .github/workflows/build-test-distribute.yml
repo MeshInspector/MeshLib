@@ -37,7 +37,8 @@ jobs:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
-      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -59,7 +60,8 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vcpkg_version:         ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version:   ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:   ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -107,8 +109,9 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
-      full_config_build: ${{ needs.config.outputs.full_config_build == 'true' }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
@@ -173,7 +176,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
@@ -232,6 +235,12 @@ jobs:
      - name: Build NuGet package
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
 
+     - name: Install package for Patch step
+       run: py -3 -m pip install delvewheel
+
+     - name: Patch NuGet package
+       run: py -3 scripts\nuget_package_patch.py MeshLib.nupkg
+
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4
        with:
@@ -272,14 +281,14 @@ jobs:
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
@@ -313,7 +322,7 @@ jobs:
     timeout-minutes: 5
     runs-on: aws-micro
     needs: [ upload-distributions ]
-    if: always()
+    if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
     steps:
       - name: Checkout
@@ -342,31 +351,31 @@ jobs:
     steps:
         # all Windows
       - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
         # .NET
       - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Distributives*
           failOnError: false
 
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Wheelhouse*
           failOnError: false
 
       - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: RunnerSysStats*
           failOnError: false
@@ -397,13 +406,13 @@ jobs:
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
           failOnError: false

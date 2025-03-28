@@ -78,8 +78,10 @@ public:
     enum class ChangeType
     {
         AppendAction, ///< additions in scoped block does not provide signal
-        Undo,
-        Redo,
+        PreUndo,
+        PostUndo,
+        PreRedo,
+        PostRedo,
         Clear,
         PopAction, ///< called after removing action that exceeds memory limit
         Filter

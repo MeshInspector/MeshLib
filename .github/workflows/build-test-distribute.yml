@@ -273,6 +273,9 @@ jobs:
       - name: Start Instance
         run: |
           aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
+      - name: Wait Instance
+        run: |
+          aws ec2 wait instance-status-ok --instance-ids i-0987d7b35b21ad1f1
 
   windows-unity-test:
     if: ${{ github.event_name == 'schedule' }} // triggered by schedule

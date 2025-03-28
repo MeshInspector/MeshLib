@@ -34,7 +34,10 @@
     <ClCompile Include="MRMatrix3.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
+    <ClCompile Include="MRVector3.c" />
+    <ClCompile Include="SimpleObjects.c" />
     <ClCompile Include="TestFunctions.c" />
+
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -66,6 +69,8 @@
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRColor.h" />
     <ClInclude Include="MRMatrix3.h" />
+    <ClInclude Include="MRVector3.h" />
+    <ClInclude Include="SimpleObjects.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

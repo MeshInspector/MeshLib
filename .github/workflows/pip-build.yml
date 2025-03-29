@@ -53,7 +53,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag || 'latest'}}
-      options: ${{ matrix.container-options || '' }}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
@@ -66,6 +66,7 @@ jobs:
             compiler: /usr/bin/clang++-11
           - platform: "aarch64"
             os: "ubuntu20-arm64"
+            container-options: " " # empty
             runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
             # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
             # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.

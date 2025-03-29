@@ -120,7 +120,7 @@ jobs:
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest

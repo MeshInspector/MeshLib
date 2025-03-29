@@ -36,7 +36,6 @@ jobs:
             container-prefix: ""
           - platform: "aarch64"
             runner: [ self-hosted, linux-arm64, spot, meshinspector ]
-            container-options: "--user root"
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"

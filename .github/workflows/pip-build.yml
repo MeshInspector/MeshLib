@@ -66,7 +66,6 @@ jobs:
             compiler: /usr/bin/clang++-11
           - platform: "aarch64"
             os: "ubuntu20-arm64"
-            container-options: "--user root"
             runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
             # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
             # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
@@ -415,7 +414,6 @@ jobs:
             container-prefix: " "
           - platform: "aarch64"
             runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-            container-options: "--user root"
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"

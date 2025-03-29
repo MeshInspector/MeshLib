@@ -112,4 +112,28 @@ TEST( MRMesh, tangentPlaneToSpheres )
     EXPECT_NEAR( p3->d, 0, 1e-15 );
 }
 
+TEST( MRMesh, quadrangleOtherDiagonal )
+{
+    const double exp1 = 3.5551215012835908;
+    auto d1 = quadrangleOtherDiagonal( 3., 4., 6., 3., 4. );
+    EXPECT_TRUE( d1.has_value() );
+    EXPECT_NEAR( exp1, *d1, 1e-15 );
+    auto d1f = quadrangleOtherDiagonal( 3.f, 4.f, 6.f, 3.f, 4.f );
+    EXPECT_TRUE( d1f.has_value() );
+    EXPECT_NEAR( float( exp1 ), *d1f, 1e-6 );
+
+    auto d2 = quadrangleOtherDiagonal( 4., 6., 3., 4., 6. );
+    EXPECT_FALSE( d2.has_value() );
+    auto d2f = quadrangleOtherDiagonal( 4.f, 6.f, 3.f, 4.f, 6.f );
+    EXPECT_FALSE( d2f.has_value() );
+
+    const double exp3 = 4.3870982579476117;
+    auto d3 = quadrangleOtherDiagonal( 3., 4., 6., 3.5, 4.5 );
+    EXPECT_TRUE( d3.has_value() );
+    EXPECT_NEAR( exp3, *d3, 1e-15 );
+    auto d3f = quadrangleOtherDiagonal( 3.f, 4.f, 6.f, 3.5f, 4.5f );
+    EXPECT_TRUE( d3f.has_value() );
+    EXPECT_NEAR( float( exp3 ), *d3f, 1e-6f );
+}
+
 } //namespace MR

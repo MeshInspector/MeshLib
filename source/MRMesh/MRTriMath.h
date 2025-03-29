@@ -289,8 +289,9 @@ template <typename T>
     return Vector2<T>{ x, y };
 }
 
-/// given the lengths of 4 edges of a quadrangle, and one of its diagonals (c);
-/// returns the length of the other diagonal if the quadrangle is valid and convex or std::nullopt otherwise
+/// given two triangles on same plane sharing one side, with edge lengths in same order: (a, b, c) and (b1, a1, c);
+/// they can be considered as a quadrangle with a diagonal of length (c); and the lengths of consecutive edges (a, b, b1, a1);
+/// returns the length of the other quadrangle's diagonal if the quadrangle is valid and convex or std::nullopt otherwise
 template <typename T>
 [[nodiscard]] std::optional<T> quadrangleOtherDiagonal( T a, T b, T c, T a1, T b1 )
 {

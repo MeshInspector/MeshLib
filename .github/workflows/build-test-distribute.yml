@@ -14,6 +14,10 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
@@ -247,6 +251,61 @@ jobs:
          name: DistributivesNuGet
          path: MeshLib.nupkg
          retention-days: 1
+
+     - name: Configure AWS Credentials
+       uses: aws-actions/configure-aws-credentials@v4
+       with:
+         role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+         aws-region: us-east-1
+
+     - name: Upload NuGet Package to S3
+       shell: powershell
+       run: aws s3 cp MeshLib.nupkg 's3://test-artifacts-git/MeshLib.nupkg' --quiet
+
+  start-unity-instance:
+    name: Start unity instance
+    runs-on: aws-micro
+    needs: [ windows-build-test ]
+    outputs:
+      instance_started: ${{ steps.set-output.outputs.instance_started }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Start Instance
+        run: |
+          aws ec2 start-instances --instance-ids i-0987d7b35b21ad1f1
+      - name: Wait Instance
+        run: |
+          aws ec2 wait instance-status-ok --instance-ids i-0987d7b35b21ad1f1
+
+  windows-unity-test:
+    if: ${{ github.event_name == 'schedule' }} // triggered by schedule
+    needs: [ start-unity-instance ]
+    uses: ./.github/workflows/unity-nuget-test.yml
+    secrets: inherit
+
+  stop-instance:
+    runs-on: aws-micro
+    needs: [ start-unity-instance, windows-unity-test ]
+    if: always()
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Stop Instance
+        run: |
+          aws ec2 stop-instances --instance-ids i-0987d7b35b21ad1f1
 
   upload-distributions:
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}

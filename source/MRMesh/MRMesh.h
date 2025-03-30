@@ -142,6 +142,9 @@ struct [[nodiscard]] Mesh
     /// returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
 
+    /// computes and returns the lengths of all edges in the mesh
+    [[nodiscard]] MRMESH_API UndirectedEdgeScalars edgeLengths() const;
+
     /// returns squared Euclidean length of the edge (faster to compute than length)
     [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return edgeVector( e ).lengthSq(); }
 

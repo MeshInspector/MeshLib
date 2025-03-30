@@ -309,6 +309,37 @@ template <typename T>
     return ( *p - *p1 ).length();
 }
 
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the squared tangent of half angle opposite the side with length (a)
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T tanSqOfHalfAngle( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return 0;
+    return num / den;
+}
+
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the cotangent of the angle opposite the side with length a
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T cotan( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return -std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const auto tanSq = num / den;
+    return ( 1 - tanSq ) / ( 2 * std::sqrt( tanSq ) );
+}
+
 /// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;
 /// returns field gradient in the triangle or std::nullopt if the triangle is degenerate
 template <typename T>

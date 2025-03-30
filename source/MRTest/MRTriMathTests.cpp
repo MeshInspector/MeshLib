@@ -120,7 +120,7 @@ TEST( MRMesh, quadrangleOtherDiagonal )
     EXPECT_NEAR( exp1, *d1, 1e-15 );
     auto d1f = quadrangleOtherDiagonal( 3.f, 4.f, 6.f, 3.f, 4.f );
     EXPECT_TRUE( d1f.has_value() );
-    EXPECT_NEAR( float( exp1 ), *d1f, 1e-6 );
+    EXPECT_NEAR( float( exp1 ), *d1f, 1e-6f );
 
     auto d2 = quadrangleOtherDiagonal( 4., 6., 3., 4., 6. );
     EXPECT_FALSE( d2.has_value() );
@@ -134,6 +134,27 @@ TEST( MRMesh, quadrangleOtherDiagonal )
     auto d3f = quadrangleOtherDiagonal( 3.f, 4.f, 6.f, 3.5f, 4.5f );
     EXPECT_TRUE( d3f.has_value() );
     EXPECT_NEAR( float( exp3 ), *d3f, 1e-6f );
+}
+
+TEST( MRMesh, triangleAnglesFromEdgeLengths )
+{
+    EXPECT_NEAR(            cotan( 3., 4., 5. ), 4. / 3, 1e-15 );
+    EXPECT_NEAR( tanSqOfHalfAngle( 3., 4., 5. ), 1. / 9, 1e-15 );
+
+    EXPECT_NEAR(            cotan( 4., 5., 3. ), 3. / 4, 1e-15 );
+    EXPECT_NEAR( tanSqOfHalfAngle( 4., 5., 3. ), 1. / 4, 1e-15 );
+
+    EXPECT_NEAR(            cotan( 5., 3., 4. ), 0., 1e-15 );
+    EXPECT_NEAR( tanSqOfHalfAngle( 5., 3., 4. ), 1., 1e-15 );
+
+    EXPECT_NEAR(            cotan( 3.f, 4.f, 5.f ), 4.f / 3, 1e-6f );
+    EXPECT_NEAR( tanSqOfHalfAngle( 3.f, 4.f, 5.f ), 1.f / 9, 1e-6f );
+
+    EXPECT_NEAR(            cotan( 4.f, 5.f, 3.f ), 3.f / 4, 1e-6f );
+    EXPECT_NEAR( tanSqOfHalfAngle( 4.f, 5.f, 3.f ), 1.f / 4, 1e-6f );
+
+    EXPECT_NEAR(            cotan( 5.f, 3.f, 4.f ), 0.f, 1e-6f );
+    EXPECT_NEAR( tanSqOfHalfAngle( 5.f, 3.f, 4.f ), 1.f, 1e-6f );
 }
 
 } //namespace MR

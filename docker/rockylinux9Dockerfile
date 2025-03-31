@@ -19,12 +19,12 @@ RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --s
 
 WORKDIR /opt/vcpkg
 
-ENV VCPKG_TRIPLET=x64-linux-dynamic
-
 # build vcpkg packages
-COPY requirements/vcpkg-linux.txt requirements.txt
-RUN echo "set(VCPKG_BUILD_TYPE release)" >> triplets/community/${VCPKG_TRIPLET}.cmake && \
-    ./vcpkg install --host-triplet=${VCPKG_TRIPLET} $(cat requirements.txt | tr '\n' ' ') && \
+COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
+COPY thirdparty/vcpkg/triplets MeshLib/triplets
+ENV VCPKG_TRIPLET=x64-linux-meshlib
+
+RUN ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets $(cat MeshLib/requirements.txt | tr '\n' ' ') && \
     rm -rf buildtrees downloads 
 
 RUN mkdir /home/MeshLib

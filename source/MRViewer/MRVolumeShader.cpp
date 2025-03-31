@@ -203,7 +203,10 @@ std::string getVolumeFragmentShader()
     uint dimsX = uint( dims.x );
     while ( outColor.a < 1.0 )
     {
-        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        if ( step <= 0.0 )
+            rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        else
+            rayStart = rayStart + normRayDir*step;
         
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
@@ -401,7 +404,10 @@ std::string getVolumePickerFragmentShader()
     uint dimsX = uint( dims.x );
     while ( !firstFound )
     {
-        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        if ( step <= 0.0 )
+            rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        else
+            rayStart = rayStart + normRayDir*step;
 
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )

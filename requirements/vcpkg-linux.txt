@@ -10,6 +10,7 @@ boost-serialization
 boost-signals2
 boost-stacktrace
 boost-url
+clip
 cpr
 eigen3
 freetype
@@ -20,12 +21,14 @@ gtest
 gtk3
 hidapi
 jsoncpp
+laz-perf
 libe57format
 libharu
 libjpeg-turbo
 libzip
 opencascade[core]
 openvdb
+parallel-hashmap
 python3
 spdlog
 tbb

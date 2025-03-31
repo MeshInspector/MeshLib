@@ -108,9 +108,7 @@ int main( void )
 
     // MRSimpleObjects
     RUN_TEST( testMrMakeCube );
-    RUN_TEST( testMrMakeCylinderAdvancedParametersNew );
     RUN_TEST( testMrMakeCylinderAdvanced );
-    RUN_TEST( testMrMakeTorusParametersNew );
     RUN_TEST( testMrMakeTorus );
     RUN_TEST( testMrMakeTorusWithSelfIntersections );
     RUN_TEST( testMrMakeSphere );

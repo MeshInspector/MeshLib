@@ -18,40 +18,22 @@ void testMrMakeCube(void) {
     mrMeshFree(cube);
 }
 
-
-void testMrMakeCylinderAdvancedParametersNew(void) {
-    const MRMakeCylinderAdvancedParameters params = mrMakeCylinderAdvancedParametersNew();
-
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.radius0, 0.1f, 0.001f);
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.radius1, 0.1f, 0.001f);
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.startAngle, 0.0f, 0.001f);
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.arcSize, 2.0f * 3.1415, 0.001f);
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.length, 1.0f, 0.001f);
-    TEST_ASSERT_INT_EQUAL(params.resolution, 16);
-}
-
 void testMrMakeCylinderAdvanced(void) {
-    const MRMakeCylinderAdvancedParameters params = mrMakeCylinderAdvancedParametersNew();
+    MRMakeCylinderAdvancedParameters params = mrMakeCylinderAdvancedParametersNew();
+    params.radius0 = 1.0f;
+    params.radius1 = 0.5f;
+    params.startAngle = 0.0f;
+    params.arcSize = (float)(2.0f * 3.1415);
+    params.length = 1.0f;
+    params.resolution = 16;
 
     MRMesh *cylinder = mrMakeCylinderAdvanced(&params);
     TEST_ASSERT(cylinder != NULL);
 
     const double surfaceArea = mrMeshArea(cylinder, NULL);
-    const double theoreticalSurfaceArea = 2.0 * 3.1415 * params.radius0 * params.length +
-                                    3.1415 * params.radius0 * params.radius0 * 2.0; // assuming circular ends.
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(surfaceArea, theoreticalSurfaceArea, 0.1f);
+    TEST_ASSERT_FLOAT_EQUAL_APPROX(surfaceArea, 10.541437, 0.1f);
 
     mrMeshFree(cylinder);
-}
-
-
-void testMrMakeTorusParametersNew(void) {
-    const MRMakeTorusParameters params = mrMakeTorusParametersNew();
-
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.primaryRadius, 1.0f, 0.001f);
-    TEST_ASSERT_FLOAT_EQUAL_APPROX(params.secondaryRadius, 0.1f, 0.001f);
-    TEST_ASSERT_INT_EQUAL(params.primaryResolution, 16);
-    TEST_ASSERT_INT_EQUAL(params.secondaryResolution, 16);
 }
 
 

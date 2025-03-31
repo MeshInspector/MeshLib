@@ -290,4 +290,9 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
     return {};
 }
 
+size_t PointsProjector::projectionsHeapBytes( size_t ) const
+{
+    return 0;
+}
+
 } //namespace MR

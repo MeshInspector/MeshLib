@@ -28,6 +28,7 @@ opencascade[core]
 openvdb
 python3
 spdlog
+tbb
 tiff
 tinygltf
 tinyxml2

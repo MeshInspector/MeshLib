@@ -1,0 +1,36 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 60db926..5b88c5b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -17,6 +17,7 @@ endif()
+ option(CLIP_ENABLE_IMAGE "Compile with support to copy/paste images" on)
+ option(CLIP_EXAMPLES "Compile clip examples" on)
+ option(CLIP_TESTS "Compile clip tests" on)
++option(CLIP_INSTALL "Enable clip installation" on)
+ if(UNIX AND NOT APPLE)
+   option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
+ endif()
+@@ -98,3 +99,23 @@ if(CLIP_TESTS)
+   enable_testing()
+   add_subdirectory(tests)
+ endif()
++
++if(CLIP_INSTALL)
++  include(GNUInstallDirs)
++
++  install(
++    FILES clip.h
++    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
++  )
++  install(
++    TARGETS clip
++    EXPORT clip-targets
++    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++  )
++  install(
++    EXPORT clip-targets
++    NAMESPACE clip::
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
++  )
++endif()

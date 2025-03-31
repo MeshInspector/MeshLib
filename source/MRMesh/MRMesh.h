@@ -303,7 +303,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
 
     /// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
-    /// and returns 0 if left face does not exist
+    /// consider cotangents zero for not existing triangles
     [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
 
     /// computes quadratic form in the vertex as the sum of squared distances from

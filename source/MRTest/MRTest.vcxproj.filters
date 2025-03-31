@@ -76,6 +76,9 @@
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MREdgeLengthMeshTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

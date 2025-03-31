@@ -33,7 +33,7 @@ jobs:
       - name: Install nuget package
         shell: powershell
         run: |
-          C:\Users\Administrator\.dotnet\tools\nugetforunity.exe restore "C:\work\unity_proj\NugetTestProj"
+          C:\\Users\\Administrator\\.dotnet\\tools\\ugetforunity.exe restore "C:\work\unity_proj\NugetTestProj"
 
       - name: Run test
         shell: powershell

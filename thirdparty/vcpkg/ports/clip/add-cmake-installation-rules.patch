@@ -1,16 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 60db926..5b88c5b 100644
+index bb7e764..21e31bf 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -17,6 +17,7 @@ endif()
- option(CLIP_ENABLE_IMAGE "Compile with support to copy/paste images" on)
+@@ -20,6 +20,7 @@ if(WIN32)
+ endif()
  option(CLIP_EXAMPLES "Compile clip examples" on)
  option(CLIP_TESTS "Compile clip tests" on)
 +option(CLIP_INSTALL "Enable clip installation" on)
  if(UNIX AND NOT APPLE)
    option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
  endif()
-@@ -98,3 +99,23 @@ if(CLIP_TESTS)
+@@ -104,3 +105,35 @@ if(CLIP_TESTS)
    enable_testing()
    add_subdirectory(tests)
  endif()
@@ -33,4 +33,38 @@ index 60db926..5b88c5b 100644
 +    NAMESPACE clip::
 +    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
 +  )
++
++  include(CMakePackageConfigHelpers)
++
++  configure_package_config_file(
++    clip-config.cmake.in
++    ${CMAKE_CURRENT_BINARY_DIR}/clip-config.cmake
++    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
++  )
++  install(
++    FILES ${CMAKE_CURRENT_BINARY_DIR}/clip-config.cmake
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
++  )
 +endif()
+diff --git a/README.md b/README.md
+index e9695db..1a52e84 100644
+--- a/README.md
++++ b/README.md
+@@ -69,6 +69,7 @@ int main() {
+   [list_clip_formats](examples/list_clip_formats.cpp) example.
+ * `CLIP_EXAMPLES`: Compile [examples](examples/).
+ * `CLIP_TESTS`: Compile [tests](tests/).
++* `CLIP_INSTALL`: Generate installation rules for CMake.
+ * `CLIP_X11_WITH_PNG` (only for Linux/X11): Enables support to
+   copy/paste images using the `libpng` library on Linux.
+ 
+diff --git a/clip-config.cmake.in b/clip-config.cmake.in
+new file mode 100644
+index 0000000..a3086e8
+--- /dev/null
++++ b/clip-config.cmake.in
+@@ -0,0 +1,4 @@
++@PACKAGE_INIT@
++
++include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@-targets.cmake")
++check_required_components("@CMAKE_PROJECT_NAME@")

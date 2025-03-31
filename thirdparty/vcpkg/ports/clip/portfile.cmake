@@ -1,8 +1,9 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO dacap/clip
-    REF "v${VERSION}"
-    SHA512 49b4c7d7a18b0fce4a00b350de7fd70c7b42bee47f3d475dcf767c5f3351b853aa951df3e771d7d1c6c3ba5b25849ccd9ceb08331ffc0f6c45c92db4c90fa1be
+    #    REF "v${VERSION}"
+    REF a1a5fd11b420ad321b000eba4f736d53ef557e89
+    SHA512 ef65ed7de918190f2190e1e1bef1d5c2056f34be9e080d749e6a3b9e9db889327b21a1a7e23d6de1f14aef9a94e63fc86416bdf8567678c90d1b26427b1a9aed
     HEAD_REF main
     PATCHES
       "add-cmake-installation-rules.patch"

@@ -33,7 +33,7 @@ struct [[nodiscard]] EdgeLengthMesh
     /// given the edge with left and right triangular faces, which form together a quadrangle,
     /// returns the length of geodesic line on original mesh between the vertices of the quadrangle opposite to given edge;
     /// returns std::nullopt if the geodesic line does not go fully inside the quadrangle
-    [[nodiscard]] std::optional<float> edgeLengthAfterFlip( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API std::optional<float> edgeLengthAfterFlip( EdgeId e ) const;
 
     /// given the edge with left and right triangular faces, which form together a quadrangle,
     /// rotates the edge counter-clockwise inside the quadrangle;

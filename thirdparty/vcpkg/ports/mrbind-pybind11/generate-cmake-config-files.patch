@@ -1,0 +1,84 @@
+diff --git a/source/non_limited_api/CMakeLists.txt b/source/non_limited_api/CMakeLists.txt
+index 6e42fbd0..2c6c2fd9 100644
+--- a/source/non_limited_api/CMakeLists.txt
++++ b/source/non_limited_api/CMakeLists.txt
+@@ -25,6 +25,7 @@ set(PYBIND11_NONLIMITEDAPI_SUFFIX "" CACHE STRING "A custom suffix to append to
+ set(PYBIND11_NONLIMITEDAPI_LIBRARY_OUTPUT_DIR "" CACHE PATH "Replaces the library installation path for the shim.")
+ 
+ include(GNUInstallDirs)
++include(CMakePackageConfigHelpers)
+ 
+ set(PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_STUBS "${CMAKE_INSTALL_LIBDIR}" CACHE PATH "Where to install the stub library.")
+ set(PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_SHIMS "${CMAKE_INSTALL_LIBDIR}" CACHE PATH "Where to install the shim library.")
+@@ -47,16 +48,26 @@ if (${PYBIND11_NONLIMITEDAPI_BUILD_STUBS})
+     target_link_directories(${PROJECT_NAME} PUBLIC ${Python_LIBRARY_DIRS})
+   endif()
+ 
+-  install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
++  install(
++    TARGETS ${PROJECT_NAME}
++    EXPORT ${PROJECT_NAME}-targets
+     ARCHIVE DESTINATION ${PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_STUBS}
+     LIBRARY DESTINATION ${PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_STUBS}
+-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+   )
+   if (PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS)
+     install(
+-      EXPORT ${PROJECT_NAME}
++      EXPORT ${PROJECT_NAME}-targets
+       NAMESPACE pybind11nonlimitedapi::
+-      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pybind11nonlimitedapi/cmake
++      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
++    )
++    configure_package_config_file(
++      pybind11nonlimitedapi-config.cmake.in
++      ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
++      INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
++    )
++    install(
++      FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
++      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
+     )
+   endif()
+ 
+@@ -100,16 +111,26 @@ else()
+     set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYBIND11_NONLIMITEDAPI_LIBRARY_OUTPUT_DIR}")
+   endif()
+ 
+-  install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
++  install(
++    TARGETS ${PROJECT_NAME}
++    EXPORT ${PROJECT_NAME}-targets
+     ARCHIVE DESTINATION ${PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_SHIMS}
+     LIBRARY DESTINATION ${PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_SHIMS}
+-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+   )
+   if (PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS)
+     install(
+-      EXPORT ${PROJECT_NAME}
++      EXPORT ${PROJECT_NAME}-targets
+       NAMESPACE pybind11nonlimitedapi::
+-      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pybind11nonlimitedapi/cmake
++      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
++    )
++    configure_package_config_file(
++      pybind11nonlimitedapi-config.cmake.in
++      ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
++      INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
++    )
++    install(
++      FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
++      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11nonlimitedapi
+     )
+   endif()
+ endif()
+diff --git a/source/non_limited_api/pybind11nonlimitedapi-config.cmake.in b/source/non_limited_api/pybind11nonlimitedapi-config.cmake.in
+new file mode 100644
+index 00000000..a3086e85
+--- /dev/null
++++ b/source/non_limited_api/pybind11nonlimitedapi-config.cmake.in
+@@ -0,0 +1,4 @@
++@PACKAGE_INIT@
++
++include("${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@-targets.cmake")
++check_required_components("@CMAKE_PROJECT_NAME@")

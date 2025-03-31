@@ -26,6 +26,7 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
+mrbind-pybind11
 opencascade[core]
 openvdb
 parallel-hashmap

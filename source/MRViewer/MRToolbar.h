@@ -1,8 +1,12 @@
 #pragma once
+
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRColor.h"
 #include <json/forwards.h>
-#include "exports.h"
+#include <map>
+#include <vector>
+#include <string>
 
 namespace MR
 {

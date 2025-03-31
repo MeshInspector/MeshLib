@@ -64,7 +64,11 @@ ELSE()
 
   find_package(glfw3 CONFIG REQUIRED)
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE MRMesh glfw Freetype::Freetype)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    glfw
+    Freetype::Freetype
+    ${CMAKE_DL_LIBS}
+  )
 ENDIF()
 
 install(

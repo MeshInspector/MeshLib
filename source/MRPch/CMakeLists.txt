@@ -58,9 +58,8 @@ IF(MR_PCH)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
   ENDIF()
   IF(MR_PCH_USE_EXTRA_HEADERS AND MESHLIB_BUILD_MRVIEWER)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      imgui
-    )
+    set(IMGUI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/imgui")
+    target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${IMGUI_ROOT}>)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

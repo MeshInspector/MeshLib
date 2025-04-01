@@ -14,7 +14,6 @@ project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
-add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 include(CompilerOptions)
 
@@ -175,7 +174,6 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)
-include_directories(${MESHLIB_THIRDPARTY_DIR}/imgui)
 include_directories(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include)
 
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
@@ -219,16 +217,6 @@ ELSE()
   ENDIF()
 ENDIF()
 
-IF(MESHLIB_BUILD_MRVIEWER)
-  IF(MSVC)
-    set(IMGUI_DIR ${MESHLIB_THIRDPARTY_DIR}/imgui)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
-  ELSE()
-    set(IMGUI_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/imgui)
-  ENDIF()
-  include_directories(${IMGUI_DIR})
-ENDIF()
-
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
@@ -258,6 +246,7 @@ IF(MESHLIB_BUILD_MRVIEWER)
     ENDIF()
   ENDIF()
 
+  add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 

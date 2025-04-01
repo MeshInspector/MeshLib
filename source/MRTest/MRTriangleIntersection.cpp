@@ -49,6 +49,21 @@ TEST( MRMesh, TriangleSegmentIntersectFloat )
     EXPECT_TRUE( intersection );
 }
 
+TEST( MRMesh, PointTriangleIntersectFloat )
+{
+    EXPECT_TRUE( isPointInPlane( ::T1[0], ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( ( ::T1[0] + ::T1[1] + ::T1[2] ) / 3.0f, ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( ( ::T1[0] + ::T1[1] ) / 2.0f, ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInPlane( Vector3f( 100, 100, 0 ), ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_FALSE( isPointInPlane( Vector3f( 0, 0, 1 ), ::T1[0], ::T1[1], ::T1[2] ) );
+
+    EXPECT_TRUE( isPointInTriangle( ::T1[0], ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInTriangle( ( ::T1[0] + ::T1[1] + ::T1[2] ) / 3.0f, ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_TRUE( isPointInTriangle( ( ::T1[0] + ::T1[1] ) / 2.0f, ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_FALSE( isPointInTriangle( Vector3f( 100, 100, 0 ), ::T1[0], ::T1[1], ::T1[2] ) );
+    EXPECT_FALSE( isPointInTriangle( Vector3f( 0, 0, 1 ), ::T1[0], ::T1[1], ::T1[2] ) );
+}
+
 using TrianglesIntersectParameters = std::tuple<bool, Triangle3f, Triangle3f>;
 class TrianglesIntersectTestFixture : public testing::TestWithParam<TrianglesIntersectParameters> { };
 

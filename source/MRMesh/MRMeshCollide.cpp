@@ -226,7 +226,10 @@ Expected<bool> findSelfCollidingTriangles(
                     if ( mp.region && !mp.region->test( bFace ) )
                         return Processing::Continue;
                     if ( mp.mesh.topology.sharedEdge( aFace, bFace ) )
+                    {
+                        // check vertex in same plane (mixed == 0)
                         return Processing::Continue;
+                    }
                     if ( regionMap && (*regionMap)[aFace] != (*regionMap)[bFace] )
                         return Processing::Continue;
 
@@ -247,11 +250,12 @@ Expected<bool> findSelfCollidingTriangles(
                         // shared vertex
                         const int j = sv.first;
                         const int k = sv.second;
+                        // also check touching here
                         if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[ ( k + 1 ) % 3 ], bp[ ( k + 2 ) % 3 ] ) &&
                              !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[ ( j + 1 ) % 3 ], ap[ ( j + 2 ) % 3 ] ) )
                             return Processing::Continue;
                     }
-                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
+                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) ) // also check touching here
                         return Processing::Continue;
                     myRes.emplace_back( aFace, bFace );
                     if ( !outCollidingPairs )

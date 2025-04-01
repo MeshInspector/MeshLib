@@ -239,7 +239,7 @@ jobs:
        run: py -3 -m pip install delvewheel
 
      - name: Patch NuGet package
-       run: py -3 scripts\nuget_package_patch.py MeshLib.nupkg
+       run: py -3 scripts\nuget_patch\nuget_package_patch.py MeshLib.nupkg
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4

@@ -126,7 +126,6 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
         for (int i = 0; i < 3; ++i) {
             res.xf.b[i] = float( atPos.GetValue( i ) );
         }
-        res.xf.b /= 1000.0f;
     }
 
     if( ds.FindDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() ) )
@@ -324,6 +323,7 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     DicomVolumeT<T> res;
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );
+    res.xf = fileRes.xf;
     return res;
 }
 

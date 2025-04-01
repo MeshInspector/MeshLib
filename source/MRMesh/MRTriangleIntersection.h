@@ -99,7 +99,7 @@ bool isPointInPlane( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>&
     return mixed( p - a, p - b, p - c ) == T( 0 );
 }
 
-/// returns true if plane ABC contains point P
+/// returns true if ABC triangle contains point P
 template<typename T>
 bool isPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
 {

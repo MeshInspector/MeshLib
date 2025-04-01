@@ -73,7 +73,8 @@ MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings 
 
 struct IntrinsicDeloneSettings
 {
-    /// passing negative threshold makes more edges satisfy Delaunay conditions
+    /// the edge is considered Delaunay, if cotan(a1) + cotan(a2) >= threshold;
+    /// passing positive(negative) threshold makes less(more) edges satisfy Delaunay conditions
     float threshold = 0;
 
     /// Region on mesh to be processed, it is constant and not updated

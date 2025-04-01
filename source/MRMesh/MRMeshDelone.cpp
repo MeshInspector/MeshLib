@@ -181,7 +181,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
                 continue;
 
             if ( ++flipsDone == 1 )
-                mesh.invalidateCaches();
+                mesh.invalidateCaches( false ); // false means that vertex coordinates are not changed
             mesh.topology.flipEdge( e );
             nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ) );
             nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ) );

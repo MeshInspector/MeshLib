@@ -8,6 +8,7 @@
 #include "MRVector2.h"
 #include "MRGeodesicPath.h"
 #include "MRTriDist.h"
+#include "MREdgeLengthMesh.h"
 
 namespace MR
 {
@@ -127,12 +128,20 @@ bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3
     return metricAC <= metricBD;
 }
 
+void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
+{
+    MR_WRITER( mesh );
+    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
+    {
+        return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
+    } );
+}
+
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
-    MR_TIMER;
-    MR_WRITER( mesh );
+    MR_TIMER
 
     UndirectedEdgeBitSet flipCandidates( mesh.topology.undirectedEdgeSize() );
     UndirectedEdgeBitSet nextFlipCandidates( mesh.topology.undirectedEdgeSize(), true );
@@ -156,12 +165,13 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
             if ( checkDeloneQuadrangleInMesh( mesh, e, settings ) )
                 continue;
 
+            if ( ++flipsDone == 1 )
+                mesh.invalidateCaches();
             mesh.topology.flipEdge( e );
-            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ).undirected() );
-            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ).undirected() );
-            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ).undirected() );
-            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ).undirected() );
-            ++flipsDone;
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ) );
         }
         if ( flipsDoneBeforeThisIter == flipsDone )
             break;
@@ -169,13 +179,46 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     return flipsDone;
 }
 
-void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
+int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& settings, int numIters, ProgressCallback progressCallback )
 {
-    MR_WRITER( mesh );
-    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
+    if ( numIters <= 0 )
+        return 0;
+    MR_TIMER
+
+    UndirectedEdgeBitSet flipCandidates( mesh.topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates( mesh.topology.undirectedEdgeSize(), true );
+
+    int flipsDone = 0;
+    for ( int iter = 0; iter < numIters; ++iter )
     {
-        return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
-    } );
+        if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
+            return flipsDone;
+
+        flipCandidates.reset();
+        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
+        {
+            if ( !mesh.isDelone( e, settings.threshold ) )
+                flipCandidates.set( e );
+        } );
+        nextFlipCandidates.reset();
+        int flipsDoneBeforeThisIter = flipsDone;
+        for ( UndirectedEdgeId e : flipCandidates )
+        {
+            if ( mesh.isDelone( e, settings.threshold ) )
+                continue;
+
+            if ( !mesh.flipEdge( e ) )
+                continue;
+
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ) );
+        }
+        if ( flipsDoneBeforeThisIter == flipsDone )
+            break;
+    }
+    return flipsDone;
 }
 
 } //namespace MR

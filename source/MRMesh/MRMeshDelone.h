@@ -11,13 +11,17 @@ struct DeloneSettings
 {
     /// Maximal allowed surface deviation during every individual flip
     float maxDeviationAfterFlip = FLT_MAX;
+
     /// Maximal allowed dihedral angle change (in radians) over the flipped edge
     float maxAngleChange = FLT_MAX;
+
     /// if this value is less than FLT_MAX then the algorithm will
     /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
     float criticalTriAspectRatio = FLT_MAX;
+
     /// Region on mesh to be processed, it is constant and not updated
     const FaceBitSet* region = nullptr;
+
     /// Edges specified by this bit-set will never be flipped
     const UndirectedEdgeBitSet* notFlippable = nullptr;
 };
@@ -47,6 +51,9 @@ struct DeloneSettings
 ///   true  = by introducing AC diagonal and splitting ABCD on triangles ABC and ACD
 [[nodiscard]] MRMESH_API bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d );
 
+/// improves mesh triangulation in a ring of vertices with common origin and represented by edge e
+MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings = {} );
+
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,
 /// \return the number of flips done
@@ -54,8 +61,25 @@ struct DeloneSettings
 /// \param progressCallback Callback to report algorithm progress and cancel it by user request
 MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings = {}, int numIters = 1, ProgressCallback progressCallback = {} );
 
-/// improves mesh triangulation in a ring of vertices with common origin and represented by edge e
-MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings = {} );
+struct IntrinsicDeloneSettings
+{
+    /// passing negative threshold makes more edges satisfy Delaunay conditions
+    float threshold = 0;
+
+    /// Region on mesh to be processed, it is constant and not updated
+    const FaceBitSet* region = nullptr;
+
+    /// Edges specified by this bit-set will never be flipped
+    const UndirectedEdgeBitSet* notFlippable = nullptr;
+};
+
+/// improves mesh triangulation by performing flipping of edges to satisfy Intrinsic Delaunay local property,
+/// consider every edge at most numIters times,
+/// \return the number of flips done
+/// \param numIters Maximal iteration count
+/// \param progressCallback Callback to report algorithm progress and cancel it by user request
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+MRMESH_API int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& settings = {}, int numIters = 1, ProgressCallback progressCallback = {} );
 
 /// \}
 

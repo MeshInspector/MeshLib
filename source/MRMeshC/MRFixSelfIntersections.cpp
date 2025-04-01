@@ -26,10 +26,10 @@ MRFixSelfIntersectionsSettings mrFixSelfIntersectionsSettingsNew( void )
     return res;
 }
 
-MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh_, MRProgressCallback cb, MRString** errorString )
+MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh_, bool countTouching, MRProgressCallback cb, MRString** errorString )
 {
     ARG( mesh );
-    auto resOrErr = SelfIntersections::getFaces( mesh, cb );
+    auto resOrErr = SelfIntersections::getFaces( mesh, countTouching, cb );
 
     MRFaceBitSet* res = nullptr;
     if ( resOrErr )

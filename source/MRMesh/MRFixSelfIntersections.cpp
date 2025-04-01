@@ -18,11 +18,11 @@ namespace MR
 namespace SelfIntersections
 {
 
-Expected<FaceBitSet> getFaces( const Mesh& mesh, ProgressCallback cb )
+Expected<FaceBitSet> getFaces( const Mesh& mesh, bool countTouching, ProgressCallback cb )
 {
     auto [faceToRegionMap, componentsCount] = MeshComponents::getAllComponentsMap(
         { mesh }, MeshComponents::FaceIncidence::PerEdge );
-    return findSelfCollidingTrianglesBS( mesh, cb, &faceToRegionMap );
+    return findSelfCollidingTrianglesBS( mesh, cb, &faceToRegionMap, countTouching );
 }
 
 // Helper function to fix self-intersections on part of mesh
@@ -43,7 +43,7 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh }, MeshComponents::FaceIncidence::PerEdge ).first;
     auto res = findSelfCollidingTrianglesBS( mesh,
         subprogress( settings.callback, 0.0f, progress ),
-        &faceToRegionMap);
+        &faceToRegionMap, currentSettings.countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
     FaceBitSet badFaces = std::move( res.value() );
@@ -81,7 +81,7 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh }, MeshComponents::FaceIncidence::PerEdge ).first;
     res = findSelfCollidingTrianglesBS( mesh,
         subprogress( settings.callback, endProgress, 1.0f ),
-        &faceToRegionMap );
+        &faceToRegionMap, settings.countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
     badFaces = res.value() - badFaces; // Exclude incurable faces
@@ -118,7 +118,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     auto res = findSelfCollidingTrianglesBS( mesh,
                                              subprogress( settings.callback, 0.05f, 0.3f ),
-                                             &faceToRegionMap );
+                                             &faceToRegionMap, settings.countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
@@ -155,7 +155,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     res = findSelfCollidingTrianglesBS( MeshPart( mesh, &res.value() ),
                                         subprogress( settings.callback, 0.55f, 0.7f ),
-                                        &faceToRegionMap );
+                                        &faceToRegionMap,settings.countTouching );
 
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -221,14 +221,14 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 }
 
 // Helper function to find own self-intersections on a mesh part
-static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb )
+static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb, bool countTouching )
 {
     FaceMap tgt2srcFaces;
     PartMapping mapping;
     mapping.tgt2srcFaces = &tgt2srcFaces;
     Mesh partMesh = mesh.cloneRegion( part, false, mapping );
     // Faster than searching in mesh part due to AABB tree rebuild
-    auto res = findSelfCollidingTrianglesBS( { partMesh }, cb );
+    auto res = findSelfCollidingTrianglesBS( { partMesh }, cb, nullptr, countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
     FaceBitSet result( mesh.topology.lastValidFace() + 1 );
@@ -245,7 +245,7 @@ static Expected<void> doFix( Mesh &mesh, FaceBitSet &part, const Settings & sett
     // Find colliding triangles
     float progress = 0.1f, endProgress = 0.9f;
     auto res = findSelfCollidingTrianglesBSForPart( mesh, part, 
-        subprogress( cb, 0.0f, progress ) );
+        subprogress( cb, 0.0f, progress ), settings.countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
     // Get area around colliding triangles
@@ -327,7 +327,7 @@ static Expected<void> doFix( Mesh &mesh, FaceBitSet &part, const Settings & sett
     }
     // Find resulting self-intersections
     res = findSelfCollidingTrianglesBSForPart( mesh, part,
-        subprogress( cb, endProgress, 1.0 ) );
+        subprogress( cb, endProgress, 1.0 ), settings.countTouching );
     if ( !res.has_value() )
         return unexpected( res.error() );
     accumBadFaces |= res.value();

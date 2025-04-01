@@ -170,7 +170,8 @@ Expected<bool> findSelfCollidingTriangles(
     const MeshPart& mp,
     std::vector<FaceFace> * outCollidingPairs,
     ProgressCallback cb,
-    const Face2RegionMap * regionMap )
+    const Face2RegionMap * regionMap,
+    bool countTouching )
 {
     MR_TIMER
     const AABBTree & tree = mp.mesh.getAABBTree();
@@ -215,7 +216,7 @@ Expected<bool> findSelfCollidingTriangles(
             mySubtasks.push_back( subtasks[is] );
             std::vector<FaceFace> myRes;
             processSelfSubtasks( tree, mySubtasks, mySubtasks,
-                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing]( const NodeNode & s )
+                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing, countTouching]( const NodeNode & s )
                 {
                     const auto & aNode = tree[s.aNode];
                     const auto & bNode = tree[s.bNode];
@@ -250,7 +251,7 @@ Expected<bool> findSelfCollidingTriangles(
                     if ( se )
                     {
                         // check coplanar
-                        if ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) )
+                        if ( !countTouching || ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) ) )
                             return Processing::Continue;
                         // else not coplanar
                     }
@@ -263,16 +264,19 @@ Expected<bool> findSelfCollidingTriangles(
                              !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[( j + 1 ) % 3], ap[( j + 2 ) % 3] ) )
                         {
                             // check touching too
-                            if ( !isPointInTriangle( ap[( j + 1 ) % 3], bp[0], bp[1], bp[2] ) && 
-                                 !isPointInTriangle( ap[( j + 2 ) % 3], bp[0], bp[1], bp[2] ) &&
-                                 !isPointInTriangle( bp[( k + 1 ) % 3], ap[0], ap[1], ap[2] ) &&
-                                 !isPointInTriangle( bp[( k + 2 ) % 3], ap[0], ap[1], ap[2] ) )
+                            if ( !countTouching ||
+                                  ( !isPointInTriangle( ap[( j + 1 ) % 3], bp[0], bp[1], bp[2] ) &&
+                                    !isPointInTriangle( ap[( j + 2 ) % 3], bp[0], bp[1], bp[2] ) &&
+                                    !isPointInTriangle( bp[( k + 1 ) % 3], ap[0], ap[1], ap[2] ) &&
+                                    !isPointInTriangle( bp[( k + 2 ) % 3], ap[0], ap[1], ap[2] ) ) )
                                 return Processing::Continue;
                             // else not touching
                         }
                     }
                     else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
                     {
+                        if ( !countTouching )
+                            return Processing::Continue;
                         // check touching too
                         bool touching = false;
                         for ( int i = 0; i < 3; ++i )
@@ -335,20 +339,21 @@ Expected<bool> findSelfCollidingTriangles(
 }
 
 Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb,
-    const Face2RegionMap * regionMap )
+    const Face2RegionMap* regionMap,
+    bool countTouching )
 {
     std::vector<FaceFace> res;
-    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap );
+    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap, countTouching );
     if ( !exp )
         return unexpected( std::move( exp.error() ) );
     return res;
 }
 
-Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb, const Face2RegionMap * regionMap )
+Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressCallback cb, const Face2RegionMap* regionMap, bool countTouching )
 {
     MR_TIMER
     
-    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap );
+    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap, countTouching );
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
 

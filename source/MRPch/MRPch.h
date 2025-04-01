@@ -109,7 +109,9 @@
 
 #ifndef MESHLIB_NO_VIEWER
 #include "MRViewer/MRAppendHistory.h"
+#include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRStatePlugin.h"
+#include "MRViewer/MRViewport.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRUIStyle.h"
 #endif

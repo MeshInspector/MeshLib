@@ -28,6 +28,7 @@ libjpeg-turbo
 libzip
 mrbind-pybind11
 opencascade[core]
+openctm
 openvdb
 parallel-hashmap
 python3

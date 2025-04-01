@@ -19,6 +19,7 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRClipboard.h"
 #include "MRSceneOperations.h"
+#include "MRToolbar.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -82,6 +83,15 @@ auto getItemCaption( const std::string& name )->const std::string&
 
 } //anonymous namespace
 
+RibbonMenu::RibbonMenu() :
+    toolbar_( new Toolbar() )
+{
+}
+
+RibbonMenu::~RibbonMenu()
+{
+}
+
 std::shared_ptr<RibbonMenu> RibbonMenu::instance()
 {
     return getViewerInstance().getRibbonMenu();
@@ -122,8 +132,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
         if ( cShowTopPanel && menuUIConfig_.drawToolbar )
         {
-            toolbar_.drawToolbar();
-            toolbar_.drawCustomize();
+            toolbar_->drawToolbar();
+            toolbar_->drawCustomize();
         }
 
         if ( menuUIConfig_.drawScenePanel )
@@ -156,7 +166,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         return getRequirements_( item );
     } );
 
-    toolbar_.setRibbonMenu( this );
+    toolbar_->setRibbonMenu( this );
     std::shared_ptr<RibbonSceneObjectsListDrawer> ribbonObjectsSceneListDrawer = std::make_shared<RibbonSceneObjectsListDrawer>();
     ribbonObjectsSceneListDrawer->initRibbonMenu( this );
     sceneObjectsList_ = std::dynamic_pointer_cast< SceneObjectsListDrawer >( ribbonObjectsSceneListDrawer );
@@ -176,7 +186,7 @@ void RibbonMenu::shutdown()
 
 void RibbonMenu::openToolbarCustomize()
 {
-    toolbar_.openCustomize();
+    toolbar_->openCustomize();
 }
 
 // we use design preset font size
@@ -207,17 +217,17 @@ bool RibbonMenu::isTopPannelPinned() const
 
 void RibbonMenu::setQuickAccessListVersion( int version )
 {
-    toolbar_.setItemsListVersion( version );
+    toolbar_->setItemsListVersion( version );
 }
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    toolbar_.readItemsList( root );
+    toolbar_->readItemsList( root );
 }
 
 void RibbonMenu::resetQuickAccessList()
 {
-    toolbar_.resetItemsList();
+    toolbar_->resetItemsList();
 }
 
 void RibbonMenu::setSceneSize( const Vector2i& size )
@@ -545,7 +555,7 @@ void RibbonMenu::drawHeaderPannel_()
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
     }
     // prepare active button
-    bool needActive = hasAnyActiveItem() && toolbar_.getCurrentToolbarWidth() == 0.0f;
+    bool needActive = hasAnyActiveItem() && toolbar_->getCurrentToolbarWidth() == 0.0f;
     float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
     // 40 - active button size (optional)
@@ -1556,7 +1566,7 @@ void RibbonMenu::readMenuItemsStructure_()
 {
     RibbonSchemaLoader loader;
     loader.loadSchema();
-    toolbar_.resetItemsList();
+    toolbar_->resetItemsList();
 }
 
 void RibbonMenu::postResize_( int width, int height )
@@ -1569,7 +1579,7 @@ void RibbonMenu::postRescale_( float x, float y )
 {
     ImGuiMenu::postRescale_( x, y );
     buttonDrawer_.setScaling( menu_scaling() );
-    toolbar_.setScaling( menu_scaling() );
+    toolbar_->setScaling( menu_scaling() );
     fixViewportsSize_( Viewer::instanceRef().framebufferSize.x, Viewer::instanceRef().framebufferSize.y );
 
     RibbonSchemaLoader loader;

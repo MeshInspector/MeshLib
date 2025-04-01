@@ -34,6 +34,7 @@ class SceneTextureGL;
 class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
+class Toolbar;
 class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;

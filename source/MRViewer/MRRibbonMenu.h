@@ -6,7 +6,6 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
-#include "MRToolbar.h"
 #include "MRMesh/MRSignal.h"
 #include "MRRibbonNotification.h"
 #include <type_traits>
@@ -54,6 +53,9 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
     };
 
 public:
+    MRVIEWER_API RibbonMenu();
+    MRVIEWER_API ~RibbonMenu();
+
     // returns RibonMenu from ViewerInstance()
     MRVIEWER_API static std::shared_ptr<RibbonMenu> instance();
 
@@ -118,7 +120,7 @@ public:
     RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
 
     /// get access to Ribbon Toolbar
-    Toolbar& getToolbar() { return toolbar_; }
+    Toolbar& getToolbar() { return *toolbar_; }
 
     /// get access to Ribbon notifier
     RibbonNotifier& getRibbonNotifier() { return notifier_; };
@@ -246,6 +248,7 @@ protected:
     MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
 
     RibbonMenuSearch searcher_;
+
 private:
     void changeTab_( int newTab );
 
@@ -303,7 +306,7 @@ private:
 
     std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
 
-    Toolbar toolbar_;
+    std::unique_ptr<Toolbar> toolbar_;
     RibbonNotifier notifier_;
 #ifndef __EMSCRIPTEN__
     AsyncRequest asyncRequest_;

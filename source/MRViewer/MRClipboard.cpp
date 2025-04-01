@@ -5,7 +5,12 @@
         #include <MRMesh/MRFinally.h>
         #include "MRPch/MRWinapi.h"
     #else
-        #include <clip.h>
+        #if __has_include( "clip.h" )
+            #include <clip.h>
+        #else
+            // TODO: remove obsolete include
+            #include <clip/clip.h>
+        #endif
     #endif
 #endif
 

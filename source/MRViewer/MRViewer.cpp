@@ -71,6 +71,7 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRPch/MRJson.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>

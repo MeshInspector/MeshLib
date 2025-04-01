@@ -289,8 +289,9 @@ template <typename T>
     return Vector2<T>{ x, y };
 }
 
-/// given the lengths of 4 edges of a quadrangle, and one of its diagonals (c);
-/// returns the length of the other diagonal if the quadrangle is valid and convex or std::nullopt otherwise
+/// given two triangles on same plane sharing one side, with edge lengths in same order: (a, b, c) and (b1, a1, c);
+/// they can be considered as a quadrangle with a diagonal of length (c); and the lengths of consecutive edges (a, b, b1, a1);
+/// returns the length of the other quadrangle's diagonal if the quadrangle is valid and convex or std::nullopt otherwise
 template <typename T>
 [[nodiscard]] std::optional<T> quadrangleOtherDiagonal( T a, T b, T c, T a1, T b1 )
 {
@@ -306,6 +307,37 @@ template <typename T>
     if ( y < 0 || y > c )
         return {};
     return ( *p - *p1 ).length();
+}
+
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the squared tangent of half angle opposite the side with length (a)
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T tanSqOfHalfAngle( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return 0;
+    return num / den;
+}
+
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the cotangent of the angle opposite the side with length a
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T cotan( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return -std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const auto tanSq = num / den;
+    return ( 1 - tanSq ) / ( 2 * std::sqrt( tanSq ) );
 }
 
 /// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;

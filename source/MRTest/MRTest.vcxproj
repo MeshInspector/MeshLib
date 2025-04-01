@@ -15,6 +15,7 @@
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBoxTests.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRMeshIntersectTests.cpp" />

@@ -1,8 +1,12 @@
 #pragma once
+
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRColor.h"
-#include "MRPch/MRJson.h"
-#include "exports.h"
+#include <json/forwards.h>
+#include <map>
+#include <vector>
+#include <string>
 
 namespace MR
 {
@@ -36,7 +40,7 @@ public:
     /// reset items list to default value
     /// \details default value is taken from RibbonSchemaHolder
     MRVIEWER_API void resetItemsList();
-    /// get acces to items
+    /// get access to items
     MRVIEWER_API const MenuItemsList& getItemsList() const { return itemsList_; }
     /// get item list version
     MRVIEWER_API int getItemsListVersion() const { return itemsListVersion_; }

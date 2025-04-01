@@ -1303,6 +1303,9 @@
     <ClInclude Include="MRTbbTaskArenaAndGroup.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MREdgeLengthMesh.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2124,6 +2127,9 @@
     </ClCompile>
     <ClCompile Include="MRClosestWeightedPoint.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgeLengthMesh.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

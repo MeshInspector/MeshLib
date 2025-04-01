@@ -24,6 +24,8 @@ public:
     using CudaFwnConstructor = std::function<std::unique_ptr<IFastWindingNumber>( const Mesh& )>;
     /// Returns specific implementation of IPointsToMeshProjector interface projects on GPU
     using CudaMeshProjectorConstructor = std::function<std::unique_ptr<IPointsToMeshProjector>()>;
+    /// Returns specific implementation of IPointsProjector interface projects on GPU
+    using CudaPointsProjectorConstructor = std::function<std::unique_ptr<IPointsProjector>()>;
 
 #ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
@@ -35,6 +37,7 @@ public:
     MRVIEWER_API static void setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc );
     MRVIEWER_API static void setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCtor );
     MRVIEWER_API static void setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor );
+    MRVIEWER_API static void setCudaPointsProjectorConstructor( CudaPointsProjectorConstructor ppCtor );
 
 #ifndef MRVIEWER_NO_VOXELS
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
@@ -64,6 +67,9 @@ public:
 
     // Returns cuda implementation of IPointsToMeshProjector
     [[nodiscard]] MRVIEWER_API static std::unique_ptr<IPointsToMeshProjector> getCudaPointsToMeshProjector();
+
+    // Returns cuda implementation of IPointsProjector
+    [[nodiscard]] MRVIEWER_API static std::unique_ptr<IPointsProjector> getCudaPointsProjector();
 
 #ifndef MRVIEWER_NO_VOXELS
     // Returns cuda implementation of PointsToDistanceVolumeCallback
@@ -113,6 +119,7 @@ private:
     CudaFreeMemoryFunc freeMemFunc_;
     CudaFwnConstructor fwnCtor_;
     CudaMeshProjectorConstructor mpCtor_;
+    CudaPointsProjectorConstructor ppCtor_;
 #ifndef MRVIEWER_NO_VOXELS
     CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
     CudaPointsToDistanceVolumeByPartsCallback pointsToDistanceVolumeByPartsCallback_;

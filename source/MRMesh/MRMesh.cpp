@@ -267,6 +267,20 @@ Vector3f Mesh::triCenter( FaceId f ) const
     return ( 1 / 3.0f ) * ( v0 + v1 + v2 );
 }
 
+UndirectedEdgeScalars Mesh::edgeLengths() const
+{
+    MR_TIMER
+    UndirectedEdgeScalars res( topology.undirectedEdgeSize() );
+    ParallelFor( res, [&]( UndirectedEdgeId ue )
+    {
+        if ( topology.isLoneEdge( ue ) )
+            return;
+        res[ue] = edgeLength( ue );
+    } );
+
+    return res;
+}
+
 Vector3f Mesh::leftDirDblArea( EdgeId e ) const
 {
     VertId a, b, c;

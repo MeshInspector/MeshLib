@@ -142,6 +142,9 @@ struct [[nodiscard]] Mesh
     /// returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
 
+    /// computes and returns the lengths of all edges in the mesh
+    [[nodiscard]] MRMESH_API UndirectedEdgeScalars edgeLengths() const;
+
     /// returns squared Euclidean length of the edge (faster to compute than length)
     [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return edgeVector( e ).lengthSq(); }
 
@@ -300,7 +303,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
 
     /// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
-    /// and returns 0 if left face does not exist
+    /// consider cotangents zero for not existing triangles
     [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
 
     /// computes quadratic form in the vertex as the sum of squared distances from

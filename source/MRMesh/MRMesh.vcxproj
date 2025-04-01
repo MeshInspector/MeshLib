@@ -31,6 +31,7 @@
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
     <ClInclude Include="MRDistanceToMeshOptions.h" />
+    <ClInclude Include="MREdgeLengthMesh.h" />
     <ClInclude Include="MREnums.h" />
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
@@ -414,6 +415,7 @@
     <ClInclude Include="MRTbbThreadMutex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />

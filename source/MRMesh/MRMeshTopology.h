@@ -154,10 +154,15 @@ public:
     template <typename T>
     void forEachVertex( const MeshTriPoint & p, T && callback ) const;
 
+    /// given one edge with triangular face on the left;
+    /// returns two other edges of the same face, oriented to have this face on the left;
+    /// the edges are returned in counter-clockwise order if look from mesh outside
+    MRMESH_API void getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const;
+
     /// gets 3 edges of given triangular face, oriented to have it on the left;
     /// the edges are returned in counter-clockwise order if look from mesh outside
-    MRMESH_API void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const;
-               void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getTriEdges( f, e[0], e[1], e[2] ); }
+    void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const { getLeftTriEdges( e0 = edgeWithLeft( f ), e1, e2 ); }
+    void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getLeftTriEdges( e[0] = edgeWithLeft( f ), e[1], e[2] ); }
 
     /// returns true if the cell to the left of a is quadrangular
     [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;

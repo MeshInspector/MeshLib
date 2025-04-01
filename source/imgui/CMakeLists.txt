@@ -1,48 +1,57 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-project(imgui)
-
-set(IMGUI_ROOT "../../thirdparty/imgui")
-
-file(GLOB IMGUI_SOURCES
-  "${IMGUI_ROOT}/*.cpp"
-  "${IMGUI_ROOT}/misc/freetype/*.cpp"
-  "${IMGUI_ROOT}/misc/cpp/*.cpp"
-  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp"
-  "${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp"
-  "*.cpp"
-)
-
-file(GLOB IMGUI_HEADERS
-  "${IMGUI_ROOT}/*.h"
-  "${IMGUI_ROOT}/misc/freetype/*.h"
-  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.h"
-  "${IMGUI_ROOT}/backends/imgui_impl_glfw.h"
-  "${IMGUI_ROOT}/backends/imgui_impl_opengl3_loader.h"
-  "*.h"
-)
-
-add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
-
-target_include_directories(${PROJECT_NAME} PRIVATE "..")
-target_include_directories(${PROJECT_NAME} PRIVATE "${IMGUI_ROOT}")
-target_include_directories(${PROJECT_NAME} PRIVATE "../../thirdparty/parallel-hashmap")
+project(imgui LANGUAGES CXX)
 
 # Don't emit warnings.
-string(REPLACE "/W4" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+IF(MSVC)
+  string(REPLACE "/W4" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+ELSE()
+  string(REPLACE "-Wall" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "-Wextra" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "-Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "-pedantic-errors" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+ENDIF()
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+set(IMGUI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/imgui")
+
+file(GLOB SOURCES
+  "*.cpp"
+  "${IMGUI_ROOT}/*.cpp"
+  "${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp"
+  "${IMGUI_ROOT}/misc/cpp/*.cpp"
+  "${IMGUI_ROOT}/misc/freetype/*.cpp"
+)
+
+file(GLOB HEADERS
+  "*.h"
+  "${IMGUI_ROOT}/*.h"
+)
+
+file(GLOB BACKEND_HEADERS
+  "${IMGUI_ROOT}/backends/imgui_impl_glfw.h"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3.h"
+  "${IMGUI_ROOT}/backends/imgui_impl_opengl3_loader.h"
+)
+
+file(GLOB FREETYPE_HEADERS
+  "${IMGUI_ROOT}/misc/freetype/*.h"
+)
+
+add_library(imgui SHARED ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS})
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${IMGUI_ROOT}>
+)
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_ENABLE_FREETYPE)
-target_compile_definitions(${PROJECT_NAME} PRIVATE MRIMGUI_EXPORT)
-
-
+target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
-  set(BUILD_SHARED_LIBS ON)
-
   find_package(freetype)
   IF(NOT freetype_FOUND)
     find_package(PkgConfig REQUIRED)
@@ -55,23 +64,41 @@ ELSE()
 
   find_package(glfw3 CONFIG REQUIRED)
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE glfw Freetype::Freetype)
-
-  # TODO: check condition (is it really OS-specific?)
-  IF(NOT APPLE AND NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
-  ENDIF()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    glfw
+    Freetype::Freetype
+    ${CMAKE_DL_LIBS}
+  )
 ENDIF()
 
-include(GNUInstallDirs)
-install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}
+  LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+  ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+  INCLUDES DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
 )
 
 install(
-    EXPORT ${PROJECT_NAME}
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/imgui/cmake
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)
+install(
+  FILES ${BACKEND_HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}/backends"
+)
+install(
+  FILES ${FREETYPE_HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}/misc/freetype"
+)
+
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
+  DESTINATION ${MR_CONFIG_DIR}
+)
+
+install(
+  EXPORT ${PROJECT_NAME}
+  FILE ${PROJECT_NAME}Targets.cmake
+  DESTINATION ${MR_CONFIG_DIR}
 )

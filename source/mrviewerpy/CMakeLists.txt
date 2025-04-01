@@ -29,6 +29,7 @@ IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
+    imgui
     MRMesh
     MRPython
     fmt
@@ -41,6 +42,7 @@ IF(APPLE)
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
+    imgui
     MRMesh
     MRPython
     fmt::fmt
@@ -53,6 +55,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
+    imgui
     MRMesh
     MRPython
     JsonCpp::JsonCpp

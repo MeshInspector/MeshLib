@@ -26,7 +26,9 @@ do
   esac
 done
 
-PRECOMPILED_LIB_PATH=$(realpath -m "${PRECOMPILED_LIB_PATH}")
+echo "PRECOMPILED_LIB_PATH=${PRECOMPILED_LIB_PATH}"
+# macOS: realpath: illegal option -- m
+# PRECOMPILED_LIB_PATH=$(realpath -m "${PRECOMPILED_LIB_PATH}")
 
 rm -rf ./lib
 

@@ -40,6 +40,16 @@ struct DeloneSettings
 /// converts arguments in double and calls above function
 [[nodiscard]] MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange = FLT_MAX );
 
+enum class FlipEdge : int
+{
+    Can,    ///< edge flipping is possible
+    Cannot, ///< edge flipping is prohibited by topology or by constraints
+    Must    ///< edge flipping is required to solve some topology issue
+};
+
+/// consider topology and constraints to decide about flip possibility
+[[nodiscard]] MRMESH_API FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable );
+
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;
 /// \return false otherwise if flipping the edge does not introduce too large surface deviation (can be returned only for inner edge of the region)

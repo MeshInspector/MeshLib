@@ -32,6 +32,9 @@ outputs:
 runs:
   using: composite
   steps:
+    - shell: bash
+      run: echo "${{ runner }}
+      
     - name: Fetch job ID
       id: fetch_job_id
       # `shell` must be specified explicitly for composite actions.

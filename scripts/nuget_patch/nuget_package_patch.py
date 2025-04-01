@@ -4,13 +4,13 @@ import shutil
 import subprocess
 from pathlib import Path
 
-workong_dir = Path(".").resolve()
+working_dir = Path(".").resolve()
 
 def patch_targets_file( dir ):
-    tfile = open( workong_dir/ dir / "build" / "MeshLib.targets","w")
+    tfile = open( working_dir/ dir / "build" / "MeshLib.targets","w")
     tfile.write("<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n")
     tfile.write("\t<ItemGroup>\n")
-    for root,dir,files in os.walk(workong_dir / dir / "content"):
+    for root,dir,files in os.walk(working_dir / dir / "content"):
         for file in files:
             if file.endswith(".dll") or ".so" in file:
                 tfile.write("\t\t<None Include=\"$(MSBuildThisFileDirectory)\\..\\content\\"+file+"\">\n")
@@ -29,12 +29,12 @@ def extract_nuget( dir, name ):
 
 def make_fake_whl(whl_dir,nuget_dir):
     os.mkdir(whl_dir)
-    whl_libs_path = workong_dir /whl_dir / "dummy.libs"
+    whl_libs_path = working_dir /whl_dir / "dummy.libs"
     os.mkdir( whl_libs_path)
-    os.mkdir( workong_dir / whl_dir /"dummy-1.0.dist-info")
+    os.mkdir( working_dir / whl_dir /"dummy-1.0.dist-info")
     # add only used dll in fake wheel
     dll_name = "MRMeshC.dll"
-    dll_path = workong_dir / nuget_dir / "content" / dll_name
+    dll_path = working_dir / nuget_dir / "content" / dll_name
     shutil.copyfile(dll_path, whl_libs_path /dll_name)
     # actually create whl file
     shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
@@ -57,7 +57,7 @@ def patch_whl(out_dir,nuget_dir):
                 # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
                 "--no-mangle", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
 
-                "--add-path", workong_dir / nuget_dir / "content", # path where input dependencies are located
+                "--add-path", working_dir / nuget_dir / "content", # path where input dependencies are located
 
                 # use this directory instead of extracting files from result whl file
                 "--extract-dir", out_dir,
@@ -75,7 +75,7 @@ def patch_whl(out_dir,nuget_dir):
 
 def apply_patch(patch_dir,nuget_dir):
     # remove old dependencies folder
-    shutil.rmtree(workong_dir / nuget_dir /"content")
+    shutil.rmtree(working_dir / nuget_dir /"content")
     # copy mangled dependencies to proper location
     shutil.copytree(patch_dir + "/dummy.libs/",nuget_dir+"/content/")
     # just clean directory

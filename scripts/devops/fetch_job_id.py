@@ -16,7 +16,7 @@ def fetch_jobs(repo: str, run_id: str):
         return json.loads(resp.read().decode())
 
 def filter_job(job, job_name, runner_name):
-    return job['status'] == "in_progress" and job_name in job['name'] and job['runner_name'] == runner_name
+    return job['status'] == "in_progress" and job_name in job['name'] and runner_name in [job['runner_name'], f"GitHub-Actions-{job['runner_id']}"]
 
 def get_job_id():
     job_name = os.environ.get("GITHUB_JOB")

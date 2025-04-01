@@ -16,7 +16,7 @@ typedef enum MRFixSelfIntersectionsMethod
 typedef struct MRFixSelfIntersectionsSettings
 {
     /// If true then count touching faces as self-intersections
-    bool countTouching;
+    bool touchIsIntersection;
     /// Fix method
     MRFixSelfIntersectionsMethod method;
     /// Maximum relax iterations
@@ -34,7 +34,7 @@ typedef struct MRFixSelfIntersectionsSettings
 MRMESHC_API MRFixSelfIntersectionsSettings mrFixSelfIntersectionsSettingsNew(void);
 
 /// Find all self-intersections faces component-wise
-MRMESHC_API MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh, bool countTouching, MRProgressCallback cb, MRString** errorString );
+MRMESHC_API MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh, bool touchIsIntersection, MRProgressCallback cb, MRString** errorString );
 
 /// Finds and fixes self-intersections per component:
 MRMESHC_API void mrFixSelfIntersectionsFix( MRMesh* mesh, const MRFixSelfIntersectionsSettings* settings, MRString** errorString );

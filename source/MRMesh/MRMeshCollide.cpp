@@ -171,7 +171,7 @@ Expected<bool> findSelfCollidingTriangles(
     std::vector<FaceFace> * outCollidingPairs,
     ProgressCallback cb,
     const Face2RegionMap * regionMap,
-    bool countTouching )
+    bool touchIsIntersection )
 {
     MR_TIMER
     const AABBTree & tree = mp.mesh.getAABBTree();
@@ -216,7 +216,7 @@ Expected<bool> findSelfCollidingTriangles(
             mySubtasks.push_back( subtasks[is] );
             std::vector<FaceFace> myRes;
             processSelfSubtasks( tree, mySubtasks, mySubtasks,
-                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing, countTouching]( const NodeNode & s )
+                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing, touchIsIntersection]( const NodeNode & s )
                 {
                     const auto & aNode = tree[s.aNode];
                     const auto & bNode = tree[s.bNode];
@@ -251,7 +251,7 @@ Expected<bool> findSelfCollidingTriangles(
                     if ( se )
                     {
                         // check coplanar
-                        if ( !countTouching || ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) ) )
+                        if ( !touchIsIntersection || ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) ) )
                             return Processing::Continue;
                         // else not coplanar
                     }
@@ -264,7 +264,7 @@ Expected<bool> findSelfCollidingTriangles(
                              !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[( j + 1 ) % 3], ap[( j + 2 ) % 3] ) )
                         {
                             // check touching too
-                            if ( !countTouching ||
+                            if ( !touchIsIntersection ||
                                   ( !isPointInTriangle( ap[( j + 1 ) % 3], bp[0], bp[1], bp[2] ) &&
                                     !isPointInTriangle( ap[( j + 2 ) % 3], bp[0], bp[1], bp[2] ) &&
                                     !isPointInTriangle( bp[( k + 1 ) % 3], ap[0], ap[1], ap[2] ) &&
@@ -275,7 +275,7 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
                     {
-                        if ( !countTouching )
+                        if ( !touchIsIntersection )
                             return Processing::Continue;
                         // check touching too
                         bool touching = false;
@@ -340,20 +340,20 @@ Expected<bool> findSelfCollidingTriangles(
 
 Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb,
     const Face2RegionMap* regionMap,
-    bool countTouching )
+    bool touchIsIntersection )
 {
     std::vector<FaceFace> res;
-    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap, countTouching );
+    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap, touchIsIntersection );
     if ( !exp )
         return unexpected( std::move( exp.error() ) );
     return res;
 }
 
-Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressCallback cb, const Face2RegionMap* regionMap, bool countTouching )
+Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressCallback cb, const Face2RegionMap* regionMap, bool touchIsIntersection )
 {
     MR_TIMER
     
-    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap, countTouching );
+    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap, touchIsIntersection );
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
 

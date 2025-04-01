@@ -13,7 +13,7 @@ namespace SelfIntersections
 struct Settings
 {
     /// If true then count touching faces as self-intersections
-    bool countTouching = true; 
+    bool touchIsIntersection = true; 
     /// Fix method
     enum class Method
     {
@@ -35,7 +35,7 @@ struct Settings
 };
 
 /// Find all self-intersections faces component-wise
-MRMESH_API Expected<FaceBitSet> getFaces( const Mesh& mesh, bool countTouching = true, ProgressCallback cb = {} );
+MRMESH_API Expected<FaceBitSet> getFaces( const Mesh& mesh, bool touchIsIntersection = true, ProgressCallback cb = {} );
 
 /// Finds and fixes self-intersections per component:
 MRMESH_API Expected<void> fix( Mesh& mesh, const Settings& settings );

@@ -1,5 +1,6 @@
 import json
 import os
+import pprint
 import urllib.request
 
 GITHUB_HEADERS = {
@@ -22,8 +23,16 @@ def get_job_id():
     repo = os.environ.get("GITHUB_REPOSITORY")
     run_id = os.environ.get("GITHUB_RUN_ID")
     runner_name = os.environ.get("RUNNER_NAME")
+    pprint.pp({
+        'GITHUB_JOB': job_name,
+        'GITHUB_REPOSITORY': repo,
+        'GITHUB_RUN_ID': run_id,
+        'RUNNER_NAME': runner_name,
+    })
 
     resp = fetch_jobs(repo, run_id)
+    pprint.pp(resp)
+
     jobs = [
         job
         for job in resp['jobs']

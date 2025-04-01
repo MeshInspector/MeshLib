@@ -17,6 +17,7 @@ REGISTER_AUTO_CAST2( std::string, MRString )
 MRFixSelfIntersectionsSettings mrFixSelfIntersectionsSettingsNew( void )
 {
     MRFixSelfIntersectionsSettings res;
+    res.countTouching = true;
     res.method = MRFixSelfIntersectionsMethodRelax;
     res.relaxIterations = 5;
     res.maxExpand = 3;

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # exit on error
 
 # for github runners only!
 
@@ -42,4 +43,3 @@ else
   ln -s ${PRECOMPILED_LIB_PATH} "./lib"
   echo "Link to ${PRECOMPILED_LIB_PATH} created."
 fi
-exit 0

@@ -225,38 +225,67 @@ Expected<bool> findSelfCollidingTriangles(
                     const auto bFace = bNode.leafId();
                     if ( mp.region && !mp.region->test( bFace ) )
                         return Processing::Continue;
-                    if ( mp.mesh.topology.sharedEdge( aFace, bFace ) )
-                    {
-                        // check vertex in same plane (mixed == 0)
-                        return Processing::Continue;
-                    }
-                    if ( regionMap && (*regionMap)[aFace] != (*regionMap)[bFace] )
+                    if ( regionMap && ( *regionMap )[aFace] != ( *regionMap )[bFace] )
                         return Processing::Continue;
 
                     VertId av[3], bv[3];
-                    mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                    mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
-
                     Vector3d ap[3], bp[3];
+
+                    auto se = mp.mesh.topology.sharedEdge( aFace, bFace );
+                    if ( se )
+                    {
+                        mp.mesh.topology.getLeftTriVerts( se, av[0], av[1], av[2] );
+                        mp.mesh.topology.getLeftTriVerts( se.sym(), bv[0], bv[1], bv[2] );
+                    }
+                    else
+                    {
+                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
+                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                    }
                     for ( int j = 0; j < 3; ++j )
                     {
                         ap[j] = Vector3d{ mp.mesh.points[av[j]] };
                         bp[j] = Vector3d{ mp.mesh.points[bv[j]] };
                     }
-
-                    auto sv = sharedVertex( av, bv );
-                    if ( sv.first >= 0 )
+                    if ( se )
+                    {
+                        // check coplanar
+                        if ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) )
+                            return Processing::Continue;
+                        // else not coplanar
+                    }
+                    else if ( auto sv = sharedVertex( av, bv ); sv.first >= 0 )
                     {
                         // shared vertex
                         const int j = sv.first;
                         const int k = sv.second;
-                        // also check touching here
-                        if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[ ( k + 1 ) % 3 ], bp[ ( k + 2 ) % 3 ] ) &&
-                             !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[ ( j + 1 ) % 3 ], ap[ ( j + 2 ) % 3 ] ) )
+                        if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[( k + 1 ) % 3], bp[( k + 2 ) % 3] ) &&
+                             !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[( j + 1 ) % 3], ap[( j + 2 ) % 3] ) )
+                        {
+                            // check touching too
+                            if ( !isPointInTriangle( ap[( j + 1 ) % 3], bp[0], bp[1], bp[2] ) && 
+                                 !isPointInTriangle( ap[( j + 2 ) % 3], bp[0], bp[1], bp[2] ) &&
+                                 !isPointInTriangle( bp[( k + 1 ) % 3], ap[0], ap[1], ap[2] ) &&
+                                 !isPointInTriangle( bp[( k + 2 ) % 3], ap[0], ap[1], ap[2] ) )
+                                return Processing::Continue;
+                            // else not touching
+                        }
+                    }
+                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
+                    {
+                        // check touching too
+                        bool touching = false;
+                        for ( int i = 0; i < 3; ++i )
+                        {
+                            if ( isPointInTriangle( ap[i], bp[0], bp[1], bp[2] ) || isPointInTriangle( bp[i], ap[0], ap[1], ap[2] ) )
+                            {
+                                touching = true;
+                                break;
+                            }
+                        }
+                        if ( !touching )
                             return Processing::Continue;
                     }
-                    else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) ) // also check touching here
-                        return Processing::Continue;
                     myRes.emplace_back( aFace, bFace );
                     if ( !outCollidingPairs )
                     {

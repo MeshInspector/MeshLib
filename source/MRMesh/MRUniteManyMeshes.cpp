@@ -39,9 +39,10 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
     if ( fixDegenerations )
     {
         auto newFaces = mapper_.newFaces();
-        resolveMeshDegenerations( res.mesh, {
+        fixMeshDegeneracies( res.mesh, {
             .maxDeviation = maxError,
             .region = &newFaces,
+            .mode = FixMeshDegeneraciesParams::Mode::Decimate
         } );
     }
 

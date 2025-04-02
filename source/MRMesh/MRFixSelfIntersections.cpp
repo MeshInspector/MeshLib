@@ -117,7 +117,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         return unexpectedOperationCanceled();
 
     auto res = findSelfCollidingTrianglesBS( mesh,
-                                             subprogress( settings.callback, 0.05f, 0.3f ),
+                                             subprogress( settings.callback, 0.05f, 0.2f ),
                                              &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -141,12 +141,22 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         ssettings.maxEdgeSplits = 1000;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
-        ssettings.progressCallback = subprogress( settings.callback, 0.3f, 0.5f );
+        ssettings.progressCallback = subprogress( settings.callback, 0.2f, 0.3f );
         subdivideMesh( mesh, ssettings );
     }
 
-    if ( !reportProgress( settings.callback, 0.5f ) )
+    if ( !reportProgress( settings.callback, 0.3f ) )
         return unexpectedOperationCanceled();
+
+    FixMeshDegeneraciesParams fdParams;
+    fdParams.maxDeviation = currentSettings.subdivideEdgeLen * 1e-2f;
+    fdParams.tinyEdgeLength = currentSettings.subdivideEdgeLen * 1e-3f;
+    fdParams.criticalTriAspectRatio = 1e6f;
+    fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+    fdParams.cb = subprogress( settings.callback, 0.3f, 0.5f );
+    auto fdRes = fixMeshDegeneracies( mesh, fdParams );
+    if ( !fdRes.has_value() )
+        return fdRes;
 
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 

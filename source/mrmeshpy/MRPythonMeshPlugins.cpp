@@ -107,6 +107,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
 
     pybind11::class_<MR::SelfIntersections::Settings>( m, "FixSelfIntersectionSettings", "Setting set for mesh self-intersections fix" ).
         def( pybind11::init<>() ).
+        def_readwrite( "touchIsIntersection", &MR::SelfIntersections::Settings::touchIsIntersection ).
         def_readwrite( "method", &MR::SelfIntersections::Settings::method ).
         def_readwrite( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations, "Maximum relax iterations" ).
         def_readwrite( "maxExpand", &MR::SelfIntersections::Settings::maxExpand, "Maximum expand count (edge steps from self-intersecting faces), should be > 0" ).
@@ -119,7 +120,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
         "Finds and fixes self-intersections per component" );
 
     m.def( "localFindSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::getFaces ),
-        pybind11::arg( "mesh" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg( "touchIsIntersection" ) = true, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Find all self-intersections faces component-wise" );
 } )
 

@@ -20,7 +20,7 @@ void testFixSelfIntersections( void )
     size_t validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
     TEST_ASSERT( validFacesCount == 1024 );
 
-    MRFaceBitSet* intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, &error );
+    MRFaceBitSet* intersections = mrFixSelfIntersectionsGetFaces( mesh, true, NULL, &error );
     TEST_ASSERT( !error );
     size_t intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
     TEST_ASSERT( intersectionsCount == 128 );
@@ -33,7 +33,7 @@ void testFixSelfIntersections( void )
     validFacesCount = mrBitSetCount( ( MRBitSet* ) mrMeshTopologyGetValidFaces( mrMeshTopology( mesh ) ) );
     TEST_ASSERT( validFacesCount == 1194 );
 
-    intersections = mrFixSelfIntersectionsGetFaces( mesh, NULL, &error );
+    intersections = mrFixSelfIntersectionsGetFaces( mesh, true, NULL, &error );
     TEST_ASSERT( !error );
     intersectionsCount = mrBitSetCount( ( MRBitSet* ) intersections );
     TEST_ASSERT( intersectionsCount == 0 );

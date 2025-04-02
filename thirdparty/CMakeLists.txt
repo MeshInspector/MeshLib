@@ -80,7 +80,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
-add_subdirectory(./OpenCTM ./OpenCTM)
+add_subdirectory(./OpenCTM-git ./OpenCTM)
 
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)

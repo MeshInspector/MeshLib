@@ -5,6 +5,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRClosestWeightedPoint.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -45,6 +46,10 @@ struct WeightedPointsShellParameters
 
     /// Progress callback
     ProgressCallback progress;
+
+
+    // To allow passing Python lambdas into `dist.pointWeight`.
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 /// consider a point cloud where each point has additive weight,

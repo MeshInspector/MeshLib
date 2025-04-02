@@ -138,8 +138,10 @@ bool mrResolveMeshDegenerations( MRMesh* mesh_, const MRResolveMeshDegenSettings
             .region = auto_cast( src.region ),
         };
     }
-
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     return resolveMeshDegenerations( mesh, settings );
+MR_SUPPRESS_WARNING_POP
 }
 
 MRRemeshSettings mrRemeshSettingsNew()

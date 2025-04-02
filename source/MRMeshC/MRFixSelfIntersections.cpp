@@ -17,6 +17,7 @@ REGISTER_AUTO_CAST2( std::string, MRString )
 MRFixSelfIntersectionsSettings mrFixSelfIntersectionsSettingsNew( void )
 {
     MRFixSelfIntersectionsSettings res;
+    res.touchIsIntersection = true;
     res.method = MRFixSelfIntersectionsMethodRelax;
     res.relaxIterations = 5;
     res.maxExpand = 3;
@@ -26,10 +27,10 @@ MRFixSelfIntersectionsSettings mrFixSelfIntersectionsSettingsNew( void )
     return res;
 }
 
-MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh_, MRProgressCallback cb, MRString** errorString )
+MRFaceBitSet* mrFixSelfIntersectionsGetFaces( const MRMesh* mesh_, bool touchIsIntersection, MRProgressCallback cb, MRString** errorString )
 {
     ARG( mesh );
-    auto resOrErr = SelfIntersections::getFaces( mesh, cb );
+    auto resOrErr = SelfIntersections::getFaces( mesh, touchIsIntersection, cb );
 
     MRFaceBitSet* res = nullptr;
     if ( resOrErr )

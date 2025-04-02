@@ -5,6 +5,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRClosestWeightedPoint.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -45,6 +46,10 @@ struct WeightedPointsShellParameters
 
     /// Progress callback
     ProgressCallback progress;
+
+
+    // To allow passing Python lambdas into `dist.pointWeight`.
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 /// consider a point cloud where each point has additive weight,
@@ -52,9 +57,19 @@ struct WeightedPointsShellParameters
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParameters& params );
 
+/// consider a point cloud where each point has additive weight (taken from pointWeights and not from params),
+/// and the distance to a point is considered equal to (euclidean distance - weight),
+/// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
+[[nodiscard]] MRVOXELS_API Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars& pointWeights, const WeightedPointsShellParameters& params );
+
 /// consider a mesh where each vertex has additive weight, and this weight is linearly interpolated in mesh triangles,
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params );
+
+/// consider a mesh where each vertex has additive weight (taken from vertWeights and not from params), and this weight is linearly interpolated in mesh triangles,
+/// and the distance to a point is considered equal to (euclidean distance - weight),
+/// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
+[[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParameters& params );
 
 } //namespace MR

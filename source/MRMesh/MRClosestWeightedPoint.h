@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMeshTriPoint.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cfloat>
 
 namespace MR
@@ -45,6 +46,10 @@ struct DistanceFromWeightedPointsParams
     /// maximal magnitude of gradient of points' weight in the cloud, >=0;
     /// if maxWeightGrad < 1 then more search optimizations can be done
     float maxWeightGrad = FLT_MAX;
+
+
+    // To allow passing Python lambdas into `pointWeight`.
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParams

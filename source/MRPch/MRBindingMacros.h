@@ -24,3 +24,15 @@
 #define MR_BIND_TEMPLATE(...)
 #define MR_BIND_IGNORE
 #endif
+
+#ifdef MR_COMPILING_PB11_BINDINGS
+// Put this inside of a class.
+// Then when this class is used as a function parameter, calling that function will temporarily unlock GIL when it's called.
+// This e.g. prevents deadlocks if your function calls Python lambdas.
+// This is enabled by default for e.g. `std::function`, but not for classes that have them as members.
+// This is a weak hint, some things can override it.
+// Notice this being enabled only when `MR_COMPILING_PB11_BINDINGS` is defined, so this won't get parsed and appear in Python bindings themselves.
+#define MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM using _prefer_gil_unlock_when_used_as_param = void;
+#else
+#define MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
+#endif

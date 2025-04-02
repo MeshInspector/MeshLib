@@ -150,7 +150,6 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         ssettings.region = &res.value();
         ssettings.maxEdgeLen = currentSettings.subdivideEdgeLen;
         ssettings.maxEdgeSplits = 1000;
-        ssettings.maxAngleChangeAfterFlip = PI_F / 10.0f;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
         ssettings.progressCallback = subprogress( settings.callback, 0.4f, 0.5f );

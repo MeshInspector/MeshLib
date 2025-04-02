@@ -141,7 +141,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     {
         auto box = mesh.computeBoundingBox( &res.value() );
         if ( currentSettings.subdivideEdgeLen <= 0.0f )
-            currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;// fdParams.maxDeviation;
+            currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : fdParams.maxDeviation;
 
         SubdivideSettings ssettings;
         ssettings.region = &res.value();

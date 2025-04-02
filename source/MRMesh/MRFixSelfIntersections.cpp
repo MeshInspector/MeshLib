@@ -111,13 +111,25 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( !reportProgress( settings.callback, 0.0f ) )
         return unexpectedOperationCanceled();
 
+    if ( settings.touchIsIntersection )
+    {
+        FixMeshDegeneraciesParams fdParams;
+        fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
+        fdParams.tinyEdgeLength = fdParams.tinyEdgeLength * 0.1f;
+        fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+        fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
+        auto fdRes = fixMeshDegeneracies( mesh, fdParams );
+        if ( !fdRes.has_value() )
+            return fdRes;
+    }
+
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.05f ) )
+    if ( !reportProgress( settings.callback, 0.25f ) )
         return unexpectedOperationCanceled();
 
     auto res = findSelfCollidingTrianglesBS( mesh,
-                                             subprogress( settings.callback, 0.05f, 0.2f ),
+                                             subprogress( settings.callback, 0.25f, 0.4f ),
                                              &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -134,29 +146,18 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( currentSettings.subdivideEdgeLen <= 0.0f )
             currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;
 
-
         SubdivideSettings ssettings;
         ssettings.region = &res.value();
         ssettings.maxEdgeLen = currentSettings.subdivideEdgeLen;
         ssettings.maxEdgeSplits = 1000;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
-        ssettings.progressCallback = subprogress( settings.callback, 0.2f, 0.3f );
+        ssettings.progressCallback = subprogress( settings.callback, 0.4f, 0.5f );
         subdivideMesh( mesh, ssettings );
     }
 
-    if ( !reportProgress( settings.callback, 0.3f ) )
+    if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpectedOperationCanceled();
-
-    FixMeshDegeneraciesParams fdParams;
-    fdParams.maxDeviation = currentSettings.subdivideEdgeLen * 1e-2f;
-    fdParams.tinyEdgeLength = currentSettings.subdivideEdgeLen * 1e-3f;
-    fdParams.criticalTriAspectRatio = 1e6f;
-    fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
-    fdParams.cb = subprogress( settings.callback, 0.3f, 0.5f );
-    auto fdRes = fixMeshDegeneracies( mesh, fdParams );
-    if ( !fdRes.has_value() )
-        return fdRes;
 
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
@@ -195,8 +196,6 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( !reportProgress( settings.callback, 0.8f ) )
             return unexpectedOperationCanceled();
 
-        FaceBitSet newFaces;
-        VertBitSet newVerts;
         auto sp = subprogress( settings.callback, 0.8f, 0.95f );
         for ( int i = 0; i < holes.size(); ++i )
         {
@@ -215,14 +214,12 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
             // Fill hole
             // MultipleEdgesResolveMode::Simple should be enough after deleting findHoleComplicatingFaces(...)
             // But if multiple edges appear often, could be changed to MultipleEdgesResolveMode::Strong
-            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),.outNewFaces = &newFaces,
+            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),
                 .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple });
 
             if ( !reportProgress( sp, float( i + 1 ) / float( holes.size() ) ) )
                 return unexpectedOperationCanceled();
         }
-
-        relax( mesh, { {currentSettings.relaxIterations, &newVerts } } );
 
         if ( !reportProgress( settings.callback, 1.0f ) )
             return unexpectedOperationCanceled();

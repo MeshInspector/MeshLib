@@ -111,14 +111,17 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( !reportProgress( settings.callback, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    FixMeshDegeneraciesParams fdParams;
-    fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
-    fdParams.tinyEdgeLength = fdParams.tinyEdgeLength * 0.1f;
-    fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
-    fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
-    auto fdRes = fixMeshDegeneracies( mesh, fdParams );
-    if ( !fdRes.has_value() )
-        return fdRes;
+    if ( settings.touchIsIntersection )
+    {
+        FixMeshDegeneraciesParams fdParams;
+        fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
+        fdParams.tinyEdgeLength = fdParams.tinyEdgeLength * 0.1f;
+        fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+        fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
+        auto fdRes = fixMeshDegeneracies( mesh, fdParams );
+        if ( !fdRes.has_value() )
+            return fdRes;
+    }
 
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
@@ -141,7 +144,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     {
         auto box = mesh.computeBoundingBox( &res.value() );
         if ( currentSettings.subdivideEdgeLen <= 0.0f )
-            currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : fdParams.maxDeviation;
+            currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;
 
         SubdivideSettings ssettings;
         ssettings.region = &res.value();

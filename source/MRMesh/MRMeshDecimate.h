@@ -241,8 +241,9 @@ struct ResolveMeshDegenSettings
  *
  * \sa \ref decimateMesh
  */
+[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
-[[deprecated(" use the version with parameter struct instead" )]]
+[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 

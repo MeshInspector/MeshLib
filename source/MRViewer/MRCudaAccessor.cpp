@@ -1,5 +1,6 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRPointsProject.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
@@ -38,6 +39,11 @@ void CudaAccessor::setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCt
 void CudaAccessor::setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor )
 {
     instance_().mpCtor_ = mpCtor;
+}
+
+void CudaAccessor::setCudaPointsProjectorConstructor( CudaPointsProjectorConstructor ppCtor )
+{
+    instance_().ppCtor_ = ppCtor;
 }
 
 #ifndef MRVIEWER_NO_VOXELS
@@ -100,6 +106,14 @@ std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProject
     if ( !inst.mpCtor_ )
         return {};
     return inst.mpCtor_();
+}
+
+std::unique_ptr<MR::IPointsProjector> CudaAccessor::getCudaPointsProjector()
+{
+    auto& inst = instance_();
+    if ( !inst.ppCtor_ )
+        return {};
+    return inst.ppCtor_();
 }
 
 #ifndef MRVIEWER_NO_VOXELS

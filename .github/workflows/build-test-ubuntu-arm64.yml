@@ -59,6 +59,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      # CMake 4 compatibility
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
     steps:
       - name: Work-around possible permission issues
         shell: bash

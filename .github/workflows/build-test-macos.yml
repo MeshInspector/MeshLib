@@ -61,6 +61,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      # CMake 4 compatibility
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,9 +123,8 @@ jobs:
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests
-        if: ${{ matrix.os == 'arm' }}
         timeout-minutes: 3
-        run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+        run: MR_LOCAL_RESOURCES=1 ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest

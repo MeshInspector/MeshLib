@@ -16,6 +16,8 @@ static_assert( sizeof( MR::Cuda::PointsProjectionResult ) == sizeof( MR::PointsP
 namespace MR::Cuda
 {
 
+constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
+
 Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
     const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings )
 {
@@ -93,12 +95,14 @@ Expected<void> PointsProjector::findProjections( std::vector<MR::PointsProjectio
     return {};
 }
 
+size_t PointsProjector::projectionsHeapBytes( size_t numProjections ) const
+{
+    return std::min( ( sizeof( float3 ) + sizeof( PointsProjectionResult ) ) * numProjections, cMinCudaBufferSize );
+}
+
 size_t findProjectionOnPointsHeapBytes( const PointCloud& pointCloud, size_t pointsCount )
 {
-    constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
-    return
-          pointCloudHeapBytes( pointCloud )
-        + std::min( ( sizeof( float3 ) + sizeof( PointsProjectionResult ) ) * pointsCount, cMinCudaBufferSize );
+    return pointCloudHeapBytes( pointCloud ) + std::min( ( sizeof( float3 ) + sizeof( PointsProjectionResult ) ) * pointsCount, cMinCudaBufferSize );
 }
 
 } // namespace MR::Cuda

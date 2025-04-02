@@ -18,8 +18,8 @@ public static class MeshResolveDegenerationsExample
 
             var mesh = MeshLoad.FromAnySupportedFormat(inputFile);
             var parameters = new ResolveMeshDegenParameters();
-            parameters.maxDeviation = mesh.BoundingBox.Diagonal() * 1e-5f;
-            parameters.tinyEdgeLength = 1e-3f;
+            parameters.maxDeviation = mesh.BoundingBox.Diagonal() * 1e-3f;
+            parameters.tinyEdgeLength = parameters.maxDeviation * 0.1f;
 
             if (!ResolveMeshDegenerations(ref mesh, parameters))
             {

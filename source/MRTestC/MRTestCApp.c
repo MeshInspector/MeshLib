@@ -21,6 +21,8 @@
 #include "MRColor.h"
 #include "MRMatrix3.h"
 #include "MRAffineXf.h"
+#include "SimpleObjects.h"
+#include "MRVector3.h"
 
 int main( void )
 {
@@ -103,6 +105,30 @@ int main( void )
     RUN_TEST( testMrAffineXf3fLinear );
     RUN_TEST( testMrAffineXf3fMul );
     RUN_TEST( testMrAffineXf3fApply );
+
+    // MRSimpleObjects
+    RUN_TEST( testMrMakeCube );
+    RUN_TEST( testMrMakeCylinderAdvanced );
+    RUN_TEST( testMrMakeTorus );
+    RUN_TEST( testMrMakeTorusWithSelfIntersections );
+    RUN_TEST( testMrMakeSphere );
+    RUN_TEST( testMrMakeUVSphere );
+
+    //MRVector
+    RUN_TEST( testMrVector3fDiagonal );
+    RUN_TEST( testMrVector3fPlusX );
+    RUN_TEST( testMrVector3fPlusY );
+    RUN_TEST( testMrVector3fPlusZ );
+    RUN_TEST( testMrVector3fAdd );
+    RUN_TEST( testMrVector3fSub );
+    RUN_TEST( testMrVector3fMulScalar );
+    RUN_TEST( testMrVector3fLengthSq );
+    RUN_TEST( testMrVector3fLength );
+    RUN_TEST( testMrVector3iDiagonal );
+    RUN_TEST( testMrVector3iPlusX );
+    RUN_TEST( testMrVector3iPlusY );
+    RUN_TEST( testMrVector3iPlusZ );
+
 
     printf("Tests finished\n");
 }

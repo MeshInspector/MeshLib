@@ -2,7 +2,6 @@
 #include "MRRibbonMenu.h"
 #include "ImGuiHelpers.h"
 #include "MRColorTheme.h"
-#include "ImGuiHelpers.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"

@@ -528,6 +528,7 @@ template <typename T, typename I, typename P> class Heap;
 
 class MRMESH_CLASS MeshTopology;
 struct MRMESH_CLASS Mesh;
+struct MRMESH_CLASS EdgeLengthMesh;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
@@ -691,6 +692,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 class IPointsToMeshProjector;
+class IPointsProjector;
 
 namespace MeshBuilder
 {

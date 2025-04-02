@@ -103,6 +103,14 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
     return marchingCubes( weightedPointsToDistanceFunctionVolume( cloud, wp2vparams ), vmParams );
 }
 
+Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars& pointWeights,
+    const WeightedPointsShellParameters& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&pointWeights]( VertId v ){ return pointWeights[v]; };
+    return weightedPointsShell( cloud, params );
+}
+
 Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params )
 {
     MR_TIMER
@@ -139,6 +147,13 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     };
 
     return marchingCubes( weightedMeshToDistanceFunctionVolume( mesh, wp2vparams ), vmParams );
+}
+
+Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParameters& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&vertWeights]( VertId v ){ return vertWeights[v]; };
+    return weightedMeshShell( mesh, params );
 }
 
 } //namespace MR

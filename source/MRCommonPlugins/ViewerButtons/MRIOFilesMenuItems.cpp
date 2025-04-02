@@ -66,7 +66,7 @@
 #endif
 
 #if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-#include <clip/clip.h>
+#include <clip.h>
 #endif
 
 #include <unordered_set>

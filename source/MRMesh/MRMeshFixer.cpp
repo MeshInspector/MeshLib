@@ -8,6 +8,12 @@
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
 #include "MRBox.h"
+#include "MRRegionBoundary.h"
+#include "MRExpandShrink.h"
+#include "MRMeshDecimate.h"
+#include "MRMeshSubdivide.h"
+#include "MREdgePaths.h"
+#include "MRFillHoleNicely.h"
 
 namespace MR
 {
@@ -136,6 +142,147 @@ Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topol
     std::sort( res.begin(), res.end() );
 
     return res;
+}
+
+Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params )
+{
+    MR_TIMER;
+    int maxSteps = 1;
+    if ( params.mode == FixMeshDegeneraciesParams::Mode::Remesh )
+        maxSteps = 2;
+    else if ( params.mode == FixMeshDegeneraciesParams::Mode::RemeshPatch )
+        maxSteps = 3;
+
+    auto prepareRegion = [&] ( auto cb )->Expected<FaceBitSet>
+    {
+        auto dfres = findDegenerateFaces( { mesh,params.region }, params.criticalTriAspectRatio, subprogress( cb, 0.0f, 0.5f ) );
+        if ( !dfres.has_value() )
+            return unexpected( dfres.error() );
+        auto seres = findShortEdges( { mesh,params.region }, params.tinyEdgeLength, subprogress( cb, 0.5f, 1.0f ) );
+        if ( !seres.has_value() )
+            return unexpected( seres.error() );
+        if ( dfres->none() && seres->none() )
+            return {}; // nothing to fix
+        FaceBitSet tempRegion = *dfres | getIncidentFaces( mesh.topology, *seres );
+        expand( mesh.topology, tempRegion, 3 );
+        tempRegion &= mesh.topology.getFaceIds( params.region );
+        return tempRegion;
+    };
+
+    // START DECIMATION PART
+    auto sbd = subprogress( params.cb, 0.0f, 1.0f / float( maxSteps ) );
+    auto regRes = prepareRegion( subprogress( sbd, 0.0f, 0.2f ) );
+    if ( !regRes.has_value() )
+        return unexpected( regRes.error() );
+    if ( regRes->none() )
+        return {}; // nothing to fix
+    if ( !reportProgress( sbd, 0.25f ) )
+        return unexpectedOperationCanceled();
+    
+    DecimateSettings dsettings
+    {
+        .strategy = DecimateStrategy::ShortestEdgeFirst,
+        .maxError = params.maxDeviation,
+        .criticalTriAspectRatio = maxSteps > 1 ? FLT_MAX : params.criticalTriAspectRatio, // no need to bypass checks in decimation if subdivision is on
+        .tinyEdgeLength = params.tinyEdgeLength,
+        .stabilizer = params.stabilizer,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
+        .region = &*regRes,
+        .maxAngleChange = params.maxAngleChange,
+        .progressCallback = subprogress( sbd, 0.25f,  1.0f )
+    };
+
+    auto res = decimateMesh( mesh, dsettings );
+
+    if ( params.region )
+    {
+        // validate region
+        *params.region |= *regRes;
+        *params.region &= mesh.topology.getValidFaces();
+    }
+
+    if ( res.cancelled )
+        return unexpectedOperationCanceled();
+
+    if ( maxSteps == 1 )
+        return {}; // other steps are disabled
+
+    // START SUBDIVISION PART
+    auto sbs = subprogress( params.cb, 1.0f / float( maxSteps ), 2.0f / float( maxSteps ) );
+    regRes = prepareRegion( subprogress( sbs, 0.0f, 0.2f ) );
+    if ( !regRes.has_value() )
+        return unexpected( regRes.error() );
+    if ( regRes->none() )
+        return {}; // nothing to fix
+    if ( !reportProgress( sbs, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    SubdivideSettings ssettings{
+        .maxEdgeLen = 1e3f * params.tinyEdgeLength,
+        .maxEdgeSplits = int( mesh.topology.undirectedEdgeSize() ), // 2 * int( region.count() ),
+        .maxDeviationAfterFlip = params.maxDeviation, // 0.1 * tolerance
+        .maxAngleChangeAfterFlip = params.maxAngleChange,
+        .criticalAspectRatioFlip = params.criticalTriAspectRatio, // questionable - may lead to exceeding beyond tolerance, but if set FLT_MAX, may lead to more degeneracies
+        .region = params.region,
+        .maxTriAspectRatio = params.criticalTriAspectRatio,
+        .progressCallback = subprogress( sbs, 0.25f, 1.0f )
+    };
+    subdivideMesh( mesh, ssettings );
+
+    if ( !reportProgress( sbs, 1.f ) )
+        return unexpectedOperationCanceled();
+
+    if ( maxSteps == 2 )
+        return {}; // other steps are disabled
+
+    // START PATCH STEP
+    auto sbp = subprogress( params.cb, 2.0f / float( maxSteps ), 3.0f / float( maxSteps ) );
+    regRes = prepareRegion( subprogress( sbp, 0.0f, 0.2f ) );
+    if ( !regRes.has_value() )
+        return unexpected( regRes.error() );
+    if ( regRes->none() )
+        return {}; // nothing to fix
+    if ( !reportProgress( sbp, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    auto boundaryEdges = delRegionKeepBd( mesh, *regRes );
+
+    auto sb = subprogress( sbp, 0.25f, 1.0f );
+    for ( int i = 0; i < boundaryEdges.size(); ++i )
+    {
+        const auto& boundaryEdge = boundaryEdges[i];
+        if ( boundaryEdge.empty() )
+            continue;
+
+        const auto len = calcPathLength( boundaryEdge, mesh );
+        const auto avgLen = len / boundaryEdge.size();
+        FillHoleNicelySettings settings
+        {
+            .triangulateParams =
+            {
+                .metric = getUniversalMetric( mesh ),
+                .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
+            },
+            .maxEdgeLen = float( avgLen ) * 1.5f,
+            .maxEdgeSplits = 20'000,
+            .smoothCurvature = true,
+            .edgeWeights = EdgeWeights::Unit // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
+        };
+
+        for ( auto e : boundaryEdge )
+        {
+            if ( mesh.topology.left( e ) )
+                continue;
+            auto newFaces = fillHoleNicely( mesh, e, settings );
+            if ( params.region )
+                *params.region |= newFaces;
+        }
+        if ( !sb( ( i + 1.f ) / boundaryEdges.size() ) )
+            return unexpectedOperationCanceled();
+    }
+    if ( params.region )
+        *params.region &= mesh.topology.getValidFaces();
+    return {};
 }
 
 VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )

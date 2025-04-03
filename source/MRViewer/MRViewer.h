@@ -69,7 +69,6 @@ struct FileLoadOptions
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-
     // true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
 };

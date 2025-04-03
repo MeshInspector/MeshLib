@@ -258,7 +258,7 @@ jobs:
   start-unity-instance:
     name: Start unity instance
     runs-on: aws-micro
-    needs: [ windows-build-test ]
+    needs: [ windows-build-test, create-nuget-package ]
     outputs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     permissions:

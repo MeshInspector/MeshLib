@@ -289,7 +289,7 @@ IF(MESHLIB_PYTHON_SUPPORT)
 ENDIF()
 
 IF(MSVC)
-  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/OpenCTM)
+  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/OpenCTM-git)
   add_subdirectory(${PROJECT_SOURCE_DIR}/laz-perf)
 ENDIF()
 

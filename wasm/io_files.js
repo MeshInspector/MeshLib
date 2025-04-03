@@ -298,13 +298,13 @@ var open_dir = function (e) {
   return false;
 };
 
-var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, optObjectName="") {
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes) {
   var directory = ".use_open_files";
   FS.createPath("/", directory);
   var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");
   FS.writeFile(path, bytes);
 
-  Module.ccall('emsAddFileToScene', 'void', ['string','string'], [path,optObjectName]);
+  Module.ccall('emsAddFileToScene', 'void', ['string'], [path]);
   // enforce several frames to toggle animation when popup closed
   for (var i = 0; i < 500; i += 100)
     setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);

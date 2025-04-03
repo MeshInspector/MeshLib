@@ -21,6 +21,7 @@ jobs:
 
       - name: Copy nupkg from S3
         shell: powershell
+        # We use the same fake version 1.0.0.3468 to simplify test workflow for Install package step
         run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --quiet
 
       - name: rm previous data
@@ -45,7 +46,7 @@ jobs:
         shell: powershell
         run: |
           [xml]$xml = Get-Content "C:\work\results.xml"
-          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in test_results.xml found"; exit 1}
+          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in results.xml found"; exit 1}
 
       - name: upload logs
         if: always()

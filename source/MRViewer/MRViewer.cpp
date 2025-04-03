@@ -1260,6 +1260,8 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
                 onSceneSaved( result.loadedFiles.front() );
+                if ( options.loadedCallback )
+                    options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
@@ -1276,6 +1278,8 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                     AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
+                if ( options.loadedCallback )
+                    options.loadedCallback( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1287,6 +1291,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             }
 
             viewport().preciseFitDataToScreenBorder( { 0.9f } );
+        }
+        else
+        {
+            if ( options.loadedCallback )
+                options.loadedCallback( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );

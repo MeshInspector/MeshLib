@@ -180,12 +180,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             completed += 1;
         } );
     }
-
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
     while ( !loadingCanceled && completed < nodes.size() )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
         loadingCanceled = !cb();
     }
+#endif
     group.wait();
 
     if ( loadingCanceled )

@@ -69,8 +69,13 @@ struct FileLoadOptions
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-    // true here will replace existing scene even if more than one file is open
+    /// true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
+
+    /// if this callback is set - it is called once when all obects are added to scene
+    /// top level objects only are present here
+    /// empty vector will be passed here in case of error
+    std::function<void(const std::vector<std::shared_ptr<Object>>& objs)> loadedCallback;
 };
 
 // GLFW-based mesh viewer

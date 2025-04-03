@@ -1,14 +1,14 @@
 var pointerSize = 0;
 
 var getPointerSize = function () {
-    if (!pointerSize) {
-        pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
-    }
-    return pointerSize;
+  if (!pointerSize) {
+    pointerSize = Module.ccall('emsGetPointerSize', 'number', [], []);
+  }
+  return pointerSize;
 }
 
 var toPointer = function (value) {
-    return getPointerSize() == 8 ? BigInt(value) : value;
+  return getPointerSize() == 8 ? BigInt(value) : value;
 }
 
 var freeFSCallback = function () {
@@ -90,7 +90,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   btn_save.setAttribute('value', 'Save');
   btn_save.setAttribute('style', 'position: absolute;width: 100px;height: 28px;top: 194px;left: 50%;transform: translate(-50%, -50%);border-radius: 4px;color: #fff;font-size: 14px;font-weight: 600;border: none;');
   btn_save.setAttribute('class', 'button');
-  btn_save.onclick = function() {
+  btn_save.onclick = function () {
     Module.ccall('emsSaveFile', 'number', ['string'], [document.getElementById('download_name').value + document.getElementById('download_ext').value]);
     addKeyboardEvents();
     document.getElementById('show_download_dialog').remove();
@@ -107,7 +107,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
 
   name_selector.focus();
   name_selector.select();
-  name_selector.addEventListener('keydown', function(ev) {
+  name_selector.addEventListener('keydown', function (ev) {
     if (ev.key == 'Enter' && name_selector.value) {
       ev.preventDefault();
       btn_save.click();
@@ -298,13 +298,18 @@ var open_dir = function (e) {
   return false;
 };
 
-var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes) {
+var emplace_file_in_local_FS_and_open_context_id = 0;
+var emplace_file_in_local_FS_and_open_notifier = {};
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, callback = function (objHierarhyJSONString) {}) {
   var directory = ".use_open_files";
   FS.createPath("/", directory);
   var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");
   FS.writeFile(path, bytes);
 
-  Module.ccall('emsAddFileToScene', 'void', ['string'], [path]);
+  emplace_file_in_local_FS_and_open_notifier[emplace_file_in_local_FS_and_open_context_id] = callback;
+  Module.ccall('emsAddFileToScene', 'void', ['string', 'number'], [path, emplace_file_in_local_FS_and_open_context_id]);
+  emplace_file_in_local_FS_and_open_context_id = emplace_file_in_local_FS_and_open_context_id + 1;
+
   // enforce several frames to toggle animation when popup closed
   for (var i = 0; i < 500; i += 100)
     setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
@@ -360,6 +365,6 @@ var test_download_file = function (url) {
     );
   }).then(async (response) => {
     console.log(response);
-    emplace_file_in_local_FS_and_open("downloadedFile.stl", new Uint8Array(await response.arrayBuffer()));
+    emplace_file_in_local_FS_and_open("downloadedFile.stl", new Uint8Array(await response.arrayBuffer()),(e)=>{ console.log(JSON.parse(e)); });
   });
 }

@@ -300,7 +300,7 @@ var open_dir = function (e) {
 
 var emplace_file_in_local_FS_and_open_context_id = 0;
 var emplace_file_in_local_FS_and_open_notifier = {};
-var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, callback = function (objHierarhyJSONString) {}) {
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, callback = function (objHierarchyJSONString) {}) {
   var directory = ".use_open_files";
   FS.createPath("/", directory);
   var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");

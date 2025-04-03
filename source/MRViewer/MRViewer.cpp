@@ -1254,13 +1254,15 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
 
             if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
-                // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( undoName );
-                auto newRoot = result.scene;
-                std::swap( newRoot, SceneRoot::getSharedPtr() );
-                setSceneDirty();
-                onSceneSaved( result.loadedFiles.front() );
-                if ( options.loadedCallback )
+                {
+                    // the scene is taken as is from a single file, replace the current scene with it
+                    AppendHistory<SwapRootAction>( undoName );
+                    auto newRoot = result.scene;
+                    std::swap( newRoot, SceneRoot::getSharedPtr() );
+                    setSceneDirty();
+                    onSceneSaved( result.loadedFiles.front() );
+                }
+                if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
@@ -1268,17 +1270,18 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 // not-scene file was open, or several scenes were open, append them to the current scene
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
-
-                SCOPED_HISTORY( undoName );
-
                 const auto children = result.scene->children();
-                result.scene->removeAllChildren();
-                for ( const auto& obj : children )
                 {
-                    AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
+                    SCOPED_HISTORY( undoName );
+
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                    {
+                        AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
                 }
-                if ( options.loadedCallback )
+                if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( children, result.errorSummary, result.warningSummary );
             }
 

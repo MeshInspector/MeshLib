@@ -108,22 +108,22 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
 
 #ifdef __EMSCRIPTEN__
 
-Json::Value prepareJsonObjHierarhyRecursive( const MR::Object& obj )
+Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
 {
     Json::Value root;
     root["Name"] = obj.name();
     for (const auto& child : obj.children())
     {
-        root["Children"].append( prepareJsonObjHierarhyRecursive( *child ) );
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
     }
     return root;
 }
 
-Json::Value prepareJsonObjsHierarhy( const std::vector<std::shared_ptr<MR::Object>>& objs )
+Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Object>>& objs )
 {
     Json::Value root;
     for (const auto& obj : objs )
-        root["Children"].append( prepareJsonObjHierarhyRecursive( *obj ) );
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *obj ) );
     return root;
 }
 #endif
@@ -156,13 +156,13 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
     FileLoadOptions opts;
     opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
     {
-        auto hierarhyRoot = prepareJsonObjsHierarhy(objs);
-        hierarhyRoot["Errors"] = errors;
-        hierarhyRoot["Warnings"] = warnings;
-        auto hierarhyLine = hierarhyRoot.toStyledString();
+        auto hierarchyRoot = prepareJsonObjsHierarchy(objs);
+        hierarchyRoot["Errors"] = errors;
+        hierarchyRoot["Warnings"] = warnings;
+        auto hierarchyLine = hierarchyRoot.toStyledString();
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
-        EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarhyLine.c_str() );
+        EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarchyLine.c_str() );
 #pragma GCC diagnostic pop   
     };
     getViewerInstance().loadFiles( paths, opts );

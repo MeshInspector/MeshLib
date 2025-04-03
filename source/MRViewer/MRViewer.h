@@ -64,6 +64,8 @@ struct LaunchParams
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };
 
+using FilesLoadedCallback = std::function<void(const std::vector<std::shared_ptr<Object>>& objs,const std::string& errors, const std::string& warnings)>;
+
 struct FileLoadOptions
 {
     /// first part of undo name
@@ -74,8 +76,7 @@ struct FileLoadOptions
 
     /// if this callback is set - it is called once when all obects are added to scene
     /// top level objects only are present here
-    /// empty vector will be passed here in case of error
-    std::function<void(const std::vector<std::shared_ptr<Object>>& objs)> loadedCallback;
+    FilesLoadedCallback loadedCallback;
 };
 
 // GLFW-based mesh viewer

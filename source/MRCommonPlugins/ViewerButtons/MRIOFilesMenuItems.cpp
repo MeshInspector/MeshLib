@@ -119,12 +119,12 @@ Json::Value prepareJsonObjHierarhyRecursive( const MR::Object& obj )
     return root;
 }
 
-std::string prepareJsonObjsHierarhy( const std::vector<std::shared_ptr<MR::Object>>& objs )
+Json::Value prepareJsonObjsHierarhy( const std::vector<std::shared_ptr<MR::Object>>& objs )
 {
     Json::Value root;
     for (const auto& obj : objs )
-        root.append( prepareJsonObjHierarhyRecursive( *obj ) );
-    return root.toStyledString();
+        root["Children"].append( prepareJsonObjHierarhyRecursive( *obj ) );
+    return root;
 }
 #endif
 
@@ -154,9 +154,12 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
         return;
     }
     FileLoadOptions opts;
-    opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs )
+    opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
     {
-        auto hierarhyLine = prepareJsonObjsHierarhy(objs);
+        auto hierarhyRoot = prepareJsonObjsHierarhy(objs);
+        hierarhyRoot["Errors"] = errors;
+        hierarhyRoot["Warnings"] = warnings;
+        auto hierarhyLine = hierarhyRoot.toStyledString();
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
         EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarhyLine.c_str() );

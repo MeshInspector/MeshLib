@@ -112,7 +112,7 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
+EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, const char* objName )
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
@@ -131,6 +131,9 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
         showError( stringUnsupportedFileExtension() );
         return;
     }
+    FileLoadOptions options;
+    if ( objName )
+        options.forceObjectName = std::string( objName );
     getViewerInstance().loadFiles( paths );
 }
 

@@ -69,6 +69,9 @@ struct FileLoadOptions
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
+    /// if single object loaded and this is not empty - changes its name in scene to this
+    std::string forceObjectName = "";
+
     // true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
 };

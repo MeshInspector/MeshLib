@@ -88,7 +88,8 @@ public:
         if ( loadedObjects_.size() == 1 )
         {
             const auto& object = loadedObjects_.front();
-            if ( object->typeName() == SceneRootObject::TypeName() || ( object->typeName() == Object::TypeName() && object->xf() == AffineXf3f() ) )
+            auto typeName = std::string( object->typeName() );
+            if ( typeName == SceneRootObject::TypeName() || ( typeName == Object::TypeName() && object->xf() == AffineXf3f() ) )
             {
                 scene = createRootFormObject( object );
                 constructed = false;

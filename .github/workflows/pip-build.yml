@@ -29,6 +29,8 @@ env:
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
+  # CMake 4 compatibility
+  CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
 
 jobs:

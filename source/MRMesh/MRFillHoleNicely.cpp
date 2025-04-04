@@ -69,7 +69,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
             // exclude boundary vertices from positionVertsSmoothly(), since it tends to move them inside the mesh
             auto vertsForSmoothing = newVerts - mesh.topology.findBoundaryVerts( &newVerts );
             positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights );
+            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
             if ( settings.naturalSmooth )
             {
                 auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
@@ -81,7 +81,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
                 {
                     vertsForSmoothing = incidentVerts - mesh.topology.findBoundaryVerts( &incidentVerts );
                     positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights );
+                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
                 }
             }
         }

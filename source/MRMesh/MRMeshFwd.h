@@ -51,7 +51,7 @@
 // #endif
 
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Warray-bounds"
   #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -59,7 +59,7 @@
 
 #include <array>
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
   #pragma GCC diagnostic pop
 #endif
 
@@ -528,6 +528,7 @@ template <typename T, typename I, typename P> class Heap;
 
 class MRMESH_CLASS MeshTopology;
 struct MRMESH_CLASS Mesh;
+struct MRMESH_CLASS EdgeLengthMesh;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
@@ -631,6 +632,8 @@ class FewSmallest;
 class Graph;
 class WatershedGraph;
 
+struct TbbTaskArenaAndGroup;
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
@@ -689,6 +692,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 class IPointsToMeshProjector;
+class IPointsProjector;
 
 namespace MeshBuilder
 {

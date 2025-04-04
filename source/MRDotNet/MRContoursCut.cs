@@ -82,16 +82,16 @@ namespace MR
             public MRVariableEdgeTri() { }
         };
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [DllImport("MRMeshC", CharSet = CharSet.Auto)]
         private static extern MROneMeshContour mrOneMeshContoursGet(IntPtr contours, ulong index);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [DllImport("MRMeshC", CharSet = CharSet.Auto)]
         private static extern ulong mrOneMeshContoursSize(IntPtr contours);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [DllImport("MRMeshC", CharSet = CharSet.Auto)]
         private static extern void mrOneMeshContoursFree(IntPtr contours);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [DllImport("MRMeshC", CharSet = CharSet.Auto)]
         private static extern IntPtr mrGetOneMeshIntersectionContours(IntPtr meshA, IntPtr meshB,
                                                                      IntPtr continousContours,
                                                                      bool getMeshAIntersections,

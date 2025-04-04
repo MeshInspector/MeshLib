@@ -4,6 +4,7 @@
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
@@ -15,7 +16,7 @@
 
 #ifndef _WIN32
   #ifndef MRVIEWER_NO_GTK
-    #include <gtkmm.h>
+    #include <gtk/gtk.h>
   #endif
 #else
 #  define GLFW_EXPOSE_NATIVE_WIN32
@@ -253,56 +254,62 @@ std::string getCurrentFolder( const FileDialogParameters& params )
     return MR::utf8string( MR::GetHomeDirectory() );
 }
 
-std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
+std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDialogParameters& params )
 {
-    switch ( action )
-    {
-    case Gtk::FILE_CHOOSER_ACTION_OPEN:
-        return multiple ? "Open Files" : "Open File";
-    case Gtk::FILE_CHOOSER_ACTION_SAVE:
-        return "Save File";
-    case Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER:
-        return multiple ? "Open Folders" : "Open Folder";
-    case Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER:
-        return "Save Folder";
-    }
-    assert( false );
-    return {};
+    if ( params.folderDialog )
+        return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
+    else if ( params.saveDialog )
+        return { GTK_FILE_CHOOSER_ACTION_SAVE, "Save File" };
+    else
+        return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
 std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params = {} )
 {
     // Gtk has a nasty habit of overriding the locale to "".s
-    auto locale = std::setlocale( LC_ALL, nullptr );
-    std::string localeStr;
-    if ( locale )
+    std::optional<std::string> localeStr;
+    if ( auto locale = std::setlocale( LC_ALL, nullptr ) )
         localeStr = std::string( locale );
-    auto kit = Gtk::Application::create();
-    if ( locale )
-        std::setlocale( LC_ALL, localeStr.c_str() );
+    MR_FINALLY {
+        if ( localeStr )
+            std::setlocale( LC_ALL, localeStr->c_str() );
+    };
 
-    Gtk::FileChooserAction action;
-    if ( params.folderDialog )
-        action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER : Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER;
-    else
-        action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN;
+    if ( !gtk_init_check( NULL, NULL ) )
+    {
+        spdlog::error( "Failed to initialize GTK+" );
+        return {};
+    }
+    MR_FINALLY {
+        while ( gtk_events_pending() )
+            gtk_main_iteration();
+    };
+
+    auto [action, title] = gtkDialogParameters( params );
 #if defined( __APPLE__ )
-    const auto dialogPtr = Gtk::FileChooserNative::create(gtkDialogTitle( action, params.multiselect ), action );
-    auto& dialog = *dialogPtr.get();
+    auto* dialog = gtk_file_chooser_native_new( title.c_str(), NULL, action, params.saveDialog ? "_Save" : "_Open", "_Cancel" );
+    MR_FINALLY {
+        gtk_native_dialog_destroy( GTK_NATIVE_DIALOG( dialog ) );
+    };
 #else
-    Gtk::FileChooserDialog dialog( gtkDialogTitle( action, params.multiselect ), action );
-#endif
-    dialog.set_select_multiple( params.multiselect );
+    auto* dialog = gtk_file_chooser_dialog_new( title.c_str(), NULL, action, NULL, NULL );
+    MR_FINALLY {
+        gtk_widget_destroy( dialog );
+    };
 
-#if !defined( __APPLE__ )
-    dialog.add_button( Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL );
-    dialog.add_button( params.saveDialog ? Gtk::Stock::SAVE : Gtk::Stock::OPEN, Gtk::RESPONSE_ACCEPT );
+    gtk_dialog_add_button( GTK_DIALOG( dialog ), params.saveDialog ? "_Save" : "_Open", GTK_RESPONSE_ACCEPT );
+    gtk_dialog_add_button( GTK_DIALOG( dialog ), "_Cancel", GTK_RESPONSE_CANCEL );
 #endif
+
+    auto* chooser = GTK_FILE_CHOOSER( dialog );
+
+    gtk_file_chooser_set_select_multiple( chooser, params.multiselect );
 
     for ( const auto& filter: params.filters )
     {
-        auto filterText = Gtk::FileFilter::create();
-        filterText->set_name( filter.name );
+        auto* fileFilter = gtk_file_filter_new();
+        gtk_file_filter_set_name( fileFilter, filter.name.c_str() );
+
         size_t separatorPos = 0;
         for (;;)
         {
@@ -312,33 +319,42 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
             if ( ext == "*.*" )
                 ext = "*";
 #endif
-            filterText->add_pattern( ext );
+            gtk_file_filter_add_pattern( fileFilter, ext.c_str() );
             if ( nextSeparatorPos == std::string::npos )
                 break;
             separatorPos = nextSeparatorPos + 1;
         }
-        dialog.add_filter( filterText );
+
+        gtk_file_chooser_add_filter( chooser, fileFilter ); // the chooser takes ownership of the filter
     }
 
-    dialog.set_current_folder( getCurrentFolder( params ) );
+    const auto currentFolder = getCurrentFolder( params );
+    gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 
     if ( !params.fileName.empty() )
-        dialog.set_current_name( params.fileName );
+        gtk_file_chooser_set_current_name( chooser, params.fileName.c_str() );
 
     if ( params.saveDialog )
-        dialog.set_do_overwrite_confirmation( true );
+        gtk_file_chooser_set_do_overwrite_confirmation( chooser, true );
 
     std::vector<std::filesystem::path> results;
     auto onResponse = [&] ( int responseId )
     {
-        if ( responseId == Gtk::RESPONSE_ACCEPT )
+        if ( responseId == GTK_RESPONSE_ACCEPT )
         {
-            for ( const auto& filename : dialog.get_filenames() )
+            auto* filenames = gtk_file_chooser_get_filenames( chooser );
+            MR_FINALLY {
+                g_slist_free_full( filenames, g_free );
+            };
+
+            for ( auto* node = filenames ; node != NULL; node = node->next )
             {
+                const auto* filename = (gchar*)node->data;
                 std::filesystem::path filepath( filename );
                 if ( params.saveDialog && !filepath.has_extension() )
                 {
-                    const std::string filterName = dialog.get_filter()->get_name();
+                    auto* fileFilter = gtk_file_chooser_get_filter( chooser );
+                    const std::string filterName = gtk_file_filter_get_name( fileFilter );
                     for ( const auto& filter: params.filters )
                     {
                         if ( filterName == filter.name )
@@ -352,9 +368,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
             }
 
             auto& cfg = MR::Config::instance();
-            cfg.setJsonValue( cLastUsedDirKey, dialog.get_current_folder() );
+            cfg.setJsonValue( cLastUsedDirKey, gtk_file_chooser_get_current_folder( chooser ) );
         }
-        else if ( responseId != Gtk::RESPONSE_CANCEL )
+        else if ( responseId != GTK_RESPONSE_CANCEL )
         {
             spdlog::warn( "GTK dialog failed" );
         }
@@ -367,14 +383,11 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 #endif
     };
 #if defined( __APPLE__ )
-    onResponse( dialog.run() );
+    onResponse( gtk_native_dialog_run( GTK_NATIVE_DIALOG( dialog ) ) );
+    gtk_native_dialog_hide( GTK_NATIVE_DIALOG( dialog ) );
 #else // __APPLE__
-    dialog.signal_response().connect([&] ( int responseId )
-    {
-        onResponse( responseId );
-        dialog.hide();
-    });
-    kit->run( dialog );
+    onResponse( gtk_dialog_run( GTK_DIALOG( dialog ) ) );
+    gtk_widget_hide( dialog );
 #endif // __APPLE__
 
     return results;

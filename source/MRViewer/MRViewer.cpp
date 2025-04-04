@@ -71,6 +71,7 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRPch/MRJson.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
@@ -1194,7 +1195,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : DistanceMapLoad::Filters )
+    for ( auto& filter : DistanceMapLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
@@ -1253,28 +1254,35 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
 
             if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
-                // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( undoName );
-                auto newRoot = result.scene;
-                std::swap( newRoot, SceneRoot::getSharedPtr() );
-                setSceneDirty();
-                onSceneSaved( result.loadedFiles.front() );
+                {
+                    // the scene is taken as is from a single file, replace the current scene with it
+                    AppendHistory<SwapRootAction>( undoName );
+                    auto newRoot = result.scene;
+                    std::swap( newRoot, SceneRoot::getSharedPtr() );
+                    setSceneDirty();
+                    onSceneSaved( result.loadedFiles.front() );
+                }
+                if ( options.loadedCallback ) // strictly after history is added
+                    options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
                 // not-scene file was open, or several scenes were open, append them to the current scene
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
-
-                SCOPED_HISTORY( undoName );
-
                 const auto children = result.scene->children();
-                result.scene->removeAllChildren();
-                for ( const auto& obj : children )
                 {
-                    AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
+                    SCOPED_HISTORY( undoName );
+
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                    {
+                        AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
                 }
+                if ( options.loadedCallback ) // strictly after history is added
+                    options.loadedCallback( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1286,6 +1294,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             }
 
             viewport().preciseFitDataToScreenBorder( { 0.9f } );
+        }
+        else
+        {
+            if ( options.loadedCallback )
+                options.loadedCallback( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
@@ -2677,8 +2690,8 @@ void Viewer::enableGlobalHistory( bool on )
         globalHistoryStore_ = std::make_shared<HistoryStore>();
         globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
         {
-            if ( type == HistoryStore::ChangeType::Undo ||
-                 type == HistoryStore::ChangeType::Redo ||
+            if ( type == HistoryStore::ChangeType::PostUndo ||
+                 type == HistoryStore::ChangeType::PostRedo ||
                  type == HistoryStore::ChangeType::AppendAction )
                 makeTitleFromSceneRootPath();
         } );

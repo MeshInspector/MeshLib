@@ -15,6 +15,7 @@
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBoxTests.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
+    <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRMeshIntersectTests.cpp" />
@@ -22,6 +23,8 @@
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
+    <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
+    <ClCompile Include="MRPolyline2IntersectTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />

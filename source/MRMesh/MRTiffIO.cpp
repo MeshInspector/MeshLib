@@ -313,7 +313,7 @@ Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& ou
             {
                 Vector3d tiePoints[2];
                 tiePoints[0] = { dataTie[0],dataTie[1],dataTie[2] };
-                tiePoints[0] = { dataTie[3],dataTie[4],dataTie[5] };
+                tiePoints[1] = { dataTie[3],dataTie[4],dataTie[5] };
 
                 double* dataScale;// will be freed with tiff
                 Vector3d scale;

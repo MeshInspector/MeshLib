@@ -17,6 +17,7 @@
 #include "MRMakeSphereMesh.h"
 #include "MRBuffer.h"
 #include "MRTbbThreadMutex.h"
+#include "MRMeshFixer.h"
 
 namespace MR
 {
@@ -212,28 +213,27 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
 {
     MR_TIMER;
 
-    DecimateSettings dsettings
+    FixMeshDegeneraciesParams fsettings
     {
-        .maxError = settings.maxDeviation,
-        .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .maxDeviation = settings.maxDeviation,
         .tinyEdgeLength = settings.tinyEdgeLength,
+        .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .maxAngleChange = settings.maxAngleChange,
         .stabilizer = settings.stabilizer,
-        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = settings.region,
-        .maxAngleChange = settings.maxAngleChange
     };
-    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
+    return fixMeshDegeneracies( mesh, fsettings ).has_value();
 }
 
 bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
 {
-    ResolveMeshDegenSettings settings
+    FixMeshDegeneraciesParams settings
     {
         .maxDeviation = maxDeviation,
-        .maxAngleChange = maxAngleChange,
-        .criticalAspectRatio = criticalAspectRatio
+        .criticalTriAspectRatio = criticalAspectRatio,
+        .maxAngleChange = maxAngleChange
     };
-    return resolveMeshDegenerations( mesh, settings );
+    return fixMeshDegeneracies( mesh, settings ).has_value();
 }
 
 bool MeshDecimator::initialize_()

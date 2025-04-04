@@ -71,6 +71,7 @@ jobs:
     env:
       BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5 # CMake 4 compatibility
 
     steps:
       - name: Checkout
@@ -79,6 +80,7 @@ jobs:
           submodules: true
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:

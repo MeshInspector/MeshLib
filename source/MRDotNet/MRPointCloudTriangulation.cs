@@ -60,7 +60,7 @@ namespace MR
             public MRTriangulationParameters() { }
         };
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrTriangulatePointCloud(IntPtr pointCloud, ref MRTriangulationParameters parameters);
 
         /**        

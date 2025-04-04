@@ -8,7 +8,7 @@
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRSurfaceDistance.h"
 #include "MRMesh/MRMeshDirMax.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshIntersect.h"
@@ -24,8 +24,6 @@
 #include "MRMesh/MRInnerShell.h"
 #include "MRMesh/MRRingIterator.h"
 
-#include "MRMesh/MRParallelFor.h"
-#include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
 
@@ -97,7 +95,7 @@ Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& para
     if ( !reportProgress( params.cb, 0.15f ) )
         return unexpectedOperationCanceled();
     
-    FixUndercuts::fixUndercuts( meshCopy, Vector3f::plusZ(), params.voxelSize );
+    FixUndercuts::fix( meshCopy, { .upDirection = Vector3f::plusZ(),.voxelSize = params.voxelSize } );
     
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
@@ -276,7 +274,7 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
 
     const float topExcluded = FLT_MAX;
-    const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
+    const auto [min, max] = parallelMinMax( distances, &res.meshAfterCut.topology.getValidVerts(), &topExcluded );
     
     size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
     if ( numIsolines == 0 )

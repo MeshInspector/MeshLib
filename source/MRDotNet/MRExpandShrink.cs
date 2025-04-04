@@ -7,22 +7,22 @@ namespace MR
 {
     public partial class DotNet
     {
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrExpandFaceRegion(IntPtr top, IntPtr region, int hops);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrExpandFaceRegionFromFace(IntPtr top, FaceId face, int hops);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrExpandVertRegion(IntPtr top, IntPtr region, int hops);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrExpandVertRegionFromVert(IntPtr top, VertId vert, int hops);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrShrinkFaceRegion(IntPtr top, IntPtr region, int hops);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void mrShrinkVertRegion(IntPtr top, IntPtr region, int hops);
 
         /// adds to the region all faces within given number of hops (stars) from the initial region boundary

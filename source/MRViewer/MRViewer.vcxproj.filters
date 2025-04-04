@@ -463,6 +463,9 @@
     <ClCompile Include="MRRibbonLayoutConfig.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonRegisterItem.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -907,6 +910,9 @@
       <Filter>IO</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonLayoutConfig.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonRegisterItem.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>

@@ -13,22 +13,22 @@ namespace MR
             VertId v0;
             VertId v1;
         }
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFindHoleComplicatingFaces(IntPtr mesh);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFindDegenerateFaces(ref MRMeshPart mp, float criticalAspectRatio, IntPtr cb, ref IntPtr errorStr);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrFindShortEdges(ref MRMeshPart mp, float criticalLength, IntPtr cb, ref IntPtr errorStr);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         unsafe private static extern void fixMultipleEdges(IntPtr mesh, MultipleEdge* multipleEdges, ulong multipleEdgesNum);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern void findAndFixMultipleEdges(IntPtr mesh);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
 
         /// returns all faces that complicate one of mesh holes;

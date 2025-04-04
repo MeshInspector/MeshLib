@@ -50,7 +50,10 @@ namespace MR
         }
         Matrix3f rot, scale;
         if ( parent_ )
-            decomposeMatrix3( parent_->worldXf().A, rot, scale );
+        {
+            builtXf_ = parent_->worldXf();
+            decomposeMatrix3( builtXf_.A, rot, scale );
+        }
         directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
     }
 
@@ -170,8 +173,17 @@ namespace MR
     }
 
 
-    const Vector3f& DirectionWidget::getDirection() const
+    Vector3f DirectionWidget::getDirection() const
     {
+        if ( parent_ )
+        {
+            auto wXf = parent_->worldXf();
+            if ( wXf != builtXf_ )
+            {
+                auto prevLocalDir = directionObj_->xf().A * Vector3f::plusZ();
+                return wXf.A * prevLocalDir;
+            }
+        }
         return dir_;
     }
 

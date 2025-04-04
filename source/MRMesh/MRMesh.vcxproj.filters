@@ -1287,6 +1287,25 @@
     <ClInclude Include="MRMeshDoubleLayer.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRParallelMinMax.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMinMaxArg.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRClosestWeightedPoint.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTbbTaskArenaAndGroup.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MREdgeLengthMesh.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2101,6 +2120,16 @@
     </ClCompile>
     <ClCompile Include="MRMeshDoubleLayer.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRClosestWeightedPoint.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgeLengthMesh.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

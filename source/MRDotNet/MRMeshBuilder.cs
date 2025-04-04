@@ -10,13 +10,13 @@ namespace MR
     {
         public class MeshBuilder
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRVertMap* mrVertMapNew();
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern void mrVertMapFree(MRVertMap* vertMap);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern int mrMeshBuilderUniteCloseVertices(IntPtr mesh, float closeDist, bool uniteOnlyBd, MRVertMap* optionalVertOldToNew);
 
             /// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;

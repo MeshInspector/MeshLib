@@ -180,7 +180,6 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
     auto minCorner = Vector3f( objVoxels_->getActiveBounds().min ) - Vector3f::diagonal( 0.5f );
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "minCorner" ), minCorner.x, minCorner.y, minCorner.z ) );
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), std::min( { voxelSize.x, voxelSize.y, voxelSize.z } ) ) );
 
 
     constexpr std::array<float, 24> cubePoints =
@@ -351,6 +350,8 @@ void RenderVolumeObject::bindVolume_( bool picker )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "minValue" ), ( params.min - volume.min ) / ( volume.max - volume.min ) ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "maxValue" ), ( params.max - volume.min ) / ( volume.max - volume.min ) ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "shadingMode" ), int( params.shadingType ) ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), params.samplingStep ) );
+
 
     dirty_ &= ~( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }

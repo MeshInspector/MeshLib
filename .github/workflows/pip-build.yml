@@ -29,6 +29,8 @@ env:
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
+  # CMake 4 compatibility
+  CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
 
 jobs:
@@ -67,7 +69,7 @@ jobs:
           - platform: "aarch64"
             os: "ubuntu20-arm64"
             container-options: "--user root"
-            runner: [ 'self-hosted', 'linux-arm64' ]
+            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
             # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
             # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
             compiler: /usr/bin/clang++-18
@@ -414,7 +416,7 @@ jobs:
             container-options: "--user root"
             container-prefix: " "
           - platform: "aarch64"
-            runner: [ 'self-hosted', 'linux-arm64' ]
+            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
             container-options: "--user root"
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"

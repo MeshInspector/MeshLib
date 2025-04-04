@@ -73,16 +73,16 @@ namespace MR
             public MRGridToMeshSettings() { }
         }
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         unsafe private static extern void mrVdbConversionsEvalGridMinMax( IntPtr grid, float* min, float* max );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern MRVdbVolume mrVdbConversionsMeshToVolume( IntPtr mesh, ref MRMeshToVolumeSettings settings, ref IntPtr errorStr );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern MRVdbVolume mrVdbConversionsFloatGridToVdbVolume( IntPtr grid );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrVdbConversionsGridToMesh( IntPtr grid, ref MRGridToMeshSettings settings, ref IntPtr errorStr );
 
         // eval min max value from FloatGrid

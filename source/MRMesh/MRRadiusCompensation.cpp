@@ -114,7 +114,7 @@ Expected<void> RadiusCompensator::calcCompensations()
         toolCenters_[v] = tc;
         if ( tc.x != FLT_MAX )
             costs_[v] = std::make_pair( sumCompensationCost_( tc ), v );
-    }, subprogress( params_.callback, 0.0f, 0.25f ) );
+    }, subprogress( params_.callback, 0.1f, 0.25f ) );
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
@@ -132,7 +132,7 @@ Expected<void> RadiusCompensator::calcCompensations()
 
 MR::Expected<void> RadiusCompensator::filterCompensations()
 {
-    auto sb = subprogress( params_.callback, 0.25f, 0.4f );
+    auto sb = subprogress( params_.callback, 0.3f, 0.4f );
     VertBitSet visitedVerts = vertRegion_;
     int i = 0;
     for ( auto& [cost, cId] : costs_ )
@@ -180,7 +180,7 @@ Expected<void> RadiusCompensator::applyCompensation()
 
     int maxIters = std::max( 1, params_.maxIterations );
 
-    auto sb = subprogress( params_.callback, 0.25f, 1.0f );
+    auto sb = subprogress( params_.callback, 0.4f, 1.0f );
     auto maxAllowedShiftSq = sqr( std::min( mesh_.computeBoundingBox( params_.region ).diagonal() * 1e-2f, 2 * params_.toolRadius / float( maxIters ) ) );
     for ( int i = 1; i <= maxIters; ++i )
     {

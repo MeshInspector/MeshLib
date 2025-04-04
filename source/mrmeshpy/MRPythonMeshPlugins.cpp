@@ -107,6 +107,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
 
     pybind11::class_<MR::SelfIntersections::Settings>( m, "FixSelfIntersectionSettings", "Setting set for mesh self-intersections fix" ).
         def( pybind11::init<>() ).
+        def_readwrite( "touchIsIntersection", &MR::SelfIntersections::Settings::touchIsIntersection ).
         def_readwrite( "method", &MR::SelfIntersections::Settings::method ).
         def_readwrite( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations, "Maximum relax iterations" ).
         def_readwrite( "maxExpand", &MR::SelfIntersections::Settings::maxExpand, "Maximum expand count (edge steps from self-intersecting faces), should be > 0" ).
@@ -119,7 +120,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
         "Finds and fixes self-intersections per component" );
 
     m.def( "localFindSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::getFaces ),
-        pybind11::arg( "mesh" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        pybind11::arg( "mesh" ), pybind11::arg( "touchIsIntersection" ) = true, pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Find all self-intersections faces component-wise" );
 } )
 
@@ -151,9 +152,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
 #ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
-    m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
+    m.def( "fixUndercuts", [] ( Mesh& mesh, const FaceBitSet& region, const Vector3f& upDir, float voxelSize, float be )
+    {
+        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be,.region = &region } );
+    },
         pybind11::arg( "mesh" ), pybind11::arg( "selectedArea" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
-        "aChanges mesh:\n"
+        "Changes mesh:\n"
         "Fills all holes first, then:\n"
         "fixes undercuts (in selected area) via prolonging widest points down\n"
         "Requires to update RenderObject after using\n"
@@ -163,9 +167,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 
-    m.def( "fixUndercuts", ( void ( * )( Mesh&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
+    m.def( "fixUndercuts", [] ( Mesh& mesh, const Vector3f& upDir, float voxelSize, float be )
+    {
+        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be } );
+    },
     pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
-        "aChanges mesh:\n"
+        "Changes mesh:\n"
         "Fills all holes first, then:\n"
         "fixes undercuts via prolonging widest points down\n"
         "Requires to update RenderObject after using\n"
@@ -390,12 +397,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
 {
     pybind11::enum_<EdgeWeights>( m, "LaplacianEdgeWeightsParam" ).
         value( "Unit", EdgeWeights::Unit, "all edges have same weight=1" ).
-        value( "Cotan", EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" ).
-        value( "CotanTimesLength", EdgeWeights::CotanTimesLength, "[deprecated] edge weight is equal to edge length times cotangent weight" ).
-        value( "CotanWithAreaEqWeight", EdgeWeights::CotanWithAreaEqWeight, "cotangent edge weights and equation weights inversely proportional to square root of local area" );
+        value( "Cotan", EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" );
+
+    pybind11::enum_<VertexMass>( m, "LaplacianVertexMassParam" ).
+        value( "Unit", VertexMass::Unit, "all vertices have same mass=1" ).
+        value( "Cotan", VertexMass::NeiArea, "vertex mass depends on local geometry and proportional to the area of first-ring triangles" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
-        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ),
+        pybind11::arg_v( "edgeWeights", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
+        pybind11::arg_v( "vmass", MR::VertexMass::Unit, "LaplacianVertexMassParam.Unit" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 

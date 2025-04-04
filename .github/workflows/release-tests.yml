@@ -35,7 +35,7 @@ jobs:
             container-options: "--user root"
             container-prefix: ""
           - platform: "aarch64"
-            runner: [ 'self-hosted', 'linux-arm64' ]
+            runner: [ self-hosted, linux-arm64, spot, meshinspector ]
             container-options: "--user root"
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"

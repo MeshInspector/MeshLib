@@ -41,7 +41,8 @@ public:
 
     // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     // \param freeVerts must not include all vertices of a mesh connected component
-    MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem = Laplacian::RememberShape::Yes );
+    MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit,
+        RememberShape rem = Laplacian::RememberShape::Yes );
 
     // notify Laplacian that given vertex has changed after init and must be fixed during apply;
     // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
@@ -68,8 +69,6 @@ public:
 
     // return fixed vertices from the first layer around free vertices
     VertBitSet firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
-
-    using EdgeWeights [[deprecated]] = MR::EdgeWeights;
 
 private:
     // updates solver_ only

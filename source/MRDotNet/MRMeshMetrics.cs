@@ -9,31 +9,31 @@ namespace MR
     {
         public class FillHoleMetric
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrFillHoleMetricFree(IntPtr metric);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern double mrCalcCombinedFillMetric(IntPtr mesh, IntPtr filledRegion, IntPtr metric);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetCircumscribedMetric(IntPtr mesh);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetPlaneFillMetric(IntPtr mesh, EdgeId e);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetPlaneNormalizedFillMetric(IntPtr mesh, EdgeId e);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetComplexFillMetric(IntPtr mesh, EdgeId e);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetUniversalMetric(IntPtr mesh);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetMinAreaMetric(IntPtr mesh);
 
             private FillHoleMetric(IntPtr metric)

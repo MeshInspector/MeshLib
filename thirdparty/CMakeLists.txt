@@ -34,9 +34,6 @@ IF(MR_EMSCRIPTEN)
   ENDIF()
 ENDIF()
 
-#imgui build
-add_subdirectory(../source/imgui ./imgui)
-
 IF(APPLE)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest ./googletest)
@@ -179,9 +176,5 @@ set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
-file(GLOB IMGUI_HEADERS "imgui/*.h")
-install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})

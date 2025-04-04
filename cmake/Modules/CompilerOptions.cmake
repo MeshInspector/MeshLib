@@ -83,9 +83,6 @@ ENDIF()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_COMMON_C_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MESHLIB_COMMON_C_CXX_FLAGS}")
 
-# Some macros.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
-
 IF(WIN32)
   IF(MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
@@ -106,6 +103,10 @@ ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 IF(MSVC)
   add_definitions(-DUNICODE -D_UNICODE)
   add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+ENDIF()
+
+IF(NOT MSVC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 ENDIF()
 
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
@@ -164,9 +165,9 @@ IF(MR_EMSCRIPTEN)
   )
 
   IF(MR_EMSCRIPTEN_SINGLETHREAD)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,node")
   ELSE()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker,node -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
 
     # uncomment to enable source map for debugging in browsers (slow)
     #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")

@@ -18,6 +18,8 @@ namespace MR
 
             public struct Settings
             {
+                /// If true then count touching faces as self-intersections
+                public bool touchIsIntersection = true;
                 /// Fix method
                 public Method method = Method.Relax;
                 /// Maximum relax iterations
@@ -33,7 +35,7 @@ namespace MR
             [StructLayout(LayoutKind.Sequential)]
             internal struct MRFixSelfIntersectionsSettings
             {
-
+                public byte touchIsIntersection = 1;
                 public Method method = Method.Relax;
                 public int relaxIterations = 5;
                 public int maxExpand = 3;
@@ -42,22 +44,22 @@ namespace MR
                 public MRFixSelfIntersectionsSettings() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-            private static extern IntPtr mrFixSelfIntersectionsGetFaces(IntPtr mesh, IntPtr cb, ref IntPtr errorString);
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern IntPtr mrFixSelfIntersectionsGetFaces(IntPtr mesh, bool touchIsIntersection, IntPtr cb, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrFixSelfIntersectionsFix(IntPtr mesh, ref MRFixSelfIntersectionsSettings settings, ref IntPtr errorString);
 
             /// Find all self-intersections faces component-wise
-            static public FaceBitSet GetFaces(Mesh mesh)
+            static public FaceBitSet GetFaces(Mesh mesh,bool touchIsIntersection = true)
             {
                 IntPtr errorStr = IntPtr.Zero;
-                var mrFaces = mrFixSelfIntersectionsGetFaces(mesh.mesh_, IntPtr.Zero, ref errorStr);
+                var mrFaces = mrFixSelfIntersectionsGetFaces(mesh.mesh_, touchIsIntersection, IntPtr.Zero, ref errorStr);
 
                 if (errorStr != IntPtr.Zero)
                 {
@@ -74,10 +76,11 @@ namespace MR
                 IntPtr errorStr = IntPtr.Zero;
 
                 MRFixSelfIntersectionsSettings mrSettings = new MRFixSelfIntersectionsSettings();
+                mrSettings.touchIsIntersection = settings.touchIsIntersection ? (byte)1 : (byte)0;
                 mrSettings.method = settings.method;
                 mrSettings.relaxIterations = settings.relaxIterations;
                 mrSettings.maxExpand = settings.maxExpand;
-                mrSettings.subdivideEdgeLen = settings.subdivideEdgeLen;
+                mrSettings.subdivideEdgeLen = settings.subdivideEdgeLen;                
 
                 mrFixSelfIntersectionsFix(mesh.mesh_, ref mrSettings, ref errorStr);
                 if (errorStr != IntPtr.Zero)

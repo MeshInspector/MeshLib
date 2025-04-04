@@ -44,6 +44,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      # CMake 4 compatibility
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
     steps:
       - name: Display job info
         run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
@@ -52,6 +56,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -104,16 +109,17 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
         uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.compiler}}
+          name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.cxx-compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests
@@ -132,11 +138,13 @@ jobs:
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
+        env:
+          RUN_CUDA_ARG: ${{ matrix.build_mrcuda == 'ON' && '--run-cuda=negative' || '' }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
-          pytest_args: "--run-cuda=negative"
+          pytest_args: ${{ env.RUN_CUDA_ARG }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.os }}/${{matrix.config}}/${{matrix.compiler}}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
@@ -179,7 +187,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

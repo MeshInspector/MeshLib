@@ -7,10 +7,10 @@ namespace MR
     {
         public class VoxelsLoad
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrVoxelsLoadFromAnySupportedFormat( string file, IntPtr cb, ref IntPtr errorStr );
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
             
             /// Detects the format from file extension and loads voxels from it

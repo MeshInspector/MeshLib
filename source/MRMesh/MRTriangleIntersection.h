@@ -92,6 +92,29 @@ bool doTrianglesIntersect(
     return false;
 }
 
+/// returns true if ABC plane contains point P
+template<typename T>
+bool isPointInPlane( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
+{
+    return mixed( p - a, p - b, p - c ) == T( 0 );
+}
+
+/// returns true if ABC triangle contains point P
+template<typename T>
+bool isPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
+{
+    if ( !isPointInPlane( p, a, b, c ) )
+        return false;
+    const auto normDir = cross( b - a, c - a );
+    if ( dot( normDir, cross( b - a, p - a ) ) < 0 )
+        return false;
+    if ( dot( normDir, cross( c - b, p - b ) ) < 0 )
+        return false;
+    if ( dot( normDir, cross( a - c, p - c ) ) < 0 )
+        return false;
+    return true;
+}
+
 /// returns true if a plane containing edge XY separates point Z from triangle UVW
 template <typename T>
 bool doesEdgeXySeparate(

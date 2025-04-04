@@ -30,7 +30,7 @@ on:
 jobs:
   ubuntu-arm-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: ${{ matrix.docker-image }}
       options: --user root
@@ -60,6 +60,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      # CMake 4 compatibility
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -75,6 +79,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:

@@ -12,14 +12,15 @@ def make_fake_whl(dll_path : Path):
     whl_dir = w_dir / "temp_whl_dir"
     os.mkdir(whl_dir)
     whl_libs_path = whl_dir / "dummy.libs"
+    whl_info_path = whl_dir / "dummy-1.0.dist-info"
     os.mkdir( whl_libs_path)
-    os.mkdir( whl_dir /"dummy-1.0.dist-info")
+    os.mkdir( whl_info_path )
     # copy dll
     shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
     # create servant files
-    wheel_file = open( whl_libs_path / "WHEEL","w")
+    wheel_file = open( whl_info_path / "WHEEL","w")
     wheel_file.close()
-    record_file = open( whl_libs_path / "RECORD","w")
+    record_file = open( whl_info_path / "RECORD","w")
     record_file.write( "dummy.libs/" + dll_path.name )
     record_file.close()
     # actually create whl file
@@ -75,9 +76,5 @@ def patch_whl(out_dir,libs_dir):
     shutil.unpack_archive(repaired_files[0],"pathced_whl","zip")
     shutil.copytree(Path("pathced_whl") / "dummy.libs/",Path(out_dir))
     #clean
-    if (Path(out_dir)/"WHEEL").is_file():
-        os.remove(Path(out_dir)/"WHEEL")
-    if (Path(out_dir)/"RECORD").is_file():
-        os.remove(Path(out_dir)/"RECORD")
     shutil.rmtree("wheelhouse")
     shutil.rmtree("pathced_whl")

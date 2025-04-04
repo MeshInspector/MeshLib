@@ -11,32 +11,29 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\Alloc.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressMG1.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressMG2.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressRAW.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzFind.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaDec.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaEnc.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaLib.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\openctm.c" />
-    <ClCompile Include="..\..\thirdparty\OpenCTM\stream.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressMG1.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressMG2.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressRAW.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Alloc.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzFind.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaDec.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaEnc.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaLib.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\openctm.c" />
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\stream.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\Alloc.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\internal.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzFind.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzHash.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaDec.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaEnc.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaLib.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\NameMangle.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\openctm.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\openctmpp.h" />
-    <ClInclude Include="..\..\thirdparty\OpenCTM\Types.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\thirdparty\OpenCTM\CMakeLists.txt" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\internal.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Alloc.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzFind.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzHash.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaDec.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaEnc.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaLib.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\NameMangle.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Types.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\openctm.h" />
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\openctmpp.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -75,10 +72,10 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>OPENCTM_BUILD;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OpenCTM_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MeshLibDir)thirdparty\OpenCTM-git\lib\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\liblzma\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -98,12 +95,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>OPENCTM_BUILD;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OpenCTM_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MeshLibDir)thirdparty\OpenCTM-git\lib\;$(MeshLibDir)thirdparty\OpenCTM-git\lib\liblzma\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>

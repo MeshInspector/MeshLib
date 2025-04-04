@@ -51,9 +51,11 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     fmt::fmt
   )
   IF(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip )
+    find_package(clip REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
   ENDIF()
 ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE CLIP_ENABLE_IMAGE=1)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
     MRMesh

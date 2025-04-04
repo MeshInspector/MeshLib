@@ -6,75 +6,70 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\Alloc.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressMG1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressMG1.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressMG2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressMG2.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\compressRAW.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\compressRAW.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\openctm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzFind.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\stream.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaDec.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Alloc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaEnc.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzFind.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\LzmaLib.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaDec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\openctm.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaEnc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\thirdparty\OpenCTM\stream.c">
+    <ClCompile Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaLib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\Alloc.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\internal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\internal.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\openctm.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzFind.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\openctmpp.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzHash.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Alloc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaDec.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzFind.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaEnc.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzHash.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\LzmaLib.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaDec.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\NameMangle.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaEnc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\openctm.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\LzmaLib.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\openctmpp.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\NameMangle.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\thirdparty\OpenCTM\Types.h">
+    <ClInclude Include="..\..\thirdparty\OpenCTM-git\lib\liblzma\Types.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="..\..\thirdparty\OpenCTM\CMakeLists.txt">
-      <Filter>Source Files</Filter>
-    </Text>
   </ItemGroup>
 </Project>

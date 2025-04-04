@@ -64,6 +64,32 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
     if ( !params.fileName.empty() )
         [dialog setNameFieldStringValue:toNSString( params.fileName )];
 
+    if ( !params.folderDialog && !params.filters.empty() )
+    {
+        auto* fileTypes = [[NSMutableArray alloc] init];
+        for ( const auto& filter : params.filters )
+        {
+            size_t separatorPos = 0;
+            for (;;)
+            {
+                auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
+                auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+
+                assert( ext.starts_with( "*." ) );
+                if ( ext != "*.*" )
+                    [fileTypes addObject:toNSString( ext.substr( 2 ) )];
+
+                if ( nextSeparatorPos == std::string::npos )
+                    break;
+                separatorPos = nextSeparatorPos + 1;
+            }
+        }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        [dialog setAllowedFileTypes:fileTypes];
+#pragma clang diagnostic pop
+    }
+
     if ( [dialog runModal] != NSModalResponseOK )
         return {};
 

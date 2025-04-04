@@ -256,7 +256,7 @@ jobs:
        run: aws s3 cp MeshLib.nupkg 's3://test-artifacts-git/MeshLib.nupkg' --quiet
 
   windows-unity-test:
-    needs: [ start-unity-instance ]
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
     uses: ./.github/workflows/unity-nuget-test.yml
 
   upload-distributions:

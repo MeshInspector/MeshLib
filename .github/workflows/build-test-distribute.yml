@@ -207,7 +207,6 @@ jobs:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
     needs:
       - config
-      - windows-build-test
     uses: ./.github/workflows/build-linux-nuget-content.yml
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}

@@ -27,7 +27,7 @@ int main( int argc, char* argv[] )
     mrExpandVertRegion( mrMeshTopology( mesh ), freeVerts, 5 );
 
     // Initialize laplacian
-    mrLaplacianInit( lDeformer, freeVerts, MREdgeWeightsCotanWithAreaEqWeight, MRLaplacianRememberShapeYes );
+    mrLaplacianInit( lDeformer, freeVerts, MREdgeWeightsCotan, MRVertexMassNeiArea, MRLaplacianRememberShapeYes );
 
     MRBox3f bbox = mrMeshComputeBoundingBox( mesh, NULL );
     float shiftAmount = mrBox3fDiagonal( &bbox ) * 0.01f;

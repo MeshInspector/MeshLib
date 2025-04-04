@@ -8,10 +8,29 @@ permissions:
   contents: read
 
 jobs:
-  unity-nuget-test:
-    timeout-minutes: 10
-    runs-on: [self-hosted, windows, x64, unity, meshinspector] 
+  start-unity-instance:
+    name: Start unity instance
+    runs-on: aws-micro
+    needs: [ create-nuget-package ]
+    outputs:
+      instance_started: ${{ steps.set-output.outputs.instance_started }}
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Start Instance
+        run: |
+          aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
+      - name: Wait Instance
+        run: |
+          aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }
 
+  unity-nuget-test:
+    if: ${{ github.event_name == 'schedule' }} // triggered by schedule
+    timeout-minutes: 10
+    runs-on: [self-hosted, windows, x64, unity, meshinspector]
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -56,3 +75,16 @@ jobs:
           aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
 
 
+  stop-instance:
+    runs-on: aws-micro
+    needs: [ start-unity-instance, windows-unity-test ]
+    if: always()
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Stop Instance
+        run: |
+          aws ec2 stop-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }

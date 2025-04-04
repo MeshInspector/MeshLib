@@ -1,4 +1,6 @@
 #include "MRFileDialog.h"
+#include "MRFileDialogInternal.h"
+
 #include "MRViewerFwd.h"
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
@@ -15,7 +17,9 @@
 #include <clocale>
 
 #ifndef _WIN32
-  #ifndef MRVIEWER_NO_GTK
+  #if defined( __APPLE__ )
+    #include "MRFileDialogCocoa.h"
+  #elif !defined( MRVIEWER_NO_GTK )
     #include <gtk/gtk.h>
   #endif
 #else
@@ -93,15 +97,8 @@ EMSCRIPTEN_KEEPALIVE void emsFreeFSCallback()
 namespace
 {
 
-struct FileDialogParameters : MR::FileParameters
-{
-    bool folderDialog{false}; // open dialog only
-    bool multiselect{true};   // open dialog only
-    bool saveDialog{false};   // true for save dialog, false for open
-};
-
 #if defined( _WIN32 )
-std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> windowsDialog( const detail::FileDialogParameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
     //<SnippetRefCounts>
@@ -236,25 +233,7 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
 }
 #else
 #ifndef MRVIEWER_NO_GTK
-const std::string cLastUsedDirKey = "lastUsedDir";
-
-std::string getCurrentFolder( const FileDialogParameters& params )
-{
-    if ( !params.baseFolder.empty() )
-        return MR::utf8string( params.baseFolder );
-
-    auto& cfg = MR::Config::instance();
-    if ( cfg.hasJsonValue( cLastUsedDirKey ) )
-    {
-        auto lastUsedDir = cfg.getJsonValue( cLastUsedDirKey );
-        if ( lastUsedDir.isString() )
-            return lastUsedDir.asString();
-    }
-
-    return MR::utf8string( MR::GetHomeDirectory() );
-}
-
-std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDialogParameters& params )
+std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const detail::FileDialogParameters& params )
 {
     if ( params.folderDialog )
         return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
@@ -264,7 +243,7 @@ std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDia
         return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
-std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> gtkDialog( const detail::FileDialogParameters& params = {} )
 {
     // Gtk has a nasty habit of overriding the locale to "".s
     std::optional<std::string> localeStr;
@@ -286,12 +265,6 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     };
 
     auto [action, title] = gtkDialogParameters( params );
-#if defined( __APPLE__ )
-    auto* dialog = gtk_file_chooser_native_new( title.c_str(), NULL, action, params.saveDialog ? "_Save" : "_Open", "_Cancel" );
-    MR_FINALLY {
-        gtk_native_dialog_destroy( GTK_NATIVE_DIALOG( dialog ) );
-    };
-#else
     auto* dialog = gtk_file_chooser_dialog_new( title.c_str(), NULL, action, NULL, NULL );
     MR_FINALLY {
         gtk_widget_destroy( dialog );
@@ -299,7 +272,6 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 
     gtk_dialog_add_button( GTK_DIALOG( dialog ), params.saveDialog ? "_Save" : "_Open", GTK_RESPONSE_ACCEPT );
     gtk_dialog_add_button( GTK_DIALOG( dialog ), "_Cancel", GTK_RESPONSE_CANCEL );
-#endif
 
     auto* chooser = GTK_FILE_CHOOSER( dialog );
 
@@ -315,11 +287,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
             auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
-#if defined( __APPLE__ )
-            if ( ext == "*.*" )
-                ext = "*";
-#endif
+
             gtk_file_filter_add_pattern( fileFilter, ext.c_str() );
+
             if ( nextSeparatorPos == std::string::npos )
                 break;
             separatorPos = nextSeparatorPos + 1;
@@ -328,7 +298,7 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         gtk_file_chooser_add_filter( chooser, fileFilter ); // the chooser takes ownership of the filter
     }
 
-    const auto currentFolder = getCurrentFolder( params );
+    const auto currentFolder = detail::getCurrentFolder( params );
     gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 
     if ( !params.fileName.empty() )
@@ -374,21 +344,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             spdlog::warn( "GTK dialog failed" );
         }
-#if defined( __APPLE__ )
-        // on macOS the main window remains unfocused after the file dialog is closed
-        MR::CommandLoop::appendCommand( []
-        {
-            glfwFocusWindow( MR::Viewer::instance()->window );
-        } );
-#endif
     };
-#if defined( __APPLE__ )
-    onResponse( gtk_native_dialog_run( GTK_NATIVE_DIALOG( dialog ) ) );
-    gtk_native_dialog_hide( GTK_NATIVE_DIALOG( dialog ) );
-#else // __APPLE__
     onResponse( gtk_dialog_run( GTK_DIALOG( dialog ) ) );
     gtk_widget_hide( dialog );
-#endif // __APPLE__
 
     return results;
 }
@@ -422,7 +380,7 @@ namespace MR
 
 std::filesystem::path openFileDialog( const FileParameters& params )
 {
-    FileDialogParameters parameters{ params };
+    detail::FileDialogParameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = false;
@@ -432,6 +390,8 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
+#elif defined( __APPLE__ )
+    results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
@@ -469,7 +429,7 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 
 std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params )
 {
-    FileDialogParameters parameters{ params };
+    detail::FileDialogParameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = true;
     parameters.saveDialog = false;
@@ -479,6 +439,8 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
+#elif defined( __APPLE__ )
+    results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
@@ -512,7 +474,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     // Windows dialog does not support forward slashes between folders
     baseFolder.make_preferred();
 
-    FileDialogParameters parameters;
+    detail::FileDialogParameters parameters;
     parameters.baseFolder = baseFolder;
     parameters.folderDialog = true;
     parameters.multiselect = false;
@@ -521,6 +483,8 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
+#elif defined( __APPLE__ )
+    results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
@@ -561,7 +525,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     // Windows dialog does not support forward slashes between folders
     baseFolder.make_preferred();
 
-    FileDialogParameters parameters;
+    detail::FileDialogParameters parameters;
     parameters.baseFolder = baseFolder;
     parameters.folderDialog = true;
     parameters.multiselect = true;
@@ -570,6 +534,8 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
+#elif defined( __APPLE__ )
+    results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
@@ -580,7 +546,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
 
 std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 {
-    FileDialogParameters parameters{ params };
+    detail::FileDialogParameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = true;
@@ -590,6 +556,8 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
+#elif defined( __APPLE__ )
+    results = detail::runCocoaFileDialog( parameters );
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif

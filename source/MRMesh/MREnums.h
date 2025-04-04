@@ -12,9 +12,6 @@ enum class EdgeWeights
     /// edge weight depends on local geometry and uses cotangent values
     Cotan,
 
-    /// [deprecated] edge weight is equal to edge length times cotangent weight
-    CotanTimesLength,
-
     /// cotangent edge weights and equation weights inversely proportional to square root of local area
     CotanWithAreaEqWeight
 };

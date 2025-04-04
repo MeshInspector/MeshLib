@@ -203,11 +203,21 @@ jobs:
           path: MeshLibDotNetDist.zip
           retention-days: 1
 
+  nuget-patch-linux-libs:
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
+    needs:
+      - config
+      - windows-build-test
+    uses: ./.github/workflows/build-linux-nuget-content.yml
+    with:
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+
   create-nuget-package:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
     needs:
       - config
       - windows-build-test
+      - nuget-patch-linux-libs
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -238,8 +248,15 @@ jobs:
      - name: Install package for Patch step
        run: py -3 -m pip install delvewheel
 
+     - name: Download .NET Binaries Archive
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetPatchArchiveLinux*
+         path: linux_patch
+         merge-multiple: true
+
      - name: Patch NuGet package
-       run: py -3 scripts\nuget_patch\nuget_package_patch.py MeshLib.nupkg
+       run: py -3 scripts\nuget_patch\nuget_package_patch.py MeshLib.nupkg linux_patch
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4
@@ -360,6 +377,11 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: DotNetArchive*
+          failOnError: false
+      - name: Delete .NET Linux Patches artifact
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: DotNetPatchArchiveLinux*
           failOnError: false
       # Distributives
       - name: Delete Distribution

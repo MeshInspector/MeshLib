@@ -1,12 +1,13 @@
 #include "MRFixUndercuts.h"
-
+#include "MROffset.h"
+#include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMatrix3.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRVDBConversions.h"
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRTimer.h"
@@ -14,13 +15,11 @@
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRColor.h"
-#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRMeshDirMax.h"
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRParallelFor.h"
-#include "MROffset.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRMeshSubdivide.h"
 
@@ -43,7 +42,7 @@ static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vect
 /// move bottom vertices of given mesh to make object thickness at least (minThickness) in (up) direction;
 /// use this function before making signed distance field from the mesh with minThickness=voxelSize
 /// to avoid unexpected hole appearance in thin areas
-static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
+static void makeZThickAtLeast( Mesh & mesh, float minThickness, Vector3f up )
 {
     MR_TIMER
     up = up.normalized();
@@ -196,7 +195,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     }
 
     extendAndFillAllHoles( mesh, bottomExtension, Vector3f::plusZ() );
-    makeZThinkAtLeast( mesh, voxelSize, Vector3f::plusZ() );
+    makeZThickAtLeast( mesh, voxelSize, Vector3f::plusZ() );
 
     if ( params.region )
     {

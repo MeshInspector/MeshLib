@@ -18,7 +18,7 @@ freeVerts.set( ancV1, True )
 mm.expand(mesh.topology,freeVerts,5)
 
 # Initialize laplacian
-lDeformer.init(freeVerts,mm.EdgeWeights.CotanWithAreaEqWeight)
+lDeformer.init(freeVerts,mm.EdgeWeights.Cotan,mm.VertexMass.NeiArea)
 
 shiftAmount = mesh.computeBoundingBox().diagonal()*0.01
 # Fix anchor vertices in required position

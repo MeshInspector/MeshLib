@@ -7,6 +7,7 @@
 using namespace MR;
 
 REGISTER_AUTO_CAST( EdgeWeights )
+REGISTER_AUTO_CAST( VertexMass )
 REGISTER_AUTO_CAST( Laplacian )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( Vector3f )
@@ -26,10 +27,10 @@ void mrLaplacianFree( MRLaplacian* laplacian_ )
     delete laplacian;
 }
 
-void mrLaplacianInit( MRLaplacian* laplacian_, const MRVertBitSet* freeVerts_, MREdgeWeights weights_, MRLaplacianRememberShape rem_ )
+void mrLaplacianInit( MRLaplacian* laplacian_, const MRVertBitSet* freeVerts_, MREdgeWeights weights_, MRVertexMass vmass_, MRLaplacianRememberShape rem_ )
 {
-    ARG( laplacian ); ARG( freeVerts ); ARG_VAL( weights ); ARG_VAL( rem );
-    laplacian.init( freeVerts, weights, rem );
+    ARG( laplacian ); ARG( freeVerts ); ARG_VAL( weights ); ARG_VAL( vmass ); ARG_VAL( rem );
+    laplacian.init( freeVerts, weights, vmass, rem );
 }
 
 void mrLaplacianFixVertex( MRLaplacian* laplacian_, MRVertId v_, const MRVector3f* fixedPos_, bool smooth )

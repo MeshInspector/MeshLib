@@ -26,7 +26,7 @@ int main()
     MR::expand( mesh->topology, freeVerts, 5 );
 
     // Initialize laplacian
-    lDeformer.init( freeVerts, MR::EdgeWeights::CotanWithAreaEqWeight );
+    lDeformer.init( freeVerts, MR::EdgeWeights::Cotan, MR::VertexMass::NeiArea );
 
     const auto shiftAmount = mesh->computeBoundingBox().diagonal() * 0.01f;
     // Fix the anchor vertices in the required position

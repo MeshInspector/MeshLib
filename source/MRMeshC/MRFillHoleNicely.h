@@ -3,14 +3,22 @@
 
 MR_EXTERN_C_BEGIN
 
+typedef enum MRVertexMass
+{
+    /// all vertices have same mass=1
+    MRVertexMassUnit,
+    /// vertex mass depends on local geometry and proportional to the area of first-ring triangles
+    MRVertexMassNeiArea
+} MRVertexMass;
+
 typedef enum MREdgeWeights
 {  
     /// all edges have same weight=1
     MREdgeWeightsUnit,
     /// edge weight depends on local geometry and uses cotangent values
-    MREdgeWeightsCotan,
+    MREdgeWeightsCotan
     /// cotangent edge weights and equation weights inversely proportional to square root of local area
-    MREdgeWeightsCotanWithAreaEqWeight
+    //MREdgeWeightsCotanWithAreaEqWeight => use MREdgeWeights::Cotan and MRVertexMass::NeiArea instead
 } MREdgeWeights;
 
 typedef struct MRFillHoleNicelyParams
@@ -31,6 +39,8 @@ typedef struct MRFillHoleNicelyParams
     bool naturalSmooth;
     /// edge weighting scheme for smoothCurvature mode
     MREdgeWeights edgeWeights;
+    /// vertex mass scheme for smoothCurvature mode
+    MRVertexMass vmass;
 } MRFillHoleNicelyParams;
 
 MRMESHC_API MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void );

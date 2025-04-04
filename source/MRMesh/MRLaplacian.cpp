@@ -12,7 +12,7 @@
 namespace MR
 {
 
-void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, RememberShape rem )
+void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( mesh_, freeVerts ) );
@@ -57,7 +57,7 @@ void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, Rem
         for ( auto e : orgRing( mesh_.topology, v ) )
         {
             double w = 1;
-            if ( weights == MR::EdgeWeights::Cotan || weights == MR::EdgeWeights::CotanWithAreaEqWeight ) 
+            if ( weights == EdgeWeights::Cotan ) 
                 w = std::clamp( mesh_.cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = mesh_.topology.dest( e );
             rowElements.push_back( { -w, d } );
@@ -67,9 +67,14 @@ void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, Rem
         if ( sumW == 0 )
             continue;
         double a = 1;
-        if ( weights == MR::EdgeWeights::CotanWithAreaEqWeight )
+        if ( vmass == VertexMass::NeiArea )
+        {
+            // in updateSolver_ we build A = M_^T * M_;
+            // if here we divide each row of M_ on square root of mass,
+            // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
             if ( auto d = mesh_.dblArea( v ); d > 0 )
                 a =  1 / std::sqrt( d );
+        }
         const double rSumW = a / sumW;
         for ( auto el : rowElements )
         {

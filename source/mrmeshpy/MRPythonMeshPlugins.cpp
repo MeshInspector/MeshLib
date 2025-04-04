@@ -391,11 +391,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
 {
     pybind11::enum_<EdgeWeights>( m, "LaplacianEdgeWeightsParam" ).
         value( "Unit", EdgeWeights::Unit, "all edges have same weight=1" ).
-        value( "Cotan", EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" ).
-        value( "CotanWithAreaEqWeight", EdgeWeights::CotanWithAreaEqWeight, "cotangent edge weights and equation weights inversely proportional to square root of local area" );
+        value( "Cotan", EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" );
+
+    pybind11::enum_<VertexMass>( m, "LaplacianVertexMassParam" ).
+        value( "Unit", VertexMass::Unit, "all vertices have same mass=1" ).
+        value( "Cotan", VertexMass::NeiArea, "vertex mass depends on local geometry and proportional to the area of first-ring triangles" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
-        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ),
+        pybind11::arg_v( "edgeWeights", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
+        pybind11::arg_v( "vmass", MR::VertexMass::Unit, "LaplacianVertexMassParam.Unit" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 

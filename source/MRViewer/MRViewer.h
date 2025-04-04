@@ -64,13 +64,19 @@ struct LaunchParams
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };
 
+using FilesLoadedCallback = std::function<void(const std::vector<std::shared_ptr<Object>>& objs,const std::string& errors, const std::string& warnings)>;
+
 struct FileLoadOptions
 {
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-    // true here will replace existing scene even if more than one file is open
+    /// true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
+
+    /// if this callback is set - it is called once when all obects are added to scene
+    /// top level objects only are present here
+    FilesLoadedCallback loadedCallback;
 };
 
 // GLFW-based mesh viewer

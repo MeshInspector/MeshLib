@@ -55,7 +55,8 @@ struct WeightedPointsShellParameters
 /// consider a point cloud where each point has additive weight,
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
-[[nodiscard]] MRVOXELS_API Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParameters& params );
+// MR_BIND_IGNORE to hide this function in Python API because calling Python's Lambda will be extremely slow anyway
+[[nodiscard]] MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParameters& params );
 
 /// consider a point cloud where each point has additive weight (taken from pointWeights and not from params),
 /// and the distance to a point is considered equal to (euclidean distance - weight),
@@ -65,7 +66,8 @@ struct WeightedPointsShellParameters
 /// consider a mesh where each vertex has additive weight, and this weight is linearly interpolated in mesh triangles,
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
-[[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params );
+// MR_BIND_IGNORE to hide this function in Python API because calling Python's Lambda will be extremely slow anyway
+[[nodiscard]] MR_BIND_IGNORE MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params );
 
 /// consider a mesh where each vertex has additive weight (taken from vertWeights and not from params), and this weight is linearly interpolated in mesh triangles,
 /// and the distance to a point is considered equal to (euclidean distance - weight),

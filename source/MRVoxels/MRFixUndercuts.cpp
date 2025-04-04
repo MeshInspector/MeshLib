@@ -211,12 +211,15 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     if ( !reportProgress( params.cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    bool fixNotCanceled = true;
+    bool keepGoing = true;
     auto fsb = subprogress( params.cb, 0.6f, 0.8f );
     if ( params.region )
-        fixNotCanceled = fixGridFullByPart( fullGrid, regionGrid, zOffset, fsb ); // fix undercuts if fullGrid by active voxels from partGrids
+        keepGoing = fixGridFullByPart( fullGrid, regionGrid, zOffset, fsb ); // fix undercuts if fullGrid by active voxels from partGrids
     else
-        fixNotCanceled = fixGrid( fullGrid, zOffset, fsb );
+        keepGoing = fixGrid( fullGrid, zOffset, fsb );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
 
     auto meshRes = gridToMesh( std::move( fullGrid ), GridToMeshSettings{
         .voxelSize = Vector3f::diagonal( voxelSize ),
@@ -231,7 +234,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     if ( params.wallAngle != 0 )
     {
         // back transform projective
-        auto keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+        keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
         {
             auto diff = mesh.points[v] - center;
             if ( params.wallAngle > 0 )

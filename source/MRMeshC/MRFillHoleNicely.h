@@ -9,8 +9,6 @@ typedef enum MREdgeWeights
     MREdgeWeightsUnit,
     /// edge weight depends on local geometry and uses cotangent values
     MREdgeWeightsCotan,
-    /// [deprecated] edge weight is equal to edge length times cotangent weight
-    MREdgeWeightsCotanTimesLength,
     /// cotangent edge weights and equation weights inversely proportional to square root of local area
     MREdgeWeightsCotanWithAreaEqWeight
 } MREdgeWeights;

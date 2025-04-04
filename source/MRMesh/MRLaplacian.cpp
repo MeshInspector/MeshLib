@@ -59,8 +59,6 @@ void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, Rem
             double w = 1;
             if ( weights == MR::EdgeWeights::Cotan || weights == MR::EdgeWeights::CotanWithAreaEqWeight ) 
                 w = std::clamp( mesh_.cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
-            else if ( weights == MR::EdgeWeights::CotanTimesLength ) 
-                w = mesh_.edgeLength( e ) * mesh_.cotan( e );
             auto d = mesh_.topology.dest( e );
             rowElements.push_back( { -w, d } );
             sumWPos -= w * Vector3d( mesh_.points[d] );

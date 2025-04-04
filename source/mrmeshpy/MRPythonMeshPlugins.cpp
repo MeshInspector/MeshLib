@@ -392,7 +392,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
     pybind11::enum_<EdgeWeights>( m, "LaplacianEdgeWeightsParam" ).
         value( "Unit", EdgeWeights::Unit, "all edges have same weight=1" ).
         value( "Cotan", EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" ).
-        value( "CotanTimesLength", EdgeWeights::CotanTimesLength, "[deprecated] edge weight is equal to edge length times cotangent weight" ).
         value( "CotanWithAreaEqWeight", EdgeWeights::CotanWithAreaEqWeight, "cotangent edge weights and equation weights inversely proportional to square root of local area" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,

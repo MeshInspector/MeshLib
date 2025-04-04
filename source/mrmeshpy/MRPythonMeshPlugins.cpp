@@ -152,9 +152,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
 #ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
-    m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
+    m.def( "fixUndercuts", [] ( Mesh& mesh, const FaceBitSet& region, const Vector3f& upDir, float voxelSize, float be )
+    {
+        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be,.region = &region } );
+    },
         pybind11::arg( "mesh" ), pybind11::arg( "selectedArea" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
-        "aChanges mesh:\n"
+        "Changes mesh:\n"
         "Fills all holes first, then:\n"
         "fixes undercuts (in selected area) via prolonging widest points down\n"
         "Requires to update RenderObject after using\n"
@@ -164,9 +167,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 
-    m.def( "fixUndercuts", ( void ( * )( Mesh&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
+    m.def( "fixUndercuts", [] ( Mesh& mesh, const Vector3f& upDir, float voxelSize, float be )
+    {
+        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be } );
+    },
     pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
-        "aChanges mesh:\n"
+        "Changes mesh:\n"
         "Fills all holes first, then:\n"
         "fixes undercuts via prolonging widest points down\n"
         "Requires to update RenderObject after using\n"

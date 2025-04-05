@@ -11,7 +11,6 @@ jobs:
   start-unity-instance:
     name: Start unity instance
     runs-on: aws-micro
-    needs: [ create-nuget-package ]
     outputs:
       instance_started: ${{ steps.set-output.outputs.instance_started }}
     steps:

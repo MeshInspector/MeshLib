@@ -43,7 +43,7 @@ def patch_whl(out_dir,libs_dir):
                     # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
                     # to pack these dlls with original names and let system solve conflicts on import
                     # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-                    "--no-mangle", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
+                    "--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
 
                     "--add-path",libs_dir, # path where input dependencies are located
 

@@ -37,7 +37,8 @@ public:
         No    // ignore initial mesh shape in the region and just position vertices smoothly in the region
     };
 
-    Laplacian( Mesh & mesh ) : mesh_( mesh ) { }
+    MRMESH_API explicit Laplacian( Mesh & mesh );
+    Laplacian( const MeshTopology & topology, VertCoords & points ) : topology_( topology ), points_( points ) { }
 
     // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     // \param freeVerts must not include all vertices of a mesh connected component
@@ -62,13 +63,31 @@ public:
     MRMESH_API void applyToScalar( VertScalars & scalarField );
 
     // return all initially free vertices and the first layer of vertices around them
-    const VertBitSet & region() const { return region_; }
+    [[nodiscard]] const VertBitSet & region() const { return region_; }
 
     // return currently free vertices
-    const VertBitSet & freeVerts() const { return freeVerts_; }
+    [[nodiscard]] const VertBitSet & freeVerts() const { return freeVerts_; }
 
     // return fixed vertices from the first layer around free vertices
-    VertBitSet firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
+    [[nodiscard]] const VertBitSet & firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
+
+public: // Mesh-like functions
+    /// returns three points of left face of e: res[0] = orgPnt( e ), res[1] = destPnt( e )
+    [[nodiscard]] MRMESH_API Triangle3f getLeftTriPoints( EdgeId e ) const;
+
+    /// computes cotangent of the angle in the left( e ) triangle opposite to e,
+    /// and returns 0 if left face does not exist
+    [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
+
+    /// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
+    /// consider cotangents zero for not existing triangles
+    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
+
+    /// computes sum of directed double areas of all triangles around given vertex
+    [[nodiscard]] MRMESH_API Vector3f dirDblArea( VertId v ) const;
+
+    /// computes the length of summed directed double areas of all triangles around given vertex
+    [[nodiscard]] float dblArea( VertId v ) const { return dirDblArea( v ).length(); }
 
 private:
     // updates solver_ only
@@ -80,7 +99,8 @@ private:
     template <typename I, typename G, typename S>
     void prepareRhs_( I && iniRhs, G && g, S && s );
 
-    Mesh & mesh_;
+    const MeshTopology & topology_;
+    VertCoords & points_;
 
     // all initially free vertices and the first layer of vertices around them
     VertBitSet region_;

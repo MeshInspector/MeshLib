@@ -721,13 +721,13 @@ std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& m
     return res;
 }
 
-bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
+bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection )
 {
     MR_TIMER;
 
-    auto unionFindStruct = getUnionFindStructureVerts( mesh );   
+    auto unionFindStruct = getUnionFindStructureVerts( topology );
     const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, mesh.topology.getValidVerts() );
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, topology.getValidVerts() );
     RegionBitSet remainKeysBitSets( k );
     for ( VertId v( 0 ); v < uniqueRootsMap.size(); ++v )
     {
@@ -737,6 +737,11 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
             remainKeysBitSets.set( rId );
     }
     return remainKeysBitSets.count() != remainKeysBitSets.size();
+}
+
+bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
+{
+    return hasFullySelectedComponent( mesh.topology, selection );
 }
 
 void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
@@ -800,11 +805,11 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
     return res;
 }
 
-UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )
+UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region )
 {
     MR_TIMER
 
-    const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
+    const VertBitSet& vertsRegion = topology.getVertIds( region );
 
     auto test = [region]( VertId v )
     {
@@ -820,14 +825,19 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
     VertId v1;
     for ( auto v0 : vertsRegion )
     {
-        for ( auto e : orgRing( mesh.topology, v0 ) )
+        for ( auto e : orgRing( topology, v0 ) )
         {
-            v1 = mesh.topology.dest( e );
+            v1 = topology.dest( e );
             if ( v1.valid() && test( v1 ) && v1 < v0 )
                 unionFindStructure.unite( v0, v1 );
         }
     }
     return unionFindStructure;
+}
+
+UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )
+{
+    return getUnionFindStructureVerts( mesh.topology, region );
 }
 
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges )

@@ -20,6 +20,7 @@ void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
 {
     MR_TIMER
 
+    mesh.invalidateCaches();
     Laplacian laplacian( mesh );
     laplacian.init( verts, edgeWeights, vmass, Laplacian::RememberShape::No );
     if ( fixedSharpVertices )

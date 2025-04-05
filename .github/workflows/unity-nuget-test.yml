@@ -76,7 +76,7 @@ jobs:
 
   stop-instance:
     runs-on: aws-micro
-    needs: [ start-unity-instance, windows-unity-test ]
+    needs: [ start-unity-instance ]
     if: always()
     steps:
       - name: Configure AWS Credentials (OIDC)

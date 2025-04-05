@@ -32,7 +32,7 @@ def apply_patch(patch_dir,nuget_dir,clean):
     if clean:
         shutil.rmtree(working_dir / nuget_dir /"content")
     # copy mangled dependencies to proper location
-    shutil.copytree(patch_dir + "/",nuget_dir+"/content/")
+    shutil.copytree(patch_dir + "/",nuget_dir+"/content/",dirs_exist_ok=True)
     # just clean directory
     shutil.rmtree(patch_dir)
 

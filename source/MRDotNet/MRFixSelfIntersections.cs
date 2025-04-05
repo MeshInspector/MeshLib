@@ -64,7 +64,7 @@ namespace MR
                 if (errorStr != IntPtr.Zero)
                 {
                     var errData = mrStringData(errorStr);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = Marshal.PtrToStringUTF8(errData);
                     throw new SystemException(errorMessage);
                 }
 
@@ -86,7 +86,7 @@ namespace MR
                 if (errorStr != IntPtr.Zero)
                 {
                     var errData = mrStringData(errorStr);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = Marshal.PtrToStringUTF8(errData);
                     throw new SystemException(errorMessage);
                 }
             }

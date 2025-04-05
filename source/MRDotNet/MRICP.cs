@@ -365,7 +365,7 @@ namespace MR
             public string GetStatusInfo()
             {
                 var mrStr = mrICPGetStatusInfo(mrICP_);
-                return Marshal.PtrToStringAnsi(mrStringData(mrStr));
+                return Marshal.PtrToStringUTF8(mrStringData(mrStr));
             }
             /// computes the number of samples able to form pairs
             public int GetNumSamples()

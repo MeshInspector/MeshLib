@@ -104,6 +104,13 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
     return marchingCubes( weightedPointsToDistanceFunctionVolume( cloud, wp2vparams ), vmParams );
 }
 
+Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars& pointWeights,
+                                    const WeightedPointsShellParametersMetric& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&pointWeights]( VertId v ){ return pointWeights[v]; };
+    return weightedPointsShell( cloud, params );
+}
 
 Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParametersMetric& params )
 {
@@ -141,6 +148,13 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     };
 
     return marchingCubes( weightedMeshToDistanceFunctionVolume( mesh, wp2vparams ), vmParams );
+}
+
+Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParametersMetric& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&vertWeights]( VertId v ){ return vertWeights[v]; };
+    return weightedMeshShell( mesh, params );
 }
 
 Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )

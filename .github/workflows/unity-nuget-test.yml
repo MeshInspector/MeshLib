@@ -7,6 +7,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: unity-test
+  cancel-in-progress: false
+
 jobs:
   start-unity-instance:
     name: Start unity instance

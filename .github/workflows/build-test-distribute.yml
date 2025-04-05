@@ -266,7 +266,7 @@ jobs:
     needs:
       - create-nuget-package
       - windows-build-test
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
+    if: ${{ github.event_name == 'schedule' }} // triggered by schedule
     uses: ./.github/workflows/unity-nuget-test.yml
 
   upload-distributions:

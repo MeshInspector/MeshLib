@@ -27,7 +27,6 @@ jobs:
           aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
 
   unity-nuget-test:
-    if: ${{ github.event_name == 'schedule' }} // triggered by schedule
     timeout-minutes: 10
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
@@ -39,7 +38,7 @@ jobs:
 
       - name: Copy nupkg from S3
         shell: powershell
-        # We use the same fake version 1.0.0.3468 to simplify test workflow for Install package step
+        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
         run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --quiet
 
       - name: rm previous data

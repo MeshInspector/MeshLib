@@ -8,6 +8,8 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRPointsInBall.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 
 namespace MR
 {
@@ -159,9 +161,10 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeig
 
 Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
 {
+    MR_TIMER
     VertBitSet allVerts;
     for ( const auto& reg : params.regions )
-        allVerts |= allVerts | reg.verts;
+        allVerts |= reg.verts;
 
     const float interRadSq = sqr( params.interpolationDist );
     auto pointWeight = [&params, &mesh, &allVerts, interRadSq] ( VertId v )
@@ -187,30 +190,25 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
             return Processing::Continue;
         } );
 
+        assert( n > 0 );
         return res / static_cast<float>( n );
     };
 
     // precalculate the weights
-    Vector<float, VertId> weights( allVerts.find_last() + 1 );
-    for ( auto v : allVerts )
+    VertScalars weights( mesh.topology.getValidVerts().find_last() + 1, 0 );
+    BitSetParallelFor( allVerts, [&weights, &pointWeight] ( VertId v )
+    {
         weights[v] = pointWeight( v );
+    } );
 
     DistanceFromWeightedPointsParams distParams;
+    distParams.maxWeight = parallelMinMax( weights, &allVerts ).second;
     distParams.pointWeight = [weights = std::move( weights ), allVerts] ( VertId v ) mutable
     {
-        if ( allVerts.test( v ) )
-            return weights[v];
-        else
-            return 0.f;
+        return weights[v];
     };
 
-    distParams.maxWeight = std::numeric_limits<float>::min();
-    for ( auto v : allVerts )
-    {
-        distParams.maxWeight = std::max( distParams.maxWeight, distParams.pointWeight( v ) );
-    }
-
-    WeightedPointsShellParametersMetric resParams{ static_cast<WeightedPointsShellParametersBase>( params ), distParams };
+    WeightedPointsShellParametersMetric resParams{ static_cast<const WeightedPointsShellParametersBase&>( params ), distParams };
 
     return weightedMeshShell( mesh, resParams );
 }

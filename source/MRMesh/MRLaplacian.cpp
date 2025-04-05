@@ -5,17 +5,19 @@
 #include "MRRingIterator.h"
 #include "MRMakeSphereMesh.h"
 #include "MRMeshComponents.h"
-#include "MRGTest.h"
+#include "MRTriMath.h"
 #include "MRPch/MRTBB.h"
 #include <Eigen/SparseCholesky>
 
 namespace MR
 {
 
+Laplacian::Laplacian( Mesh & mesh ) : topology_( mesh.topology ), points_( mesh.points ) { }
+
 void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass, RememberShape rem )
 {
     MR_TIMER;
-    assert( !MeshComponents::hasFullySelectedComponent( mesh_, freeVerts ) );
+    assert( !MeshComponents::hasFullySelectedComponent( topology_, freeVerts ) );
 
     class SimplicialLDLTSolver final : public Solver
     {
@@ -39,7 +41,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
     freeVerts_ = freeVerts;
     region_ = freeVerts;
     // free vertices and the first layer around the region
-    expand( mesh_.topology, region_ );
+    expand( topology_, region_ );
 
     // build matrix of equations: vertex pos = mean pos of its neighbors
     regionVert2id_.resize( region_.size() );
@@ -54,14 +56,14 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         eq.firstElem = (int)nonZeroElements_.size();
         double sumW = 0;
         Vector3d sumWPos;
-        for ( auto e : orgRing( mesh_.topology, v ) )
+        for ( auto e : orgRing( topology_, v ) )
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan ) 
-                w = std::clamp( mesh_.cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
-            auto d = mesh_.topology.dest( e );
+                w = std::clamp( cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+            auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
-            sumWPos -= w * Vector3d( mesh_.points[d] );
+            sumWPos -= w * Vector3d( points_[d] );
             sumW += w;
         }
         if ( sumW == 0 )
@@ -72,7 +74,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             // in updateSolver_ we build A = M_^T * M_;
             // if here we divide each row of M_ on square root of mass,
             // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
-            if ( auto d = mesh_.dblArea( v ); d > 0 )
+            if ( auto d = dblArea( v ); d > 0 )
                 a =  1 / std::sqrt( d );
         }
         const double rSumW = a / sumW;
@@ -81,7 +83,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             el.coeff *= rSumW;
             nonZeroElements_.push_back( el );
         }
-        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( mesh_.points[v] ) : Vector3d();
+        eq.rhs = ( rem == RememberShape::Yes ) ? sumWPos * rSumW + a * Vector3d( points_[v] ) : Vector3d();
         eq.centerCoeff = a;
         equations_.push_back( eq );
     }
@@ -101,7 +103,7 @@ void Laplacian::fixVertex( VertId v, bool smooth )
 
 void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth ) 
 { 
-    mesh_.points[v] = fixedPos; 
+    points_[v] = fixedPos; 
     fixVertex( v, smooth ); 
 }
 
@@ -130,7 +132,7 @@ void Laplacian::updateSolver_()
     freeVert2id_ = makeVectorWithSeqNums( freeVerts_ );
 
     firstLayerFixedVerts_ = freeVerts_;
-    expand( mesh_.topology, firstLayerFixedVerts_ );
+    expand( topology_, firstLayerFixedVerts_ );
     firstLayerFixedVerts_ -= fixedSharpVertices_;
     const auto rowSz = firstLayerFixedVerts_.count();
     firstLayerFixedVerts_ -= freeVerts_;
@@ -235,7 +237,7 @@ void Laplacian::updateRhs_()
 
     prepareRhs_(
         [&]( const Equation & eq ) { return eq.rhs; },
-        [&]( VertId v ) { return Vector3d{ mesh_.points[v] }; },
+        [&]( VertId v ) { return Vector3d{ points_[v] }; },
         [&]( int n, const Vector3d & r )
         {
             for ( int i = 0; i < 3; ++i )
@@ -268,12 +270,11 @@ void Laplacian::apply()
     for ( auto v : freeVerts_ )
     {
         int mapv = freeVert2id_[v];
-        auto & pt = mesh_.points[v];
+        auto & pt = points_[v];
         pt.x = (float) sol[0][mapv];
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];
     }
-    mesh_.invalidateCaches();
 }
 
 void Laplacian::applyToScalar( VertScalars & scalarField )
@@ -299,28 +300,30 @@ void Laplacian::applyToScalar( VertScalars & scalarField )
     }
 }
 
-TEST(MRMesh, Laplacian) 
+Triangle3f Laplacian::getLeftTriPoints( EdgeId e ) const
 {
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
+    auto vs = topology_.getLeftTriVerts( e ) ;
+    return { points_[vs[0]], points_[vs[1]], points_[vs[2]] };
+}
 
+float Laplacian::leftCotan( EdgeId e ) const
+{
+    if ( !topology_.left( e ).valid() )
+        return 0;
+    return MR::cotan( getLeftTriPoints( e ) );
+}
+
+Vector3f Laplacian::dirDblArea( VertId v ) const
+{
+    Vector3f sum;
+    for ( EdgeId e : orgRing( topology_, v ) )
     {
-        VertBitSet vs;
-        vs.autoResizeSet( 0_v );
-        Laplacian laplacian( sphere );
-        laplacian.init( vs, EdgeWeights::Cotan );
-        laplacian.apply();
-
-        // fix the only free vertex
-        laplacian.fixVertex( 0_v );
-        laplacian.apply();
+        if ( topology_.left( e ).valid() )
+        {
+            sum += MR::dirDblArea( getLeftTriPoints( e ) );
+        }
     }
-
-    {
-        Laplacian laplacian( sphere );
-        // no free verts
-        laplacian.init( {}, EdgeWeights::Cotan );
-        laplacian.apply();
-    }
+    return sum;
 }
 
 } //namespace MR

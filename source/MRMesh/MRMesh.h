@@ -79,13 +79,13 @@ struct [[nodiscard]] Mesh
     /// computes the center of given edge
     [[nodiscard]] Vector3f edgeCenter( UndirectedEdgeId e ) const { return edgePoint( e, 0.5f ); }
 
-    /// returns three points of left face of e
+    /// returns three points of left face of e: v0 = orgPnt( e ), v1 = destPnt( e )
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
 
-    /// returns three points of left face of e
+    /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
 
-    /// returns three points of left face of e
+    /// returns three points of left face of e: res[0] = orgPnt( e ), res[1] = destPnt( e )
     [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { Triangle3f res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
 
     /// returns three points of given face

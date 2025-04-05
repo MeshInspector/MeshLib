@@ -53,7 +53,7 @@ FWH.make_fake_whl(working_dir / NUGET_DIR / "content" / "MRMeshC.dll")
 FWH.patch_whl(PATCH_DIR,working_dir / NUGET_DIR / "content")
 
 apply_patch(PATCH_DIR,NUGET_DIR,True) # first - windows patch: clean
-for i in range(2,len(sys.argv)-1):
+for i in range(2,len(sys.argv)):
     apply_patch(sys.argv[i],NUGET_DIR,False) # all other patches without cleaning
     
 

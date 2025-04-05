@@ -104,6 +104,12 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
+      - name: Python setup
+        env:
+          ALLOW_DELETING_EXISTING_PYTHON: 1
+        run: |
+          scripts/mrbind-pybind11/install_all_python_versions_ubuntu_reqs.sh
+
       - name: Install thirdparty libs
         # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
         run: |

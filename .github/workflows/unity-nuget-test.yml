@@ -1,3 +1,4 @@
+name: Test Nuget package with Unity
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -32,6 +33,7 @@ jobs:
 
   unity-nuget-test:
     timeout-minutes: 10
+    needs: [ start-unity-instance ]
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
     steps:
       - name: Configure AWS Credentials
@@ -79,7 +81,7 @@ jobs:
 
   stop-instance:
     runs-on: aws-micro
-    needs: [ start-unity-instance ]
+    needs: [ unity-nuget-test ]
     if: always()
     steps:
       - name: Configure AWS Credentials (OIDC)

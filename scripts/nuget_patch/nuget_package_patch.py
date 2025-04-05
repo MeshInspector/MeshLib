@@ -1,8 +1,8 @@
 import sys
 import os
 import shutil
-import subprocess
 from pathlib import Path
+import fake_whl_helper as FWH
 
 working_dir = Path(".").resolve()
 
@@ -27,59 +27,13 @@ def extract_nuget( dir, name ):
     # remove input file to replace it with new one
     os.remove(name)
 
-def make_fake_whl(whl_dir,nuget_dir):
-    os.mkdir(whl_dir)
-    whl_libs_path = working_dir /whl_dir / "dummy.libs"
-    os.mkdir( whl_libs_path)
-    os.mkdir( working_dir / whl_dir /"dummy-1.0.dist-info")
-    # add only used dll in fake wheel
-    dll_name = "MRMeshC.dll"
-    dll_path = working_dir / nuget_dir / "content" / dll_name
-    shutil.copyfile(dll_path, whl_libs_path /dll_name)
-    # actually create whl file
-    shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
-    os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")
-    # clean
-    shutil.rmtree(whl_dir)
-
-def patch_whl(out_dir,nuget_dir):
-    # use mangling tool on whl file
-    # store result dlls in `content/dummy.libs/`
-    try:
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "delvewheel",
-                "repair",
-                # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
-                # that happens if we pack these dlls into whl.
-                # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
-                # to pack these dlls with original names and let system solve conflicts on import
-                # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-                "--no-mangle", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
-
-                "--add-path", working_dir / nuget_dir / "content", # path where input dependencies are located
-
-                # use this directory instead of extracting files from result whl file
-                "--extract-dir", out_dir,
-
-                # main option - needed to mangle whl/libs/ content (only thing we doing it for)
-                "--analyze-existing",
-                "dummy-1.0-py3-none-any.whl"
-            ]
-        )
-    except subprocess.CalledProcessError as e:
-        print(e)
-        sys.exit(e.returncode)
-    # not needed anymore
-    os.remove("dummy-1.0-py3-none-any.whl")
-
-def apply_patch(patch_dir,nuget_dir):
+def apply_patch(patch_dir,nuget_dir,clean):
     # remove old dependencies folder
-    shutil.rmtree(working_dir / nuget_dir /"content")
+    if clean:
+        shutil.rmtree(working_dir / nuget_dir /"content")
     # copy mangled dependencies to proper location
-    shutil.copytree(patch_dir + "/dummy.libs/",nuget_dir+"/content/")
+    shutil.copytree(patch_dir + "/",nuget_dir+"/content/",dirs_exist_ok=True)
     # just clean directory
-    shutil.rmtree("wheelhouse")
     shutil.rmtree(patch_dir)
 
 def archive_nuget( dir, name ):
@@ -90,11 +44,19 @@ def archive_nuget( dir, name ):
 
 input_nuget = sys.argv[1]
 
-extract_nuget("temp_nuget",input_nuget)
+NUGET_DIR = "temp_nuget"
+PATCH_DIR = "patch_dir"
+
+extract_nuget(NUGET_DIR,input_nuget)
 # create fake wheel to use common python repair tool that mangle wheel dependencies names (what we actually want to use for nuget package too)
-make_fake_whl("dummy_wheel","temp_nuget")
-patch_whl("content","temp_nuget")
-apply_patch("content","temp_nuget")
-patch_targets_file("temp_nuget")
+FWH.make_fake_whl(working_dir / NUGET_DIR / "content" / "MRMeshC.dll")
+FWH.patch_whl(PATCH_DIR,working_dir / NUGET_DIR / "content")
+
+apply_patch(PATCH_DIR,NUGET_DIR,True) # first - windows patch: clean
+for i in range(2,len(sys.argv)):
+    apply_patch(sys.argv[i],NUGET_DIR,False) # all other patches without cleaning
+    
+
+patch_targets_file(NUGET_DIR)
 # create new nuget archive in place of old one
-archive_nuget("temp_nuget",input_nuget)
+archive_nuget(NUGET_DIR,input_nuget)

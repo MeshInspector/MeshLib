@@ -149,7 +149,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
     for ( const auto& reg : params.regions )
         allVerts |= allVerts | reg.verts;
 
-    const auto interRadSq = sqr( params.interpolationDist );
+    const float interRadSq = sqr( params.interpolationDist );
     auto pointWeight = [&params, &mesh, &allVerts, interRadSq] ( VertId v )
     {
         if ( params.regions.empty() )
@@ -160,7 +160,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
         size_t n = 0;
 
         const auto pt = mesh.points[v];
-        findPointsInBall( mesh, Ball3f( pt, interRadSq ), [&n, &res, &params]
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &params]
             ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
             auto vv = found.vId;

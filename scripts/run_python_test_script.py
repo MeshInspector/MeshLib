@@ -36,10 +36,7 @@ if platformSystem == 'Linux':
                 os_version = line.split('=')[-1].replace('"', '')
 
     if "ubuntu" in os_name.lower():
-        if os_version.startswith("20"):
-            python_cmds = ["python3.8"]
-        elif os_version.startswith("22"):
-            python_cmds = ["python3.10"]
+        python_cmds = ["python3"] # use the same python version as in venv
     elif "fedora" in os_name.lower():
         if os_version.startswith("35"):
             python_cmds = ["python3.9"]

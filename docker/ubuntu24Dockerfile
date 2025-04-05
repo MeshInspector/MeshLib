@@ -8,7 +8,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip ninja-build \
+        tzdata git sudo time ninja-build \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -54,7 +54,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu.sh \

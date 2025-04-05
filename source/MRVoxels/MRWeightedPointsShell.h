@@ -67,7 +67,8 @@ struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
     /// list of regions (overlappings are allowed) with corresponding offsets
     std::vector<PartialVertScalars> regions;
 
-    /// interpolation factor between the weights of the regions
+    /// interpolation distance between the weights of the regions
+    /// determines the sharpness of transitions between different regions
     float interpolationDist = 0;
 };
 

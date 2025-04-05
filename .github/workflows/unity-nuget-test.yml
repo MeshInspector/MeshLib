@@ -25,7 +25,7 @@ jobs:
           aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
       - name: Wait Instance
         run: |
-          aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }
+          aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
 
   unity-nuget-test:
     if: ${{ github.event_name == 'schedule' }} // triggered by schedule
@@ -87,4 +87,4 @@ jobs:
           aws-region: us-east-1
       - name: Stop Instance
         run: |
-          aws ec2 stop-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }
+          aws ec2 stop-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }}

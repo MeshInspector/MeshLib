@@ -92,7 +92,7 @@ namespace MR
             if (mrResult.errorString != IntPtr.Zero)
             {
                 var errData = mrStringData(mrResult.errorString);
-                errorMessage = Marshal.PtrToStringAnsi(errData);
+                errorMessage = Marshal.PtrToStringUTF8(errData);
             }
 
             if (!string.IsNullOrEmpty(errorMessage))

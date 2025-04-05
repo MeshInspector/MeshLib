@@ -82,7 +82,7 @@ jobs:
           build_config: ${{ matrix.config }}
 
       - name: Set up Homebrew cache for x64 runner
-        if: runner.arch == 'x64'
+        if: ${{ runner.arch == 'x64' }}
         uses: actions/cache@v4
         with:
           path: |

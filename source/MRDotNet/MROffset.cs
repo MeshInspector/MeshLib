@@ -135,7 +135,7 @@ namespace MR
                 IntPtr res = mrOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -157,7 +157,7 @@ namespace MR
                 IntPtr res = mrDoubleOffsetMesh(mp.mrMeshPart, offsetA, offsetB, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -178,7 +178,7 @@ namespace MR
                 IntPtr res = mrMcOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -205,7 +205,7 @@ namespace MR
                 IntPtr res = mrMcShellMeshRegion(mp.mesh.mesh_, mp.region.bs_, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -233,7 +233,7 @@ namespace MR
                 IntPtr res = mrSharpOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -260,7 +260,7 @@ namespace MR
                 IntPtr res = mrGeneralOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -291,7 +291,7 @@ namespace MR
                 IntPtr res = mrThickenMesh(mesh.mesh_, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);

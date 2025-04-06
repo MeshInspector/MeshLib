@@ -1,6 +1,7 @@
 #include "MRMeshMath.h"
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
+#include "MRRingIterator.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -207,6 +208,226 @@ Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, cons
         return curr;
     },
     [] ( auto a, auto b ) { return a + b; } );
+}
+
+namespace
+{
+
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0) and other three vertices taken from a mesh's triangle
+class FaceVolumeCalc
+{
+public:
+    FaceVolumeCalc( const MeshTopology & topology, const VertCoords & points, const FaceBitSet& region) : topology_( topology ), points_( points ), region_( region )
+    {}
+    FaceVolumeCalc( FaceVolumeCalc& x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), region_( x.region_ )
+    {}
+    void join( const FaceVolumeCalc& y )
+    {
+        volume_ += y.volume_;
+    }
+
+    double volume() const
+    {
+        return volume_;
+    }
+
+    void operator()( const tbb::blocked_range<FaceId>& r )
+    {
+        for ( FaceId f = r.begin(); f < r.end(); ++f )
+        {
+            if ( region_.test( f ) && topology_.hasFace( f ) )
+            {
+                const auto coords = getTriPoints( topology_, points_, f );
+                volume_ += mixed( Vector3d( coords[0] ), Vector3d( coords[1] ), Vector3d( coords[2] ) );
+            }
+        }
+    }
+
+private:
+    const MeshTopology & topology_;
+    const VertCoords & points_;
+    const FaceBitSet& region_;
+    double volume_{ 0.0 };
+};
+
+/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0), another vertex at the center of hole,
+/// and other two vertices taken from a hole's edge
+class HoleVolumeCalc
+{
+public:
+    HoleVolumeCalc( const MeshTopology & topology, const VertCoords & points, const std::vector<EdgeId>& holeRepresEdges ) : topology_( topology ), points_( points ), holeRepresEdges_( holeRepresEdges )
+    {}
+    HoleVolumeCalc( HoleVolumeCalc& x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), holeRepresEdges_( x.holeRepresEdges_ )
+    {}
+    void join( const HoleVolumeCalc& y )
+    {
+        volume_ += y.volume_;
+    }
+
+    double volume() const
+    {
+        return volume_;
+    }
+
+    void operator()( const tbb::blocked_range<size_t>& r )
+    {
+        for ( size_t i = r.begin(); i < r.end(); ++i )
+        {
+            const auto e0 = holeRepresEdges_[i];
+            Vector3d sumBdPos;
+            int countBdVerts = 0;
+            for ( auto e : leftRing( topology_, e0 ) )
+            {
+                sumBdPos += Vector3d( orgPnt( topology_, points_, e ) );
+                ++countBdVerts;
+            }
+            Vector3d holeCenter = sumBdPos / double( countBdVerts );
+            for ( auto e : leftRing( topology_, e0 ) )
+            {
+                volume_ += mixed( holeCenter, Vector3d( orgPnt( topology_, points_, e ) ), Vector3d( destPnt( topology_, points_, e ) ) );
+            }
+        }
+    }
+
+private:
+    const MeshTopology & topology_;
+    const VertCoords & points_;
+    const std::vector<EdgeId>& holeRepresEdges_;
+    double volume_{ 0.0 };
+};
+
+} // anonymous namespace
+
+double volume( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region /*= nullptr */ )
+{
+    MR_TIMER
+    const auto lastValidFace = topology.lastValidFace();
+    const auto& faces = topology.getFaceIds( region );
+    FaceVolumeCalc fcalc( topology, points, faces );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), fcalc );
+
+    const auto holeRepresEdges = topology.findHoleRepresentiveEdges( region );
+    HoleVolumeCalc hcalc( topology, points, holeRepresEdges );
+    parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
+
+    return ( fcalc.volume() + hcalc.volume() ) / 6.0;
+}
+
+double holePerimiter( const MeshTopology & topology, const VertCoords & points, EdgeId e0 )
+{
+    double res = 0;
+    if ( topology.left( e0 ) )
+    {
+        assert( false );
+        return res;
+    }
+
+    for ( auto e : leftRing( topology, e0 ) )
+    {
+        assert( !topology.left( e ) );
+        res += edgeLength( topology, points, e );
+    }
+    return res;
+}
+
+Vector3d holeDirArea( const MeshTopology & topology, const VertCoords & points, EdgeId e0 )
+{
+    Vector3d sum;
+    if ( topology.left( e0 ) )
+    {
+        assert( false );
+        return sum;
+    }
+
+    Vector3d p0{ orgPnt( topology, points, e0 ) };
+    for ( auto e : leftRing0( topology, e0 ) )
+    {
+        assert( !topology.left( e ) );
+        Vector3d p1{ orgPnt( topology, points, e ) };
+        Vector3d p2{ destPnt( topology, points, e ) };
+        sum += cross( p1 - p0, p2 - p0 );
+    }
+    return 0.5 * sum;
+}
+
+Vector3f leftTangent( const MeshTopology & topology, const VertCoords & points, EdgeId e )
+{
+    assert( topology.left( e ) );
+    const auto lNorm = leftNormal( topology, points, e );
+    const auto eDir = edgeVector( topology, points, e ).normalized();
+    return cross( lNorm, eDir );
+}
+
+Vector3f dirDblArea( const MeshTopology & topology, const VertCoords & points, VertId v )
+{
+    Vector3f sum;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        if ( topology.left( e ).valid() )
+        {
+            sum += leftDirDblArea( topology, points, e );
+        }
+    }
+    return sum;
+}
+
+Vector3f normal( const MeshTopology & topology, const VertCoords & points, const MeshTriPoint & p )
+{
+    VertId a, b, c;
+    topology.getLeftTriVerts( p.e, a, b, c );
+    auto n0 = normal( topology, points, a );
+    auto n1 = normal( topology, points, b );
+    auto n2 = normal( topology, points, c );
+    return p.bary.interpolate( n0, n1, n2 ).normalized();
+}
+
+Vector3f pseudonormal( const MeshTopology & topology, const VertCoords & points, VertId v, const FaceBitSet * region )
+{
+    Vector3f sum;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        const auto l = topology.left( e );
+        if ( l && ( !region || region->test( l ) ) )
+        {
+            auto d0 = edgeVector( topology, points, e );
+            auto d1 = edgeVector( topology, points, topology.next( e ) );
+            auto angle = MR::angle( d0, d1 );
+            auto n = cross( d0, d1 );
+            sum += angle * n.normalized();
+        }
+    }
+
+    return sum.normalized();
+}
+
+Vector3f pseudonormal( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue, const FaceBitSet * region )
+{
+    EdgeId e{ ue };
+    auto l = topology.left( e );
+    if ( l && region && !region->test( l ) )
+        l = {};
+    auto r = topology.right( e );
+    if ( r && region && !region->test( r ) )
+        r = {};
+    if ( !l && !r )
+        return {};
+    if ( !l )
+        return normal( topology, points, r );
+    if ( !r )
+        return normal( topology, points, l );
+    auto nl = normal( topology, points, l );
+    auto nr = normal( topology, points, r );
+    return ( nl + nr ).normalized();
+}
+
+Vector3f pseudonormal( const MeshTopology & topology, const VertCoords & points, const MeshTriPoint & p, const FaceBitSet * region )
+{
+    if ( auto v = p.inVertex( topology ) )
+        return pseudonormal( topology, points, v, region );
+    if ( auto e = p.onEdge( topology ) )
+        return pseudonormal( topology, points, e.e.undirected(), region );
+    assert( !region || region->test( topology.left( p.e ) ) );
+    return leftNormal( topology, points, p.e );
 }
 
 } //namespace MR

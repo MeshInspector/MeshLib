@@ -179,49 +179,49 @@ struct [[nodiscard]] Mesh
 
     /// returns volume of the object surrounded by given region (or whole mesh if (region) is nullptr);
     /// if the region has holes then each hole will be virtually filled by adding triangles for each edge and the hole's geometrical center
-    [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
+    [[nodiscard]] double volume( const FaceBitSet* region = nullptr ) const { return MR::volume( topology, points, region ); }
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-    [[nodiscard]] MRMESH_API double holePerimiter( EdgeId e ) const;
+    [[nodiscard]] double holePerimiter( EdgeId e ) const { return MR::holePerimiter( topology, points, e ); }
 
     /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
-    [[nodiscard]] MRMESH_API Vector3d holeDirArea( EdgeId e ) const;
+    [[nodiscard]] Vector3d holeDirArea( EdgeId e ) const { return MR::holeDirArea( topology, points, e ); }
 
     /// computes unit vector that is both orthogonal to given edge and to the normal of its left triangle, the vector is directed inside left triangle
-    [[nodiscard]] MRMESH_API Vector3f leftTangent( EdgeId e ) const;
+    [[nodiscard]] Vector3f leftTangent( EdgeId e ) const { return MR::leftTangent( topology, points, e ); }
 
     /// computes triangular face normal from its vertices
-    [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
+    [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return MR::leftNormal( topology, points, e ); }
 
     /// computes triangular face normal from its vertices
-    [[nodiscard]] Vector3f normal( FaceId f ) const { return dirDblArea( f ).normalized(); }
+    [[nodiscard]] Vector3f normal( FaceId f ) const { return MR::normal( topology, points, f ); }
 
     /// computes sum of directed double areas of all triangles around given vertex
-    [[nodiscard]] MRMESH_API Vector3f dirDblArea( VertId v ) const;
+    [[nodiscard]] Vector3f dirDblArea( VertId v ) const { return MR::dirDblArea( topology, points, v ); }
 
     /// computes the length of summed directed double areas of all triangles around given vertex
-    [[nodiscard]] float dblArea( VertId v ) const { return dirDblArea( v ).length(); }
+    [[nodiscard]] float dblArea( VertId v ) const { return MR::dblArea( topology, points, v ); }
 
     /// computes normal in a vertex using sum of directed areas of neighboring triangles
-    [[nodiscard]] Vector3f normal( VertId v ) const { return dirDblArea( v ).normalized(); }
+    [[nodiscard]] Vector3f normal( VertId v ) const { return MR::normal( topology, points, v ); }
 
     /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates and normalizes again;
     /// this is the same normal as in rendering with smooth shading
-    [[nodiscard]] MRMESH_API Vector3f normal( const MeshTriPoint & p ) const;
+    [[nodiscard]] Vector3f normal( const MeshTriPoint & p ) const { return MR::normal( topology, points, p ); }
 
     /// computes angle-weighted sum of normals of incident faces of given vertex (only (region) faces will be considered);
     /// the sum is normalized before returning
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, v, region ); }
 
     /// computes normalized half sum of face normals sharing given edge (only (region) faces will be considered);
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, e, region ); }
 
     /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation
     /// as suggested in the article "Signed Distance Computation Using the Angle Weighted Pseudonormal" by J. Andreas Baerentzen and Henrik Aanaes,
     /// https://backend.orbit.dtu.dk/ws/portalfiles/portal/3977815/B_rentzen.pdf
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, p, region ); }
 
     /// given a point (pt) in 3D and the closest point to in on mesh (proj),
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;

@@ -102,17 +102,11 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 /// returns circumcircle diameter of given mesh triangle
 [[nodiscard]] MRMESH_API float circumcircleDiameter( const MeshTopology & topology, const VertCoords & points, FaceId f );
 
-/// converts vertex into barycentric representation
-[[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, const VertCoords & points, VertId v );
-
 /// converts face id and 3d point into barycentric representation
 [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, const VertCoords & points, FaceId f, const Vector3f & p );
 
 /// converts face id and 3d point into barycentric representation
 [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, const VertCoords & points, const PointOnFace& p );
-
-/// converts vertex into edge-point representation
-[[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( const MeshTopology & topology, const VertCoords & points, VertId v );
 
 /// converts edge and 3d point into edge-point representation
 [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( const MeshTopology & topology, const VertCoords & points, EdgeId e, const Vector3f & p );

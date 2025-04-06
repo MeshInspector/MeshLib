@@ -184,9 +184,11 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
             for ( const auto& reg : params.regions )
             {
                 if ( reg.verts.test( vv ) )
+                {
                     res += reg.value;
+                    n += 1;
+                }
             }
-            n += 1;
             return Processing::Continue;
         } );
 

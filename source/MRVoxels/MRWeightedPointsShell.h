@@ -65,6 +65,7 @@ struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
     };
 
     /// list of regions (overlappings are allowed) with corresponding offsets
+    /// the additional offset in overlaps is set to the average of the regions
     std::vector<PartialVertScalars> regions;
 
     /// interpolation distance between the weights of the regions

@@ -11,6 +11,8 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRParallelMinMax.h"
 
+#include <spdlog/spdlog.h>
+
 namespace MR
 {
 
@@ -162,6 +164,10 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeig
 Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
 {
     MR_TIMER
+
+    if ( params.regions.empty() )
+        spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
+
     VertBitSet allVerts;
     for ( const auto& reg : params.regions )
         allVerts |= reg.verts;

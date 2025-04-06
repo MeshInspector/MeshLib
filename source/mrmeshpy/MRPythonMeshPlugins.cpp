@@ -403,7 +403,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         value( "Unit", VertexMass::Unit, "all vertices have same mass=1" ).
         value( "Cotan", VertexMass::NeiArea, "vertex mass depends on local geometry and proportional to the area of first-ring triangles" );
 
-    m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
+    m.def( "positionVertsSmoothly", (void(*)( Mesh&, const VertBitSet&, EdgeWeights, VertexMass, const VertBitSet * )) &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ),
         pybind11::arg_v( "edgeWeights", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
         pybind11::arg_v( "vmass", MR::VertexMass::Unit, "LaplacianVertexMassParam.Unit" ),

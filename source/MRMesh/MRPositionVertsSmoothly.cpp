@@ -14,14 +14,12 @@
 namespace MR
 {
 
-void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    EdgeWeights edgeWeights, VertexMass vmass,
-    const VertBitSet * fixedSharpVertices )
+void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
+    EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
 {
     MR_TIMER
 
-    mesh.invalidateCaches();
-    Laplacian laplacian( mesh );
+    Laplacian laplacian( topology, points );
     laplacian.init( verts, edgeWeights, vmass, Laplacian::RememberShape::No );
     if ( fixedSharpVertices )
         for ( auto v : *fixedSharpVertices )
@@ -29,11 +27,18 @@ void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
     laplacian.apply();
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
+void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
+    EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
+{
+    mesh.invalidateCaches();
+    positionVertsSmoothly( mesh.topology, mesh.points, verts, edgeWeights, vmass, fixedSharpVertices );
+}
+
+void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
     const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
 {
     MR_TIMER
-    assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( mesh, verts ) );
+    assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( topology, verts ) );
 
     const auto sz = verts.count();
     if ( sz <= 0 )
@@ -51,10 +56,10 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
     {
         double sumW = 0;
         Vector3d sumFixed;
-        for ( auto e : orgRing( mesh.topology, v ) )
+        for ( auto e : orgRing( topology, v ) )
         {
             sumW += 1;
-            auto d = mesh.topology.dest( e );
+            auto d = topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
             {
                 // free neighbor
@@ -65,7 +70,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
             else
             {
                 // fixed neighbor
-                sumFixed += Vector3d( mesh.points[d] );
+                sumFixed += Vector3d( points[d] );
             }
         }
         if ( vertShifts )
@@ -74,7 +79,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
         {
             const auto s = (*vertStabilizers)[v];
             sumW += s;
-            sumFixed += Vector3d( s * mesh.points[v] );
+            sumFixed += Vector3d( s * points[v] );
         }
         mTriplets.emplace_back( n, n, sumW );
         for ( int i = 0; i < 3; ++i )
@@ -99,12 +104,19 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
     n = 0;
     for ( auto v : verts )
     {
-        auto & pt = mesh.points[v];
+        auto & pt = points[v];
         pt.x = (float) sol[0][n];
         pt.y = (float) sol[1][n];
         pt.z = (float) sol[2][n];
         ++n;
     }
+}
+
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
+    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+{
+    mesh.invalidateCaches();
+    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, verts, vertShifts, vertStabilizers );
 }
 
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
@@ -282,13 +294,13 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     }
 }
 
-void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
+void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, const InflateSettings & settings )
 {
     MR_TIMER
     if ( !verts.any() )
         return;
     if ( settings.preSmooth )
-        positionVertsSmoothlySharpBd( mesh, verts );
+        positionVertsSmoothlySharpBd( topology, points, verts );
     if ( settings.iterations <= 0 || settings.pressure == 0 )
         return;
 
@@ -322,4 +334,9 @@ void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & setti
     }
 }
 
+void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
+{
+    mesh.invalidateCaches();
+    inflate( mesh.topology, mesh.points, verts, settings );
+}
 } //namespace MR

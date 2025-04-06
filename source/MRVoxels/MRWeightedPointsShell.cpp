@@ -177,13 +177,11 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
     {
         if ( params.regions.empty() )
             return 0.f;
-        if ( !allVerts.test( v ) )
-            return 0.f;
         float res = 0.f;
         size_t n = 0;
 
         const auto pt = mesh.points[v];
-        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &params]
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &params, &allVerts]
             ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
             auto vv = found.vId;
@@ -195,10 +193,13 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
                     n += 1;
                 }
             }
+            if ( !allVerts.test( vv ) )
+                n += 1;
             return Processing::Continue;
         } );
 
-        assert( n > 0 );
+        if ( n == 0 )
+            return 0.f;
         return res / static_cast<float>( n );
     };
 

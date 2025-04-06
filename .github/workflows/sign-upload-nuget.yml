@@ -4,21 +4,56 @@ on:
   release:
    types: [ published ]
   workflow_dispatch:
-  
+    inputs:
+      version_tag:
+        description: Tag of the release to notarize
+        required: true
+        type: string
+      beta:
+        description: If true - loads given nuget as beta version
+        required: false
+        type: boolean
+        default: false  
 
 jobs:
   setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+      version_tag: ${{ steps.get-tag.outputs.tag }}
     steps:
       - name: Checkout
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: actions/checkout@v4
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         id: get-latest-tag
-        
+      
+      - name: Set latest version tag to ENV
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: |
+          version_tag=${{ steps.get-latest-tag.outputs.tag }}
+          echo ${version_tag}
+          version_tag=${version_tag%%-*}
+          echo "version_tag=${version_tag}" >> "$GITHUB_ENV"
+
+      - name: Set user provided version tag to ENV
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          version_tag=${{ inputs.version_tag }}
+          echo ${version_tag}
+          version_tag=${version_tag%%-*}
+          echo "version_tag=${version_tag}" >> "$GITHUB_ENV"
+      
+      - name: Output tag from ENV
+        id: get-tag
+        run: |
+          version_tag=${{ env.version_tag }}
+          echo ${version_tag}
+          version_tag=${version_tag%%-*}
+          echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"
+
   sign-upload:
     timeout-minutes: 10
     needs: setup
@@ -35,6 +70,10 @@ jobs:
                               --repo $env:GITHUB_REPOSITORY `
                               --pattern "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"    
      
+      - name: Make Beta
+        if: ${{ inputs.beta }}
+        run: py -3 scripts\nuget_patch\nuget_make_beta.py "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"
+
       - name: Sign NuGet package with certificate
         run: |
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{needs.setup.outputs.version_tag}}.nupkg

@@ -205,7 +205,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
 
     DistanceFromWeightedPointsParams distParams;
     distParams.maxWeight = parallelMinMax( weights, &allVerts ).second;
-    distParams.pointWeight = [weights = std::move( weights ), allVerts] ( VertId v ) mutable
+    distParams.pointWeight = [weights = std::move( weights )] ( VertId v ) mutable
     {
         return weights[v];
     };

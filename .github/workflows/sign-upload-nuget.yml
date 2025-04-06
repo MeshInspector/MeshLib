@@ -71,7 +71,7 @@ jobs:
                               --pattern "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"    
      
       - name: Make Beta
-        if: ${{ inputs.beta }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.beta }}
         run: py -3 scripts\nuget_patch\nuget_make_beta.py "MeshLib_${{needs.setup.outputs.version_tag}}.nupkg"
 
       - name: Sign NuGet package with certificate

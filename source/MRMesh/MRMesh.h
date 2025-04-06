@@ -1,10 +1,9 @@
 #pragma once
 
+#include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
-#include "MRMeshTopology.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
-#include "MRLineSegm.h"
 #include "MRSharedThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
@@ -59,19 +58,19 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API bool operator ==( const Mesh & b ) const;
 
     /// returns coordinates of the edge origin
-    [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
+    [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return MR::orgPnt( topology, points, e ); }
 
     /// returns coordinates of the edge destination
-    [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+    [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return MR::destPnt( topology, points, e ); }
 
     /// returns vector equal to edge destination point minus edge origin point
-    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return MR::edgeVector( topology, points, e ); }
 
     /// returns line segment of given edge
-    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return { orgPnt( e ), destPnt( e ) }; }
+    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return MR::edgeSegment( topology, points, e ); }
 
     /// returns a point on the edge: origin point for f=0 and destination point for f=1
-    [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
+    [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return MR::edgePoint( topology, points, e, f ); }
 
     /// computes coordinates of point given as edge and relative position on it
     [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }

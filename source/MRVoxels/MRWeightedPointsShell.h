@@ -58,15 +58,15 @@ struct WeightedPointsShellParametersMetric : WeightedPointsShellParametersBase
 
 struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
 {
-    struct PartialVertScalars
+    struct Region
     {
         VertBitSet verts;
-        float value = 0.f;
+        float weight = 0.f;
     };
 
     /// list of regions (overlappings are allowed) with corresponding offsets
     /// the additional offset in overlaps is set to the average of the regions
-    std::vector<PartialVertScalars> regions;
+    std::vector<Region> regions;
 
     /// interpolation distance between the weights of the regions
     /// determines the sharpness of transitions between different regions

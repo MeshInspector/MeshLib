@@ -95,16 +95,14 @@ NSView* createAccessoryView( const IOFilters& filters )
 
 } // namespace
 
-/// ...
+/// helper class to update allowed file types on user change
 @interface FileFormatPickerListener : NSObject
 {
 @private
     NSSavePanel* dialog_;
     MR::IOFilters filters_;
 }
-/// ...
 - (instancetype)initWithDialog:(NSSavePanel*)dialog filters:(MR::IOFilters)filters;
-/// ...
 - (void)popupAction:(id)sender;
 @end
 

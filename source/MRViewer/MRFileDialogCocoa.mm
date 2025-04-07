@@ -69,26 +69,25 @@ NSView* createAccessoryView( const IOFilters& filters )
     [popup sizeToFit];
     const auto labelSize = [label frame].size;
     const auto popupSize = [popup frame].size;
-    const auto maxHeight = std::max( labelSize.height, popupSize.height );
+
+    // see: https://stackoverflow.com/a/71276393
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    popup.translatesAutoresizingMaskIntoConstraints = NO;
 
     constexpr auto cPadding = 8.;
     constexpr auto cSpacing = 4.;
-#define _ cPadding
-#define __ cSpacing
-    [view setFrameSize:NSMakeSize(
-        _ + labelSize.width + __ + popupSize.width + _,
-        _ + maxHeight + _
-    )];
-    [label setFrameOrigin:NSMakePoint(
-        _,
-        _ + ( maxHeight - labelSize.height ) / 2.
-    )];
-    [popup setFrameOrigin:NSMakePoint(
-        _ + labelSize.width + __,
-        _ + ( maxHeight - popupSize.height ) / 2. - 1.5 // for unknown reason the popup is misaligned by default
-    )];
-#undef __
-#undef _
+    [NSLayoutConstraint activateConstraints:@[
+        [label.bottomAnchor constraintEqualToAnchor:view.bottomAnchor constant:-cPadding],
+        [label.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:+cPadding],
+        [label.widthAnchor constraintEqualToConstant:labelSize.width],
+
+        [popup.leadingAnchor constraintEqualToAnchor:label.trailingAnchor constant:cSpacing],
+        [popup.firstBaselineAnchor constraintEqualToAnchor:label.firstBaselineAnchor],
+
+        [popup.topAnchor constraintEqualToAnchor:view.topAnchor constant:+cPadding],
+        [popup.trailingAnchor constraintEqualToAnchor:view.trailingAnchor constant:-cPadding],
+        [popup.widthAnchor constraintEqualToConstant:popupSize.width],
+    ]];
 
     return view;
 }

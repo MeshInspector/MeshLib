@@ -52,6 +52,8 @@ constexpr int cFileFormatPopupTag = 1;
 NSView* createAccessoryView( const IOFilters& filters )
 {
     auto* label = [NSTextField labelWithString:@"Format:"];
+    label.textColor = NSColor.secondaryLabelColor;
+    label.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
 
     auto* popup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     for ( const auto& filter : filters )
@@ -69,8 +71,8 @@ NSView* createAccessoryView( const IOFilters& filters )
     const auto popupSize = [popup frame].size;
     const auto maxHeight = std::max( labelSize.height, popupSize.height );
 
-    constexpr auto cPadding = 8;
-    constexpr auto cSpacing = 4;
+    constexpr auto cPadding = 8.;
+    constexpr auto cSpacing = 4.;
 #define _ cPadding
 #define __ cSpacing
     [view setFrameSize:NSMakeSize(
@@ -79,11 +81,11 @@ NSView* createAccessoryView( const IOFilters& filters )
     )];
     [label setFrameOrigin:NSMakePoint(
         _,
-        _ + ( maxHeight - labelSize.height ) / 2
+        _ + ( maxHeight - labelSize.height ) / 2.
     )];
     [popup setFrameOrigin:NSMakePoint(
         _ + labelSize.width + __,
-        _ + ( maxHeight - popupSize.height ) / 2
+        _ + ( maxHeight - popupSize.height ) / 2. - 1.5 // for unknown reason the popup is misaligned by default
     )];
 #undef __
 #undef _

@@ -1,6 +1,8 @@
 #include "MRFileDialogCocoa.h"
 
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 
 #include <AppKit/AppKit.h>
 
@@ -14,6 +16,11 @@ inline std::string fromNSURL( NSURL* url )
     return [[url path] UTF8String];
 }
 
+inline NSString* toNSString( const std::string_view& path )
+{
+    return [[NSString alloc] initWithBytes:path.data() length:path.size() encoding:NSUTF8StringEncoding];
+}
+
 inline NSString* toNSString( const std::string& path )
 {
     return [NSString stringWithUTF8String:path.c_str()];
@@ -24,6 +31,24 @@ inline NSURL* toNSURL( const std::string& path )
     return [NSURL fileURLWithPath:toNSString( path )];
 }
 
+NSArray<NSString*>* makeFileTypes( const IOFilters& filters )
+{
+    auto* fileTypes = [[NSMutableArray alloc] init];
+    for ( const auto& filter : filters )
+    {
+        split( filter.extensions, ";", [&] ( std::string_view&& ext )
+        {
+            assert( ext.starts_with( "*." ) );
+            if ( ext != "*.*" )
+                [fileTypes addObject:toNSString( ext.substr( 2 ) )];
+            return false;
+        } );
+    }
+    return fileTypes;
+}
+
+constexpr int cFileFormatPopupTag = 1;
+
 NSView* createAccessoryView( const IOFilters& filters )
 {
     auto* label = [NSTextField labelWithString:@"Format:"];
@@ -31,6 +56,7 @@ NSView* createAccessoryView( const IOFilters& filters )
     auto* popup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     for ( const auto& filter : filters )
         [popup addItemWithTitle:toNSString( filter.name )];
+    [popup setTag:cFileFormatPopupTag];
 
     auto* view = [[NSView alloc] initWithFrame:NSZeroRect];
     [view addSubview:label];
@@ -66,6 +92,46 @@ NSView* createAccessoryView( const IOFilters& filters )
 }
 
 } // namespace
+
+/// ...
+@interface FileFormatPickerListener : NSObject
+{
+@private
+    NSSavePanel* dialog_;
+    MR::IOFilters filters_;
+}
+/// ...
+- (instancetype)initWithDialog:(NSSavePanel*)dialog filters:(MR::IOFilters)filters;
+/// ...
+- (void)popupAction:(id)sender;
+@end
+
+@implementation FileFormatPickerListener
+
+- (instancetype)initWithDialog:(NSSavePanel*)dialog filters:(MR::IOFilters)filters
+{
+    if ( ( self = [super init] ) )
+    {
+        dialog_ = dialog;
+        filters_ = filters;
+    }
+    return self;
+}
+
+- (void)popupAction:(id)sender
+{
+    auto index = [sender indexOfSelectedItem];
+    assert( index < filters_.size() );
+    auto* fileTypes = makeFileTypes( { filters_[index] } );
+    if ( [fileTypes count] == 0 )
+        fileTypes = makeFileTypes( filters_ );
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [dialog_ setAllowedFileTypes:fileTypes];
+#pragma clang diagnostic pop
+}
+
+@end
 
 namespace MR::detail
 {
@@ -109,30 +175,19 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
 
     if ( !params.folderDialog && !params.filters.empty() )
     {
-        auto* fileTypes = [[NSMutableArray alloc] init];
-        for ( const auto& filter : params.filters )
-        {
-            size_t separatorPos = 0;
-            for (;;)
-            {
-                auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
-                auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
-
-                assert( ext.starts_with( "*." ) );
-                if ( ext != "*.*" )
-                    [fileTypes addObject:toNSString( ext.substr( 2 ) )];
-
-                if ( nextSeparatorPos == std::string::npos )
-                    break;
-                separatorPos = nextSeparatorPos + 1;
-            }
-        }
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [dialog setAllowedFileTypes:fileTypes];
+        [dialog setAllowedFileTypes:makeFileTypes( params.filters )];
 #pragma clang diagnostic pop
 
-        dialog.accessoryView = createAccessoryView( params.filters );
+        // add file format picker
+        auto* accessoryView = createAccessoryView( params.filters );
+        dialog.accessoryView = accessoryView;
+
+        auto* popup = (NSPopUpButton*)[accessoryView viewWithTag:cFileFormatPopupTag];
+        auto* pickerListener = [[FileFormatPickerListener alloc] initWithDialog:dialog filters:params.filters];
+        popup.target = pickerListener;
+        popup.action = @selector( popupAction: );
     }
 
     if ( [dialog runModal] != NSModalResponseOK )

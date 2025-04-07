@@ -7,6 +7,8 @@
 namespace
 {
 
+using namespace MR;
+
 inline std::string fromNSURL( NSURL* url )
 {
     return [[url path] UTF8String];
@@ -20,6 +22,47 @@ inline NSString* toNSString( const std::string& path )
 inline NSURL* toNSURL( const std::string& path )
 {
     return [NSURL fileURLWithPath:toNSString( path )];
+}
+
+NSView* createAccessoryView( const IOFilters& filters )
+{
+    auto* label = [NSTextField labelWithString:@"Format:"];
+
+    auto* popup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    for ( const auto& filter : filters )
+        [popup addItemWithTitle:toNSString( filter.name )];
+
+    auto* view = [[NSView alloc] initWithFrame:NSZeroRect];
+    [view addSubview:label];
+    [view addSubview:popup];
+
+    // compute widget layout
+    [label sizeToFit];
+    [popup sizeToFit];
+    const auto labelSize = [label frame].size;
+    const auto popupSize = [popup frame].size;
+    const auto maxHeight = std::max( labelSize.height, popupSize.height );
+
+    constexpr auto cPadding = 8;
+    constexpr auto cSpacing = 4;
+#define _ cPadding
+#define __ cSpacing
+    [view setFrameSize:NSMakeSize(
+        _ + labelSize.width + __ + popupSize.width + _,
+        _ + maxHeight + _
+    )];
+    [label setFrameOrigin:NSMakePoint(
+        _,
+        _ + ( maxHeight - labelSize.height ) / 2
+    )];
+    [popup setFrameOrigin:NSMakePoint(
+        _ + labelSize.width + __,
+        _ + ( maxHeight - popupSize.height ) / 2
+    )];
+#undef __
+#undef _
+
+    return view;
 }
 
 } // namespace
@@ -88,6 +131,8 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [dialog setAllowedFileTypes:fileTypes];
 #pragma clang diagnostic pop
+
+        dialog.accessoryView = createAccessoryView( params.filters );
     }
 
     if ( [dialog runModal] != NSModalResponseOK )

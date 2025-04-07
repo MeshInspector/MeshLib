@@ -6,6 +6,9 @@ on:
       release_id:
         required: true
         type: string
+      release_tag:
+        required: true
+        type: string
 
 jobs:
   linux-x64-test:
@@ -48,7 +51,7 @@ jobs:
         if: ${{ matrix.os != 'fedora:39' }}
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         with:
-          releaseId: ${{inputs.release_id}}
+          releaseTag: ${{inputs.release_tag}}
           fileName: "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
@@ -63,7 +66,7 @@ jobs:
         if: ${{ matrix.os == 'fedora:39' }}
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         with:
-          releaseId: ${{inputs.release_id}}
+          releaseTag: ${{inputs.release_tag}}
           fileName: "*.rpm"
 
       - name: Install Fedora Release
@@ -163,7 +166,7 @@ jobs:
       - name: Download Ubuntu arm64 Release
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         with:
-          releaseId: ${{inputs.release_id}}
+          releaseTag: ${{inputs.release_tag}}
           fileName: "*${{matrix.name}}-arm64-dev.deb"
 
       - name: Install Ubuntu arm64 Release
@@ -231,7 +234,7 @@ jobs:
       - name: Download Distributive
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         with:
-          releaseId: ${{inputs.release_id}}
+          releaseTag: ${{inputs.release_tag}}
           fileName: "*x64.pkg"
 
       - name: Install Pkg

@@ -44,6 +44,9 @@ on:
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
+      run_unity_nuget_test:
+        description: "expression to run unity-nuget-test.yml"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
@@ -91,6 +94,8 @@ jobs:
       tag-disable-fedora:        ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-fedora' ) }}
       tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      # expressions for running workflows
+      run-unity-nuget-test:  ${{ contains( github.event.pull_request.labels.*.name, 'run-unity-nuget-test' ) }}
 
     runs-on: aws-micro
 
@@ -99,6 +104,7 @@ jobs:
       full_config_build: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
       upload_artifacts: ${{ github.event_name == 'push' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
       version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
+
 
     steps:
       - name: Checkout

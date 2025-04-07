@@ -148,7 +148,6 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     {
         // add new triangles after hole filling to bitset
         regionCpy = *params.region;
-        regionCpy.resize( mesh.topology.faceSize(), false );
     }
     
     if ( !reportProgress( params.cb, 0.05f ) )
@@ -174,6 +173,16 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         ss.maxEdgeSplits = INT_MAX;
         ss.maxDeviationAfterFlip = voxelSize / 3.0f;
         ss.progressCallback = subprogress( params.cb, 0.05f, 0.25f );
+        if ( params.region )
+        {
+            ss.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+            {
+                if ( regionCpy.test( mesh.topology.left( e ) ) )
+                    regionCpy.autoResizeSet( mesh.topology.left( e1 ) );
+                if ( regionCpy.test( mesh.topology.right( e ) ) )
+                    regionCpy.autoResizeSet( mesh.topology.right( e1 ) );
+            };
+        }
         subdivideMesh( mesh, ss );
         if ( !reportProgress( params.cb, 0.25f ) )
             return unexpectedOperationCanceled();
@@ -193,6 +202,9 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         if ( !keepGoing )
             return unexpectedOperationCanceled();
     }
+
+    if ( params.region )
+        regionCpy.resize( mesh.topology.faceSize(), false );
 
     extendAndFillAllHoles( mesh, bottomExtension, Vector3f::plusZ() );
     makeZThickAtLeast( mesh, voxelSize, Vector3f::plusZ() );

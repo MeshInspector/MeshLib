@@ -307,7 +307,7 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
     VertScalars a( verts.find_last() + 1 );
     BitSetParallelFor( verts, [&]( VertId v )
     {
-        a[v] = mesh.dblArea( v );
+        a[v] = dblArea( topology, points, v );
     } );
     double sumArea = 0;
     for ( auto v : verts )
@@ -328,9 +328,9 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
             ( i + 1 ) * settings.pressure / settings.iterations : settings.pressure;
         BitSetParallelFor( verts, [&]( VertId v )
         {
-            vertShifts[v] = currPressure * a[v] * mesh.normal( v );
+            vertShifts[v] = currPressure * a[v] * normal( topology, points, v );
         } );
-        positionVertsSmoothlySharpBd( mesh, verts, &vertShifts );
+        positionVertsSmoothlySharpBd( topology, points, verts, &vertShifts );
     }
 }
 

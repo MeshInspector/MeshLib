@@ -204,6 +204,14 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
         auto* url = [dialog URL];
         results.emplace_back( fromNSURL( url ) );
     }
+    if ( results.empty() )
+        return results;
+
+    const auto currentDir = params.folderDialog ? results.front() : results.front().parent_path();
+    [[maybe_unused]] std::error_code ec;
+    assert( is_directory( currentDir, ec ) );
+    setCurrentFolder( utf8string( currentDir ) );
+
     return results;
 }
 

@@ -10,7 +10,7 @@
 #include "MRMesh/MRPointsInBall.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

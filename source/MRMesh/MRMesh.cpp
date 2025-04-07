@@ -761,16 +761,7 @@ float Mesh::leftCotan( EdgeId e ) const
 {
     if ( !topology.left( e ).valid() )
         return 0;
-    Vector3f p0, p1, p2;
-    getLeftTriPoints( e, p0, p1, p2 );
-    auto a = p0 - p2;
-    auto b = p1 - p2;
-    auto nom = dot( a, b );
-    auto den = cross( a, b ).length();
-    static constexpr float maxval = 1e5f;
-    if ( fabs( nom ) >= maxval * den )
-        return maxval * sgn( nom );
-    return nom / den;
+    return MR::cotan( getLeftTriPoints( e ) );
 }
 
 QuadraticForm3f Mesh::quadraticForm( VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const

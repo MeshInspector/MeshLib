@@ -165,6 +165,13 @@ template<typename T>
 
 /// computes twice the area of given triangle
 template<typename T>
+[[nodiscard]] inline T dblArea( const Triangle3<T> & t )
+{
+    return dirDblArea( t ).length();
+}
+
+/// computes twice the area of given triangle
+template<typename T>
 [[nodiscard]] inline T dblArea( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return dirDblArea( p, q, r ).length();
@@ -322,6 +329,20 @@ template <typename T>
     if ( num <= 0 )
         return 0;
     return num / den;
+}
+
+/// given triangle by its three vertices: t[0], t[1], t[2],
+/// returns the cotangent of the angle at t[2], but not larger by magnitude than absMaxVal
+template <typename T>
+[[nodiscard]] inline T cotan( const Triangle3<T> & t, T absMaxVal = std::numeric_limits<T>::max() )
+{
+    auto a = t[0] - t[2];
+    auto b = t[1] - t[2];
+    auto nom = dot( a, b );
+    auto den = cross( a, b ).length();
+    if ( fabs( nom ) >= absMaxVal * den )
+        return absMaxVal * sgn( nom );
+    return nom / den;
 }
 
 /// given (a, b, c) - the side lengths of a triangle,

@@ -830,6 +830,18 @@ bool isDicomFolder( const std::filesystem::path& dirPath )
     return false;
 }
 
+std::vector<std::filesystem::path> findDicomFoldersRecursively( const std::filesystem::path& path )
+{
+    std::vector<std::filesystem::path> res;
+    std::error_code ec;
+    for ( auto entry : DirectoryRecursive{ path, ec } )
+    {
+        if ( entry.is_directory() && isDicomFolder( entry.path() ) )
+            res.push_back( entry.path() );
+    }
+    return res;
+}
+
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;

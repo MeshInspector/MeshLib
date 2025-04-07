@@ -141,7 +141,7 @@ public:
     [[nodiscard]] MRMESH_API Triangulation getTriangulation() const;
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
-    /// the vertices are returned in counter-clockwise order if look from mesh outside
+    /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
                void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }

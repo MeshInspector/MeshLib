@@ -18,28 +18,33 @@ namespace MR
 {
     MeshTopology topology;
     VertScalars field;
-    relax( topology, field );
+    relaxT( topology, field );
 }
 
-bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
+bool relax( Mesh& mesh, const MeshRelaxParams& params, const ProgressCallback& cb )
 {
-    MR_WRITER( mesh );
-    return relax( mesh.topology, mesh.points, params, cb );
+    mesh.invalidateCaches();
+    return relaxT( mesh.topology, mesh.points, params, cb );
 }
 
-Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
+bool relax( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params, const ProgressCallback& cb )
+{
+    return relaxT( topology, points, params, cb );
+}
+
+Vector3f vertexPosEqualNeiAreas( const MeshTopology& topology, const VertCoords& points, VertId v, bool noShrinkage )
 {
     // computation in doubles improves quality of the result in case of degenerate input
     SymMatrix3d mat;
     Vector3d rhs;
-    const EdgeId e0 = mesh.topology.edgeWithOrg( v );
+    const EdgeId e0 = topology.edgeWithOrg( v );
     EdgeId ei = e0;
-    EdgeId en = mesh.topology.next( ei );
-    auto pi = Vector3d( mesh.destPnt( ei ) );
-    auto pn = Vector3d( mesh.destPnt( en ) );
+    EdgeId en = topology.next( ei );
+    auto pi = Vector3d( destPnt( topology, points, ei ) );
+    auto pn = Vector3d( destPnt( topology, points, en ) );
     for (;;)
     {
-        if ( mesh.topology.left( ei ) )
+        if ( topology.left( ei ) )
         {
             const auto m = crossSquare( pn - pi );
             mat += m;
@@ -49,13 +54,13 @@ Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
             break;
         ei = en;
         pi = pn;
-        en = mesh.topology.next( ei );
-        pn = Vector3d( mesh.destPnt( en ) );
+        en = topology.next( ei );
+        pn = Vector3d( destPnt( topology, points, en ) );
     } 
 
     if ( noShrinkage )
     {
-        const auto norm = Vector3d( mesh.normal( v ) );
+        const auto norm = Vector3d( normal( topology, points, v ) );
         const auto [x,y] = norm.perpendicular();
         SymMatrix2d mat2;
         const auto mx = mat * x;
@@ -66,9 +71,9 @@ Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
         const auto det = mat2.det();
         const auto tr = mat2.trace();
         if ( DBL_EPSILON * std::abs( tr * tr ) >= std::abs( det ) )
-            return mesh.points[v]; // the linear system cannot be trusted
+            return points[v]; // the linear system cannot be trusted
 
-        const auto p0 = dot( norm, Vector3d( mesh.points[v] ) ) * norm;
+        const auto p0 = dot( norm, Vector3d( points[v] ) ) * norm;
         rhs -= mat * p0;
         Vector2d rhs2;
         rhs2.x = dot( rhs, x );
@@ -81,74 +86,84 @@ Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
     const auto det = mat.det();
     const auto tr = mat.trace();
     if ( DBL_EPSILON * std::abs( tr * tr * tr ) >= std::abs( det ) )
-        return mesh.points[v]; // the linear system cannot be trusted
+        return points[v]; // the linear system cannot be trusted
 
     return Vector3f( mat.inverse( det ) * rhs );
 }
 
-bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, ProgressCallback cb )
+Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
+{
+    return vertexPosEqualNeiAreas( mesh.topology, mesh.points, v, noShrinkage );
+}
+
+bool equalizeTriAreas( const MeshTopology& topology, VertCoords& points, const MeshEqualizeTriAreasParams& params, const ProgressCallback& cb )
 {
     assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh.points, params );
-    MR_WRITER( mesh );
+    VertLimiter limiter( points, params );
 
     VertCoords newPoints;
-    const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    const VertBitSet& zone = topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newPoints = mesh.points;
+        newPoints = points;
         if ( !BitSetParallelFor( zone, [&]( VertId v )
         {
-            auto e0 = mesh.topology.edgeWithOrg( v );
+            auto e0 = topology.edgeWithOrg( v );
             if ( !e0.valid() )
                 return;
             auto np = newPoints[v];
-            auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v, params.noShrinkage ) - np );
+            auto pushForce = params.force * ( vertexPosEqualNeiAreas( topology, points, v, params.noShrinkage ) - np );
             np += pushForce;
             newPoints[v] = limiter( v, np );
         }, internalCb ) )
             return false;
-        mesh.points.swap( newPoints );
+        points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )
-        hardSmoothTetrahedrons( mesh, params.region );
+        hardSmoothTetrahedrons( topology, points, params.region );
     return true;
 }
 
-bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
+bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, const ProgressCallback& cb )
+{
+    if ( params.iterations > 0 )
+        mesh.invalidateCaches();
+    return equalizeTriAreas( mesh.topology, mesh.points, params, cb );
+}
+
+bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params, const ProgressCallback& cb )
 {
     assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh.points, params );
-    MR_WRITER( mesh );
+    VertLimiter limiter( points, params );
 
     VertCoords newPoints;
 
-    const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    const VertBitSet& zone = topology.getVertIds( params.region );
     std::vector<Vector3f> vertPushForces( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb1 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f ) / float( params.iterations ); } );
         auto internalCb2 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ); } );
-        newPoints = mesh.points;
+        newPoints = points;
         if ( !BitSetParallelFor( zone, [&]( VertId v )
         {
             Vector3d sum;
             int count = 0;
-            for ( auto e : orgRing( mesh.topology, v ) )
+            for ( auto e : orgRing( topology, v ) )
             {
-                sum += Vector3d( mesh.points[mesh.topology.dest( e )] );
+                sum += Vector3d( points[topology.dest( e )] );
                 ++count;
             }
-            vertPushForces[v] = params.force * ( Vector3f{sum / double( count )} - mesh.points[v] );
+            vertPushForces[v] = params.force * ( Vector3f{sum / double( count )} - points[v] );
         }, internalCb1 ) )
             return false;
 
@@ -156,9 +171,9 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         {
             Vector3d sum;
             int count = 0;
-            for ( auto e : orgRing( mesh.topology, v ) )
+            for ( auto e : orgRing( topology, v ) )
             {
-                auto d = mesh.topology.dest( e );
+                auto d = topology.dest( e );
                 if ( zone.test( d ) )
                     sum += Vector3d( vertPushForces[d] );
                 ++count;
@@ -168,47 +183,53 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         }, internalCb2 ) )
             return false;
 
-        mesh.points.swap( newPoints );
+        points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )
-        hardSmoothTetrahedrons( mesh, params.region );
+        hardSmoothTetrahedrons( topology, points, params.region );
     return true;
 }
 
-bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallback cb )
+bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, const ProgressCallback& cb )
+{
+    if ( params.iterations > 0 )
+        mesh.invalidateCaches();
+    return relaxKeepVolume( mesh.topology, mesh.points, params, cb );
+}
+
+bool relaxApprox( const MeshTopology& topology, VertCoords& points, const MeshApproxRelaxParams& params, const ProgressCallback& cb )
 {
     assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh.points, params );
-    MR_WRITER( mesh );
+    VertLimiter limiter( points, params );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
-        ( float( std::sqrt( mesh.area() ) ) * 1e-3f ) : params.surfaceDilateRadius;
+        ( float( std::sqrt( area( topology, points ) ) ) * 1e-3f ) : params.surfaceDilateRadius;
 
     VertCoords newPoints;
-    const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    const VertBitSet& zone = topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newPoints = mesh.points;
+        newPoints = points;
         if ( !BitSetParallelFor( zone, [&] ( VertId v )
         {
-            auto e0 = mesh.topology.edgeWithOrg( v );
+            auto e0 = topology.edgeWithOrg( v );
             if ( !e0.valid() )
                 return;
-            VertBitSet neighbors( mesh.topology.lastValidVert() + 1 );
+            VertBitSet neighbors( topology.lastValidVert() + 1 );
             neighbors.set( v );
 
-            dilateRegion( mesh, neighbors, surfaceRadius );
+            dilateRegion( topology, points, neighbors, surfaceRadius );
 
             PointAccumulator accum;
             int count = 0;
             for ( auto newV : neighbors )
             {
-                Vector3d ptD = Vector3d( mesh.points[newV] );
+                Vector3d ptD = Vector3d( points[newV] );
                 accum.addPoint( ptD );
                 ++count;
             }
@@ -231,9 +252,9 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
 
                 QuadricApprox approxAccum;
                 for ( auto newV : neighbors )
-                    approxAccum.addPoint( basisInv( Vector3d( mesh.points[newV] ) ) );
+                    approxAccum.addPoint( basisInv( Vector3d( points[newV] ) ) );
 
-                auto centerPoint = basisInv( Vector3d( mesh.points[v] ) );
+                auto centerPoint = basisInv( Vector3d( points[v] ) );
                 const auto coefs = approxAccum.calcBestCoefficients();
                 centerPoint.z =
                     coefs[0] * centerPoint.x * centerPoint.x +
@@ -248,14 +269,21 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
             newPoints[v] = limiter( v, np );
         }, internalCb ) )
             return false;
-        mesh.points.swap( newPoints );
+        points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )
-        hardSmoothTetrahedrons( mesh, params.region );
+        hardSmoothTetrahedrons( topology, points, params.region );
     return true;
 }
 
-void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region )
+bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, const ProgressCallback& cb )
+{
+    if ( params.iterations > 0 )
+        mesh.invalidateCaches();
+    return relaxApprox( mesh.topology, mesh.points, params, cb );
+}
+
+void removeSpikes( const MeshTopology& topology, VertCoords& points, int maxIterations, float minSumAngle, const VertBitSet * region )
 {
     if ( maxIterations <= 0 )
         return;
@@ -264,11 +292,16 @@ void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const Vert
 
     for ( int i = 0; i < maxIterations; ++i )
     {
-        auto spikeVerts = mesh.findSpikeVertices( minSumAngle, region ).value();
-        if ( spikeVerts.count() == 0 )
+        auto spikeVerts = findSpikeVertices( topology, points, minSumAngle, region ).value();
+        if ( spikeVerts.none() )
             break;
-        relax( mesh, { { 1,&spikeVerts } } );
+        relax( topology, points, { { 1,&spikeVerts } } );
     }
+}
+
+void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region )
+{
+    return removeSpikes( mesh.topology, mesh.points, maxIterations, minSumAngle, region );
 }
 
 void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters )
@@ -400,8 +433,13 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numI
 
 void hardSmoothTetrahedrons( Mesh & mesh, const VertBitSet *region )
 {
-    MR_WRITER( mesh );
-    return hardSmoothTetrahedrons( mesh.topology, mesh.points, region );
+    mesh.invalidateCaches();
+    return hardSmoothTetrahedronsT( mesh.topology, mesh.points, region );
+}
+
+void hardSmoothTetrahedrons( const MeshTopology& topology, VertCoords& points, const VertBitSet *region )
+{
+    return hardSmoothTetrahedronsT( topology, points, region );
 }
 
 } //namespace MR

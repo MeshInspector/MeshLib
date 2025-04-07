@@ -11,7 +11,6 @@
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRSurfacePath.h"
 #include "MRMesh/MRGeodesicPath.h"
-#include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRMeshDelone.h"
 #include "MRMesh/MRMeshSubdivide.h"
 #include "MRMesh/MRMeshComponents.h"
@@ -144,7 +143,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
     m.def( "hasMultipleEdges", &MR::hasMultipleEdges,
         pybind11::arg( "topology" ), "finds multiple edges in the mesh" );
 
-    m.def( "removeSpikes", &MR::removeSpikes,
+    m.def( "removeSpikes", ( void( * )( MR::Mesh&, int, float, const MR::VertBitSet * ) ) &MR::removeSpikes,
         pybind11::arg( "mesh" ), pybind11::arg( "maxIterations" ), pybind11::arg( "minSumAngle" ), pybind11::arg( "region" ) = nullptr,
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
@@ -313,18 +312,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
         def_readwrite( "type", &MeshApproxRelaxParams::type, "" );
 
-    m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
+    m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, const ProgressCallback& ) )& relax,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
         "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
 
-    m.def( "relaxKeepVolume", &relaxKeepVolume,
+    m.def( "relaxKeepVolume", ( bool( * )( Mesh&, const MeshRelaxParams&, const ProgressCallback& ) )& relaxKeepVolume,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
         "do not really keeps volume but tries hard \n"
         "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
 
-    m.def( "relaxApprox", &relaxApprox,
+    m.def( "relaxApprox", ( bool( * )( Mesh&, const MeshApproxRelaxParams&, const ProgressCallback& ) )& relaxApprox,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshApproxRelaxParams(), "MeshApproxRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified through the params).\n"
         "The algorithm looks at approx neighborhoods to smooth the mesh\n"

@@ -12,12 +12,18 @@ namespace MR
 MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
     EdgeWeights edgeWeights = EdgeWeights::Cotan, VertexMass vmass = VertexMass::Unit,
     const VertBitSet * fixedSharpVertices = nullptr );
+MRMESH_API void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
+    EdgeWeights edgeWeights = EdgeWeights::Cotan, VertexMass vmass = VertexMass::Unit,
+    const VertBitSet * fixedSharpVertices = nullptr );
 
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
 /// \param verts must not include all vertices of a mesh connected component unless vertStabilizers are given
 /// \param vertShifts optional additional shifts of each vertex relative to smooth position
 /// \param vertStabilizers optional per-vertex stabilizers: the more the value, the bigger vertex attraction to its original position
 MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
+    const Vector<Vector3f, VertId>* vertShifts = nullptr,
+    const VertScalars* vertStabilizers = nullptr );
+MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
     const Vector<Vector3f, VertId>* vertShifts = nullptr,
     const VertScalars* vertStabilizers = nullptr );
 
@@ -44,6 +50,7 @@ struct SpacingSettings
 
 /// Moves given vertices to make the distances between them as specified
 MRMESH_API void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings );
+MRMESH_API void positionVertsWithSpacing( const MeshTopology& topology, VertCoords& points, const SpacingSettings & settings );
 
 struct InflateSettings
 {
@@ -65,5 +72,6 @@ struct InflateSettings
 /// putting given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
 /// \param verts must not include all vertices of a mesh connected component
 MRMESH_API void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings );
+MRMESH_API void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, const InflateSettings & settings );
 
 } //namespace MR

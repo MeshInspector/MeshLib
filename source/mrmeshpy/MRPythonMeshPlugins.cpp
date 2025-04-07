@@ -402,14 +402,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         value( "Unit", VertexMass::Unit, "all vertices have same mass=1" ).
         value( "Cotan", VertexMass::NeiArea, "vertex mass depends on local geometry and proportional to the area of first-ring triangles" );
 
-    m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
+    m.def( "positionVertsSmoothly", (void(*)( Mesh&, const VertBitSet&, EdgeWeights, VertexMass, const VertBitSet * )) &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ),
         pybind11::arg_v( "edgeWeights", MR::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
         pybind11::arg_v( "vmass", MR::VertexMass::Unit, "LaplacianVertexMassParam.Unit" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 
-    m.def( "positionVertsSmoothlySharpBd", &MR::positionVertsSmoothlySharpBd,
+    m.def( "positionVertsSmoothlySharpBd", (void(*)( Mesh&, const VertBitSet&, const Vector<Vector3f, VertId>*, const VertScalars* )) &MR::positionVertsSmoothlySharpBd,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "vertShifts" ) = nullptr, pybind11::arg( "vertStabilizers" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary\n"
         "\tmesh - source mesh\n"
@@ -439,7 +439,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, InflateSettings, [] ( pybind11::module_& m )
         ).
         def_readwrite( "gradualPressureGrowth", &InflateSettings::gradualPressureGrowth, "whether to increase the pressure gradually during the iterations (recommended for best quality)" );
 
-    m.def( "inflate", &MR::inflate,
+    m.def( "inflate", (void(*)( Mesh&, const VertBitSet&, const InflateSettings & )) &MR::inflate,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", InflateSettings(), "InflateSettings()" ),
         "Inflates (in one of two sides) given mesh region by"
         "putting given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary. \n"

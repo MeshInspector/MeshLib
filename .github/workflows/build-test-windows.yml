@@ -26,6 +26,10 @@ on:
         default: true
         required: false
         type: boolean
+      nuget_build:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   windows-build-test:
@@ -289,7 +293,7 @@ jobs:
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Archive .NET files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: tar -a -c -f MREDist_DotNet.zip ./source/x64/Release
 
       - name: Upload Windows Binaries Archive
@@ -301,7 +305,7 @@ jobs:
           retention-days: 1
 
       - name: Upload .NET Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetArchive

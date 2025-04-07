@@ -727,9 +727,6 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
-    if ( utf8string( path.extension() ) != ".dcm" )
-        return DicomStatusEnum::Invalid;
-
     std::ifstream ifs( path, std::ios_base::binary );
 
 #ifdef __EMSCRIPTEN__
@@ -823,7 +820,7 @@ bool isDicomFolder( const std::filesystem::path& dirPath )
         {
             const auto& path = entry.path();
             const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+            if ( VoxelsLoad::isDicomFile( path ) )
                 return true;
         }
     }

@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.get-tag.outputs.tag }}
+      version_tag: ${{ steps.get-tag.outputs.version_tag }}
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' }}

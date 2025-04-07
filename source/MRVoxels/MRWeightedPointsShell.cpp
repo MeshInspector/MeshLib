@@ -7,6 +7,10 @@
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRIsNaN.h"
+#include "MRMesh/MRPointsInBall.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -65,7 +69,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
     };
 }
 
-Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParameters& params )
+Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParametersMetric& params )
 {
     MR_TIMER
 
@@ -104,14 +108,14 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
 }
 
 Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars& pointWeights,
-    const WeightedPointsShellParameters& params0 )
+                                    const WeightedPointsShellParametersMetric& params0 )
 {
     auto params = params0;
     params.dist.pointWeight = [&pointWeights]( VertId v ){ return pointWeights[v]; };
     return weightedPointsShell( cloud, params );
 }
 
-Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParameters& params )
+Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParametersMetric& params )
 {
     MR_TIMER
 
@@ -149,11 +153,85 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     return marchingCubes( weightedMeshToDistanceFunctionVolume( mesh, wp2vparams ), vmParams );
 }
 
-Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParameters& params0 )
+Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParametersMetric& params0 )
 {
     auto params = params0;
     params.dist.pointWeight = [&vertWeights]( VertId v ){ return vertWeights[v]; };
     return weightedMeshShell( mesh, params );
 }
+
+VertScalars calculateShellWeightsFromRegions(
+    const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist )
+{
+    MR_TIMER
+
+    if ( regions.empty() )
+        spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
+
+    VertBitSet allVerts;
+    for ( const auto& reg : regions )
+        allVerts |= reg.verts;
+
+    const float interRadSq = sqr( interpolationDist );
+    auto pointWeight = [&regions, &mesh, &allVerts, interRadSq] ( VertId v )
+    {
+        if ( regions.empty() )
+            return 0.f;
+        float res = 0.f;
+        size_t n = 0;
+
+        const auto pt = mesh.points[v];
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts]
+            ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
+        {
+            auto vv = found.vId;
+            for ( const auto& reg : regions )
+            {
+                if ( reg.verts.test( vv ) )
+                {
+                    res += reg.weight;
+                    n += 1;
+                }
+            }
+            if ( !allVerts.test( vv ) )
+                n += 1;
+            return Processing::Continue;
+        } );
+
+        if ( n == 0 )
+            return 0.f;
+        return res / static_cast<float>( n );
+    };
+
+    // precalculate the weights
+    VertScalars weights( mesh.topology.getValidVerts().find_last() + 1, 0 );
+    BitSetParallelFor( allVerts, [&weights, &pointWeight] ( VertId v )
+    {
+        weights[v] = pointWeight( v );
+    } );
+
+    return weights;
+}
+
+Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
+{
+    MR_TIMER
+
+    const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
+
+    DistanceFromWeightedPointsParams distParams;
+    distParams.maxWeight = 0.f;
+    for ( const auto& reg : params.regions )
+        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
+    distParams.pointWeight = [&weights] ( VertId v )
+    {
+        return weights[v];
+    };
+
+    WeightedPointsShellParametersMetric resParams{ static_cast<const WeightedPointsShellParametersBase&>( params ), distParams };
+
+    return weightedMeshShell( mesh, resParams );
+}
+
 
 } //namespace MR

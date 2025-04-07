@@ -1,10 +1,9 @@
 #pragma once
 
+#include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
-#include "MRMeshTopology.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
-#include "MRLineSegm.h"
 #include "MRSharedThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
@@ -59,170 +58,170 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API bool operator ==( const Mesh & b ) const;
 
     /// returns coordinates of the edge origin
-    [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
+    [[nodiscard]] Vector3f orgPnt( EdgeId e ) const { return MR::orgPnt( topology, points, e ); }
 
     /// returns coordinates of the edge destination
-    [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+    [[nodiscard]] Vector3f destPnt( EdgeId e ) const { return MR::destPnt( topology, points, e ); }
 
     /// returns vector equal to edge destination point minus edge origin point
-    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return MR::edgeVector( topology, points, e ); }
 
     /// returns line segment of given edge
-    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return { orgPnt( e ), destPnt( e ) }; }
+    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return MR::edgeSegment( topology, points, e ); }
 
     /// returns a point on the edge: origin point for f=0 and destination point for f=1
-    [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
+    [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return MR::edgePoint( topology, points, e, f ); }
 
     /// computes coordinates of point given as edge and relative position on it
-    [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
+    [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return MR::edgePoint( topology, points, ep ); }
 
     /// computes the center of given edge
-    [[nodiscard]] Vector3f edgeCenter( UndirectedEdgeId e ) const { return edgePoint( e, 0.5f ); }
+    [[nodiscard]] Vector3f edgeCenter( UndirectedEdgeId e ) const { return MR::edgeCenter( topology, points, e ); }
 
     /// returns three points of left face of e: v0 = orgPnt( e ), v1 = destPnt( e )
-    MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
+    void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getLeftTriPoints( topology, points, e, v0, v1, v2 ); }
 
     /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
-    void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
+    void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { return MR::getLeftTriPoints( topology, points, e, v ); }
 
     /// returns three points of left face of e: res[0] = orgPnt( e ), res[1] = destPnt( e )
-    [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { Triangle3f res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
+    [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { return MR::getLeftTriPoints( topology, points, e ); }
 
     /// returns three points of given face
-    void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { getLeftTriPoints( topology.edgeWithLeft( f ), v0, v1, v2 ); }
+    void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getTriPoints( topology, points, f, v0, v1, v2 ); }
 
     /// returns three points of given face
-    void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { getTriPoints( f, v[0], v[1], v[2] ); }
+    void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { return MR::getTriPoints( topology, points, f, v ); }
 
     /// returns three points of given face
-    [[nodiscard]] Triangle3f getTriPoints( FaceId f ) const { Triangle3f res; getTriPoints( f, res[0], res[1], res[2] ); return res; }
+    [[nodiscard]] Triangle3f getTriPoints( FaceId f ) const { return MR::getTriPoints( topology, points, f ); }
 
     /// computes coordinates of point given as face and barycentric representation
-    [[nodiscard]] MRMESH_API Vector3f triPoint( const MeshTriPoint & p ) const;
+    [[nodiscard]] Vector3f triPoint( const MeshTriPoint & p ) const { return MR::triPoint( topology, points, p ); }
 
     /// returns the centroid of given triangle
-    [[nodiscard]] MRMESH_API Vector3f triCenter( FaceId f ) const;
+    [[nodiscard]] Vector3f triCenter( FaceId f ) const { return MR::triCenter( topology, points, f ); }
 
     /// returns aspect ratio of given mesh triangle equal to the ratio of the circum-radius to twice its in-radius
-    [[nodiscard]] MRMESH_API float triangleAspectRatio( FaceId f ) const;
+    [[nodiscard]] float triangleAspectRatio( FaceId f ) const { return MR::triangleAspectRatio( topology, points, f ); }
     
     /// returns squared circumcircle diameter of given mesh triangle
-    [[nodiscard]] MRMESH_API float circumcircleDiameterSq( FaceId f ) const;
+    [[nodiscard]] float circumcircleDiameterSq( FaceId f ) const { return MR::circumcircleDiameterSq( topology, points, f ); }
 
     /// returns circumcircle diameter of given mesh triangle
-    [[nodiscard]] MRMESH_API float circumcircleDiameter( FaceId f ) const;
+    [[nodiscard]] float circumcircleDiameter( FaceId f ) const { return MR::circumcircleDiameter( topology, points, f ); }
 
     /// converts vertex into barycentric representation
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( VertId v ) const;
 
     /// converts face id and 3d point into barycentric representation
-    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( FaceId f, const Vector3f & p ) const;
+    [[nodiscard]] MeshTriPoint toTriPoint( FaceId f, const Vector3f & p ) const { return MR::toTriPoint( topology, points, f, p ); }
 
     /// converts face id and 3d point into barycentric representation
-    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const PointOnFace& p ) const;
+    [[nodiscard]] MeshTriPoint toTriPoint( const PointOnFace& p ) const { return MR::toTriPoint( topology, points, p ); }
 
     /// converts vertex into edge-point representation
     [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( VertId v ) const;
 
     /// converts edge and 3d point into edge-point representation
-    [[nodiscard]] MRMESH_API MeshEdgePoint toEdgePoint( EdgeId e, const Vector3f & p ) const;
+    [[nodiscard]] MeshEdgePoint toEdgePoint( EdgeId e, const Vector3f & p ) const { return MR::toEdgePoint( topology, points, e, p ); }
 
     /// returns one of three face vertices, closest to given point
-    [[nodiscard]] MRMESH_API VertId getClosestVertex( const PointOnFace & p ) const;
+    [[nodiscard]] VertId getClosestVertex( const PointOnFace & p ) const { return MR::getClosestVertex( topology, points, p ); }
 
     /// returns one of three face vertices, closest to given point
-    [[nodiscard]] VertId getClosestVertex( const MeshTriPoint & p ) const { return getClosestVertex( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
+    [[nodiscard]] VertId getClosestVertex( const MeshTriPoint & p ) const { return MR::getClosestVertex( topology, points, p ); }
 
     /// returns one of three face edges, closest to given point
-    [[nodiscard]] MRMESH_API UndirectedEdgeId getClosestEdge( const PointOnFace & p ) const;
+    [[nodiscard]] UndirectedEdgeId getClosestEdge( const PointOnFace & p ) const { return MR::getClosestEdge( topology, points, p ); }
 
     /// returns one of three face edges, closest to given point
-    [[nodiscard]] UndirectedEdgeId getClosestEdge( const MeshTriPoint & p ) const { return getClosestEdge( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
+    [[nodiscard]] UndirectedEdgeId getClosestEdge( const MeshTriPoint & p ) const { return MR::getClosestEdge( topology, points, p ); }
 
     /// returns Euclidean length of the edge
-    [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
+    [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return MR::edgeLength( topology, points, e ); }
 
     /// computes and returns the lengths of all edges in the mesh
-    [[nodiscard]] MRMESH_API UndirectedEdgeScalars edgeLengths() const;
+    [[nodiscard]] UndirectedEdgeScalars edgeLengths() const { return MR::edgeLengths( topology, points ); }
 
     /// returns squared Euclidean length of the edge (faster to compute than length)
-    [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return edgeVector( e ).lengthSq(); }
+    [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return MR::edgeLengthSq( topology, points, e ); }
 
     /// computes directed double area of left triangular face of given edge
-    [[nodiscard]] MRMESH_API Vector3f leftDirDblArea( EdgeId e ) const;
+    [[nodiscard]]  Vector3f leftDirDblArea( EdgeId e ) const { return MR::leftDirDblArea( topology, points, e ); }
 
     /// computes directed double area for a triangular face from its vertices
-    [[nodiscard]] Vector3f dirDblArea( FaceId f ) const { return leftDirDblArea( topology.edgeWithLeft( f ) ); }
+    [[nodiscard]] Vector3f dirDblArea( FaceId f ) const { return MR::dirDblArea( topology, points, f ); }
 
     /// returns twice the area of given face
-    [[nodiscard]] float dblArea( FaceId f ) const { return dirDblArea( f ).length(); }
+    [[nodiscard]] float dblArea( FaceId f ) const { return MR::dblArea( topology, points, f ); }
 
     /// returns the area of given face
-    [[nodiscard]] float area( FaceId f ) const { return 0.5f * dblArea( f ); }
+    [[nodiscard]] float area( FaceId f ) const { return MR::area( topology, points, f ); }
 
     /// computes the area of given face-region
-    [[nodiscard]] MRMESH_API double area( const FaceBitSet & fs ) const;
+    [[nodiscard]] double area( const FaceBitSet & fs ) const { return MR::area( topology, points, fs ); }
 
     /// computes the area of given face-region (or whole mesh)
-    [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return area( topology.getFaceIds( fs ) ); }
+    [[nodiscard]] double area( const FaceBitSet * fs = nullptr ) const { return MR::area( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region
-    [[nodiscard]] MRMESH_API Vector3d dirArea( const FaceBitSet & fs ) const;
+    [[nodiscard]] Vector3d dirArea( const FaceBitSet & fs ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of directed areas for faces from given region (or whole mesh)
-    [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return dirArea( topology.getFaceIds( fs ) ); }
+    [[nodiscard]] Vector3d dirArea( const FaceBitSet * fs = nullptr ) const { return MR::dirArea( topology, points, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-    [[nodiscard]] MRMESH_API double projArea( const Vector3f & dir, const FaceBitSet & fs ) const;
+    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet & fs ) const { return MR::projArea( topology, points, dir, fs ); }
 
     /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
-    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return projArea( dir, topology.getFaceIds( fs ) ); }
+    [[nodiscard]] double projArea( const Vector3f & dir, const FaceBitSet * fs = nullptr ) const { return MR::projArea( topology, points, dir, fs ); }
 
     /// returns volume of the object surrounded by given region (or whole mesh if (region) is nullptr);
     /// if the region has holes then each hole will be virtually filled by adding triangles for each edge and the hole's geometrical center
-    [[nodiscard]] MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
+    [[nodiscard]] double volume( const FaceBitSet* region = nullptr ) const { return MR::volume( topology, points, region ); }
 
     /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-    [[nodiscard]] MRMESH_API double holePerimiter( EdgeId e ) const;
+    [[nodiscard]] double holePerimiter( EdgeId e ) const { return MR::holePerimiter( topology, points, e ); }
 
     /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
     /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
-    [[nodiscard]] MRMESH_API Vector3d holeDirArea( EdgeId e ) const;
+    [[nodiscard]] Vector3d holeDirArea( EdgeId e ) const { return MR::holeDirArea( topology, points, e ); }
 
     /// computes unit vector that is both orthogonal to given edge and to the normal of its left triangle, the vector is directed inside left triangle
-    [[nodiscard]] MRMESH_API Vector3f leftTangent( EdgeId e ) const;
+    [[nodiscard]] Vector3f leftTangent( EdgeId e ) const { return MR::leftTangent( topology, points, e ); }
 
     /// computes triangular face normal from its vertices
-    [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
+    [[nodiscard]] Vector3f leftNormal( EdgeId e ) const { return MR::leftNormal( topology, points, e ); }
 
     /// computes triangular face normal from its vertices
-    [[nodiscard]] Vector3f normal( FaceId f ) const { return dirDblArea( f ).normalized(); }
+    [[nodiscard]] Vector3f normal( FaceId f ) const { return MR::normal( topology, points, f ); }
 
     /// computes sum of directed double areas of all triangles around given vertex
-    [[nodiscard]] MRMESH_API Vector3f dirDblArea( VertId v ) const;
+    [[nodiscard]] Vector3f dirDblArea( VertId v ) const { return MR::dirDblArea( topology, points, v ); }
 
     /// computes the length of summed directed double areas of all triangles around given vertex
-    [[nodiscard]] float dblArea( VertId v ) const { return dirDblArea( v ).length(); }
+    [[nodiscard]] float dblArea( VertId v ) const { return MR::dblArea( topology, points, v ); }
 
     /// computes normal in a vertex using sum of directed areas of neighboring triangles
-    [[nodiscard]] Vector3f normal( VertId v ) const { return dirDblArea( v ).normalized(); }
+    [[nodiscard]] Vector3f normal( VertId v ) const { return MR::normal( topology, points, v ); }
 
     /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates and normalizes again;
     /// this is the same normal as in rendering with smooth shading
-    [[nodiscard]] MRMESH_API Vector3f normal( const MeshTriPoint & p ) const;
+    [[nodiscard]] Vector3f normal( const MeshTriPoint & p ) const { return MR::normal( topology, points, p ); }
 
     /// computes angle-weighted sum of normals of incident faces of given vertex (only (region) faces will be considered);
     /// the sum is normalized before returning
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, v, region ); }
 
     /// computes normalized half sum of face normals sharing given edge (only (region) faces will be considered);
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, e, region ); }
 
     /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation
     /// as suggested in the article "Signed Distance Computation Using the Angle Weighted Pseudonormal" by J. Andreas Baerentzen and Henrik Aanaes,
     /// https://backend.orbit.dtu.dk/ws/portalfiles/portal/3977815/B_rentzen.pdf
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const { return MR::pseudonormal( topology, points, p, region ); }
 
     /// given a point (pt) in 3D and the closest point to in on mesh (proj),
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
@@ -258,53 +257,53 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API bool isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
 
     /// computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
-    [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
+    [[nodiscard]] float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::sumAngles( topology, points, v, outBoundaryVert ); }
 
     /// returns vertices where the sum of triangle angles is below given threshold
-    [[nodiscard]] MRMESH_API Expected<VertBitSet> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
+    [[nodiscard]] Expected<VertBitSet> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, const ProgressCallback& cb = {} ) const { return MR::findSpikeVertices( topology, points, minSumAngle, region, cb ); }
 
     /// given an edge between two triangular faces, computes sine of dihedral angle between them:
     /// 0 if both faces are in the same plane,
     /// positive if the faces form convex surface,
     /// negative if the faces form concave surface
-    [[nodiscard]] MRMESH_API float dihedralAngleSin( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngleSin( UndirectedEdgeId e ) const { return MR::dihedralAngleSin( topology, points, e ); }
 
     /// given an edge between two triangular faces, computes cosine of dihedral angle between them:
     /// 1 if both faces are in the same plane,
     /// 0 if the surface makes right angle turn at the edge,
     /// -1 if the faces overlap one another
-    [[nodiscard]] MRMESH_API float dihedralAngleCos( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngleCos( UndirectedEdgeId e ) const { return MR::dihedralAngleCos( topology, points, e ); }
 
     /// given an edge between two triangular faces, computes the dihedral angle between them:
     /// 0 if both faces are in the same plane,
     /// positive if the faces form convex surface,
     /// negative if the faces form concave surface;
     /// please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
-    [[nodiscard]] MRMESH_API float dihedralAngle( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngle( UndirectedEdgeId e ) const { return MR::dihedralAngle( topology, points, e ); }
 
     /// computes discrete mean curvature in given vertex, measures in length^-1;
     /// 0 for planar regions, positive for convex surface, negative for concave surface
-    [[nodiscard]] MRMESH_API float discreteMeanCurvature( VertId v ) const;
+    [[nodiscard]] float discreteMeanCurvature( VertId v ) const { return MR::discreteMeanCurvature( topology, points, v ); }
 
     /// computes discrete mean curvature in given edge, measures in length^-1;
     /// 0 for planar regions, positive for convex surface, negative for concave surface
-    [[nodiscard]] MRMESH_API float discreteMeanCurvature( UndirectedEdgeId e ) const;
+    [[nodiscard]] float discreteMeanCurvature( UndirectedEdgeId e ) const { return MR::discreteMeanCurvature( topology, points, e ); }
 
     /// computes discrete Gaussian curvature (or angle defect) at given vertex,
     /// which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
     /// optionally returns whether the vertex is on boundary
-    [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return 2 * PI_F - sumAngles( v, outBoundaryVert ); }
+    [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::discreteGaussianCurvature( topology, points, v, outBoundaryVert ); }
 
     /// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;
+    [[nodiscard]] UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const { return MR::findCreaseEdges( topology, points, angleFromPlanar ); }
 
     /// computes cotangent of the angle in the left( e ) triangle opposite to e,
     /// and returns 0 if left face does not exist
-    [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
+    [[nodiscard]] float leftCotan( EdgeId e ) const { return MR::leftCotan( topology, points, e ); }
 
     /// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
     /// consider cotangents zero for not existing triangles
-    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
+    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { return MR::cotan( topology, points, ue ); }
 
     /// computes quadratic form in the vertex as the sum of squared distances from
     /// 1) planes of adjacent triangles, with the weight equal to the angle of adjacent triangle at this vertex divided on PI in case of angleWeigted=true;
@@ -312,29 +311,29 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
         const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
-    /// passes through all valid vertices and finds the minimal bounding box containing all of them;
-    /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
-
     /// returns the bounding box containing all valid vertices (implemented via getAABBTree())
     /// this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision
     [[nodiscard]] MRMESH_API Box3f getBoundingBox() const;
+
+    /// passes through all valid vertices and finds the minimal bounding box containing all of them;
+    /// if toWorld transformation is given then returns minimal bounding box in world space
+    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
 
     /// computes average length of an edge in this mesh
-    [[nodiscard]] MRMESH_API float averageEdgeLength() const;
+    [[nodiscard]] float averageEdgeLength() const { return MR::averageEdgeLength( topology, points ); }
 
     /// computes average position of all valid mesh vertices
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+    [[nodiscard]] Vector3f findCenterFromPoints() const { return MR::findCenterFromPoints( topology, points ); }
 
     /// computes center of mass considering that density of all triangles is the same
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromFaces() const;
+    [[nodiscard]] Vector3f findCenterFromFaces() const { return MR::findCenterFromFaces( topology, points ); }
 
     /// computes bounding box and returns its center
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
+    [[nodiscard]] Vector3f findCenterFromBBox() const { return MR::findCenterFromBBox( topology, points ); }
 
     /// for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
     MRMESH_API void zeroUnusedPoints();

@@ -18,11 +18,10 @@ def make_fake_whl(dll_path : Path):
     # copy dll
     shutil.copyfile(dll_path, whl_libs_path / dll_path.name )
     # create servant files
-    wheel_file = open( whl_info_path / "WHEEL","w")
-    wheel_file.close()
-    record_file = open( whl_info_path / "RECORD","w")
-    record_file.write( "dummy.libs/" + dll_path.name )
-    record_file.close()
+    with open( whl_info_path / "WHEEL", "w" ) as wheel_file:
+        pass
+    with open( whl_info_path / "RECORD", "w" ) as record_file:
+        record_file.write( "dummy.libs/" + dll_path.name )
     # actually create whl file
     shutil.make_archive("dummy-1.0-py3-none-any","zip",whl_dir)
     os.rename("dummy-1.0-py3-none-any.zip","dummy-1.0-py3-none-any.whl")
@@ -73,8 +72,8 @@ def patch_whl(out_dir,libs_dir):
     repaired_files = []
     for repaired_wheel_file in Path(".").glob("wheelhouse/dummy-*.whl"):
         repaired_files.append(repaired_wheel_file)
-    shutil.unpack_archive(repaired_files[0],"pathced_whl","zip")
-    shutil.copytree(Path("pathced_whl") / "dummy.libs/",Path(out_dir))
+    shutil.unpack_archive(repaired_files[0],"patched_whl","zip")
+    shutil.copytree(Path("patched_whl") / "dummy.libs/",Path(out_dir))
     #clean
     shutil.rmtree("wheelhouse")
-    shutil.rmtree("pathced_whl")
+    shutil.rmtree("patched_whl")

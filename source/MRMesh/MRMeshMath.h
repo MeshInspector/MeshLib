@@ -250,4 +250,66 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
 [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTopology & topology, const VertCoords & points, const MeshTriPoint & p, const FaceBitSet * region = nullptr );
 
+/// computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
+[[nodiscard]] MRMESH_API float sumAngles( const MeshTopology & topology, const VertCoords & points, VertId v, bool * outBoundaryVert = nullptr );
+
+/// returns vertices where the sum of triangle angles is below given threshold
+[[nodiscard]] MRMESH_API Expected<VertBitSet> findSpikeVertices( const MeshTopology & topology, const VertCoords & points, float minSumAngle, const VertBitSet* region = nullptr, const ProgressCallback& cb = {} );
+
+/// given an edge between two triangular faces, computes sine of dihedral angle between them:
+/// 0 if both faces are in the same plane,
+/// positive if the faces form convex surface,
+/// negative if the faces form concave surface
+[[nodiscard]] MRMESH_API float dihedralAngleSin( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId e );
+
+/// given an edge between two triangular faces, computes cosine of dihedral angle between them:
+/// 1 if both faces are in the same plane,
+/// 0 if the surface makes right angle turn at the edge,
+/// -1 if the faces overlap one another
+[[nodiscard]] MRMESH_API float dihedralAngleCos( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId e );
+
+/// given an edge between two triangular faces, computes the dihedral angle between them:
+/// 0 if both faces are in the same plane,
+/// positive if the faces form convex surface,
+/// negative if the faces form concave surface;
+/// please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
+[[nodiscard]] MRMESH_API float dihedralAngle( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId e );
+
+/// computes discrete mean curvature in given vertex, measures in length^-1;
+/// 0 for planar regions, positive for convex surface, negative for concave surface
+[[nodiscard]] MRMESH_API float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & points, VertId v );
+
+/// computes discrete mean curvature in given edge, measures in length^-1;
+/// 0 for planar regions, positive for convex surface, negative for concave surface
+[[nodiscard]] MRMESH_API float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId e );
+
+/// computes discrete Gaussian curvature (or angle defect) at given vertex,
+/// which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
+/// optionally returns whether the vertex is on boundary
+[[nodiscard]] inline float discreteGaussianCurvature( const MeshTopology & topology, const VertCoords & points, VertId v, bool * outBoundaryVert = nullptr )
+{
+    return 2 * PI_F - sumAngles( topology, points, v, outBoundaryVert );
+}
+
+/// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar );
+
+/// computes cotangent of the angle in the left( e ) triangle opposite to e,
+/// and returns 0 if left face does not exist
+[[nodiscard]] MRMESH_API float leftCotan( const MeshTopology & topology, const VertCoords & points, EdgeId e );
+
+/// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
+/// consider cotangents zero for not existing triangles
+[[nodiscard]] inline float cotan( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue )
+{
+    EdgeId e{ ue };
+    return leftCotan( topology, points, e ) + leftCotan( topology, points, e.sym() );
+}
+
+/// computes quadratic form in the vertex as the sum of squared distances from
+/// 1) planes of adjacent triangles, with the weight equal to the angle of adjacent triangle at this vertex divided on PI in case of angleWeigted=true;
+/// 2) lines of adjacent boundary and crease edges
+[[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( const MeshTopology & topology, const VertCoords & points, VertId v, bool angleWeigted,
+    const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr );
+
 } //namespace MR

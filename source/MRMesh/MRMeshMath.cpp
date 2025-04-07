@@ -1,5 +1,6 @@
 #include "MRMeshMath.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
@@ -226,7 +227,7 @@ public:
         volume_ += y.volume_;
     }
 
-    double volume() const
+    double volume()
     {
         return volume_;
     }
@@ -264,7 +265,7 @@ public:
         volume_ += y.volume_;
     }
 
-    double volume() const
+    double volume()
     {
         return volume_;
     }
@@ -294,6 +295,37 @@ private:
     const VertCoords & points_;
     const std::vector<EdgeId>& holeRepresEdges_;
     double volume_{ 0.0 };
+};
+
+class CreaseEdgesCalc
+{
+public:
+    CreaseEdgesCalc( const MeshTopology & topology, const VertCoords & points, float critCos ) : topology_( topology ), points_( points ), critCos_( critCos ) 
+        { edges_.resize( topology_.undirectedEdgeSize() ); }
+    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), critCos_( x.critCos_ )
+        { edges_.resize( topology_.undirectedEdgeSize() ); }
+
+    void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
+
+    UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
+
+    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
+    {
+        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
+        {
+            if ( topology_.isLoneEdge( ue ) )
+                continue;
+            auto dihedralCos = dihedralAngleCos( topology_, points_, ue );
+            if ( dihedralCos <= critCos_ )
+                edges_.set( ue );
+        }
+    }
+
+private:
+    const MeshTopology & topology_;
+    const VertCoords & points_;
+    float critCos_ = 1;
+    UndirectedEdgeBitSet edges_;
 };
 
 } // anonymous namespace
@@ -428,6 +460,115 @@ Vector3f pseudonormal( const MeshTopology & topology, const VertCoords & points,
         return pseudonormal( topology, points, e.e.undirected(), region );
     assert( !region || region->test( topology.left( p.e ) ) );
     return leftNormal( topology, points, p.e );
+}
+
+float sumAngles( const MeshTopology & topology, const VertCoords & points, VertId v, bool * outBoundaryVert )
+{
+    if ( outBoundaryVert )
+        *outBoundaryVert = false;
+    float sum = 0;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        if ( topology.left( e ).valid() )
+        {
+            auto d0 = edgeVector( topology, points, e );
+            auto d1 = edgeVector( topology, points, topology.next( e ) );
+            auto angle = MR::angle( d0, d1 );
+            sum += angle;
+        }
+        else if ( outBoundaryVert )
+            *outBoundaryVert = true;
+    }
+    return sum;
+}
+
+Expected<VertBitSet> findSpikeVertices( const MeshTopology & topology, const VertCoords & points, float minSumAngle, const VertBitSet * region, ProgressCallback cb )
+{
+    MR_TIMER
+    const VertBitSet & testVerts = topology.getVertIds( region );
+    VertBitSet res( testVerts.size() );
+    auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
+    {
+        bool boundaryVert = false;
+        auto a = sumAngles( topology, points, v, &boundaryVert );
+        if ( !boundaryVert && a < minSumAngle )
+            res.set( v );
+    }, cb );
+
+    if ( !completed )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+float dihedralAngleSin( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue )
+{
+    EdgeId e{ ue };
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    return MR::dihedralAngleSin( leftNormal( topology, points, e ), leftNormal( topology, points, e.sym() ), edgeVector( topology, points, e ) );
+}
+
+float dihedralAngleCos( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue )
+{
+    EdgeId e{ ue };
+    if ( topology.isBdEdge( e ) )
+        return 1;
+    return MR::dihedralAngleCos( leftNormal( topology, points, e ), leftNormal( topology, points, e.sym() ) );
+}
+
+float dihedralAngle( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue )
+{
+    EdgeId e{ ue };
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    return MR::dihedralAngle( leftNormal( topology, points, e ), leftNormal( topology, points, e.sym() ), edgeVector( topology, points, e ) );
+}
+
+float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & points, VertId v )
+{
+    float sumArea = 0;
+    float sumAngLen = 0;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        auto l = topology.left( e );
+        if ( !l )
+            continue; // area( l ) is not defined and dihedralAngle( e ) = 0
+        sumArea += area( topology, points, l );
+        sumAngLen += dihedralAngle( topology, points, e.undirected() ) * edgeLength( topology, points, e.undirected() );
+    }
+    // sumAngLen / (2*2) because of mean curvature definition * each edge has 2 vertices,
+    // sumArea / 3 because each triangle has 3 vertices
+    return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
+}
+
+float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & points, UndirectedEdgeId ue )
+{
+    EdgeId e = ue;
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    float sumArea = area( topology, points, topology.left( e ) ) + area( topology, points, topology.right( e ) );
+    float sumAngLen = dihedralAngle( topology, points, e.undirected() ) * edgeLength( topology, points, e.undirected() );
+    // sumAngLen / 2 because of mean curvature definition,
+    // sumArea / 3 because each triangle has 3 edges
+    return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
+}
+
+UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar )
+{
+    MR_TIMER
+    assert( angleFromPlanar > 0 && angleFromPlanar < PI );
+    const float critCos = std::cos( angleFromPlanar );
+    CreaseEdgesCalc calc( topology, points, critCos );
+    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
+    return calc.takeEdges();
+}
+
+float leftCotan( const MeshTopology & topology, const VertCoords & points, EdgeId e )
+{
+    if ( !topology.left( e ).valid() )
+        return 0;
+    return MR::cotan( getLeftTriPoints( topology, points, e ) );
 }
 
 } //namespace MR

@@ -257,53 +257,53 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API bool isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
 
     /// computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
-    [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
+    [[nodiscard]] float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::sumAngles( topology, points, v, outBoundaryVert ); }
 
     /// returns vertices where the sum of triangle angles is below given threshold
-    [[nodiscard]] MRMESH_API Expected<VertBitSet> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, ProgressCallback cb = {} ) const;
+    [[nodiscard]] Expected<VertBitSet> findSpikeVertices( float minSumAngle, const VertBitSet* region = nullptr, const ProgressCallback& cb = {} ) const { return MR::findSpikeVertices( topology, points, minSumAngle, region, cb ); }
 
     /// given an edge between two triangular faces, computes sine of dihedral angle between them:
     /// 0 if both faces are in the same plane,
     /// positive if the faces form convex surface,
     /// negative if the faces form concave surface
-    [[nodiscard]] MRMESH_API float dihedralAngleSin( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngleSin( UndirectedEdgeId e ) const { return MR::dihedralAngleSin( topology, points, e ); }
 
     /// given an edge between two triangular faces, computes cosine of dihedral angle between them:
     /// 1 if both faces are in the same plane,
     /// 0 if the surface makes right angle turn at the edge,
     /// -1 if the faces overlap one another
-    [[nodiscard]] MRMESH_API float dihedralAngleCos( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngleCos( UndirectedEdgeId e ) const { return MR::dihedralAngleCos( topology, points, e ); }
 
     /// given an edge between two triangular faces, computes the dihedral angle between them:
     /// 0 if both faces are in the same plane,
     /// positive if the faces form convex surface,
     /// negative if the faces form concave surface;
     /// please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
-    [[nodiscard]] MRMESH_API float dihedralAngle( UndirectedEdgeId e ) const;
+    [[nodiscard]] float dihedralAngle( UndirectedEdgeId e ) const { return MR::dihedralAngle( topology, points, e ); }
 
     /// computes discrete mean curvature in given vertex, measures in length^-1;
     /// 0 for planar regions, positive for convex surface, negative for concave surface
-    [[nodiscard]] MRMESH_API float discreteMeanCurvature( VertId v ) const;
+    [[nodiscard]] float discreteMeanCurvature( VertId v ) const { return MR::discreteMeanCurvature( topology, points, v ); }
 
     /// computes discrete mean curvature in given edge, measures in length^-1;
     /// 0 for planar regions, positive for convex surface, negative for concave surface
-    [[nodiscard]] MRMESH_API float discreteMeanCurvature( UndirectedEdgeId e ) const;
+    [[nodiscard]] float discreteMeanCurvature( UndirectedEdgeId e ) const { return MR::discreteMeanCurvature( topology, points, e ); }
 
     /// computes discrete Gaussian curvature (or angle defect) at given vertex,
     /// which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
     /// optionally returns whether the vertex is on boundary
-    [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return 2 * PI_F - sumAngles( v, outBoundaryVert ); }
+    [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::discreteGaussianCurvature( topology, points, v, outBoundaryVert ); }
 
     /// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
-    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;
+    [[nodiscard]] UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const { return MR::findCreaseEdges( topology, points, angleFromPlanar ); }
 
     /// computes cotangent of the angle in the left( e ) triangle opposite to e,
     /// and returns 0 if left face does not exist
-    [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
+    [[nodiscard]] float leftCotan( EdgeId e ) const { return MR::leftCotan( topology, points, e ); }
 
     /// computes sum of cotangents of the angle in the left and right triangles opposite to given edge,
     /// consider cotangents zero for not existing triangles
-    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
+    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { return MR::cotan( topology, points, ue ); }
 
     /// computes quadratic form in the vertex as the sum of squared distances from
     /// 1) planes of adjacent triangles, with the weight equal to the angle of adjacent triangle at this vertex divided on PI in case of angleWeigted=true;
@@ -311,13 +311,13 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
         const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
-    /// passes through all valid vertices and finds the minimal bounding box containing all of them;
-    /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
-
     /// returns the bounding box containing all valid vertices (implemented via getAABBTree())
     /// this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision
     [[nodiscard]] MRMESH_API Box3f getBoundingBox() const;
+
+    /// passes through all valid vertices and finds the minimal bounding box containing all of them;
+    /// if toWorld transformation is given then returns minimal bounding box in world space
+    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space

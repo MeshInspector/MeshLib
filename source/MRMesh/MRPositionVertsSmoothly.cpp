@@ -14,6 +14,13 @@
 namespace MR
 {
 
+void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
+    EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
+{
+    mesh.invalidateCaches();
+    positionVertsSmoothly( mesh.topology, mesh.points, verts, edgeWeights, vmass, fixedSharpVertices );
+}
+
 void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
     EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
 {
@@ -27,11 +34,11 @@ void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, co
     laplacian.apply();
 }
 
-void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
+    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
 {
     mesh.invalidateCaches();
-    positionVertsSmoothly( mesh.topology, mesh.points, verts, edgeWeights, vmass, fixedSharpVertices );
+    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, verts, vertShifts, vertStabilizers );
 }
 
 void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
@@ -112,19 +119,18 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     }
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 {
     mesh.invalidateCaches();
-    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, verts, vertShifts, vertStabilizers );
+    positionVertsWithSpacing( mesh.topology, mesh.points, settings );
 }
 
-void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
+void positionVertsWithSpacing( const MeshTopology& topology, VertCoords& points, const SpacingSettings & settings )
 {
     MR_TIMER
     assert( settings.maxSumNegW > 0 );
 
-    const auto & verts = mesh.topology.getVertIds( settings.region );
+    const auto & verts = topology.getVertIds( settings.region );
     const auto sz = verts.count();
     if ( sz <= 0 || settings.numIters <= 0 )
         return;
@@ -133,7 +139,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     const FaceBitSet * incidentFaces = nullptr;
     if ( settings.isInverted && settings.region )
     {
-        myFaces = getIncidentFaces( mesh.topology, *settings.region );
+        myFaces = getIncidentFaces( topology, *settings.region );
         incidentFaces = &myFaces;
     }
 
@@ -155,10 +161,10 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
             double sumW = 0;
             float sumNegW = 0;
             Vector3d sumFixed;
-            for ( auto e : orgRing( mesh.topology, v ) )
+            for ( auto e : orgRing( topology, v ) )
             {
-                const auto d = mesh.topology.dest( e );
-                const auto l = ( mesh.points[v] - mesh.points[d] ).length();
+                const auto d = topology.dest( e );
+                const auto l = ( points[v] - points[d] ).length();
                 const auto t = settings.dist( e );
                 float w = 0;
                 if ( t > l )
@@ -178,13 +184,13 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 else
                 {
                     // fixed neighbor
-                    sumFixed += Vector3d( w * mesh.points[d] );
+                    sumFixed += Vector3d( w * points[d] );
                 }
             }
             auto s = settings.stabilizer;
             if ( sumNegW > settings.maxSumNegW )
                 s += sumNegW / settings.maxSumNegW;
-            sumFixed += Vector3d( s * mesh.points[v] );
+            sumFixed += Vector3d( s * points[v] );
             mTriplets.emplace_back( n, n, sumW + s );
             for ( int i = 0; i < 3; ++i )
                 rhs[i][n] = sumFixed[i];
@@ -208,7 +214,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
         n = 0;
         for ( auto v : verts )
         {
-            auto & pt = mesh.points[v];
+            auto & pt = points[v];
             pt.x = (float) sol[0][n];
             pt.y = (float) sol[1][n];
             pt.z = (float) sol[2][n];
@@ -218,17 +224,17 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
         if ( settings.isInverted )
         {
             shiftedVerts.clear();
-            shiftedVerts.resize( mesh.topology.vertSize(), false );
+            shiftedVerts.resize( topology.vertSize(), false );
             bool anyInverted = false;
-            for ( auto f : mesh.topology.getFaceIds( incidentFaces ) )
+            for ( auto f : topology.getFaceIds( incidentFaces ) )
             {
                 if ( !settings.isInverted( f ) )
                     continue;
                 anyInverted = true;
-                auto vs = mesh.topology.getTriVerts( f );
+                auto vs = topology.getTriVerts( f );
                 Triangle3f t0;
                 for ( int i = 0; i < 3; ++i )
-                    t0[i] = mesh.points[ vs[i] ];
+                    t0[i] = points[ vs[i] ];
                 auto t = makeDegenerate( t0 );
 
                 if ( settings.region )
@@ -274,10 +280,10 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 
                 for ( int i = 0; i < 3; ++i )
                 {
-                    if ( mesh.points[ vs[i] ] != t[i] )
+                    if ( points[ vs[i] ] != t[i] )
                     {
                         shiftedVerts.set( vs[i] );
-                        mesh.points[ vs[i] ] = t[i];
+                        points[ vs[i] ] = t[i];
                     }
                 }
             }
@@ -288,10 +294,16 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 MeshRelaxParams relaxParams;
                 relaxParams.region = &shiftedVerts;
                 relaxParams.force = 0.1f;
-                relax( mesh, relaxParams );
+                relax( topology, points, relaxParams );
             }
         }
     }
+}
+
+void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
+{
+    mesh.invalidateCaches();
+    inflate( mesh.topology, mesh.points, verts, settings );
 }
 
 void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, const InflateSettings & settings )
@@ -334,9 +346,4 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
     }
 }
 
-void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
-{
-    mesh.invalidateCaches();
-    inflate( mesh.topology, mesh.points, verts, settings );
-}
 } //namespace MR

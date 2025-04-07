@@ -160,31 +160,32 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeig
     return weightedMeshShell( mesh, params );
 }
 
-Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
+VertScalars calculateShellWeightsFromRegions(
+    const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist )
 {
     MR_TIMER
 
-    if ( params.regions.empty() )
+    if ( regions.empty() )
         spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
 
     VertBitSet allVerts;
-    for ( const auto& reg : params.regions )
+    for ( const auto& reg : regions )
         allVerts |= reg.verts;
 
-    const float interRadSq = sqr( params.interpolationDist );
-    auto pointWeight = [&params, &mesh, &allVerts, interRadSq] ( VertId v )
+    const float interRadSq = sqr( interpolationDist );
+    auto pointWeight = [&regions, &mesh, &allVerts, interRadSq] ( VertId v )
     {
-        if ( params.regions.empty() )
+        if ( regions.empty() )
             return 0.f;
         float res = 0.f;
         size_t n = 0;
 
         const auto pt = mesh.points[v];
-        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &params, &allVerts]
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts]
             ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
             auto vv = found.vId;
-            for ( const auto& reg : params.regions )
+            for ( const auto& reg : regions )
             {
                 if ( reg.verts.test( vv ) )
                 {
@@ -208,6 +209,15 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
     {
         weights[v] = pointWeight( v );
     } );
+
+    return weights;
+}
+
+Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
+{
+    MR_TIMER
+
+    const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 
     DistanceFromWeightedPointsParams distParams;
     distParams.maxWeight = 0.f;

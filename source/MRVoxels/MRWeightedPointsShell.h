@@ -95,6 +95,10 @@ struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParametersMetric& params );
 
+/// interpolate set of regions and assign weight to each vertex of the mesh
+MRVOXELS_API VertScalars calculateShellWeightsFromRegions(
+    const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist );
+
 /// this overload supports linear interpolation between the regions with different weight
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params );
 

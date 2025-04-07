@@ -1306,6 +1306,9 @@
     <ClInclude Include="MREdgeLengthMesh.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshMath.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2129,6 +2132,9 @@
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MREdgeLengthMesh.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshMath.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>

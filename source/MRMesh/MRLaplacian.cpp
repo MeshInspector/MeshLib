@@ -60,7 +60,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan ) 
-                w = std::clamp( cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+                w = std::clamp( cotan( topology_, points_, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
             sumWPos -= w * Vector3d( points_[d] );
@@ -74,7 +74,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
             // in updateSolver_ we build A = M_^T * M_;
             // if here we divide each row of M_ on square root of mass,
             // then M' = sqrt(Mass^-1) * M_; A = M'^T * M' = M_^T * Mass^-1 * M_
-            if ( auto d = dblArea( v ); d > 0 )
+            if ( auto d = dblArea( topology_, points_, v ); d > 0 )
                 a =  1 / std::sqrt( d );
         }
         const double rSumW = a / sumW;
@@ -298,32 +298,6 @@ void Laplacian::applyToScalar( VertScalars & scalarField )
         int mapv = freeVert2id_[v];
         scalarField[v] = float( sol[mapv] );
     }
-}
-
-Triangle3f Laplacian::getLeftTriPoints( EdgeId e ) const
-{
-    auto vs = topology_.getLeftTriVerts( e ) ;
-    return { points_[vs[0]], points_[vs[1]], points_[vs[2]] };
-}
-
-float Laplacian::leftCotan( EdgeId e ) const
-{
-    if ( !topology_.left( e ).valid() )
-        return 0;
-    return MR::cotan( getLeftTriPoints( e ) );
-}
-
-Vector3f Laplacian::dirDblArea( VertId v ) const
-{
-    Vector3f sum;
-    for ( EdgeId e : orgRing( topology_, v ) )
-    {
-        if ( topology_.left( e ).valid() )
-        {
-            sum += MR::dirDblArea( getLeftTriPoints( e ) );
-        }
-    }
-    return sum;
 }
 
 } //namespace MR

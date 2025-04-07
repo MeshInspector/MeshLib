@@ -219,78 +219,9 @@ Box3f Mesh::getBoundingBox() const
     return getAABBTree().getBoundingBox(); 
 }
 
-class FaceBoundingBoxCalc 
-{
-public:
-    FaceBoundingBoxCalc( const Mesh& mesh, const FaceBitSet& region, const AffineXf3f* toWorld ) : mesh_( mesh ), region_( region ), toWorld_( toWorld ) {}
-    FaceBoundingBoxCalc( FaceBoundingBoxCalc& x, tbb::split ) : mesh_( x.mesh_ ), region_( x.region_ ), toWorld_( x.toWorld_ ) {}
-    void join( const FaceBoundingBoxCalc & y ) { box_.include( y.box_ ); }
-
-    const Box3f & box() const { return box_; }
-
-    void operator()( const tbb::blocked_range<FaceId> & r ) 
-    {
-        for ( FaceId f = r.begin(); f < r.end(); ++f ) 
-        {
-            if ( region_.test( f ) && mesh_.topology.hasFace( f ) )
-            {
-                for ( EdgeId e : leftRing( mesh_.topology, f ) )
-                {
-                    box_.include( toWorld_ ? ( *toWorld_ )( mesh_.points[mesh_.topology.org( e )] ) : mesh_.points[mesh_.topology.org( e )] );
-                }
-            }
-        }
-    }
-            
-private:
-    const Mesh & mesh_;
-    const FaceBitSet & region_;
-    Box3f box_;
-    const AffineXf3f* toWorld_ = nullptr;
-};
-
 Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toWorld ) const
 {
-    if ( !region )
-        return computeBoundingBox( toWorld );
-
-    MR_TIMER
-    const auto lastValidFace = topology.lastValidFace();
-
-    FaceBoundingBoxCalc calc( *this, *region, toWorld );
-    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
-    return calc.box();
-}
-
-float Mesh::averageEdgeLength() const
-{
-    MR_TIMER
-    struct S
-    {
-        double sum = 0;
-        int n = 0;
-        S & operator +=( const S & b )
-        {
-            sum += b.sum;
-            n += b.n;
-            return *this;
-        }
-    };
-    S s = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() }, 1024 ), S{},
-        [&] ( const auto & range, S curr )
-        {
-            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                if ( !topology.isLoneEdge( ue ) )
-                {
-                    curr.sum += edgeLength( ue );
-                    ++curr.n;
-                }
-            return curr;
-        },
-        [] ( S a, const S & b ) { a += b; return a; }
-    );
-
-    return s.n > 0 ? float( s.sum / s.n ) : 0.0f;
+    return MR::computeBoundingBox( topology, points, region, toWorld );
 }
 
 void Mesh::zeroUnusedPoints()
@@ -699,68 +630,6 @@ void Mesh::shrinkToFit()
     MR_TIMER
     topology.shrinkToFit();
     points.vec_.shrink_to_fit();
-}
-
-Vector3f Mesh::findCenterFromPoints() const
-{
-    MR_TIMER
-    if ( topology.numValidVerts() <= 0 )
-    {
-        assert( false );
-        return {};
-    }
-    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), Vector3d{},
-    [&] ( const auto & range, Vector3d curr )
-    {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-            if ( topology.hasVert( v ) )
-                curr += Vector3d{ points[v] };
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-    return Vector3f{ sumPos / (double)topology.numValidVerts() };
-}
-
-Vector3f Mesh::findCenterFromFaces() const
-{
-    MR_TIMER
-    struct Acc
-    {
-        Vector3d areaPos;
-        double area = 0;
-        Acc operator +( const Acc & b ) const
-        {
-            return {
-                .areaPos = areaPos + b.areaPos,
-                .area = area + b.area
-            };
-        }
-    };
-    auto acc = parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Acc{},
-    [&] ( const auto & range, Acc curr )
-    {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( topology.hasFace( f ) )
-            {
-                double triArea = area( f );
-                Vector3d center( triCenter( f ) );
-                curr.area += triArea;
-                curr.areaPos += center * triArea;
-            }
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-    if ( acc.area <= 0 )
-    {
-        assert( false );
-        return {};
-    }
-    return Vector3f{ acc.areaPos / acc.area };
-}
-
-Vector3f Mesh::findCenterFromBBox() const
-{
-    return computeBoundingBox().center();
 }
 
 void Mesh::mirror( const Plane3f& plane )

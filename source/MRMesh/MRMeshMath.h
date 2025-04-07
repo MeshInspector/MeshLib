@@ -312,4 +312,20 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( const MeshTopology & topology, const VertCoords & points, VertId v, bool angleWeigted,
     const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr );
 
+/// passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
+/// if toWorld transformation is given then returns minimal bounding box in world space
+[[nodiscard]] MRMESH_API Box3f computeBoundingBox( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region, const AffineXf3f* toWorld = nullptr );
+
+/// computes average length of an edge in the mesh given by (topology, points)
+[[nodiscard]] MRMESH_API float averageEdgeLength( const MeshTopology & topology, const VertCoords & points );
+
+/// computes average position of all valid mesh vertices
+[[nodiscard]] MRMESH_API Vector3f findCenterFromPoints( const MeshTopology & topology, const VertCoords & points );
+
+/// computes center of mass considering that density of all triangles is the same
+[[nodiscard]] MRMESH_API Vector3f findCenterFromFaces( const MeshTopology & topology, const VertCoords & points );
+
+/// computes bounding box and returns its center
+[[nodiscard]] MRMESH_API Vector3f findCenterFromBBox( const MeshTopology & topology, const VertCoords & points );
+
 } //namespace MR

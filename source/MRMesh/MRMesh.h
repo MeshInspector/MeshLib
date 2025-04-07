@@ -324,16 +324,16 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
 
     /// computes average length of an edge in this mesh
-    [[nodiscard]] MRMESH_API float averageEdgeLength() const;
+    [[nodiscard]] float averageEdgeLength() const { return MR::averageEdgeLength( topology, points ); }
 
     /// computes average position of all valid mesh vertices
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+    [[nodiscard]] Vector3f findCenterFromPoints() const { return MR::findCenterFromPoints( topology, points ); }
 
     /// computes center of mass considering that density of all triangles is the same
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromFaces() const;
+    [[nodiscard]] Vector3f findCenterFromFaces() const { return MR::findCenterFromFaces( topology, points ); }
 
     /// computes bounding box and returns its center
-    [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
+    [[nodiscard]] Vector3f findCenterFromBBox() const { return MR::findCenterFromBBox( topology, points ); }
 
     /// for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
     MRMESH_API void zeroUnusedPoints();

@@ -3,6 +3,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
 #include "MRRingIterator.h"
+#include "MRComputeBoundingBox.h"
+#include "MRQuadraticForm.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -328,6 +330,37 @@ private:
     UndirectedEdgeBitSet edges_;
 };
 
+class FaceBoundingBoxCalc
+{
+public:
+    FaceBoundingBoxCalc( const MeshTopology & topology, const VertCoords & points, const FaceBitSet& region, const AffineXf3f* toWorld ) : topology_( topology ), points_( points ), region_( region ), toWorld_( toWorld ) {}
+    FaceBoundingBoxCalc( FaceBoundingBoxCalc& x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), region_( x.region_ ), toWorld_( x.toWorld_ ) {}
+    void join( const FaceBoundingBoxCalc & y ) { box_.include( y.box_ ); }
+
+    const Box3f & box() const { return box_; }
+
+    void operator()( const tbb::blocked_range<FaceId> & r ) 
+    {
+        for ( FaceId f = r.begin(); f < r.end(); ++f ) 
+        {
+            if ( region_.test( f ) && topology_.hasFace( f ) )
+            {
+                for ( EdgeId e : leftRing( topology_, f ) )
+                {
+                    box_.include( toWorld_ ? ( *toWorld_ )( points_[topology_.org( e )] ) : points_[topology_.org( e )] );
+                }
+            }
+        }
+    }
+
+private:
+    const MeshTopology & topology_;
+    const VertCoords & points_;
+    const FaceBitSet & region_;
+    Box3f box_;
+    const AffineXf3f* toWorld_ = nullptr;
+};
+
 } // anonymous namespace
 
 double volume( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region /*= nullptr */ )
@@ -343,6 +376,19 @@ double volume( const MeshTopology & topology, const VertCoords & points, const F
     parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
 
     return ( fcalc.volume() + hcalc.volume() ) / 6.0;
+}
+
+Box3f computeBoundingBox( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * region, const AffineXf3f* toWorld )
+{
+    if ( !region )
+        return computeBoundingBox( points, topology.getValidVerts(), toWorld );
+
+    MR_TIMER
+    const auto lastValidFace = topology.lastValidFace();
+
+    FaceBoundingBoxCalc calc( topology, points, *region, toWorld );
+    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    return calc.box();
 }
 
 double holePerimiter( const MeshTopology & topology, const VertCoords & points, EdgeId e0 )
@@ -482,7 +528,7 @@ float sumAngles( const MeshTopology & topology, const VertCoords & points, VertI
     return sum;
 }
 
-Expected<VertBitSet> findSpikeVertices( const MeshTopology & topology, const VertCoords & points, float minSumAngle, const VertBitSet * region, ProgressCallback cb )
+Expected<VertBitSet> findSpikeVertices( const MeshTopology & topology, const VertCoords & points, float minSumAngle, const VertBitSet * region, const ProgressCallback& cb )
 {
     MR_TIMER
     const VertBitSet & testVerts = topology.getVertIds( region );
@@ -569,6 +615,131 @@ float leftCotan( const MeshTopology & topology, const VertCoords & points, EdgeI
     if ( !topology.left( e ).valid() )
         return 0;
     return MR::cotan( getLeftTriPoints( topology, points, e ) );
+}
+
+QuadraticForm3f quadraticForm( const MeshTopology & topology, const VertCoords & points, VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases )
+{
+    QuadraticForm3f qf;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        if ( topology.isBdEdge( e, region ) || ( creases && creases->test( e ) ) )
+        {
+            // zero-length boundary edge is treated as uniform stabilizer: all shift directions are equally penalized,
+            // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
+            qf.addDistToLine( edgeVector( topology, points, e ).normalized() );
+        }
+        if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
+        {
+            if ( angleWeigted )
+            {
+                auto d0 = edgeVector( topology, points, e );
+                auto d1 = edgeVector( topology, points, topology.next( e ) );
+                auto angle = MR::angle( d0, d1 );
+                static constexpr float INV_PIF = 1 / PI_F;
+                qf.addDistToPlane( leftNormal( topology, points, e ), angle * INV_PIF );
+            }
+            else
+            {
+                // zero-area triangle is treated as no triangle with no penalty at all,
+                // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
+                qf.addDistToPlane( leftNormal( topology, points, e ) );
+            }
+        }
+    }
+    return qf;
+}
+
+float averageEdgeLength( const MeshTopology & topology, const VertCoords & points )
+{
+    MR_TIMER
+    struct S
+    {
+        double sum = 0;
+        int n = 0;
+        S & operator +=( const S & b )
+        {
+            sum += b.sum;
+            n += b.n;
+            return *this;
+        }
+    };
+    S s = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() }, 1024 ), S{},
+        [&] ( const auto & range, S curr )
+        {
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                if ( !topology.isLoneEdge( ue ) )
+                {
+                    curr.sum += edgeLength( topology, points, ue );
+                    ++curr.n;
+                }
+            return curr;
+        },
+        [] ( S a, const S & b ) { a += b; return a; }
+    );
+
+    return s.n > 0 ? float( s.sum / s.n ) : 0.0f;
+}
+
+Vector3f findCenterFromPoints( const MeshTopology & topology, const VertCoords & points )
+{
+    MR_TIMER
+    if ( topology.numValidVerts() <= 0 )
+    {
+        assert( false );
+        return {};
+    }
+    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), Vector3d{},
+    [&] ( const auto & range, Vector3d curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( topology.hasVert( v ) )
+                curr += Vector3d{ points[v] };
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    return Vector3f{ sumPos / (double)topology.numValidVerts() };
+}
+
+Vector3f findCenterFromFaces( const MeshTopology & topology, const VertCoords & points )
+{
+    MR_TIMER
+    struct Acc
+    {
+        Vector3d areaPos;
+        double area = 0;
+        Acc operator +( const Acc & b )
+        {
+            return {
+                .areaPos = areaPos + b.areaPos,
+                .area = area + b.area
+            };
+        }
+    };
+    auto acc = parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Acc{},
+    [&] ( const auto & range, Acc curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( topology.hasFace( f ) )
+            {
+                double triArea = area( topology, points, f );
+                Vector3d center( triCenter( topology, points, f ) );
+                curr.area += triArea;
+                curr.areaPos += center * triArea;
+            }
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    if ( acc.area <= 0 )
+    {
+        assert( false );
+        return {};
+    }
+    return Vector3f{ acc.areaPos / acc.area };
+}
+
+Vector3f findCenterFromBBox( const MeshTopology & topology, const VertCoords & points )
+{
+    return computeBoundingBox( points, topology.getValidVerts() ).center();
 }
 
 } //namespace MR

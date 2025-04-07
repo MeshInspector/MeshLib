@@ -30,26 +30,10 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' }}
         id: get-latest-tag
       
-      - name: Set latest version tag to ENV
-        if: ${{ github.event_name != 'workflow_dispatch' }}
-        run: |
-          version_tag=${{ steps.get-latest-tag.outputs.tag }}
-          echo ${version_tag}
-          version_tag=${version_tag%%-*}
-          echo "version_tag=${version_tag}" >> "$GITHUB_ENV"
-
-      - name: Set user provided version tag to ENV
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          version_tag=${{ inputs.version_tag }}
-          echo ${version_tag}
-          version_tag=${version_tag%%-*}
-          echo "version_tag=${version_tag}" >> "$GITHUB_ENV"
-      
       - name: Output tag from ENV
         id: get-tag
         run: |
-          version_tag=${{ env.version_tag }}
+          version_tag=${{ github.event_name == 'workflow_dispatch' && inputs.version_tag || steps.get-latest-tag.outputs.tag }}
           echo ${version_tag}
           version_tag=${version_tag%%-*}
           echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"

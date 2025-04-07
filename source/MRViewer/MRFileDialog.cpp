@@ -98,7 +98,7 @@ namespace
 {
 
 #if defined( _WIN32 )
-std::vector<std::filesystem::path> windowsDialog( const detail::FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogParameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
     //<SnippetRefCounts>

@@ -9,7 +9,6 @@
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRPointsInBall.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRParallelMinMax.h"
 
 #include <spdlog/spdlog.h>
 

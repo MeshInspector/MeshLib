@@ -14,4 +14,6 @@ struct FileDialogParameters : FileParameters
 
 MRVIEWER_API std::string getCurrentFolder( const std::filesystem::path& baseFolder = {} );
 
+MRVIEWER_API void setCurrentFolder( const std::string& folder );
+
 } // namespace MR::detail

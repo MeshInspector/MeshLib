@@ -30,4 +30,10 @@ std::string getCurrentFolder( const std::filesystem::path& baseFolder )
     return utf8string( GetHomeDirectory() );
 }
 
+void setCurrentFolder( const std::string& folder )
+{
+    auto& cfg = Config::instance();
+    cfg.setJsonValue( cLastUsedDirKey, folder );
+}
+
 } // namespace MR::detail

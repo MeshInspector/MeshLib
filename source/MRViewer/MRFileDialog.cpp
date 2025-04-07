@@ -233,7 +233,7 @@ std::vector<std::filesystem::path> windowsDialog( const detail::FileDialogParame
 }
 #else
 #ifndef MRVIEWER_NO_GTK
-std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const detail::FileDialogParameters& params )
+std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const MR::detail::FileDialogParameters& params )
 {
     if ( params.folderDialog )
         return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
@@ -243,7 +243,7 @@ std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const detail:
         return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
-std::vector<std::filesystem::path> gtkDialog( const detail::FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParameters& params = {} )
 {
     // Gtk has a nasty habit of overriding the locale to "".s
     std::optional<std::string> localeStr;
@@ -298,7 +298,7 @@ std::vector<std::filesystem::path> gtkDialog( const detail::FileDialogParameters
         gtk_file_chooser_add_filter( chooser, fileFilter ); // the chooser takes ownership of the filter
     }
 
-    const auto currentFolder = detail::getCurrentFolder( params );
+    const auto currentFolder = MR::detail::getCurrentFolder( params.baseFolder );
     gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 
     if ( !params.fileName.empty() )
@@ -337,8 +337,7 @@ std::vector<std::filesystem::path> gtkDialog( const detail::FileDialogParameters
                 results.emplace_back( std::move( filepath ) );
             }
 
-            auto& cfg = MR::Config::instance();
-            cfg.setJsonValue( cLastUsedDirKey, gtk_file_chooser_get_current_folder( chooser ) );
+            MR::detail::setCurrentFolder( gtk_file_chooser_get_current_folder( chooser ) );
         }
         else if ( responseId != GTK_RESPONSE_CANCEL )
         {

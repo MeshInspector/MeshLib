@@ -18,13 +18,14 @@ MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void )
     MRFillHoleNicelyParams params;
     FillHoleNicelySettings defaultParams;
     params.triangulateParams = mrFillHoleParamsNew();
-    params.triangulateOnly = defaultParams.triangulateOnly;    
+    params.triangulateOnly = defaultParams.triangulateOnly;
     params.maxEdgeLen = defaultParams.maxEdgeLen;
     params.maxEdgeSplits = defaultParams.maxEdgeSplits;
     params.maxAngleChangeAfterFlip = defaultParams.maxAngleChangeAfterFlip;
     params.smoothCurvature = defaultParams.smoothCurvature;
     params.naturalSmooth = defaultParams.naturalSmooth;
     params.edgeWeights = (MREdgeWeights)defaultParams.edgeWeights;
+    params.vmass = (MRVertexMass)defaultParams.vmass;
 
     return params;
 }
@@ -52,6 +53,7 @@ MRFaceBitSet* mrFillHoleNicely( MRMesh* mesh_, MREdgeId holeEdge_, const MRFillH
         params.smoothCurvature = params_->smoothCurvature;
         params.naturalSmooth = params_->naturalSmooth;
         params.edgeWeights = (MR::EdgeWeights)params_->edgeWeights;
+        params.vmass = (MR::VertexMass)params_->vmass;
     }
     RETURN_NEW(fillHoleNicely( mesh, holeEdge, params ) );
 }

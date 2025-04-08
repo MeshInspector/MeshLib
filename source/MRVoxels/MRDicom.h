@@ -50,6 +50,9 @@ MRVOXELS_API DicomStatus isDicomFile( const std::filesystem::path& path, std::st
 /// check if given folder contains at least one DICOM file
 MRVOXELS_API bool isDicomFolder( const std::filesystem::path& dirPath );
 
+/// returns all the dicom folders in \p path, searching recursively
+MRVOXELS_API std::vector<std::filesystem::path> findDicomFoldersRecursively( const std::filesystem::path& path );
+
 template <typename T>
 struct DicomVolumeT
 {

@@ -4,6 +4,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRConstants.h"
+#include "MRMesh/MRExpected.h"
 #include <functional>
 
 namespace MR
@@ -20,6 +21,7 @@ namespace FixUndercuts
 //   if mesh is not closed this is used to prolong hole and make bottom
 // 
 // if voxelSize == 0.0f it will be counted automaticly
+[[deprecated( "Use fix( mesh, params )" )]]
 MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
 // Changes mesh:
@@ -32,7 +34,36 @@ MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float v
 //   if mesh is not closed this is used to prolong hole and make bottom
 // 
 // if voxelSize == 0.0f it will be counted automaticly
+[[deprecated( "Use fix( mesh, params )" )]]
 MRVOXELS_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
+
+/// Fix undercuts function paramters
+struct Params
+{
+    /// fix undercuts is performed downwards (in `-direction`)
+    Vector3f upDirection;
+    
+    /// voxel size for internal computations: lower size - better precision but more system resources required
+    float voxelSize = 0.0f;
+
+    /// minimum extension of bottom part of the mesh
+    float bottomExtension = 0.0f;
+
+    /// vertical angle of fixed undercut walls (note that this value is approximate - it defines "camera" position for internal projective transformation)
+    /// 0 - strictly vertical walls of undercuts area
+    /// positive - expanding downwards walls
+    /// negative - shrinking downwards walls
+    float wallAngle = 0.0f;
+
+    /// if set - only this region will be fixed (but still all mesh will be rebuild)
+    const FaceBitSet* region = nullptr;
+
+    ProgressCallback cb;
+};
+
+/// Fixes undercut areas by building vertical walls under it, 
+/// algorithm is performed in voxel space, so the mesh is completely rebuilt after this operation
+MRVOXELS_API Expected<void> fix( Mesh& mesh, const Params& params );
 
 // Input - undercut faces, insertion direction
 // Output - metric value

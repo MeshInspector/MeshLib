@@ -181,7 +181,7 @@ namespace MR.Test
                 objects.Add(obj);
 
                 obj.mesh = Mesh.MakeSphere(1.0f, 100);
-                obj.name = "Sphere";
+                obj.name = "LongSphereName"; // must be long enough to deactivate short string optimization (SSO) in C++
                 obj.toWorld = new AffineXf3f(Vector3f.Diagonal(-2));
                 objects.Add(obj);
 
@@ -211,7 +211,7 @@ namespace MR.Test
                     return;
 
                 Assert.That(loadedMesh.Points.Count == 100);
-                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == 0.0f);
 
                 settings.customXf = true;
@@ -237,7 +237,7 @@ namespace MR.Test
                     return;
 
                 Assert.That(loadedMesh.Points.Count == 100);
-                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == -2.0f);
 
                 loadedMesh = loadedObjs[0].mesh;

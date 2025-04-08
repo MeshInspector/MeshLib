@@ -570,6 +570,21 @@ bool dilateRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilatio
     return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
 bool erodeRegion( const Mesh& mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
@@ -583,6 +598,21 @@ bool erodeRegion( const Mesh& mesh, VertBitSet & region, float dilation, Progres
 bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
+}
+
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet & region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet & region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
 }
 
 int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,

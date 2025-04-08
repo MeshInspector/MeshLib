@@ -1,7 +1,11 @@
 [![build-test-distribute](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml?branch=master) 
+
 [![PyPI version](https://badge.fury.io/py/meshlib.svg)](https://badge.fury.io/py/meshlib)
-[![Python](https://img.shields.io/pypi/pyversions/meshlib.svg?style=plastic)](https://badge.fury.io/py/meshlib)
 [![Downloads](https://pepy.tech/badge/meshlib/month?style=flat-square)](https://pepy.tech/project/meshlib)
+[![Python](https://img.shields.io/pypi/pyversions/meshlib.svg?style=flat)](https://badge.fury.io/py/meshlib)
+
+[![NuGet Version](https://img.shields.io/nuget/v/MeshLib?label=nuget%20package&color=green)](https://www.nuget.org/packages/MeshLib)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/MeshLib?label=downloads%2Ftotal&color=blue)](https://www.nuget.org/packages/MeshLib)
 
 <p align="left">
 <picture>

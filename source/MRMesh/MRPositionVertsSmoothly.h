@@ -74,4 +74,9 @@ struct InflateSettings
 MRMESH_API void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings );
 MRMESH_API void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, const InflateSettings & settings );
 
+/// Inflates (in one of two sides) given mesh region,
+/// putting given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
+/// this function makes just 1 iteration of inflation and is used inside inflate(...)
+MRMESH_API void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, float pressure );
+
 } //namespace MR

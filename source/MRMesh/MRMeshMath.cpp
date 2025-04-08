@@ -141,6 +141,18 @@ Vector3f leftDirDblArea( const MeshTopology & topology, const VertCoords & point
     return cross( bp - ap, cp - ap );
 }
 
+Vector<Vector3f, VertId> dirDblAreas( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region )
+{
+    MR_TIMER
+    const auto & vs = topology.getVertIds( region );
+    Vector<Vector3f, VertId> res( vs.find_last() + 1 );
+    BitSetParallelFor( vs, [&]( VertId v )
+    {
+        res[v] = dirDblArea( topology, points, v );
+    } );
+    return res;
+}
+
 float triangleAspectRatio( const MeshTopology & topology, const VertCoords & points, FaceId f )
 {
     VertId a, b, c;

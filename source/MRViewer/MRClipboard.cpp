@@ -5,7 +5,7 @@
         #include <MRMesh/MRFinally.h>
         #include "MRPch/MRWinapi.h"
     #else
-        #include <clip/clip.h>
+        #include <clip.h>
     #endif
 #endif
 

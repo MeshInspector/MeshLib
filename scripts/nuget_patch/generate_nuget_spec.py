@@ -43,7 +43,7 @@ f.write('\t\t<file src="' + str(LICENSE_FILE) +'" target=""></file>\n')
 f.write('\t\t<file src="./readme_dotnet.md" target="docs/"></file>\n')
 
 def add_files(folder : Path, target):
-	for address, dirs, files in folder:
+	for address, dirs, files in os.walk(folder):
 		for file in files:
 			fname = Path(file)
 			if not fname.is_file():

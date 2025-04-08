@@ -44,6 +44,9 @@ on:
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
+      run_unity_nuget_test:
+        description: "expression to run unity-nuget-test.yml"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       test_pip_build:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}

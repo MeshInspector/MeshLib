@@ -258,10 +258,11 @@ jobs:
        run: aws s3 cp MeshLib.nupkg 's3://test-artifacts-git/MeshLib.nupkg' --quiet
 
   windows-unity-test:
+    if: ${{ needs.config.outputs.run_unity_nuget_test == 'true' }}
     needs:
-      - create-nuget-package
+      - config
       - windows-build-test
-    if: ${{ github.event_name == 'schedule' }} // triggered by schedule
+      - create-nuget-package
     uses: ./.github/workflows/unity-nuget-test.yml
 
   upload-distributions:

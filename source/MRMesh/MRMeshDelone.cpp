@@ -50,7 +50,7 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     return checkDeloneQuadrangle( Vector3d( a ), Vector3d( b ), Vector3d( c ), Vector3d( d ), double( maxAngleChange ) );
 }
 
-FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable )
+FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable, const VertBitSet* vertRegion )
 {
     if ( notFlippable && notFlippable->test( edge ) )
         return FlipEdge::Cannot;
@@ -61,6 +61,12 @@ FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitS
     VertId a, b, c, d;
     topology.getLeftTriVerts( edge, a, c, d );
     assert( a != c );
+    if ( vertRegion )
+    {
+        if ( !vertRegion->test( a ) && !vertRegion->test( c ) )
+            return FlipEdge::Cannot;
+    }
+
     b = topology.dest( topology.prev( edge ) );
     if( b == d )
         return FlipEdge::Cannot; // avoid creation of loop edges
@@ -87,7 +93,7 @@ FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitS
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
 {
-    const auto can = canFlipEdge( mesh.topology, edge, settings.region, settings.notFlippable );
+    const auto can = canFlipEdge( mesh.topology, edge, settings.region, settings.notFlippable, settings.vertRegion );
     if ( can == FlipEdge::Cannot )
         return true;
     if ( can == FlipEdge::Must )
@@ -202,7 +208,7 @@ int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& s
 
     auto checkDeloneQuadrangleInMesh = [&]( EdgeId e )
     {
-        const auto can = canFlipEdge( mesh.topology, e, settings.region, settings.notFlippable );
+        const auto can = canFlipEdge( mesh.topology, e, settings.region, settings.notFlippable, settings.vertRegion );
         if ( can == FlipEdge::Cannot )
             return true;
         if ( can == FlipEdge::Must )

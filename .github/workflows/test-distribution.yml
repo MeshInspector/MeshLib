@@ -49,10 +49,7 @@ jobs:
 
       - name: Download Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          tag: ${{inputs.release_tag}}
-          fileName: "*${{matrix.name}}-dev.deb"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
@@ -64,10 +61,7 @@ jobs:
 
       - name: Download Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          tag: ${{inputs.release_tag}}
-          fileName: "*.rpm"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*.rpm"
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
@@ -164,10 +158,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Ubuntu arm64 Release
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          tag: ${{inputs.release_tag}}
-          fileName: "*${{matrix.name}}-arm64-dev.deb"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb"
 
       - name: Install Ubuntu arm64 Release
         run: |
@@ -232,10 +223,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          tag: ${{inputs.release_tag}}
-          fileName: "*x64.pkg"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg"
 
       - name: Install Pkg
         run: |

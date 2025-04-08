@@ -31,11 +31,9 @@ bool ParallelProgressReporter::updateTask_( float delta )
     std::lock_guard lock( mutex_ );
     progress_ += delta / static_cast<float>( totalWeight_ );
     if ( mainThreadId_ == std::this_thread::get_id() )
-        return (*this)();
+        return continue_ = cb_( progress_ ); // avoid recursive lock here
     return continue_;
 }
-
-
 
 bool ParallelProgressReporter::PerTaskReporter::operator()( float p ) const
 {
@@ -43,6 +41,5 @@ bool ParallelProgressReporter::PerTaskReporter::operator()( float p ) const
     task_->progress = p;
     return res;
 }
-
 
 }

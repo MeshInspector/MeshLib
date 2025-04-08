@@ -12,7 +12,8 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
 
 WORKDIR /opt
 
-ENV VCPKG_VERSION=2025.03.19
+ARG VCPKG_VERSION=2025.03.19
+ENV VCPKG_VERSION=$VCPKG_VERSION
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
     cd vcpkg && \
     ./bootstrap-vcpkg.sh -disableMetrics
@@ -23,8 +24,9 @@ WORKDIR /opt/vcpkg
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
-ENV VCPKG_TRIPLET=x64-linux-meshlib
 
+ARG VCPKG_TRIPLET=x64-linux-meshlib
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ') && \
     rm -rf buildtrees downloads 
 
@@ -36,7 +38,7 @@ COPY --from=build /opt/vcpkg /opt/vcpkg
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
 ENV VCPKG_ROOT=/opt/vcpkg
-ENV VCPKG_TRIPLET=x64-linux-meshlib
+ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
     dnf -y install --enablerepo crb \

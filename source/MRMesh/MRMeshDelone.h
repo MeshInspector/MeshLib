@@ -19,11 +19,14 @@ struct DeloneSettings
     /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
     float criticalTriAspectRatio = FLT_MAX;
 
-    /// Region on mesh to be processed, it is constant and not updated
+    /// Only edges with left and right faces in this set can be flipped
     const FaceBitSet* region = nullptr;
 
     /// Edges specified by this bit-set will never be flipped
     const UndirectedEdgeBitSet* notFlippable = nullptr;
+
+    /// Only edges with origin or destination in this set before or after flip can be flipped
+    const VertBitSet* vertRegion = nullptr;
 };
 
 /// \defgroup MeshDeloneGroup Mesh Delone
@@ -48,7 +51,10 @@ enum class FlipEdge : int
 };
 
 /// consider topology and constraints to decide about flip possibility
-[[nodiscard]] MRMESH_API FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable );
+[[nodiscard]] MRMESH_API FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge,
+    const FaceBitSet* region = nullptr,
+    const UndirectedEdgeBitSet* notFlippable = nullptr,
+    const VertBitSet* vertRegion = nullptr );
 
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;
@@ -77,11 +83,14 @@ struct IntrinsicDeloneSettings
     /// passing positive(negative) threshold makes less(more) edges satisfy Delaunay conditions
     float threshold = 0;
 
-    /// Region on mesh to be processed, it is constant and not updated
+    /// Only edges with left and right faces in this set can be flipped
     const FaceBitSet* region = nullptr;
 
     /// Edges specified by this bit-set will never be flipped
     const UndirectedEdgeBitSet* notFlippable = nullptr;
+
+    /// Only edges with origin or destination in this set before or after flip can be flipped
+    const VertBitSet* vertRegion = nullptr;
 };
 
 /// improves mesh triangulation by performing flipping of edges to satisfy Intrinsic Delaunay local property,

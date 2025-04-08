@@ -313,12 +313,11 @@ jobs:
           fi
 
   test-distribution:
-    #if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    #needs: [ config, versioning-and-release-url, upload-distributions ]
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_id: "01234"
-      release_tag: "v1.0.0.3659"
+      release_tag: ${{ needs.config.outputs.release_tag }}
     secrets:
       GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 

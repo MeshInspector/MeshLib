@@ -6,9 +6,6 @@ on:
       release_id:
         required: true
         type: string
-      release_tag:
-        required: true
-        type: string
     secrets:
       GH_TOKEN:
         required: true

@@ -45,10 +45,10 @@ f.write('\t\t<file src="./readme_dotnet.md" target="docs/"></file>\n')
 def add_files(folder : Path, target):
 	for address, dirs, files in os.walk(folder):
 		for file in files:
-			fname = Path(file)
+			fname = Path(folder/file)
 			if not fname.is_file():
 				continue
-			f.write( '\t\t<file src="' + str(folder / file) +  '" target="' + target + '""></file>\n' )
+			f.write( '\t\t<file src="' + str(fname) +  '" target="' + target + '"></file>\n' )
 
 add_files( DOTNET_DLL_DIR, "lib/netstandard2.0/" )
 add_files( WINDOWS_RUNTIME_DIR, "runtimes/win-x64/native/" )

@@ -80,7 +80,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
-add_subdirectory(./OpenCTM ./OpenCTM)
+add_subdirectory(./OpenCTM-git ./OpenCTM)
 
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
@@ -149,8 +149,6 @@ ELSE() # not MR_EMSCRIPTEN
   set(BUILD_SHARED_LIBS ON)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip)
-  file(GLOB CLIP_HEADERS "clip/*.h")
-  install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 
   set(E57_GIT_SUBMODULE_UPDATE OFF)
   set(E57_XML_PARSER TinyXML2 CACHE STRING "")

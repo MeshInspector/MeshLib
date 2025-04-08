@@ -73,3 +73,6 @@
 [submodule "thirdparty/mrbind"]
 	path = thirdparty/mrbind
 	url = https://github.com/MeshInspector/mrbind
+[submodule "thirdparty/OpenCTM-git"]
+	path = thirdparty/OpenCTM-git
+	url = https://github.com/MeshInspector/OpenCTM.git

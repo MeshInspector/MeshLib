@@ -47,8 +47,25 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install GitHub CLI
+        run: |
+          if [ -f /etc/debian_version ]; then
+            apt-get update && apt-get install -y curl
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            apt-get update
+            apt-get install -y gh
+          elif [ -f /etc/redhat-release ]; then
+            sudo dnf install 'dnf-command(config-manager)'
+            sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+            sudo dnf install gh --repo gh-cli
+          fi
+
       - name: Download Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
@@ -61,6 +78,8 @@ jobs:
 
       - name: Download Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: gh release download ${{ inputs.release_tag }} --pattern "*.rpm"
 
       - name: Install Fedora Release
@@ -157,7 +176,18 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install GitHub CLI
+        run: |
+          apt-get update && apt-get install -y curl
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt-get update
+          apt-get install -y gh
+
       - name: Download Ubuntu arm64 Release
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb"
 
       - name: Install Ubuntu arm64 Release
@@ -223,6 +253,8 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg"
 
       - name: Install Pkg

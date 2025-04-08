@@ -69,7 +69,7 @@ jobs:
         if: ${{ matrix.os != 'fedora:39' }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
@@ -83,7 +83,7 @@ jobs:
         if: ${{ matrix.os == 'fedora:39' }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh release download ${{ inputs.release_tag }} --pattern "*.rpm"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*.rpm" --repo ${{ github.repository }}
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
@@ -191,7 +191,7 @@ jobs:
       - name: Download Ubuntu arm64 Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
         run: |
@@ -258,7 +258,7 @@ jobs:
       - name: Download Distributive
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg"
+        run: gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
 
       - name: Install Pkg
         run: |

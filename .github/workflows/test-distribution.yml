@@ -60,7 +60,7 @@ jobs:
             apt-get update
             apt-get install -y gh
           elif [ -f /etc/redhat-release ]; then
-            sudo dnf install -y 'dnf-command(config-manager)'
+            sudo dnf install -y git 'dnf-command(config-manager)'
             sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
             sudo dnf install gh -y --repo gh-cli
           fi

@@ -320,7 +320,7 @@ jobs:
       release_id: "01234"
       release_tag: "v1.0.0.3659"
     secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-dev-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),

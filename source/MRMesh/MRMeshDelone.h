@@ -61,6 +61,8 @@ enum class FlipEdge : int
 /// \return false otherwise if flipping the edge does not introduce too large surface deviation (can be returned only for inner edge of the region)
 [[nodiscard]] MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {},
     float * deviationSqAfterFlip = nullptr ); ///< squared surface deviation after flip is written here (at least when the function returns false)
+[[nodiscard]] MRMESH_API bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoords & points, EdgeId edge, const DeloneSettings& settings = {},
+    float * deviationSqAfterFlip = nullptr ); ///< squared surface deviation after flip is written here (at least when the function returns false)
 
 /// given quadrangle ABCD, selects how to best triangulate it:
 ///   false = by introducing BD diagonal and splitting ABCD on triangles ABD and DBC,
@@ -69,13 +71,15 @@ enum class FlipEdge : int
 
 /// improves mesh triangulation in a ring of vertices with common origin and represented by edge e
 MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings = {} );
+MRMESH_API void makeDeloneOriginRing( MeshTopology& topology, const VertCoords& points, EdgeId e, const DeloneSettings& settings = {} );
 
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,
 /// \return the number of flips done
 /// \param numIters Maximal iteration count
 /// \param progressCallback Callback to report algorithm progress and cancel it by user request
-MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings = {}, int numIters = 1, ProgressCallback progressCallback = {} );
+MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings = {}, int numIters = 1, const ProgressCallback& progressCallback = {} );
+MRMESH_API int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings = {}, int numIters = 1, const ProgressCallback& progressCallback = {} );
 
 struct IntrinsicDeloneSettings
 {
@@ -99,7 +103,7 @@ struct IntrinsicDeloneSettings
 /// \param numIters Maximal iteration count
 /// \param progressCallback Callback to report algorithm progress and cancel it by user request
 /// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
-MRMESH_API int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& settings = {}, int numIters = 1, ProgressCallback progressCallback = {} );
+MRMESH_API int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& settings = {}, int numIters = 1, const ProgressCallback& progressCallback = {} );
 
 /// \}
 

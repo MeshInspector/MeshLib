@@ -12,7 +12,12 @@
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRTimer.h>
 
+// MSBuild compatibility
+#if __has_include(<openctm.h>)
+#include <openctm.h>
+#else
 #include <OpenCTM/openctm.h>
+#endif
 
 #include <fstream>
 

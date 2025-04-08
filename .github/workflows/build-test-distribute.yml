@@ -313,10 +313,12 @@ jobs:
 
   test-distribution:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    needs: [ config, versioning-and-release-url, upload-distributions ]
+    needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets:
+      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-dev-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),

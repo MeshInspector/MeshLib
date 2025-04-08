@@ -3,9 +3,12 @@ name: Test Distribution
 on:
   workflow_call:
     inputs:
-      release_id:
+      release_tag:
         required: true
         type: string
+    secrets:
+      GH_TOKEN:
+        required: true
 
 jobs:
   linux-x64-test:
@@ -44,12 +47,26 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install GitHub CLI
+        run: |
+          if [ -f /etc/debian_version ]; then
+            apt-get update && apt-get install -y curl sudo
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            apt-get update
+            apt-get install -y gh
+          elif [ -f /etc/redhat-release ]; then
+            sudo dnf install -y git 'dnf-command(config-manager)'
+            sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+            sudo dnf install gh -y --repo gh-cli
+          fi
+
       - name: Download Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          releaseId: ${{inputs.release_id}}
-          fileName: "*${{matrix.name}}-dev.deb"
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
         if: ${{ matrix.os != 'fedora:39' }}
@@ -61,10 +78,9 @@ jobs:
 
       - name: Download Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          releaseId: ${{inputs.release_id}}
-          fileName: "*.rpm"
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "*.rpm" --repo ${{ github.repository }}
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:39' }}
@@ -160,11 +176,19 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install GitHub CLI
+        run: |
+          apt-get update && apt-get install -y curl sudo
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt-get update
+          apt-get install -y gh
+
       - name: Download Ubuntu arm64 Release
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          releaseId: ${{inputs.release_id}}
-          fileName: "*${{matrix.name}}-arm64-dev.deb"
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
         run: |
@@ -229,10 +253,9 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
-        with:
-          releaseId: ${{inputs.release_id}}
-          fileName: "*x64.pkg"
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "*x64.pkg" --repo ${{ github.repository }}
 
       - name: Install Pkg
         run: |

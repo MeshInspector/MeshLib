@@ -61,15 +61,18 @@ FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitS
     VertId a, b, c, d;
     topology.getLeftTriVerts( edge, a, c, d );
     assert( a != c );
-    if ( vertRegion )
-    {
-        if ( !vertRegion->test( a ) && !vertRegion->test( c ) )
-            return FlipEdge::Cannot;
-    }
-
     b = topology.dest( topology.prev( edge ) );
     if( b == d )
         return FlipEdge::Cannot; // avoid creation of loop edges
+
+    if ( vertRegion )
+    {
+        if ( !vertRegion->test( a )
+          && !vertRegion->test( b )
+          && !vertRegion->test( c )
+          && !vertRegion->test( d ) )
+            return FlipEdge::Cannot;
+    }
 
     bool edgeIsMultiple = false;
     for ( auto e : orgRing0( topology, edge ) )

@@ -576,7 +576,7 @@ void SurfaceManipulationWidget::changeSurface_()
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     for ( auto v : singleEditingRegion_ )
-        normal += mesh.normal( v );
+        normal += mesh.dirDblArea( v );
     normal = normal.normalized();
 
     auto& points = obj_->varMesh()->points;

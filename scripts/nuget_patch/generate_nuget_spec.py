@@ -11,8 +11,8 @@ VERSION = sys.argv[4][1:]
 
 SPEC_FILE = WORK_DIR / "Package.nuspec"
 LICENSE_FILE = WORK_DIR / "LICENSE"
-shutil.copy(LICENSE_FILE, str(LICENSE_FILE + ".txt") )
-LICENSE_FILE = Path( str(LICENSE_FILE + ".txt") )
+shutil.copy(LICENSE_FILE, str(LICENSE_FILE) + ".txt" )
+LICENSE_FILE = Path( str(LICENSE_FILE )+ ".txt" )
 
 COPYRIGHT_FILE = WORK_DIR / "scripts" / "copyright_header.txt"
 COPYRIGHT = open(COPYRIGHT_FILE,'r').read()[3:]
@@ -33,7 +33,7 @@ f.write('\t\t<dependencies>\n')
 f.write('\t\t\t<group targetFramework="netstandard2.0"/>\n')
 f.write('\t\t</dependencies>\n')
 f.write('\t\t<icon>images/MeshInspector_icon.png</icon>\n')
-f.write('\t\t<license type="file">' + str(LICENSE_FILE.name) + '</license>\n')
+f.write('\t\t<license type="file">' + LICENSE_FILE.name + '</license>\n')
 f.write('\t\t<readme>docs/readme_dotnet.md</readme>\n')
 f.write('\t</metadata>\n')
 

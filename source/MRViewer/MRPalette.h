@@ -86,15 +86,20 @@ public:
     MRVIEWER_API void saveCurrentToJson( Json::Value& root ) const;
 
 
-    // return color according val and setting filter type
-    // Discrete: returns color for given value
-    // Linear: get interpolated color from the init vector
-    MRVIEWER_API Color getColor( float val ) const;
+    /// return color according relative value and setting filter type
+    /// \param relativeValue - value scaled from ragne [min, max] to [0; 1]
+    /// Discrete: returns color for given value
+    /// Linear: get interpolated color from the init vector
+    MRVIEWER_API Color getColor( float relativeValue ) const;
+    /// return invalid color
+    Color getInvalidColor() const { return Color::gray(); }
 
-    const MeshTexture& getTexture() const
-    {
-        return texture_;
-    };
+    /// get colors for given vert value
+    /// \param region only these vertices will be processed
+    /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
+    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const;
+
+    const MeshTexture& getTexture() const { return texture_; };
 
     // get relative position in [0,1], where 0 is for minimum and 1 is for maximum
     MRVIEWER_API float getRelativePos( float val ) const;

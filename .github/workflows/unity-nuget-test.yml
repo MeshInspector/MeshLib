@@ -27,7 +27,7 @@ jobs:
       - name: Start Instance
         run: |
           $instanceState = aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} --query 'Reservations[].Instances[].State.Name' --output text
-          if ($instanceState -ne "running") { aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} }
+          ($instanceState -eq "stopped") { aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} }
       - name: Wait Instance
         run: |
           aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
@@ -86,6 +86,7 @@ jobs:
     if: always()
     steps:
       - name: Configure AWS Credentials (OIDC)
+        if: always()
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances

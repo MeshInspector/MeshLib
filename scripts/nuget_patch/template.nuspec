@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>MeshLib</id>
+		<version>$VERSION</version>
+		<authors>AMV Consulting</authors>
+		<owners>AMV Consulting</owners>
+		<projectUrl>https://meshlib.io</projectUrl>
+		<description>Mesh processing library</description>
+		<releaseNotes>https://github.com/MeshInspector/MeshLib/releases</releaseNotes>
+		<copyright>$COPYRIGHT</copyright>
+		<dependencies>
+			<group targetFramework="netstandard2.0"/>
+		</dependencies>
+		<icon>images/MeshInspector_icon.png</icon>
+		<license type="file">LICENSE.txt</license>
+		<readme>docs/readme_dotnet.md</readme>
+	</metadata>
+	<files>
+		<file src="./macos/MeshInspector_icon.png" target="images/"></file>
+		<file src="LICENSE.txt" target=""></file>
+		<file src="./readme_dotnet.md" target="docs/"></file>
+$FILES
+	</files>
+</package>

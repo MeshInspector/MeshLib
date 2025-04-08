@@ -208,39 +208,37 @@ jobs:
      - name: Checkout
        uses: actions/checkout@v4
 
-     - name: Download .NET Binaries Archive
+     - name: Download NuGet Windows Patch Archive
        uses: actions/download-artifact@v4
        with:
-         pattern: DotNetArchive*
+         pattern: DotNetPatchArchiveWindows*
+         path: windows_runtime
          merge-multiple: true
 
-     - name: Extract Windows Binaries
-       run: |
-         tar -xvzf MREDist_DotNet.zip
+     - name: Download NuGet Linux Patch Archive
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetPatchArchiveLinux*
+         path: linux_runtime
+         merge-multiple: true
+
+     - name: Download NuGet DLL
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetDll*
+         path: dotnet_dll
+         merge-multiple: true
 
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\generate_nuget_spec.py ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
 
      - name: Build NuGet package
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
-
-     - name: Download .NET Linux Patch Archive
-       uses: actions/download-artifact@v4
-       with:
-         pattern: DotNetPatchArchiveLinux*
-         path: linux_patch
-         merge-multiple: true
-
-     - name: Install package for Patch step
-       run: py -3 -m pip install delvewheel
-
-     - name: Patch NuGet package
-       run: py -3 scripts\nuget_patch\nuget_package_patch.py MeshLib.nupkg linux_patch
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4
@@ -367,22 +365,22 @@ jobs:
     if: always()
     continue-on-error: true
     steps:
-        # all Windows
+      # all Windows
       - name: Delete Windows Debug Install Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
-        # .NET
+      # .NET
       - name: Delete .NET Binaries Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
-          name: DotNetArchive*
+          name: DotNetDll*
           failOnError: false
-      - name: Delete .NET Linux Patches artifact
+      - name: Delete NuGet Patches artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
-          name: DotNetPatchArchiveLinux*
+          name: DotNetPatchArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution

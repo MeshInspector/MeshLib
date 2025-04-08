@@ -507,13 +507,11 @@ VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& 
 {
     MR_TIMER
 
-    VertColors result(region.find_last() + 1, Color::transparent() );
-    BitSetParallelFor( region, [&result, &values, valids, this] ( VertId v )
+    VertColors result( region.find_last() + 1, getInvalidColor() );
+    const auto& validRegion = valids ? *valids : region;
+    BitSetParallelFor( validRegion, [&result, &values, this] ( VertId v )
     {
-        if ( valids && !valids->test( v ) )
-            result[v] = getInvalidColor();
-        else
-            result[v] = getColor( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) );
+        result[v] = getColor( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) );
     } );
     return result;
 }

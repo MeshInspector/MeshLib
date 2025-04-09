@@ -153,6 +153,9 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
     return leftDirDblArea( topology, points, topology.edgeWithLeft( f ) );
 }
 
+/// computes and returns the directed double area for every (region) vertex in the mesh
+[[nodiscard]] MRMESH_API Vector<Vector3f, VertId> dirDblAreas( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region = nullptr );
+
 /// returns twice the area of given face
 [[nodiscard]] inline float dblArea( const MeshTopology & topology, const VertCoords & points, FaceId f )
 {

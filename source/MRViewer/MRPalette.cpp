@@ -503,6 +503,19 @@ Color Palette::getColor( float val ) const
     return Color();
 }
 
+VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const
+{
+    MR_TIMER
+
+    VertColors result( region.find_last() + 1, getInvalidColor() );
+    const auto& validRegion = valids ? *valids : region;
+    BitSetParallelFor( validRegion, [&result, &values, this] ( VertId v )
+    {
+        result[v] = getColor( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) );
+    } );
+    return result;
+}
+
 float Palette::getRelativePos( float val ) const
 {
     if ( parameters_.ranges.size() == 2 )
@@ -606,7 +619,7 @@ void Palette::updateDiscretizatedColors_()
 
     // add second layer with gray color for invalid values
     const auto sz = colors.size();
-    colors.resize( 2 * sz, Color::gray() );
+    colors.resize( 2 * sz, getInvalidColor() );
     texture_.resolution = { int( sz ), 2 };
 
     // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors

@@ -316,34 +316,40 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
     if ( settings.iterations <= 0 || settings.pressure == 0 )
         return;
 
-    VertScalars a( verts.find_last() + 1 );
-    BitSetParallelFor( verts, [&]( VertId v )
-    {
-        a[v] = dblArea( topology, points, v );
-    } );
-    double sumArea = 0;
-    for ( auto v : verts )
-        sumArea += a[v];
-    if ( sumArea <= 0 )
-        return;
-    float rAvgArea = float( 1 / sumArea );
-    BitSetParallelFor( verts, [&]( VertId v )
-    {
-        a[v] *= rAvgArea;
-    } );
-    // a[v] contains relative area around vertex #v in the whole region, sum(a[v]) = 1
-
-    Vector<Vector3f, VertId> vertShifts( a.size() );
     for ( int i = 0; i < settings.iterations; ++i )
     {
         const auto currPressure = settings.gradualPressureGrowth ?
             ( i + 1 ) * settings.pressure / settings.iterations : settings.pressure;
-        BitSetParallelFor( verts, [&]( VertId v )
-        {
-            vertShifts[v] = currPressure * a[v] * normal( topology, points, v );
-        } );
-        positionVertsSmoothlySharpBd( topology, points, verts, &vertShifts );
+        inflate1( topology, points, verts, currPressure );
     }
+}
+
+void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, float pressure )
+{
+    if ( pressure == 0 )
+        return positionVertsSmoothlySharpBd( topology, points, verts );
+
+    MR_TIMER
+    auto vertShifts = dirDblAreas( topology, points, &verts );
+    const double sumDblArea = parallel_deterministic_reduce( tbb::blocked_range( 0_v, vertShifts.endId(), 1024 ), 0.0,
+    [&] ( const auto & range, double curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( verts.test( v ) )
+                curr += vertShifts[v].length();
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    if ( sumDblArea <= 0 )
+        return;
+    const float k = float( pressure / sumDblArea );
+
+    BitSetParallelFor( verts, [&]( VertId v )
+    {
+        vertShifts[v] *= k;
+    } );
+    // sum( abs( vertShifts[v] ) ) = currPressure
+    positionVertsSmoothlySharpBd( topology, points, verts, &vertShifts );
 }
 
 } //namespace MR

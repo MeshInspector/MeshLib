@@ -30,7 +30,6 @@ opencascade[core]
 openctm
 openvdb
 parallel-hashmap
-python3
 spdlog
 tbb
 tiff

@@ -192,6 +192,8 @@ IF(MESHLIB_USE_VCPKG)
   set(MR_CONFIG_DIR lib/cmake/MeshLib)
   set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
   set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
+  # set rpath manually for both executables and shared libraries
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_PROJECT_NAME}")
 ELSEIF(NOT APPLE)
   include(GNUInstallDirs)
   set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")

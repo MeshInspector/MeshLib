@@ -38,6 +38,8 @@ COPY --from=build /opt/vcpkg /opt/vcpkg
 ENV MR_STATE=DOCKER_BUILD
 ENV MESHLIB_USE_VCPKG=ON
 ENV VCPKG_ROOT=/opt/vcpkg
+
+ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \

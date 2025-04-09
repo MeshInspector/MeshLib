@@ -57,6 +57,9 @@ on:
       build_enable_fedora:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-fedora == 'true' ) }}
+      build_enable_linux_vcpkg:
+        description:
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-linux-vcpkg == 'true' ) }}
       build_enable_windows:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-windows == 'true' ) }}

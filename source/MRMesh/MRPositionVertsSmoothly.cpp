@@ -326,6 +326,9 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
 
 void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, float pressure )
 {
+    if ( pressure == 0 )
+        return positionVertsSmoothlySharpBd( topology, points, verts );
+
     MR_TIMER
     auto vertShifts = dirDblAreas( topology, points, &verts );
     const double sumDblArea = parallel_deterministic_reduce( tbb::blocked_range( 0_v, vertShifts.endId(), 1024 ), 0.0,

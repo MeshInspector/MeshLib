@@ -78,7 +78,6 @@ bool fixGridByAccessor( FloatGrid& grid, openvdb::FloatGrid::Accessor onAccessor
     auto maxZ = dimsBB.max().z() - 1;
     auto minZ = dimsBB.min().z();
     auto zDims = dimsBB.max().z() - dimsBB.min().z() + 1 + zOffset;
-    float absMin = FLT_MAX;
     for ( int z = maxZ; z + zOffset > minZ; --z )
     {
         bool minZLayer = z + zOffset - 1 == minZ;
@@ -93,13 +92,15 @@ bool fixGridByAccessor( FloatGrid& grid, openvdb::FloatGrid::Accessor onAccessor
                 auto val = valAccessor.getValue( { x,y,z } );
                 if ( !minZLayer )
                 {
-                    if ( val < absMin )
-                        absMin = val;
                     if ( val < valLow )
                         valAccessor.setValue( { x,y,z - 1 }, val );
                 }
-                else if ( val < 0.0f )
-                    valAccessor.setValue( { x,y,z - 1 }, absMin );
+                else
+                {
+                    const float absLimit = 0.3f; // 30% of voxel size
+                    val = std::clamp( val, -absLimit, absLimit );
+                    valAccessor.setValue( { x,y,z - 1 }, val );
+                }
             }
         }
         if ( z % 4 == 0 && !reportProgress( cb, float( maxZ - z + 1 ) / float( zDims ) ) )

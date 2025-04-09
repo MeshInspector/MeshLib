@@ -70,27 +70,36 @@ static void makeZThickAtLeast( Mesh & mesh, float minThickness, Vector3f up )
     mesh.points = std::move( newPoints );
 }
 
-bool fixGrid( FloatGrid& grid, int zOffset, const ProgressCallback& cb )
+bool fixGridByAccessor( FloatGrid& grid, openvdb::FloatGrid::Accessor onAccessor, const openvdb::CoordBBox& dimsBB,
+    int zOffset, const ProgressCallback& cb )
 {
     MR_TIMER;
-    auto dimsBB = grid->evalActiveVoxelBoundingBox();
-    auto accessor = grid->getAccessor();
+    auto valAccessor = grid->getAccessor();
     auto maxZ = dimsBB.max().z() - 1;
+    auto minZ = dimsBB.min().z();
     auto zDims = dimsBB.max().z() - dimsBB.min().z() + 1 + zOffset;
-    for ( int z = maxZ; z + zOffset > dimsBB.min().z(); --z )
+    float absMin = FLT_MAX;
+    for ( int z = maxZ; z + zOffset > minZ; --z )
     {
+        bool minZLayer = z + zOffset - 1 == minZ;
         for ( int y = dimsBB.min().y(); y < dimsBB.max().y(); ++y )
         {
             for ( int x = dimsBB.min().x(); x < dimsBB.max().x(); ++x )
             {
-                if ( !accessor.isValueOn( {x,y,z} ) )
+                if ( !onAccessor.isValueOn( { x,y,z } ) )
                     continue;
-                accessor.setValueOn( {x,y,z - 1} );
-
-                auto valLow = accessor.getValue( {x,y,z - 1} );
-                auto val = accessor.getValue( {x,y,z} );
-                if ( val < valLow )
-                    accessor.setValue( {x,y,z - 1}, val );
+                onAccessor.setValueOn( { x,y,z - 1 } );
+                auto valLow = valAccessor.getValue( { x,y,z - 1 } );
+                auto val = valAccessor.getValue( { x,y,z } );
+                if ( !minZLayer )
+                {
+                    if ( val < absMin )
+                        absMin = val;
+                    if ( val < valLow )
+                        valAccessor.setValue( { x,y,z - 1 }, val );
+                }
+                else if ( val < 0.0f )
+                    valAccessor.setValue( { x,y,z - 1 }, absMin );
             }
         }
         if ( z % 4 == 0 && !reportProgress( cb, float( maxZ - z + 1 ) / float( zDims ) ) )
@@ -99,33 +108,14 @@ bool fixGrid( FloatGrid& grid, int zOffset, const ProgressCallback& cb )
     return true;
 }
 
+bool fixGrid( FloatGrid& grid, int zOffset, const ProgressCallback& cb )
+{
+    return fixGridByAccessor( grid, grid->getAccessor(), grid->evalActiveVoxelBoundingBox(), zOffset, cb );
+}
+
 bool fixGridFullByPart( FloatGrid& full, const FloatGrid& part, int zOffset, const ProgressCallback& cb )
 {
-    MR_TIMER;
-    auto dimsBB = part->evalActiveVoxelBoundingBox();
-    auto partAccessor = part->getAccessor();
-    auto fullAccessor = full->getAccessor();
-    auto maxZ = dimsBB.max().z() - 1;
-    auto zDims = dimsBB.max().z() - dimsBB.min().z() + 1 + zOffset;
-    for ( int z = maxZ; z + zOffset > dimsBB.min().z(); --z )
-    {
-        for ( int y = dimsBB.min().y(); y < dimsBB.max().y(); ++y )
-        {
-            for ( int x = dimsBB.min().x(); x < dimsBB.max().x(); ++x )
-            {
-                if ( !partAccessor.isValueOn( {x,y,z} ) )
-                    continue;
-                partAccessor.setValueOn( {x,y,z - 1} );
-                auto valLow = fullAccessor.getValue( {x,y,z - 1} );
-                auto val = fullAccessor.getValue( {x,y,z} );
-                if ( val < valLow )
-                    fullAccessor.setValue( {x,y,z - 1}, val );
-            }
-        }
-        if ( z % 4 == 0 && !reportProgress( cb, float( maxZ - z + 1 ) / float( zDims ) ) )
-            return false;
-    }
-    return true;
+    return fixGridByAccessor( full, part->getAccessor(), part->evalActiveVoxelBoundingBox(), zOffset, cb );
 }
 
 Expected<void> fix( Mesh& mesh, const Params& params )

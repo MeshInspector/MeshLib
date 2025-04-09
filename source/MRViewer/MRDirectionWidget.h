@@ -21,8 +21,8 @@ public:
     class ChangeDirAction : public ChangeXfAction
     {
     public:
-        ChangeDirAction( DirectionWidget& widget ) :
-            ChangeXfAction( "Change Direction", static_pointer_cast<Object>( widget.directionObj_ ) ),
+        ChangeDirAction( DirectionWidget& widget, const std::string& name = "Change Direction" ) :
+            ChangeXfAction( name, static_pointer_cast<Object>( widget.directionObj_ ) ),
             widget_{ widget },
             dir_{ widget.dir_ }
         {}

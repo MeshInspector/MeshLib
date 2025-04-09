@@ -74,7 +74,7 @@ fi
 if [ "${MESHLIB_USE_VCPKG}" == "ON" ]; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D MESHLIB_USE_VCPKG=ON \
-    -D VCPKG_TARGET_TRIPLET=x64-linux-meshlib \
+    -D VCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET} \
   "
 fi
 

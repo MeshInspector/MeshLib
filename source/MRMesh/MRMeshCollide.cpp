@@ -369,7 +369,7 @@ Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressC
 
 bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A )
 {
-    auto cols = findCollidingTriangles( a, b, rigidB2A );
+    auto cols = findCollidingTriangles( a, b, rigidB2A, true );
     if ( !cols.empty() )
         return false; // meshes intersect
 

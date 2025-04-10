@@ -15,16 +15,26 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // permute points:
     // da.y >> da.x >> db.y >> db.x > 0
 
+    // dominant permutation da.y > 0
     if ( b.x )
         return b.x < 0;
+    // permutation da.y cannot resolve the degeneration, because
+    // 1) b = 0 or
+    // 2) points 0, a, b are on the line x = 0
 
+    // dominant permutation da.x > 0
     if ( b.y )
         return b.y > 0;
+    // permutation da.x cannot resolve the degeneration, because b = 0
 
+    // dominant permutation db.y > 0
     if ( a.x )
         return a.x > 0;
+    // permutation db.y cannot resolve the degeneration, because b = 0 and a.x = 0
 
-    return a.y < 0;
+    // dominant permutation db.x > 0
+    return a.y <= 0;
+    // if a = b = 0, the previous line returns true since rotation from (da.x, da.y) to (db.x, db.y) is ccw
 }
 
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
@@ -156,7 +166,7 @@ TEST( MRMesh, PrecisePredicates2other )
     EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[3] } ) );
     EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[4] } ) );
     EXPECT_FALSE( ccw( { vs[0],vs[1],vs[5] } ) );
-    EXPECT_FALSE( ccw( { vs[0],vs[1],vs[6] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[6] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates2more )

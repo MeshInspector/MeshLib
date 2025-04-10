@@ -38,6 +38,7 @@ IF(MESHLIB_USE_VCPKG)
         # TODO: triplet for Linux and macOS
         set(VCPKG_TARGET_TRIPLET "x64-windows-meshlib" CACHE STRING "vcpkg target triplet")
     ENDIF()
+    message(STATUS "Using vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
 ELSEIF(MESHLIB_USE_VCPKG_DEFAULT)
     message(WARNING "vcpkg is disabled explicitly")
 ENDIF()

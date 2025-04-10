@@ -105,7 +105,7 @@ jobs:
       - name: Upload Timings
         uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs_${{matrix.os}}_${{matrix.config}}_${{matrix.compiler}}
+          name: Timing_Logs_linux-vcpkg_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests

@@ -66,9 +66,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                 for ( auto& c : ext )
                     c = ( char )tolower( c );
 
-                if ( ext.empty() )
-                    continue;
-
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
                 if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
                 {

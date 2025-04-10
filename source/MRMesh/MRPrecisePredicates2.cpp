@@ -5,6 +5,9 @@
 namespace MR
 {
 
+// see https://arxiv.org/pdf/math/9410209 Table 4-i:
+// a=(pi_i,1, pi_i,2)
+// b=(pi_j,1, pi_j,2)
 bool ccw( const Vector2i & a, const Vector2i & b )
 {
     if ( auto v = cross( Vector2ll{ a }, Vector2ll{ b } ) )
@@ -15,16 +18,28 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // permute points:
     // da.y >> da.x >> db.y >> db.x > 0
 
+    // the dominant permutation da.y > 0
     if ( b.x )
         return b.x < 0;
+    // permutation da.y cannot resolve the degeneration, because
+    // 1) b = 0 or
+    // 2) points 0, a, b are on the line x = 0
 
+    // next permutation da.x > 0
     if ( b.y )
         return b.y > 0;
+    // permutation da.x cannot resolve the degeneration, because b = 0
 
+    // next permutation db.y > 0
     if ( a.x )
         return a.x > 0;
+    // permutation db.y cannot resolve the degeneration, because b = 0 and a.x = 0
 
-    return a.y < 0;
+    // a = ( da.x, a.y + da.y ) ~ ( +0, a.y )
+    // b = (    0,       db.y ) ~ (  0, 1 )
+    // the smallest permutation db.x does not change anything here, and
+    // the rotation from a to b is always ccw independently on a.y sign
+    return true;
 }
 
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
@@ -141,7 +156,7 @@ TEST( MRMesh, PrecisePredicates2 )
 
 TEST( MRMesh, PrecisePredicates2other )
 {
-    std::array<PreciseVertCoords2, 7> vs =
+    std::array<PreciseVertCoords2, 9> vs =
     {
         PreciseVertCoords2{ 0_v, Vector2i{  0,  0 } },
         PreciseVertCoords2{ 1_v, Vector2i(  0,  0 ) },
@@ -150,13 +165,17 @@ TEST( MRMesh, PrecisePredicates2other )
         PreciseVertCoords2{ 4_v, Vector2i{  1,  0 } },
         PreciseVertCoords2{ 5_v, Vector2i{ -1,  0 } },
         PreciseVertCoords2{ 6_v, Vector2i{  0,  0 } },
+        PreciseVertCoords2{ 7_v, Vector2i{  0,  1 } },
+        PreciseVertCoords2{ 8_v, Vector2i{  0, -1 } }
     };
 
     EXPECT_FALSE( ccw( { vs[0],vs[1],vs[2] } ) );
     EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[3] } ) );
     EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[4] } ) );
     EXPECT_FALSE( ccw( { vs[0],vs[1],vs[5] } ) );
-    EXPECT_FALSE( ccw( { vs[0],vs[1],vs[6] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[1],vs[6] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[2],vs[7] } ) );
+    EXPECT_TRUE(  ccw( { vs[0],vs[3],vs[8] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates2more )

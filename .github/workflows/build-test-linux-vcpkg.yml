@@ -99,7 +99,7 @@ jobs:
             -DMESHLIB_PYTHON_SUPPORT=OFF
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh rockylinux9 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings

@@ -1,3 +1,7 @@
+ARG VCPKG_VERSION=2025.03.19
+ARG VCPKG_TRIPLET=x64-linux-meshlib
+
+
 FROM rockylinux:9 AS build
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
@@ -12,7 +16,7 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
 
 WORKDIR /root
 
-ARG VCPKG_VERSION=2025.03.19
+ARG VCPKG_VERSION
 ENV VCPKG_VERSION=$VCPKG_VERSION
 RUN git clone https://github.com/microsoft/vcpkg.git --branch $VCPKG_VERSION --single-branch && \
     cd vcpkg && \
@@ -25,7 +29,7 @@ COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
 
-ARG VCPKG_TRIPLET=x64-linux-meshlib
+ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 RUN ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
 RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt

@@ -114,7 +114,8 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
   IF(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip )
+    find_package(clip CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
   ENDIF()
 ELSE() # None of: MR_EMSCRIPTEN, APPLE, WIN32, vcpkg
   find_package(GDCM CONFIG REQUIRED)

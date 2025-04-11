@@ -108,7 +108,6 @@ public:
 
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
-    VisualObject* parent_;
 
     Vector3f dir_;
     Vector3f base_;
@@ -130,7 +129,8 @@ public:
     /// @param base initial base of the arrow
     /// @param length length of the arrow
     /// @param onDirectionChanged callback for the direction change
-    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, VisualObject* parent = nullptr  );
+    /// @param parent parent object for the widget, nullptr means scene root
+    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent = nullptr  );
 
     /// Removes the widget from the scene
     /// unsubscribes from viewer events
@@ -171,8 +171,8 @@ public:
     /// Returns the direction of the widget, in world space
     MRVIEWER_API Vector3f getDirection() const;
 
-    /// Returns pointer to parent object
-    MRVIEWER_API const VisualObject* getParentPtr() const;
+    /// Returns pointer to parent object, always not-null after create() and before reset()
+    MRVIEWER_API Object* getParentPtr() const;
 
     /// Block or allow mouse editing (allowed by default)
     bool isMouseBlocked() const { return blockedMouse_; }

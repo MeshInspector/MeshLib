@@ -15,6 +15,10 @@ jobs:
         with:
           ref: "master"
 
+      - name: Authenticate GitHub CLI
+        run: |
+          echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
+
       - name: Search for Tag in .github/workflows/config.yml
         id: extract-tag
         run: |
@@ -30,9 +34,6 @@ jobs:
           latest_vcpkg_tag=$(gh api repos/microsoft/vcpkg/releases/latest --jq '.tag_name' | tr -d '"')
           echo "latest_vcpkg_tag=${latest_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "latest vcpkg tag: ${latest_vcpkg_tag}"
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare Tags
         id: compare
@@ -54,10 +55,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: echo "Starting vcpkg update..."
-
-      - name: Authenticate GitHub CLI
-        run: |
-          echo "${GITHUB_TOKEN}" | gh auth login --with-token
 
       - name: Configure Git
         run: |

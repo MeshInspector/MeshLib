@@ -209,4 +209,25 @@ TEST( MRMesh, PrecisePredicates2more )
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
 }
 
+TEST( MRMesh, PrecisePredicates2InCircle )
+{
+    std::array<PreciseVertCoords2, 4> vs =
+    {
+        PreciseVertCoords2{ 4_v, Vector2i{ -244821715 , 238412152 } },
+        PreciseVertCoords2{ 3_v, Vector2i( -90205752 , 32205105 ) },
+        PreciseVertCoords2{ 0_v, Vector2i{ 244821715 , 1063004405 } },
+        PreciseVertCoords2{ 1_v, Vector2i{ -90205752 , 32205105 } }
+    };
+
+    EXPECT_TRUE( ccw( { vs[0],vs[1],vs[2] } ) );
+
+    // These 3 proves that vs[3] is inside vs[0]vs[1]vs[2] triangle
+    EXPECT_TRUE( ccw( { vs[0],vs[1],vs[3] } ) );
+    EXPECT_TRUE( ccw( { vs[1],vs[2],vs[3] } ) );
+    EXPECT_TRUE( ccw( { vs[2],vs[0],vs[3] } ) );
+
+    // This one fails
+    EXPECT_TRUE( inCircle( vs ) );
+}
+
 } //namespace MR

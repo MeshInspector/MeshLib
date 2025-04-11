@@ -55,6 +55,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
         run: echo "Starting vcpkg update..."
 
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+
       - name: Configure Git
         run: |
           git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
@@ -81,11 +85,10 @@ jobs:
         run: |
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
       
-      - name: Push branch
+      - name: Push branch using GitHub CLI
         run: |
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
-          git push origin ${new_branch}
-
+          git push --set-upstream origin ${new_branch}
+      
       - name: Create Pull Request
         run: |
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
@@ -94,3 +97,4 @@ jobs:
                        --head ${new_branch} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
+

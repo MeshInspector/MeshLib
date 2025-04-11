@@ -90,6 +90,9 @@ public:
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
     MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
+
+    void editOnlyVisibleSurface( bool edit ) { editOnlyVisibleSurface_ = edit; }
+    bool isEditOnlyVisibleSurface() const { return editOnlyVisibleSurface_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -177,6 +180,7 @@ private:
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
+    bool editOnlyVisibleSurface_ = true;
 };
 
 }

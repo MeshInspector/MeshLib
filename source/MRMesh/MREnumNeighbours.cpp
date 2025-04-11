@@ -61,10 +61,48 @@ VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float 
     {
         const auto inRange = ( start.point - mesh.points[v] ).length() <= range;
         res.set( v, inRange );
-        return inRange; // mb better <= ?
+        return inRange;
     } );
 
     return res;
+}
+
+std::pair<VertScalars, VertBitSet> findSpaceDistancesAndRegionVisible( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir )
+{
+    MR_TIMER
+
+        VertScalars resDist( mesh.topology.vertSize(), FLT_MAX );
+    VertBitSet resVerts( mesh.topology.vertSize() );
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range ) && ( dot( mesh.normal( v ), dir ) >= 0.f );
+        resDist[v] = dist;
+        resVerts.set( v, valid );
+        return valid;
+    } );
+
+    return std::pair( std::move( resDist ), std::move( resVerts ) );
+}
+
+std::pair<VertScalars, VertBitSet> findSpaceDistancesAndRegion( const Mesh& mesh, const PointOnFace& start, float range )
+{
+    MR_TIMER
+
+        VertScalars resDist( mesh.topology.vertSize(), FLT_MAX );
+    VertBitSet resVerts( mesh.topology.vertSize() );
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range );
+        resDist[v] = dist;
+        resVerts.set( v, valid );
+        return valid;
+    } );
+
+    return std::pair( std::move( resDist ), std::move( resVerts ) );
 }
 
 void EnumNeihbourFaces::run( const MeshTopology & topology, VertId start, const FacePredicate & pred )

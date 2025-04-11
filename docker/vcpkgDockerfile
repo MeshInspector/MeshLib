@@ -53,6 +53,8 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
         autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
+        $(: mrbind requirements ) \
+        llvm-devel zlib-devel \
         $(: CI environment ) \
         time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers \
         && \

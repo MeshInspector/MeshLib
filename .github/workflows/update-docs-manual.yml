@@ -54,7 +54,7 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Install mrbind
-        run: scripts/mrbind/install_mrbind_ubuntu.sh
+        run: scripts/mrbind/install_mrbind_linux.sh
 
       - name: Create virtualenv
         run: |

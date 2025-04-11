@@ -115,7 +115,7 @@ jobs:
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-          ./scripts/mrbind/install_mrbind_ubuntu.sh
+          ./scripts/mrbind/install_mrbind_linux.sh
           free -h
 
       - name: Build

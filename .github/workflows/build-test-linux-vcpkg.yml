@@ -22,6 +22,10 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
+      mrbind:
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   linux-vcpkg-build-test:
@@ -83,7 +87,20 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/mrbind thirdparty/mrbind-pybind11
+
+      - name: Install mrbind
+        if: ${{ inputs.mrbind }}
+        run: scripts/mrbind/install_mrbind_linux.sh
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -96,7 +113,6 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMESHLIB_PYTHON_SUPPORT=OFF
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg ${{matrix.config}} "${{matrix.compiler}}"

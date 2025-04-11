@@ -39,8 +39,11 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
 
     if ( c.z ) return c.z > 0;
 
+#ifndef NDEBUG
     v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
     if ( v ) return v > 0;

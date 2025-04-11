@@ -1,6 +1,7 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
 #include "MRGTest.h"
+#include "MRPrecisePredicates3.h"
 
 namespace MR
 {
@@ -66,6 +67,22 @@ bool ccw( const PreciseVertCoords2* vs )
     }
 
     return odd != ccw( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt );
+}
+
+bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
+{
+    return inCircle( vs.data() );
+}
+
+bool inCircle( const PreciseVertCoords2* vs )
+{
+    PreciseVertCoordsll vs3d[4];
+    for ( int i = 0; i < 4; ++i )
+    {
+        vs3d[i].id = vs[i].id;
+        vs3d[i].pt = Vector3ll( vs[i].pt.x, vs[i].pt.y, Vector3ll::ValueType( vs[i].pt.x ) * vs[i].pt.x + Vector3ll::ValueType( vs[i].pt.y ) * vs[i].pt.y );
+    }
+    return ccw( vs ) == orient3d( vs3d );
 }
 
 SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<PreciseVertCoords2, 4> & vs )

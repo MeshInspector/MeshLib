@@ -124,7 +124,9 @@ add_compile_definitions(Py_LIMITED_API=0x030800f0)
 add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
 
 # This affects the naming of our pybind shims.
+IF(NOT DEFINED PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE)
 add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"meshlib\")
+ENDIF()
 
 # ] --- end things for our patched pybind
 

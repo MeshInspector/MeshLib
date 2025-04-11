@@ -691,8 +691,13 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
             PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
-            editingDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-            singleEditingRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+            std::pair<VertScalars, VertBitSet> distancesAndRegion;
+            if ( editOnlyVisibleSurface_ )
+                distancesAndRegion = findSpaceDistancesAndRegionVisible( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ) );
+            else
+                distancesAndRegion = findSpaceDistancesAndRegion( mesh, pOnFace, settings_.radius );
+            editingDistanceMap_ = std::move( distancesAndRegion.first );
+            singleEditingRegion_ = std::move( distancesAndRegion.second );
         }
         else
         {
@@ -772,8 +777,14 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
             }
             pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
         }
-        visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-        visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+
+        std::pair<VertScalars, VertBitSet> distancesAndRegion;
+        if ( editOnlyVisibleSurface_ )
+            distancesAndRegion = findSpaceDistancesAndRegionVisible( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ) );
+        else
+            distancesAndRegion = findSpaceDistancesAndRegion( mesh, pOnFace, settings_.radius );
+        visualizationDistanceMap_ = std::move( distancesAndRegion.first );
+        visualizationRegion_ = std::move( distancesAndRegion.second );
         expand( mesh.topology, visualizationRegion_ );
         {
             int pointsCount = 0;

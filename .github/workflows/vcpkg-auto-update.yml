@@ -51,37 +51,46 @@ jobs:
           
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        id: bunmp-vcpkg
         env:
           GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
+        run: echo "Starting vcpkg update..."
+
+      - name: Configure Git
         run: |
           git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config --global user.name "meshinspector-bot"
-          
-          # Create new branch
+      
+      - name: Create update branch
+        run: |
           new_branch="vcpkg-update-${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
+          echo "new_branch=${new_branch}" >> $GITHUB_ENV
           git checkout -b ${new_branch}
-
-          # Search and replace in all files except /thirdparty folder
+      
+      - name: Update vcpkg tag in project files
+        run: |
           find . -type f -not -path './thirdparty*' ! -path './thirdparty/install.bat' -exec \
             sed -i 's/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g' {} +
-
+      
           sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/install.bat
 
-          # Commit the changes
+      - name: Update vcpkg tag in docker/vcpkgDockerfile
+        run: |
+          sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./docker/vcpkgDockerfile
+      
+      - name: Commit changes
+        run: |
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
-
-          # Push the changes
+      
+      - name: Push branch
+        run: |
           git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${GITHUB_TOKEN} | base64)"
           git push origin ${new_branch}
-      
-          # Create a pull request using GitHub CLI
+
+      - name: Create Pull Request
+        run: |
           gh pr create --title "Bump vcpkg to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --body "This PR updates the vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}" \
                        --base master \
                        --head ${new_branch} \
                        --label bump-vcpkg \
                        --reviewer MaxRayskiy,Grantim
-
-          
-

@@ -42,17 +42,18 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
 
-      - name: Copy nupkg from S3
-        shell: powershell
-        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
-        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg --quiet
-
       - name: rm previous data
         shell: powershell
         run: |
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
+      
+      - name: Copy nupkg from S3
+        shell: powershell
+        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
+        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg
 
       - name: Install nuget package
         shell: powershell

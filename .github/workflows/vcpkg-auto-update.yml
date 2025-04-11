@@ -49,13 +49,7 @@ jobs:
             echo "Tags are the same. No action needed."
             echo "need_vcpkg_update=false" >> $GITHUB_OUTPUT
           fi
-          
-      - name: Bump vcpkg
-        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }}
-        run: echo "Starting vcpkg update..."
-
+  
       - name: Configure Git
         run: |
           git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
@@ -82,8 +76,9 @@ jobs:
         run: |
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"
       
-      - name: Push branch using GitHub CLI
+      - name: Push branch
         run: |
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} | base64)"
           git push --set-upstream origin ${new_branch}
       
       - name: Create Pull Request

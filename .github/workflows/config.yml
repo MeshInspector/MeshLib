@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2025.03.19" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2025.04.09" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"

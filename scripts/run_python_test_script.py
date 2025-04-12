@@ -26,6 +26,16 @@ def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
                 return f"3.{minor_version}"
     return None
 
+def choco_install_python(version: str):
+    version_nodot = version.replace('.', '')  # "3.11" -> "311"
+    choco_package = f"python{version_nodot}"
+    try:
+        print(f"Installing {choco_package} via Chocolatey...")
+        subprocess.run(["choco", "install", choco_package, "-y"], check=True)
+        print(f"Successfully installed {choco_package}")
+    except subprocess.CalledProcessError:
+        print(f"Failed to install {choco_package}. Check Chocolatey setup and try again.")
+
 parser = argparse.ArgumentParser(description="Python Test Script")
 
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
@@ -41,7 +51,7 @@ parser.add_argument("-a", dest="pytest_args", type=str,
 args = parser.parse_args()
 print(args)
 
-python_cmds = ["py -3"]
+python_cmds = ["py -3.11"]
 platformSystem = platform.system()
 
 if platformSystem == 'Linux':
@@ -79,6 +89,7 @@ elif platformSystem == "Windows":
     if vcpkg_root:
         detected_version = detect_vcpkg_python_version(vcpkg_root)
         if detected_version:
+            choco_install_python(detected_version)
             python_cmds = [f"py -{detected_version}"]
 
 if args.cmd:

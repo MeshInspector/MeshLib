@@ -28,14 +28,17 @@
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.10')">
     <PythonVersion>310</PythonVersion>
+    <PythonVersionMinor>10</PythonVersionMinor>
     <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.10\</PythonIncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.11')">
     <PythonVersion>311</PythonVersion>
+    <PythonVersionMinor>11</PythonVersionMinor>
     <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.11\</PythonIncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.12')">
     <PythonVersion>312</PythonVersion>
+    <PythonVersionMinor>12</PythonVersionMinor>
     <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.12\</PythonIncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Globals">

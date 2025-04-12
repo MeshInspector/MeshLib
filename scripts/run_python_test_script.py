@@ -153,6 +153,8 @@ for py_cmd in python_cmds:
             venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:
+        if os.system(py_cmd + " -m pip install pytest numpy") != 0:
+            print("Failed to install dependencies")
         py_cmd_fixed = py_cmd
 
     print(py_cmd_fixed + " " + pytest_cmd)

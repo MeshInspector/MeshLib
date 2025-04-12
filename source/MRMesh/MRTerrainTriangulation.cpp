@@ -36,22 +36,27 @@ public:
             return;
         }
 
+        // sort by two coords (this step is needed because of not absolute `inCircle` SoS predicate)
         tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
         {
-            //return std::tuple( pts_[l].x, pts_[l].y, r ) < std::tuple( pts_[r].x, pts_[r].y, l );
-            return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } ); // use SoS based predicate
+            return std::tuple( pts_[l].x, pts_[l].y ) < std::tuple( pts_[r].x, pts_[r].y );
         } );
+        if ( !reportProgress( cb, 0.15f ) )
+        {
+            canceled_ = true;
+            return;
+        }
+        // remove same (this step is needed because of not absolute `inCircle` SoS predicate)
+        vertOrder_.vec_.erase( std::unique( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        {
+            return pts_[l] == pts_[r];
+        } ), vertOrder_.vec_.end() );
 
-        //for ( int i = 0; i + 1 < vertOrder_.size(); ++i )
-        //{
-        //    if ( pts_[vertOrder_.vec_[i]] == pts_[vertOrder_.vec_[i + 1]] )
-        //        spdlog::debug( "Same VertId {} == {}", vertOrder_.vec_[i].get(), vertOrder_.vec_[i + 1].get() );
-        //}
-
-        //vertOrder_.vec_.erase( std::unique( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
-        //{
-        //    return pts_[l] == pts_[r];
-        //} ), vertOrder_.vec_.end() );
+        // sort by SoS predicate
+        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        {
+            return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } ); // use SoS based predicate
+        } );        
 
         if ( !reportProgress( cb, 0.2f ) )
         {
@@ -72,7 +77,6 @@ public:
         if ( canceled_ )
             return {};
         seqDelaunay_( OVertId( 0 ), OVertId( vertOrder_.size() ) );
-        //recDelaunay_( OVertId( 0 ), OVertId( vertOrder_.size() ) );
         return std::move( tp_ );
     }
 private:

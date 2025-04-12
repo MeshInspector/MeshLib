@@ -59,7 +59,6 @@ elif platformSystem == "Windows":
     if vcpkg_root:
         detected_version = detect_vcpkg_python_version(vcpkg_root)
         if detected_version:
-            choco_install_python(detected_version)
             python_cmds = [f"py -{detected_version}"]
 
 if args.cmd:

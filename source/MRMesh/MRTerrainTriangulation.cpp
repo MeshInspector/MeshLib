@@ -72,10 +72,10 @@ public:
     {
         return canceled_;
     }
-    MeshTopology run()
+    MeshTopology&& run()
     {
         if ( canceled_ )
-            return {};
+            return std::move( tp_ );
         seqDelaunay_( OVertId( 0 ), OVertId( vertOrder_.size() ) );
         return std::move( tp_ );
     }
@@ -382,7 +382,7 @@ Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallb
         return unexpectedOperationCanceled();
 
     DivideConquerTriangulation::Triangulator t( std::move( p2d ), subprogress( cb, 0.1f, 1.0f ) );
-    resMesh.topology = std::move( t.run() );
+    resMesh.topology = t.run();
     if ( t.isCanceled() )
         return unexpectedOperationCanceled();
 

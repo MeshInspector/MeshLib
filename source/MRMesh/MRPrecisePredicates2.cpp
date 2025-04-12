@@ -213,12 +213,11 @@ TEST( MRMesh, PrecisePredicates2InCircle )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
-        PreciseVertCoords2{ 4_v, Vector2i{ -244821715 , 238412152 } },
-        PreciseVertCoords2{ 3_v, Vector2i( -90205752 , 32205105 ) },
-        PreciseVertCoords2{ 0_v, Vector2i{ 244821715 , 1063004405 } },
-        PreciseVertCoords2{ 1_v, Vector2i{ -90205752 , 32205105 } }
+        PreciseVertCoords2{ 3_v, Vector2i{ -1, 2 } },
+        PreciseVertCoords2{ 2_v, Vector2i( 0 , 0 ) },
+        PreciseVertCoords2{ 0_v, Vector2i{ 3, 10 } },
+        PreciseVertCoords2{ 1_v, Vector2i{ 0 , 0 } }
     };
-
     EXPECT_TRUE( ccw( { vs[0],vs[1],vs[2] } ) );
 
     // These 3 proves that vs[3] is inside vs[0]vs[1]vs[2] triangle

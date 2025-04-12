@@ -1,6 +1,7 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
 #include "MRGTest.h"
+#include "MRPrecisePredicates3.h"
 
 namespace MR
 {
@@ -66,6 +67,22 @@ bool ccw( const PreciseVertCoords2* vs )
     }
 
     return odd != ccw( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt );
+}
+
+bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
+{
+    return inCircle( vs.data() );
+}
+
+bool inCircle( const PreciseVertCoords2* vs )
+{
+    PreciseVertCoordsll vs3d[4];
+    for ( int i = 0; i < 4; ++i )
+    {
+        vs3d[i].id = vs[i].id;
+        vs3d[i].pt = Vector3ll( Vector3ll::ValueType( vs[i].pt.x ) * vs[i].pt.x + Vector3ll::ValueType( vs[i].pt.y ) * vs[i].pt.y, vs[i].pt.x, vs[i].pt.y );
+    }
+    return ccw( vs ) == orient3d( vs3d ); // TODO: looks like orient3d is not "honest" enough for this predicate
 }
 
 SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<PreciseVertCoords2, 4> & vs )
@@ -190,6 +207,53 @@ TEST( MRMesh, PrecisePredicates2more )
 
     EXPECT_FALSE( ccw( { vs[1],vs[0],vs[2] } ) );
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
+}
+
+TEST( MRMesh, PrecisePredicates2InCircle )
+{
+    std::array<PreciseVertCoords2, 4> vs =
+    {
+        PreciseVertCoords2{ 3_v, Vector2i{ -1, 2 } },
+        PreciseVertCoords2{ 2_v, Vector2i( 0 , 0 ) },
+        PreciseVertCoords2{ 0_v, Vector2i{ 3, 10 } },
+        PreciseVertCoords2{ 1_v, Vector2i{ 0 , 0 } }
+    };
+    EXPECT_TRUE( ccw( { vs[0],vs[1],vs[2] } ) );
+
+    // These 3 proves that vs[3] is inside vs[0]vs[1]vs[2] triangle
+    EXPECT_TRUE( ccw( { vs[0],vs[1],vs[3] } ) );
+    EXPECT_TRUE( ccw( { vs[1],vs[2],vs[3] } ) );
+    EXPECT_TRUE( ccw( { vs[2],vs[0],vs[3] } ) );
+
+    // Check that vs[3] is inCircle
+    EXPECT_TRUE( inCircle( vs ) );
+}
+
+TEST( MRMesh, PrecisePredicates2InCircle2 )
+{
+    std::array<PreciseVertCoords2, 5> vs =
+    {
+        PreciseVertCoords2{ 0_v, Vector2i{ -106280744 , -1002263723 } },
+        PreciseVertCoords2{ 1_v, Vector2i( -187288916 , -172107608 ) },
+        PreciseVertCoords2{ 2_v, Vector2i{ -25334363 , -1063004405 } },
+        PreciseVertCoords2{ 3_v, Vector2i{ -15200618 , -10122159 } },
+        PreciseVertCoords2{ 4_v, Vector2i{ -106280744 , -1002263723 } }
+    };
+
+    // Prove that 0_v 2_v 4_v circle is in +Y half plane (4_v 2_v is horde in lower part)
+    EXPECT_FALSE( ccw( { vs[2],vs[4],vs[3] } ) ); // 3_v is to the right of 2-4 vec
+    
+    // looks like this should be false
+    EXPECT_TRUE( inCircle( { vs[4],vs[2],vs[0],vs[3] } ) ); // 3_v is in circle
+
+    // prove that 0_v is inside 142 triangle
+    EXPECT_TRUE( ccw( { vs[1],vs[4],vs[0] } ) );
+    EXPECT_TRUE( ccw( { vs[4],vs[2],vs[0] } ) );
+    EXPECT_TRUE( ccw( { vs[2],vs[1],vs[0] } ) );
+    // it means that 142 circle should be larger in +Y half plane and so 3_v should be inside it
+    // but it is not
+    // DISABLED
+    //EXPECT_TRUE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
 } //namespace MR

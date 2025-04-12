@@ -9,6 +9,7 @@
 #include "MRPrecisePredicates2.h"
 #include "MRId.h"
 #include "MR2to3.h"
+#include <numeric> // for std::iota
 
 namespace MR
 {

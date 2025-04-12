@@ -95,6 +95,7 @@ jobs:
       tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
       tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
       tag-disable-fedora:        ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-fedora' ) }}
+      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
       tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 

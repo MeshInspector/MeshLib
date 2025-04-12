@@ -118,9 +118,7 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/ubuntu**'
-              - 'docker/fedora**'
-              - 'docker/emscripten**'
+              - 'docker/*Dockerfile'
               - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'

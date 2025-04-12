@@ -287,7 +287,7 @@ TEST( MRMesh, PrecisePredicates2InCircle )
     EXPECT_TRUE( ccw( { vs[1],vs[2],vs[3] } ) );
     EXPECT_TRUE( ccw( { vs[2],vs[0],vs[3] } ) );
 
-    // This one fails
+    // Check that vs[3] is inCircle
     EXPECT_TRUE( inCircle( vs ) );
 }
 

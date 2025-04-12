@@ -72,6 +72,16 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
         + 2 * a.x * cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
     if ( v ) return v > 0;
 
+    // 3) db=(0, db.y, 2b.y*db.y),
+    v = cross( Vector2hp{ a.x, a.z }, Vector2hp{ c.x, c.z } ) // distance^3
+        - 2 * b.y * cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
+    if ( v ) return v > 0;
+
+    // 4) db=(db.x, 0, 2b.x*db.x),
+    v = -cross( Vector2hp{ a.y, a.z }, Vector2hp{ c.y, c.z } ) // distance^3
+        - 2 * b.x * cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
+    if ( v ) return v > 0;
+
     // ...
 
     return true;
@@ -295,17 +305,14 @@ TEST( MRMesh, PrecisePredicates2InCircle2 )
     // Prove that 0_v 2_v 4_v circle is in +Y half plane (4_v 2_v is horde in lower part)
     EXPECT_FALSE( ccw( { vs[2],vs[4],vs[3] } ) ); // 3_v is to the right of 2-4 vec
     
-    // looks like this should be false
-    EXPECT_TRUE( inCircle( { vs[4],vs[2],vs[0],vs[3] } ) ); // 3_v is in circle
+    EXPECT_FALSE( inCircle( { vs[4],vs[2],vs[0],vs[3] } ) ); // 3_v is in circle
 
     // prove that 0_v is inside 142 triangle
     EXPECT_TRUE( ccw( { vs[1],vs[4],vs[0] } ) );
     EXPECT_TRUE( ccw( { vs[4],vs[2],vs[0] } ) );
     EXPECT_TRUE( ccw( { vs[2],vs[1],vs[0] } ) );
     // it means that 142 circle should be larger in +Y half plane and so 3_v should be inside it
-    // but it is not
-    // DISABLED
-    EXPECT_TRUE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
+    EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
 } //namespace MR

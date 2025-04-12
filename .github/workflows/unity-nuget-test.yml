@@ -12,7 +12,7 @@ on:
         required: true
         type: string
     secrets:
-      GH_TOKEN:
+      BUILD_MACHINE_TOKEN:
         required: true
 
 permissions:
@@ -64,7 +64,7 @@ jobs:
       - name: Download nuget package
         # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
         run: |
-          Write-Output ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          Write-Output ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "MeshLib.nupkg" --repo ${{ github.repository }}
           mv MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg
 

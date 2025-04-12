@@ -318,7 +318,7 @@ jobs:
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
     secrets:
-      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   test-distribution:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}

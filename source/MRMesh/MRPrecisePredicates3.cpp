@@ -40,8 +40,11 @@ bool orient3dT( const Vector3<T> & a, const Vector3<T>& b, const Vector3<T>& c )
 
     if ( c.z ) return c.z > 0;
 
+#ifndef NDEBUG
     v = -cross( Vector2hp{ a.y, a.z }, Vector2hp{ c.y, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     v = cross( Vector2hp{ a.x, a.y }, Vector2hp{ b.x, b.y } );
     if ( v ) return v > 0;

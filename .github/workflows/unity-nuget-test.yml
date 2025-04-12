@@ -66,7 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg " --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
       
       - name: Move nuget package to repo folder
         # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
@@ -80,7 +80,6 @@ jobs:
             exit 1
           }
       
-
       - name: Install nuget package
         shell: powershell
         run: |
@@ -90,7 +89,6 @@ jobs:
         shell: powershell
         run: |
           Start-Process -FilePath "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -ArgumentList "-runTests", "-batchmode", "-projectPath", "C:\work\unity_proj\NugetTestProj", "-testPlatform", "playmode", "-testResults", "C:\work\results.xml", "-logfile", "C:\work\batch_log.txt" -Wait
-
 
       - name: verify xml
         shell: powershell

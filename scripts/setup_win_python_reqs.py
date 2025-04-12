@@ -7,12 +7,12 @@ def run_python_setup(py_version: str):
     py_cmd = f"py -{py_version}"
     try:
         print(f"Ensuring pip is available for Python {py_version}...")
-        subprocess.run([py_cmd, "-m", "ensurepip", "--upgrade"], check=True)
-        subprocess.run([py_cmd, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+        subprocess.run(f"{py_cmd} -m ensurepip --upgrade", shell=True, check=True)
+        subprocess.run(f"{py_cmd} -m pip install --upgrade pip", shell=True, check=True)
 
         requirements_file = Path(__file__).resolve().parents[1] / "requirements" / "python.txt"
         if requirements_file.exists():
-            subprocess.run([py_cmd, "-m", "pip", "install", "-r", str(requirements_file)], check=True)
+            subprocess.run(f"{py_cmd} -m pip install -r {requirements_file}", shell=True, check=True)
         else:
             print(f"WARNING: Requirements file not found at {requirements_file}")
     except subprocess.CalledProcessError as e:
@@ -24,5 +24,6 @@ if platform.system() == "Windows":
     if vcpkg_root:
         detected_version = detect_vcpkg_python_version(vcpkg_root)
         if detected_version:
+            print(f"Using python version {detected_version}")
             choco_install_python(detected_version)
             run_python_setup(detected_version)

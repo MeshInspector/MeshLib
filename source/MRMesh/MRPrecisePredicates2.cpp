@@ -82,7 +82,7 @@ bool inCircle( const PreciseVertCoords2* vs )
         vs3d[i].id = vs[i].id;
         vs3d[i].pt = Vector3ll( Vector3ll::ValueType( vs[i].pt.x ) * vs[i].pt.x + Vector3ll::ValueType( vs[i].pt.y ) * vs[i].pt.y, vs[i].pt.x, vs[i].pt.y );
     }
-    return ccw( vs ) == orient3d( vs3d );
+    return ccw( vs ) == orient3d( vs3d ); // TODO: looks like orient3d is not "honest" enough for this predicate
 }
 
 SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<PreciseVertCoords2, 4> & vs )

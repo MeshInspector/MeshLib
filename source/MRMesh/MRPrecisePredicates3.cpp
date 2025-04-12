@@ -13,48 +13,74 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 namespace MR
 {
 
+// see https://arxiv.org/pdf/math/9410209 Table 4-ii:
+// a=(pi_i,1, pi_i,2, pi_i,3)
+// b=(pi_j,1, pi_j,2, pi_j,3)
+// c=(pi_k,1, pi_k,2, pi_k,3)
 bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
 {
     auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
-    if ( vhp ) return vhp > 0;
+    if ( vhp ) return vhp > 0; // points are in general position
 
+    // points 0, a, b, c are on the same plane
+
+    // permute points:
+    // dba.z >> da.y >> da.x >> db.z >> db.y >> db.x >> dc.z >> dc.y >> dc.x > 0
+
+    // the dominant permutation da.z > 0
     auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );
     if ( v ) return v > 0;
+    // common plane parallel to OZ or all points are on the same line
 
+    // next permutation da.y > 0
     v = -cross( Vector2ll{ b.x, b.z }, Vector2ll{ c.x, c.z } );
     if ( v ) return v > 0;
+    // common plane parallel to OYZ or all points are on the same line
 
+    // next permutation da.x > 0
     v = cross( Vector2ll{ b.y, b.z }, Vector2ll{ c.y, c.z } );
     if ( v ) return v > 0;
+    // all points are on the same line
 
+    // next permutation db.z > 0
+#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = -cross( Vector2ll{ a.x, a.y }, Vector2ll{ c.x, c.y } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     if ( c.x ) return c.x > 0;
 
     if ( c.y ) return c.y < 0;
 
+    // next permutation db.y > 0
+#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = cross( Vector2ll{ a.x, a.z }, Vector2ll{ c.x, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     if ( c.z ) return c.z > 0;
 
-#ifndef NDEBUG
+    // next permutation db.x > 0
+#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
     assert( v == 0 );
     if ( v ) return v > 0;
 #endif
 
+    // next permutation dc.z > 0
+#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     if ( b.x ) return b.x < 0;
 
     if ( b.y ) return b.y > 0;
 
-    if ( a.x ) return a.x > 0;
-
-    return true;
+    return a.x >= 0;
 }
 
 bool orient3d( const std::array<PreciseVertCoords, 4> & vs )

@@ -15,6 +15,10 @@ on:
       GH_TOKEN:
         required: true
 
+permissions:
+  id-token: write
+  contents: read
+
 concurrency:
   group: unity-test
   cancel-in-progress: false

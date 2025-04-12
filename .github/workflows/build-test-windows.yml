@@ -156,10 +156,7 @@ jobs:
           (gi '${{matrix.vc-path}}\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Setup python
-        run: |
-          py -3.11 -m ensurepip --upgrade
-          py -3.11 -m pip install --upgrade pip
-          py -3.11 -m pip install -r .\requirements\python.txt
+        run: py -3 setup_win_python_reqs.py
 
       - name: Check Visual Studio projects for missing file entries
         run: py -3 scripts\check_vcxproj.py source\

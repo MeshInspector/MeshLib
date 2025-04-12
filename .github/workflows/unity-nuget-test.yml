@@ -62,12 +62,24 @@ jobs:
           Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
-        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
+        shell: powershell
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "MeshLib.nupkg" --repo ${{ github.repository }}
-          mv MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg
+          gh release download ${{ inputs.release_tag }} --pattern "MeshLib*.nupkg " --repo ${{ github.repository }}
+      
+      - name: Move nuget package to repo folder
+        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
+        shell: powershell
+        run: |
+          $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
+          if ($pkg) {
+            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg"
+          } else {
+            Write-Error "No MeshLib*.nupkg file found"
+            exit 1
+          }
+      
 
       - name: Install nuget package
         shell: powershell

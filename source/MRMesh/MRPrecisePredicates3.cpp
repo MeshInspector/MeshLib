@@ -25,56 +25,48 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
     // points 0, a, b, c are on the same plane
 
     // permute points:
-    // dba.z >> da.y >> da.x >> db.z >> db.y >> db.x >> dc.z >> dc.y >> dc.x > 0
+    // da.z >> da.y >> da.x >> db.z >> db.y >> db.x >> dc.z >> dc.y >> dc.x > 0
 
     // the dominant permutation da.z > 0
     auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );
     if ( v ) return v > 0;
-    // common plane parallel to OZ or all points are on the same line
+    // common plane parallel to OZ or b.xy orthogonal to c.xy
 
     // next permutation da.y > 0
     v = -cross( Vector2ll{ b.x, b.z }, Vector2ll{ c.x, c.z } );
     if ( v ) return v > 0;
-    // common plane parallel to OYZ or all points are on the same line
+    // common plane parallel to OYZ or b.xz orthogonal to c.xz
 
     // next permutation da.x > 0
     v = cross( Vector2ll{ b.y, b.z }, Vector2ll{ c.y, c.z } );
     if ( v ) return v > 0;
-    // all points are on the same line
+    // all points are on the same line or b=0 or c=0
 
     // next permutation db.z > 0
-#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = -cross( Vector2ll{ a.x, a.y }, Vector2ll{ c.x, c.y } );
-    assert( v == 0 );
     if ( v ) return v > 0;
-#endif
 
     if ( c.x ) return c.x > 0;
 
     if ( c.y ) return c.y < 0;
 
     // next permutation db.y > 0
-#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
-    v = cross( Vector2ll{ a.x, a.z }, Vector2ll{ c.x, c.z } );
-    assert( v == 0 );
-    if ( v ) return v > 0;
-#endif
-
-    if ( c.z ) return c.z > 0;
+    // in the article: v = cross( Vector2ll{ a.x, a.z }, Vector2ll{ c.x, c.z } ),
+    // but since c.x = 0, v = ( (long long) a.x ) * ( (long long) c.z );
+    if ( c.z )
+        return ( a.x >= 0 ) == ( c.z > 0 );
+    // now c.x=c.y=c.z=0
 
     // next permutation db.x > 0
-#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
+#ifndef NDEBUG // this case is present in the article, but can never happen since c.y=c.z=0
     v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
     assert( v == 0 );
     if ( v ) return v > 0;
 #endif
 
     // next permutation dc.z > 0
-#ifndef NDEBUG // this case is present in the article, but can never happen since all 0, a, b, c are on the same line
     v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
-    assert( v == 0 );
     if ( v ) return v > 0;
-#endif
 
     if ( b.x ) return b.x < 0;
 

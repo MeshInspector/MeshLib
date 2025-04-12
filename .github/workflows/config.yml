@@ -40,7 +40,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
-        value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}

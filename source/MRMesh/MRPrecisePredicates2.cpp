@@ -43,6 +43,64 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     return true;
 }
 
+bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
+{
+    Vector3ll a( a0.x, a0.y, sqr( (long long) a0.x ) + sqr( (long long) a0.y ) );
+    Vector3ll b( b0.x, b0.y, sqr( (long long) b0.x ) + sqr( (long long) b0.y ) );
+    Vector3ll c( c0.x, c0.y, sqr( (long long) c0.x ) + sqr( (long long) c0.y ) );
+
+    using Vector3hpp = Vector3<HighHighPrecisionInt>;
+    auto vhp = mixed( Vector3hpp{ a }, Vector3hpp{ b }, Vector3hpp{ c } );
+    if ( vhp ) return vhp > 0;
+
+    // permute points:
+    // 1) da=(0, da.y, 2a.y*da.y),
+    // 2) da=(da.x, 0, 2a.x*da.x),
+    // 3) db=(0, db.y, 2b.y*db.y),
+    // 4) db=(db.x, 0, 2b.x*db.x),
+    // 5) dc=(0, dc.y, 2c.y*dc.y),
+    // 6) dc=(dc.x, 0, 2c.x*dc.x)
+
+    using Vector2hp = Vector2<HighPrecisionInt>;
+    // 1) da=(0, da.y, 2a.y*da.y),
+    auto v = -cross( Vector2hp{ b.x, b.z }, Vector2hp{ c.x, c.z } ) // distance^3
+        + 2 * a.y * cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
+    if ( v ) return v > 0;
+
+    // 2) da=(da.x, 0, 2a.x*da.x),
+    v = cross( Vector2hp{ b.y, b.z }, Vector2hp{ c.y, c.z } ) // distance^3
+        + 2 * a.x * cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
+    if ( v ) return v > 0;
+
+    // ...
+
+    return true;
+}
+
+inline bool orientParaboloid3d( const Vector2i & a, const Vector2i & b, const Vector2i & c, const Vector2i & d )
+    { return orientParaboloid3d( a - d, b - d, c - d ); }
+
+bool orientParaboloid3d( const PreciseVertCoords2* vs )
+{
+    bool odd = false;
+    std::array<int, 4> order = { 0, 1, 2, 3 };
+
+    for ( int i = 0; i < 3; ++i )
+    {
+        for ( int j = i + 1; j < 4; ++j )
+        {
+            assert( vs[order[i]].id != vs[order[j]].id );
+            if ( vs[order[i]].id > vs[order[j]].id )
+            {
+                odd = !odd;
+                std::swap( order[i], order[j] );
+            }
+        }
+    }
+
+    return odd != orientParaboloid3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+}
+
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
 {
     return ccw( vs.data() );
@@ -76,13 +134,7 @@ bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
 
 bool inCircle( const PreciseVertCoords2* vs )
 {
-    PreciseVertCoordsll vs3d[4];
-    for ( int i = 0; i < 4; ++i )
-    {
-        vs3d[i].id = vs[i].id;
-        vs3d[i].pt = Vector3ll( Vector3ll::ValueType( vs[i].pt.x ) * vs[i].pt.x + Vector3ll::ValueType( vs[i].pt.y ) * vs[i].pt.y, vs[i].pt.x, vs[i].pt.y );
-    }
-    return ccw( vs ) == orient3d( vs3d ); // TODO: looks like orient3d is not "honest" enough for this predicate
+    return ccw( vs ) == orientParaboloid3d( vs );
 }
 
 SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<PreciseVertCoords2, 4> & vs )
@@ -253,7 +305,7 @@ TEST( MRMesh, PrecisePredicates2InCircle2 )
     // it means that 142 circle should be larger in +Y half plane and so 3_v should be inside it
     // but it is not
     // DISABLED
-    //EXPECT_TRUE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
+    EXPECT_TRUE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
 } //namespace MR

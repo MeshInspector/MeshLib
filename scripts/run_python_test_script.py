@@ -149,11 +149,11 @@ for py_cmd in python_cmds:
         print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
         if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
             venv_failed = True
-        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest numpy"):
+        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest pytest_check numpy"):
             venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:
-        if os.system(py_cmd + " -m pip install pytest numpy") != 0:
+        if os.system(py_cmd + " -m pip install pytest pytest_check numpy") != 0:
             print("Failed to install dependencies")
         py_cmd_fixed = py_cmd
 

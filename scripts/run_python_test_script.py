@@ -19,7 +19,7 @@ parser.add_argument("-a", dest="pytest_args", type=str,
 args = parser.parse_args()
 print(args)
 
-python_cmds = ["py -3.11"]
+python_cmds = ["py -3"]
 platformSystem = platform.system()
 
 if platformSystem == 'Linux':

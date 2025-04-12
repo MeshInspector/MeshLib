@@ -4,6 +4,24 @@ import platform
 import argparse
 import shutil
 
+def get_vcpkg_root_from_where():
+    try:
+        output = subprocess.check_output(["where", "vcpkg"], universal_newlines=True)
+        first_line = output.strip().splitlines()[0]
+        return Path(first_line).resolve().parent
+    except Exception:
+        return None
+
+def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
+    include_dir = vcpkg_root / "installed" / triplet / "include"
+    if include_dir.exists():
+        for entry in include_dir.iterdir():
+            match = re.match(r"python3\.(\d+)", entry.name)
+            if match:
+                minor_version = match.group(1)
+                return f"3.{minor_version}"
+    return None
+
 parser = argparse.ArgumentParser(description="Python Test Script")
 
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
@@ -50,6 +68,26 @@ if platformSystem == 'Linux':
 
 elif platformSystem == 'Darwin':
     python_cmds = ["python3.10"]
+
+elif platformSystem == "Windows":
+    vcpkg_root = get_vcpkg_root_from_where()
+    if vcpkg_root:
+        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        if detected_version:
+            python_cmds = [f"py -{detected_version}"]
+        else:
+            # fallback to Windows Server version check
+            try:
+                win_ver = platform.version()  # '10.0.17763' (Windows Server 2019)
+                build = int(win_ver.split('.')[2])
+                if build < 20000: # Below Windows 11 (Build 20000+)
+                    python_cmds = ["py -3.11"]
+                else:
+                    python_cmds = ["py -3.12"]
+            except Exception:
+                python_cmds = ["py -3"]
+    else:
+        python_cmds = ["py -3"]
 
 if args.cmd:
     python_cmds = [str(args.cmd).strip()]

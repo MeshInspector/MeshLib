@@ -1,12 +1,19 @@
 name: Test Nuget package with Unity
 on:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test'
+        required: true
+        type: string
   workflow_call:
-
-permissions:
-  id-token: write
-  contents: read
+    inputs:
+      release_tag:
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
 
 concurrency:
   group: unity-test
@@ -49,11 +56,13 @@ jobs:
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
-      
-      - name: Copy nupkg from S3
-        shell: powershell
+
+      - name: Download nuget package
         # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
-        run: aws s3 cp s3://test-artifacts-git/MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg
+        run: |
+          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
+          gh release download ${{ inputs.release_tag }} --pattern "MeshLib.nupkg" --repo ${{ github.repository }}
+          mv MeshLib.nupkg C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg
 
       - name: Install nuget package
         shell: powershell

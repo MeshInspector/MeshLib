@@ -40,7 +40,7 @@ on:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
-        value: ${{ github.event_name == 'push' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
@@ -95,6 +95,7 @@ jobs:
       tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
       tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
       tag-disable-fedora:        ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-fedora' ) }}
+      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
       tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
       tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
 

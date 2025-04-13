@@ -185,6 +185,7 @@ bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
 
 bool inCircle( const PreciseVertCoords2* vs )
 {
+    // orientParaboloid3d and not ordinary orient3d as in the article, since additional coordinate x*x+y*y is not independent from x and y
     return ccw( vs ) == orientParaboloid3d( vs );
 }
 

@@ -49,42 +49,66 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     Vector3ll b( b0.x, b0.y, sqr( (long long) b0.x ) + sqr( (long long) b0.y ) );
     Vector3ll c( c0.x, c0.y, sqr( (long long) c0.x ) + sqr( (long long) c0.y ) );
 
-    using Vector3hpp = Vector3<HighHighPrecisionInt>;
-    auto vhp = mixed( Vector3hpp{ a }, Vector3hpp{ b }, Vector3hpp{ c } );
-    if ( vhp ) return vhp > 0;
-
-    // permute points:
-    // 1) da=(0, da.y, 2a.y*da.y),
-    // 2) da=(da.x, 0, 2a.x*da.x),
-    // 3) db=(0, db.y, 2b.y*db.y),
-    // 4) db=(db.x, 0, 2b.x*db.x),
-    // 5) dc=(0, dc.y, 2c.y*dc.y),
-    // 6) dc=(dc.x, 0, 2c.x*dc.x)
-
     using Vector2hp = Vector2<HighPrecisionInt>;
-    // 1) da=(0, da.y, 2a.y*da.y),
-    auto v = -cross( Vector2hp{ b.x, b.z }, Vector2hp{ c.x, c.z } ) // distance^3
-        + 2 * a.y * cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
-    if ( v ) return v > 0;
+    using Vector3hpp = Vector3<HighHighPrecisionInt>;
 
-    // 2) da=(da.x, 0, 2a.x*da.x),
-    v = cross( Vector2hp{ b.y, b.z }, Vector2hp{ c.y, c.z } ) // distance^3
-        + 2 * a.x * cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
-    if ( v ) return v > 0;
+    //e**0
+    if ( auto v = mixed( Vector3hpp{ a }, Vector3hpp{ b }, Vector3hpp{ c } ) )
+        return v > 0;
 
-    // 3) db=(0, db.y, 2b.y*db.y),
-    v = cross( Vector2hp{ a.x, a.z }, Vector2hp{ c.x, c.z } ) // distance^3
-        - 2 * b.y * cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
-    if ( v ) return v > 0;
+    // e**1
+    const auto bxy_cxy = cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
+    if ( auto v = -cross( Vector2hp{ b.x, b.z }, Vector2hp{ c.x, c.z } ) + 2 * a.y * bxy_cxy )
+        return v > 0;
 
-    // 4) db=(db.x, 0, 2b.x*db.x),
-    v = -cross( Vector2hp{ a.y, a.z }, Vector2hp{ c.y, c.z } ) // distance^3
-        - 2 * b.x * cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
-    if ( v ) return v > 0;
+    // e**2
+    if ( auto v = bxy_cxy )
+        return v > 0;
+
+    // e**2
+    assert( bxy_cxy == 0 );
+    if ( auto v = cross( Vector2hp{ b.y, b.z }, Vector2hp{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
+        return v > 0;
+
+    // e**6 same as e**2
+
+    // e**9
+    const auto axy_cxy = cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
+    if ( auto v = cross( Vector2hp{ a.x, a.z }, Vector2hp{ c.x, c.z } ) - 2 * b.y * axy_cxy )
+        return v > 0;
+
+    // e**10
+    if ( auto v = -c.x * ( a.y + b.y ) )
+        return v > 0;
+
+    // e**11
+    if ( auto v = -c.x )
+        return v > 0;
+
+    // e**12: -2*a.x*c.x - 2*b.y*c.y + c.z
+    assert( c.x == 0 );
+    if ( auto v = - 2 * b.y * c.y + c.z )
+        return v > 0;
+
+    // e**18
+    if ( auto v = -axy_cxy )
+        return v > 0;
+
+    // e**21
+    if ( auto v = -c.y )
+        return v > 0;
+    assert( c.x == 0 && c.y == 0 && c.z == 0 );
+
+    // e**27
+    //assert( axy_cxy == 0 );
+    //v = -cross( Vector2hp{ a.y, a.z }, Vector2hp{ c.y, c.z } ) // distance^3
+    //    - 2 * b.x * axy_cxy;
+    //if ( v ) return v > 0;
 
     // ...
 
-    return true;
+    // e**102
+    return false;
 }
 
 inline bool orientParaboloid3d( const Vector2i & a, const Vector2i & b, const Vector2i & c, const Vector2i & d )

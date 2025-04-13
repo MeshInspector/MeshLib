@@ -99,20 +99,37 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
         return v > 0;
     assert( c.x == 0 && c.y == 0 && c.z == 0 );
 
-    // e**27
-    //assert( axy_cxy == 0 );
-    //v = -cross( Vector2hp{ a.y, a.z }, Vector2hp{ c.y, c.z } ) // distance^3
-    //    - 2 * b.x * axy_cxy;
-    //if ( v ) return v > 0;
+    // e**81
+    if ( auto v = b.x * HighPrecisionInt( a.z ) - a.x * HighPrecisionInt( b.z ) )
+        return v > 0;
 
-    // ...
+    // e**82
+    if ( auto v = a.y * b.x )
+        return v > 0;
+
+    // e**83
+    if ( auto v = b.x )
+        return v > 0;
+
+    // e**84
+    if ( auto v = -b.z )
+        return v > 0; // can only be false, since b.z >= 0
+
+    // e**90
+    if ( auto v = -a.x * b.y )
+        return v > 0;
+
+    // e**93
+    if ( auto v = -b.y )
+        return v > 0;
+
+    // e**99
+    if ( auto v = -a.x )
+        return v > 0;
 
     // e**102
     return false;
 }
-
-inline bool orientParaboloid3d( const Vector2i & a, const Vector2i & b, const Vector2i & c, const Vector2i & d )
-    { return orientParaboloid3d( a - d, b - d, c - d ); }
 
 bool orientParaboloid3d( const PreciseVertCoords2* vs )
 {

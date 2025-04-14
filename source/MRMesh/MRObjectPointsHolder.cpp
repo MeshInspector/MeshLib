@@ -100,7 +100,7 @@ void ObjectPointsHolder::updateSelectedPoints( VertBitSet& selection )
     std::swap( selectedPoints_, selection );
     numSelectedPoints_.reset();
     pointsSelectionChangedSignal();
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
 }
 
 const VertBitSet& ObjectPointsHolder::getSelectedPointsOrAll() const

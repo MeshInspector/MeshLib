@@ -63,7 +63,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRPython", "MRPython\MRPyth
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_stubs", "..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj", "{CB6D82FB-E91D-4D62-B82E-BE644244E30A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_meshlib_3.11", "..\thirdparty\pybind11nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_meshlib", "..\thirdparty\pybind11nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MREmbeddedPython", "MREmbeddedPython\MREmbeddedPython.vcxproj", "{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}"
 EndProject

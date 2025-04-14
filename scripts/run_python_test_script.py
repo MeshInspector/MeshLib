@@ -4,6 +4,8 @@ import platform
 import argparse
 import shutil
 
+from utils import get_vcpkg_root_from_where, detect_vcpkg_python_version
+
 parser = argparse.ArgumentParser(description="Python Test Script")
 
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
@@ -50,6 +52,14 @@ if platformSystem == 'Linux':
 
 elif platformSystem == 'Darwin':
     python_cmds = ["python3.10"]
+
+elif platformSystem == "Windows":
+    python_cmds = ["py -3"]
+    vcpkg_root = get_vcpkg_root_from_where()
+    if vcpkg_root:
+        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        if detected_version:
+            python_cmds = [f"py -{detected_version}"]
 
 if args.cmd:
     python_cmds = [str(args.cmd).strip()]
@@ -108,7 +118,7 @@ for py_cmd in python_cmds:
         print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
         if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
             venv_failed = True
-        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest numpy"):
+        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest pytest_check numpy"):
             venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:

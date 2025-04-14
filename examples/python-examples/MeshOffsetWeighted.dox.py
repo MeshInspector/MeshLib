@@ -15,7 +15,7 @@ for i in range(verts_num):
 
 # ===params
 
-params = mrmeshpy.WeightedPointsShellParameters()
+params = mrmeshpy.WeightedPointsShellParametersMetric()
 # Algorithm is voxel based, voxel size affects performance and form of result mesh
 params.voxelSize = mrmeshpy.suggestVoxelSize(mesh, 10000)
 # common basic offset applied for all point

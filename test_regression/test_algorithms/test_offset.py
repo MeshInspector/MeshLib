@@ -281,7 +281,7 @@ def test_offset_weighted_shell(tmp_path):
         scalars.vec[i] = weight
 
     # Setup parameters
-    params = mrmeshpy.WeightedPointsShellParameters()
+    params = mrmeshpy.WeightedPointsShellParametersMetric()
     params.offset = 0.05
     params.voxelSize = 0.1
     params.dist.maxWeight = max(scalars.vec)

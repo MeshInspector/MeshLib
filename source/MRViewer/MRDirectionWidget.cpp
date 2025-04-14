@@ -13,7 +13,6 @@ namespace MR
 void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent )
 {
     reset();
-    base_ = base;
     length_ = length;
     onDirectionChanged_ = onDirectionChanged;
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -30,6 +29,7 @@ void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float l
     parent->addChild( directionObj_ );
 
     updateDirection( dir );
+    updateBase( base );
 }
 
 void DirectionWidget::reset()
@@ -49,7 +49,9 @@ void DirectionWidget::updateLocalDirection( const Vector3f& dir )
     if ( !directionObj_ )
         return assert( false );
 
-    return directionObj_->setXf( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
+    auto xf = directionObj_->xf();
+    xf.A = Matrix3f::rotation( Vector3f::plusZ(), dir );
+    directionObj_->setXf( xf );
 }
 
 void DirectionWidget::updateDirection( const Vector3f& dir )
@@ -63,15 +65,25 @@ void DirectionWidget::updateDirection( const Vector3f& dir )
     updateLocalDirection( parent->worldXf().A.inverse() * dir );
 }
 
+void DirectionWidget::updateLocalBase( const Vector3f& base )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    auto xf = directionObj_->xf();
+    xf.b = base;
+    directionObj_->setXf( xf );
+}
+
 void DirectionWidget::updateBase( const Vector3f& base )
 {
     if ( !directionObj_ )
-        return;
+        return assert( false );
+    auto parent = directionObj_->parent();
+    if ( !parent )
+        return assert( false );
 
-    base_ = base;
-    auto xf = directionObj_->xf();
-    xf.b = base_;
-    directionObj_->setXf( xf );
+    updateLocalBase( parent->worldXf().inverse()( base ) );
 }
 
 void DirectionWidget::updateLength( float length )
@@ -144,7 +156,7 @@ bool DirectionWidget::onMouseMove_( int x, int y )
     auto viewer = Viewer::instance();
     const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    const auto newDir = worldEndPoint - parent->worldXf()( base_ );
+    const auto newDir = worldEndPoint - getBase();
     updateDirection( newDir );
     if ( onDirectionChanged_ )
         onDirectionChanged_( newDir, needToSaveHistory_ );
@@ -178,9 +190,20 @@ const Color& DirectionWidget::getColor() const
     return color_;
 }
 
-const Vector3f& DirectionWidget::getBase() const
+Vector3f DirectionWidget::getLocalBase() const
 {
-    return base_;
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return directionObj_->xf().b;
+}
+
+Vector3f DirectionWidget::getBase() const
+{
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return directionObj_->worldXf().b;
 }
 
 Vector3f DirectionWidget::getLocalDirection() const

@@ -114,6 +114,14 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
 
+      - name: Generate and build MRBind bindings
+        if: ${{ inputs.mrbind }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: |
+          export PKG_CONFIG_PATH=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/pkgconfig
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=ON DEPS_BASE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET
+
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg ${{matrix.config}} "${{matrix.compiler}}"
 
@@ -130,6 +138,24 @@ jobs:
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: C Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: Python Sanity Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+
+      - name: Python Regression Tests
+        if: ${{ inputs.internal_build }}
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          mrbind: ${{ inputs.mrbind }}
+          pytest_args: '--run-cuda=negative'
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: linux-vcpkg/${{ matrix.config }}/${{ matrix.compiler }}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}

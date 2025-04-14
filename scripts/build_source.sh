@@ -67,6 +67,8 @@ fi
 # add env options to cmake
 MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
 
+MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_PREFIX_PATH=${PWD}"
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi

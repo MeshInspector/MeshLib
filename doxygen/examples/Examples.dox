@@ -15,7 +15,6 @@ This page contains some examples of using MeshLib
  - \ref ExampleMeshBoolean
  - \ref ExampleMeshDecimate
  - \ref ExampleMeshOffset
- - \ref ExampleMeshOffsetWeighted
  - \ref ExampleMeshFillHole
  - \ref ExampleMeshStitchHole
  - \ref ExampleMeshResolveDegenerations

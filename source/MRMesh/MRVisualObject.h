@@ -214,6 +214,8 @@ public:
     MRMESH_API uint32_t getDirtyFlags() const { return dirty_; }
     /// resets all dirty flags (except for cache flags that will be reset automatically on cache update)
     MRMESH_API void resetDirty() const;
+    /// reset dirty flags without some specific bits (useful for lazy normals update)
+    MRMESH_API virtual void resetDirtyExceptMask( uint32_t mask ) const;
 
     /// returns cached bounding box of this object in local coordinates
     MRMESH_API Box3f getBoundingBox() const;
@@ -301,7 +303,6 @@ protected:
     virtual void setupRenderObject_() const {}
 
     mutable UniquePtr<IRenderObject> renderObj_;
-    mutable Dirty dirty_;
 
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.
@@ -361,6 +362,8 @@ protected:
     }
 
 private:
+    mutable Dirty dirty_; // private dirty, to force all using setDirtyFlags, instead of direct change
+
     mutable Box3f boundingBoxCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only

@@ -192,6 +192,12 @@ void VisualObject::resetDirty() const
     dirty_ &= DIRTY_CACHES;
 }
 
+void VisualObject::resetDirtyExceptMask( uint32_t mask ) const
+{
+    // Bounding box and normals (all caches) is cleared only if it was recounted
+    dirty_ &= ( DIRTY_CACHES | mask );
+}
+
 Box3f VisualObject::getBoundingBox() const
 {
     if ( dirty_ & DIRTY_BOUNDING_BOX )

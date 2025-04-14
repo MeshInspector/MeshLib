@@ -1,5 +1,6 @@
 #pragma once
 #include "MRHistoryAction.h"
+#include "MRColor.h"
 #include <memory>
 
 namespace MR

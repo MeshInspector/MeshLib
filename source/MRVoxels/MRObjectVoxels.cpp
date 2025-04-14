@@ -159,8 +159,6 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
     volumeRenderActiveVoxels_.clear();
     setDirtyFlags( DIRTY_ALL );
-    if ( volumeRendering_ )
-        setDirtyFlags( DIRTY_SELECTION ); // This flag is not set in ObjectMeshHolder::setDirtyFlags
     return oldVdbVolume;
 }
 

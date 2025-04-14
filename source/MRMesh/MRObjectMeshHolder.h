@@ -110,10 +110,10 @@ public:
     const ObjectMeshData& data() const { return data_; }
 
     /// sets whole new ObjectMeshData
-    virtual void setData( ObjectMeshData && data ) { data_ = std::move( data ); dirty_ |= DIRTY_ALL; }
+    virtual void setData( ObjectMeshData && data ) { data_ = std::move( data ); setDirtyFlags( DIRTY_ALL ); } // use setDirtyFlags( DIRTY_ALL ) to invalidate caches
 
     /// swaps whole ObjectMeshData with given argument
-    virtual void updateData( ObjectMeshData& data ) { std::swap( data_, data ); dirty_ |= DIRTY_ALL; }
+    virtual void updateData( ObjectMeshData& data ) { std::swap( data_, data ); setDirtyFlags( DIRTY_ALL ); } // use setDirtyFlags( DIRTY_ALL ) to invalidate caches
 
     /// returns per-vertex colors of the object
     const VertColors& getVertsColorMap() const { return data_.vertColors; }

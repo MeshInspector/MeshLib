@@ -44,6 +44,14 @@ void DirectionWidget::setOnDirectionChangedCallback( OnDirectionChangedCallback 
     onDirectionChanged_ = cb;
 }
 
+void DirectionWidget::updateLocalDirection( const Vector3f& dir )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    return directionObj_->setXf( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
+}
+
 void DirectionWidget::updateDirection( const Vector3f& dir )
 {
     if ( !directionObj_ )
@@ -52,11 +60,7 @@ void DirectionWidget::updateDirection( const Vector3f& dir )
     if ( !parent )
         return assert( false );
 
-    dir_ = dir.normalized();
-    Matrix3f rot, scale;
-    builtXf_ = parent->worldXf();
-    decomposeMatrix3( builtXf_.A, rot, scale );
-    directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
+    updateLocalDirection( parent->worldXf().A.inverse() * dir );
 }
 
 void DirectionWidget::updateBase( const Vector3f& base )
@@ -179,24 +183,21 @@ const Vector3f& DirectionWidget::getBase() const
     return base_;
 }
 
+Vector3f DirectionWidget::getLocalDirection() const
+{
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return directionObj_->xf().A * Vector3f::plusZ();
+}
 
 Vector3f DirectionWidget::getDirection() const
 {
     if ( !directionObj_ )
         return assert( false ), Vector3f{};
-    auto parent = directionObj_->parent();
-    if ( !parent )
-        return assert( false ), Vector3f{};
 
-    auto wXf = parent->worldXf();
-    if ( wXf != builtXf_ )
-    {
-        auto prevLocalDir = directionObj_->xf().A * Vector3f::plusZ();
-        return wXf.A * prevLocalDir;
-    }
-    return dir_;
+    return directionObj_->worldXf().A * Vector3f::plusZ();
 }
-
 
 Object* DirectionWidget::getParentPtr() const
 {

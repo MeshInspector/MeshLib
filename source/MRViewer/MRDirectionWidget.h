@@ -17,25 +17,13 @@ public:
     /// This callback is invoked every time when the direction is changed by mouse
     using OnDirectionChangedCallback = std::function<void( const Vector3f&, bool )>;
 
-    /// history action for changing the direction. It should be added to the history stack by user code
+    /// This history action must be created before the change in widget's direction to make it undo-able
     class ChangeDirAction : public ChangeXfAction
     {
     public:
         ChangeDirAction( DirectionWidget& widget, const std::string& name = "Change Direction" ) :
-            ChangeXfAction( name, static_pointer_cast<Object>( widget.directionObj_ ) ),
-            widget_{ widget },
-            dir_{ widget.dir_ }
+            ChangeXfAction( name, static_pointer_cast<Object>( widget.directionObj_ ) )
         {}
-        virtual void action( Type type ) override
-        {
-            ChangeXfAction::action( type ); 
-            auto tempDir = widget_.dir_;
-            widget_.updateDirection( dir_ );
-            dir_ = tempDir;
-        }
-    private:
-        DirectionWidget& widget_;
-        Vector3f dir_;
     };
 
     /// history action for changing the base. It should be added to the history stack by user code
@@ -109,7 +97,6 @@ public:
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
 
-    Vector3f dir_;
     Vector3f base_;
     float length_;
     bool mousePressed_ = false;
@@ -142,6 +129,9 @@ public:
     /// Updates the direction of the arrow, in world space
     MRVIEWER_API void updateDirection( const Vector3f& dir );
 
+    /// Updates the direction of the arrow in parent's space
+    MRVIEWER_API void updateLocalDirection( const Vector3f& dir );
+
     /// Updates the base of the arrow, in world space
     MRVIEWER_API void updateBase( const Vector3f& base );
 
@@ -171,6 +161,9 @@ public:
     /// Returns the direction of the widget, in world space
     MRVIEWER_API Vector3f getDirection() const;
 
+    /// Returns the direction of the widget in parent's space
+    MRVIEWER_API Vector3f getLocalDirection() const;
+
     /// Returns pointer to parent object, always not-null after create() and before reset()
     MRVIEWER_API Object* getParentPtr() const;
 
@@ -182,8 +175,6 @@ private:
     MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
-
-    AffineXf3f builtXf_;
 };
 
-}
+} //namespace MR

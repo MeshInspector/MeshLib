@@ -17,32 +17,13 @@ public:
     /// This callback is invoked every time when the direction is changed by mouse
     using OnDirectionChangedCallback = std::function<void( const Vector3f&, bool )>;
 
-    /// This history action must be created before the change in widget's direction to make it undo-able
+    /// This history action must be created before the change in widget's direction or base to make them undo-able
     class ChangeDirAction : public ChangeXfAction
     {
     public:
         ChangeDirAction( DirectionWidget& widget, const std::string& name = "Change Direction" ) :
             ChangeXfAction( name, static_pointer_cast<Object>( widget.directionObj_ ) )
         {}
-    };
-
-    /// history action for changing the base. It should be added to the history stack by user code
-    class ChangeBaseAction : public ChangeXfAction
-    {
-    public:
-        ChangeBaseAction( DirectionWidget& widget ) :
-            ChangeXfAction( "Change Base", static_pointer_cast< Object >( widget.directionObj_ ) ),
-            widget_{ widget },
-            base_{ widget.base_ }
-        {}
-        virtual void action( Type type ) override
-        {
-            ChangeXfAction::action( type );
-            std::swap( base_, widget_.base_ );
-        }
-    private:
-        DirectionWidget& widget_;
-        Vector3f base_;
     };
 
     /// history action for changing the length. It should be added to the history stack by user code
@@ -97,8 +78,7 @@ public:
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
 
-    Vector3f base_;
-    float length_;
+    float length_ = 0;
     bool mousePressed_ = false;
     // if blocked cannot be moved with mouse
     bool blockedMouse_{ false };
@@ -135,6 +115,9 @@ public:
     /// Updates the base of the arrow, in world space
     MRVIEWER_API void updateBase( const Vector3f& base );
 
+    /// Updates the base of the arrow in parent's space
+    MRVIEWER_API void updateLocalBase( const Vector3f& base );
+
     /// Updates the length of the arrow
     MRVIEWER_API void updateLength( float length );
 
@@ -155,8 +138,11 @@ public:
     /// Returns the color of the widget
     MRVIEWER_API const Color& getColor() const;
 
-    /// Returns the base of the widget
-    MRVIEWER_API const Vector3f& getBase() const;
+    /// Returns the base of the widget, in world space
+    MRVIEWER_API Vector3f getBase() const;
+
+    /// Returns the base of the widget in parent's space
+    MRVIEWER_API Vector3f getLocalBase() const;
 
     /// Returns the direction of the widget, in world space
     MRVIEWER_API Vector3f getDirection() const;

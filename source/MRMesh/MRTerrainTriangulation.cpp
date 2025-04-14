@@ -6,8 +6,10 @@
 #include "MRTimer.h"
 #include "MRComputeBoundingBox.h"
 #include "MRParallelFor.h"
+#include "MRPrecisePredicates2.h"
 #include "MRId.h"
 #include "MR2to3.h"
+#include <numeric> // for std::iota
 
 namespace MR
 {
@@ -19,69 +21,125 @@ namespace DivideConquerTriangulation
 
 class Triangulator
 {
+struct OrderedVertTag{};
+using OVertId = Id<OrderedVertTag>;
+
 public:
-    Triangulator( std::vector<Vector3f>&& points, ProgressCallback cb ):
-        cb_{ cb }
+    Triangulator( Vector<Vector2i, VertId>&& points, ProgressCallback cb )
     {
-        mesh_.points.vec_ = std::move( points );
-        mesh_.topology.vertResize( mesh_.points.size() );
+        pts_ = std::move( points );
+        vertOrder_.resize( pts_.size() );
+        
+        std::iota( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), VertId( 0 ) );
+        if ( !reportProgress( cb, 0.1f ) )
+        {
+            canceled_ = true;
+            return;
+        }
+
+        // sort by two coords (this step is needed because of not absolute `inCircle` SoS predicate)
+        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        {
+            return std::tuple( pts_[l].x, pts_[l].y ) < std::tuple( pts_[r].x, pts_[r].y );
+        } );
+        if ( !reportProgress( cb, 0.15f ) )
+        {
+            canceled_ = true;
+            return;
+        }
+        // remove same (this step is needed because of not absolute `inCircle` SoS predicate)
+        vertOrder_.vec_.erase( std::unique( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        {
+            return pts_[l] == pts_[r];
+        } ), vertOrder_.vec_.end() );
+
+        // sort by SoS predicate
+        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        {
+            return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } ); // use SoS based predicate
+        } );        
+
+        if ( !reportProgress( cb, 0.2f ) )
+        {
+            canceled_ = true;
+            return;
+        }
+
+        cb_ = subprogress( cb, 0.2f, 1.0f );
+
+        tp_.vertResize( pts_.size() );
     }
     bool isCanceled() const
     {
         return canceled_;
     }
-    Mesh run()
+    MeshTopology&& run()
     {
-        seqDelaunay_( 0_v, VertId( mesh_.points.size() ) );
-        return std::move( mesh_ );
+        if ( canceled_ )
+            return std::move( tp_ );
+        seqDelaunay_( OVertId( 0 ), OVertId( vertOrder_.size() ) );
+        return std::move( tp_ );
     }
 private:
-    Mesh mesh_;
+    MeshTopology tp_;
+    Vector<Vector2i, VertId> pts_;
+    Vector<VertId, OVertId> vertOrder_;
     EdgeId basel_;
     ProgressCallback cb_;
     bool canceled_{ false };
 
-    bool inCircle_( const Vector3f& af, Vector3f bf, Vector3f cf, Vector3f df ) const
+    bool inCircle_( VertId aid, VertId bid, VertId cid, VertId did ) const
     {
-        Vector3d b = Vector3d( bf ) - Vector3d( af );
-        Vector3d c = Vector3d( cf ) - Vector3d( af );
-        Vector3d d = Vector3d( df ) - Vector3d( af );
-        return Matrix3d(
-            Vector3d( c.x, c.y, double( c.x ) * c.x + double( c.y ) * c.y ),
-            Vector3d( b.x, b.y, double( b.x ) * b.x + double( b.y ) * b.y ),
-            Vector3d( d.x, d.y, double( d.x ) * d.x + double( d.y ) * d.y )
-        ).det() > 0;
+        if ( aid == did || bid == did )
+            return false; // could be a case in this algorithm
+
+        PreciseVertCoords2 pvc[4];
+        pvc[0].id = aid;
+        pvc[1].id = bid;
+        pvc[2].id = cid;
+        pvc[3].id = did;
+        for ( int i = 0; i < 4; ++i )
+            pvc[i].pt = pts_[pvc[i].id];
+        // use SoS based predicate
+        return inCircle( pvc );
     }
 
-    bool ccw_( const Vector3f& af, Vector3f bf, Vector3f cf ) const
+    bool ccw_( VertId aid, VertId bid, VertId cid ) const
     {
-        Vector3d b = Vector3d( bf ) - Vector3d( af );
-        Vector3d c = Vector3d( cf ) - Vector3d( af );
-        return Matrix2d( to2dim( b ), to2dim( c ) ).det() > 0;
+        assert( aid != bid );
+        assert( aid != cid );
+        assert( bid != cid );
+
+        PreciseVertCoords2 pvc[3];
+        pvc[0].id = aid;
+        pvc[1].id = bid;
+        pvc[2].id = cid;
+        for ( int i = 0; i < 3; ++i )
+            pvc[i].pt = pts_[pvc[i].id];
+        // use SoS based predicate
+        return ccw( pvc );
     }
 
-    bool leftOf_( const Vector3f& x, EdgeId e ) const { return ccw_( x, mesh_.orgPnt( e ), mesh_.destPnt( e ) ); }
-    bool rightOf_( const Vector3f& x, EdgeId e ) const { return ccw_( x, mesh_.destPnt( e ), mesh_.orgPnt( e ) ); }
-    bool valid_( EdgeId e ) const { return ccw_( mesh_.destPnt( e ), mesh_.destPnt( basel_ ), mesh_.orgPnt( basel_ ) ); }
+    bool leftOf_( VertId xId, EdgeId e ) const { return ccw_( xId, tp_.org( e ), tp_.dest( e ) ); }
+    bool rightOf_( VertId xId, EdgeId e ) const { return ccw_( xId, tp_.dest( e ), tp_.org( e ) ); }
+    bool valid_( EdgeId e ) const { return ccw_( tp_.dest( e ), tp_.dest( basel_ ), tp_.org( basel_ ) ); }
 
     EdgeId connect_( EdgeId a, EdgeId b )
     {
-        auto& tp = mesh_.topology;
-        auto e = tp.makeEdge();
-        tp.splice( tp.prev( a.sym() ), e );
-        tp.splice( b, e.sym() );
+        auto e = tp_.makeEdge();
+        tp_.splice( tp_.prev( a.sym() ), e );
+        tp_.splice( b, e.sym() );
         return e;
     }
 
     void deleteEdge_( EdgeId e )
     {
-        auto& tp = mesh_.topology;
-        if ( tp.left( e ) )
-            tp.setLeft( e, {} );
-        if ( tp.left( e.sym() ) )
-            tp.setLeft( e.sym(), {} );
-        tp.splice( tp.prev( e ), e );
-        tp.splice( tp.prev( e.sym() ), e.sym() );
+        if ( tp_.left( e ) )
+            tp_.setLeft( e, {} );
+        if ( tp_.left( e.sym() ) )
+            tp_.setLeft( e.sym(), {} );
+        tp_.splice( tp_.prev( e ), e );
+        tp_.splice( tp_.prev( e.sym() ), e.sym() );
     }
 
     struct OutEdges
@@ -92,94 +150,83 @@ private:
         EdgeId rightMost;
     };
 
-    OutEdges leafDelaunay_( VertId begin, VertId end )
+    OutEdges leafDelaunay_( OVertId begin, OVertId end )
     {
         auto size = end - begin;
         assert( size == 2 || size == 3 );
-        auto& m = mesh_;
-        auto& tp = m.topology;
-        const auto& p = m.points;
 
+        VertId v0 = vertOrder_[begin];
+        VertId v1 = vertOrder_[begin + 1];
         if ( size == 2 )
         {
-            auto ne = tp.makeEdge();
-            tp.setOrg( ne, VertId( begin ) );
-            tp.setOrg( ne.sym(), VertId( begin + 1 ) );
+            auto ne = tp_.makeEdge();
+            tp_.setOrg( ne, v0 );
+            tp_.setOrg( ne.sym(), v1 );
             return { ne,ne.sym() };
         }
+        VertId v2 = vertOrder_[begin + 2];
         EdgeId ne0, ne1;
         {
-            ne0 = tp.makeEdge();
-            ne1 = tp.makeEdge();
-            tp.setOrg( ne0, VertId( begin ) );
-            tp.setOrg( ne1, VertId( begin + 1 ) );
-            tp.setOrg( ne1.sym(), VertId( begin + 2 ) );
-            tp.splice( ne1, ne0.sym() );
+            ne0 = tp_.makeEdge();
+            ne1 = tp_.makeEdge();
+            tp_.setOrg( ne0, v0 );
+            tp_.setOrg( ne1, v1 );
+            tp_.setOrg( ne1.sym(), v2 );
+            tp_.splice( ne1, ne0.sym() );
         }
-        if ( ccw_( p[begin], p[begin + 1], p[begin + 2] ) )
+        if ( ccw_( v0, v1, v2 ) )
         {
             connect_( ne1, ne0 );
-            tp.setLeft( ne0, tp.addFaceId() );
+            tp_.setLeft( ne0, tp_.addFaceId() );
             return { ne0,ne1.sym() };
         }
-        else if ( ccw_( p[begin], p[begin + 2], p[begin + 1] ) )
+        else
         {
+            assert( ccw_( v0, v2, v1 ) ); // as far as we use SoS, it should always be true
             auto ne2 = connect_( ne1, ne0 );
-            tp.setLeft( ne0.sym(), tp.addFaceId() );
+            tp_.setLeft( ne0.sym(), tp_.addFaceId() );
             return { ne2.sym(),ne2 };
         }
-
-        return { ne0,ne1.sym() };
     }
 
     OutEdges nodeDelaunay_( const OutEdges& leftOut, const OutEdges& rightOut )
     {
-        auto& m = mesh_;
-        auto& tp = m.topology;
         auto [ldo, ldi] = leftOut;
         auto [rdi, rdo] = rightOut;
         for ( ;;)
         {
-            if ( leftOf_( m.orgPnt( rdi ), ldi ) )
-                ldi = tp.prev( ldi.sym() );
-            else if ( rightOf_( m.orgPnt( ldi ), rdi ) )
-                rdi = tp.next( rdi.sym() );
+            if ( leftOf_( tp_.org( rdi ), ldi ) )
+                ldi = tp_.prev( ldi.sym() );
+            else if ( rightOf_( tp_.org( ldi ), rdi ) )
+                rdi = tp_.next( rdi.sym() );
             else
                 break;
         }
         basel_ = connect_( rdi.sym(), ldi );
 
-        if ( tp.org( ldi ) == tp.org( ldo ) )
+        if ( tp_.org( ldi ) == tp_.org( ldo ) )
             ldo = basel_.sym();
-        if ( tp.org( rdi ) == tp.org( rdo ) )
+        if ( tp_.org( rdi ) == tp_.org( rdo ) )
             rdo = basel_;
 
         for ( ;;)
         {
-            auto lcand = tp.next( basel_.sym() );
+            auto lcand = tp_.next( basel_.sym() );
             if ( valid_( lcand ) )
             {
-                while ( inCircle_( m.destPnt( basel_ ), m.orgPnt( basel_ ), m.destPnt( lcand ), m.destPnt( tp.next( lcand ) ) ) )
+                while ( inCircle_( tp_.dest( basel_ ), tp_.org( basel_ ), tp_.dest( lcand ), tp_.dest( tp_.next( lcand ) ) ) )
                 {
-                    auto t = tp.next( lcand );
-                    if ( t == basel_.sym() )
-                        break;
-                    if ( lcand.undirected() == ldo.undirected() )
-                        break; // precision issues leads to such troubles, for now just break
+                    auto t = tp_.next( lcand );
                     deleteEdge_( lcand );
                     lcand = t;
                 }
             }
-            auto rcand = tp.prev( basel_ );
+            auto rcand = tp_.prev( basel_ );
             if ( valid_( rcand ) )
             {
-                while ( inCircle_( m.destPnt( basel_ ), m.orgPnt( basel_ ), m.destPnt( rcand ), m.destPnt( tp.prev( rcand ) ) ) )
+                while ( inCircle_( tp_.dest( basel_ ), tp_.org( basel_ ), tp_.dest( rcand ), tp_.dest( tp_.prev( rcand ) ) ) )
                 {
-                    auto t = tp.prev( rcand );
-                    if ( t == basel_ )
-                        break;
-                    if ( rcand.undirected() == rdo.undirected() )
-                        break; // precision issues leads to such troubles, for now just break
+                    auto t = tp_.prev( rcand );
                     deleteEdge_( rcand );
                     rcand = t;
                 }
@@ -187,7 +234,7 @@ private:
             if ( !valid_( lcand ) && !valid_( rcand ) )
                 break;
             if ( !valid_( lcand ) || ( valid_( rcand ) &&
-                inCircle_( m.destPnt( lcand ), m.orgPnt( lcand ), m.orgPnt( rcand ), m.destPnt( rcand ) ) ) )
+                inCircle_( tp_.dest( lcand ), tp_.org( lcand ), tp_.org( rcand ), tp_.dest( rcand ) ) ) )
             {
                 basel_ = connect_( rcand, basel_.sym() );
             }
@@ -195,29 +242,29 @@ private:
             {
                 basel_ = connect_( basel_.sym(), lcand.sym() );
             }
-            tp.setLeft( basel_, tp.addFaceId() );
+            tp_.setLeft( basel_, tp_.addFaceId() );
         }
-        assert( tp.hasEdge( ldo ) );
-        assert( tp.hasEdge( rdo ) );
+        assert( tp_.hasEdge( ldo ) );
+        assert( tp_.hasEdge( rdo ) );
         return { ldo,rdo };
     }
 
-    OutEdges recDelaunay_( VertId begin, VertId end )
+    OutEdges recDelaunay_( OVertId begin, OVertId end )
     {
         auto size = end - begin;
         if ( size == 2 || size == 3 )
             return leafDelaunay_( begin, end );
 
-        auto left = recDelaunay_( begin, VertId( ( begin.get() + end.get() ) / 2 ) );
-        auto right = recDelaunay_( VertId( ( begin.get() + end.get() ) / 2 ), end );
+        auto left = recDelaunay_( begin, OVertId( ( begin.get() + end.get() ) / 2 ) );
+        auto right = recDelaunay_( OVertId( ( begin.get() + end.get() ) / 2 ), end );
         return nodeDelaunay_( left, right );
     }
 
-    OutEdges seqDelaunay_( VertId begin, VertId end )
+    OutEdges seqDelaunay_( OVertId begin, OVertId end )
     {
         struct SubTask
         {
-            VertId b, e;
+            OVertId b, e;
             OutEdges l, r;
             int parentIndex{ INT_MAX };
             bool isLeaf() const
@@ -233,7 +280,7 @@ private:
         SubTask subtasks[MaxStackSize];
         int stackSize = 0;
 
-        auto addSubTask = [&] ( VertId begin, VertId end, int parent )
+        auto addSubTask = [&] ( OVertId begin, OVertId end, int parent )
         {
             assert( stackSize < MaxStackSize );
             subtasks[stackSize++] = { 
@@ -288,9 +335,9 @@ private:
             }
             auto curInd = stackSize - 1;
             // first add right
-            addSubTask( VertId( ( s.b + s.e ) / 2 ), s.e, curInd );
+            addSubTask( OVertId( ( s.b + s.e ) / 2 ), s.e, curInd );
             // second add left (to process right second)
-            addSubTask( s.b, VertId( ( s.b + s.e ) / 2 ), -curInd - 1 );
+            addSubTask( s.b, OVertId( ( s.b + s.e ) / 2 ), -curInd - 1 );
         }
         assert( false );
         return {};
@@ -321,28 +368,26 @@ Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallb
 {
     MR_TIMER;
 
-    tbb::parallel_sort( points.begin(), points.end(), [] ( const auto& l, const auto& r )->bool
+    Mesh resMesh;
+    resMesh.points = std::move( points );
+    auto box = Box3d( computeBoundingBox( resMesh.points ) );
+
+    auto toInt = getToIntConverter( box );
+    Vector<Vector2i, VertId> p2d( resMesh.points.size() );
+    ParallelFor( p2d, [&] ( VertId v )
     {
-        return l.x < r.x || ( l.x == r.x && l.y < r.y );
+        p2d[v] = to2dim( toInt( resMesh.points[v] ) );
     } );
 
     if ( cb && !cb( 0.1f ) )
         return unexpectedOperationCanceled();
 
-    points.erase( std::unique( points.begin(), points.end(), [] ( const auto& l, const auto& r )->bool
-    {
-        return l.x == r.x && l.y == r.y;
-    } ), points.end() );
-
-    if ( cb && !cb( 0.2f ) )
-        return unexpectedOperationCanceled();
-
-    DivideConquerTriangulation::Triangulator t( std::move( points ), subprogress( cb, 0.2f, 1.0f ) );
-    auto res = t.run();
+    DivideConquerTriangulation::Triangulator t( std::move( p2d ), subprogress( cb, 0.1f, 1.0f ) );
+    resMesh.topology = t.run();
     if ( t.isCanceled() )
         return unexpectedOperationCanceled();
 
-    return res;
+    return resMesh;
 }
 
 }

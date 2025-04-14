@@ -11,6 +11,17 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
+struct PreciseVertCoord
+{
+    VertId id;   ///< unique id of the vertex (in both contours)
+    int pt;      ///< coordinate
+};
+
+/// return true if l is smaller then r
+/// uses simulation-of-simplicity to avoid "number are the same"
+inline bool smaller( const PreciseVertCoord& l, const PreciseVertCoord& r )
+{ return l.pt < r.pt || ( l.pt == r.pt && r.id < l.id ); }
+
 /// return true if the smallest rotation from vector (a) to vector (b) is in counter-clock-wise direction;
 /// uses simulation-of-simplicity to avoid "vectors are collinear"
 MRMESH_API bool ccw( const Vector2i & a, const Vector2i & b );
@@ -29,6 +40,10 @@ struct PreciseVertCoords2
 /// first sorts the indices in ascending order, then calls the predicate for sorted points
 MRMESH_API bool ccw( const std::array<PreciseVertCoords2, 3> & vs );
 MRMESH_API bool ccw( const PreciseVertCoords2* vs );
+
+/// return true if 4th point in array lays inside circumcircle of first 3 points based triangle
+MRMESH_API bool inCircle( const std::array<PreciseVertCoords2, 4>& vs );
+MRMESH_API bool inCircle( const PreciseVertCoords2* vs );
 
 struct SegmentSegmentIntersectResult
 {

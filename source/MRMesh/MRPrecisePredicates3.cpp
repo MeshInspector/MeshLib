@@ -13,36 +13,40 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 namespace MR
 {
 
-bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
+template<typename T, typename hT, typename hhT>
+bool orient3dT( const Vector3<T> & a, const Vector3<T>& b, const Vector3<T>& c )
 {
-    auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
+    auto vhp = mixed( Vector3<hhT>{ a }, Vector3<hhT>{ b }, Vector3<hhT>{ c } );
     if ( vhp ) return vhp > 0;
 
-    auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );
+    auto v = cross( Vector2<hT>{ b.x, b.y }, Vector2<hT>{ c.x, c.y } );
     if ( v ) return v > 0;
 
-    v = -cross( Vector2ll{ b.x, b.z }, Vector2ll{ c.x, c.z } );
+    v = -cross( Vector2<hT>{ b.x, b.z }, Vector2<hT>{ c.x, c.z } );
     if ( v ) return v > 0;
 
-    v = cross( Vector2ll{ b.y, b.z }, Vector2ll{ c.y, c.z } );
+    v = cross( Vector2<hT>{ b.y, b.z }, Vector2<hT>{ c.y, c.z } );
     if ( v ) return v > 0;
 
-    v = -cross( Vector2ll{ a.x, a.y }, Vector2ll{ c.x, c.y } );
+    v = -cross( Vector2<hT>{ a.x, a.y }, Vector2<hT>{ c.x, c.y } );
     if ( v ) return v > 0;
 
     if ( c.x ) return c.x > 0;
 
     if ( c.y ) return c.y < 0;
 
-    v = cross( Vector2ll{ a.x, a.z }, Vector2ll{ c.x, c.z } );
+    v = cross( Vector2<hT>{ a.x, a.z }, Vector2<hT>{ c.x, c.z } );
     if ( v ) return v > 0;
 
     if ( c.z ) return c.z > 0;
 
-    v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
+#ifndef NDEBUG
+    v = -cross( Vector2<hT>{ a.y, a.z }, Vector2<hT>{ c.y, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
-    v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
+    v = cross( Vector2<hT>{ a.x, a.y }, Vector2<hT>{ b.x, b.y } );
     if ( v ) return v > 0;
 
     if ( b.x ) return b.x < 0;
@@ -54,15 +58,21 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
     return true;
 }
 
-bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+bool orient3d( const Vector3i& a, const Vector3i& b, const Vector3i& c )
 {
-    return orient3d( vs.data() );
+    return orient3dT<int, long long, HighPrecisionInt>( a, b, c );
 }
 
-bool orient3d( const PreciseVertCoords* vs )
+bool orient3d( const Vector3ll& a, const Vector3ll& b, const Vector3ll& c )
+{
+    return orient3dT<long long, HighPrecisionInt, HighHighPrecisionInt>( a, b, c );
+}
+
+template<typename T>
+bool orient3dT( const T* vs )
 {
     bool odd = false;
-    std::array<int, 4> order = {0, 1, 2, 3};
+    std::array<int, 4> order = { 0, 1, 2, 3 };
 
     for ( int i = 0; i < 3; ++i )
     {
@@ -78,6 +88,26 @@ bool orient3d( const PreciseVertCoords* vs )
     }
 
     return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+}
+
+bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+{
+    return orient3dT( vs.data() );
+}
+
+bool orient3d( const PreciseVertCoords* vs )
+{
+    return orient3dT( vs );
+}
+
+bool orient3d( const std::array<PreciseVertCoordsll, 4>& vs )
+{
+    return orient3dT( vs.data() );
+}
+
+bool orient3d( const PreciseVertCoordsll* vs )
+{
+    return orient3dT( vs );
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )

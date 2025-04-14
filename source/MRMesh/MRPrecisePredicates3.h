@@ -14,13 +14,10 @@ namespace MR
 /// returns true if the plane with orientated triangle ABC has 0 point at the left;
 /// uses simulation-of-simplicity to avoid "0 is exactly on plane"
 MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c );
-MRMESH_API bool orient3d( const Vector3ll& a, const Vector3ll& b, const Vector3ll& c );
 
 /// returns true if the plane with orientated triangle ABC has D point at the left;
 /// uses simulation-of-simplicity to avoid "D is exactly on plane"
 inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
-    { return orient3d( a - d, b - d, c - d ); }
-inline bool orient3d( const Vector3ll & a, const Vector3ll & b, const Vector3ll & c, const Vector3ll & d )
     { return orient3d( a - d, b - d, c - d ); }
 
 struct PreciseVertCoords
@@ -29,17 +26,9 @@ struct PreciseVertCoords
     Vector3i pt; ///< integer coordinates of the vertex
 };
 
-struct PreciseVertCoordsll
-{
-    VertId id;   ///< unique id of the vertex (in both meshes)
-    Vector3ll pt; ///< integer coordinates of the vertex
-};
-
 /// first sorts the indices in ascending order, then calls the predicate for sorted points
 MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
 MRMESH_API bool orient3d( const PreciseVertCoords* vs );
-MRMESH_API bool orient3d( const std::array<PreciseVertCoordsll, 4>& vs );
-MRMESH_API bool orient3d( const PreciseVertCoordsll* vs );
 
 struct TriangleSegmentIntersectResult
 {

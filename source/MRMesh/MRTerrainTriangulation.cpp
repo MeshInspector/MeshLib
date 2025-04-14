@@ -37,22 +37,6 @@ public:
             return;
         }
 
-        // sort by two coords (this step is needed because of not absolute `inCircle` SoS predicate)
-        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
-        {
-            return std::tuple( pts_[l].x, pts_[l].y ) < std::tuple( pts_[r].x, pts_[r].y );
-        } );
-        if ( !reportProgress( cb, 0.15f ) )
-        {
-            canceled_ = true;
-            return;
-        }
-        // remove same (this step is needed because of not absolute `inCircle` SoS predicate)
-        vertOrder_.vec_.erase( std::unique( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
-        {
-            return pts_[l] == pts_[r];
-        } ), vertOrder_.vec_.end() );
-
         // sort by SoS predicate
         tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
         {

@@ -1,5 +1,9 @@
 import platform
 import subprocess
+
+# Add current script directory to sys.path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from utils import get_vcpkg_root_from_where, detect_vcpkg_python_version, choco_install_python
 from pathlib import Path
 

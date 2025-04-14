@@ -34,6 +34,38 @@
 namespace MR
 {
 
+void findSpaceDistancesAndVertsCoincidingDirection( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
+                                             VertScalars& distances, VertBitSet& verts )
+{
+    MR_TIMER
+
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range ) && ( dot( mesh.normal( v ), dir ) >= 0.f );
+        distances[v] = dist;
+        verts.set( v, valid );
+        return valid;
+    } );
+}
+
+void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, float range, VertScalars& distances, VertBitSet& verts )
+{
+    // note! better update bitset for interesting verts than check for all verts from distances
+    MR_TIMER
+    
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range );
+        distances[v] = dist;
+        verts.set( v, valid );
+        return valid;
+    } );
+}
+
 /// Undo action for ObjectMesh points only (not topology) change;
 /// It can store all points (uncompressed format), or only modified points (compressed format)
 class SurfaceManipulationWidget::SmartChangeMeshPointsAction : public HistoryAction
@@ -322,6 +354,14 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
         historyAction_->compress();
         historyAction_.reset();
     }
+}
+
+void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region )
+{
+    if ( editOnlyVisibleSurface_ )
+        findSpaceDistancesAndVertsCoincidingDirection( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region );
+    else
+        findSpaceDistancesAndVerts( mesh, pOnFace, settings_.radius, distances, region );
 }
 
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
@@ -686,18 +726,12 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
                 triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
             }
         }
-
+        
         if ( triPoints.size() == 1 )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
-            PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
-            std::pair<VertScalars, VertBitSet> distancesAndRegion;
-            if ( editOnlyVisibleSurface_ )
-                distancesAndRegion = findSpaceDistancesAndRegionVisible( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ) );
-            else
-                distancesAndRegion = findSpaceDistancesAndRegion( mesh, pOnFace, settings_.radius );
-            editingDistanceMap_ = std::move( distancesAndRegion.first );
-            singleEditingRegion_ = std::move( distancesAndRegion.second );
+            const PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
+            updateDistancesAndRegion_( mesh, pOnFace, editingDistanceMap_, singleEditingRegion_ );
         }
         else
         {
@@ -778,13 +812,7 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
             pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
         }
 
-        std::pair<VertScalars, VertBitSet> distancesAndRegion;
-        if ( editOnlyVisibleSurface_ )
-            distancesAndRegion = findSpaceDistancesAndRegionVisible( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ) );
-        else
-            distancesAndRegion = findSpaceDistancesAndRegion( mesh, pOnFace, settings_.radius );
-        visualizationDistanceMap_ = std::move( distancesAndRegion.first );
-        visualizationRegion_ = std::move( distancesAndRegion.second );
+        updateDistancesAndRegion_( mesh, pOnFace, visualizationDistanceMap_, visualizationRegion_ );
         expand( mesh.topology, visualizationRegion_ );
         {
             int pointsCount = 0;

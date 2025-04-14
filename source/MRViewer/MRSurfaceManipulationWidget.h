@@ -91,7 +91,9 @@ public:
     MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
     MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
 
-    void editOnlyVisibleSurface( bool edit ) { editOnlyVisibleSurface_ = edit; }
+    /// restricts editable area to vertices whose normals look into the same half-space as normal under cursor
+    void setEditOnlyVisibleSurface( bool edit ) { editOnlyVisibleSurface_ = edit; }
+    /// get state of an editable region restriction 
     bool isEditOnlyVisibleSurface() const { return editOnlyVisibleSurface_; }
 private:
     /// start modifying mesh surface
@@ -130,6 +132,8 @@ private:
     /// this function is called after all modifications are finished;
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
+
+    void updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region );
 
     Settings settings_;
 

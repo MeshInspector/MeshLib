@@ -42,9 +42,14 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     MRPython
     spdlog::spdlog
     TBB::tbb
-    pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+  IF(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11nonlimitedapi_stubs)
+  ELSE()
+    find_package(pybind11nonlimitedapi REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11nonlimitedapi::pybind11nonlimitedapi_stubs)
+  ENDIF()
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh

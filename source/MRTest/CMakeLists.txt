@@ -88,10 +88,12 @@ IF(MESHLIB_PYTHON_SUPPORT)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRPython
     MREmbeddedPython
-    pybind11nonlimitedapi_stubs
   )
-  IF(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
+  IF(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pybind11nonlimitedapi_stubs)
+  ELSE()
+    find_package(pybind11nonlimitedapi REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python pybind11nonlimitedapi::pybind11nonlimitedapi_stubs)
   ENDIF()
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_PYTHON)

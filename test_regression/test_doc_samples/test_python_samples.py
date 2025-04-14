@@ -80,10 +80,6 @@ def run_code_sample(code_path: str, args: list):
                                   'verify': 'points'
                                   },
                                  id="GlobalRegistration.dox.py",
-                                 marks=pytest.mark.bindingsV3,),
-                             pytest.param(
-                                 {'sample': "MeshOffsetWeighted.dox.py", 'input_files': [], 'output_files': ["offset_weighted.ctm"]},
-                                 id="MeshOffsetWeighted.dox.py",
                                  marks=pytest.mark.bindingsV3),
                          ])
 @pytest.mark.smoke

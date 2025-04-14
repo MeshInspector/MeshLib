@@ -34,7 +34,7 @@
 namespace MR
 {
 
-void findSpaceDistancesAndVertsCoincidingDirection( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
+void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
                                              VertScalars& distances, VertBitSet& verts )
 {
     MR_TIMER
@@ -358,8 +358,8 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
 
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region )
 {
-    if ( editOnlyVisibleSurface_ )
-        findSpaceDistancesAndVertsCoincidingDirection( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region );
+    if ( editOnlyCodirectedSurface_ )
+        findSpaceDistancesAndCodirectedVerts( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region );
     else
         findSpaceDistancesAndVerts( mesh, pOnFace, settings_.radius, distances, region );
 }

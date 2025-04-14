@@ -92,9 +92,9 @@ public:
     MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
 
     /// restricts editable area to vertices whose normals look into the same half-space as normal under cursor
-    void setEditOnlyVisibleSurface( bool edit ) { editOnlyVisibleSurface_ = edit; }
+    void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
     /// get state of an editable region restriction 
-    bool isEditOnlyVisibleSurface() const { return editOnlyVisibleSurface_; }
+    bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -184,7 +184,7 @@ private:
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
-    bool editOnlyVisibleSurface_ = true;
+    bool editOnlyCodirectedSurface_ = true;
 };
 
 }

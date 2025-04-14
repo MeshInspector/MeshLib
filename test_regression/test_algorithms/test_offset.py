@@ -261,3 +261,44 @@ def test_offset_general(tmp_path, test_params):
     with check:
         degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
+
+
+@pytest.mark.bindingsV3
+def test_offset_weighted_shell(tmp_path):
+    """
+    Tests weightedMeshShell method with vertex-based weights
+    """
+    # Load input mesh
+    input_folder = Path(test_files_path) / "algorithms" / "offset"
+    case_name = "weighted_offset"
+    mesh = mrmeshpy.loadMesh(input_folder / "Torus_default.ctm")
+
+    # Create weights for vertices
+    vertex_count = mesh.points.size()
+    scalars = mrmeshpy.VertScalars(vertex_count)
+    for i in range(vertex_count):
+        weight = abs(mesh.points.vec[i].x / 5) + 0.1
+        scalars.vec[i] = weight
+
+    # Setup parameters
+    params = mrmeshpy.WeightedPointsShellParametersMetric()
+    params.offset = 0.05
+    params.voxelSize = 0.1
+    params.dist.maxWeight = max(scalars.vec)
+
+    # Run weightedMeshShell
+    new_mesh = mrmeshpy.weightedMeshShell(mesh, scalars, params)
+
+    # === Verification
+    mrmeshpy.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
+    ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
+
+    with check:
+        compare_meshes_similarity(new_mesh, ref_mesh)
+    with check:
+        self_col_tri = mrmeshpy.findSelfCollidingTriangles(new_mesh).size()
+        assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"

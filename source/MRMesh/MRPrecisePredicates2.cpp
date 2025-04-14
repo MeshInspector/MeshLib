@@ -65,7 +65,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     if ( auto v = bxy_cxy )
         return v > 0;
 
-    // e**2
+    // e**3
     assert( bxy_cxy == 0 );
     if ( auto v = cross( Vector2hp{ b.y, b.z }, Vector2hp{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
         return v > 0;
@@ -78,7 +78,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
         return v > 0;
 
     // e**10
-    if ( auto v = -c.x * ( a.y + b.y ) )
+    if ( auto v = c.x * ( b.y - a.y ) )
         return v > 0;
 
     // e**11

@@ -114,14 +114,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     // e**84
     if ( auto v = -b.z )
         return v > 0; // can only be false, since b.z >= 0
-
-    // e**90
-    if ( auto v = -a.x * b.y )
-        return v > 0;
-
-    // e**93
-    if ( auto v = -b.y )
-        return v > 0;
+    assert( b.x == 0 && b.y == 0 && b.z == 0 );
 
     // e**99
     if ( auto v = -a.x )

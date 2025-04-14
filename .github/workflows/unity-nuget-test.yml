@@ -37,8 +37,11 @@ jobs:
           aws-region: us-east-1
       - name: Start Instance
         run: |
-          $instanceState = aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} --query 'Reservations[].Instances[].State.Name' --output text
-          ($instanceState -eq "stopped") { aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} }
+          instanceState=$(aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} } --query 'Reservations[].Instances[].State.Name' --output text)
+          if [[ "$instanceState" == "stopped" ]]; then
+            aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} }
+          fi
+ 
       - name: Wait Instance
         run: |
           aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}

@@ -41,6 +41,13 @@ struct PreciseVertCoords2
 MRMESH_API bool ccw( const std::array<PreciseVertCoords2, 3> & vs );
 MRMESH_API bool ccw( const PreciseVertCoords2* vs );
 
+/// considers 3D points obtained from 2D inputs by moving each point on paraboloid: z = x*x+y*y;
+/// returns true if the plane with orientated triangle ABC has D point at the left;
+/// uses simulation-of-simplicity to avoid "D is exactly on plane"
+MRMESH_API bool orientParaboloid3d( const Vector2i & a, const Vector2i & b, const Vector2i & c );
+inline bool orientParaboloid3d( const Vector2i & a, const Vector2i & b, const Vector2i & c, const Vector2i & d )
+    { return orientParaboloid3d( a - d, b - d, c - d ); }
+
 /// return true if 4th point in array lays inside circumcircle of first 3 points based triangle
 MRMESH_API bool inCircle( const std::array<PreciseVertCoords2, 4>& vs );
 MRMESH_API bool inCircle( const PreciseVertCoords2* vs );

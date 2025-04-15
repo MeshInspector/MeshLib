@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using static MR.DotNet;
 
-public static class MeshResolveDegenerationsExample
+public static class MeshFixDegeneraciesExample
 {
     public static void Run(string[] args)
     {
@@ -9,7 +9,7 @@ public static class MeshResolveDegenerationsExample
         {
             if (args.Length != 2 && args.Length != 3)
             {
-                Console.WriteLine("Usage: {0} MeshResolveDegenerationsExample INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
+                Console.WriteLine("Usage: {0} MeshFixDegeneraciesExample INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
                 return;
             }
 

@@ -30,10 +30,7 @@ void DirectionWidget::create( const Vector3f& worldDir, const Vector3f& worldBas
 {
     onDirectionChanged_ = onDirectionChanged;
     create( parent );
-
-    updateDirection( worldDir );
-    updateBase( worldBase );
-    updateLength( worldLength );
+    updateArrow( { .dir = worldDir, .base = worldBase, .length = worldLength } );
 }
 
 void DirectionWidget::reset()

@@ -37,6 +37,7 @@
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRMeshCollide.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
@@ -115,6 +116,7 @@
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
+    <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />

@@ -78,5 +78,76 @@ namespace MR
         {
             findAndFixMultipleEdges(mesh.mesh_);
         }
+
+        public struct FixMeshDegeneraciesParams
+        {
+            /// maximum permitted deviation from the original surface
+            public float maxDeviation = 0f;
+
+            /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+            public float tinyEdgeLength = 0f;
+
+            /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
+            /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
+            public float criticalTriAspectRatio = 1e4f;
+
+            /// Permit edge flips if it does not change dihedral angle more than on this value
+            public float maxAngleChange = (float)(Math.PI / 3.0);
+
+            /// Small stabilizer is important to achieve good results on completely planar mesh parts,
+            /// if your mesh is not-planer everywhere, then you can set it to zero
+            public float stabilizer = 1e-6f;
+
+            /// degenerations will be fixed only in given region, it is updated during the operation
+            public FaceBitSet? region = null;
+
+            public enum Mode
+            {
+                Decimate, ///< use decimation only to fix degeneracies
+                Remesh,   ///< if decimation does not succeed, perform subdivision too
+                RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
+            }
+            public Mode mode = Mode.Remesh;
+
+            public FixMeshDegeneraciesParams() { }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRFixMeshDegeneraciesParams
+        {
+            public float maxDeviation = 0f;
+            public float tinyEdgeLength = 0f;
+            public float criticalTriAspectRatio = 1e4f;
+            public float maxAngleChange = (float)(Math.PI / 3.0);
+            public float stabilizer = 1e-6f;
+            public IntPtr region = IntPtr.Zero;
+            public FixMeshDegeneraciesParams.Mode mode = FixMeshDegeneraciesParams.Mode.Remesh;
+
+            public MRFixMeshDegeneraciesParams() { }
+        }
+
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+        private static extern void mrFixMeshDegeneracies(IntPtr mesh, ref MRFixMeshDegeneraciesParams settings, ref IntPtr errorString);
+
+        /// Fixes degenerate faces and short edges in mesh (changes topology)
+        public static void FixMeshDegeneracies(ref Mesh mesh, FixMeshDegeneraciesParams settings)
+        {
+            MRFixMeshDegeneraciesParams mrParams;
+            mrParams.maxDeviation = settings.maxDeviation;
+            mrParams.tinyEdgeLength = settings.tinyEdgeLength;
+            mrParams.criticalTriAspectRatio = settings.criticalTriAspectRatio;
+            mrParams.maxAngleChange = settings.maxAngleChange;
+            mrParams.stabilizer = settings.stabilizer;
+            mrParams.region = settings.region?.bs_ ?? IntPtr.Zero;
+            mrParams.mode = settings.mode;
+
+            IntPtr errorString = IntPtr.Zero;
+            mrFixMeshDegeneracies(mesh.varMesh(), ref mrParams, ref errorString);
+            if ( errorString != IntPtr.Zero )
+            {
+                string error = MarshalNativeUtf8ToManagedString( mrStringData( errorString ) );
+                throw new SystemException( error );
+            }
+        }
     }
 }

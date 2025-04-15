@@ -266,6 +266,7 @@ namespace MR
         /// Resolves degenerate triangles in given mesh
         /// This function performs decimation, so it can affect topology
         /// \return true if the mesh has been changed
+        [Obsolete("use FixMeshDegeneracies instead")]
         public static bool ResolveMeshDegenerations(ref Mesh mesh, ResolveMeshDegenParameters settings)
         {
             MRResolveMeshDegenParameters mrParameters = new MRResolveMeshDegenParameters();

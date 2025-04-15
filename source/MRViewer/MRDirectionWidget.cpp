@@ -232,6 +232,22 @@ Vector3f DirectionWidget::getDirection() const
     return ( directionObj_->worldXf().A * Vector3f::plusZ() ).normalized();
 }
 
+float DirectionWidget::getLocalLength() const
+{
+    if ( !directionObj_ )
+        return assert( false ), 0.0f;
+
+    return ( directionObj_->xf().A * Vector3f::plusZ() ).length();
+}
+
+float DirectionWidget::getLength() const
+{
+    if ( !directionObj_ )
+        return assert( false ), 0.0f;
+
+    return ( directionObj_->worldXf().A * Vector3f::plusZ() ).length();
+}
+
 auto DirectionWidget::getLocalArrow() const -> Arrow
 {
     Arrow res;

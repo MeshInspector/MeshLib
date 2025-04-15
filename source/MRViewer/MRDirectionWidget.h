@@ -153,10 +153,10 @@ public:
     MRVIEWER_API Vector3f getLocalDirection() const;
 
     /// Returns the length of the arrow in world space
-    float getLength() const { return getArrow().length; }
+    MRVIEWER_API float getLength() const;
 
     /// Returns the length of the arrow in parent's space
-    float getLocalLength() const { return getLocalArrow().length; }
+    MRVIEWER_API float getLocalLength() const;
 
     /// Returns pointer to parent object, always not-null after create() and before reset()
     MRVIEWER_API Object* getParentPtr() const;

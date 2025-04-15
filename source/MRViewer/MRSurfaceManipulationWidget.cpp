@@ -667,14 +667,15 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     MR_TIMER;
 
     const auto& viewerRef = getViewerInstance();
+    const ViewportId viewportId = viewerRef.viewport().id;
     std::vector<Vector2f> viewportPoints;
     if ( !mousePressed_ || ( mousePos - mousePos_ ).lengthSq() < 16.f )
-        viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
+        viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewportId ) ) );
     else
     {
         // if the mouse shift is large, then the brush area is defined as the common area of many small shifts (creating many intermediate points of movement)
-        const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) );
-        const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewerRef.getHoveredViewportId() ) );
+        const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewportId ) );
+        const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewportId ) );
         const Vector2f vec = newMousePos - oldMousePos;
         const int count = int( std::ceil( vec.length() ) ) + 1;
         const Vector2f step = vec / ( count - 1.f );
@@ -690,14 +691,15 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         movedPosPick = getViewerInstance().viewport().multiPickObjects( { { static_cast< VisualObject* >( objMeshPtr.get() ) } }, viewportPoints );
     else
     {
-        auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();
-        std::vector<VisualObject*> visualObjectsP( visualObjectsS.size() );
+        const auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();
+        std::vector<VisualObject*> visualObjectsP;
+        visualObjectsP.reserve( visualObjectsS.size() );
         for ( int i = 0; i < visualObjectsS.size(); ++i )
         {
             if ( lastStableObjMesh_ && visualObjectsS[i] == obj_ )
-                visualObjectsP[i] = lastStableObjMesh_.get();
-            else
-                visualObjectsP[i] = visualObjectsS[i].get();
+                visualObjectsP.push_back( lastStableObjMesh_.get() );
+            else if ( visualObjectsS[i]->isVisible( viewportId ) )
+                visualObjectsP.push_back( visualObjectsS[i].get() );
         }
         movedPosPick = getViewerInstance().viewport().multiPickObjects( visualObjectsP, viewportPoints );
     }

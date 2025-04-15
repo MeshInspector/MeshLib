@@ -7,7 +7,7 @@ import shutil
 # Add current script directory to sys.path
 try:
     script_dir = os.path.dirname(os.path.abspath(__file__))
-except NameError:
+except ModuleNotFoundError:
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 from utils import get_vcpkg_root_from_where, detect_vcpkg_python_version

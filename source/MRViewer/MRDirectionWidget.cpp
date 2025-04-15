@@ -5,7 +5,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRMatrix3Decompose.h"
 
 namespace MR
 {
@@ -240,12 +239,11 @@ auto DirectionWidget::getLocalArrow() const -> Arrow
         return assert( false ), res;
 
     const auto xf = directionObj_->xf();
-    res.dir = ( xf.A * Vector3f::plusZ() ).normalized();
+    const auto arrowVec = xf.A * Vector3f::plusZ();
+    res.length = arrowVec.length();
+    if ( res.length )
+        res.dir = arrowVec / res.length;
     res.base = xf.b;
-
-    Matrix3f r, s;
-    decomposeMatrix3( xf.A, r, s );
-    res.length = ( s.x.x + s.y.y + s.z.z ) / 3;
     return res;
 }
 
@@ -256,12 +254,11 @@ auto DirectionWidget::getArrow() const -> Arrow
         return assert( false ), res;
 
     const auto xf = directionObj_->worldXf();
-    res.dir = ( xf.A * Vector3f::plusZ() ).normalized();
+    const auto arrowVec = xf.A * Vector3f::plusZ();
+    res.length = arrowVec.length();
+    if ( res.length )
+        res.dir = arrowVec / res.length;
     res.base = xf.b;
-
-    Matrix3f r, s;
-    decomposeMatrix3( xf.A, r, s );
-    res.length = ( s.x.x + s.y.y + s.z.z ) / 3; // assumes uniform scaling in all parent objects
     return res;
 }
 

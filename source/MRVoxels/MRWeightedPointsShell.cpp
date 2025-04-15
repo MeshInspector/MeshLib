@@ -11,6 +11,7 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRParallelMinMax.h"
 
 namespace MR
 {
@@ -220,9 +221,10 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 
     DistanceFromWeightedPointsParams distParams;
-    distParams.maxWeight = 0.f;
-    for ( const auto& reg : params.regions )
-        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
+    
+    auto [_,maxWeight] = parallelMinMax(weights);
+    distParams.maxWeight = maxWeight;
+
     distParams.pointWeight = [&weights] ( VertId v )
     {
         return weights[v];

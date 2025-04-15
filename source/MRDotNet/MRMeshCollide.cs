@@ -18,7 +18,7 @@ namespace MR
         */
         public static bool IsInside(MeshPart meshA, MeshPart meshB, AffineXf3f? rigidB2A = null)
         {
-            return mrIsInside(ref meshA.mrMeshPart, ref meshB.mrMeshPart, rigidB2A is null ? IntPtr.Zero : rigidB2A.XfAddr());
+            return mrIsInside(ref meshA.mrMeshPart, ref meshB.mrMeshPart, rigidB2A?.XfAddr() ?? IntPtr.Zero);
         }
     }
 }

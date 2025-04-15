@@ -48,25 +48,34 @@ void DirectionWidget::setOnDirectionChangedCallback( OnDirectionChangedCallback 
     onDirectionChanged_ = cb;
 }
 
-void DirectionWidget::updateLocalDirection( const Vector3f& dir )
+void DirectionWidget::updateLocalArrow( const Arrow& arrow )
 {
     if ( !directionObj_ )
         return assert( false );
 
-    auto xf = directionObj_->xf();
-    xf.A = Matrix3f::rotation( Vector3f::plusZ(), dir );
-    directionObj_->setXf( xf );
+    directionObj_->setXf( AffineXf3f( arrow.length * Matrix3f::rotation( Vector3f::plusZ(), arrow.dir ), arrow.base ) );
+}
+
+void DirectionWidget::updateArrow( const Arrow& arrow )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    directionObj_->setWorldXf( AffineXf3f( arrow.length * Matrix3f::rotation( Vector3f::plusZ(), arrow.dir ), arrow.base ) );
+}
+
+void DirectionWidget::updateLocalDirection( const Vector3f& dir )
+{
+    auto arrow = getLocalArrow();
+    arrow.dir = dir;
+    updateLocalArrow( arrow );
 }
 
 void DirectionWidget::updateDirection( const Vector3f& dir )
 {
-    if ( !directionObj_ )
-        return assert( false );
-    auto parent = directionObj_->parent();
-    if ( !parent )
-        return assert( false );
-
-    updateLocalDirection( parent->worldXf().A.inverse() * dir );
+    auto arrow = getArrow();
+    arrow.dir = dir;
+    updateArrow( arrow );
 }
 
 void DirectionWidget::updateLocalBase( const Vector3f& base )
@@ -92,25 +101,16 @@ void DirectionWidget::updateBase( const Vector3f& base )
 
 void DirectionWidget::updateLocalLength( float length )
 {
-    if ( !directionObj_ )
-        return;
-
-    auto xf = directionObj_->xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf.A, r, s );
-    xf.A = length * r;
-    directionObj_->setXf( xf );
+    auto arrow = getLocalArrow();
+    arrow.length = length;
+    updateLocalArrow( arrow );
 }
 
 void DirectionWidget::updateLength( float length )
 {
-    if ( !directionObj_ )
-        return assert( false );
-    auto parent = directionObj_->parent();
-    if ( !parent )
-        return assert( false );
-
-    updateLocalLength( ( parent->worldXf().A.inverse() * Vector3f::diagonal( length / 3 ) ).length() );
+    auto arrow = getArrow();
+    arrow.length = length;
+    updateArrow( arrow );
 }
 
 void DirectionWidget::setVisible( bool visible )
@@ -222,7 +222,7 @@ Vector3f DirectionWidget::getLocalDirection() const
     if ( !directionObj_ )
         return assert( false ), Vector3f{};
 
-    return directionObj_->xf().A * Vector3f::plusZ();
+    return ( directionObj_->xf().A * Vector3f::plusZ() ).normalized();
 }
 
 Vector3f DirectionWidget::getDirection() const
@@ -230,27 +230,39 @@ Vector3f DirectionWidget::getDirection() const
     if ( !directionObj_ )
         return assert( false ), Vector3f{};
 
-    return directionObj_->worldXf().A * Vector3f::plusZ();
+    return ( directionObj_->worldXf().A * Vector3f::plusZ() ).normalized();
 }
 
-float DirectionWidget::getLocalLength() const
+auto DirectionWidget::getLocalArrow() const -> Arrow
 {
+    Arrow res;
     if ( !directionObj_ )
-        return assert( false ), 0.0f;
+        return assert( false ), res;
+
+    const auto xf = directionObj_->xf();
+    res.dir = ( xf.A * Vector3f::plusZ() ).normalized();
+    res.base = xf.b;
 
     Matrix3f r, s;
-    decomposeMatrix3( directionObj_->xf().A, r, s );
-    return ( s.x.x + s.y.y + s.z.z ) / 3;
+    decomposeMatrix3( xf.A, r, s );
+    res.length = ( s.x.x + s.y.y + s.z.z ) / 3;
+    return res;
 }
 
-float DirectionWidget::getLength() const
+auto DirectionWidget::getArrow() const -> Arrow
 {
+    Arrow res;
     if ( !directionObj_ )
-        return assert( false ), 0.0f;
+        return assert( false ), res;
+
+    const auto xf = directionObj_->worldXf();
+    res.dir = ( xf.A * Vector3f::plusZ() ).normalized();
+    res.base = xf.b;
 
     Matrix3f r, s;
-    decomposeMatrix3( directionObj_->worldXf().A, r, s );
-    return ( s.x.x + s.y.y + s.z.z ) / 3; // assumes uniform scaling in all parent objects
+    decomposeMatrix3( xf.A, r, s );
+    res.length = ( s.x.x + s.y.y + s.z.z ) / 3; // assumes uniform scaling in all parent objects
+    return res;
 }
 
 Object* DirectionWidget::getParentPtr() const

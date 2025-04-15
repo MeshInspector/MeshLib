@@ -68,6 +68,13 @@ private:
     void clear_();
 
 public:
+    struct Arrow
+    {
+        Vector3f dir;     ///< unit direction along arrow
+        Vector3f base;    ///< the point from which the arrow starts
+        float length = 1; ///< the length of the arrow
+    };
+
     /// Creates a new widget for visualizing the direction and adds it to scene;
     /// subscribes to viewer events; intial local direction is (0,0,1), initial local base (0,0,0), the length is 1
     /// @param parent parent object for the widget, nullptr means scene root
@@ -88,6 +95,12 @@ public:
 
     /// Manually set callback function
     MRVIEWER_API void setOnDirectionChangedCallback( OnDirectionChangedCallback cb );
+
+    /// Updates the arrow, in world space
+    MRVIEWER_API void updateArrow( const Arrow& arrow );
+
+    /// Updates the arrow in parent's space
+    MRVIEWER_API void updateLocalArrow( const Arrow& arrow );
 
     /// Updates the direction of the arrow, in world space
     MRVIEWER_API void updateDirection( const Vector3f& dir );
@@ -121,6 +134,12 @@ public:
     /// Returns the color of the widget
     MRVIEWER_API const Color& getColor() const;
 
+    /// Returns the arrow's properties, in world space
+    MRVIEWER_API Arrow getArrow() const;
+
+    /// Returns the arrow's properties in parent's space
+    MRVIEWER_API Arrow getLocalArrow() const;
+
     /// Returns the base of the widget, in world space
     MRVIEWER_API Vector3f getBase() const;
 
@@ -134,10 +153,10 @@ public:
     MRVIEWER_API Vector3f getLocalDirection() const;
 
     /// Returns the length of the arrow in world space
-    MRVIEWER_API float getLength() const;
+    float getLength() const { return getArrow().length; }
 
     /// Returns the length of the arrow in parent's space
-    MRVIEWER_API float getLocalLength() const;
+    float getLocalLength() const { return getLocalArrow().length; }
 
     /// Returns pointer to parent object, always not-null after create() and before reset()
     MRVIEWER_API Object* getParentPtr() const;

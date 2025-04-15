@@ -432,7 +432,17 @@ std::string GetDetailedOSName()
     return winName;
 #else
 #ifdef __EMSCRIPTEN__
-    return "Wasm";
+#ifdef __EMSCRIPTEN_PTHREADS__
+    if constexpr ( sizeof( void* ) == 8 )
+        return "Wasm-x64-mt";
+    else
+        return "Wasm-x32-mt";
+#else
+    if constexpr ( sizeof( void* ) == 8 )
+        return "Wasm-x64-st"; // now we don't have this configuration
+    else
+        return "Wasm-x32-st";
+#endif
 #else
 // if linux
 #ifndef __APPLE__

@@ -11,7 +11,6 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 
 #include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRParallelMinMax.h"
 
 namespace MR
 {
@@ -178,11 +177,12 @@ VertScalars calculateShellWeightsFromRegions(
     {
         if ( regions.empty() )
             return 0.f;
-        float res = 0.f;
+        MinMaxf minmax;
+        float res = 0.0f;
         size_t n = 0;
 
         const auto pt = mesh.points[v];
-        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts]
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts,&minmax]
             ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
             auto vv = found.vId;
@@ -190,6 +190,7 @@ VertScalars calculateShellWeightsFromRegions(
             {
                 if ( reg.verts.test( vv ) )
                 {
+                    minmax.include( reg.weight );
                     res += reg.weight;
                     n += 1;
                 }
@@ -201,7 +202,7 @@ VertScalars calculateShellWeightsFromRegions(
 
         if ( n == 0 )
             return 0.f;
-        return res / static_cast<float>( n );
+        return std::clamp( res / float( n ), minmax.min, minmax.max ); // not to exceed limits because of floating point errors
     };
 
     // precalculate the weights
@@ -221,10 +222,9 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 
     DistanceFromWeightedPointsParams distParams;
-    
-    auto [_,maxWeight] = parallelMinMax(weights);
-    distParams.maxWeight = maxWeight;
-
+    distParams.maxWeight = 0.f;
+    for ( const auto& reg : params.regions )
+        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
     distParams.pointWeight = [&weights] ( VertId v )
     {
         return weights[v];

@@ -25,7 +25,7 @@
         <tab type="user" url="__BEGIN_URL__ExampleMeshOffset__END_URL__" title="Mesh Offset"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFillHole__END_URL__" title="Mesh Fill Hole"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshStitchHole__END_URL__" title="Mesh Stitch Holes"/>
-        <tab type="user" url="__BEGIN_URL__ExampleMeshResolveDegenerations__END_URL__" title="Mesh Resolve Degenerations"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshFixDegeneracies__END_URL__" title="Mesh Fix Degeneracies"/>
         <tab type="user" url="__BEGIN_URL__ExampleGlobalRegistration__END_URL__" title="Global Registration"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshICP__END_URL__" title="Mesh ICP"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExtrude__END_URL__" title="Mesh Extrude"/>

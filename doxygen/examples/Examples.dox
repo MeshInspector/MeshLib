@@ -18,7 +18,7 @@ This page contains some examples of using MeshLib
  - \ref ExampleMeshOffsetWeighted
  - \ref ExampleMeshFillHole
  - \ref ExampleMeshStitchHole
- - \ref ExampleMeshResolveDegenerations
+ - \ref ExampleMeshFixDegeneracies
  - \ref ExampleSignedDistance
  - \ref ExampleSignedDistancePointToMesh
  - \ref ExampleSignedDistances

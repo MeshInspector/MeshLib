@@ -144,7 +144,7 @@ auto DualEdgePathsBuider::growOneEdge() -> CandidateFace
 std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts,
     const FaceDistancesSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     DualEdgePathsBuider builder( topology, metric, starts );
     float localMaxDist = 0;
     size_t numDone = settings.progress ? starts.count() : 0;

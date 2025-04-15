@@ -15,7 +15,7 @@ namespace MR
 template<typename T>
 void hardSmoothTetrahedronsT( const MeshTopology & topology, Vector<T, VertId> & field, const VertBitSet *region = nullptr )
 {
-    MR_TIMER
+    MR_TIMER;
     auto tetrahedrons = findNRingVerts( topology, 3, region );
     // in normal mesh two vertices from tetrahedrons cannot be neighbors, so it is safe to run it in parallel
     BitSetParallelFor( tetrahedrons, [&] ( VertId v )
@@ -62,7 +62,7 @@ bool relaxT( const MeshTopology & topology, Vector<T, VertId> & field, const Mes
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
 
     const auto getWeightOrDefault = [w = params.weights] ( VertId v ) -> float
     {

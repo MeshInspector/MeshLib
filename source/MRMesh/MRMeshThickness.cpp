@@ -58,7 +58,7 @@ MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v, float ray
 
 std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     VertScalars res( mesh.points.size(), FLT_MAX );
     if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
@@ -238,7 +238,7 @@ InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings 
 
 std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     VertScalars res( mesh.points.size(), FLT_MAX );
     if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {

@@ -210,10 +210,10 @@ public:
 
     [[nodiscard]] Expected<void> loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] const ProgressCallback& callback )
     {
-        MR_TIMER
+        MR_TIMER;
 
         {
-            MR_NAMED_TIMER( "transfer roots" )
+            MR_NAMED_TIMER( "transfer roots" );
 
 #if MODERN_PROGRESS_INDICATION_SUPPORTED
             ProgressIndicator progress( subprogress( callback, 0.00f, 0.80f ) );
@@ -274,7 +274,7 @@ public:
     /// load object structure without actual geometry data
     void loadModelStructure( const Handle( TDocStd_Document )& document )
     {
-        MR_TIMER
+        MR_TIMER;
 
         const auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
 #if STEP_LOAD_COLORS
@@ -308,7 +308,7 @@ public:
     /// load and triangulate meshes
     void loadMeshes()
     {
-        MR_TIMER
+        MR_TIMER;
 
         ParallelFor( 0, (int)meshTriangulationContexts_.size(), [&] ( int i )
         {
@@ -507,7 +507,7 @@ private:
 
     static TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape )
     {
-        MR_TIMER
+        MR_TIMER;
 
 #if MODERN_BREPMESH_SUPPORTED
         IMeshTools_Parameters parameters;
@@ -525,7 +525,7 @@ private:
 
     static std::vector<Triangle3f> loadShape_( const TopoDS_Shape& shape )
     {
-        MR_TIMER
+        MR_TIMER;
 
         struct FeatureData
         {
@@ -655,7 +655,7 @@ std::mutex cOpenCascadeTempFileMutex = {};
 
 Expected<void> readFromFile( STEPControl_Reader& reader, const std::filesystem::path& path )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const TCollection_AsciiString pathStr( path.c_str() );
     if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
@@ -665,7 +665,7 @@ Expected<void> readFromFile( STEPControl_Reader& reader, const std::filesystem::
 
 Expected<void> readFromStream( STEPControl_Reader& reader, std::istream& in )
 {
-    MR_TIMER
+    MR_TIMER;
 
 #if STEP_READSTREAM_SUPPORTED
     if ( reader.ReadStream( "STEP file", in ) != IFSelect_RetDone )
@@ -739,7 +739,7 @@ std::mutex cOpenCascadeMutex = {};
 
 Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::unique_lock lock( cOpenCascadeMutex );
 
@@ -771,7 +771,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::unique_lock lock( cOpenCascadeMutex );
 
@@ -797,7 +797,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::unique_lock lock( cOpenCascadeMutex );
 
@@ -813,7 +813,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 
     Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
     {
-        MR_NAMED_TIMER( "transfer data" )
+        MR_NAMED_TIMER( "transfer data" );
 
         reader.SetNameMode( true );
 #if STEP_LOAD_COLORS

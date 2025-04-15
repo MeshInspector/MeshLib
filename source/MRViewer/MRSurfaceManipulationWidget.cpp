@@ -37,7 +37,7 @@ namespace MR
 void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
                                              VertScalars& distances, VertBitSet& verts )
 {
-    MR_TIMER
+    MR_TIMER;
 
     EnumNeihbourVertices e;
     e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
@@ -53,8 +53,8 @@ void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& 
 void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, float range, VertScalars& distances, VertBitSet& verts )
 {
     // note! better update bitset for interesting verts than check for all verts from distances
-    MR_TIMER
-    
+    MR_TIMER;
+
     EnumNeihbourVertices e;
     e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
     {
@@ -157,7 +157,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     }
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-    
+
     if ( !originalMesh_ )
     {
         originalMesh_ = std::make_shared<Mesh>( *obj_->mesh() );
@@ -300,7 +300,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
 {
     if ( button != MouseButton::Left || modifiers != 0 )
         return false;
-    
+
     ObjAndPick objAndPick;
     if ( ignoreOcclusion_ )
         objAndPick = getViewerInstance().viewport().pickRenderObject( { { static_cast< VisualObject* >( obj_.get() ) } } );
@@ -726,7 +726,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
                 triPoints.push_back( mesh.toTriPoint( pick.face, pick.point ) );
             }
         }
-        
+
         if ( triPoints.size() == 1 )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
@@ -911,7 +911,7 @@ void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitS
             res = originalMesh_->signedDistance( meshVerts[VertId( v )], projRes );
         else
             res = std::sqrt( res );
-        
+
         valueChanges_[v] = res;
         if ( !projRes.mtp )
             unknownSign_.set( v, true );

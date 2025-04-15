@@ -12,7 +12,7 @@ namespace MR
 
 void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !objMesh || !objMesh->mesh() )
         return;
     const auto & topology = objMesh->mesh()->topology;
@@ -32,7 +32,7 @@ void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 
 void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !objMesh )
         return;
 
@@ -47,7 +47,7 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !objMesh )
         return;
 
@@ -64,7 +64,7 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeHashMap & emap )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !objMesh )
         return;
 
@@ -81,7 +81,7 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const UndirectedEdgeBMap & emap )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !objMesh )
         return;
 

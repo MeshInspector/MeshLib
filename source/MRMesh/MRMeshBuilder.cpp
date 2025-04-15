@@ -16,7 +16,7 @@ namespace MeshBuilder
 
 static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region )
 {
-    MR_TIMER
+    MR_TIMER;
     return parallel_reduce( tbb::blocked_range( 0_f, t.endId() ), VertId{},
     [&] ( const auto & range, VertId currMax )
     {
@@ -36,7 +36,7 @@ static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region 
 
 static VertId findMaxVertId( const std::vector<VertId> & verts )
 {
-    MR_TIMER
+    MR_TIMER;
     return parallel_reduce( tbb::blocked_range( size_t(0), verts.size() ), VertId{},
     [&] ( const auto & range, VertId currMax )
     {
@@ -224,7 +224,7 @@ static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
 
 static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
 {
-    MR_TIMER
+    MR_TIMER;
 
     FaceAdder fa;
     // we will try to add these triangles in the current pass
@@ -262,7 +262,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
 MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
     const BuildSettings & settings, ProgressCallback progressCb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     MeshTopology res;
     if ( faces.empty() || verts.empty() )
@@ -318,7 +318,7 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
 
 void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( t.empty() )
         return;
 
@@ -333,7 +333,7 @@ void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSetti
 void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
     FaceBitSet * createdFaces )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const int numTri = (int)vertTriples.size() / 3;
     Triangulation t;
@@ -374,7 +374,7 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     const std::vector<MeshPiece> & pieces,
     const BuildSettings & settings0 )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // construct empty final mesh with enough number of elements
     const auto numParts = pieces.size();
@@ -426,8 +426,8 @@ constexpr size_t minTrisInPart = 32768;
 
 static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     // reserve enough elements for faces and vertices
     //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
     const auto maxVertId = findMaxVertId( t, settings.region );
@@ -514,8 +514,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 {
     if ( t.empty() )
         return {};
-    MR_TIMER
-    
+    MR_TIMER;
+
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
     const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
     assert( numParts >= 1 );
@@ -531,7 +531,7 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
             // pass through to sequential version that consumes twice less memory
         }
     }
-    
+
     return fromTrianglesSeq( t, settings );
 }
 
@@ -710,7 +710,7 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( t.empty() )
         return 0;
 
@@ -804,7 +804,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
     std::vector<VertDuplication> * dups, const BuildSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet localRegion = getLocalRegion( settings.region, t.size() );
     BuildSettings localSettings = settings;
     localSettings.region = &localRegion;
@@ -844,12 +844,12 @@ Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
 
 int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet bdVerts;
     if ( uniteOnlyBd )
         bdVerts = mesh.topology.findBoundaryVerts();
 
-    const VertMap vertOldToNew = uniteOnlyBd ? 
+    const VertMap vertOldToNew = uniteOnlyBd ?
         *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :
         *findSmallestCloseVertices( mesh, closeDist );
     int numChanged = 0;

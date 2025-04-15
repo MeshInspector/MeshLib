@@ -16,7 +16,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     EdgeId holeEdge,
     const FillHoleNicelySettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( !mesh.topology.left( holeEdge ) );
 
     FaceBitSet newFaces;

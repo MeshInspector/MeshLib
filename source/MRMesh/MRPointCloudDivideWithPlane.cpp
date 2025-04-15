@@ -10,7 +10,7 @@ namespace MR
 
 VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& plane )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet result( pc.validPoints.find_last() + 1 );
     BitSetParallelFor( pc.validPoints, [&] ( VertId v )
     {
@@ -21,7 +21,7 @@ VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& plane )
 
 PointCloud divideWithPlane( const PointCloud& pc, const Plane3f& plane, const DividePointCloudOptionalOutput& optOut )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto posVerts = findHalfSpacePoints( pc, plane );
     PointCloud res;
     res.addPartByMask( pc, posVerts, { .src2tgtVerts = optOut.outVmap } );

@@ -13,7 +13,7 @@ namespace MR
 {
 
 Box3f PointCloud::getBoundingBox() const
-{ 
+{
     return getAABBTree().getBoundingBox();
 }
 
@@ -24,7 +24,7 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
 
 Vector3f PointCloud::findCenterFromPoints() const
 {
-    MR_TIMER
+    MR_TIMER;
     const auto num = calcNumValidPoints();
     if ( num <= 0 )
     {
@@ -50,7 +50,7 @@ Vector3f PointCloud::findCenterFromBBox() const
 
 void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, const CloudPartMapping& outMap, const VertNormals * extNormals )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto& fromPoints = from.points;
     const auto& fromNormals = extNormals ? *extNormals : from.normals;
 
@@ -127,7 +127,7 @@ size_t PointCloud::heapBytes() const
 
 void PointCloud::mirror( const Plane3f& plane )
 {
-    MR_TIMER
+    MR_TIMER;
     BitSetParallelFor( validPoints, [&] ( VertId id )
     {
         points[id] += 2.0f * ( plane.project( points[id] ) - points[id] );
@@ -140,7 +140,7 @@ void PointCloud::mirror( const Plane3f& plane )
 
 void PointCloud::flipOrientation( const VertBitSet * region )
 {
-    MR_TIMER
+    MR_TIMER;
     BitSetParallelFor( getVertIds( region ), [&] ( VertId id )
     {
         if ( id < normals.size() )
@@ -150,7 +150,7 @@ void PointCloud::flipOrientation( const VertBitSet * region )
 
 bool PointCloud::pack( VertMap * outNew2Old )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto newSz = validPoints.count();
     if ( points.size() == newSz )
     {
@@ -193,7 +193,7 @@ bool PointCloud::pack( VertMap * outNew2Old )
 
 std::vector<VertId> PointCloud::getLexicographicalOrder() const
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<VertId> lexyOrder;
     lexyOrder.reserve( validPoints.count() );
     for ( auto v : validPoints )
@@ -209,7 +209,7 @@ std::vector<VertId> PointCloud::getLexicographicalOrder() const
 
 VertBMap PointCloud::pack( Reorder reoder )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto numValidPoints = validPoints.count();
     const bool wasPacked = numValidPoints == points.size();

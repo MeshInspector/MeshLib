@@ -28,7 +28,7 @@ namespace MR
 
 Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, const SaveObjectSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( settings.callback, 0.f ) )
         return unexpectedOperationCanceled();
 

@@ -123,7 +123,7 @@ VertBitSet getPointsForRefineFeature( const PointCloud& pointCloud, const Featur
 
 VertBitSet filterDisjointPoints( const Mesh& mesh, const VertBitSet& selectedPoints, const FaceBitSet& referenceFaces )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto selectedFaces = getIncidentFaces( mesh.topology, selectedPoints );
     const auto components = MeshComponents::getAllComponents( { mesh, &selectedFaces }, MeshComponents::FaceIncidence::PerVertex );
@@ -138,7 +138,7 @@ VertBitSet filterDisjointPoints( const Mesh& mesh, const VertBitSet& selectedPoi
 
 VertBitSet filterDisjointPoints( const PointCloud& pointCloud, const VertBitSet& selectedPoints, const VertBitSet& referencePoints, float segmentTolerance )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto avgRadius = findAvgPointsRadius( pointCloud, 20 );
     const auto res = PointCloudComponents::getAllComponents( pointCloud, avgRadius );
@@ -234,7 +234,7 @@ namespace MR
 
 Expected<AffineXf3f> refineFeatureObject( const FeatureObject& featObj, const Mesh& mesh, const RefineParameters& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto featureType = FeaturesObjectKind::_count;
     forEachObjectKind( [&] ( auto type )
@@ -281,7 +281,7 @@ Expected<AffineXf3f> refineFeatureObject( const FeatureObject& featObj, const Me
 
 Expected<AffineXf3f> refineFeatureObject( const FeatureObject& featObj, const PointCloud& pointCloud, const RefineParameters& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto featureType = FeaturesObjectKind::_count;
     forEachObjectKind( [&] ( auto type )

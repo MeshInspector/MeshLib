@@ -65,7 +65,7 @@ std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>
 
 void mergeSubtree( TypedFlatTree subtree )
 {
-    MR_TIMER
+    MR_TIMER;
 
     SCOPED_HISTORY( "Merge Objects" );
 

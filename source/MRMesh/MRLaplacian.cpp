@@ -59,7 +59,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
         for ( auto e : orgRing( topology_, v ) )
         {
             double w = 1;
-            if ( weights == EdgeWeights::Cotan ) 
+            if ( weights == EdgeWeights::Cotan )
                 w = std::clamp( cotan( topology_, points_, e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             auto d = topology_.dest( e );
             rowElements.push_back( { -w, d } );
@@ -92,7 +92,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, VertexM
     equations_.push_back( eq );
 }
 
-void Laplacian::fixVertex( VertId v, bool smooth ) 
+void Laplacian::fixVertex( VertId v, bool smooth )
 {
     rhsValid_ = false;
     if ( freeVerts_.autoResizeTestSet( v, false ) )
@@ -101,10 +101,10 @@ void Laplacian::fixVertex( VertId v, bool smooth )
         solverValid_ = false;
 }
 
-void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth ) 
-{ 
-    points_[v] = fixedPos; 
-    fixVertex( v, smooth ); 
+void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth )
+{
+    points_[v] = fixedPos;
+    fixVertex( v, smooth );
 }
 
 void Laplacian::updateSolver()
@@ -119,7 +119,7 @@ void Laplacian::updateSolver_()
         return;
     solverValid_ = true;
 
-    MR_TIMER
+    MR_TIMER;
 
     const auto sz = freeVerts_.count();
     if ( sz <= 0 )
@@ -229,7 +229,7 @@ void Laplacian::updateRhs_()
         return;
     rhsValid_ = true;
 
-    MR_TIMER
+    MR_TIMER;
 
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )

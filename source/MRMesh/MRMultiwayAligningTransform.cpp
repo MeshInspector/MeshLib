@@ -265,7 +265,7 @@ void MultiwayAligningTransform::add( const MultiwayAligningTransform & r )
 
 std::vector<RigidXf3d> MultiwayAligningTransform::solve( const Stabilizer & stab ) const
 {
-    MR_TIMER
+    MR_TIMER;
     const double rotStabSq = sqr( stab.rot );
     const double shiftStabSq = sqr( stab.shift );
 

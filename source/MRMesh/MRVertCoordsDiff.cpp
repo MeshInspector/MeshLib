@@ -8,7 +8,7 @@ namespace MR
 
 VertCoordsDiff::VertCoordsDiff( const VertCoords & from, const VertCoords & to )
 {
-    MR_TIMER
+    MR_TIMER;
 
     toPointsSize_ = to.size();
     for ( VertId v{0}; v < toPointsSize_; ++v )
@@ -20,7 +20,7 @@ VertCoordsDiff::VertCoordsDiff( const VertCoords & from, const VertCoords & to )
 
 void VertCoordsDiff::applyAndSwap( VertCoords & m )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto mPointsSize = m.size();
     // remember points being deleted from m

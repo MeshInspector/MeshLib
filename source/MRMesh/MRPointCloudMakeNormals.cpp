@@ -20,7 +20,7 @@ namespace MR
 
 std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, float radius, const ProgressCallback & progress, OrientNormals orient )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertNormals normals;
     normals.resizeNoInit( pointCloud.points.size() );
@@ -47,7 +47,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 
 std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, const AllLocalTriangulations& triangs, const ProgressCallback & progress, OrientNormals orient )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertNormals normals;
     normals.resizeNoInit( pointCloud.points.size() );
@@ -69,7 +69,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
     const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress, OrientNormals orient )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertNormals normals;
     normals.resizeNoInit( pointCloud.points.size() );
@@ -97,7 +97,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
 template<class T>
 bool orientNormalsCore( const PointCloud& pointCloud, VertNormals& normals, const T & enumNeis, ProgressCallback progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto bbox = pointCloud.computeBoundingBox();
     if ( !reportProgress( progress, 0.025f ) )
@@ -212,7 +212,7 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Bu
 bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const AllLocalTriangulations& triangs,
      const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     return orientNormalsCore( pointCloud, normals,
         [&triangs]( VertId v, auto callback )
         {
@@ -226,7 +226,7 @@ bool orientNormals( const PointCloud& pointCloud, VertNormals& normals, const Al
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
     float radius, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto optNormals = makeUnorientedNormals( pointCloud, radius, subprogress( progress, 0.0f, 0.1f ) );
     if ( !optNormals )
@@ -241,7 +241,7 @@ std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
 std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
     AllLocalTriangulations& triangs, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !autoOrientLocalTriangulations( pointCloud, triangs, pointCloud.validPoints, subprogress( progress, 0.0f, 0.9f ) ) )
         return {};

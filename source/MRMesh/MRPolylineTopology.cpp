@@ -10,7 +10,7 @@ namespace MR
 
 void PolylineTopology::buildOpenLines( const std::vector<VertId> & comp2firstVert )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( comp2firstVert.empty() )
     {
         assert( false );
@@ -71,7 +71,7 @@ void PolylineTopology::vertResize( size_t newSize )
 }
 
 void PolylineTopology::vertResizeWithReserve( size_t newSize )
-{ 
+{
     if ( edgePerVertex_.size() >= newSize )
         return;
     edgePerVertex_.resizeWithReserve( newSize );
@@ -180,7 +180,7 @@ void PolylineTopology::deleteEdge( UndirectedEdgeId ue )
 
 void PolylineTopology::deleteEdges( const UndirectedEdgeBitSet & es )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto ue : es )
         deleteEdge( ue );
 }
@@ -372,7 +372,7 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
 
 void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap, WholeEdgeMap * outEmap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // in all maps: from index -> to index
     WholeEdgeMap emap;
@@ -411,7 +411,7 @@ void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap
             const EdgeId e{ ue };
             edges_[e].next = mapEdge( emap, edges_[e].next );
             edges_[e.sym()].next = mapEdge( emap, edges_[e.sym()].next );
-        
+
             edges_[e].org = vmap[edges_[e].org];
             edges_[e.sym()].org = vmap[edges_[e.sym()].org];
         }
@@ -423,10 +423,10 @@ void PolylineTopology::addPart( const PolylineTopology & from, VertMap * outVmap
         *outEmap = std::move( emap );
 }
 
-void PolylineTopology::addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask, 
+void PolylineTopology::addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask,
     VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
     // in all maps: from index -> to index
     EdgeMap emap;
     EdgeId lastFromValidEdgeId = from.lastNotLoneEdge();
@@ -461,7 +461,7 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
             ++numValidVerts_;
         }
     }
-    
+
     const auto& fromEdges = from.edges_;
     for ( auto ue : mask )
     {
@@ -474,7 +474,7 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
         ne = emap[fromEdges[e.sym()].next];
         if ( ne.valid() )
             edges_[emap[e.sym()]].next = ne;
-        
+
         edges_[emap[e]].org = vmap[fromEdges[e].org];
         edges_[emap[e.sym()]].org = vmap[fromEdges[e.sym()].org];
     }
@@ -490,7 +490,7 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
 
 void PolylineTopology::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     PolylineTopology packed;
     packed.vertReserve( numValidVerts() );
@@ -543,12 +543,12 @@ bool PolylineTopology::read( std::istream & s )
 
 bool PolylineTopology::isConsistentlyOriented() const
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( EdgeId e{0}; e < edges_.size(); ++e )
     {
         auto ne = next( e );
-        if ( e == ne || e.odd() == ne.sym().odd() ) 
+        if ( e == ne || e.odd() == ne.sym().odd() )
             continue;
         return false;
     }
@@ -557,7 +557,7 @@ bool PolylineTopology::isConsistentlyOriented() const
 
 void PolylineTopology::flip()
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( auto & e : edgePerVertex_ )
     {
@@ -579,7 +579,7 @@ void PolylineTopology::flip()
 
 bool PolylineTopology::checkValidity() const
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( EdgeId e{0}; e < edges_.size(); ++e )
     {
@@ -597,7 +597,7 @@ bool PolylineTopology::checkValidity() const
         if ( edgePerVertex_[v].valid() )
         {
             CHECK( validVerts_.test( v ) )
-            const auto e0 = edgePerVertex_[v]; 
+            const auto e0 = edgePerVertex_[v];
             CHECK( e0 < edges_.size() );
             CHECK( edges_[e0].org == v );
             ++realValidVerts;
@@ -621,7 +621,7 @@ bool PolylineTopology::checkValidity() const
 
 void PolylineTopology::computeValidsFromEdges()
 {
-    MR_TIMER
+    MR_TIMER;
 
     numValidVerts_ = 0;
     for ( VertId v{0}; v < edgePerVertex_.size(); ++v )

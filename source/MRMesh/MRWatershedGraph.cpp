@@ -10,8 +10,8 @@
 namespace std
 {
 
-template<> 
-struct hash<MR::Graph::EndVertices> 
+template<>
+struct hash<MR::Graph::EndVertices>
 {
     size_t operator()( MR::Graph::EndVertices const& e ) const noexcept
     {
@@ -33,7 +33,7 @@ WatershedGraph::WatershedGraph( const Mesh & mesh, const Vector<int, FaceId> & f
     : mesh_( mesh )
     , face2iniBasin_( face2basin )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( numBasins >= 0 );
     basins_.clear();
     bds_.clear();
@@ -185,7 +185,7 @@ Graph::VertId WatershedGraph::flowsFinallyTo( Graph::VertId v, bool exceptOutsid
 
 void WatershedGraph::setParentsToRoots()
 {
-    MR_TIMER
+    MR_TIMER;
     ParallelFor( parentBasin_, [&]( Graph::VertId v )
     {
         parentBasin_[v] = getRootBasin( v );
@@ -194,7 +194,7 @@ void WatershedGraph::setParentsToRoots()
 
 MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
 {
-    MR_TIMER
+    MR_TIMER;
     Graph::EdgeId lowestEdge;
     float lowestLevel = FLT_MAX;
     for ( auto ei : graph_.validEdges() )
@@ -218,7 +218,7 @@ MRMESH_API std::pair<Graph::EdgeId, float> WatershedGraph::findLowestBd() const
 
 Graph::VertId WatershedGraph::merge( Graph::VertId v0, Graph::VertId v1 )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( v0 && v1 );
     assert( v0 != outsideId_ && v1 != outsideId_ );
     assert( graph_.valid( v0 ) && graph_.valid( v1 ) );
@@ -268,7 +268,7 @@ Graph::VertId WatershedGraph::mergeViaBd( Graph::EdgeId bd )
 
 FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res;
     if ( basin == outsideId_ )
         return res;
@@ -285,7 +285,7 @@ FaceBitSet WatershedGraph::getBasinFaces( Graph::VertId basin ) const
 
 Vector<Graph::VertId, Graph::VertId> WatershedGraph::iniBasin2Tgt( bool joinOverflowBasins ) const
 {
-    MR_TIMER
+    MR_TIMER;
     Vector<Graph::VertId, Graph::VertId> res( graph_.vertSize() );
     ParallelFor( res, [&]( Graph::VertId basin )
     {
@@ -302,7 +302,7 @@ Vector<Graph::VertId, Graph::VertId> WatershedGraph::iniBasin2Tgt( bool joinOver
 
 Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces( bool joinOverflowBasins ) const
 {
-    MR_TIMER
+    MR_TIMER;
     Vector<FaceBitSet, Graph::VertId> res( graph_.vertSize() );
     const auto roots = iniBasin2Tgt( joinOverflowBasins );
     for ( Graph::VertId basin( 0 ); basin < outsideId_; ++basin )
@@ -324,7 +324,7 @@ Vector<FaceBitSet, Graph::VertId> WatershedGraph::getAllBasinFaces( bool joinOve
 
 FaceBitSet WatershedGraph::getBasinFacesBelowLevel( Graph::VertId basin, float waterLevel ) const
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res;
     if ( basin == outsideId_ )
         return res;
@@ -354,7 +354,7 @@ double WatershedGraph::computeBasinVolume( Graph::VertId basin, float waterLevel
 
 UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool joinOverflowBasins ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto roots = iniBasin2Tgt( joinOverflowBasins );
 
@@ -378,7 +378,7 @@ UndirectedEdgeBitSet WatershedGraph::getInterBasinEdges( bool joinOverflowBasins
 
 auto WatershedGraph::getOverflowPoints() const -> std::vector<OverflowPoint>
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<OverflowPoint> res;
 
     for ( auto basin : graph_.validVerts() )

@@ -37,7 +37,7 @@ namespace
 
 MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f * normals )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( !normals || normals->size() == in.contour.size() );
     MarkedContour3f res;
     if ( in.contour.empty() )
@@ -106,7 +106,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
 
 MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( markStability > 0 );
     if ( mc.contour.empty() )
         return mc;
@@ -196,7 +196,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
 
 MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( settings.iterations >= 1 );
     MarkedContour3f res = markedContour( controlPoints );
     for( int i = 0; i < settings.iterations; ++i )

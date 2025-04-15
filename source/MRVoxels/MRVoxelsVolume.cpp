@@ -9,7 +9,7 @@ namespace MR
 
 Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     SimpleVolumeMinMax res;
     res.voxelSize = volume.voxelSize;
     res.dims = volume.dims;

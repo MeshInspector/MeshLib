@@ -169,7 +169,7 @@ struct OneIterSettings
 template<typename MeshType, typename VolumeType>
 VertBitSet adjustOneIter( MeshOnVoxelsT<MeshType, VolumeType>& mv, OneIterSettings s )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet correctedPoints( mv.mesh().points.size() );
     Vector<Vector3f, VertId> shifts( mv.mesh().points.size(), Vector3f{ 0.f, 0.f, 0.f } );
@@ -246,7 +246,7 @@ Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
     ProgressCallback callback
 )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !relax( mesh, { { .iterations = 1, .force = settings.preparationSmoothForce } }, subprogress( callback, 0.0f, 0.1f ) ) )
         return unexpectedOperationCanceled();

@@ -12,7 +12,7 @@ namespace MR
 
 std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, const UniformSamplingSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto cb = settings.progress;
 
@@ -86,7 +86,7 @@ std::optional<VertBitSet> pointUniformSampling( const PointCloud& pointCloud, co
 
 std::optional<PointCloud> makeUniformSampledCloud( const PointCloud& pointCloud, const UniformSamplingSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::optional<PointCloud> res;
     auto s = settings;

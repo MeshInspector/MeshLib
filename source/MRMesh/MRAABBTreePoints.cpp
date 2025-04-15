@@ -69,7 +69,7 @@ int AABBTreePointsMaker::partitionPoints( Box3f& box, int firstPoint, int lastPo
 
     int midPoint = firstPoint + ( lastPoint - firstPoint ) / 2;
     // to minimize the total number of nodes
-    midPoint += ( AABBTreePoints::MaxNumPointsInLeaf - ( midPoint % AABBTreePoints::MaxNumPointsInLeaf ) ) % AABBTreePoints::MaxNumPointsInLeaf; 
+    midPoint += ( AABBTreePoints::MaxNumPointsInLeaf - ( midPoint % AABBTreePoints::MaxNumPointsInLeaf ) ) % AABBTreePoints::MaxNumPointsInLeaf;
     std::nth_element( orderedPoints_.data() + firstPoint, orderedPoints_.data() + midPoint, orderedPoints_.data() + lastPoint,
         [&]( const AABBTreePoints::Point& a, const AABBTreePoints::Point& b )
     {
@@ -175,7 +175,7 @@ std::pair<AABBTreePoints::NodeVec, std::vector<AABBTreePoints::Point>> AABBTreeP
 AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
 {
     auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( pointCloud.points, &pointCloud.validPoints );
-    nodes_ = std::move( nodes ); 
+    nodes_ = std::move( nodes );
     orderedPoints_ = std::move( orderedPoints );
 }
 
@@ -195,7 +195,7 @@ AABBTreePoints::AABBTreePoints( const VertCoords & points, const VertBitSet * va
 
 void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
 {
-    MR_TIMER
+    MR_TIMER;
     VertId newId = 0_v;
     for ( auto & n : nodes_ )
     {
@@ -213,7 +213,7 @@ void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
 
 void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
 {
-    MR_TIMER
+    MR_TIMER;
         VertId newId = 0_v;
     for ( auto& n : nodes_ )
     {
@@ -232,15 +232,15 @@ void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
 
 size_t AABBTreePoints::heapBytes() const
 {
-    return 
+    return
         nodes_.heapBytes() +
         MR::heapBytes( orderedPoints_ );
 }
 
 void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & changedVerts )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     // find changed orderedPoints_ and update them
     BitSet changedPoints( orderedPoints_.size() );
     BitSetParallelForAll( changedPoints, [&]( size_t i )

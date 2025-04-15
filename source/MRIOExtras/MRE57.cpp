@@ -27,7 +27,7 @@ namespace MR::PointsLoad
 
 Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, const E57LoadSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<NamedCloud> res;
     std::optional<AffineXf3d> xf0; // returned transformation of the first not-empty cloud
     if ( settings.identityXf )

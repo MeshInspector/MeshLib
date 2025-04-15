@@ -434,14 +434,14 @@ std::string GetDetailedOSName()
 #ifdef __EMSCRIPTEN__
 #ifdef __EMSCRIPTEN_PTHREADS__
     if constexpr ( sizeof( void* ) == 8 )
-        return "Wasm-x64-mt";
+        return "wasm64-mt";
     else
-        return "Wasm-x32-mt";
+        return "wasm32-mt";
 #else
     if constexpr ( sizeof( void* ) == 8 )
-        return "Wasm-x64-st"; // now we don't have this configuration
+        return "wasm64-st"; // now we don't have this configuration
     else
-        return "Wasm-x32-st";
+        return "wasm32-st";
 #endif
 #else
 // if linux

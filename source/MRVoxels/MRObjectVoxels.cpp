@@ -55,7 +55,7 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb, bool normalPlusGrad )
@@ -87,7 +87,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume )
@@ -133,7 +133,7 @@ Expected<bool> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool u
         updateIsoSurface( *recRes );
     }
     if ( volumeRendering_ )
-        dirty_ |= DIRTY_TEXTURE;
+        setDirtyFlags( DIRTY_TEXTURE );
     return updateSurface;
 }
 
@@ -159,8 +159,6 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
     volumeRenderActiveVoxels_.clear();
     setDirtyFlags( DIRTY_ALL );
-    if ( volumeRendering_ )
-        dirty_ |= DIRTY_SELECTION; // This flag is not set in ObjectMeshHolder::setDirtyFlags
     return oldVdbVolume;
 }
 
@@ -392,7 +390,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 void ObjectVoxels::invalidateActiveBoundsCaches()
 {
     volumeRenderActiveVoxels_.clear();
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
     activeVoxels_.reset();
     activeBounds_.reset();
 }
@@ -423,7 +421,7 @@ void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels 
     if ( !valid )
         return;
     volumeRenderActiveVoxels_ = activeVoxels;
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const
@@ -479,7 +477,7 @@ void ObjectVoxels::setVolumeRenderingParams( const VolumeRenderingParams& params
         return;
     volumeRenderingParams_ = params;
     if ( isVolumeRenderingEnabled() )
-        dirty_ |= DIRTY_TEXTURE;
+        setDirtyFlags( DIRTY_TEXTURE );
 }
 
 bool ObjectVoxels::hasVisualRepresentation() const

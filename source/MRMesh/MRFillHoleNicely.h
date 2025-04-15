@@ -39,6 +39,9 @@ struct FillHoleNicelySettings
     /// edge weighting scheme for smoothCurvature mode
     EdgeWeights edgeWeights = EdgeWeights::Cotan;
 
+    /// vertex mass scheme for smoothCurvature mode
+    VertexMass vmass = VertexMass::Unit;
+
     /// optional uv-coordinates of vertices; if provided then elements corresponding to new vertices will be added there
     VertUVCoords * uvCoords = {};
 

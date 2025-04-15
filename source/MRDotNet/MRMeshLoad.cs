@@ -129,7 +129,7 @@ namespace MR
                 if (errString != IntPtr.Zero)
                 {
                     var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
 
@@ -152,7 +152,7 @@ namespace MR
                 {
 
                     var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
 
@@ -163,7 +163,8 @@ namespace MR
                 {
                     var mrNamedMesh = mrVectorMeshLoadNamedMeshGet(vector, (ulong)i);
                     var namedMesh = new NamedMesh();
-                    namedMesh.name = Marshal.PtrToStringAnsi(mrNamedMesh.name);
+                    var nameData = mrStringData(mrNamedMesh.name);
+                    namedMesh.name = MarshalNativeUtf8ToManagedString(nameData);
                     namedMesh.mesh = new Mesh(mrNamedMesh.mesh);
                     namedMesh.mesh.SkipDisposingAtFinalize();
                     namedMesh.xf = new AffineXf3f(mrNamedMesh.xf);

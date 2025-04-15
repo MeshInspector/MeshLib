@@ -19,6 +19,7 @@
     <ClCompile Include="MRMesh.c" />
     <ClCompile Include="MRMeshBoolean.c" />
     <ClCompile Include="MRMeshBuilder.c" />
+    <ClCompile Include="MRMeshCollide.c" />
     <ClCompile Include="MRMeshCollidePrecise.c" />
     <ClCompile Include="MRMeshComponents.c" />
     <ClCompile Include="MRMeshDecimate.c" />
@@ -37,7 +38,6 @@
     <ClCompile Include="MRVector3.c" />
     <ClCompile Include="SimpleObjects.c" />
     <ClCompile Include="TestFunctions.c" />
-
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -53,6 +53,7 @@
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRMeshCollide.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />

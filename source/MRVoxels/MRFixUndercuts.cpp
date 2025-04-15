@@ -1,12 +1,13 @@
 #include "MRFixUndercuts.h"
-
+#include "MROffset.h"
+#include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMatrix3.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRVDBConversions.h"
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRTimer.h"
@@ -14,12 +15,13 @@
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRColor.h"
-#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRMeshDirMax.h"
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MR2to3.h"
+#include "MRMesh/MRMeshSubdivide.h"
 
 namespace MR
 {
@@ -40,7 +42,7 @@ static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vect
 /// move bottom vertices of given mesh to make object thickness at least (minThickness) in (up) direction;
 /// use this function before making signed distance field from the mesh with minThickness=voxelSize
 /// to avoid unexpected hole appearance in thin areas
-static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
+static void makeZThickAtLeast( Mesh & mesh, float minThickness, Vector3f up )
 {
     MR_TIMER
     up = up.normalized();
@@ -68,127 +70,201 @@ static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
     mesh.points = std::move( newPoints );
 }
 
-void fix( FloatGrid& grid, int zOffset )
+bool fixGridByAccessor( FloatGrid& grid, openvdb::FloatGrid::Accessor onAccessor, const openvdb::CoordBBox& dimsBB,
+    int zOffset, const ProgressCallback& cb )
 {
     MR_TIMER;
-    auto dimsBB = grid->evalActiveVoxelBoundingBox();
-    auto accessor = grid->getAccessor();
-
-    for ( int z = dimsBB.max().z() - 1; z + zOffset > dimsBB.min().z(); --z )
+    auto valAccessor = grid->getAccessor();
+    auto maxZ = dimsBB.max().z() - 1;
+    auto minZ = dimsBB.min().z();
+    auto zDims = dimsBB.max().z() - dimsBB.min().z() + 1 + zOffset;
+    for ( int z = maxZ; z + zOffset > minZ; --z )
     {
+        bool minZLayer = z + zOffset - 1 == minZ;
         for ( int y = dimsBB.min().y(); y < dimsBB.max().y(); ++y )
         {
             for ( int x = dimsBB.min().x(); x < dimsBB.max().x(); ++x )
             {
-                if ( !accessor.isValueOn( {x,y,z} ) )
+                if ( !onAccessor.isValueOn( { x,y,z } ) )
                     continue;
-                accessor.setValueOn( {x,y,z - 1} );
-
-                auto valLow = accessor.getValue( {x,y,z - 1} );
-                auto val = accessor.getValue( {x,y,z} );
-                if ( val < valLow )
-                    accessor.setValue( {x,y,z - 1}, val );
+                onAccessor.setValueOn( { x,y,z - 1 } );
+                auto valLow = valAccessor.getValue( { x,y,z - 1 } );
+                auto val = valAccessor.getValue( { x,y,z } );
+                if ( !minZLayer )
+                {
+                    if ( val < valLow )
+                        valAccessor.setValue( { x,y,z - 1 }, val );
+                }
+                else
+                {
+                    const float absLimit = 0.3f; // 30% of voxel size
+                    val = std::clamp( val, -absLimit, absLimit );
+                    valAccessor.setValue( { x,y,z - 1 }, val );
+                }
             }
         }
+        if ( z % 4 == 0 && !reportProgress( cb, float( maxZ - z + 1 ) / float( zDims ) ) )
+            return false;
     }
+    return true;
 }
 
-void fixFullByPart( FloatGrid& full, const FloatGrid& part, int zOffset )
+bool fixGrid( FloatGrid& grid, int zOffset, const ProgressCallback& cb )
+{
+    return fixGridByAccessor( grid, grid->getAccessor(), grid->evalActiveVoxelBoundingBox(), zOffset, cb );
+}
+
+bool fixGridFullByPart( FloatGrid& full, const FloatGrid& part, int zOffset, const ProgressCallback& cb )
+{
+    return fixGridByAccessor( full, part->getAccessor(), part->evalActiveVoxelBoundingBox(), zOffset, cb );
+}
+
+Expected<void> fix( Mesh& mesh, const Params& params )
 {
     MR_TIMER;
-    auto dimsBB = part->evalActiveVoxelBoundingBox();
-    auto partAccessor = part->getAccessor();
-    auto fullAccessor = full->getAccessor();
-    for ( int z = dimsBB.max().z() - 1; z + zOffset > dimsBB.min().z(); --z )
+    MR_WRITER( mesh );
+
+    float voxelSize = params.voxelSize <= 0 ? suggestVoxelSize( mesh, numVoxels ) : params.voxelSize;
+    float bottomExtension = params.bottomExtension <= 0.0f ? 2.0f * voxelSize : params.bottomExtension;
+
+    auto rot = AffineXf3f::linear( Matrix3f::rotation( params.upDirection, Vector3f::plusZ() ) );
+
+    int zOffset = 0;
+    if ( mesh.topology.isClosed() )
+        zOffset = int( bottomExtension / voxelSize );
+
+    FaceBitSet regionCpy;
+    FloatGrid regionGrid;
+    if ( params.region )
     {
-        for ( int y = dimsBB.min().y(); y < dimsBB.max().y(); ++y )
-        {
-            for ( int x = dimsBB.min().x(); x < dimsBB.max().x(); ++x )
-            {
-                if ( !partAccessor.isValueOn( {x,y,z} ) )
-                    continue;
-                partAccessor.setValueOn( {x,y,z - 1} );
-                auto valLow = fullAccessor.getValue( {x,y,z - 1} );
-                auto val = fullAccessor.getValue( {x,y,z} );
-                if ( val < valLow )
-                    fullAccessor.setValue( {x,y,z - 1}, val );
-            }
-        }
+        // add new triangles after hole filling to bitset
+        regionCpy = *params.region;
     }
+    
+    if ( !reportProgress( params.cb, 0.05f ) )
+        return unexpectedOperationCanceled();
+
+    mesh.transform( rot );
+    Vector3f center;
+    float heightZ = 0;
+    if ( params.wallAngle != 0 )
+    {
+        // transform projective
+        auto meshBox = mesh.computeBoundingBox();
+        center = meshBox.center();
+        auto halfDiagXY = std::sqrt( to2dim( meshBox.size() ).lengthSq() / 2.0f );
+        heightZ = halfDiagXY / std::tan( std::abs( params.wallAngle ) );
+
+
+        // need to subdivide - because this projection is not really linear, 
+        // so for big planar faces back projection will change the geometry
+        SubdivideSettings ss;
+        ss.maxEdgeLen = 4 * voxelSize; // guarantee some precision but do not subdivide too much
+        ss.maxAngleChangeAfterFlip = PI_F / 36.0f;
+        ss.maxEdgeSplits = INT_MAX;
+        ss.maxDeviationAfterFlip = voxelSize / 3.0f;
+        ss.progressCallback = subprogress( params.cb, 0.05f, 0.25f );
+        if ( params.region )
+        {
+            ss.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+            {
+                if ( regionCpy.test( mesh.topology.left( e ) ) )
+                    regionCpy.autoResizeSet( mesh.topology.left( e1 ) );
+                if ( regionCpy.test( mesh.topology.right( e ) ) )
+                    regionCpy.autoResizeSet( mesh.topology.right( e1 ) );
+            };
+        }
+        subdivideMesh( mesh, ss );
+        if ( !reportProgress( params.cb, 0.25f ) )
+            return unexpectedOperationCanceled();
+
+        auto keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+        {
+            auto diff = mesh.points[v] - center;
+            if ( params.wallAngle > 0 )
+                diff.z = -diff.z;
+            auto ratio = ( diff.z + heightZ ) / heightZ;
+            if ( ratio != 0 )
+            {
+                mesh.points[v].x = center.x + diff.x / ratio;
+                mesh.points[v].y = center.y + diff.y / ratio;
+            }
+        }, subprogress( params.cb, 0.25f, 0.3f ) );
+        if ( !keepGoing )
+            return unexpectedOperationCanceled();
+    }
+
+    if ( params.region )
+        regionCpy.resize( mesh.topology.faceSize(), false );
+
+    extendAndFillAllHoles( mesh, bottomExtension, Vector3f::plusZ() );
+    makeZThickAtLeast( mesh, voxelSize, Vector3f::plusZ() );
+
+    if ( params.region )
+    {
+        regionCpy.resize( mesh.topology.faceSize(), true );
+
+        // create mesh and unclosed grid 
+        regionGrid = meshToDistanceField( mesh.cloneRegion( regionCpy ), AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( params.cb, 0.3f, 0.4f ) );
+        if ( !reportProgress( params.cb, 0.4f ) )
+            return unexpectedOperationCanceled();
+    }
+
+    auto fullGrid = meshToLevelSet( mesh, AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( params.cb, 0.4f, 0.6f ) );
+    if ( !reportProgress( params.cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    bool keepGoing = true;
+    auto fsb = subprogress( params.cb, 0.6f, 0.8f );
+    if ( params.region )
+        keepGoing = fixGridFullByPart( fullGrid, regionGrid, zOffset, fsb ); // fix undercuts if fullGrid by active voxels from partGrids
+    else
+        keepGoing = fixGrid( fullGrid, zOffset, fsb );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    auto meshRes = gridToMesh( std::move( fullGrid ), GridToMeshSettings{
+        .voxelSize = Vector3f::diagonal( voxelSize ),
+        .cb = subprogress( params.cb,0.8f,0.9f )
+    } );
+    
+    if ( !meshRes.has_value() )
+        return unexpected( std::move( meshRes.error() ) );
+
+    mesh = std::move( *meshRes );
+
+    if ( params.wallAngle != 0 )
+    {
+        // back transform projective
+        keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+        {
+            auto diff = mesh.points[v] - center;
+            if ( params.wallAngle > 0 )
+                diff.z = -diff.z;
+            auto ratio = ( diff.z + heightZ ) / heightZ;
+            if ( ratio != 0 )
+            {
+                mesh.points[v].x = center.x + diff.x * ratio;
+                mesh.points[v].y = center.y + diff.y * ratio;
+            }
+        }, subprogress( params.cb, 0.9f, 0.95f ) );
+        if ( !keepGoing )
+            return unexpectedOperationCanceled();
+    }
+    auto rotInversed = rot.inverse();
+    mesh.transform( rotInversed );
+    return {};
 }
 
 void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    MR_TIMER;
-    MR_WRITER( mesh );
-    if ( voxelSize == 0.0f )
-    {
-        // count voxel size if needed
-        auto bbox = mesh.computeBoundingBox();
-        auto volume = bbox.volume();
-        voxelSize = std::cbrtf( volume / numVoxels );
-    }
-    if ( bottomExtension <= 0.0f )
-        bottomExtension = 2.0f * voxelSize;
-
-    auto rot = AffineXf3f::linear( Matrix3f::rotation( upDirectionMeshSpace, Vector3f::plusZ() ) );
-
-    int zOffset = 0;
-    if ( mesh.topology.isClosed() )
-        zOffset = int( bottomExtension / voxelSize );
-
-    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
-    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
-    auto grid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
-    fix( grid, zOffset );
-    
-    mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
-        .voxelSize = Vector3f::diagonal( voxelSize )
-    } ).value(); // no callback so cannot be stopped
-    auto rotInversed = rot.inverse();
-    mesh.transform( rotInversed );
+    fix( mesh, { .upDirection = upDirectionMeshSpace,.voxelSize = voxelSize,.bottomExtension = bottomExtension } );
 }
 
 void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    MR_TIMER;
-    MR_WRITER( mesh );
-    if ( voxelSize == 0.0f )
-    {
-        // count voxel size if needed
-        auto bbox = mesh.computeBoundingBox();
-        auto volume = bbox.volume();
-        voxelSize = std::cbrtf( volume / numVoxels );
-    }
-    if ( bottomExtension <= 0.0f )
-        bottomExtension = 2.0f * voxelSize;
-
-    auto rot = AffineXf3f::linear( Matrix3f::rotation( upDirectionMeshSpace, Vector3f::plusZ() ) );
-
-    int zOffset = 0;
-    if ( mesh.topology.isClosed() )
-        zOffset = int( bottomExtension / voxelSize );
-
-    // add new triangles after hole filling to bitset
-    FaceBitSet copyFBS = faceBitSet;
-    copyFBS.resize( mesh.topology.faceSize(), false );
-    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
-    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
-    auto fullGrid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
-    copyFBS.resize( mesh.topology.faceSize(), true );
-
-    // create mesh and unclosed grid 
-    auto partGrid = meshToDistanceField( mesh.cloneRegion( copyFBS ), rot, Vector3f::diagonal( voxelSize ) );
-
-    // fix undercuts if fullGrid by active voxels from partGrid
-    fixFullByPart( fullGrid, partGrid, zOffset );
-
-    // create mesh and restore transform
-    mesh = gridToMesh( std::move( fullGrid ), GridToMeshSettings{
-        .voxelSize = Vector3f::diagonal( voxelSize )
-    } ).value(); // no callback so cannot be stopped
-    auto rotInversed = rot.inverse();
-    mesh.transform( rotInversed );
+    fix( mesh, { .upDirection = upDirectionMeshSpace,.voxelSize = voxelSize,.bottomExtension = bottomExtension,.region = &faceBitSet } );
 }
 
 UndercutMetric getUndercutAreaMetric( const Mesh& mesh )

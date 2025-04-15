@@ -21,11 +21,13 @@ struct MeshRelaxParams : RelaxParams
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 /// \return true if was finished successfully, false if was interrupted by progress callback
-MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
+MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
+MRMESH_API bool relax( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
 
 /// computes position of a vertex, when all neighbor triangles have almost equal areas,
 /// more precisely it minimizes sum_i (area_i)^2 by adjusting the position of this vertex only
 [[nodiscard]] MRMESH_API Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage );
+[[nodiscard]] MRMESH_API Vector3f vertexPosEqualNeiAreas( const MeshTopology& topology, const VertCoords& points, VertId v, bool noShrinkage );
 
 struct MeshEqualizeTriAreasParams : MeshRelaxParams
 {
@@ -36,12 +38,14 @@ struct MeshEqualizeTriAreasParams : MeshRelaxParams
 
 /// applies given number of iterations with movement toward vertexPosEqualNeiAreas() to the whole mesh ( or some region if it is specified )
 /// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
-MRMESH_API bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params = {}, ProgressCallback cb = {} );
+MRMESH_API bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params = {}, const ProgressCallback& cb = {} );
+MRMESH_API bool equalizeTriAreas( const MeshTopology& topology, VertCoords& points, const MeshEqualizeTriAreasParams& params = {}, const ProgressCallback& cb = {} );
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n
 /// do not really keeps volume but tries hard
 /// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
-MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
+MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
+MRMESH_API bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
 
 struct MeshApproxRelaxParams : MeshRelaxParams
 {
@@ -54,10 +58,12 @@ struct MeshApproxRelaxParams : MeshRelaxParams
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 /// approx neighborhoods
 /// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
-MRMESH_API bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params = {}, ProgressCallback cb = {} );
+MRMESH_API bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params = {}, const ProgressCallback& cb = {} );
+MRMESH_API bool relaxApprox( const MeshTopology& topology, VertCoords& points, const MeshApproxRelaxParams& params = {}, const ProgressCallback& cb = {} );
 
 /// applies at most given number of relaxation iterations the spikes detected by given threshold
 MRMESH_API void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region = nullptr );
+MRMESH_API void removeSpikes( const MeshTopology& topology, VertCoords& points, int maxIterations, float minSumAngle, const VertBitSet * region = nullptr );
 
 /// given a region of faces on the mesh, moves boundary vertices of the region
 /// to make the region contour much smoother with minor optimization of mesh topology near region boundary;
@@ -67,6 +73,7 @@ MRMESH_API void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFace
 
 /// move all region vertices with exactly three neighbor vertices in the center of the neighbors
 MRMESH_API void hardSmoothTetrahedrons( Mesh & mesh, const VertBitSet *region = nullptr );
+MRMESH_API void hardSmoothTetrahedrons( const MeshTopology& topology, VertCoords& points,const VertBitSet *region = nullptr );
 
 /// \}
 

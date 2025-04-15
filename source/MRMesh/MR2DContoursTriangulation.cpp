@@ -139,7 +139,7 @@ private:
 
     bool less_( VertId l, VertId r ) const
     {
-        return std::tuple( pts_[l].x, pts_[l].y, l ) < std::tuple( pts_[r].x, pts_[r].y, r );
+        return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } );
     }
 
 // INITIALIZATION CLASS BLOCK

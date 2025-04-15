@@ -66,9 +66,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                 for ( auto& c : ext )
                     c = ( char )tolower( c );
 
-                if ( ext.empty() )
-                    continue;
-
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
                 if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
                 {
@@ -180,12 +177,15 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             completed += 1;
         } );
     }
-
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
     while ( !loadingCanceled && completed < nodes.size() )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
         loadingCanceled = !cb();
+        if ( loadingCanceled )
+            group.cancel(); // cancel faster if possible
     }
+#endif
     group.wait();
 
     if ( loadingCanceled )

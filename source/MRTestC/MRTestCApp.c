@@ -4,6 +4,7 @@
 #include "MRBox.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
+#include "MRMeshCollide.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRMeshDecimate.h"
 #include "MRMeshExtrude.h"
@@ -45,6 +46,7 @@ int main( void )
     RUN_TEST( testMeshSubdivide )
     RUN_TEST( testBooleanMultipleEdgePropogationSort )
     RUN_TEST( testBooleanMapper )
+    RUN_TEST( testMeshCollide )
     RUN_TEST( testMeshCollidePrecise )
     RUN_TEST( testMeshDecimate )
     RUN_TEST( testMeshFillHole )

@@ -205,7 +205,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
             if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
                 return 0;
-            positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan, &sharpVerts );
+            positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan, VertexMass::Unit, &sharpVerts );
         }
         else
             positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan );

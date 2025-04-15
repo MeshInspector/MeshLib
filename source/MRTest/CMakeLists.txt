@@ -16,15 +16,11 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
-    MRPython
-    MREmbeddedPython
     MRViewer
     jsoncpp
     fmt
     gtest
     spdlog
-    Python::Python
-    pybind11nonlimitedapi_stubs
     OpenVDB
     tbb
     ${CMAKE_DL_LIBS}
@@ -50,34 +46,24 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
-      MRPython
-      MREmbeddedPython
       MRViewer
       JsonCpp::JsonCpp
       fmt::fmt
       GTest::gtest
       spdlog::spdlog
-      pybind11nonlimitedapi_stubs
       OpenVDB::openvdb
       TBB::tbb
       ${CMAKE_DL_LIBS}
     )
-    IF(NOT WIN32)
-      target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python )
-    ENDIF()
   ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
-      MRPython
-      MREmbeddedPython
       MRViewer
       JsonCpp::JsonCpp
       fmt
       gtest
       spdlog
-      Python::Python
-      pybind11nonlimitedapi_stubs
       openvdb
       tbb
       ${CMAKE_DL_LIBS}
@@ -96,6 +82,19 @@ IF(MESHLIB_BUILD_VOXELS)
   )
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
+
+IF(MESHLIB_PYTHON_SUPPORT)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRPython
+    MREmbeddedPython
+    pybind11nonlimitedapi_stubs
+  )
+  IF(NOT WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
+  ENDIF()
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_PYTHON)
 ENDIF()
 
 IF(MR_PCH)

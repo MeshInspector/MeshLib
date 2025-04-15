@@ -24,7 +24,7 @@
     <ProjectGuid>{5612E480-6980-4242-9039-BE367F4ECBF0}</ProjectGuid>
     <RootNamespace>pybind11nonlimitedapi</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>pybind11nonlimitedapi_meshlib_3.11</ProjectName>
+    <ProjectName>pybind11nonlimitedapi_meshlib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -51,6 +51,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\source\common.props" />
+  <PropertyGroup Label="Globals">
+    <TargetName>pybind11nonlimitedapi_meshlib_3.$(PythonVersionMinor)</TargetName>
+  </PropertyGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>

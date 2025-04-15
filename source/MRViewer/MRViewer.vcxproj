@@ -140,6 +140,7 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRSceneOperations.cpp" />
     <ClCompile Include="SceneReorder.cpp" />
+    <ClCompile Include="MRFileDialogInternal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -295,6 +296,7 @@
     <ClInclude Include="MRRenderImGuiLabelObject.h" />
     <ClInclude Include="MRSceneOperations.h" />
     <ClInclude Include="SceneReorder.h" />
+    <ClInclude Include="MRFileDialogInternal.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

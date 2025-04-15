@@ -40,5 +40,14 @@ namespace MR.Test
             Assert.That(posCount, Is.EqualTo(156) );
 
         }
+
+        [Test]
+        public void TestMeshCollide()
+        {
+            MeshPart meshA = new MeshPart(Mesh.MakeTorus(1.1f, 0.5f, 8, 8));
+            MeshPart meshB = new MeshPart(Mesh.MakeTorus(1.1f, 0.2f, 8, 8));
+            Assert.That(IsInside(meshB, meshA));
+            Assert.That(!IsInside(meshA, meshB));
+        }
     }
 }

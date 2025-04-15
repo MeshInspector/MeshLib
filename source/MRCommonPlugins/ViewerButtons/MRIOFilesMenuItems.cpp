@@ -66,7 +66,7 @@
 #endif
 
 #if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-#include <clip/clip.h>
+#include <clip.h>
 #endif
 
 #include <unordered_set>
@@ -106,13 +106,35 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
     } );
 }
 
+#ifdef __EMSCRIPTEN__
+
+Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
+{
+    Json::Value root;
+    root["Name"] = obj.name();
+    for (const auto& child : obj.children())
+    {
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
+    }
+    return root;
+}
+
+Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Object>>& objs )
+{
+    Json::Value root;
+    for (const auto& obj : objs )
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *obj ) );
+    return root;
+}
+#endif
+
 }
 
 
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
+EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId )
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
@@ -131,7 +153,19 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
         showError( stringUnsupportedFileExtension() );
         return;
     }
-    getViewerInstance().loadFiles( paths );
+    FileLoadOptions opts;
+    opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
+    {
+        auto hierarchyRoot = prepareJsonObjsHierarchy(objs);
+        hierarchyRoot["Errors"] = errors;
+        hierarchyRoot["Warnings"] = warnings;
+        auto hierarchyLine = hierarchyRoot.toStyledString();
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+        EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarchyLine.c_str() );
+#pragma GCC diagnostic pop   
+    };
+    getViewerInstance().loadFiles( paths, opts );
 }
 
 EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )

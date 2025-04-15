@@ -380,7 +380,7 @@ void ObjectMeshHolder::setTexture( MeshTexture texture )
     else
         textures_.front() = std::move(texture);
 
-    dirty_ |= DIRTY_TEXTURE;
+    setDirtyFlags( DIRTY_TEXTURE );
 }
 
 void ObjectMeshHolder::updateTexture( MeshTexture& updated )
@@ -389,7 +389,7 @@ void ObjectMeshHolder::updateTexture( MeshTexture& updated )
         textures_.resize( 1 );
 
     std::swap( textures_.front(), updated);
-    dirty_ |= DIRTY_TEXTURE;
+    setDirtyFlags( DIRTY_TEXTURE );
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )
@@ -491,17 +491,17 @@ uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewpo
     uint32_t res = 0;
     if ( !( flatShading & viewportMask ).empty() )
     {
-        res |= ( dirty_ & DIRTY_FACES_RENDER_NORMAL );
+        res |= ( getDirtyFlags() & DIRTY_FACES_RENDER_NORMAL );
     }
     if ( ( flatShading & viewportMask ) != viewportMask )
     {
         if ( !data_.creases.any() )
         {
-            res |= ( dirty_ & DIRTY_VERTS_RENDER_NORMAL );
+            res |= ( getDirtyFlags() & DIRTY_VERTS_RENDER_NORMAL );
         }
         else
         {
-            res |= ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
+            res |= ( getDirtyFlags() & DIRTY_CORNERS_RENDER_NORMAL );
         }
     }
     return res;
@@ -511,15 +511,8 @@ bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
         ( isVisible( viewportMask ) &&
-          ( dirty_ & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
+          ( getDirtyFlags() & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
 }
-
-void ObjectMeshHolder::resetDirtyExeptMask( uint32_t mask ) const
-{
-    // Bounding box and normals (all caches) is cleared only if it was recounted
-    dirty_ &= ( DIRTY_CACHES | mask );
-}
-
 
 void ObjectMeshHolder::applyScale( float scaleFactor )
 {
@@ -566,7 +559,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
     numSelectedFaces_.reset();
     selectedArea_.reset();
     faceSelectionChangedSignal();
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
 }
 
 void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
@@ -574,7 +567,7 @@ void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
     data_.selectedEdges = std::move( newSelection );
     numSelectedEdges_.reset();
     edgeSelectionChangedSignal();
-    dirty_ |= DIRTY_EDGES_SELECTION;
+    setDirtyFlags( DIRTY_EDGES_SELECTION );
 }
 
 bool ObjectMeshHolder::isMeshClosed() const
@@ -725,10 +718,6 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    // selected faces and edges can be changed only by the methods of this class,
-    // which set dirty flags appropriately
-    mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
-
     VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
@@ -762,11 +751,11 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
     creasesChangedSignal();
     if ( data_.creases.any() )
     {
-        dirty_ |= DIRTY_CORNERS_RENDER_NORMAL;
+        setDirtyFlags( DIRTY_CORNERS_RENDER_NORMAL );
     }
     else
     {
-        dirty_ |= DIRTY_VERTS_RENDER_NORMAL;
+        setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
     }
 }
 

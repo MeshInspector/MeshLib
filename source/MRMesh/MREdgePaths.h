@@ -128,11 +128,17 @@ MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMet
 MRMESH_API bool dilateRegion( const Mesh& mesh, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
 MRMESH_API bool dilateRegion( const Mesh& mesh, VertBitSet& region, float dilation, ProgressCallback callback = {} );
 MRMESH_API bool dilateRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
 
 /// shrinks the region (of faces or vertices) on given value (in meters). returns false if callback also returns false
 MRMESH_API bool erodeRegion( const Mesh& mesh, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
 MRMESH_API bool erodeRegion( const Mesh& mesh, VertBitSet& region, float dilation, ProgressCallback callback = {} );
 MRMESH_API bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
 
 /// finds all intersection points between given path and plane, adds them in outIntersections and returns their number
 MRMESH_API int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,

@@ -766,7 +766,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         dirtyPointPos_ = true;
     }
 
-    objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+    objMesh_->resetDirtyExceptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 
 #ifndef __EMSCRIPTEN__
     if ( !cornerMode && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )

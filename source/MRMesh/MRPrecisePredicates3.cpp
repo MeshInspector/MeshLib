@@ -13,7 +13,7 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 namespace MR
 {
 
-bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
+bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
     auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
     if ( vhp ) return vhp > 0;
@@ -39,8 +39,11 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
 
     if ( c.z ) return c.z > 0;
 
+#ifndef NDEBUG
     v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
     if ( v ) return v > 0;
@@ -54,15 +57,10 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
     return true;
 }
 
-bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
-{
-    return orient3d( vs.data() );
-}
-
 bool orient3d( const PreciseVertCoords* vs )
 {
     bool odd = false;
-    std::array<int, 4> order = {0, 1, 2, 3};
+    std::array<int, 4> order = { 0, 1, 2, 3 };
 
     for ( int i = 0; i < 3; ++i )
     {
@@ -78,6 +76,11 @@ bool orient3d( const PreciseVertCoords* vs )
     }
 
     return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+}
+
+bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+{
+    return orient3d( vs.data() );
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )

@@ -183,7 +183,19 @@ ELSE()
 ENDIF()
 message("version: ${MESHLIB_VERSION}")
 
-IF(NOT APPLE)
+IF(MESHLIB_USE_VCPKG)
+  # use OS-agnostic directory structure for vcpkg
+  set(MR_BIN_DIR bin)
+  set(MR_INCLUDE_DIR include/MeshLib)
+  set(MR_MAIN_LIB_DIR lib/${MESHLIB_PROJECT_NAME})
+  set(MR_PY_LIB_DIR lib/${MESHLIB_PROJECT_NAME}/meshlib)
+  set(MR_CONFIG_DIR lib/cmake/MeshLib)
+  set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
+  set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
+  # set rpath manually for both executables and shared libraries
+  # related issue: https://gitlab.kitware.com/cmake/cmake/-/issues/23727
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_PROJECT_NAME}")
+ELSEIF(NOT APPLE)
   include(GNUInstallDirs)
   set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")
   set(MR_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/MeshLib")
@@ -289,8 +301,8 @@ IF(MESHLIB_PYTHON_SUPPORT)
 ENDIF()
 
 IF(MSVC)
-  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/OpenCTM)
   add_subdirectory(${PROJECT_SOURCE_DIR}/laz-perf)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/OpenCTM)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)

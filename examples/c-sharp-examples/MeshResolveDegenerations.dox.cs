@@ -17,19 +17,11 @@ public static class MeshResolveDegenerationsExample
             string outputFile = args.Length == 3 ? args[2] : inputFile;
 
             var mesh = MeshLoad.FromAnySupportedFormat(inputFile);
-            var parameters = new ResolveMeshDegenParameters();
+            var parameters = new FixMeshDegeneraciesParams();
             parameters.maxDeviation = mesh.BoundingBox.Diagonal() * 1e-3f;
             parameters.tinyEdgeLength = parameters.maxDeviation * 0.1f;
 
-            if (!ResolveMeshDegenerations(ref mesh, parameters))
-            {
-                Console.WriteLine("No changes were made");
-            }
-            else
-            {
-                Console.WriteLine("Degenerations resolved");
-                MeshSave.ToAnySupportedFormat(mesh, outputFile);
-            }
+            FixMeshDegeneracies(ref mesh, parameters);
         }
         catch (Exception e)
         {

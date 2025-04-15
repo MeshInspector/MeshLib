@@ -196,7 +196,10 @@ VertScalars calculateShellWeightsFromRegions(
                 }
             }
             if ( !allVerts.test( vv ) )
+            {
+                minmax.include( 0.0f );
                 n += 1;
+            }
             return Processing::Continue;
         } );
 

@@ -82,9 +82,9 @@ public:
 
     /// Creates a new widget for visualizing the direction and adds it to scene
     /// subscribes to viewer events
-    /// @param dir initial direction, in world space
-    /// @param base initial base of the arrow, in world space
-    /// @param length length of the arrow, in world space
+    /// @param worldDir initial direction, in world space
+    /// @param worldBase initial base of the arrow, in world space
+    /// @param worldLength length of the arrow, in world space
     /// @param onDirectionChanged callback for the direction change
     /// @param parent parent object for the widget, nullptr means scene root
     MRVIEWER_API void create( const Vector3f& worldDir, const Vector3f& worldBase, float worldLength, OnDirectionChangedCallback onDirectionChanged, Object* parent = nullptr );

@@ -78,7 +78,7 @@ public:
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
 
-    float length_ = 0;
+    float length_ = 1;
     bool mousePressed_ = false;
     // if blocked cannot be moved with mouse
     bool blockedMouse_{ false };
@@ -90,14 +90,19 @@ private:
     void clear_();
 
 public:
+    /// Creates a new widget for visualizing the direction and adds it to scene;
+    /// subscribes to viewer events; intial local direction is (0,0,1), initial local base (0,0,0), the length is 1 (or the last manually set value)
+    /// @param parent parent object for the widget, nullptr means scene root
+    MRVIEWER_API void create( Object* parent = nullptr );
+
     /// Creates a new widget for visualizing the direction and adds it to scene
     /// subscribes to viewer events
-    /// @param dir initial direction
-    /// @param base initial base of the arrow
+    /// @param dir initial direction, in world space
+    /// @param base initial base of the arrow, in world space
     /// @param length length of the arrow
     /// @param onDirectionChanged callback for the direction change
     /// @param parent parent object for the widget, nullptr means scene root
-    MRVIEWER_API void create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent = nullptr  );
+    MRVIEWER_API void create( const Vector3f& worldDir, const Vector3f& worldBase, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent = nullptr );
 
     /// Removes the widget from the scene
     /// unsubscribes from viewer events

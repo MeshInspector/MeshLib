@@ -10,11 +10,9 @@
 namespace MR
 {
 
-void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent )
+void DirectionWidget::create( Object* parent )
 {
     reset();
-    length_ = length;
-    onDirectionChanged_ = onDirectionChanged;
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, length_ * Vector3f::plusZ(), length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
@@ -27,9 +25,16 @@ void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float l
     if ( !parent )
         parent = &SceneRoot::get();
     parent->addChild( directionObj_ );
+}
 
-    updateDirection( dir );
-    updateBase( base );
+void DirectionWidget::create( const Vector3f& worldDir, const Vector3f& worldBase, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent )
+{
+    length_ = length;
+    onDirectionChanged_ = onDirectionChanged;
+    create( parent );
+
+    updateDirection( worldDir );
+    updateBase( worldBase );
 }
 
 void DirectionWidget::reset()

@@ -1,8 +1,11 @@
+import argparse
 import os
+import re
 import sys
 import platform
-import argparse
+import subprocess
 import shutil
+from pathlib import Path
 
 def get_vcpkg_root_from_where():
     try:

@@ -1,13 +1,30 @@
+import argparse
 import os
+import re
 import sys
 import platform
-import argparse
+import subprocess
 import shutil
+from pathlib import Path
 
-# Add current script directory to sys.path
-sys.path.insert(0, os.path.dirname(os.path.abspath("__file__")))
+def get_vcpkg_root_from_where():
+    try:
+        output = subprocess.check_output(["where", "vcpkg"], universal_newlines=True)
+        first_line = output.strip().splitlines()[0]
+        return Path(first_line).resolve().parent
+    except Exception as e:
+        print(e)
+        return None
 
-from utils import get_vcpkg_root_from_where, detect_vcpkg_python_version
+def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
+    include_dir = vcpkg_root / "installed" / triplet / "include"
+    if include_dir.exists():
+        for entry in include_dir.iterdir():
+            match = re.match(r"python3\.(\d+)", entry.name)
+            if match:
+                minor_version = match.group(1)
+                return f"3.{minor_version}"
+    return None
 
 parser = argparse.ArgumentParser(description="Python Test Script")
 

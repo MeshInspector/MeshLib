@@ -270,6 +270,21 @@ namespace MR.Test
         }
 
         [Test]
+        public void TestAddMesh()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            Assert.That(cubeMesh.ValidFaces.Count() == 12);
+            var cpyMesh = cubeMesh.Clone();
+            cubeMesh.AddMesh(cpyMesh);
+            Assert.That(cubeMesh.ValidFaces.Count() == 24);
+            FaceBitSet bs = new FaceBitSet(12);
+            bs.Set(0);
+            MeshPart mp = new MeshPart(cpyMesh,bs);
+            cubeMesh.AddMeshPart(ref mp);
+            Assert.That(cubeMesh.ValidFaces.Count() == 25);
+        }
+
+        [Test]
         public void TestProjection()
         {
             var p = new Vector3f(1, 2, 3);

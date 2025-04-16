@@ -49,6 +49,9 @@ class ShortcutManager;
 struct ShortcutKey;
 enum class ShortcutCategory : char;
 
+class DirectionWidget;
+class PlaneWidget;
+
 class TouchpadController;
 struct TouchpadParameters;
 class SpaceMouseController;

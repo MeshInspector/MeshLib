@@ -2,7 +2,6 @@
 #include "MRUIRectAllocator.h"
 #include "MRUITestEngine.h"
 #include "MRImGuiVectorOperators.h"
-#include "MRMesh/MRBitSet.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"
 #include "MRViewerInstance.h"
@@ -14,11 +13,14 @@
 #include "MRRibbonFontManager.h"
 #include "MRPlaneWidget.h"
 #include "MRColorTheme.h"
+#include "MRUIStyle.h"
+#include "MRDirectionWidget.h"
+#include "MRAppendHistory.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRUIStyle.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace ImGui
@@ -1560,6 +1562,24 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
         planeWidget.updatePlane( plane, plane.n != planeBackUp.n );
 
     ImGui::PopStyleVar( 2 );
+}
+
+bool Direction( MR::DirectionWidget& dirWidget, bool& editDragging, const std::string& historyName )
+{
+    auto dir = dirWidget.getLocalDirection();
+    bool res = UI::drag<NoUnit>( "Direction", dir, 0.01f, -1.0f, 1.0f );
+    if ( res )
+    {
+        if ( !editDragging )
+        {
+            AppendHistory<DirectionWidget::ChangeDirAction>( dirWidget, historyName );
+            editDragging = true;
+        }
+        dirWidget.updateLocalDirection( dir );
+    }
+    if ( ImGui::IsItemDeactivatedAfterEdit() )
+        editDragging = false;
+    return res;
 }
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )

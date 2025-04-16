@@ -61,8 +61,8 @@ MRMESHC_API float mrMeshEdgeLengthSq( const MRMesh* mesh, MRUndirectedEdgeId e )
 /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
 MRMESHC_API void mrMeshDeleteFaces( MRMesh* mesh, const MRFaceBitSet* fs, const MRUndirectedEdgeBitSet* keepEdges );
 
-/// optional parameters for \ref mrMeshAddPartByMask
-typedef struct MRMeshAddPartByMaskParameters
+/// optional parameters for \ref mrMeshAddMeshPart
+typedef struct MRMeshAddMeshPartParameters
 {
     /// if flipOrientation then every from triangle is inverted before adding
     bool flipOrientation;
@@ -73,10 +73,10 @@ typedef struct MRMeshAddPartByMaskParameters
     const MREdgePath* fromContours;
     size_t fromContoursNum;
     // TODO: map
-} MRMeshAddPartByMaskParameters;
+} MRMeshAddMeshPartParameters;
 
 /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
-MRMESHC_API void mrMeshAddPartByMask( MRMesh* mesh, const MRMesh* from, const MRFaceBitSet* fromFaces, const MRMeshAddPartByMaskParameters* params );
+MRMESHC_API void mrMeshAddMeshPart( MRMesh* mesh, const MRMeshPart* meshPart, const MRMeshAddMeshPartParameters* params );
 
 /// tightly packs all arrays eliminating lone edges and invalid face, verts and points
 MRMESHC_API void mrMeshPack( MRMesh* mesh, bool rearrangeTriangles );

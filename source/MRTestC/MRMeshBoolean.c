@@ -5,6 +5,7 @@
 #include <MRMeshC/MRBitSet.h>
 #include <MRMeshC/MRCube.h>
 #include <MRMeshC/MRMesh.h>
+#include <MRMeshC/MRMeshPart.h>
 #include <MRMeshC/MRMeshBoolean.h>
 #include <MRMeshC/MRMeshTopology.h>
 #include <MRMeshC/MRRegionBoundary.h>
@@ -113,14 +114,15 @@ void testBooleanMultipleEdgePropogationSort( void )
         MREdgeLoop* border = mrTrackRightBoundaryLoop( meshATopology, meshAHoles->data[0], NULL );
 
         const MRFaceBitSet* meshASupFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshASup ) );
-        const MRMeshAddPartByMaskParameters params = {
+        const MRMeshAddMeshPartParameters params = {
             .flipOrientation = true,
             .thisContours = border,
             .thisContoursNum = 1,
             .fromContours = border,
             .fromContoursNum = 1,
         };
-        mrMeshAddPartByMask( meshA, meshASup, meshASupFaces, &params );
+        MRMeshPart mp = { .mesh = meshASup, .region = meshASupFaces };
+        mrMeshAddMeshPart( meshA, &mp, &params );
 
         mrEdgePathFree( border );
         mrEdgePathFree( meshAHoles );

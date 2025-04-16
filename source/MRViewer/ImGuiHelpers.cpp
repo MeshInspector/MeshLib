@@ -1566,7 +1566,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
 
 bool Direction( MR::DirectionWidget& dirWidget, bool& editDragging, const std::string& historyName )
 {
-    auto dir = dirWidget.getLocalDirection();
+    auto dir = dirWidget.getDirection();
     bool res = UI::drag<NoUnit>( "Direction", dir, 0.01f, -1.0f, 1.0f );
     if ( res )
     {
@@ -1575,7 +1575,7 @@ bool Direction( MR::DirectionWidget& dirWidget, bool& editDragging, const std::s
             AppendHistory<DirectionWidget::ChangeDirAction>( dirWidget, historyName );
             editDragging = true;
         }
-        dirWidget.updateLocalDirection( dir );
+        dirWidget.updateDirection( dir );
     }
     if ( ImGui::IsItemDeactivatedAfterEdit() )
         editDragging = false;

@@ -484,23 +484,30 @@ bool buttonIconEx(
         } );
     }
 
-    float localPadding = 0.0f;
     ImVec2 startPosIcon;
     ImVec2 startPosText;
     if ( params.textUnderImage )
     {
-        if( vecDetail.empty() )
-            localPadding = ( buttonSize.y - iconSize.y ) / 2.0f;
+        float iconYPadding = 0.0f;
+        float textYPadding = 0.0f;
+        if ( vecDetail.empty() )
+        {
+            iconYPadding = ( buttonSize.y - iconSize.y ) / 2.0f;
+            iconYPadding = std::max( iconYPadding, style.FramePadding.x );
+        }
         else
-            localPadding = ( buttonSize.y - iconSize.y - vecDetail.size() * cFontSize ) / 3.0f;
-        localPadding = std::max( localPadding, style.FramePadding.y );
-        startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
-        startPosText = ImVec2( ( startButtonPos.x + endButtonPos.x ) / 2.0f, startPosIcon.y + iconSize.y + localPadding );
+        {
+            auto freeYSpace = buttonSize.y - iconSize.y - vecDetail.size() * cFontSize;
+            textYPadding = std::clamp( freeYSpace - 2 * style.FramePadding.y - 1, 0.0f, freeYSpace / 3.0f );
+            iconYPadding = textYPadding > style.FramePadding.y ? textYPadding : style.FramePadding.y;
+        }
+        startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + iconYPadding );
+        startPosText = ImVec2( ( startButtonPos.x + endButtonPos.x ) / 2.0f, startPosIcon.y + iconSize.y + textYPadding );
     }
     else
     {
         maxLineLength += cSpaceWidth; // to compensate icon inner spacing
-        localPadding = ( buttonSize.x - iconSize.x - maxLineLength - style.ItemInnerSpacing.x ) / 2.0f;
+        auto localPadding = ( buttonSize.x - iconSize.x - maxLineLength - style.ItemInnerSpacing.x ) / 2.0f;
         localPadding = std::max( localPadding, style.FramePadding.x );
         if ( vecDetail.empty() )
             startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );

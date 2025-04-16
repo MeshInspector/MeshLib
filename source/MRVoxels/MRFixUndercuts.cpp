@@ -32,7 +32,7 @@ constexpr float numVoxels = 1e7f;
 
 static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vector3f& dir )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto minV = findDirMax( -dir, mesh, UseAABBTree::YesIfAlreadyConstructed );
     auto borders = extendAllHoles( mesh, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
@@ -44,7 +44,7 @@ static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vect
 /// to avoid unexpected hole appearance in thin areas
 static void makeZThickAtLeast( Mesh & mesh, float minThickness, Vector3f up )
 {
-    MR_TIMER
+    MR_TIMER;
     up = up.normalized();
     const IntersectionPrecomputes<float> iprec( up );
     auto newPoints = mesh.points;
@@ -140,7 +140,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         // add new triangles after hole filling to bitset
         regionCpy = *params.region;
     }
-    
+
     if ( !reportProgress( params.cb, 0.05f ) )
         return unexpectedOperationCanceled();
 
@@ -156,7 +156,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         heightZ = halfDiagXY / std::tan( std::abs( params.wallAngle ) );
 
 
-        // need to subdivide - because this projection is not really linear, 
+        // need to subdivide - because this projection is not really linear,
         // so for big planar faces back projection will change the geometry
         SubdivideSettings ss;
         ss.maxEdgeLen = 4 * voxelSize; // guarantee some precision but do not subdivide too much
@@ -204,7 +204,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     {
         regionCpy.resize( mesh.topology.faceSize(), true );
 
-        // create mesh and unclosed grid 
+        // create mesh and unclosed grid
         regionGrid = meshToDistanceField( mesh.cloneRegion( regionCpy ), AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( params.cb, 0.3f, 0.4f ) );
         if ( !reportProgress( params.cb, 0.4f ) )
             return unexpectedOperationCanceled();
@@ -228,7 +228,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         .voxelSize = Vector3f::diagonal( voxelSize ),
         .cb = subprogress( params.cb,0.8f,0.9f )
     } );
-    
+
     if ( !meshRes.has_value() )
         return unexpected( std::move( meshRes.error() ) );
 
@@ -285,7 +285,7 @@ UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh )
 
 void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts )
 {
-    MR_TIMER
+    MR_TIMER;
 
     outUndercuts.resize( mesh.topology.faceSize() );
     float moveUpRay = mesh.computeBoundingBox().diagonal() * 1e-5f; //to be independent of mesh size
@@ -302,7 +302,7 @@ void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& o
 
 double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric )
 {
-    MR_TIMER
+    MR_TIMER;
     findUndercuts( mesh, upDirection, outUndercuts );
     return metric( outUndercuts, upDirection );
 }

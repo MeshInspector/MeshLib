@@ -50,5 +50,5 @@ MRMESH_API void printTimingTree( double minTimeSec = 0.1 );
 
 } // namespace MR
 
-#define MR_TIMER MR::Timer _timer( __FUNCTION__ );
-#define MR_NAMED_TIMER(name) MR::Timer _named_timer( name );
+#define MR_TIMER MR::Timer _timer( __FUNCTION__ )
+#define MR_NAMED_TIMER(name) MR::Timer _named_timer( name )

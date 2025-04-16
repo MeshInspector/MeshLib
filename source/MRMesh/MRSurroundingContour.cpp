@@ -174,7 +174,7 @@ Expected<EdgeLoop> surroundingContour(
     const Vector3f & dir
 )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeLoop res;
     const auto sz = includeEdges.size();
     if ( sz < 2 )
@@ -204,7 +204,7 @@ Expected<EdgeLoop> surroundingContour(
         for ( auto e : includeEdges )
             sum += mesh.edgePoint( e, 0.5f );
         const Vector3f center = sum / float( sz );
-        
+
         const Vector3f dir0 = ( mesh.edgePoint( includeEdges[0], 0.5f ) - center ).normalized();
         const Vector3f dir1 = cross( dir, dir0 ).normalized();
         auto angle = [&]( EdgeId e )
@@ -246,7 +246,7 @@ Expected<EdgeLoop> surroundingContour(
     const Vector3f & dir
 )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeLoop res;
     const auto sz = keyVertices.size();
     if ( sz < 2 )
@@ -271,7 +271,7 @@ Expected<EdgeLoop> surroundingContour(
         for ( auto v : keyVertices )
             sum += mesh.points[v];
         const Vector3f center = sum / float( sz );
-        
+
         const Vector3f dir0 = ( mesh.points[keyVertices[0]] - center ).normalized();
         const Vector3f dir1 = cross( dir, dir0 ).normalized();
         auto angle = [&]( VertId v )

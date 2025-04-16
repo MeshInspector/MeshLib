@@ -476,7 +476,7 @@ RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
     if ( !( dirty_ & DIRTY_FACE ) || !objLabel_->labelRepresentingMesh() )
         return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );
 
-    MR_TIMER
+    MR_TIMER;
 
     const auto& mesh = objLabel_->labelRepresentingMesh();
     const auto& topology = mesh->topology;

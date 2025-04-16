@@ -62,7 +62,7 @@ private:
 
 Expected<void> Saver::run()
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !stream_ )
         return unexpected( std::string( "Bad stream before CTM-encoding" ) );
     ctmSaveCustom( context_, []( const void* buf, CTMuint size, void* data ) -> CTMuint
@@ -107,7 +107,7 @@ Expected<Mesh> fromCtm( const std::filesystem::path& file, const MeshLoadSetting
 
 Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto context = ctmNewContext( CTM_IMPORT );
     MR_FINALLY { ctmFreeContext( context ); };
@@ -216,7 +216,7 @@ Expected<void> toCtm( const Mesh & mesh, const std::filesystem::path & file, con
 
 Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions& options )
 {
-    MR_TIMER
+    MR_TIMER;
 
     class ScopedCtmConext
     {
@@ -327,7 +327,7 @@ Expected<MR::PointCloud> fromCtm( const std::filesystem::path& file, const Point
 
 Expected<MR::PointCloud> fromCtm( std::istream& in, const PointsLoadSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto context = ctmNewContext( CTM_IMPORT );
     MR_FINALLY { ctmFreeContext( context ); };
@@ -420,7 +420,7 @@ Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& fil
 
 Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePointsOptions& options )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( (  options.saveValidOnly && !cloud.validPoints.any() ) ||
          ( !options.saveValidOnly && cloud.points.empty() ) )

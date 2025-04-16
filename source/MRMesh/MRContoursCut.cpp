@@ -254,9 +254,9 @@ TrianglesSortRes sortTrianglesSymmetrical( const SortIntersectionsData& sortData
 }
 
 // try determine sort looking on next or prev intersection
-TrianglesSortRes sortPropagateContour( 
+TrianglesSortRes sortPropagateContour(
     const MeshTopology& tp,
-    const SortIntersectionsData& sortData, 
+    const SortIntersectionsData& sortData,
     const IntersectionData& il, const IntersectionData& ir,
     EdgeId baseEdgeOr )
 {
@@ -269,7 +269,7 @@ TrianglesSortRes sortPropagateContour(
     bool sameContour = il.contourId == ir.contourId;
     int stepRight = el == er ? 1 : -1;
 
-    // finds next/prev intersection on edge in the contour 
+    // finds next/prev intersection on edge in the contour
     auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
     {
         const auto& contour = left ? lContour : rContour;
@@ -362,12 +362,12 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
-            assert( 
+            assert(
                 ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
-            
+
             // determined condition, intersections leave face in different edges (not returned)
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
@@ -385,7 +385,7 @@ TrianglesSortRes sortPropagateContour(
             lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
         else
             lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
-        
+
         FaceId fl = lContour[lOtherRef].tri;
         FaceId fr = rContour[rOtherRef].tri;
 
@@ -419,7 +419,7 @@ TrianglesSortRes sortPropagateContour(
 
 // baseEdge - cutting edge representation with orientation of first intersection
 std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> getLessFunc(
-    const MeshTopology& tp, 
+    const MeshTopology& tp,
     const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
 {
     if ( !sortData )
@@ -548,7 +548,7 @@ OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& m
                     e = otherMesh.destPnt( inIntersection.edge );
                 }
                 // always calculate in mesh A space
-                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise( 
+                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
                     getCoord( a, !inIntersection.isEdgeATriB ),
                     getCoord( b, !inIntersection.isEdgeATriB ),
                     getCoord( c, !inIntersection.isEdgeATriB ),
@@ -896,11 +896,11 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
 
             // consistent orientation:
             // topology.next( pEId ) == nEId || topology.prev( pEId.sym() ) == nEId.sym()
-            // 
+            //
             // not consistent orientation:
             // it means that one of `prev` or `next` are form original MeshTriPoints vector - orientation should be fixed when this MeshTriPoint will be `curr` in this function
             // all mesh tri points will be curr in this function once so, output orientation should be correct
-            if ( topology.next( pEId ).undirected() == nEId.undirected() || 
+            if ( topology.next( pEId ).undirected() == nEId.undirected() ||
                  topology.prev( pEId.sym() ).undirected() == nEId.sym().undirected() )
             {
                 // orientation is consistent or `next` orientation can be wrong
@@ -918,7 +918,7 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
                     return {};
                 return OneMeshIntersection{ topology.left( curr.e ),mesh.triPoint( curr ) };
             }
-            // else statement means that `prev` and `next` do not share face 
+            // else statement means that `prev` and `next` do not share face
             // only correct `curr` position is on the edge that share one face with `prev` and other face with `next`
         }
         else
@@ -961,13 +961,13 @@ OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTr
     return res;
 }
 
-Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg, 
+Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     MeshTriPointsConnector connectorFn /*= {}*/, std::vector<int>* pivotIndices /*= nullptr */ )
 {
     MR_TIMER;
     if ( meshTriPointsOrg.size() < 2 )
         return {};
-    bool closed = 
+    bool closed =
         meshTriPointsOrg.front().e == meshTriPointsOrg.back().e &&
         meshTriPointsOrg.front().bary.a == meshTriPointsOrg.back().bary.a &&
         meshTriPointsOrg.front().bary.b == meshTriPointsOrg.back().bary.b;
@@ -1205,14 +1205,14 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
 
 Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings /*= {} */ )
 {
-    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints, 
+    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints,
         [isoValue] ( int )
     {
         return isoValue;
     }, searchSettings );
 }
 
-Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, 
+Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     const std::function<float( int )>& offsetAtPoint, SearchPathSettings searchSettings /*= {}*/ )
 {
     if ( !offsetAtPoint )
@@ -1345,7 +1345,7 @@ Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const
                 {
                     inter.primitiveId = FaceId( nEM.map[newUE] );
                 }
-            }            
+            }
         } );
         resI.intersections.back() = resI.intersections.front();
     }
@@ -1613,7 +1613,7 @@ void iterateFindRemovedFaceInfo( FullRemovedFacesInfo& removedFaces, int contId,
 // back-iterate removed face info to find correct splice edge for vert->face->vert like paths (second vert should find correct face edge for splice)
 EdgeId iterateRemovedFacesInfoToFindLeftEdge( const MeshTopology& topology, const FullRemovedFacesInfo& removedFaces, int contId, int interId, FaceId f, VertId v )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( int backContId = contId; backContId >= 0; --backContId )
     {
         int prevInter = backContId == contId ? ( interId - 1 ) : ( int( removedFaces[backContId].size() ) - 1 );
@@ -1957,7 +1957,7 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
 }
 
 //            ^
-//            | top edge 
+//            | top edge
 //            |
 // <---------- ----------->
 // left edge  ^  right edge
@@ -2006,7 +2006,7 @@ void cutOneEdge( Mesh& mesh,
     mesh.topology.setLeft( baseEdge, FaceId{} );
     mesh.topology.setLeft( baseEdge.sym(), FaceId{} );
 
-    EdgeId e = baseEdge;       
+    EdgeId e = baseEdge;
     // disconnect edge e from its origin
     EdgeId e0;
     {
@@ -2072,9 +2072,9 @@ void cutOneEdge( Mesh& mesh,
         triangulateContour( mesh, e0, oldLeft, new2OldMap, new2OldEdgeMap );
 }
 
-// this function cut mesh edge and connects it with result path, 
+// this function cut mesh edge and connects it with result path,
 // after it each path edge left and right faces are invalid (they are removed)
-void cutEdgesIntoPieces( Mesh& mesh, 
+void cutEdgesIntoPieces( Mesh& mesh,
                          EdgeDataMap&& edgeData, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
@@ -2282,7 +2282,7 @@ TEST( MRMesh, BooleanIntersectionsSort )
         { 8.92162418f, 14.4169340f,-0.203402281f },
         { 8.95297337f, 14.4501600f,-0.191835344f }
     };
-    Triangulation tA = 
+    Triangulation tA =
     {
         { 0_v, 1_v, 3_v },
         { 0_v, 3_v, 2_v }
@@ -2312,7 +2312,7 @@ TEST( MRMesh, BooleanIntersectionsSort )
     auto meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters );
 
     SortIntersectionsData dataForA{meshB,contours,converters.toInt,nullptr,meshA.topology.vertSize(),false};
-    
+
     Vector3f aNorm;
     for ( auto f : meshA.topology.getValidFaces() )
         aNorm += meshA.dirDblArea( f );

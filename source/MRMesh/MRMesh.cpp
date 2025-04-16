@@ -57,7 +57,7 @@ Mesh Mesh::fromTriangles(
     VertCoords vertexCoordinates,
     const Triangulation& t, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromTriangles( t, settings, cb );
@@ -71,13 +71,13 @@ Mesh Mesh::fromTriMesh(
     return fromTriangles( std::move( triMesh.points ), triMesh.tris, settings, cb );
 }
 
-Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
+Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     VertCoords vertexCoordinates,
     Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
     const MeshBuilder::BuildSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
@@ -95,7 +95,7 @@ Mesh Mesh::fromFaceSoup(
     const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
     const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
@@ -128,7 +128,7 @@ Mesh Mesh::fromFaceSoup(
 
 Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices )
 {
-    MR_TIMER
+    MR_TIMER;
     MeshBuilder::VertexIdentifier vi;
     vi.reserve( posTriples.size() );
     vi.addTriangles( posTriples );
@@ -142,7 +142,7 @@ Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool du
 
 bool Mesh::operator ==( const Mesh & b ) const
 {
-    MR_TIMER
+    MR_TIMER;
     if ( topology != b.topology )
         return false;
     for ( auto v : topology.getValidVerts() )
@@ -214,9 +214,9 @@ Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
-Box3f Mesh::getBoundingBox() const 
-{ 
-    return getAABBTree().getBoundingBox(); 
+Box3f Mesh::getBoundingBox() const
+{
+    return getAABBTree().getBoundingBox();
 }
 
 Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toWorld ) const
@@ -226,7 +226,7 @@ Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toW
 
 void Mesh::zeroUnusedPoints()
 {
-    MR_TIMER
+    MR_TIMER;
 
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ points.size() } ), [&] ( const tbb::blocked_range<VertId>& range )
     {
@@ -240,7 +240,7 @@ void Mesh::zeroUnusedPoints()
 
 void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
 
     BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
     {
@@ -349,7 +349,7 @@ VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * regi
 void Mesh::addMesh( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertMap vmap;
     topology.addPart( from.topology, outFmap, &vmap, outEmap, rearrangeTriangles );
@@ -378,7 +378,7 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto & fromFaces = from.mesh.topology.getFaceIds( from.region );
     addPartBy( from.mesh, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
@@ -388,7 +388,7 @@ void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool 
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
@@ -398,7 +398,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     const std::vector<EdgePath> & fromContours,
     PartMapping map )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertHashMap localVmap;
     if ( !map.src2tgtVerts )
@@ -427,7 +427,7 @@ template MRMESH_API void Mesh::addPartBy( const Mesh & from,
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     Mesh res;
     const auto fcount = region.count();
@@ -450,7 +450,7 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
 
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( rearrangeTriangles )
         topology.rotateTriangles();
@@ -465,7 +465,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
 
 Expected<void> Mesh::pack( const PackMapping & map, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     topology.pack( map );
     if ( !reportProgress( cb, 0.8f ) )
         return unexpectedOperationCanceled();
@@ -490,7 +490,7 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
 
 Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
@@ -566,15 +566,15 @@ std::optional<MeshProjectionResult> Mesh::projectPoint( const Vector3f& point, f
     return proj;
 }
 
-const AABBTree & Mesh::getAABBTree() const 
-{ 
+const AABBTree & Mesh::getAABBTree() const
+{
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
     assert( res.numLeaves() == topology.numValidFaces() );
     return res;
 }
 
-const AABBTreePoints & Mesh::getAABBTreePoints() const 
-{ 
+const AABBTreePoints & Mesh::getAABBTreePoints() const
+{
     const auto & res = AABBTreePointsOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
     assert( res.orderedPoints().size() == topology.numValidVerts() );
     return res;
@@ -606,12 +606,12 @@ void Mesh::updateCaches( const VertBitSet & changedVerts )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         assert( tree.numLeaves() == topology.numValidFaces() );
-        tree.refit( *this, changedVerts ); 
+        tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
     {
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
-        tree.refit( points, changedVerts ); 
+        tree.refit( points, changedVerts );
     } );
     dipolesOwner_.reset();
 }
@@ -627,14 +627,14 @@ size_t Mesh::heapBytes() const
 
 void Mesh::shrinkToFit()
 {
-    MR_TIMER
+    MR_TIMER;
     topology.shrinkToFit();
     points.vec_.shrink_to_fit();
 }
 
 void Mesh::mirror( const Plane3f& plane )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto& p : points )
     {
         p += 2.0f * ( plane.project( p ) - p );
@@ -657,7 +657,7 @@ TEST( MRMesh, BasicExport )
     (void)vertexTripples;
 }
 
-TEST(MRMesh, SplitEdge) 
+TEST(MRMesh, SplitEdge)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} },
@@ -703,7 +703,7 @@ TEST(MRMesh, SplitEdge)
     EXPECT_EQ( region.count(), 3 );
 }
 
-TEST(MRMesh, SplitEdge1) 
+TEST(MRMesh, SplitEdge1)
 {
     Mesh mesh;
     const auto e01 = mesh.topology.makeEdge();
@@ -725,7 +725,7 @@ TEST(MRMesh, SplitEdge1)
     EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
 }
 
-TEST(MRMesh, SplitFace) 
+TEST(MRMesh, SplitFace)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} }

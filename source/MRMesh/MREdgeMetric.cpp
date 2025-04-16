@@ -8,8 +8,8 @@
 namespace MR
 {
 
-EdgeMetric identityMetric() 
-{ 
+EdgeMetric identityMetric()
+{
     return []( EdgeId ) { return 1.0f; };
 }
 
@@ -73,7 +73,7 @@ EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleS
 
 EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Buffer<float, UndirectedEdgeId> table( topology.undirectedEdgeSize() );
     ParallelFor( table.beginId(), table.endId(), [&]( UndirectedEdgeId ue )

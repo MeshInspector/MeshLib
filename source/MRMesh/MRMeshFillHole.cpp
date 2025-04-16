@@ -202,7 +202,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
     };
     std::vector<unsigned> optimalStepsCache( maxPolygonSubdivisions );
     std::queue<WeightedConn> newEdgesQueue;
-    
+
     auto pushInQueue = [&] ( int a, int b )
     {
         VertId aV, bV;
@@ -223,7 +223,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
             continue;
         if ( testExistance( start.a, start.prevA ) || testExistance( start.b, start.prevA ) ) // test if this edge exists
         {
-            // fix multiple edge 
+            // fix multiple edge
             unsigned steps = ( start.b + unsigned( loop.size() ) - start.a ) % unsigned( loop.size() );
             getOptimalSteps( optimalStepsCache, ( start.a + 1 ) % loop.size(), steps, unsigned( loop.size() ), maxPolygonSubdivisions );
             optimalStepsCache.erase( std::remove_if( optimalStepsCache.begin(), optimalStepsCache.end(), [&] ( unsigned v )
@@ -311,7 +311,7 @@ void processCandidate( const Mesh& mesh, const WeightedConn& current,
     {
         if ( cOp )
         {
-            auto edgeACMetric = addALoop ? 
+            auto edgeACMetric = addALoop ?
                 metrics.edgeMetric( bVert, aVert, cOp, cVert ) :
                 metrics.edgeMetric( aVert, bVert, cOp, cVert ); // always cw oriented
             sumMetric = metrics.combineMetric( sumMetric, edgeACMetric );
@@ -349,11 +349,11 @@ void processCandidate( const Mesh& mesh, const WeightedConn& current,
             else
             {
                 assert( currentSpin.a == 1 || currentSpin.b == 1 );
-                double lastEdgeMetric = metrics.edgeMetric( 
+                double lastEdgeMetric = metrics.edgeMetric(
                     mesh.topology.org( aEdgesMap.front() ), mesh.topology.org( bEdgesMap.front() ), // 0-a,0-b
                     bVert, // if addLoopA - last a, otherwise last b
                     currentSpin.a == 1 ? mesh.topology.org( aEdgesMap[1] ) : mesh.topology.org( bEdgesMap[1] ) ); // 1-a or 1-b
-                
+
                 nextConn.weight = metrics.combineMetric( nextConn.weight, lastEdgeMetric );
                 break;
             }
@@ -813,7 +813,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
 void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const FillHoleParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // TODO: parallel getHoleFillPlan
 
@@ -924,16 +924,16 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &
 
 EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces )
 {
-    return extendHole( mesh, a, 
+    return extendHole( mesh, a,
         [plane]( const Vector3f & p ) { return plane.project( p ); },
         outNewFaces );
 }
 
 std::vector<EdgeId> extendAllHoles( Mesh& mesh, const Plane3f & plane, FaceBitSet * outNewFaces )
 {
-    MR_TIMER
+    MR_TIMER;
     auto borders = mesh.topology.findHoleRepresentiveEdges();
-    
+
     for ( auto& border : borders )
         border = extendHole( mesh, border, plane, outNewFaces );
 
@@ -961,7 +961,7 @@ EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, Fac
 
 EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces )
 {
-    return extendHole( mesh, a, 
+    return extendHole( mesh, a,
         []( const Vector3f & p ) { return p; },
         outNewFaces );
 }
@@ -1090,7 +1090,7 @@ MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBi
 
 MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, float samplingStep, FaceBitSet * outNewFaces )
 {
-    MR_TIMER
+    MR_TIMER;
     MakeBridgeResult res = makeQuadBridge( mesh.topology, a, b, outNewFaces );
     if ( !res.na && !res.nb )
         return res;

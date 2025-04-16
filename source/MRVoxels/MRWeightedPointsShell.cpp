@@ -17,7 +17,7 @@ namespace MR
 
 FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud, const WeightedPointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( !params.signDistanceByNormal || cloud.hasNormals() );
 
@@ -45,7 +45,7 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
 
 FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return FunctionVolume
     {
@@ -71,7 +71,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
 
 Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParametersMetric& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
@@ -117,7 +117,7 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars&
 
 Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParametersMetric& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
@@ -163,7 +163,7 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeig
 VertScalars calculateShellWeightsFromRegions(
     const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( regions.empty() )
         spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
@@ -220,7 +220,7 @@ VertScalars calculateShellWeightsFromRegions(
 
 Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 

@@ -21,7 +21,7 @@ namespace MR
 
 Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( callback && !callback( 0.f ) )
         return unexpected( getCancelMessage( folder ) );

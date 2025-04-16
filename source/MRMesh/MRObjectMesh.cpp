@@ -185,7 +185,7 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
 
 std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh )
 {
-    MR_TIMER
+    MR_TIMER;
 
         bool hasVertColorMap = false; // save if at least one has
     bool hasFaceColorMap = false;     // save if at least one has

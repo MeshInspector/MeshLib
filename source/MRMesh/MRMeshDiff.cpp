@@ -9,14 +9,14 @@ namespace MR
 
 MeshDiff::MeshDiff( const Mesh & from, const Mesh & to )
 {
-    MR_TIMER
+    MR_TIMER;
     pointsDiff_ = VertCoordsDiff( from.points, to.points );
     topologyDiff_ = MeshTopologyDiff( from.topology, to.topology );
 }
 
 void MeshDiff::applyAndSwap( Mesh & m )
 {
-    MR_TIMER
+    MR_TIMER;
     pointsDiff_.applyAndSwap( m.points );
     topologyDiff_.applyAndSwap( m.topology );
 }
@@ -24,7 +24,7 @@ void MeshDiff::applyAndSwap( Mesh & m )
 TEST(MRMesh, MeshDiff)
 {
     Triangulation t
-    { 
+    {
         { 0_v, 1_v, 2_v },
         { 0_v, 2_v, 3_v }
     };

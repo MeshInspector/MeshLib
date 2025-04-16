@@ -18,7 +18,7 @@ namespace PointCloudComponents
 /// 2. the total number of roots
 static std::pair<Vert2RegionMap, int> getUniqueRootIds( const VertMap& allRoots, const VertBitSet& region )
 {
-    MR_TIMER
+    MR_TIMER;
     Vert2RegionMap uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto v : region )
@@ -36,7 +36,7 @@ static std::pair<Vert2RegionMap, int> getUniqueRootIds( const VertMap& allRoots,
 
 Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( maxDist > 0.f );
     assert( minSize > 1 );
@@ -51,7 +51,7 @@ Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, floa
 Expected<MR::VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStructs,
     const VertBitSet& region, int minSize, ProgressCallback pc /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( minSize > 1 );
     const auto& allRoots = unionStructs.roots();
@@ -84,7 +84,7 @@ Expected<MR::VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStruct
 
 Expected<std::vector<VertBitSet>> getLargeComponents( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( maxDist > 0.f );
     assert( minSize > 1 );
@@ -135,7 +135,7 @@ Expected<std::vector<VertBitSet>> getLargeComponents( const PointCloud& pointClo
 Expected<std::pair<std::vector<VertBitSet>, int>>  getAllComponents( const PointCloud& pointCloud, float maxDist,
     int maxComponentCount /*= INT_MAX*/, ProgressCallback pc /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( maxDist > 0.f );
     assert( maxComponentCount > 1 );
@@ -178,7 +178,7 @@ Expected<std::pair<std::vector<VertBitSet>, int>>  getAllComponents( const Point
 
 Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointCloud, float maxDist, const VertBitSet* region /*= nullptr*/, ProgressCallback pc /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const VertBitSet& vertsRegion = region ? *region : pointCloud.validPoints;
 

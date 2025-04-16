@@ -16,10 +16,10 @@ void PointsToMeshProjector::updateMeshData( const Mesh* mesh )
 
 void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !mesh_ )
         return;
-    
+
     result.resize( points.size() );
 
     AffineXf3f xf;
@@ -43,7 +43,7 @@ VertScalars findSignedDistances(
     const MeshProjectionParameters & params,
     IPointsToMeshProjector * projector )
 {
-    MR_TIMER
+    MR_TIMER;
 
     AffineXf3f testToRefXf;
     if ( params.refXf )

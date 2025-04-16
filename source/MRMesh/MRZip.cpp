@@ -34,7 +34,7 @@ void zipProgressCallback( zip_t* , double progress, void* data )
 {
     if ( !data )
         return;
-    
+
     auto pd = reinterpret_cast<ProgressData*>( data );
     if ( !reportProgress( pd->cb, float( progress ) ) )
         pd->canceled = true;
@@ -227,7 +227,7 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
 Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
@@ -237,7 +237,7 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         return unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
 
     int err;
-    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( cb, 0.5f, 1.0f ) );    
+    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( cb, 0.5f, 1.0f ) );
     if ( !zip )
         return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
@@ -311,14 +311,14 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         return unexpectedOperationCanceled();
 
     if ( closeRes == -1 )
-        return unexpected( "Cannot close zip" );   
+        return unexpected( "Cannot close zip" );
 
     return {};
 }
 
 Expected<void> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
-    MR_TIMER
+    MR_TIMER;
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
@@ -329,7 +329,7 @@ Expected<void> decompressZip( const std::filesystem::path& zipFile, const std::f
 
 Expected<void> decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto zipSource = zip_source_function_create( istreamZipSourceCallback, &zipStream, nullptr );
     if ( !zipSource )

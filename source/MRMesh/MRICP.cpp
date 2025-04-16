@@ -61,7 +61,7 @@ void ICP::setFloatXf( const AffineXf3f& fltXf )
 
 AffineXf3f ICP::autoSelectFloatXf()
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto bestFltXf = flt_.xf;
     float bestDist = getMeanSqDistToPoint();
@@ -113,7 +113,7 @@ void ICP::sampleRefPoints( float samplingVoxelSize )
 
 void ICP::updatePointPairs()
 {
-    MR_TIMER
+    MR_TIMER;
     MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
@@ -148,7 +148,7 @@ void updatePointPairs( PointPairs & pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosThreshold, float distThresholdSq, bool mutualClosest )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto src2tgtXf = tgt.xf.inverse() * src.xf;
     const auto tgt2srcXf = src.xf.inverse() * tgt.xf;
 
@@ -225,7 +225,7 @@ void updatePointPairs( PointPairs & pairs,
 
 void ICP::deactivatefarDistPairs_()
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( int i = 0; i < 3; ++i )
     {
@@ -242,7 +242,7 @@ void ICP::deactivatefarDistPairs_()
 
 bool ICP::p2ptIter_()
 {
-    MR_TIMER
+    MR_TIMER;
     PointToPointAligningTransform p2pt;
     for ( size_t idx : flt2refPairs_.active )
     {
@@ -334,7 +334,7 @@ AffineXf3f getAligningXf( const PointToPlaneAligningTransform & p2pl,
 
 bool ICP::p2plIter_()
 {
-    MR_TIMER
+    MR_TIMER;
     Vector3f centroidRef;
     int activeCount = 0;
     for ( size_t idx : flt2refPairs_.active )

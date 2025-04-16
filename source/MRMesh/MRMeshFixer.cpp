@@ -79,10 +79,10 @@ int duplicateMultiHoleVertices( Mesh & mesh )
 
 Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     tbb::enumerable_thread_specific<std::vector<MultipleEdge>> threadData;
     const VertId lastValidVert = topology.lastValidVert();
-    
+
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     std::atomic<size_t> numDone{ 0 };
@@ -178,7 +178,7 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         return {}; // nothing to fix
     if ( !reportProgress( sbd, 0.25f ) )
         return unexpectedOperationCanceled();
-    
+
     DecimateSettings dsettings
     {
         .strategy = DecimateStrategy::ShortestEdgeFirst,
@@ -310,7 +310,7 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
 
 FaceBitSet findDisorientedFaces( const Mesh& mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     auto disorientedFaces = mesh.topology.getValidFaces();
     BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
     {
@@ -350,7 +350,7 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
 {
     if ( multipleEdges.empty() )
         return;
-    MR_TIMER
+    MR_TIMER;
     MR_WRITER( mesh )
 
     for ( const auto & mE : multipleEdges )
@@ -375,7 +375,7 @@ void fixMultipleEdges( Mesh & mesh )
 
 Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res( mp.mesh.topology.faceSize() );
     auto completed = BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
@@ -393,7 +393,7 @@ Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspe
 
 Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto criticalLengthSq = sqr( criticalLength );
     UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
     auto completed = BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
@@ -402,7 +402,7 @@ Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float critica
             return;
         if ( mp.mesh.edgeLengthSq( ue ) <= criticalLengthSq )
             res.set( ue );
-    }, cb );    
+    }, cb );
 
     if ( !completed )
         return unexpectedOperationCanceled();
@@ -463,7 +463,7 @@ void eliminateDoubleTrisAround( MeshTopology & topology, VertId v, FaceBitSet * 
                 break; // full ring has been inspected
             continue;
         }
-    } 
+    }
 }
 
 bool isDegree3Dest( const MeshTopology& topology, EdgeId e )
@@ -491,7 +491,7 @@ EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e, FaceBitSet * regi
 
 int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceBitSet * fs )
 {
-    MR_TIMER
+    MR_TIMER;
     auto candidates = region;
     int res = 0;
     for (;;)
@@ -537,7 +537,7 @@ EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
 
 VertBitSet findRepeatedVertsOnHoleBd( const MeshTopology& topology )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto holeRepresEdges = topology.findHoleRepresentiveEdges();
 
     VertBitSet res;
@@ -579,7 +579,7 @@ static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<
 {
     EdgeId bd;
     float bdAngle = -1;
-    
+
     auto angle = [&]( EdgeId e )
     {
         assert( !mesh.topology.left( e ) );
@@ -622,7 +622,7 @@ static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<
 
 FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
 
     tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
     BitSetParallelFor( findRepeatedVertsOnHoleBd( mesh.topology ), [&]( VertId v )

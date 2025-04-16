@@ -234,10 +234,8 @@ SetViewportConfigPresetMenuItem::SetViewportConfigPresetMenuItem( Type type ):
     RibbonMenuItem( sGetViewportConfigName( type ) ),
     type_{ type }
 {
-    updateViewports_ = [] ( const ViewportMask appendedViewports, size_t oldViewportListCount, ViewportId oldActiveViewport )
+    updateViewports_ = [] ( const ViewportMask appendedViewports, ViewportId oldActiveViewport )
     {
-        if ( oldViewportListCount >= getViewerInstance().viewport_list.size() )
-            return;
         auto allObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any );
 
         for ( ViewportId newVpId : appendedViewports )
@@ -262,9 +260,12 @@ bool SetViewportConfigPresetMenuItem::action()
     float width = MR::width( bounds );
     float height = MR::height( bounds );
 
+    ViewportMask newViewportMask;
+    for ( const auto& viewport : viewer.viewport_list )
+        newViewportMask |= viewport.id;
+    newViewportMask = ~newViewportMask;
     const ViewportId oldViewportId = viewer.viewport().id;
-    const size_t viewportListCount = viewer.viewport_list.size();
-    for ( int i = int( viewportListCount ) - 1; i > 0; --i )
+    for ( int i = int( viewer.viewport_list.size() ) - 1; i > 0; --i )
         viewer.erase_viewport( i );
 
     ViewportRectangle rect;
@@ -280,7 +281,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.x = rect.max.x;
             rect.min.y = bounds.min.y;
             rect.max = bounds.max;
-            updateViewports_( viewer.append_viewport( rect ), viewportListCount, oldViewportId );
+            newViewportMask &= ViewportMask( viewer.append_viewport( rect ) );
+            updateViewports_( newViewportMask, oldViewportId );
 
             break;
         case Type::Horizontal:
@@ -292,7 +294,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.x = bounds.min.x;
             rect.min.y = rect.max.y;
             rect.max = bounds.max;
-            updateViewports_( viewer.append_viewport( rect ), viewportListCount, oldViewportId );
+            newViewportMask &= ViewportMask( viewer.append_viewport( rect ) );
+            updateViewports_( newViewportMask, oldViewportId );
 
             break;
         case Type::Quad:
@@ -316,7 +319,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.y = rect.max.y;
             rect.max = bounds.max;
             appendedViewports |= viewer.append_viewport( rect );
-            updateViewports_( appendedViewports, viewportListCount, oldViewportId );
+            newViewportMask &= appendedViewports;
+            updateViewports_( newViewportMask, oldViewportId );
             break;
         }
         case Type::Hex:
@@ -350,7 +354,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.y = rect.max.y;
             rect.max = bounds.max;
             appendedViewports |= viewer.append_viewport( rect );
-            updateViewports_( appendedViewports, viewportListCount, oldViewportId );
+            newViewportMask &= appendedViewports;
+            updateViewports_( newViewportMask, oldViewportId );
             break;
         }
         case Type::Single:
@@ -360,7 +365,7 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width;
             rect.max.y = rect.min.y + height;
             viewer.viewport().setViewportRect( rect );
-            updateViewports_( {}, viewportListCount, oldViewportId );
+            updateViewports_( {}, {} );
             break;
     }
     return false;

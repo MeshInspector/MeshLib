@@ -19,7 +19,7 @@
 
 The MeshLib SDK is an open-source library that provides advanced algorithms for 3D data processing. It assists developers and engineers in achieving precise results while delivering significant resource savings. Whether you are working on 3D printing, scanning, inspection, automation, robotics, scientific visualization, or medical devices, MeshLib is ideally suited to meet your needs thanks to its potent capabilities and broad applicability.
 
-![image](https://github.com/user-attachments/assets/72d6a56b-6737-4262-9bdc-0bcec7d5b06b)
+![MeshLib_SDK_Mesh_Processing_Library](https://github.com/user-attachments/assets/3be4bc4e-7657-4ba0-9246-17182c3ea5e6)
 
 ## Why Choose MeshLib
 

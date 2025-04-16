@@ -122,6 +122,7 @@ namespace MR
             public float stabilizer = 1e-6f;
             public IntPtr region = IntPtr.Zero;
             public FixMeshDegeneraciesParams.Mode mode = FixMeshDegeneraciesParams.Mode.Remesh;
+            public IntPtr cb = IntPtr.Zero;
 
             public MRFixMeshDegeneraciesParams() { }
         }
@@ -140,6 +141,7 @@ namespace MR
             mrParams.stabilizer = settings.stabilizer;
             mrParams.region = settings.region?.bs_ ?? IntPtr.Zero;
             mrParams.mode = settings.mode;
+            mrParams.cb = IntPtr.Zero;
 
             IntPtr errorString = IntPtr.Zero;
             mrFixMeshDegeneracies(mesh.varMesh(), ref mrParams, ref errorString);

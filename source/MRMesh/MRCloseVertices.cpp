@@ -13,7 +13,7 @@ namespace MR
 
 std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & points, float closeDist, const AABBTreePoints & tree, const VertBitSet * valid, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertMap res;
     res.resizeNoInit( points.size() );
@@ -68,7 +68,7 @@ std::optional<VertMap> findSmallestCloseVerticesUsingTree( const VertCoords & po
 
 std::optional<VertMap> findSmallestCloseVertices( const VertCoords & points, float closeDist, const VertBitSet * valid, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     AABBTreePoints tree( points, valid );
     return findSmallestCloseVerticesUsingTree( points, closeDist, tree, valid, cb );
 }
@@ -85,7 +85,7 @@ std::optional<VertMap> findSmallestCloseVertices( const PointCloud & cloud, floa
 
 VertBitSet findCloseVertices( const VertMap & smallestMap )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res;
     for ( auto v = 0_v; v < smallestMap.size(); ++v )
     {
@@ -125,7 +125,7 @@ std::optional<VertBitSet> findCloseVertices( const PointCloud & cloud, float clo
 
 std::vector<EdgePair> findTwinEdgePairs( const Mesh & mesh, float closeDist )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<EdgePair> res;
 
     const auto map = *findSmallestCloseVertices( mesh, closeDist );
@@ -153,7 +153,7 @@ std::vector<EdgePair> findTwinEdgePairs( const Mesh & mesh, float closeDist )
 
 EdgeBitSet findTwinEdges( const std::vector<EdgePair> & pairs )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeBitSet res;
     for ( const auto & [e1, e2] : pairs )
     {
@@ -171,7 +171,7 @@ EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist )
 
 UndirectedEdgeBitSet findTwinUndirectedEdges( const std::vector<EdgePair> & pairs )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res;
     for ( const auto & [e1, e2] : pairs )
     {
@@ -189,7 +189,7 @@ UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist
 
 UndirectedEdgeHashMap findTwinUndirectedEdgeHashMap( const std::vector<EdgePair> & pairs )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeHashMap res;
     /// every edge is present twice in (pairs) in both orientations; and
     /// every edge is present twice in (res): once in key and once in value

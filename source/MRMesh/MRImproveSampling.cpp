@@ -12,7 +12,7 @@ namespace MR
 
 bool improveSampling( const PointCloud & cloud, VertBitSet & samples, const ImproveSamplingSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( settings.numIters >= 1 );
 
     // create point-cloud from initial samples

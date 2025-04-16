@@ -56,7 +56,7 @@ private:
 template <typename T, typename P>
 PriorityQueue<T, P>::PriorityQueue( const P& pred, Container&& v ) : c( std::move( v ) ), pred_( pred )
 {
-    MR_TIMER
+    MR_TIMER;
     std::make_heap( c.begin(), c.end(), pred_ );
 }
 

@@ -24,7 +24,7 @@ void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
 void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
     EdgeWeights edgeWeights, VertexMass vmass, const VertBitSet * fixedSharpVertices )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Laplacian laplacian( topology, points );
     laplacian.init( verts, edgeWeights, vmass, Laplacian::RememberShape::No );
@@ -44,7 +44,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
 void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
     const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( topology, verts ) );
 
     const auto sz = verts.count();
@@ -127,7 +127,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 
 void positionVertsWithSpacing( const MeshTopology& topology, VertCoords& points, const SpacingSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( settings.maxSumNegW > 0 );
 
     const auto & verts = topology.getVertIds( settings.region );
@@ -308,7 +308,7 @@ void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & setti
 
 void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, const InflateSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !verts.any() )
         return;
     if ( settings.preSmooth )
@@ -329,7 +329,7 @@ void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSe
     if ( pressure == 0 )
         return positionVertsSmoothlySharpBd( topology, points, verts );
 
-    MR_TIMER
+    MR_TIMER;
     auto vertShifts = dirDblAreas( topology, points, &verts );
     const double sumDblArea = parallel_deterministic_reduce( tbb::blocked_range( 0_v, vertShifts.endId(), 1024 ), 0.0,
     [&] ( const auto & range, double curr )

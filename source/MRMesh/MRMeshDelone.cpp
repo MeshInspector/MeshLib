@@ -183,7 +183,7 @@ int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const
 {
     if ( numIters <= 0 )
         return 0;
-    MR_TIMER
+    MR_TIMER;
 
     UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
     UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
@@ -224,7 +224,7 @@ int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& s
 {
     if ( numIters <= 0 )
         return 0;
-    MR_TIMER
+    MR_TIMER;
 
     auto checkDeloneQuadrangleInMesh = [&]( EdgeId e )
     {

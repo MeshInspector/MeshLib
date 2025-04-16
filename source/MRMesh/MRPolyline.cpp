@@ -17,8 +17,8 @@ namespace MR
 template<typename V>
 Polyline<V>::Polyline( const Contours2f& contours )
 {
-    MR_TIMER
-    topology.buildFromContours( contours, 
+    MR_TIMER;
+    topology.buildFromContours( contours,
         [&points = this->points]( size_t sz )
         {
             points.reserve( sz );
@@ -30,15 +30,15 @@ Polyline<V>::Polyline( const Contours2f& contours )
             else
                 points.emplace_back( p.x, p.y, 0.0f );
             return points.backId();
-        } 
+        }
     );
 }
 
 template<typename V>
 Polyline<V>::Polyline( const Contours3f& contours )
 {
-    MR_TIMER
-    topology.buildFromContours( contours, 
+    MR_TIMER;
+    topology.buildFromContours( contours,
         [&points = this->points]( size_t sz )
         {
             points.reserve( sz );
@@ -50,14 +50,14 @@ Polyline<V>::Polyline( const Contours3f& contours )
             else
                 points.push_back( p );
             return points.backId();
-        } 
+        }
     );
 }
 
 template<typename V>
 Polyline<V>::Polyline( const std::vector<VertId> & comp2firstVert, Vector<V, VertId> ps )
 {
-    MR_TIMER
+    MR_TIMER;
     topology.buildOpenLines( comp2firstVert );
     points = std::move( ps );
 }
@@ -105,7 +105,7 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
 template<typename V>
 void MR::Polyline<V>::addPart( const Polyline<V>& from, VertMap * outVmap, WholeEdgeMap * outEmap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertMap vmap;
     VertMap* vmapPtr = outVmap ? outVmap : &vmap;
@@ -127,10 +127,10 @@ void MR::Polyline<V>::addPart( const Polyline<V>& from, VertMap * outVmap, Whole
 }
 
 template<typename V>
-void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask, 
+void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,
     VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertMap vmap;
     VertMap* vmapPtr = outVmap ? outVmap : &vmap;
@@ -154,7 +154,7 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 template<typename V>
 void Polyline<V>::pack( VertMap * outVmap, WholeEdgeMap * outEmap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Polyline<V> packed;
     packed.points.reserve( topology.numValidVerts() );
@@ -197,7 +197,7 @@ Vector3f MR::Polyline<V>::loopDirArea( EdgeId e0 ) const
 template<typename V>
 float Polyline<V>::totalLength() const
 {
-    MR_TIMER
+    MR_TIMER;
     double sum = 0;
     for ( auto ue : undirectedEdges( topology ) )
         sum += edgeLength( ue );
@@ -214,7 +214,7 @@ Box<V> Polyline<V>::getBoundingBox() const
 template<typename V>
 V Polyline<V>::findCenterFromPoints() const
 {
-    MR_TIMER
+    MR_TIMER;
     if ( topology.numValidVerts() <= 0 )
     {
         assert( false );
@@ -241,8 +241,8 @@ Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 template<typename V>
 Contours<V> Polyline<V>::contours( std::vector<std::vector<VertId>>* vertMap ) const
 {
-    MR_TIMER
-    return topology.convertToContours<V>( 
+    MR_TIMER;
+    return topology.convertToContours<V>(
         [&points = this->points] ( VertId v )
         {
             return points[v];
@@ -253,8 +253,8 @@ Contours<V> Polyline<V>::contours( std::vector<std::vector<VertId>>* vertMap ) c
 template<typename V>
 Contours2f Polyline<V>::contours2( std::vector<std::vector<VertId>>* vertMap ) const
 {
-    MR_TIMER
-    return topology.convertToContours<Vector2f>( 
+    MR_TIMER;
+    return topology.convertToContours<Vector2f>(
         [&points = this->points] ( VertId v )
         {
             return Vector2f{ points[v] };
@@ -344,7 +344,7 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
 template<typename V>
 void Polyline<V>::transform( const AffineXf<V> & xf )
 {
-    MR_TIMER
+    MR_TIMER;
     VertId lastValidVert = topology.lastValidVert();
 
     tbb::parallel_for(tbb::blocked_range<VertId>(VertId{ 0 }, lastValidVert + 1), [&](const tbb::blocked_range<VertId> & range)

@@ -442,7 +442,7 @@ void computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
 
 UndirectedEdgeBitSet findExtremeEdges( const Mesh & mesh, const VertScalars & field, ExtremeEdgeType type )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res( mesh.topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
@@ -542,7 +542,7 @@ Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
 }
 
 HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
-    const VertBitSet & starts, const VertBitSet & ends, 
+    const VertBitSet & starts, const VertBitSet & ends,
     const VertBitSet * vertRegion, VertScalars * outSurfaceDistances )
 {
     MR_TIMER;
@@ -584,7 +584,7 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
 
 SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs )
 {
-    MR_TIMER
+    MR_TIMER;
     SurfacePaths res;
     if ( vs.empty() )
         return res;

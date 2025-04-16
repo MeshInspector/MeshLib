@@ -11,7 +11,7 @@
 
 namespace MR
 {
- 
+
 void PointAccumulator::addPoint( const Vector3d & pt )
 {
     sumWeight_ += 1;
@@ -121,14 +121,14 @@ Line3d PointAccumulator::getBestLine() const
 
 void accumulatePoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( const auto& p : points )
         accum.addPoint( p.transformed( xf ) );
 }
 
 void accumulateWeighedPoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const std::vector<float>& weights, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( points.size() == weights.size() );
     for ( auto i = 0; i < points.size(); ++i )
         accum.addPoint( points[i].transformed( xf ), weights[i] );
@@ -136,7 +136,7 @@ void accumulateWeighedPoints( PointAccumulator& accum, const std::vector<Vector3
 
 void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto& topology = mp.mesh.topology;
     const auto& edgePerFaces = topology.edgePerFace();
     const auto& faceIds = topology.getFaceIds( mp.region );
@@ -159,7 +159,7 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
 
 void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto& topology = pl.topology;
     for ( auto edge : undirectedEdges(topology) )
     {
@@ -173,7 +173,7 @@ void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const 
 
 void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto v : pc.validPoints )
         accum.addPoint( pc.points[v].transformed( xf ) );
 }

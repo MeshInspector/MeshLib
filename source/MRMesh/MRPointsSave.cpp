@@ -50,7 +50,7 @@ Expected<void> toXyz( const PointCloud& points, const std::filesystem::path& fil
 
 Expected<void> toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
     size_t numSaved = 0;
 
@@ -90,7 +90,7 @@ Expected<void> toXyzn( const PointCloud& points, const std::filesystem::path& fi
 
 Expected<void> toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !cloud.hasNormals() )
         return unexpected( std::string( "Point cloud does not have normal data" ) );
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
@@ -149,7 +149,7 @@ Expected<void> toPly( const PointCloud& points, const std::filesystem::path& fil
 
 Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"

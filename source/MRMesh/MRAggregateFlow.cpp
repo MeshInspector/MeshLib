@@ -12,7 +12,7 @@ namespace MR
 
 FlowAggregator::FlowAggregator( const Mesh & mesh, const VertScalars & heights ) : mesh_( mesh ), heights_( heights )
 {
-    MR_TIMER
+    MR_TIMER;
     downFlowVert_.resize( mesh.topology.vertSize() );
     downPath_.resize( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
@@ -71,7 +71,7 @@ VertScalars FlowAggregator::computeFlow( size_t numStarts,
     const std::function<const FaceBitSet*(size_t)> & regionById,
     const OutputFlows & out ) const
 {
-    MR_TIMER
+    MR_TIMER;
     assert( !out.pFlowPerEdge || out.pPolyline );
 
     VertScalars flowInVert( mesh_.topology.vertSize() );
@@ -184,7 +184,7 @@ auto FlowAggregator::computeFlowsPerBasin( size_t numStarts,
     const std::function<MeshTriPoint(size_t)> & startById,
     const std::function<float(size_t)> & amountById ) const -> HashMap<VertId, Flows>
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertScalars flowInVert( mesh_.topology.vertSize() );
     std::vector<VertId> start2downVert( numStarts ); // for each start point stores what next vertex is on flow path (can be invalid)
@@ -269,7 +269,7 @@ auto FlowAggregator::computeFlowsPerBasin( size_t numStarts,
         x.polyline.points.resizeNoInit( n );
         x.flowPerEdge.resize( n );
     }
-        
+
     // paths from sample starts to first mesh vertices
     ParallelFor( start2downVert, [&]( size_t i )
     {
@@ -346,7 +346,7 @@ auto FlowAggregator::computeFlowsPerBasin( const std::vector<MeshTriPoint> & sta
 
 UndirectedEdgeBitSet FlowAggregator::computeCatchmentDelineation() const
 {
-    MR_TIMER
+    MR_TIMER;
     Vector<VertId, FaceId> face2rootVert( mesh_.topology.faceSize() );
     BitSetParallelFor( mesh_.topology.getValidFaces(), [&]( FaceId f )
     {

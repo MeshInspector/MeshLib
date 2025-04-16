@@ -22,7 +22,7 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
 
 void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     dipoles.resize( tree_.nodes().size() );
 
     // compute dipole data for tree leaves
@@ -133,7 +133,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
     return INV_4PI * res;
 }
 
-TEST(MRMesh, TriangleSolidAngle) 
+TEST(MRMesh, TriangleSolidAngle)
 {
     const Triangle3f tri =
     {

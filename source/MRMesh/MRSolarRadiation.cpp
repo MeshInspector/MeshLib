@@ -24,14 +24,14 @@ std::vector<Vector3f> sampleHalfSphere()
         totalPatches += patchesInRow;
 
     totalPatches *= resolutionMultiplier * resolutionMultiplier;
-    totalPatches += 1; // Add zenith 
+    totalPatches += 1; // Add zenith
 
     std::vector<Vector3f> patches;
     patches.reserve( totalPatches );
 
     for ( int i = 0; i < numberOfRows * resolutionMultiplier; i++ )
     {
-        float currentAltitude = i * patchAngleIncrement; 
+        float currentAltitude = i * patchAngleIncrement;
         int patchesInCurrentRow = patchesPerRow[i / resolutionMultiplier] * resolutionMultiplier;
 
         for (int j = 0; j < patchesInCurrentRow; j++)
@@ -51,7 +51,7 @@ std::vector<Vector3f> sampleHalfSphere()
 VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & samples, const VertBitSet & validSamples,
     const std::vector<SkyPatch> & skyPatches, BitSet * outSkyRays, std::vector<MeshIntersectionResult>* outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
     VertScalars res( samples.size(), 0.0f );
 
     float maxRadiation = 0;
@@ -109,7 +109,7 @@ BitSet findSkyRays( const Mesh & terrain,
     const VertCoords & samples, const VertBitSet & validSamples,
     const std::vector<SkyPatch> & skyPatches, std::vector<MeshIntersectionResult>* outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::vector<IntersectionPrecomputes<float>> precs;
     precs.reserve( skyPatches.size() );
@@ -129,7 +129,7 @@ BitSet findSkyRays( const Mesh & terrain,
             return;
         const auto patch = div.rem;
         const auto intersectionRes = rayMeshIntersect( terrain, Line3f( samples[sample], skyPatches[patch].dir ), 0, FLT_MAX, &precs[patch], false );
-        if ( !intersectionRes )            
+        if ( !intersectionRes )
             res.set( ray );
         else if ( outIntersections )
             (*outIntersections)[ray] =  intersectionRes;

@@ -8,7 +8,7 @@ namespace MR
 
 VertRenumber::VertRenumber( const VertBitSet & validVerts, bool saveValidOnly )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( saveValidOnly )
     {
         vert2packed_ = makeVectorWithSeqNums( validVerts );
@@ -31,13 +31,13 @@ const VertCoords & transformPoints( const VertCoords & verts, const VertBitSet &
         } );
         return buf;
     }
-    
+
     buf.resizeNoInit( vertRenumber->sizeVerts() );
     BitSetParallelFor( validVerts, [&]( VertId v )
     {
         buf[VertId((*vertRenumber)(v))] = applyFloat( xf, verts[v] );
     } );
-    
+
     return buf;
 }
 

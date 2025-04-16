@@ -27,7 +27,7 @@ inline float FastWindingNumber::calc_( const Vector3f & q, float beta, FaceId sk
 
 Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     res.resize( points.size() );
     if ( !ParallelFor( points, [&]( size_t i )
     {
@@ -39,7 +39,7 @@ Expected<void> FastWindingNumber::calcFromVector( std::vector<float>& res, const
 
 Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     res.resize( mesh_.topology.faceSize() );
     if ( !BitSetParallelFor( mesh_.topology.getValidFaces(), [&] ( FaceId f )
     {
@@ -53,7 +53,7 @@ Expected<void> FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float 
 
 Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VolumeIndexer indexer( dims );
     res.resize( indexer.size() );
@@ -77,7 +77,7 @@ float FastWindingNumber::calcWithDistances( const Vector3f& p, const DistanceToM
 
 Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VolumeIndexer indexer( dims );
     res.resize( indexer.size() );

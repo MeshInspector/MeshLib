@@ -89,7 +89,7 @@ private:
 
     bool preloadLayer_( size_t layerIndex, const ProgressCallback& cb )
     {
-        MR_TIMER
+        MR_TIMER;
         assert( layerIndex < layers_.size() );
         auto& layer = layers_[layerIndex];
         const auto z = z_ + (int)layerIndex;
@@ -117,4 +117,3 @@ private:
 };
 
 } // namespace MR
-

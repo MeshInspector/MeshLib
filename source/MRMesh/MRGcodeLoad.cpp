@@ -25,7 +25,7 @@ Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCall
 
 Expected<MR::GcodeSource> fromGcode( std::istream& in, ProgressCallback /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<std::string> res;
     while ( in )
     {

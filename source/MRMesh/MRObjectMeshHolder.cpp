@@ -394,7 +394,7 @@ void ObjectMeshHolder::updateTexture( MeshTexture& updated )
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )
 {
-    MR_TIMER
+    MR_TIMER;
     copyColors( src, thisToSrc, thisToSrcFaces );
     setTextures( src.getTextures() );
 
@@ -429,7 +429,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
 
 void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces )
 {
-    MR_TIMER
+    MR_TIMER;
 
     setColoringType( src.getColoringType() );
 

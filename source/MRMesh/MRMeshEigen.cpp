@@ -10,7 +10,7 @@ namespace MR
 
 MeshTopology topologyFromEigen( const Eigen::MatrixXi & F )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( F.cols() == 3 );
     int numTris = (int)F.rows();
     Triangulation t;
@@ -24,7 +24,7 @@ MeshTopology topologyFromEigen( const Eigen::MatrixXi & F )
 
 Mesh meshFromEigen( const Eigen::MatrixXd & V, const Eigen::MatrixXi & F )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( V.cols() == 3 );
 
     Mesh res;
@@ -40,14 +40,14 @@ Mesh meshFromEigen( const Eigen::MatrixXd & V, const Eigen::MatrixXi & F )
 
 void pointsFromEigen( const Eigen::MatrixXd & V, const VertBitSet & selection, VertCoords & points )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto v : selection )
         points[v] = Vector3f{ (float)V( (int)v, 0), (float)V( (int)v, 1), (float)V( (int)v, 2) };
 }
 
 void topologyToEigen( const MeshTopology & topology, Eigen::MatrixXi & F )
 {
-    MR_TIMER
+    MR_TIMER;
     int numFaces = topology.numValidFaces();
     F.resize( numFaces, 3 );
 
@@ -68,7 +68,7 @@ void topologyToEigen( const MeshTopology & topology, Eigen::MatrixXi & F )
 
 void meshToEigen( const Mesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi & F )
 {
-    MR_TIMER
+    MR_TIMER;
     topologyToEigen( mesh.topology, F );
 
     const VertId lastValidPoint = mesh.topology.lastValidVert();
@@ -83,7 +83,7 @@ void meshToEigen( const Mesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi & F )
     }
 }
 
-TEST(MRMesh, Eigen) 
+TEST(MRMesh, Eigen)
 {
     Eigen::MatrixXd V( 3, 3 );
     V( 0, 0 ) = 0; V( 0, 1 ) = 0; V( 0, 2 ) = 0;

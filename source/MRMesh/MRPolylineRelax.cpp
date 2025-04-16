@@ -14,7 +14,7 @@ bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback c
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     Vector<V, VertId> initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )
@@ -67,7 +67,7 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     Vector<V, VertId> initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )

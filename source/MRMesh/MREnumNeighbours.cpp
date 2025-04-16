@@ -9,7 +9,7 @@ namespace MR
 
 void EnumNeihbourVertices::run( const MeshTopology & topology, VertId start, const VertPredicate & pred )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( start );
     assert( bd_.empty() );
@@ -37,7 +37,7 @@ void EnumNeihbourVertices::run( const MeshTopology & topology, VertId start, con
 
 VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, float range )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertScalars res( mesh.topology.vertSize(), FLT_MAX );
     EnumNeihbourVertices e;
@@ -53,7 +53,7 @@ VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, 
 
 VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float rangeSq )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet res( mesh.topology.vertSize() );
     EnumNeihbourVertices e;
@@ -69,7 +69,7 @@ VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float 
 
 void EnumNeihbourFaces::run( const MeshTopology & topology, VertId start, const FacePredicate & pred )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( start );
     assert( bd_.empty() );

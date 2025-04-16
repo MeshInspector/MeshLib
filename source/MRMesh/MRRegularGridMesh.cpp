@@ -13,12 +13,12 @@ namespace MR
 {
 
 Expected<Mesh> makeRegularGridMesh( size_t width, size_t height,
-                          const RegularGridLatticeValidator& validator, 
+                          const RegularGridLatticeValidator& validator,
                           const RegularGridLatticePositioner& positioner,
                           const RegularGridMeshFaceValidator& faceValidator,
                           ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
 
     GridSettings gs =
@@ -159,7 +159,7 @@ Expected<Mesh> makeRegularGridMesh( size_t width, size_t height,
         {
             if ( v.x + 1 >= width )
                 return false;
-            return 
+            return
                 ( v.y + 1 < height && validLoUpTris.test( 2 * hfidx ) ) ||
                 ( v.y > 0 && validLoUpTris.test( 2 * ( hfidx - width + 1 ) + 1 ) );
         }
@@ -239,7 +239,7 @@ Expected<Mesh> makeRegularGridMesh( size_t width, size_t height,
 
 Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     tbb::parallel_sort( points.vec_.begin(), points.vec_.end(), [] ( const auto& l, const auto& r )
     {
         return l.y < r.y;
@@ -271,7 +271,7 @@ Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
         std::sort( points.vec_.begin() + positionOffsets[i], points.vec_.begin() + positionOffsets[i + 1],
             [] ( const auto& l, const auto& r ) { return l.x < r.x; } );
     }, subprogress( cb, 0.2f, 0.8f ) );
-    
+
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 

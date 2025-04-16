@@ -11,7 +11,7 @@ PrecipitationSimulator::PrecipitationSimulator( WatershedGraph & wg )
     : wg_( wg )
     , heap_( wg_.numBasins(), infAmount )
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( auto basin = Graph::VertId( 0 ); basin < wg.numBasins(); ++basin )
     {

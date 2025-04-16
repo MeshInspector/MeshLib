@@ -20,8 +20,8 @@ namespace MR
 
 static constexpr float NOT_VALID_VALUE = std::numeric_limits<float>::lowest();
 
-DistanceMap::DistanceMap( const MR::Matrix<float>& m ) 
-    : RectIndexer( m ) 
+DistanceMap::DistanceMap( const MR::Matrix<float>& m )
+    : RectIndexer( m )
     , data_( m.data() )
 {
 }
@@ -343,7 +343,7 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( polyline.topology.isConsistentlyOriented() );
     assert( distMap.resX() == params.resolution.x );
     assert( distMap.resY() == params.resolution.y );
@@ -397,7 +397,7 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
                 res.point = noOffsetRes.point;
                 res.dist = std::sqrt( noOffsetRes.distSq );
             }
-            
+
             if ( options.outClosestEdges )
                 ( *options.outClosestEdges )[i] = res.line;
 
@@ -420,7 +420,7 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
                         EdgeId res;
                         do
                         {
-                            res = next ? 
+                            res = next ?
                                 polyline.topology.next( prev.sym() ) :
                                 polyline.topology.next( prev ).sym();
                             if ( res == prev.sym() || res == e )
@@ -439,7 +439,7 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
                     {
                         Vector2f vecB;
                         const EdgeId prevEdge = findNextNonZero( e, false );
-                        const EdgeId nextEdge = findNextNonZero( e, true ); 
+                        const EdgeId nextEdge = findNextNonZero( e, true );
                         if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
                         {
                             const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
@@ -1378,7 +1378,7 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
 
 Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( offset > 0.f );
 

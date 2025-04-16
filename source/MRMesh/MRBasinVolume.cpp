@@ -61,7 +61,7 @@ bool BasinVolumeCalculator::addTerrainTri( Triangle3f t, float level )
 
 double computeBasinVolume( const Mesh& mesh, const FaceBitSet& faces, float level )
 {
-    MR_TIMER
+    MR_TIMER;
     BasinVolumeCalculator calc;
     for ( auto f : faces )
         calc.addTerrainTri( mesh.getTriPoints( f ), level );

@@ -11,7 +11,7 @@ namespace MR
 
 std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( maxDepth > 0 );
 
     mesh.packOptimally( false );

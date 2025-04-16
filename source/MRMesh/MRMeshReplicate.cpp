@@ -22,7 +22,7 @@ namespace MR
 
 void replicateZ( Mesh & m, const Mesh & target )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto szM = m.topology.numValidVerts();
     const auto szT =  target.topology.numValidVerts();

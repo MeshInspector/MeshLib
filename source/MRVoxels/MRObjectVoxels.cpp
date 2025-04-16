@@ -176,7 +176,7 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( float iso, 
 
 Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
 {
-    MR_TIMER
+    MR_TIMER;
     auto vdbVolume = vdbVolumeCopy;
     if ( !vdbVolume.data )
         return unexpected("No VdbVolume available");
@@ -314,7 +314,7 @@ Histogram ObjectVoxels::recalculateHistogram( std::optional<Vector2f> minmax, Pr
 
 void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     dualMarchingCubes_ = on;
     if ( updateSurface )
     {
@@ -676,7 +676,7 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
     auto res = VoxelsLoad::fromAnySupportedFormat( modelPath, progressCb );
     if ( !res.has_value() )
         return unexpected( res.error() );
-    
+
     if ( res->empty() )
         return unexpected( "No voxels found in file: " + utf8string( modelPath ) );
     assert( res->size() == 1 );
@@ -712,7 +712,7 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
     res.push_back( fmt::format( "dims: ({}, {}, {})", vdbVolume_.dims.x, vdbVolume_.dims.y, vdbVolume_.dims.z ) );
     res.push_back( fmt::format( "voxel size: ({:.3}, {:.3}, {:.3})", vdbVolume_.voxelSize.x, vdbVolume_.voxelSize.y, vdbVolume_.voxelSize.z ) );
-    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})", 
+    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})",
         vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
         vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
         vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );

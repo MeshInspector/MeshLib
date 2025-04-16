@@ -8,7 +8,7 @@ namespace MR
 
 EdgeLengthMesh EdgeLengthMesh::fromMesh( const Mesh& mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeLengthMesh res;
     res.topology = mesh.topology;
     res.edgeLengths = mesh.edgeLengths();

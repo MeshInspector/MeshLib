@@ -78,11 +78,11 @@ public:
         Count
     };
    SetViewportConfigPresetMenuItem( Type type );
-   virtual void setCustomUpdateViewports( const std::function<void( const ViewportMask, ViewportId )>& callback ) { updateViewports_ = callback; }
+   virtual void setCustomUpdateViewports( const std::function<void( const ViewportMask, size_t, ViewportId )>& callback ) { updateViewports_ = callback; }
    virtual bool action() override;
 private:
     Type type_;
-    std::function<void( const ViewportMask appendedViewports, ViewportId oldActiveViewport )> updateViewports_;
+    std::function<void( const ViewportMask appendedViewports, size_t oldViewportListCount, ViewportId oldActiveViewport )> updateViewports_;
 };
 
 }

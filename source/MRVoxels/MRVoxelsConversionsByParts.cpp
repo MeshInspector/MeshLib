@@ -62,7 +62,7 @@ Expected<void>
 mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume,
                float leftCutPosition, float rightCutPosition, const MergeVolumePartSettings &settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Expected<Mesh> res;
     if constexpr ( std::is_same_v<Volume, VdbVolume> )
@@ -183,7 +183,7 @@ Expected<Mesh>
 volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
                      const VolumeToMeshByPartsSettings &settings, const MergeVolumePartSettings &mergeSettings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     constexpr float cMemOverhead = 1.25f;
     const auto maxSliceMemoryUsage = size_t( float( dimensions.y * dimensions.z * sizeof( float ) ) * cMemOverhead );

@@ -16,7 +16,7 @@ namespace MR
  * \details provides two operations:
  * 1) change the value of any element;
  * 2) find the element with the largest value
- */ 
+ */
 template <typename T, typename I, typename P = std::less<T>>
 class Heap
 {
@@ -67,7 +67,7 @@ Heap<T, I, P>::Heap( size_t size, T def, P pred )
     , id2PosInHeap_( size )
     , pred_( pred )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( I i{ size_t( 0 ) }; i < size; ++i )
     {
         heap_[i].id = i;
@@ -81,7 +81,7 @@ Heap<T, I, P>::Heap( std::vector<Element> elms, P pred )
     , id2PosInHeap_( heap_.size() )
     , pred_( pred )
 {
-    MR_TIMER
+    MR_TIMER;
     std::make_heap( heap_.begin(), heap_.end(), [this]( const Element & a, const Element & b )
         {
             if ( pred_( a.val, b.val ) )
@@ -98,7 +98,7 @@ Heap<T, I, P>::Heap( std::vector<Element> elms, P pred )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::resize( size_t size, T def )
 {
-    MR_TIMER
+    MR_TIMER;
     assert ( heap_.size() == id2PosInHeap_.size() );
     while ( heap_.size() < size )
     {

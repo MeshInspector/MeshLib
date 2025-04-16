@@ -123,7 +123,7 @@ bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) 
 
 void ObjectPointsHolder::copyColors( const ObjectPointsHolder & src, const VertMap & thisToSrc, const FaceMap& )
 {
-    MR_TIMER
+    MR_TIMER;
 
     setColoringType( src.getColoringType() );
 

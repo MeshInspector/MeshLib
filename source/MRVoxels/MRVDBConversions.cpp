@@ -21,7 +21,7 @@ constexpr float denseVolumeToGridTolerance = 1e-6f;
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
                        std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )
 {
-    MR_TIMER
+    MR_TIMER;
         const auto& pointsRef = mp.mesh.points;
     const auto& topology = mp.mesh.topology;
     points.resize( pointsRef.size() );
@@ -52,7 +52,7 @@ Expected<TriMesh> gridToTriMesh(
     const GridType& grid,
     const GridToMeshSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
@@ -103,7 +103,7 @@ Expected<TriMesh> gridToTriMesh(
     res.tris.reserve( tNum );
 
     // Copy primitives
-    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) 
+    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n)
     {
         openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
 
@@ -157,7 +157,7 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
         assert( false );
         return {};
     }
-    MR_TIMER
+    MR_TIMER;
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
 
@@ -181,7 +181,7 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
         assert( false );
         return {};
     }
-    MR_TIMER
+    MR_TIMER;
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
 
@@ -202,7 +202,7 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 {
     if ( !grid )
         return;
-    MR_TIMER
+    MR_TIMER;
 #if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
     (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
     auto minMax = openvdb::tools::minMax( grid->tree() );
@@ -217,7 +217,7 @@ Expected<VdbVolume> meshToDistanceVdbVolume( const MeshPart& mp, const MeshToVol
 {
     if ( params.type == MeshToVolumeParams::Type::Signed && !mp.mesh.topology.isClosed( mp.region ) )
         return unexpected( "Only closed mesh can be converted to signed volume" );
-    MR_TIMER
+    MR_TIMER;
 
     FloatGrid grid;
     if ( params.type == MeshToVolumeParams::Type::Signed )
@@ -243,7 +243,7 @@ Expected<VdbVolume> meshToDistanceVdbVolume( const MeshPart& mp, const MeshToVol
 
 Expected<VdbVolume> meshToVolume( const MeshPart& mp, const MeshToVolumeParams& cParams /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto shift = AffineXf3f::translation( mp.mesh.computeBoundingBox( mp.region, &cParams.worldXf ).min
         - cParams.surfaceOffset * cParams.voxelSize );
@@ -259,7 +259,7 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
 {
     if ( !grid )
         return {};
-    MR_TIMER
+    MR_TIMER;
     VdbVolume res;
     evalGridMinMax( grid, res.min, res.max );
     auto dim = grid->evalActiveVoxelDim();
@@ -274,7 +274,7 @@ void putSimpleVolumeInDenseGrid(
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( cb )
         cb( 0.0f );
     openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
@@ -302,7 +302,7 @@ void putVolumeInDenseGrid(
         openvdb::FloatGrid::Accessor& gridAccessor,
         const Vector3i& minCoord, const VolumeType& volume, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( cb )
         cb( 0.0f );
 
@@ -337,7 +337,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
                                    float background,
                                    ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
     putSimpleVolumeInDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
     openvdb::tools::changeBackground( grid->tree(), background );
@@ -357,7 +357,7 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, Progr
 
 VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, ProgressCallback cb /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     VdbVolume res;
     std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
     auto gridAccessor = grid->getAccessor();
@@ -380,7 +380,7 @@ template<typename T, bool Norm>
 Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> maybeSourceScale = {}, ProgressCallback cb = {} )
 {
-    MR_TIMER
+    MR_TIMER;
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
     VoxelsVolumeMinMax<std::vector<T>> res;
@@ -476,7 +476,7 @@ Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & set
 
 Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -498,7 +498,7 @@ Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings
 
 Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const MakeSignedByWindingNumberSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto activeBox = grid->evalActiveVoxelBoundingBox();
     // make dense topology tree to copy its nodes topology to original grid
@@ -583,7 +583,7 @@ static FloatGrid meshToUnsignedDistanceField_(
     float surfaceOffset, const ProgressCallback & cb )
 {
     assert ( surfaceOffset > 0 );
-    MR_TIMER
+    MR_TIMER;
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
     auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
@@ -598,7 +598,7 @@ static FloatGrid meshToLevelSet_(
     float surfaceOffset, const ProgressCallback & cb )
 {
     assert ( surfaceOffset > 0 );
-    MR_TIMER
+    MR_TIMER;
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
     auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
@@ -610,7 +610,7 @@ static FloatGrid meshToLevelSet_(
 
 Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto offsetInVoxelsA = settings.offsetA / settings.voxelSize;
     auto offsetInVoxelsB = settings.offsetB / settings.voxelSize;

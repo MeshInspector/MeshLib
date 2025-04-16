@@ -505,7 +505,7 @@ Color Palette::getColor( float val ) const
 
 VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertColors result( region.find_last() + 1, getInvalidColor() );
     const auto& validRegion = valids ? *valids : region;
@@ -580,7 +580,7 @@ float Palette::getRelativePos( float val ) const
 
 VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertUVCoords res;
     res.resizeNoInit( region.size() );

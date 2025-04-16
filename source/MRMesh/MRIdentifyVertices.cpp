@@ -16,7 +16,7 @@ void VertexIdentifier::reserve( size_t numTris )
 
 void VertexIdentifier::addTriangles( const std::vector<Triangle3f> & buffer )
 {
-    MR_TIMER
+    MR_TIMER;
     assert ( t_.size() + buffer.size() <= t_.capacity() );
     vertsInHMap_.resize( buffer.size() );
 

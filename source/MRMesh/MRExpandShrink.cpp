@@ -13,13 +13,13 @@ void expand( const MeshTopology & topology, FaceBitSet & region, int hops )
     assert( hops >= 0 );
     if ( hops <= 0 )
         return;
-    MR_TIMER
+    MR_TIMER;
     dilateRegionByMetric( topology, identityMetric(), region, hops + 0.5f );
 }
 
 FaceBitSet expand( const MeshTopology & topology, FaceId f, int hops )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res;
     res.resize( topology.faceSize() );
     res.set( f );
@@ -32,13 +32,13 @@ void expand( const MeshTopology & topology, VertBitSet & region, int hops )
     assert( hops >= 0 );
     if ( hops <= 0 )
         return;
-    MR_TIMER
+    MR_TIMER;
     dilateRegionByMetric( topology, identityMetric(), region, hops + 0.5f );
 }
 
 VertBitSet expand( const MeshTopology & topology, VertId v, int hops )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res;
     res.resize( topology.vertSize() );
     res.set( v );
@@ -51,7 +51,7 @@ void shrink( const MeshTopology & topology, FaceBitSet & region, int hops )
     assert( hops >= 0 );
     if ( hops <= 0 )
         return;
-    MR_TIMER
+    MR_TIMER;
     erodeRegionByMetric( topology, identityMetric(), region, hops + 0.5f );
 }
 
@@ -60,7 +60,7 @@ void shrink( const MeshTopology & topology, VertBitSet & region, int hops )
     assert( hops >= 0 );
     if ( hops <= 0 )
         return;
-    MR_TIMER
+    MR_TIMER;
     region = topology.getValidVerts() - region;
     dilateRegionByMetric( topology, identityMetric(), region, hops + 0.5f );
     region = topology.getValidVerts() - region;
@@ -68,7 +68,7 @@ void shrink( const MeshTopology & topology, VertBitSet & region, int hops )
 
 FaceBitSet expandFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res = topology.getValidFaces();
     BitSetParallelFor( res, [&]( FaceId f )
     {
@@ -84,7 +84,7 @@ FaceBitSet expandFaces( const MeshTopology & topology, const FaceBitSet & region
 
 FaceBitSet shrinkFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res = topology.getValidFaces() & region;
     BitSetParallelFor( res, [&]( FaceId f )
     {
@@ -104,7 +104,7 @@ FaceBitSet shrinkFaces( const MeshTopology & topology, const FaceBitSet & region
 
 FaceBitSet getBoundaryFaces( const MeshTopology & topology, const FaceBitSet & region )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res = topology.getValidFaces() & region;
     BitSetParallelFor( res, [&]( FaceId f )
     {

@@ -12,7 +12,7 @@ namespace MR
 
 FaceNormals computePerFaceNormals( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<Vector3f> res( mesh.topology.faceSize() );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
@@ -23,7 +23,7 @@ FaceNormals computePerFaceNormals( const Mesh & mesh )
 
 void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t size )
 {
-    MR_TIMER
+    MR_TIMER;
     size = std::min( size, mesh.topology.faceSize() );
     ParallelFor( 0_f, FaceId( size ), [&]( FaceId f )
     {
@@ -36,7 +36,7 @@ void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t si
 
 VertNormals computePerVertNormals( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<Vector3f> res( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
@@ -47,7 +47,7 @@ VertNormals computePerVertNormals( const Mesh & mesh )
 
 VertNormals computePerVertPseudoNormals( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<Vector3f> res( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
@@ -58,7 +58,7 @@ VertNormals computePerVertPseudoNormals( const Mesh & mesh )
 
 MeshNormals computeMeshNormals( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     MeshNormals res;
 
     // compute directional areas of each mesh triangle
@@ -99,7 +99,7 @@ MeshNormals computeMeshNormals( const Mesh & mesh )
 
 Vector<TriangleCornerNormals, FaceId> computePerCornerNormals( const Mesh & mesh, const UndirectedEdgeBitSet * creases )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Vector<TriangleCornerNormals, FaceId> res( mesh.topology.faceSize() );
     // converts edge to the normal in its left face at the corner of its origin

@@ -12,7 +12,7 @@ namespace MR
 
 static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objPoints, Reorder reorder, VertBitSet * newValidVerts )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !objPoints || !objPoints->pointCloud() )
         return;

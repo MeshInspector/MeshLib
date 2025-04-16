@@ -13,7 +13,7 @@ void SeparationPointStorage::resize( size_t blockCount, size_t blockSize )
 
 int SeparationPointStorage::makeUniqueVids()
 {
-    MR_TIMER
+    MR_TIMER;
     VertId lastShift{ 0 };
     for ( auto & b : blocks_ )
     {
@@ -36,7 +36,7 @@ int SeparationPointStorage::makeUniqueVids()
 
 Triangulation SeparationPointStorage::getTriangulation( Vector<VoxelId, FaceId>* outVoxelPerFaceMap ) const
 {
-    MR_TIMER
+    MR_TIMER;
     size_t totalTris = 0;
     for ( const auto & b : blocks_ )
         totalTris += b.tris.size();
@@ -60,7 +60,7 @@ Triangulation SeparationPointStorage::getTriangulation( Vector<VoxelId, FaceId>*
 
 void SeparationPointStorage::getPoints( VertCoords & points ) const
 {
-    MR_TIMER
+    MR_TIMER;
     ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t bi )
     {
         VertId v = blocks_[bi].shift;

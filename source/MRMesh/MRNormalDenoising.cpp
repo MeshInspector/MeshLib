@@ -25,7 +25,7 @@ namespace MR
 
 void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto sz = normals.size();
     assert( (int)sz >= mesh.topology.lastValidFace() );
@@ -104,7 +104,7 @@ constexpr float eps = 0.001f;
 
 void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto sz = v.size();
     assert( sz == mesh.topology.undirectedEdgeSize() );
@@ -187,7 +187,7 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
 
 void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( v.size() == topology.undirectedEdgeSize() );
     assert( (int)normals.size() >= topology.lastValidFace() );
@@ -209,7 +209,7 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
 
 Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
     {
         assert( false );

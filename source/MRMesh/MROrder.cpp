@@ -81,7 +81,7 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
 
 FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
 
     FaceBMap res;
     const auto numFaces = mesh.topology.numValidFaces();
@@ -151,7 +151,7 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
 
 VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {
-    MR_TIMER
+    MR_TIMER;
 
     struct OrderedVertex
     {
@@ -203,13 +203,13 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
             res.b[ord[v].v] = v < res.tsize ? v : VertId{};
         }
     } );
-    
+
     return res;
 }
 
 UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {
-    MR_TIMER
+    MR_TIMER;
 
     struct OrderedEdge
     {

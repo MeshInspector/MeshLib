@@ -106,7 +106,7 @@ void OutlineDecomposer::clearLast()
 
 Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( params.pathToFontFile, ec ) )
@@ -269,7 +269,7 @@ Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
 
 Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto contours = createSymbolContours( params );
     if ( !contours.has_value() )
     {
@@ -281,7 +281,7 @@ Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
 
 void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
 {
-    MR_TIMER
+    MR_TIMER;
     mesh.pack(); // for some hard fonts with duplicated points (if triangulated contours have same points, duplicates are not used)
     // it's important to have all vertices valid:
     // first half is upper points of text and second half is lower points of text
@@ -305,7 +305,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
 
 Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto mesh = triangulateSymbolContours( params );
     if( !mesh.has_value() )
     {

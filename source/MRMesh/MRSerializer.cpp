@@ -222,7 +222,7 @@ void serializeToJson( const std::vector<Color>& colors, Json::Value& root )
 
 void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<VertId> verts;
     verts.reserve( edges.count() * 2 );
     for ( EdgeId e : edges )
@@ -248,7 +248,7 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
         return;
     }
 
-    MR_TIMER
+    MR_TIMER;
     edges.clear();
     // not edges.resize( root["size"].asInt() ), because edge ids can change after loading mesh from CTM
     edges.resize( topology.undirectedEdgeSize() );
@@ -269,13 +269,13 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
 void serializeToJson( const Plane3f& plane, Json::Value& root )
 {
     serializeToJson( plane.n, root["n"] );
-    root["d"] = plane.d; 
+    root["d"] = plane.d;
 }
 
 void serializeToJson( const TriPointf& tp, Json::Value& root )
 {
-    root["a"] = tp.a; 
-    root["b"] = tp.b; 
+    root["a"] = tp.a;
+    root["b"] = tp.b;
 }
 
 void serializeToJson( const MeshTriPoint& mtp, const MeshTopology & topology, Json::Value& root )

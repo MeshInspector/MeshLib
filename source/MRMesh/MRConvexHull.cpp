@@ -86,7 +86,7 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
 
 static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
 {
-    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge ) 
+    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
     {
         return !goodConvexEdge( mesh, testEdge );
     } );
@@ -96,7 +96,7 @@ const double NoDist = -1.0;
 
 Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     if ( validPoints.count() < 3 )
         return res;

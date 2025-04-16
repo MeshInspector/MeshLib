@@ -16,7 +16,7 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertCoords initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )
@@ -77,7 +77,7 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertCoords initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )
@@ -164,7 +164,7 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertCoords initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )

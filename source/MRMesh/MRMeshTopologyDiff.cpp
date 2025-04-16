@@ -7,7 +7,7 @@ namespace MR
 
 MeshTopologyDiff::MeshTopologyDiff( const MeshTopology & from, const MeshTopology & to )
 {
-    MR_TIMER
+    MR_TIMER;
 
     toEdgesSize_ = to.edges_.size();
     for ( EdgeId e{0}; e < toEdgesSize_; ++e )
@@ -19,7 +19,7 @@ MeshTopologyDiff::MeshTopologyDiff( const MeshTopology & from, const MeshTopolog
 
 void MeshTopologyDiff::applyAndSwap( MeshTopology & m )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto mEdgesSize = m.edges_.size();
     // remember edges_ being deleted from m

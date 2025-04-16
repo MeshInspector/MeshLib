@@ -17,7 +17,7 @@ namespace MR
 
 Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshParameters& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto cb = params.progress;
 

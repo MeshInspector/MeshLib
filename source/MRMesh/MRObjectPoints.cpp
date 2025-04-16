@@ -136,7 +136,7 @@ void ObjectPoints::serializeFields_( Json::Value& root ) const
 
 std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoints>>& objsPoints )
 {
-    MR_TIMER
+    MR_TIMER;
     auto pointCloud = std::make_shared<PointCloud>();
     auto& points = pointCloud->points;
 
@@ -217,7 +217,7 @@ std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoint
 
 std::shared_ptr<ObjectPoints> pack( const ObjectPoints& pts, Reorder reorder, VertBitSet* newValidVerts, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !pts.pointCloud() )
     {
         assert( false );

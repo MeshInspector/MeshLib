@@ -29,7 +29,7 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
 
 AABBTree::AABBTree( const MeshPart & mp )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
@@ -64,7 +64,7 @@ AABBTree::AABBTree( const MeshPart & mp )
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto changedFaces = getIncidentFaces( mesh.topology, changedVerts );
 

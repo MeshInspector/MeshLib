@@ -206,7 +206,7 @@ void ObjectGcode::updateHeapUsageCache_()
 
 void ObjectGcode::updateColors_()
 {
-    MR_TIMER
+    MR_TIMER;
     const bool feedrateValid = maxFeedrate_ > 0.f;
     VertColors colors;
     const Color workColor = getFrontColor( true );
@@ -239,7 +239,7 @@ void ObjectGcode::updateAll_()
         setDirtyFlags( DIRTY_ALL );
         return;
     }
-    MR_TIMER
+    MR_TIMER;
     GcodeProcessor executor;
     executor.setCNCMachineSettings( cncMachineSettings_ );
     executor.setGcodeSource( *gcodeSource_ );

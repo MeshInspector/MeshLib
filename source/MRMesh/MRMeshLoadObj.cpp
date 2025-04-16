@@ -628,7 +628,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         int mScopeId{ 0 };
         size_t fId{ 0 };
         // for ordering
-        size_t orderedTriangulationStartF = 0; 
+        size_t orderedTriangulationStartF = 0;
         size_t orderedTriangulationOffset = 0;
     };
     std::vector<OrderedMaterial> materialFaces;
@@ -792,7 +792,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
             for ( int i = 0; i < materialFaces.size(); ++i )
             {
                 auto mIt = mtl->find( materialScope[materialFaces[i].mScopeId].mtName );
-                auto textId = texMap[mIt->second.diffuseTextureFile];          
+                auto textId = texMap[mIt->second.diffuseTextureFile];
                 size_t endFaceId = i + 1 < materialFaces.size() ? materialFaces[i + 1].orderedTriangulationOffset : size_t( res.mesh.topology.lastValidFace() + 1 );
                 auto numFaces = endFaceId - materialFaces[i].orderedTriangulationOffset;
                 res.texturePerFace.vec_.insert( res.texturePerFace.vec_.end(), numFaces, textId );
@@ -806,9 +806,9 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     const std::filesystem::path& dir,
     bool mergeAllObjects,
-    const char* data, 
-    const std::vector<size_t>& newlines, 
-    const std::vector<ElementGroup<ObjElement>>& groups, 
+    const char* data,
+    const std::vector<size_t>& newlines,
+    const std::vector<ElementGroup<ObjElement>>& groups,
     const MeshLoad::ObjLoadSettings& settings )
 {
     MR_TIMER;
@@ -884,7 +884,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         return unexpectedOperationCanceled();
 
     timer.restart( "fill flat arrays" ); // read arrays data and map objects and materials
-    
+
     std::vector<MaterialScope> mScopes;
     std::vector<ObjectScope> oScopes;
 
@@ -1005,7 +1005,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     }
 
     timer.restart( "triangulate models" );
-    
+
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;
     if ( mergeAllObjects || oScopes.size() <= 1 )
@@ -1059,7 +1059,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& 
 Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
                                                                 const ObjLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto data = readCharBuffer( in );
     if ( !data.has_value() )

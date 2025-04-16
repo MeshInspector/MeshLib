@@ -28,7 +28,7 @@ Expected<PointCloud> fromText( const std::filesystem::path& file, const PointsLo
 
 Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto buf = readCharBuffer( in );
     if ( !buf )
@@ -376,7 +376,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& se
         std::getline( in, str );
         if ( str.empty() )
             continue;
-        
+
         if ( !parseSingleNumber<int>( str, code ) )
             return unexpected( "File is corrupted" );
 

@@ -18,7 +18,7 @@ namespace MR
 
 std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vector<SomeLocalTriangulations> & in, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( in.empty() )
         return {};
@@ -103,7 +103,7 @@ void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoor
 
 void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const std::function<Vector3f(VertId)> & targetDir )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( triangs.fanRecords.size() <= 1 )
         return;
     BitSetParallelFor( region, [&]( VertId c )
@@ -150,7 +150,7 @@ static_assert( sizeof( Repetitions ) == 1 );
 
 static ParallelHashMap<UnorientedTriangle, Repetitions> makeTriangleHashMap( const AllLocalTriangulations & triangs )
 {
-    MR_TIMER
+    MR_TIMER;
 
     ParallelHashMap<UnorientedTriangle, Repetitions> map;
     ParallelFor( size_t(0), map.subcnt(), [&]( size_t myPartId )
@@ -184,7 +184,7 @@ static ParallelHashMap<UnorientedTriangle, Repetitions> makeTriangleHashMap( con
 
 TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations & triangs )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto map = makeTriangleHashMap( triangs );
 
@@ -202,7 +202,7 @@ TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations &
 
 std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( repetitions >= 1 && repetitions <= 3 );
 
     const auto map = makeTriangleHashMap( triangs );
@@ -220,7 +220,7 @@ std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalT
 
 Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, int repetitions )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( repetitions >= 1 && repetitions <= 3 );
 
     const auto map = makeTriangleHashMap( triangs );
@@ -241,7 +241,7 @@ Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & tria
 
 void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, Triangulation * outRep3, Triangulation * outRep2 )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( outRep3 || outRep2 );
 
     const auto map = makeTriangleHashMap( triangs );
@@ -272,7 +272,7 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
     const VertBitSet & region, ProgressCallback progress,
     Triangulation * outRep3, Triangulation * outRep2 )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto bbox = pointCloud.computeBoundingBox();
     if ( !reportProgress( progress, 0.025f ) )
@@ -366,7 +366,7 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
 
     // notVisited are points that can change orientation of their local triangulation
     VertBitSet notVisited = region;
-    
+
     auto enqueueNeighbors = [&]( VertId base )
     {
         const auto nbeg = triangs.fanRecords[base].firstNei;

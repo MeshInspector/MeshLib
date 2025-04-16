@@ -60,10 +60,10 @@ For detailed information, explore our [MeshLib website section](https://meshlib
 
 ## How to Get Started with MeshLib
 
-1. [**Request a Demo](https://meshlib.io/book-a-call/).** Get expert-level guidance on evaluation and complete licensing details. 
-2. **Try MeshInspector**. Put MeshLib to the test with [MeshInspector](https://meshinspector.com), our GUI for the library, available as a standalone app for desktop and web (30-day trial is offered). 
-3. **Evaluate MeshLib**. You can [educational and non-commercial license](https://meshlib.io/license/). ,will be able dive into the documentation, follow the installation guide, check out the example code, and try running a script locally
-4. **Visit our blog**. There, we regularly post comparisons of MeshLib with other 3D processing alternatives to learn more. 
+- **Evaluate MeshLib.** Start by exploring MeshLib for free under our [educational and non-commercial license](https://github.com/MeshInspector/MeshLib?tab=License-1-ov-file#readme). You’ll get access to the [documentation](https://meshlib.io/documentation/index.html), installation guide, example code, and can run scripts locally to see how it fits your workflow.
+- **Try MeshInspector.** Put MeshLib to the test using [MeshInspector](https://meshinspector.com/), our GUI built on top of the SDK. It's available as a standalone desktop and web app with a 30-day trial.
+- [**Request a Demo**](https://meshlib.io/book-a-call/). Get expert-level guidance, ask questions about integration, and receive complete licensing information tailored to your needs.
+- **Visit our blog.** Explore [articles and tutorials](https://meshlib.io/blog/) covering 3D data processing workflows, occasional comparisons with other tools, and practical insights from the field.
 
 ## Installation
 

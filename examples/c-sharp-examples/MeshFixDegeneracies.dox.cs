@@ -22,6 +22,7 @@ public static class MeshFixDegeneraciesExample
             parameters.tinyEdgeLength = parameters.maxDeviation * 0.1f;
 
             FixMeshDegeneracies(ref mesh, parameters);
+            MeshSave.ToAnySupportedFormat(mesh, outputFile);
         }
         catch (Exception e)
         {

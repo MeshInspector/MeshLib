@@ -1,7 +1,7 @@
 {
   "name": "mrbind-pybind11",
   "version": "0.0.1",
-  "port-version": 2,
+  "port-version": 3,
   "homepage": "https://github.com/MeshInspector/mrbind-pybind11",
   "description": "Fork of pybind11 that builds stable-ABI Python modules",
   "license": "BSD-3-Clause",

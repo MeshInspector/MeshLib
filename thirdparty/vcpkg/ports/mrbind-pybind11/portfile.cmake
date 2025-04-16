@@ -4,6 +4,8 @@ vcpkg_from_github(
     REF fdea944d10587b4ee1a4e743eecdf32fbb90b9fe
     SHA512 243c209f8007a2f030cc0108ad1b5236fbe7a00e07640a845821ec98c2db062cdb395e2f4d51c89808d272b16f43bae3daf666b5183301dffed54c6b8acd4f64
     HEAD_REF non-limited-api
+    PATCHES
+        fix-cmake-config.patch
 )
 
 vcpkg_cmake_configure(

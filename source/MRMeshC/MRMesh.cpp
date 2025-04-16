@@ -7,6 +7,7 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMeshPart.h"
 
 #include <span>
 
@@ -109,9 +110,9 @@ void mrMeshTransform( MRMesh* mesh_, const MRAffineXf3f* xf_, const MRVertBitSet
     mesh.transform( xf, region );
 }
 
-void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet* fromFaces_, const MRMeshAddPartByMaskParameters* params )
+void mrMeshAddMeshPart( MRMesh* mesh_, const MRMeshPart* meshPart, const MRMeshAddMeshPartParameters* params )
 {
-    ARG( mesh ); ARG( from ); ARG( fromFaces );
+    ARG( mesh );
 
     bool flipOrientation = false;
     // TODO: cast instead of copying
@@ -127,7 +128,7 @@ void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet
         fromContoursVec.assign( fromContours.begin(), fromContours.end() );
     }
 
-    mesh.addMeshPart( { from, &fromFaces }, flipOrientation, thisContoursVec, fromContoursVec );
+    mesh.addMeshPart( { *auto_cast( meshPart->mesh ), auto_cast( meshPart->region ) }, flipOrientation, thisContoursVec, fromContoursVec );
 }
 
 void mrMeshFree( MRMesh* mesh_ )

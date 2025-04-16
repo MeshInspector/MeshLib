@@ -236,7 +236,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
 
     ParallelFor( weights, [&] ( VertId i )
     {
-        weights[i] = std::min( weights[i] - distParams.maxWeight, 0.0f );
+        weights[i] -= distParams.maxWeight;
     } );
 
     WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };

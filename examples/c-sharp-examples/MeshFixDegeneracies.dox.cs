@@ -18,8 +18,8 @@ public static class MeshFixDegeneraciesExample
 
             var mesh = MeshLoad.FromAnySupportedFormat(inputFile);
             var parameters = new FixMeshDegeneraciesParams();
-            parameters.maxDeviation = mesh.BoundingBox.Diagonal() * 1e-3f;
-            parameters.tinyEdgeLength = parameters.maxDeviation * 0.1f;
+            parameters.maxDeviation = mesh.BoundingBox.Diagonal() * 1e-5f;
+            parameters.tinyEdgeLength = 1e-3f;
 
             FixMeshDegeneracies(ref mesh, parameters);
             MeshSave.ToAnySupportedFormat(mesh, outputFile);

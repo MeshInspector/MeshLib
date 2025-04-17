@@ -10,7 +10,7 @@ RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
+        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
         && \
     dnf clean all
 
@@ -31,8 +31,10 @@ COPY thirdparty/vcpkg/triplets MeshLib/triplets
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
-RUN ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ')
-RUN ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
+RUN $(: Python 3.12 requires autoconf 2.71 or higher ) \
+    export PATH=/opt/rh/autoconf271/bin/:$PATH && \
+    ./vcpkg install --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --overlay-ports=MeshLib/ports $(cat MeshLib/requirements.txt | tr '\n' ' ') && \
+    ./vcpkg export --host-triplet=${VCPKG_TRIPLET} --overlay-triplets=MeshLib/triplets --x-all-installed --raw --output=vcpkg --output-dir=/opt
 
 
 FROM nvidia/cuda:12.6.0-devel-rockylinux9 AS production

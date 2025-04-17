@@ -6,9 +6,21 @@
 \tableofcontents
 
 ## CMake Integration Support
-MeshLib provides CMake integration support for \b Linux and \b macOS. Please note that CMake integration is not currently supported on Windows. 
+MeshLib provides CMake integration support for \b Windows, \b Linux and \b macOS.
 Example CMake configuration files are available to demonstrate how to link against the pre-built libraries. 
 You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
+
+## Windows Integration Guide
+
+MeshLib supports \b Windows via CMake, including integration with **Visual Studio**.
+
+To enable support in Visual Studio, ensure the **CMake component** is installed in your Visual Studio setup. Once installed, standard CMake configuration should work seamlessly.
+
+For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". You can configure your build with the following command:
+
+\code
+cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
+\endcode
 
 ## Quick Integration Guide
 

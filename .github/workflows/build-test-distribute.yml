@@ -330,9 +330,9 @@ jobs:
       GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-dev-documentation:
-    # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
+    # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
-    if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && always() }}
+    if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
     needs: [ config, ubuntu-arm64-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:

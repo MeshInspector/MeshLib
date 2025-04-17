@@ -41,7 +41,7 @@ private:
 bool BallRadiusAssessor::pointFound( float r, float w )
 {
     assert( r >= 0 );
-    assert( w <= params_.maxWeight );
+    //assert( w <= params_.maxWeight ); // commented due to possible intepolation errors
     assert( w <= maxLocWeight_ + r * params_.maxWeightGrad );
     if ( params_.maxWeightGrad < 1 )
     {

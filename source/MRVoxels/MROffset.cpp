@@ -24,7 +24,7 @@ namespace MR
 
 float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
 {
-    MR_TIMER
+    MR_TIMER;
     auto bb = mp.mesh.computeBoundingBox( mp.region );
     auto vol = bb.volume();
     return std::cbrt( vol / approxNumVoxels );
@@ -32,8 +32,8 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
 
 Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
-    MR_TIMER
-    assert( params.signDetectionMode == SignDetectionMode::Unsigned 
+    MR_TIMER;
+    assert( params.signDetectionMode == SignDetectionMode::Unsigned
         || params.signDetectionMode == SignDetectionMode::OpenVDB
         || params.signDetectionMode == SignDetectionMode::HoleWindingRule );
 
@@ -55,7 +55,7 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
     auto voxelSizeVector = Vector3f::diagonal( voxelSize );
     // Make grid
     FloatGrid grid;
-    if ( !useShell && !signPostprocess ) 
+    if ( !useShell && !signPostprocess )
     {
         // Compute signed distance grid
         grid = meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
@@ -117,7 +117,7 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( params.voxelSize <= 0 )
     {
@@ -241,7 +241,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
     const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     DistanceVolumeParams dvParams;
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
@@ -272,7 +272,7 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
 
 Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOffsetParameters& params )
 {
-    MR_TIMER
+    MR_TIMER;
     OffsetParameters mcParams = params;
     mcParams.callBack = subprogress( params.callBack, 0.0f, 0.7f );
     Vector<VoxelId, FaceId> map;
@@ -313,7 +313,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
 
 Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto res = offsetOneDirection( mesh, offset, params );
     if ( !res )
         return res;
@@ -336,7 +336,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
 
 Expected<Mesh> offsetOneDirection( const MeshPart& mp, float offset, const GeneralOffsetParameters& params /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
     auto res = generalOffsetMesh( mp, unsignedOffset ? std::abs( offset ) : offset, params );
     if ( !res )

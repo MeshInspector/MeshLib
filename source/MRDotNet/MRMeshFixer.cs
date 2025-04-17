@@ -46,7 +46,7 @@ namespace MR
             if (errorString != IntPtr.Zero)
             {
                 var errData = mrStringData(errorString);
-                string errorMessage = Marshal.PtrToStringAnsi(errData);
+                string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                 throw new Exception(errorMessage);
             }
             return new FaceBitSet(res);
@@ -59,7 +59,7 @@ namespace MR
             if (errorString != IntPtr.Zero)
             {
                 var errData = mrStringData(errorString);
-                string errorMessage = Marshal.PtrToStringAnsi(errData);
+                string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                 throw new Exception(errorMessage);
             }
             return new UndirectedEdgeBitSet(res);

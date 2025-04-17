@@ -72,8 +72,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     pybind11::class_<MR::EdgeMetric>( m, "EdgeMetric" );
 
     m.def( "identityMetric", &MR::identityMetric, "metric returning 1 for every edge" );
-    m.def( "edgeLengthMetric", &MR::edgeLengthMetric, pybind11::arg( "mesh" ), "returns edge's length as a metric" );
-    m.def( "edgeCurvMetric", &MR::edgeCurvMetric,
+    m.def( "edgeLengthMetric", ( MR::EdgeMetric( * )( const MR::Mesh & ) ) &MR::edgeLengthMetric, pybind11::arg( "mesh" ), "returns edge's length as a metric" );
+    m.def( "edgeCurvMetric", ( MR::EdgeMetric( * )( const MR::Mesh &, float, float ) ) &MR::edgeCurvMetric,
         pybind11::arg( "mesh" ), pybind11::arg( "angleSinFactor" ) = 2.0f, pybind11::arg( "angleSinForBoundary" ) = 0.0f,
         "returns edge's metric that depends both on edge's length and on the angle between its left and right faces\n"
         "\tangleSinFactor - multiplier before dihedral angle sine in edge metric calculation (positive to prefer concave angles, negative - convex)\n"

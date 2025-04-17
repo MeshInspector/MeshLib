@@ -304,7 +304,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
 template <typename T>
 Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -551,7 +551,7 @@ template <typename T>
 Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                  unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -727,9 +727,6 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
-    if ( utf8string( path.extension() ) != ".dcm" )
-        return DicomStatusEnum::Invalid;
-
     std::ifstream ifs( path, std::ios_base::binary );
 
 #ifdef __EMSCRIPTEN__
@@ -823,11 +820,23 @@ bool isDicomFolder( const std::filesystem::path& dirPath )
         {
             const auto& path = entry.path();
             const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+            if ( VoxelsLoad::isDicomFile( path ) )
                 return true;
         }
     }
     return false;
+}
+
+std::vector<std::filesystem::path> findDicomFoldersRecursively( const std::filesystem::path& path )
+{
+    std::vector<std::filesystem::path> res;
+    std::error_code ec;
+    for ( auto entry : DirectoryRecursive{ path, ec } )
+    {
+        if ( entry.is_directory() && isDicomFolder( entry.path() ) )
+            res.push_back( entry.path() );
+    }
+    return res;
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
@@ -858,7 +867,7 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::fi
 
 Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsVdb & dcm, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
     obj->setName( dcm.name );
     obj->construct( dcm.vol );
@@ -879,7 +888,7 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsV
 
 Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
 {
-    MR_TIMER
+    MR_TIMER;
     LoadedObjects res;
     auto loaded = loadDicomsFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.7f ) );
     auto sc = subprogress( callback, 0.7f, 1.f );

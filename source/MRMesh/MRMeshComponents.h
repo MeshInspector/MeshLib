@@ -138,19 +138,21 @@ struct LargeByAreaComponentsSettings
 
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
+[[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection );
 
-/// if all vertices of a mesh connected component are present in selection exludes these vertices
+/// if all vertices of a mesh connected component are present in selection, excludes these vertices
 MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
-/// it is guaranteed that isCompBd is invoked in a thead-safe manner (that left and right face are always processed by one thread)
+/// it is guaranteed that isCompBd is invoked in a thread-safe manner (that left and right face are always processed by one thread)
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd = {} );
 
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
+[[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region = nullptr );
 
 /// gets union-find structure for vertices, considering connections by given edges only
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges );

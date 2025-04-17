@@ -57,6 +57,7 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
+    <ClInclude Include="MRMeshMath.h" />
     <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -416,6 +417,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREdgeLengthMesh.cpp" />
+    <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />

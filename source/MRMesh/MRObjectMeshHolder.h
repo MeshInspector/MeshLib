@@ -110,23 +110,23 @@ public:
     const ObjectMeshData& data() const { return data_; }
 
     /// sets whole new ObjectMeshData
-    virtual void setData( ObjectMeshData && data ) { data_ = std::move( data ); dirty_ |= DIRTY_ALL; }
+    virtual void setData( ObjectMeshData && data ) { data_ = std::move( data ); setDirtyFlags( DIRTY_ALL ); }
 
     /// swaps whole ObjectMeshData with given argument
-    virtual void updateData( ObjectMeshData& data ) { std::swap( data_, data ); dirty_ |= DIRTY_ALL; }
+    virtual void updateData( ObjectMeshData& data ) { std::swap( data_, data ); setDirtyFlags( DIRTY_ALL ); }
 
     /// returns per-vertex colors of the object
     const VertColors& getVertsColorMap() const { return data_.vertColors; }
 
     /// sets per-vertex colors of the object
-    virtual void setVertsColorMap( VertColors vertsColorMap ) { data_.vertColors = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { data_.vertColors = std::move( vertsColorMap ); setDirtyFlags( DIRTY_VERTS_COLORMAP ); }
 
     /// swaps per-vertex colors of the object with given argument
-    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( data_.vertColors, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( data_.vertColors, vertsColorMap ); setDirtyFlags( DIRTY_VERTS_COLORMAP ); }
 
     const FaceColors& getFacesColorMap() const { return data_.faceColors; }
-    virtual void setFacesColorMap( FaceColors facesColorMap ) { data_.faceColors = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
-    virtual void updateFacesColorMap( FaceColors& updated ) { std::swap( data_.faceColors, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void setFacesColorMap( FaceColors facesColorMap ) { data_.faceColors = std::move( facesColorMap ); setDirtyFlags( DIRTY_PRIMITIVE_COLORMAP ); }
+    virtual void updateFacesColorMap( FaceColors& updated ) { std::swap( data_.faceColors, updated ); setDirtyFlags( DIRTY_PRIMITIVE_COLORMAP ); }
 
     MRMESH_API virtual void setEdgeWidth( float edgeWidth );
     float getEdgeWidth() const { return edgeWidth_; }
@@ -155,19 +155,19 @@ public:
     [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
     [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
-    virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-    virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture );  setDirtyFlags( DIRTY_TEXTURE ); }
+    virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated );  setDirtyFlags( DIRTY_TEXTURE ); }
 
     /// the texture ids for the faces if more than one texture is used to texture the object
     /// texture coordinates (data_.uvCoordinates) at a point can belong to different textures, depending on which face the point belongs to
-    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { data_.texturePerFace = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
-    virtual void updateTexturePerFace( Vector<TextureId, FaceId>& texturePerFace ) { std::swap( data_.texturePerFace, texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
-    virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
+    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { data_.texturePerFace = std::move( texturePerFace );  setDirtyFlags( DIRTY_TEXTURE_PER_FACE ); }
+    virtual void updateTexturePerFace( Vector<TextureId, FaceId>& texturePerFace ) { std::swap( data_.texturePerFace, texturePerFace );  setDirtyFlags( DIRTY_TEXTURE_PER_FACE ); }
+    virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) );  setDirtyFlags( DIRTY_TEXTURE_PER_FACE ); }
     const TexturePerFace& getTexturePerFace() const { return data_.texturePerFace; }
 
     const VertUVCoords& getUVCoords() const { return data_.uvCoordinates; }
-    virtual void setUVCoords( VertUVCoords uvCoordinates ) { data_.uvCoordinates = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-    virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( data_.uvCoordinates, updated ); dirty_ |= DIRTY_UV; }
+    virtual void setUVCoords( VertUVCoords uvCoordinates ) { data_.uvCoordinates = std::move( uvCoordinates ); setDirtyFlags( DIRTY_UV ); }
+    virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( data_.uvCoordinates, updated ); setDirtyFlags( DIRTY_UV ); }
 
     /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
     MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} );
@@ -177,11 +177,11 @@ public:
 
     // ancillary texture can be used to have custom features visualization without affecting real one
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
-    virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture );  setDirtyFlags( DIRTY_TEXTURE ); }
 
     const VertUVCoords& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
-    virtual void setAncillaryUVCoords( VertUVCoords uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-    void updateAncillaryUVCoords( VertUVCoords& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    virtual void setAncillaryUVCoords( VertUVCoords uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates );  setDirtyFlags( DIRTY_UV ); }
+    void updateAncillaryUVCoords( VertUVCoords& updated ) { std::swap( ancillaryUVCoordinates_, updated );  setDirtyFlags( DIRTY_UV ); }
 
     bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() && !ancillaryTexture_.pixels.empty(); }
     MRMESH_API void clearAncillaryTexture();
@@ -190,9 +190,6 @@ public:
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 
     MRMESH_API virtual bool getRedrawFlag( ViewportMask viewportMask ) const override;
-
-    /// reset dirty flags without some specific bits (useful for lazy normals update)
-    MRMESH_API virtual void resetDirtyExeptMask( uint32_t mask ) const;
 
     /// returns cached information whether the mesh is closed
     [[nodiscard]] MRMESH_API bool isMeshClosed() const;

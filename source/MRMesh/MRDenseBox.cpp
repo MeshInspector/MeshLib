@@ -50,7 +50,7 @@ bool DenseBox::contains( const Vector3f& pt ) const
 
 void DenseBox::init_( const std::vector<Vector3f>& points, const std::vector<float>* weights, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( const auto& p : points )
         box_.include( xf ? (*xf)( p ) : p );
     if ( xf )
@@ -84,7 +84,7 @@ void DenseBox::init_( const std::vector<Vector3f>& points, const std::vector<flo
 
 void DenseBox::init_( const MeshPart& meshPart, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     box_ = meshPart.mesh.computeBoundingBox( meshPart.region, xf );
     if ( xf )
     {
@@ -111,7 +111,7 @@ void DenseBox::init_( const MeshPart& meshPart, const AffineXf3f* xf )
 
 void DenseBox::init_( const PointCloud& points, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     box_ = points.computeBoundingBox( xf );
     if ( xf )
     {
@@ -138,7 +138,7 @@ void DenseBox::init_( const PointCloud& points, const AffineXf3f* xf )
 
 void DenseBox::init_( const Polyline3& line, const AffineXf3f* xf )
 {
-    MR_TIMER
+    MR_TIMER;
     box_ = line.computeBoundingBox( xf );
     if ( xf )
     {

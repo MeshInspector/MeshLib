@@ -46,7 +46,7 @@ EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const 
 
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::vector<EdgeLoop> res;
     HashSet<EdgeId> reportedBdEdges;
@@ -96,7 +96,7 @@ std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const Face
 
 std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region ) );
     UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
@@ -121,7 +121,7 @@ std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const Fac
 
 std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::vector<EdgeLoop> res;
     HashSet<EdgeId> reportedBdEdges;
@@ -178,7 +178,7 @@ std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology,
 
 UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopology& topology, const FaceBitSet & region )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
@@ -213,7 +213,7 @@ FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet&
 
 VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res = topology.getValidVerts();
     BitSetParallelFor( res, [&]( VertId v )
     {
@@ -235,7 +235,7 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & f
 
 VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * region )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res = topology.getValidVerts();
     BitSetParallelFor( res, [&]( VertId v )
     {
@@ -259,7 +259,7 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & regi
 
 const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !faces )
         return topology.getValidVerts();
@@ -270,7 +270,7 @@ const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBi
 
 VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet bdVerts( topology.vertSize() );
     BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
@@ -283,7 +283,7 @@ VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * r
 
 VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitSet & region )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet bdVerts( topology.vertSize() );
     BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
@@ -311,7 +311,7 @@ VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitS
 
 EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeBitSet res( topology.edgeSize() );
     for ( auto f : faces )
     {
@@ -326,7 +326,7 @@ EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces
 
 UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
@@ -339,7 +339,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
 
 UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res = edges;
     res.resize( topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
@@ -365,7 +365,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const Undir
 
 UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     for ( auto v : verts )
     {
@@ -380,11 +380,11 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
 
 UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBitSet& region )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
 
     for ( auto f0 : region )
-    { 
+    {
         EdgeId e[3];
         topology.getTriEdges( f0, e );
         for ( int i = 0; i < 3; ++i )
@@ -400,7 +400,7 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
 
 FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & verts )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res( topology.faceSize() );
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
@@ -418,7 +418,7 @@ FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & v
 
 FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res( topology.faceSize() );
     for ( auto ue : edges )
     {
@@ -432,7 +432,7 @@ FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeB
 
 FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & verts )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res( topology.faceSize() );
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
@@ -453,7 +453,7 @@ FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & vert
 
 static VertBitSet getIncidentVerts_( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res( topology.vertSize() );
     for ( auto ue : edges )
     {
@@ -466,19 +466,19 @@ static VertBitSet getIncidentVerts_( const MeshTopology & topology, const Undire
             res.set( v );
         if ( auto v = topology.dest( ue ) )
             res.set( v );
-    } 
+    }
     return res;
 }
 
 FaceBitSet getIncidentFaces( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
     return getIncidentFaces( topology, getIncidentVerts_( topology, edges ) );
 }
 
 static VertBitSet getInnerVerts_( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res = getIncidentVerts_( topology, edges );
     BitSetParallelFor( res, [&]( VertId v )
     {
@@ -496,7 +496,7 @@ static VertBitSet getInnerVerts_( const MeshTopology & topology, const Undirecte
 
 VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     //TODO: if there are many set edges, find inner vertices of the complement edges and invert
     return getIncidentVerts_( topology, edges );
@@ -504,7 +504,7 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdge
 
 const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !edges )
         return topology.getValidVerts();
@@ -515,13 +515,13 @@ const VertBitSet & getIncidentVerts( const MeshTopology & topology, const Undire
 
 VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     //TODO: if there are many set edges, find incident vertices of the complement edges and invert
     return getInnerVerts_( topology, edges );
 }
 
-TEST(MRMesh, findLeftBoundary) 
+TEST(MRMesh, findLeftBoundary)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     FaceBitSet faces;

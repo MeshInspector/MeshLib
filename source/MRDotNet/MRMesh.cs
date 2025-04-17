@@ -148,6 +148,20 @@ namespace MR
             public MRMeshPart() { }
         };
 
+        /// optional parameters for \ref mrMeshAddMeshPart
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRMeshAddMeshPartParameters
+        {
+            /// if flipOrientation then every from triangle is inverted before adding
+            public byte flipOrientation = 0;
+            /// contours on this mesh that have to be stitched with
+            public IntPtr thisContours = IntPtr.Zero;
+            public ulong thisContoursNum = 0;
+            /// contours on from mesh during addition
+            public IntPtr fromContours = IntPtr.Zero;
+            public ulong fromContoursNum = 0;
+            public MRMeshAddMeshPartParameters() { }
+        };
 
         #endregion
         /// represents a point cloud or a mesh
@@ -329,6 +343,12 @@ namespace MR
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMeshToPointCloud(IntPtr mesh, byte saveNormals, IntPtr verts);
+
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern void mrMeshAddMesh(IntPtr mesh, IntPtr fromMesh);
+
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern void mrMeshAddMeshPart(IntPtr mesh, ref MRMeshPart meshPart, ref MRMeshAddMeshPartParameters parameters);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrMeshInvalidateCaches(IntPtr mesh, bool pointsChanged);
@@ -584,7 +604,31 @@ namespace MR
             {
                 mrMeshInvalidateCaches(mesh_, pointsChanged);
             }
-
+            /// appends another mesh as separate connected component(s) to this
+            public void AddMesh(Mesh mesh)
+            {
+                mrMeshAddMesh(mesh_, mesh.mesh_);
+                clearManagedResources();
+            }
+            /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
+            public void AddMeshPart(ref MeshPart mp)
+            {
+                MRMeshAddMeshPartParameters p = new MRMeshAddMeshPartParameters();
+                mrMeshAddMeshPart(mesh_, ref mp.mrMeshPart,ref p);
+                clearManagedResources();
+            }
+            /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
+            public void AddMeshPart(MeshPart mp, MeshAddMeshPartParameters parameters )
+            {
+                MRMeshAddMeshPartParameters p = new MRMeshAddMeshPartParameters();
+                p.flipOrientation = parameters.flipOrientation ? (byte)1 : (byte)0;
+                p.thisContours = parameters.thisContours is null ? IntPtr.Zero : parameters.thisContours.mrLoops_;
+                p.thisContoursNum = parameters.thisContours is null ? 0ul : (ulong)parameters.thisContours.Count;
+                p.fromContours = parameters.fromContours is null ? IntPtr.Zero : parameters.fromContours.mrLoops_;
+                p.fromContoursNum = parameters.fromContours is null ? 0ul : (ulong)parameters.fromContours.Count;
+                mrMeshAddMeshPart(mesh_, ref mp.mrMeshPart, ref p);
+                clearManagedResources();
+            }
             #endregion
 
             #region Create
@@ -784,6 +828,17 @@ namespace MR
             public MeshTriPoint meshTriPoint;
             public float distanceSquared;
         };
+
+        public struct MeshAddMeshPartParameters
+        {
+            /// if flipOrientation then every from triangle is inverted before adding
+            public bool flipOrientation = false;
+            /// contours on this mesh that have to be stitched with
+            public EdgeLoops? thisContours = null;
+            /// contours on from mesh during addition
+            public EdgeLoops? fromContours = null;
+            public MeshAddMeshPartParameters() { }
+        }
 
         public class MeshPart
         {

@@ -19,13 +19,13 @@ private:
 };
 
 /// computes Euclidean 3D distances from given start point to all neighbor vertices within given \param range
-/// and to first vertices with the distance more or equal than range
+/// and to first vertices with the distance more than range
 [[nodiscard]] MRMESH_API VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, float range );
 
 /// calculates all neighbor vertices within a given \param range
-/// and to first vertices with the distance more or equal than range
-[[nodiscard]] MRMESH_API VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float range );
-
+/// and to first vertices with the distance more than range
+/// \param rangeSq square of range
+[[nodiscard]] MRMESH_API VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float rangeSq );
 
 class EnumNeihbourFaces
 {

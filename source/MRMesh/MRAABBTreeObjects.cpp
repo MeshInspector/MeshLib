@@ -15,7 +15,7 @@ template void AABBTreeBase<ObjTreeTraits>::getLeafOrderAndReset( LeafBMap & leaf
 
 AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( std::move( objs ) )
 {
-    MR_TIMER
+    MR_TIMER;
     using BoxedObj = BoxedLeaf<Traits>;
     Buffer<BoxedObj> boxedObjs( objs_.size() );
     toLocal_.resize( objs_.size() );

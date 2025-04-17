@@ -11,6 +11,7 @@
 #include "exports.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
+#include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRImGui.h"
 #include <misc/cpp/imgui_stdlib.h>
@@ -21,13 +22,6 @@
 #include <string>
 #include <vector>
 #include <optional>
-
-namespace MR
-{
-class Palette;
-class ImGuiImage;
-class PlaneWidget;
-}
 
 // Extend ImGui by populating its namespace directly
 //
@@ -284,6 +278,11 @@ MR_MAKE_FLAG_OPERATORS( PlaneWidgetFlags )
 /// planeWidget stores the plane widget params
 MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags = {} );
 
+/// Shows 3 edit boxes for editing of world direction coordinates;
+/// \param editDragging must be initialized with zero, used to append only one history action on start dragging;
+/// \param historyName the name of history action created on start dragging;
+/// \return true if the direction was changed inside
+MRVIEWER_API bool Direction( MR::DirectionWidget& dirWidget, bool& editDragging, const std::string& historyName );
 
 /// draw image with Y-direction inversed up-down
 MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor );

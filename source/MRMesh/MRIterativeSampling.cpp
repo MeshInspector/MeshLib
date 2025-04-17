@@ -37,7 +37,7 @@ struct PointInfo
 
 std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int numSamples, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet res = cloud.validPoints;
     auto toRemove = (int)res.count() - numSamples;
     if ( toRemove <= 0 )

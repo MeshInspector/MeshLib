@@ -90,6 +90,11 @@ public:
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
     MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
+
+    /// restricts editable area to vertices whose normals look into the same half-space as normal under cursor
+    void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
+    /// get state of an editable region restriction 
+    bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -127,6 +132,8 @@ private:
     /// this function is called after all modifications are finished;
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
+
+    void updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region );
 
     Settings settings_;
 
@@ -177,6 +184,7 @@ private:
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
+    bool editOnlyCodirectedSurface_ = true;
 };
 
 }

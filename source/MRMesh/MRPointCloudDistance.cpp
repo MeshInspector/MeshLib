@@ -10,7 +10,7 @@ namespace MR
 
 float findMaxDistanceSqOneWay( const PointCloud& a, const PointCloud& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return tbb::parallel_reduce
     (
@@ -26,7 +26,7 @@ float findMaxDistanceSqOneWay( const PointCloud& a, const PointCloud& b, const A
                 auto distSq = findProjectionOnPoints( rigidB2A ? (*rigidB2A)( b.points[i] ) : b.points[i], a, maxDistanceSq ).distSq;
                 if ( distSq > init )
                     init = distSq;
-            }           
+            }
 
             return  init;
         },

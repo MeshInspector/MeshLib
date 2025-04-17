@@ -436,7 +436,7 @@ void FanOptimizer::init_()
         if ( normalizerSq_ <= 0.0f )
             normalizerSq_ = 1.0f; // all neighbors have same coordinate as center point
     }
-    
+
 
     // fill angles
     fanData_.cacheAngleOrder.resize( fanData_.neighbors.size() );
@@ -539,7 +539,7 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
 std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
     const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // construct tree before parallel region
     if ( settings.searchNeighbors )
@@ -579,7 +579,7 @@ std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
 std::optional<AllLocalTriangulations> buildUnitedLocalTriangulations(
     const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto optPerThreadTriangs = buildLocalTriangulations( cloud, settings, subprogress( progress, 0.0f, 0.9f ) );
     if ( !optPerThreadTriangs )
@@ -598,7 +598,7 @@ bool isBoundaryPoint( const PointCloud& cloud, VertId v, const Settings & settin
 std::optional<VertBitSet> findBoundaryPoints( const PointCloud& pointCloud, const Settings & settings,
     ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet borderPoints( pointCloud.validPoints.size() );
     tbb::enumerable_thread_specific<TriangulatedFanData> tls;

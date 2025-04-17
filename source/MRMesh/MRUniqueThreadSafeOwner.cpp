@@ -62,6 +62,8 @@ UniqueThreadSafeOwner<T>::~UniqueThreadSafeOwner() = default;
 template<typename T>
 void UniqueThreadSafeOwner<T>::reset()
 {
+    if ( !obj_ ) // fast path avoiding locking and unnecessary writing in obj_ when it is already null
+        return;
     std::unique_lock lock( mutex_ );
     assert( !construction_ ); // one thread constructs the object, and this thread resets it
     obj_.reset();

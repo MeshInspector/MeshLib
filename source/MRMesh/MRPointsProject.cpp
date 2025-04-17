@@ -24,8 +24,8 @@ struct SubTask
 } //anonymous namespace
 
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
-    float upDistLimitSq /*= FLT_MAX*/, 
-    const AffineXf3f* xf /*= nullptr*/, 
+    float upDistLimitSq /*= FLT_MAX*/,
+    const AffineXf3f* xf /*= nullptr*/,
     float loDistLimitSq /*= 0*/,
     VertPredicate skipCb /*= {}*/ )
 {
@@ -194,7 +194,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
 Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( numNei >= 1 );
     Buffer<VertId> res( pc.points.size() * numNei );
 
@@ -224,7 +224,7 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, con
 
 VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     std::atomic<float> minDistSq{ FLT_MAX };
     tbb::enumerable_thread_specific<VertPair> threadData;
     BitSetParallelFor( pc.validPoints, [&]( VertId v )

@@ -102,13 +102,13 @@ std::vector<std::string> ObjectLines::getInfoLines() const
     {
         res.push_back( "no polyline" );
     }
-    
+
     return res;
 }
 
 std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLines>>& objsLines )
 {
-    MR_TIMER
+    MR_TIMER;
     auto line = std::make_shared<Polyline3>();
     auto& points = line->points;
     for ( const auto& obj : objsLines )

@@ -57,7 +57,7 @@ Mesh Mesh::fromTriangles(
     VertCoords vertexCoordinates,
     const Triangulation& t, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromTriangles( t, settings, cb );
@@ -71,13 +71,13 @@ Mesh Mesh::fromTriMesh(
     return fromTriangles( std::move( triMesh.points ), triMesh.tris, settings, cb );
 }
 
-Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
+Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     VertCoords vertexCoordinates,
     Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
     const MeshBuilder::BuildSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
@@ -95,7 +95,7 @@ Mesh Mesh::fromFaceSoup(
     const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
     const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
@@ -128,7 +128,7 @@ Mesh Mesh::fromFaceSoup(
 
 Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices )
 {
-    MR_TIMER
+    MR_TIMER;
     MeshBuilder::VertexIdentifier vi;
     vi.reserve( posTriples.size() );
     vi.addTriangles( posTriples );
@@ -142,7 +142,7 @@ Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool du
 
 bool Mesh::operator ==( const Mesh & b ) const
 {
-    MR_TIMER
+    MR_TIMER;
     if ( topology != b.topology )
         return false;
     for ( auto v : topology.getValidVerts() )
@@ -151,435 +151,14 @@ bool Mesh::operator ==( const Mesh & b ) const
     return true;
 }
 
-void Mesh::getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const
-{
-    VertId a, b, c;
-
-    topology.getLeftTriVerts( e, a, b, c );
-    v0 = points[a];
-    v1 = points[b];
-    v2 = points[c];
-}
-
-Vector3f Mesh::triPoint( const MeshTriPoint & p ) const
-{
-    if ( p.bary.b == 0 )
-    {
-        // do not require to have triangular face to the left of p.e
-        const Vector3f v0 = orgPnt( p.e );
-        const Vector3f v1 = destPnt( p.e );
-        return ( 1 - p.bary.a ) * v0 + p.bary.a * v1;
-    }
-    Vector3f v0, v1, v2;
-    getLeftTriPoints( p.e, v0, v1, v2 );
-    return p.bary.interpolate( v0, v1, v2 );
-}
-
-MeshTriPoint Mesh::toTriPoint( FaceId f, const Vector3f & p ) const
-{
-    auto e = topology.edgeWithLeft( f );
-    Vector3f v0, v1, v2;
-    getLeftTriPoints( e, v0, v1, v2 );
-    return MeshTriPoint( e, p, v0, v1, v2 );
-}
-
-MeshTriPoint Mesh::toTriPoint( const PointOnFace & p ) const
-{
-    return toTriPoint( p.face, p.point );
-}
-
 MeshTriPoint Mesh::toTriPoint( VertId v ) const
 {
     return MeshTriPoint( topology, v );
 }
 
-MeshEdgePoint Mesh::toEdgePoint( EdgeId e, const Vector3f & p ) const
-{
-    const auto & po = points[ topology.org( e ) ];
-    const auto & pd = points[ topology.dest( e ) ];
-    const auto dt = dot( p - po , pd - po );
-    const auto edgeLenSq = ( pd - po ).lengthSq();
-    if ( dt <= 0 || edgeLenSq <= 0 )
-        return { e, 0 };
-    if ( dt >= edgeLenSq )
-        return { e, 1 };
-    return { e, dt / edgeLenSq };
-}
-
 MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
 {
     return MeshEdgePoint( topology, v );
-}
-
-VertId Mesh::getClosestVertex( const PointOnFace & p ) const
-{
-    VertId res, b, c;
-    topology.getTriVerts( p.face, res, b, c );
-    float closestDistSq = ( points[res] - p.point ).lengthSq();
-    if ( auto bDistSq = ( points[b] - p.point ).lengthSq(); bDistSq < closestDistSq )
-    {
-        res = b;
-        closestDistSq = bDistSq;
-    }
-    if ( auto cDistSq = ( points[c] - p.point ).lengthSq(); cDistSq < closestDistSq )
-    {
-        res = c;
-        closestDistSq = cDistSq;
-    }
-    return res;
-}
-
-UndirectedEdgeId Mesh::getClosestEdge( const PointOnFace & p ) const
-{
-    EdgeId e = topology.edgeWithLeft( p.face );
-    Vector3f a, b, c;
-    getLeftTriPoints( e, a, b, c );
-
-    auto distSq = [&]( const LineSegm3f & l )
-    {
-        return ( p.point - closestPointOnLineSegm( p.point, l ) ).lengthSq();
-    };
-
-    UndirectedEdgeId res = e.undirected();
-    float closestDistSq = distSq( { a, b } );
-
-    e = topology.prev( e.sym() );
-    if ( auto eDistSq = distSq( { b, c } ); eDistSq < closestDistSq )
-    {
-        res = e.undirected();
-        closestDistSq = eDistSq;
-    }
-
-    e = topology.prev( e.sym() );
-    if ( auto eDistSq = distSq( { c, a } ); eDistSq < closestDistSq )
-    {
-        res = e.undirected();
-        closestDistSq = eDistSq;
-    }
-
-    return res;
-}
-
-Vector3f Mesh::triCenter( FaceId f ) const
-{
-    Vector3f v0, v1, v2;
-    getTriPoints( f, v0, v1, v2 );
-    return ( 1 / 3.0f ) * ( v0 + v1 + v2 );
-}
-
-UndirectedEdgeScalars Mesh::edgeLengths() const
-{
-    MR_TIMER
-    UndirectedEdgeScalars res( topology.undirectedEdgeSize() );
-    ParallelFor( res, [&]( UndirectedEdgeId ue )
-    {
-        if ( topology.isLoneEdge( ue ) )
-            return;
-        res[ue] = edgeLength( ue );
-    } );
-
-    return res;
-}
-
-Vector3f Mesh::leftDirDblArea( EdgeId e ) const
-{
-    VertId a, b, c;
-    topology.getLeftTriVerts( e, a, b, c );
-    assert( a.valid() && b.valid() && c.valid() );
-    const auto & ap = points[a];
-    const auto & bp = points[b];
-    const auto & cp = points[c];
-    return cross( bp - ap, cp - ap );
-}
-
-float Mesh::triangleAspectRatio( FaceId f ) const
-{
-    VertId a, b, c;
-    topology.getTriVerts( f, a, b, c );
-    assert( a.valid() && b.valid() && c.valid() );
-    const auto & ap = points[a];
-    const auto & bp = points[b];
-    const auto & cp = points[c];
-    return MR::triangleAspectRatio( ap, bp, cp );
-}
-
-float Mesh::circumcircleDiameterSq( FaceId f ) const
-{
-    VertId a, b, c;
-    topology.getTriVerts( f, a, b, c );
-    assert( a.valid() && b.valid() && c.valid() );
-    const auto & ap = points[a];
-    const auto & bp = points[b];
-    const auto & cp = points[c];
-    return MR::circumcircleDiameterSq( ap, bp, cp );
-}
-
-float Mesh::circumcircleDiameter( FaceId f ) const
-{
-    return std::sqrt( circumcircleDiameterSq( f ) );
-}
-
-double Mesh::area( const FaceBitSet & fs ) const
-{
-    MR_TIMER
-
-    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
-    [&] ( const auto & range, double curr )
-    {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( fs.test( f ) && topology.hasFace( f ) )
-                curr += dblArea( f );
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-}
-
-double Mesh::projArea( const Vector3f & dir, const FaceBitSet & fs ) const
-{
-    MR_TIMER
-
-    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
-    [&] ( const auto & range, double curr )
-    {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( fs.test( f ) && topology.hasFace( f ) )
-                curr += std::abs( dot( dirDblArea( f ), dir ) );
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-}
-
-Vector3d Mesh::dirArea( const FaceBitSet & fs ) const
-{
-    MR_TIMER
-
-    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Vector3d{},
-    [&] ( const auto & range, Vector3d curr )
-    {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( fs.test( f ) && topology.hasFace( f ) )
-                curr += Vector3d( dirDblArea( f ) );
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-}
-
-namespace
-{
-
-/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0) and other three vertices taken from a mesh's triangle
-class FaceVolumeCalc
-{
-public:
-    FaceVolumeCalc( const Mesh& mesh, const FaceBitSet& region) : mesh_( mesh ), region_( region )
-    {}
-    FaceVolumeCalc( FaceVolumeCalc& x, tbb::split ) : mesh_( x.mesh_ ), region_( x.region_ )
-    {}
-    void join( const FaceVolumeCalc& y )
-    {
-        volume_ += y.volume_;
-    }
-
-    double volume() const
-    {
-        return volume_;
-    }
-
-    void operator()( const tbb::blocked_range<FaceId>& r )
-    {
-        for ( FaceId f = r.begin(); f < r.end(); ++f )
-        {
-            if ( region_.test( f ) && mesh_.topology.hasFace( f ) )
-            {
-                const auto coords = mesh_.getTriPoints( f );
-                volume_ += mixed( Vector3d( coords[0] ), Vector3d( coords[1] ), Vector3d( coords[2] ) );
-            }
-        }
-    }
-
-private:
-    const Mesh& mesh_;
-    const FaceBitSet& region_;
-    double volume_{ 0.0 };
-};
-
-/// computes the summed six-fold volume of tetrahedrons with one vertex at (0,0,0), another vertex at the center of hole,
-/// and other two vertices taken from a hole's edge
-class HoleVolumeCalc
-{
-public:
-    HoleVolumeCalc( const Mesh& mesh, const std::vector<EdgeId>& holeRepresEdges ) : mesh_( mesh ), holeRepresEdges_( holeRepresEdges )
-    {}
-    HoleVolumeCalc( HoleVolumeCalc& x, tbb::split ) : mesh_( x.mesh_ ), holeRepresEdges_( x.holeRepresEdges_ )
-    {}
-    void join( const HoleVolumeCalc& y )
-    {
-        volume_ += y.volume_;
-    }
-
-    double volume() const
-    {
-        return volume_;
-    }
-
-    void operator()( const tbb::blocked_range<size_t>& r )
-    {
-        for ( size_t i = r.begin(); i < r.end(); ++i )
-        {
-            const auto e0 = holeRepresEdges_[i];
-            Vector3d sumBdPos;
-            int countBdVerts = 0;
-            for ( auto e : leftRing( mesh_.topology, e0 ) )
-            {
-                sumBdPos += Vector3d( mesh_.orgPnt( e ) );
-                ++countBdVerts;
-            }
-            Vector3d holeCenter = sumBdPos / double( countBdVerts );
-            for ( auto e : leftRing( mesh_.topology, e0 ) )
-            {
-                volume_ += mixed( holeCenter, Vector3d( mesh_.orgPnt( e ) ), Vector3d( mesh_.destPnt( e ) ) );
-            }
-        }
-    }
-
-private:
-    const Mesh& mesh_;
-    const std::vector<EdgeId>& holeRepresEdges_;
-    double volume_{ 0.0 };
-};
-
-} // anonymous namespace
-
-double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
-{
-    MR_TIMER
-    const auto lastValidFace = topology.lastValidFace();
-    const auto& faces = topology.getFaceIds( region );
-    FaceVolumeCalc fcalc( *this, faces );
-    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), fcalc );
-
-    const auto holeRepresEdges = topology.findHoleRepresentiveEdges( region );
-    HoleVolumeCalc hcalc( *this, holeRepresEdges );
-    parallel_deterministic_reduce( tbb::blocked_range<size_t>( size_t( 0 ), holeRepresEdges.size() ), hcalc );
-
-    return ( fcalc.volume() + hcalc.volume() ) / 6.0;
-}
-
-double Mesh::holePerimiter( EdgeId e0 ) const
-{
-    double res = 0;
-    if ( topology.left( e0 ) )
-    {
-        assert( false );
-        return res;
-    }
-
-    for ( auto e : leftRing( topology, e0 ) )
-    {
-        assert( !topology.left( e ) );
-        res += edgeLength( e );
-    }
-    return res;
-}
-
-Vector3d Mesh::holeDirArea( EdgeId e0 ) const
-{
-    Vector3d sum;
-    if ( topology.left( e0 ) )
-    {
-        assert( false );
-        return sum;
-    }
-
-    Vector3d p0{ orgPnt( e0 ) };
-    for ( auto e : leftRing0( topology, e0 ) )
-    {
-        assert( !topology.left( e ) );
-        Vector3d p1{ orgPnt( e ) };
-        Vector3d p2{ destPnt( e ) };
-        sum += cross( p1 - p0, p2 - p0 );
-    }
-    return 0.5 * sum;
-}
-
-Vector3f Mesh::leftTangent( EdgeId e ) const
-{
-    assert( topology.left( e ) );
-    const auto lNorm = leftNormal( e );
-    const auto eDir = edgeVector( e ).normalized();
-    return cross( lNorm, eDir );
-}
-
-Vector3f Mesh::dirDblArea( VertId v ) const
-{
-    Vector3f sum;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        if ( topology.left( e ).valid() )
-        {
-            sum += leftDirDblArea( e );
-        }
-    }
-    return sum;
-}
-
-Vector3f Mesh::normal( const MeshTriPoint & p ) const
-{
-    VertId a, b, c;
-    topology.getLeftTriVerts( p.e, a, b, c );
-    auto n0 = normal( a );
-    auto n1 = normal( b );
-    auto n2 = normal( c );
-    return p.bary.interpolate( n0, n1, n2 ).normalized();
-}
-
-Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const
-{
-    Vector3f sum;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        const auto l = topology.left( e );
-        if ( l && ( !region || region->test( l ) ) )
-        {
-            auto d0 = edgeVector( e );
-            auto d1 = edgeVector( topology.next( e ) );
-            auto angle = MR::angle( d0, d1 );
-            auto n = cross( d0, d1 );
-            sum += angle * n.normalized();
-        }
-    }
-
-    return sum.normalized();
-}
-
-Vector3f Mesh::pseudonormal( UndirectedEdgeId ue, const FaceBitSet * region ) const
-{
-    EdgeId e{ ue };
-    auto l = topology.left( e );
-    if ( l && region && !region->test( l ) )
-        l = {};
-    auto r = topology.right( e );
-    if ( r && region && !region->test( r ) )
-        r = {};
-    if ( !l && !r )
-        return {};
-    if ( !l )
-        return normal( r );
-    if ( !r )
-        return normal( l );
-    auto nl = normal( l );
-    auto nr = normal( r );
-    return ( nl + nr ).normalized();
-}
-
-Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region ) const
-{
-    if ( auto v = p.inVertex( topology ) )
-        return pseudonormal( v, region );
-    if ( auto e = p.onEdge( topology ) )
-        return pseudonormal( e.e.undirected(), region );
-    assert( !region || region->test( topology.left( p.e ) ) );
-    return leftNormal( p.e );
 }
 
 bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
@@ -625,184 +204,9 @@ float Mesh::calcFastWindingNumber( const Vector3f & pt, float beta ) const
     return MR::calcFastWindingNumber( getDipoles(), getAABBTree(), *this, pt, beta, {} );
 }
 
-float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
-{
-    if ( outBoundaryVert )
-        *outBoundaryVert = false;
-    float sum = 0;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        if ( topology.left( e ).valid() )
-        {
-            auto d0 = edgeVector( e );
-            auto d1 = edgeVector( topology.next( e ) );
-            auto angle = MR::angle( d0, d1 );
-            sum += angle;
-        }
-        else if ( outBoundaryVert )
-            *outBoundaryVert = true;
-    }
-    return sum;
-}
-
-Expected<VertBitSet> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
-{
-    MR_TIMER
-    const VertBitSet & testVerts = topology.getVertIds( region );
-    VertBitSet res( testVerts.size() );
-    auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
-    {
-        bool boundaryVert = false;
-        auto a = sumAngles( v, &boundaryVert );
-        if ( !boundaryVert && a < minSumAngle )
-            res.set( v );
-    }, cb );
-
-    if ( !completed )
-        return unexpectedOperationCanceled();
-
-    return res;
-}
-
-float Mesh::dihedralAngleSin( UndirectedEdgeId ue ) const
-{
-    EdgeId e{ ue };
-    if ( topology.isBdEdge( e ) )
-        return 0;
-    return MR::dihedralAngleSin( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
-}
-
-float Mesh::dihedralAngleCos( UndirectedEdgeId ue ) const
-{
-    EdgeId e{ ue };
-    if ( topology.isBdEdge( e ) )
-        return 1;
-    return MR::dihedralAngleCos( leftNormal( e ), leftNormal( e.sym() ) );
-}
-
-float Mesh::dihedralAngle( UndirectedEdgeId ue ) const
-{
-    EdgeId e{ ue };
-    if ( topology.isBdEdge( e ) )
-        return 0;
-    return MR::dihedralAngle( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
-}
-
-float Mesh::discreteMeanCurvature( VertId v ) const
-{
-    float sumArea = 0;
-    float sumAngLen = 0;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        auto l = topology.left( e );
-        if ( !l )
-            continue; // area( l ) is not defined and dihedralAngle( e ) = 0
-        sumArea += area( l );
-        sumAngLen += dihedralAngle( e.undirected() ) * edgeLength( e.undirected() );
-    }
-    // sumAngLen / (2*2) because of mean curvature definition * each edge has 2 vertices,
-    // sumArea / 3 because each triangle has 3 vertices
-    return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
-}
-
-float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
-{
-    EdgeId e = ue;
-    if ( topology.isBdEdge( e ) )
-        return 0;
-    float sumArea = area( topology.left( e ) ) + area( topology.right( e ) );
-    float sumAngLen = dihedralAngle( e.undirected() ) * edgeLength( e.undirected() );
-    // sumAngLen / 2 because of mean curvature definition,
-    // sumArea / 3 because each triangle has 3 edges
-    return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
-}
-
-class CreaseEdgesCalc 
-{
-public:
-    CreaseEdgesCalc( const Mesh & mesh, float critCos ) : mesh_( mesh ), critCos_( critCos ) 
-        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
-    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : mesh_( x.mesh_ ), critCos_( x.critCos_ )
-        { edges_.resize( mesh_.topology.undirectedEdgeSize() ); }
-
-    void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
-
-    UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
-
-    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
-    {
-        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
-        {
-            if ( mesh_.topology.isLoneEdge( ue ) )
-                continue;
-            auto dihedralCos = mesh_.dihedralAngleCos( ue );
-            if ( dihedralCos <= critCos_ )
-                edges_.set( ue );
-        }
-    }
-
-private:
-    const Mesh & mesh_;
-    float critCos_ = 1;
-    UndirectedEdgeBitSet edges_;
-};
-
-UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar ) const
-{
-    MR_TIMER
-    assert( angleFromPlanar > 0 && angleFromPlanar < PI );
-    const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( *this, critCos );
-    parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
-    return calc.takeEdges();
-}
-
-float Mesh::leftCotan( EdgeId e ) const
-{
-    if ( !topology.left( e ).valid() )
-        return 0;
-    Vector3f p0, p1, p2;
-    getLeftTriPoints( e, p0, p1, p2 );
-    auto a = p0 - p2;
-    auto b = p1 - p2;
-    auto nom = dot( a, b );
-    auto den = cross( a, b ).length();
-    static constexpr float maxval = 1e5f;
-    if ( fabs( nom ) >= maxval * den )
-        return maxval * sgn( nom );
-    return nom / den;
-}
-
 QuadraticForm3f Mesh::quadraticForm( VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
 {
-    QuadraticForm3f qf;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        if ( topology.isBdEdge( e, region ) || ( creases && creases->test( e ) ) )
-        {
-            // zero-length boundary edge is treated as uniform stabilizer: all shift directions are equally penalized,
-            // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
-            qf.addDistToLine( edgeVector( e ).normalized() );
-        }
-        if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
-        {
-            if ( angleWeigted )
-            {
-                auto d0 = edgeVector( e );
-                auto d1 = edgeVector( topology.next( e ) );
-                auto angle = MR::angle( d0, d1 );
-                static constexpr float INV_PIF = 1 / PI_F;
-                qf.addDistToPlane( leftNormal( e ), angle * INV_PIF );
-            }
-            else
-            {
-                // zero-area triangle is treated as no triangle with no penalty at all,
-                // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
-                qf.addDistToPlane( leftNormal( e ) );
-            }
-        }
-    }
-    return qf;
+    return MR::quadraticForm( topology, points, v, angleWeigted, region, creases );
 }
 
 Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
@@ -810,88 +214,19 @@ Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
-Box3f Mesh::getBoundingBox() const 
-{ 
-    return getAABBTree().getBoundingBox(); 
-}
-
-class FaceBoundingBoxCalc 
+Box3f Mesh::getBoundingBox() const
 {
-public:
-    FaceBoundingBoxCalc( const Mesh& mesh, const FaceBitSet& region, const AffineXf3f* toWorld ) : mesh_( mesh ), region_( region ), toWorld_( toWorld ) {}
-    FaceBoundingBoxCalc( FaceBoundingBoxCalc& x, tbb::split ) : mesh_( x.mesh_ ), region_( x.region_ ), toWorld_( x.toWorld_ ) {}
-    void join( const FaceBoundingBoxCalc & y ) { box_.include( y.box_ ); }
-
-    const Box3f & box() const { return box_; }
-
-    void operator()( const tbb::blocked_range<FaceId> & r ) 
-    {
-        for ( FaceId f = r.begin(); f < r.end(); ++f ) 
-        {
-            if ( region_.test( f ) && mesh_.topology.hasFace( f ) )
-            {
-                for ( EdgeId e : leftRing( mesh_.topology, f ) )
-                {
-                    box_.include( toWorld_ ? ( *toWorld_ )( mesh_.points[mesh_.topology.org( e )] ) : mesh_.points[mesh_.topology.org( e )] );
-                }
-            }
-        }
-    }
-            
-private:
-    const Mesh & mesh_;
-    const FaceBitSet & region_;
-    Box3f box_;
-    const AffineXf3f* toWorld_ = nullptr;
-};
+    return getAABBTree().getBoundingBox();
+}
 
 Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toWorld ) const
 {
-    if ( !region )
-        return computeBoundingBox( toWorld );
-
-    MR_TIMER
-    const auto lastValidFace = topology.lastValidFace();
-
-    FaceBoundingBoxCalc calc( *this, *region, toWorld );
-    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
-    return calc.box();
-}
-
-float Mesh::averageEdgeLength() const
-{
-    MR_TIMER
-    struct S
-    {
-        double sum = 0;
-        int n = 0;
-        S & operator +=( const S & b )
-        {
-            sum += b.sum;
-            n += b.n;
-            return *this;
-        }
-    };
-    S s = parallel_deterministic_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() }, 1024 ), S{},
-        [&] ( const auto & range, S curr )
-        {
-            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                if ( !topology.isLoneEdge( ue ) )
-                {
-                    curr.sum += edgeLength( ue );
-                    ++curr.n;
-                }
-            return curr;
-        },
-        [] ( S a, const S & b ) { a += b; return a; }
-    );
-
-    return s.n > 0 ? float( s.sum / s.n ) : 0.0f;
+    return MR::computeBoundingBox( topology, points, region, toWorld );
 }
 
 void Mesh::zeroUnusedPoints()
 {
-    MR_TIMER
+    MR_TIMER;
 
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ points.size() } ), [&] ( const tbb::blocked_range<VertId>& range )
     {
@@ -905,7 +240,7 @@ void Mesh::zeroUnusedPoints()
 
 void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
 
     BitSetParallelFor( topology.getVertIds( region ), [&] ( const VertId v )
     {
@@ -1014,7 +349,7 @@ VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * regi
 void Mesh::addMesh( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertMap vmap;
     topology.addPart( from.topology, outFmap, &vmap, outEmap, rearrangeTriangles );
@@ -1043,7 +378,7 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto & fromFaces = from.mesh.topology.getFaceIds( from.region );
     addPartBy( from.mesh, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
@@ -1053,7 +388,7 @@ void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool 
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
@@ -1063,7 +398,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     const std::vector<EdgePath> & fromContours,
     PartMapping map )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertHashMap localVmap;
     if ( !map.src2tgtVerts )
@@ -1092,7 +427,7 @@ template MRMESH_API void Mesh::addPartBy( const Mesh & from,
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     Mesh res;
     const auto fcount = region.count();
@@ -1115,7 +450,7 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
 
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( rearrangeTriangles )
         topology.rotateTriangles();
@@ -1130,7 +465,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
 
 Expected<void> Mesh::pack( const PackMapping & map, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     topology.pack( map );
     if ( !reportProgress( cb, 0.8f ) )
         return unexpectedOperationCanceled();
@@ -1155,7 +490,7 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
 
 Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
@@ -1231,15 +566,15 @@ std::optional<MeshProjectionResult> Mesh::projectPoint( const Vector3f& point, f
     return proj;
 }
 
-const AABBTree & Mesh::getAABBTree() const 
-{ 
+const AABBTree & Mesh::getAABBTree() const
+{
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
     assert( res.numLeaves() == topology.numValidFaces() );
     return res;
 }
 
-const AABBTreePoints & Mesh::getAABBTreePoints() const 
-{ 
+const AABBTreePoints & Mesh::getAABBTreePoints() const
+{
     const auto & res = AABBTreePointsOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
     assert( res.orderedPoints().size() == topology.numValidVerts() );
     return res;
@@ -1271,12 +606,12 @@ void Mesh::updateCaches( const VertBitSet & changedVerts )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         assert( tree.numLeaves() == topology.numValidFaces() );
-        tree.refit( *this, changedVerts ); 
+        tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
     {
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
-        tree.refit( points, changedVerts ); 
+        tree.refit( points, changedVerts );
     } );
     dipolesOwner_.reset();
 }
@@ -1292,76 +627,14 @@ size_t Mesh::heapBytes() const
 
 void Mesh::shrinkToFit()
 {
-    MR_TIMER
+    MR_TIMER;
     topology.shrinkToFit();
     points.vec_.shrink_to_fit();
 }
 
-Vector3f Mesh::findCenterFromPoints() const
-{
-    MR_TIMER
-    if ( topology.numValidVerts() <= 0 )
-    {
-        assert( false );
-        return {};
-    }
-    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), Vector3d{},
-    [&] ( const auto & range, Vector3d curr )
-    {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-            if ( topology.hasVert( v ) )
-                curr += Vector3d{ points[v] };
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-    return Vector3f{ sumPos / (double)topology.numValidVerts() };
-}
-
-Vector3f Mesh::findCenterFromFaces() const
-{
-    MR_TIMER
-    struct Acc
-    {
-        Vector3d areaPos;
-        double area = 0;
-        Acc operator +( const Acc & b ) const
-        {
-            return {
-                .areaPos = areaPos + b.areaPos,
-                .area = area + b.area
-            };
-        }
-    };
-    auto acc = parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Acc{},
-    [&] ( const auto & range, Acc curr )
-    {
-        for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( topology.hasFace( f ) )
-            {
-                double triArea = area( f );
-                Vector3d center( triCenter( f ) );
-                curr.area += triArea;
-                curr.areaPos += center * triArea;
-            }
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
-    if ( acc.area <= 0 )
-    {
-        assert( false );
-        return {};
-    }
-    return Vector3f{ acc.areaPos / acc.area };
-}
-
-Vector3f Mesh::findCenterFromBBox() const
-{
-    return computeBoundingBox().center();
-}
-
 void Mesh::mirror( const Plane3f& plane )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto& p : points )
     {
         p += 2.0f * ( plane.project( p ) - p );
@@ -1384,7 +657,7 @@ TEST( MRMesh, BasicExport )
     (void)vertexTripples;
 }
 
-TEST(MRMesh, SplitEdge) 
+TEST(MRMesh, SplitEdge)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} },
@@ -1430,7 +703,7 @@ TEST(MRMesh, SplitEdge)
     EXPECT_EQ( region.count(), 3 );
 }
 
-TEST(MRMesh, SplitEdge1) 
+TEST(MRMesh, SplitEdge1)
 {
     Mesh mesh;
     const auto e01 = mesh.topology.makeEdge();
@@ -1452,7 +725,7 @@ TEST(MRMesh, SplitEdge1)
     EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
 }
 
-TEST(MRMesh, SplitFace) 
+TEST(MRMesh, SplitFace)
 {
     Triangulation t{
         { VertId{0}, VertId{1}, VertId{2} }

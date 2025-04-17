@@ -12,7 +12,7 @@ namespace MR
 void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( settings.minNewVertDev < settings.maxNewRank2VertDev );
     assert( settings.minNewVertDev < settings.maxNewRank3VertDev );
     VertNormals normals( vox.topology.vertSize() );
@@ -70,7 +70,7 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
         Vector3f sumAC;
         float sumArea = 0;
         PlaneAccumulator pacc;
-        do 
+        do
         {
             auto v = vox.topology.org( e );
             pacc.addPlane( Plane3f::fromDirAndPt( normals[v], vox.points[v] ) );

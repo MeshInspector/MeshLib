@@ -63,7 +63,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             res.emplace_back( aFace, bFace );
             continue;
         }
-        
+
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
@@ -173,7 +173,7 @@ Expected<bool> findSelfCollidingTriangles(
     const Face2RegionMap * regionMap,
     bool touchIsIntersection )
 {
-    MR_TIMER
+    MR_TIMER;
     const AABBTree & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return false;
@@ -187,7 +187,7 @@ Expected<bool> findSelfCollidingTriangles(
     for( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
-            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; }, 
+            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; },
             [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
@@ -351,8 +351,8 @@ Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, 
 
 Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressCallback cb, const Face2RegionMap* regionMap, bool touchIsIntersection )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     auto ffs = findSelfCollidingTriangles( mp, cb, regionMap, touchIsIntersection );
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
@@ -369,7 +369,7 @@ Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressC
 
 bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A )
 {
-    auto cols = findCollidingTriangles( a, b, rigidB2A );
+    auto cols = findCollidingTriangles( a, b, rigidB2A, true );
     if ( !cols.empty() )
         return false; // meshes intersect
 
@@ -401,8 +401,8 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
     Vector3f b{-24.6611996f,-17.7504997f,-21.3423004f};
     Vector3f c{-24.6392994f,-17.7071991f,-21.3542995f};
 
-    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f}; 
-    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f}; 
+    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f};
+    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f};
     Vector3f f{-24.5862007f,-17.7504997f,-21.3586998f};
 
     bool intersection = doTrianglesIntersect(

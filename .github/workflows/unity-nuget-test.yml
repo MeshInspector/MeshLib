@@ -1,20 +1,125 @@
+name: Test Nuget package with Unity
 on:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test'
+        required: true
+        type: string
   workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+    secrets:
+      BUILD_MACHINE_TOKEN:
+        required: true
 
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: unity-test
+  cancel-in-progress: false
+
 jobs:
+  start-unity-instance:
+    name: Start unity instance
+    runs-on: aws-micro
+    outputs:
+      instance_started: ${{ steps.set-output.outputs.instance_started }}
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Start Instance
+        run: |
+          instanceState=$(aws ec2 describe-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }} --query 'Reservations[].Instances[].State.Name' --output text)
+          if [[ "$instanceState" == "stopped" ]]; then
+            aws ec2 start-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
+          fi
+ 
+      - name: Wait Instance
+        run: |
+          aws ec2 wait instance-status-ok --instance-ids ${{ vars.UNITY_INSTANCE_ID }}
+
   unity-nuget-test:
     timeout-minutes: 10
+    needs: [ start-unity-instance ]
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
-
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/EC2Github
           aws-region: us-east-1
+
+      - name: rm previous data
+        shell: powershell
+        run: |
+          Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
+
+      - name: Download nuget package
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        run: |
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+      
+      - name: Move nuget package to repo folder
+        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
+        shell: powershell
+        run: |
+          $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
+          if ($pkg) {
+            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3468.nupkg"
+          } else {
+            Write-Error "No MeshLib*.nupkg file found"
+            exit 1
+          }
+      
+      - name: Install nuget package
+        shell: powershell
+        run: |
+          C:\\Users\\Administrator\\.dotnet\\tools\\nugetforunity.exe restore "C:\work\unity_proj\NugetTestProj"
+
+      - name: Run test
+        shell: powershell
+        run: |
+          Start-Process -FilePath "C:\work\unity_editor\6000.0.40f1\Editor\Unity.exe" -ArgumentList "-runTests", "-batchmode", "-projectPath", "C:\work\unity_proj\NugetTestProj", "-testPlatform", "playmode", "-testResults", "C:\work\results.xml", "-logfile", "C:\work\batch_log.txt" -Wait
+
+      - name: verify xml
+        shell: powershell
+        run: |
+          [xml]$xml = Get-Content "C:\work\results.xml"
+          if ($xml.'test-run'.failed -eq "0") { Write-Output "All tests passed"; exit 0 } else { Write-Output "Errors in results.xml found"; exit 1}
+
+      - name: upload logs
+        if: always()
+        shell: powershell
+        run: |
+          aws s3 cp C:\work\batch_log.txt s3://test-artifacts-git/batch_log.txt
+          aws s3 cp C:\work\results.xml s3://test-artifacts-git/results.xml
+
+
+  stop-instance:
+    runs-on: aws-micro
+    needs: [ unity-nuget-test ]
+    if: always()
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        if: always()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsStartStopInstances
+          aws-region: us-east-1
+      - name: Stop Instance
+        if: always()
+        run: |
+          aws ec2 stop-instances --instance-ids ${{ vars.UNITY_INSTANCE_ID }}

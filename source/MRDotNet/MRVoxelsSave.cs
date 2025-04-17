@@ -24,7 +24,7 @@ namespace MR
                 if (errorStr != IntPtr.Zero)
                 {
                     var errData = mrStringData(errorStr);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
             }

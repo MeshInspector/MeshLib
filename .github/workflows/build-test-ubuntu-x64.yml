@@ -29,6 +29,10 @@ on:
         default: true
         required: false
         type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   ubuntu-x64-build-test:
@@ -194,4 +198,21 @@ jobs:
         with:
           name: Distributives_${{matrix.os}}-x86
           path: meshlib_${{matrix.os}}-dev.deb
+          retention-days: 1
+
+      - name: Create and fix fake Wheel for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          python3 -m venv ./wheel_venv
+          source ./wheel_venv/bin/activate
+          python3 -m pip install auditwheel
+          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMRMeshC.so" "./patched_content/"
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DotNetPatchArchiveLinux-x64
+          path: ./patched_content/*
           retention-days: 1

@@ -36,7 +36,7 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
     Mesh original;
     if ( settings.projectOnOriginalMesh )
@@ -115,7 +115,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     {
         if ( settings.maxTriAspectRatio >= 1 && numAboveMax <= 0 )
             break;
-        if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
+        if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone )
         {
             if ( !whileProgress( float( splitsDone ) / settings.maxEdgeSplits ) )
                 return 0;
@@ -205,7 +205,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
             if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
                 return 0;
-            positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan, &sharpVerts );
+            positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan, VertexMass::Unit, &sharpVerts );
         }
         else
             positionVertsSmoothly( mesh, newVerts, EdgeWeights::Cotan );
@@ -216,7 +216,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 
 Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     Mesh subMesh;
 
     // copy mesh
@@ -253,7 +253,7 @@ Expected<Mesh> copySubdividePackMesh( const MeshPart & mp, float voxelSize, cons
 
 int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !data.mesh )
     {
         assert( false );
@@ -322,7 +322,7 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
 
 ObjectMeshData makeSubdividedObjectMeshData( const ObjectMesh & obj, const SubdivideSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     ObjectMeshData data = obj.data();
     if ( !data.mesh )

@@ -59,7 +59,7 @@ SurfaceDistanceBuilder::SurfaceDistanceBuilder( const Mesh & mesh, const VertBit
 
 void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float startDistance )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto v : region )
     {
         auto & vi = vertDistanceMap_[v];
@@ -73,7 +73,7 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
 
 void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& startVertices )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( const auto & [v, dist] : startVertices )
     {
         auto & vi = vertDistanceMap_[v];
@@ -199,7 +199,7 @@ float SurfaceDistanceBuilder::metricToPenalty_( float metric, VertId v ) const
     return metric + ( mesh_.points[v] - *target_ ).length();
 }
 
-TEST(MRMesh, SurfaceDistance) 
+TEST(MRMesh, SurfaceDistance)
 {
     float vc = 0;
     EXPECT_FALSE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, 1, vc ) );

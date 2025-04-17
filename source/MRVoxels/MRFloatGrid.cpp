@@ -30,7 +30,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
     transform.setToScale( openvdb::Vec3R{ voxelScale.x,voxelScale.y,voxelScale.z } );
     dest->setTransform( openvdb::math::Transform::createLinearTransform( transform ) ); // org voxel size is 1.0f
 
-    // just grows to 100% 
+    // just grows to 100%
     // first grows fast, then slower
     ProgressCallback dummyProgressCb;
     float i = 1.0f;
@@ -145,21 +145,21 @@ void setLevelSetType( FloatGrid & grid )
 
 FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::tools::csgUnion( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
 FloatGrid operator -= ( FloatGrid & a, const FloatGrid & b )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::tools::csgDifference( ovdb( *a ), ovdb( *b ) );
     return a;
 }
 
 FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::tools::csgIntersection( ovdb( *a ), ovdb( *b ) );
     return a;
 }

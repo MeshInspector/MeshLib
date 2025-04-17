@@ -14,6 +14,10 @@ on:
     - cron: '0 17 * * *'  # Run every day at 17:00 UTC
     #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
@@ -60,8 +64,9 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vs19_vcpkg_version:   ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:   ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vs19_vcpkg_version:    ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:    ${{ needs.config.outputs.vs22_vcpkg_version }}
+      nuget_build:           ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -89,12 +94,26 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   fedora-build-test:
     if: ${{ needs.config.outputs.build_enable_fedora == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-fedora.yml
+    with:
+      app_version:           ${{ needs.config.outputs.app_version }}
+      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
+      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+    secrets: inherit
+
+  linux-vcpkg-build-test:
+    if: ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
+    needs: [ config, prepare-image ]
+    uses: ./.github/workflows/build-test-linux-vcpkg.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
@@ -172,9 +191,6 @@ jobs:
       - name: Make Install Folder
         run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
 
-      - name: Make Install Folder .NET
-        run: py -3.10 scripts\make_install_folder_dotnet.py ${{ needs.config.outputs.app_version }}
-
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
@@ -186,9 +202,6 @@ jobs:
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
 
-      - name: Archive .NET Distribution
-        run: py -3.10 scripts\zip_distribution.py install_dotnet MeshLibDotNetDist.zip
-
       - name: Upload Windows Distribution
         uses: actions/upload-artifact@v4
         with:
@@ -196,50 +209,49 @@ jobs:
           path: MeshLibDist.zip
           retention-days: 1
 
-      - name: Upload .NET Distribution
-        uses: actions/upload-artifact@v4
-        with:
-          name: DistributivesDotNet
-          path: MeshLibDotNetDist.zip
-          retention-days: 1
-
   create-nuget-package:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_ubuntu_x64 == 'true'}}
     needs:
       - config
       - windows-build-test
+      - ubuntu-x64-build-test
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
      - name: Checkout
        uses: actions/checkout@v4
 
-     - name: Download .NET Binaries Archive
+     - name: Download NuGet Windows Patch Archive
        uses: actions/download-artifact@v4
        with:
-         pattern: DotNetArchive*
+         pattern: DotNetPatchArchiveWindows*
+         path: windows_runtime
          merge-multiple: true
 
-     - name: Extract Windows Binaries
-       run: |
-         tar -xvzf MREDist_DotNet.zip
+     - name: Download NuGet Linux Patch Archive
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetPatchArchiveLinux*
+         path: linux_runtime
+         merge-multiple: true
+
+     - name: Download NuGet DLL
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetDll*
+         path: dotnet_dll
+         merge-multiple: true
 
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\generate_nuget_spec.py ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
 
      - name: Build NuGet package
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
-
-     - name: Install package for Patch step
-       run: py -3 -m pip install delvewheel
-
-     - name: Patch NuGet package
-       run: py -3 scripts\nuget_patch\nuget_package_patch.py MeshLib.nupkg
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4
@@ -260,6 +272,7 @@ jobs:
       - ubuntu-x64-build-test
       - ubuntu-arm64-build-test
       - fedora-build-test
+      - linux-vcpkg-build-test
       - emscripten-build-test
       - macos-build-test
     steps:
@@ -281,25 +294,40 @@ jobs:
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
+  windows-unity-test:
+    if: ${{ needs.config.outputs.run_unity_nuget_test == 'true' }}
+    needs:
+      - config
+      - windows-build-test
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/unity-nuget-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets:
+      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+
   test-distribution:
     if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    needs: [ config, versioning-and-release-url, upload-distributions ]
+    needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_id: ${{ needs.versioning-and-release-url.outputs.release_id }}
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets:
+      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-dev-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
@@ -349,17 +377,22 @@ jobs:
     if: always()
     continue-on-error: true
     steps:
-        # all Windows
+      # all Windows
       - name: Delete Windows Debug Install Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: WindowsArchive*
           failOnError: false
-        # .NET
+      # .NET
       - name: Delete .NET Binaries Archive artifact
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
-          name: DotNetArchive*
+          name: DotNetDll*
+          failOnError: false
+      - name: Delete NuGet Patches artifact
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: DotNetPatchArchive*
           failOnError: false
       # Distributives
       - name: Delete Distribution

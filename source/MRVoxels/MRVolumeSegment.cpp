@@ -361,7 +361,7 @@ namespace
 /// \note Values in grid are discarded, only active / not active status is taken into account
 VoxelBitSet mask2set( const VdbVolume& mask )
 {
-    MR_TIMER
+    MR_TIMER;
     VolumeIndexer indexer( mask.dims );
     auto accessor = mask.data->getConstAccessor();
     auto activeBB = mask.data->evalActiveVoxelBoundingBox();
@@ -384,7 +384,7 @@ VoxelBitSet mask2set( const VdbVolume& mask )
 /// Get instance seeds by eroding the \p maskOrig and segmenting it into separate connected components
 Expected<std::vector<VdbVolume>> getInstanceSeeds( const VdbVolume& maskOrig )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::FloatGrid mask( *maskOrig.data );
     openvdb::tools::foreach( mask.beginValueOn(), [] ( openvdb::FloatGrid::ValueOnIter it )
     {
@@ -413,7 +413,7 @@ Expected<std::vector<VdbVolume>> getInstanceSeeds( const VdbVolume& maskOrig )
 /// Dilate \p maskOrig
 VdbVolume dilateMask( const VdbVolume& maskOrig )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::FloatGrid mask( *maskOrig.data );
     openvdb::tools::foreach( mask.beginValueOn(), [] ( openvdb::FloatGrid::ValueOnIter it )
     {
@@ -433,7 +433,7 @@ VdbVolume dilateMask( const VdbVolume& maskOrig )
 
 Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std::vector<VdbVolume>& voxelSeeds, size_t minSize, ProgressCallback cb = {} )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<VoxelBitSet> seeds;
     VoxelBitSet allSeeds;
     for ( auto& seedObj : voxelSeeds )

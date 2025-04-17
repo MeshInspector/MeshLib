@@ -119,7 +119,7 @@ bool fixGridFullByPart( FloatGrid& full, const FloatGrid& part, int zOffset, con
     return fixGridByAccessor( full, part->getAccessor(), part->evalActiveVoxelBoundingBox(), zOffset, cb );
 }
 
-Expected<void> fix( Mesh& mesh, const Params& params )
+Expected<void> fix( Mesh& mesh, const FixParams& params )
 {
     MR_TIMER;
     MR_WRITER( mesh );
@@ -127,7 +127,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     float voxelSize = params.voxelSize <= 0 ? suggestVoxelSize( mesh, numVoxels ) : params.voxelSize;
     float bottomExtension = params.bottomExtension <= 0.0f ? 2.0f * voxelSize : params.bottomExtension;
 
-    auto rot = AffineXf3f::linear( Matrix3f::rotation( params.upDirection, Vector3f::plusZ() ) );
+    auto rot = AffineXf3f::linear( Matrix3f::rotation( params.findParameters.upDirection, Vector3f::plusZ() ) );
 
     int zOffset = 0;
     if ( mesh.topology.isClosed() )
@@ -147,13 +147,13 @@ Expected<void> fix( Mesh& mesh, const Params& params )
     mesh.transform( rot );
     Vector3f center;
     float heightZ = 0;
-    if ( params.wallAngle != 0 )
+    if ( params.findParameters.wallAngle != 0 )
     {
         // transform projective
         auto meshBox = mesh.computeBoundingBox();
         center = meshBox.center();
         auto halfDiagXY = std::sqrt( to2dim( meshBox.size() ).lengthSq() / 2.0f );
-        heightZ = halfDiagXY / std::tan( std::abs( params.wallAngle ) );
+        heightZ = halfDiagXY / std::tan( std::abs( params.findParameters.wallAngle ) );
 
 
         // need to subdivide - because this projection is not really linear,
@@ -181,7 +181,7 @@ Expected<void> fix( Mesh& mesh, const Params& params )
         auto keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
         {
             auto diff = mesh.points[v] - center;
-            if ( params.wallAngle > 0 )
+            if ( params.findParameters.wallAngle > 0 )
                 diff.z = -diff.z;
             auto ratio = ( diff.z + heightZ ) / heightZ;
             if ( ratio != 0 )
@@ -234,13 +234,13 @@ Expected<void> fix( Mesh& mesh, const Params& params )
 
     mesh = std::move( *meshRes );
 
-    if ( params.wallAngle != 0 )
+    if ( params.findParameters.wallAngle != 0 )
     {
         // back transform projective
         keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
         {
             auto diff = mesh.points[v] - center;
-            if ( params.wallAngle > 0 )
+            if ( params.findParameters.wallAngle > 0 )
                 diff.z = -diff.z;
             auto ratio = ( diff.z + heightZ ) / heightZ;
             if ( ratio != 0 )
@@ -259,17 +259,17 @@ Expected<void> fix( Mesh& mesh, const Params& params )
 
 void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    fix( mesh, { .upDirection = upDirectionMeshSpace,.voxelSize = voxelSize,.bottomExtension = bottomExtension } );
+    fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension } );
 }
 
 void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    fix( mesh, { .upDirection = upDirectionMeshSpace,.voxelSize = voxelSize,.bottomExtension = bottomExtension,.region = &faceBitSet } );
+    fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension,.region = &faceBitSet } );
 }
 
 UndercutMetric getUndercutAreaMetric( const Mesh& mesh )
 {
-    return [&]( const FaceBitSet& faces, const Vector3f& )
+    return [&] ( const FaceBitSet& faces, const FindParams& )
     {
         return mesh.area( faces );
     };
@@ -277,49 +277,126 @@ UndercutMetric getUndercutAreaMetric( const Mesh& mesh )
 
 UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh )
 {
-    return [&]( const FaceBitSet& faces, const Vector3f& upDir )
+    return [&] ( const FaceBitSet& faces, const FindParams& params )
     {
-        return mesh.projArea( upDir, faces );
+        if ( params.wallAngle == 0.0f )
+            return mesh.projArea( params.upDirection, faces );
+        auto rot = AffineXf3f::linear( Matrix3f::rotation( params.upDirection, Vector3f::plusZ() ) );
+        auto meshBox = mesh.computeBoundingBox( &rot );
+        auto halfDiagXY = std::sqrt( to2dim( meshBox.size() ).lengthSq() / 2.0f );
+        auto heightZ = halfDiagXY / std::tan( std::abs( params.wallAngle ) );
+        if ( params.wallAngle < 0 )
+            heightZ = -heightZ;
+        auto cameraPoint = meshBox.center() + params.upDirection.normalized() * heightZ;
+        return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ mesh.topology.faceSize() }, 1024 ), 0.0, [&] ( const auto& range, double curr )
+        {
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mesh.topology.hasFace( f ) )
+                    continue;
+                auto dir = ( mesh.triCenter( f ) - cameraPoint ).normalized();
+                curr += std::abs( dot( mesh.dirDblArea( f ), dir ) );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
     };
+}
+
+template<typename PrimTag>
+void findInternal( const Mesh& mesh, TaggedBitSet<PrimTag>& out, const FindParams& params )
+{
+    const TaggedBitSet<PrimTag>* valids;
+    if constexpr ( std::is_same_v<PrimTag, FaceTag> )
+    {
+        out.resize( mesh.topology.faceSize() );
+        valids = &mesh.topology.getValidFaces();
+    }
+    else
+    {
+        static_assert( std::is_same_v<PrimTag, VertTag> );
+        out.resize( mesh.topology.vertSize() );
+        valids = &mesh.topology.getValidVerts();
+    }
+    std::function<Vector3f( const Vector3f& pos )> getDir;
+    std::function<IntersectionPrecomputes<float>* ( )> getPrec;
+    IntersectionPrecomputes<float> prec( params.upDirection );
+    if ( params.wallAngle == 0.0f )
+    {
+        getPrec = [&prec] ()->IntersectionPrecomputes<float>* { return &prec; };
+        getDir = [&params] ( const Vector3f& )->Vector3f { return params.upDirection; };
+    }
+    else
+    {
+        getPrec = [] ()->IntersectionPrecomputes<float>* { return nullptr; };
+        auto rot = AffineXf3f::linear( Matrix3f::rotation( params.upDirection, Vector3f::plusZ() ) );
+        auto meshBox = mesh.computeBoundingBox( &rot );
+        auto halfDiagXY = std::sqrt( to2dim( meshBox.size() ).lengthSq() / 2.0f );
+        auto heightZ = halfDiagXY / std::tan( std::abs( params.wallAngle ) );
+        if ( params.wallAngle < 0 )
+            heightZ = -heightZ;
+        auto cameraPoint = meshBox.center() + params.upDirection.normalized() * heightZ;
+        bool needflip = dot( cameraPoint - meshBox.center(), params.upDirection ) < 0.0f;
+        getDir = [cameraPoint,needflip] ( const Vector3f& pos )->Vector3f
+        {
+            auto dir = ( cameraPoint - pos ).normalized();
+            if ( needflip )
+                dir = -dir;
+            return dir;
+        };
+    }
+    BitSetParallelFor( *valids, [&] ( Id<PrimTag> p )
+    {
+        Vector3f pos;
+        if constexpr ( std::is_same_v<PrimTag, FaceTag> )
+            pos = mesh.triCenter( p );
+        else
+            pos = mesh.points[p];
+        Line3f line = { pos, getDir( pos ) };
+        if ( rayMeshIntersect( mesh, line, 0.0f, FLT_MAX, getPrec(), true, [&] (FaceId f)->bool
+        {
+            if constexpr ( std::is_same_v<PrimTag, FaceTag> )
+                return f != p;
+            else
+            {
+                VertId v[3];
+                mesh.topology.getTriVerts( f, v );
+                return v[0] != p && v[1] != p && v[2] != p;
+            }
+        } ) )
+        {
+            out.set( p );
+        }
+    } );
 }
 
 void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts )
 {
-    MR_TIMER;
-
-    outUndercuts.resize( mesh.topology.faceSize() );
-    float moveUpRay = mesh.computeBoundingBox().diagonal() * 1e-5f; //to be independent of mesh size
-
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
-    {
-        auto center = mesh.triCenter( f );
-        if ( rayMeshIntersect( mesh, { center, upDirection }, moveUpRay ) )
-        {
-            outUndercuts.set( f );
-        }
-    } );
+    find( mesh, { .upDirection = upDirection }, outUndercuts );
 }
 
 double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric )
 {
-    MR_TIMER;
-    findUndercuts( mesh, upDirection, outUndercuts );
-    return metric( outUndercuts, upDirection );
+    return find( mesh, { .upDirection = upDirection }, outUndercuts, metric );
 }
 
 void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts )
 {
-    MR_TIMER;
+    find( mesh, { .upDirection = upDirection }, outUndercuts );
+}
 
-    outUndercuts.resize( mesh.topology.vertSize() );
-    float moveUpRay = mesh.computeBoundingBox().diagonal() * 1e-5f; //to be independent of mesh size
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
-    {
-        if ( rayMeshIntersect( mesh, { mesh.points[v], upDirection }, moveUpRay ) )
-        {
-            outUndercuts.set( v );
-        }
-    } );
+double find( const Mesh& mesh, const FindParams& params, FaceBitSet& outUndercuts, const UndercutMetric& metric /*= {} */ )
+{
+    MR_TIMER;
+    findInternal( mesh, outUndercuts, params );
+    if ( metric )
+        return metric( outUndercuts, params );
+    return DBL_MAX;
+}
+
+void find( const Mesh& mesh, const FindParams& params, VertBitSet& outUndercuts )
+{
+    MR_TIMER;
+    findInternal( mesh, outUndercuts, params );
 }
 
 double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution )
@@ -373,7 +450,7 @@ Vector3f improveDirectionInternal( const Mesh& mesh, const DistMapImproveDirecti
     {
         metricFinder = [&]( const Vector3f& candidateDir, FaceBitSet* out )->double
         {
-            return findUndercuts( mesh, candidateDir, *out, *metric );
+            return find( mesh, { .upDirection = candidateDir }, *out, *metric );
         };
     }
     else

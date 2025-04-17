@@ -11,6 +11,7 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRParallelFor.h"
 
 namespace MR
 {
@@ -222,7 +223,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
 {
     MR_TIMER;
 
-    const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
+    auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 
     DistanceFromWeightedPointsParams distParams;
     distParams.maxWeight = 0.f;
@@ -233,7 +234,14 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
         return weights[v];
     };
 
-    WeightedPointsShellParametersMetric resParams{ static_cast<const WeightedPointsShellParametersBase&>( params ), distParams };
+    ParallelFor( weights, [&] ( VertId i )
+    {
+        weights[i] -= distParams.maxWeight;
+    } );
+
+    WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
+    resParams.dist.maxWeight = 0.0f;
+    resParams.offset += distParams.maxWeight;
 
     return weightedMeshShell( mesh, resParams );
 }

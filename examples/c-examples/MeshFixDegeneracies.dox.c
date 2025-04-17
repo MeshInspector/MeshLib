@@ -1,5 +1,5 @@
 #include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRMeshDecimate.h>
+#include <MRMeshC/MRMeshFixer.h>
 #include <MRMeshC/MRMeshLoad.h>
 #include <MRMeshC/MRMeshSave.h>
 #include <MRMeshC/MRString.h>
@@ -31,17 +31,18 @@ int main( int argc, char* argv[] )
     }
 
     // you can set various parameters for the resolving process; see the documentation for more info
-    MRResolveMeshDegenSettings params = mrResolveMeshDegenSettingsNew();
+    MRFixMeshDegeneraciesParams params = mrFixMeshDegeneraciesParamsNew();
     // maximum permitted deviation
     const MRBox3f bbox = mrMeshComputeBoundingBox( mesh, NULL );
     params.maxDeviation = 1e-5f * mrBox3fDiagonal( &bbox );
     // maximum length of edges to be collapsed
     params.tinyEdgeLength = 1e-3f;
 
-    bool changed = mrResolveMeshDegenerations( mesh, &params );
-    if ( !changed && output == input )
+    mrFixMeshDegeneracies( mesh, &params, &errorString );
+    if ( errorString )
     {
-        fprintf( stderr, "No changes were made" );
+        fprintf( stderr, "Failed to fix mesh degeneracies: %s", mrStringData( errorString ) );
+        mrStringFree( errorString );
         goto out_mesh;
     }
 

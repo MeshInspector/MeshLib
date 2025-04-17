@@ -57,12 +57,12 @@ from pytest_check import check
                                            'output_files': [],
                                            },
                                           id="MeshExport"),
-                            pytest.param({'sample': "MeshResolveDegenerationsExample",
+                            pytest.param({'sample': "MeshFixDegeneraciesExample",
                                            'input_files': ['mesh.ctm'],
                                            'output_files': ['mesh_fixed.ctm'],
                                            'args': ['mesh.ctm', 'mesh_fixed.ctm']
                                            },
-                                          id="MeshResolveDegenerations"),
+                                          id="MeshFixDegeneracies"),
                          ])
 def test_c_sharp_samples(tmp_path, case, csharp_sample_dir):
     """

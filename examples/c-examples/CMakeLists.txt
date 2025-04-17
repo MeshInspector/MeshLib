@@ -17,7 +17,7 @@ set(EXAMPLES
   MeshLoadSave
   MeshModification
   MeshOffset
-  MeshResolveDegenerations
+  MeshFixDegeneracies
   MeshStitchHole
   NoiseDenoise
   Triangulation

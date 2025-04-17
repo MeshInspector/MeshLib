@@ -25,7 +25,7 @@
         <tab type="user" url="@ref ExampleMeshOffset" title="Mesh Offset"/>
         <tab type="user" url="@ref ExampleMeshFillHole" title="Mesh Fill Hole"/>
         <tab type="user" url="@ref ExampleMeshStitchHole" title="Mesh Stitch Holes"/>
-        <tab type="user" url="@ref ExampleMeshResolveDegenerations" title="Mesh Resolve Degenerations"/>
+        <tab type="user" url="@ref ExampleMeshFixDegeneracies" title="Mesh Fix Degeneracies"/>
         <tab type="user" url="@ref ExampleGlobalRegistration" title="Global Registration"/>
         <tab type="user" url="@ref ExampleMeshICP" title="Mesh ICP"/>
         <tab type="user" url="@ref ExampleMeshExtrude" title="Mesh Extrude"/>

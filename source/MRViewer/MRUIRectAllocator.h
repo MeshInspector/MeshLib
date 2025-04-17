@@ -76,9 +76,9 @@ public:
     // We automatically avoid all windows with `[rect_allocator_ignore]` anywhere after `##` in the name.
     MRVIEWER_API void setFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
 
+    // Call this once at the begining of ImGui frame, to remove all closed windows from entries list
+    MRVIEWER_API void invalidateClosedWindows();
 private:
-    int lastFrameCount_ = -1;
-
     enum class AllocationState
     {
         None, // This window wasn't yet drawn during this frame. If it's not drawn until the end of frame, it will be deleted from this map.

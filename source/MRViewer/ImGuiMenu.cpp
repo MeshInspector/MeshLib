@@ -89,6 +89,7 @@
 #include "MRMouseController.h"
 #include "MRSceneCache.h"
 #include "MRSceneObjectsListDrawer.h"
+#include "MRUIRectAllocator.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -271,6 +272,7 @@ void ImGuiMenu::startFrame()
 
     }
     ImGui::NewFrame();
+    UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
 }
 
 void ImGuiMenu::finishFrame()

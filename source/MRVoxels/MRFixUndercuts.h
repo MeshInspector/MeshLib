@@ -37,23 +37,30 @@ MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float v
 [[deprecated( "Use fix( mesh, params )" )]]
 MRVOXELS_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
-/// Fix undercuts function paramters
-struct Params
+/// Parameters that is used to find undercuts
+struct FindParams
 {
-    /// fix undercuts is performed downwards (in `-direction`)
+    /// Primitives that are not visible from up direction are considered as undercuts (fix undercuts is performed downwards (in `-direction`))
     Vector3f upDirection;
-    
-    /// voxel size for internal computations: lower size - better precision but more system resources required
-    float voxelSize = 0.0f;
-
-    /// minimum extension of bottom part of the mesh
-    float bottomExtension = 0.0f;
 
     /// vertical angle of fixed undercut walls (note that this value is approximate - it defines "camera" position for internal projective transformation)
     /// 0 - strictly vertical walls of undercuts area
     /// positive - expanding downwards walls
     /// negative - shrinking downwards walls
     float wallAngle = 0.0f;
+};
+
+/// Fix undercuts function paramters
+struct FixParams
+{
+    /// parameters of what is considered as undercut
+    FindParams findParameters;
+
+    /// voxel size for internal computations: lower size - better precision but more system resources required
+    float voxelSize = 0.0f;
+
+    /// minimum extension of bottom part of the mesh
+    float bottomExtension = 0.0f;
 
     /// if set - only this region will be fixed (but still all mesh will be rebuild)
     const FaceBitSet* region = nullptr;
@@ -63,29 +70,39 @@ struct Params
 
 /// Fixes undercut areas by building vertical walls under it, 
 /// algorithm is performed in voxel space, so the mesh is completely rebuilt after this operation
-MRVOXELS_API Expected<void> fix( Mesh& mesh, const Params& params );
+MRVOXELS_API Expected<void> fix( Mesh& mesh, const FixParams& params );
 
 // Input - undercut faces, insertion direction
 // Output - metric value
-using UndercutMetric = std::function<double( const FaceBitSet&, const Vector3f& upDir )>;
+using UndercutMetric = std::function<double( const FaceBitSet&, const FindParams& params )>;
 
 /// returns the metric that computes total area of undercut faces
 [[nodiscard]] MRVOXELS_API UndercutMetric getUndercutAreaMetric( const Mesh& mesh );
 
-/// returns the metric that computes summed absolute area of undercut faces as visible if look from upDir
+/// returns the metric that computes summed absolute projected area of undercut
 [[nodiscard]] MRVOXELS_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
 
 /// Adds to \param outUndercuts undercut faces
+[[deprecated( "Use find( mesh, params)" )]]
 MRVOXELS_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts );
 /// Adds to \param outUndercuts undercut vertices
+[[deprecated( "Use find( mesh, params )" )]]
 MRVOXELS_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts );
 
 /// Adds to \param outUndercuts undercut faces
 /// Returns summary metric of undercut faces
+[[deprecated( "Use find( mesh, params, metric )" )]]
 [[nodiscard]] MRVOXELS_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric );
 
-// Fast score undercuts projected area via distance map with given resolution
-// lower resolution means lower precision, but faster work
+/// Adds undercuts to \param outUndercuts
+/// if metric is set returns metric of found undercuts, otherwise returns DBL_MAX
+MRVOXELS_API double find( const Mesh& mesh, const FindParams& params, FaceBitSet& outUndercuts, const UndercutMetric& metric = {} );
+/// Adds undercuts to \param outUndercuts
+MRVOXELS_API void find( const Mesh& mesh, const FindParams& params, VertBitSet& outUndercuts );
+
+/// Fast score undercuts projected area via distance map with given resolution
+/// lower resolution means lower precision, but faster work
+/// \note does not support wallAngle yet
 [[nodiscard]] MRVOXELS_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );
 
 struct ImproveDirectionParameters
@@ -107,15 +124,17 @@ struct DistMapImproveDirectionParameters : ImproveDirectionParameters
 };
 
 // Parallel finds best of several directions defined by ImproveDirectionParameters struct
-//                      ________ 
-//        Top view:    /  \__/  \-----> maximum radial line   Side view:  |    /    _/
-//                    /  / \/ \  \                                        |   /   _/ - maxBaseAngle
-//                   |--|------|--|                                       |  /  _/     difference between two angles is baseAngleStep
-//                    \  \_/\_/  /                                        | / _/
-//                     \__/__\__/                                         |/_/
-// This picture shows polarAngle = 60 deg
+/// \note does not support wallAngle yet
+///                      ________ 
+///        Top view:    /  \__/  \-----> maximum radial line   Side view:  |    /    _/
+///                    /  / \/ \  \                                        |   /   _/ - maxBaseAngle
+///                   |--|------|--|                                       |  /  _/     difference between two angles is baseAngleStep
+///                    \  \_/\_/  /                                        | / _/
+///                     \__/__\__/                                         |/_/
+/// This picture shows polarAngle = 60 deg
 [[nodiscard]] MRVOXELS_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionParameters& params, const UndercutMetric& metric );
-// Score candidates with distance maps, lower resolution -> faster score
+/// Score candidates with distance maps, lower resolution -> faster score
+/// \note does not support wallAngle yet
 [[nodiscard]] MRVOXELS_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
 }
 }

@@ -153,7 +153,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
     m.def( "fixUndercuts", [] ( Mesh& mesh, const FaceBitSet& region, const Vector3f& upDir, float voxelSize, float be )
     {
-        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be,.region = &region } );
+        FixUndercuts::fix( mesh, { .findParameters = {.upDirection = upDir},.voxelSize = voxelSize,.bottomExtension = be,.region = &region } );
     },
         pybind11::arg( "mesh" ), pybind11::arg( "selectedArea" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
         "Changes mesh:\n"
@@ -168,7 +168,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 
     m.def( "fixUndercuts", [] ( Mesh& mesh, const Vector3f& upDir, float voxelSize, float be )
     {
-        FixUndercuts::fix( mesh, { .upDirection = upDir,.voxelSize = voxelSize,.bottomExtension = be } );
+        FixUndercuts::fix( mesh, { .findParameters = {.upDirection = upDir},.voxelSize = voxelSize,.bottomExtension = be } );
     },
     pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "voxelSize" ) = 0.0f, pybind11::arg( "bottomExtension" ) = 0.0f,
         "Changes mesh:\n"
@@ -181,10 +181,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 
-    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, FaceBitSet& ) )& MR::FixUndercuts::findUndercuts,
+    m.def( "findUndercuts", [] ( const Mesh& mesh, const Vector3f& upDir, FaceBitSet& out )
+    {
+        FixUndercuts::find( mesh, { .upDirection = upDir }, out );
+    },
         pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
         "Adds to outUndercuts undercut faces" );
-    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, VertBitSet& ) )& MR::FixUndercuts::findUndercuts,
+    m.def( "findUndercuts", [] ( const Mesh& mesh, const Vector3f& upDir, VertBitSet& out )
+    {
+        FixUndercuts::find( mesh, { .upDirection = upDir }, out );
+    },
         pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
         "Adds to outUndercuts undercut vertices" );
 } )

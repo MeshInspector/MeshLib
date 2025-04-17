@@ -95,7 +95,7 @@ Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& para
     if ( !reportProgress( params.cb, 0.15f ) )
         return unexpectedOperationCanceled();
     
-    FixUndercuts::fix( meshCopy, { .upDirection = Vector3f::plusZ(),.voxelSize = params.voxelSize } );
+    FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } );
     
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();

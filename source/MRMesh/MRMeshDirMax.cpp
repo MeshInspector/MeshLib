@@ -7,7 +7,7 @@
 namespace MR
 {
 
-static VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
+VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
 {
     MR_TIMER;
     VertId res;
@@ -45,6 +45,24 @@ static VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
     return res;
 }
 
+/// this class is intended to quickly compute maximum projection value of a box on given direction
+class FurthestBoxProj
+{
+public:
+    FurthestBoxProj( const Vector3f& dir ) :
+        minFactor_{ dir.x <= 0 ? dir.x : 0.0f, dir.y <= 0 ? dir.y : 0.0f, dir.z <= 0 ? dir.z : 0.0f },
+        maxFactor_{ dir.x >= 0 ? dir.x : 0.0f, dir.y >= 0 ? dir.y : 0.0f, dir.z >= 0 ? dir.z : 0.0f }
+    {}
+
+    float operator()( const Box3f & box ) const
+    {
+        return dot( minFactor_, box.min ) + dot( maxFactor_, box.max );
+    };
+
+private:
+    Vector3f minFactor_, maxFactor_;
+};
+
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
@@ -64,12 +82,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
-    const Vector3f minFactor{ dir.x <= 0 ? dir.x : 0.0f, dir.y <= 0 ? dir.y : 0.0f, dir.z <= 0 ? dir.z : 0.0f };
-    const Vector3f maxFactor{ dir.x >= 0 ? dir.x : 0.0f, dir.y >= 0 ? dir.y : 0.0f, dir.z >= 0 ? dir.z : 0.0f };
-    auto getFurthestBoxProj = [&]( const Box3f & box )
-    {
-        return dot( minFactor, box.min ) + dot( maxFactor, box.max );
-    };
+    FurthestBoxProj getFurthestBoxProj( dir );
 
     constexpr int MaxStackSize = 32; // to avoid allocations
     SubTask subtasks[MaxStackSize];

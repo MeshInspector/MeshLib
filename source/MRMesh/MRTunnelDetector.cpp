@@ -50,7 +50,7 @@ BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metr
 
 Expected<void> BasisTunnelsDetector::prepare( ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // count inner edges
     size_t numInnerEdges = 0;
@@ -97,7 +97,7 @@ Expected<void> BasisTunnelsDetector::prepare( ProgressCallback cb )
 
 Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
@@ -115,7 +115,7 @@ Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback c
         {
             // region can only shrink, so some more edges become not-inner
             innerEdges_[i] = {}; // invalidate such edges
-            continue; 
+            continue;
         }
 
         const auto o = mp_.mesh.topology.org( ec.edge );
@@ -211,7 +211,7 @@ Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback c
 
 Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !metric )
         metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
 
@@ -223,7 +223,7 @@ Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMet
 
 Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     auto metric = settings.metric;
     if ( !metric )
         metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );

@@ -34,6 +34,38 @@
 namespace MR
 {
 
+void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
+                                             VertScalars& distances, VertBitSet& verts )
+{
+    MR_TIMER;
+
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range ) && ( dot( mesh.normal( v ), dir ) >= 0.f );
+        distances[v] = dist;
+        verts.set( v, valid );
+        return valid;
+    } );
+}
+
+void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, float range, VertScalars& distances, VertBitSet& verts )
+{
+    // note! better update bitset for interesting verts than check for all verts from distances
+    MR_TIMER;
+
+    EnumNeihbourVertices e;
+    e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
+    {
+        const float dist = ( start.point - mesh.points[v] ).length();
+        const bool valid = ( dist <= range );
+        distances[v] = dist;
+        verts.set( v, valid );
+        return valid;
+    } );
+}
+
 /// Undo action for ObjectMesh points only (not topology) change;
 /// It can store all points (uncompressed format), or only modified points (compressed format)
 class SurfaceManipulationWidget::SmartChangeMeshPointsAction : public HistoryAction
@@ -125,7 +157,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     }
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-    
+
     if ( !originalMesh_ )
     {
         originalMesh_ = std::make_shared<Mesh>( *obj_->mesh() );
@@ -268,7 +300,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
 {
     if ( button != MouseButton::Left || modifiers != 0 )
         return false;
-    
+
     ObjAndPick objAndPick;
     if ( ignoreOcclusion_ )
         objAndPick = getViewerInstance().viewport().pickRenderObject( { { static_cast< VisualObject* >( obj_.get() ) } } );
@@ -322,6 +354,14 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
         historyAction_->compress();
         historyAction_.reset();
     }
+}
+
+void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region )
+{
+    if ( editOnlyCodirectedSurface_ )
+        findSpaceDistancesAndCodirectedVerts( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region );
+    else
+        findSpaceDistancesAndVerts( mesh, pOnFace, settings_.radius, distances, region );
 }
 
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
@@ -627,14 +667,15 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     MR_TIMER;
 
     const auto& viewerRef = getViewerInstance();
+    const ViewportId viewportId = viewerRef.viewport().id;
     std::vector<Vector2f> viewportPoints;
     if ( !mousePressed_ || ( mousePos - mousePos_ ).lengthSq() < 16.f )
-        viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
+        viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewportId ) ) );
     else
     {
         // if the mouse shift is large, then the brush area is defined as the common area of many small shifts (creating many intermediate points of movement)
-        const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) );
-        const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewerRef.getHoveredViewportId() ) );
+        const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewportId ) );
+        const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewportId ) );
         const Vector2f vec = newMousePos - oldMousePos;
         const int count = int( std::ceil( vec.length() ) ) + 1;
         const Vector2f step = vec / ( count - 1.f );
@@ -650,14 +691,15 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         movedPosPick = getViewerInstance().viewport().multiPickObjects( { { static_cast< VisualObject* >( objMeshPtr.get() ) } }, viewportPoints );
     else
     {
-        auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();
-        std::vector<VisualObject*> visualObjectsP( visualObjectsS.size() );
+        const auto visualObjectsS = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>();
+        std::vector<VisualObject*> visualObjectsP;
+        visualObjectsP.reserve( visualObjectsS.size() );
         for ( int i = 0; i < visualObjectsS.size(); ++i )
         {
             if ( lastStableObjMesh_ && visualObjectsS[i] == obj_ )
-                visualObjectsP[i] = lastStableObjMesh_.get();
-            else
-                visualObjectsP[i] = visualObjectsS[i].get();
+                visualObjectsP.push_back( lastStableObjMesh_.get() );
+            else if ( visualObjectsS[i]->isVisible( viewportId ) )
+                visualObjectsP.push_back( visualObjectsS[i].get() );
         }
         movedPosPick = getViewerInstance().viewport().multiPickObjects( visualObjectsP, viewportPoints );
     }
@@ -690,9 +732,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         if ( triPoints.size() == 1 )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
-            PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
-            editingDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-            singleEditingRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+            const PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
+            updateDistancesAndRegion_( mesh, pOnFace, editingDistanceMap_, singleEditingRegion_ );
         }
         else
         {
@@ -772,8 +813,8 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
             }
             pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
         }
-        visualizationDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
-        visualizationRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
+
+        updateDistancesAndRegion_( mesh, pOnFace, visualizationDistanceMap_, visualizationRegion_ );
         expand( mesh.topology, visualizationRegion_ );
         {
             int pointsCount = 0;
@@ -872,7 +913,7 @@ void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitS
             res = originalMesh_->signedDistance( meshVerts[VertId( v )], projRes );
         else
             res = std::sqrt( res );
-        
+
         valueChanges_[v] = res;
         if ( !projRes.mtp )
             unknownSign_.set( v, true );

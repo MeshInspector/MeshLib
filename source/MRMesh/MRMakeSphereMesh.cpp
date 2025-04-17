@@ -10,11 +10,11 @@ namespace MR
 
 Mesh makeSphere( const SphereParams & params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto mesh = makeCube();
 
     auto projectOnSphere = [&]( VertId vid )
-    { 
+    {
         mesh.points[vid] = params.radius * mesh.points[vid].normalized();
     };
     for ( auto vid : mesh.topology.getValidVerts() )
@@ -32,7 +32,7 @@ Mesh makeSphere( const SphereParams & params )
     return mesh;
 }
 
-Mesh makeUVSphere(float radius, int horisontalResolution, int verticalResolution) 
+Mesh makeUVSphere(float radius, int horisontalResolution, int verticalResolution)
 {
     MR_TIMER;
 
@@ -42,7 +42,7 @@ Mesh makeUVSphere(float radius, int horisontalResolution, int verticalResolution
     int vertexCount = horisontalResolution * verticalResolution + 2;
 
     std::vector<Vector3f> points(vertexCount);
-        
+
     k = 0;
     for (j = 0; j < verticalResolution; ++j) {
         a = PI_F * ((float)(j + 1) / (verticalResolution + 1) - 0.5f);

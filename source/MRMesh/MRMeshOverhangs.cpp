@@ -18,7 +18,7 @@ namespace MR
 
 float regionWidth( const MeshPart& mp, const Vector3f& axis, const std::vector<EdgeLoop>& allBoundaries, const std::vector<int>& thisBdIndices )
 {
-    MR_TIMER
+    MR_TIMER;
     auto metric = [&] ( EdgeId e0 )->float
     {
         bool incident = false;
@@ -69,7 +69,7 @@ float regionWidth( const MeshPart& mp, const Vector3f& axis, const std::vector<E
 
 Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOverhangsSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( std::abs( settings.axis.lengthSq() - 1.f ) < 1e-6f );
     assert( settings.layerHeight > 0.f );
@@ -146,7 +146,7 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
         if ( width < settings.maxOverhangDistance )
             region.clear();
     }, subprogress( settings.progressCb, 0.4f, 0.95f ) );
-    
+
     if ( !keepGoing )
         return unexpectedOperationCanceled();
 

@@ -18,7 +18,7 @@ using namespace MR;
 /// 2. the total number of roots
 static std::pair<UndirectedEdge2RegionMap, int> getUniqueRootIds( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdge2RegionMap uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto ue : region )

@@ -118,7 +118,7 @@ Vector3f triCenter( const MeshTopology & topology, const VertCoords & points, Fa
 
 UndirectedEdgeScalars edgeLengths( const MeshTopology & topology, const VertCoords & points )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeScalars res( topology.undirectedEdgeSize() );
     ParallelFor( res, [&]( UndirectedEdgeId ue )
     {
@@ -143,7 +143,7 @@ Vector3f leftDirDblArea( const MeshTopology & topology, const VertCoords & point
 
 Vector<Vector3f, VertId> dirDblAreas( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto & vs = topology.getVertIds( region );
     Vector<Vector3f, VertId> res( vs.find_last() + 1 );
     BitSetParallelFor( vs, [&]( VertId v )
@@ -182,7 +182,7 @@ float circumcircleDiameter( const MeshTopology & topology, const VertCoords & po
 
 double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
     [&] ( const auto & range, double curr )
@@ -197,7 +197,7 @@ double area( const MeshTopology & topology, const VertCoords & points, const Fac
 
 double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet & fs )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
     [&] ( const auto & range, double curr )
@@ -212,7 +212,7 @@ double projArea( const MeshTopology & topology, const VertCoords & points, const
 
 Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Vector3d{},
     [&] ( const auto & range, Vector3d curr )
@@ -314,7 +314,7 @@ private:
 class CreaseEdgesCalc
 {
 public:
-    CreaseEdgesCalc( const MeshTopology & topology, const VertCoords & points, float critCos ) : topology_( topology ), points_( points ), critCos_( critCos ) 
+    CreaseEdgesCalc( const MeshTopology & topology, const VertCoords & points, float critCos ) : topology_( topology ), points_( points ), critCos_( critCos )
         { edges_.resize( topology_.undirectedEdgeSize() ); }
     CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), critCos_( x.critCos_ )
         { edges_.resize( topology_.undirectedEdgeSize() ); }
@@ -323,9 +323,9 @@ public:
 
     UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
 
-    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
+    void operator()( const tbb::blocked_range<UndirectedEdgeId> & r )
     {
-        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
+        for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue )
         {
             if ( topology_.isLoneEdge( ue ) )
                 continue;
@@ -351,9 +351,9 @@ public:
 
     const Box3f & box() const { return box_; }
 
-    void operator()( const tbb::blocked_range<FaceId> & r ) 
+    void operator()( const tbb::blocked_range<FaceId> & r )
     {
-        for ( FaceId f = r.begin(); f < r.end(); ++f ) 
+        for ( FaceId f = r.begin(); f < r.end(); ++f )
         {
             if ( region_.test( f ) && topology_.hasFace( f ) )
             {
@@ -377,7 +377,7 @@ private:
 
 double volume( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
     FaceVolumeCalc fcalc( topology, points, faces );
@@ -395,7 +395,7 @@ Box3f computeBoundingBox( const MeshTopology & topology, const VertCoords & poin
     if ( !region )
         return computeBoundingBox( points, topology.getValidVerts(), toWorld );
 
-    MR_TIMER
+    MR_TIMER;
     const auto lastValidFace = topology.lastValidFace();
 
     FaceBoundingBoxCalc calc( topology, points, *region, toWorld );
@@ -542,7 +542,7 @@ float sumAngles( const MeshTopology & topology, const VertCoords & points, VertI
 
 Expected<VertBitSet> findSpikeVertices( const MeshTopology & topology, const VertCoords & points, float minSumAngle, const VertBitSet * region, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     const VertBitSet & testVerts = topology.getVertIds( region );
     VertBitSet res( testVerts.size() );
     auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
@@ -614,7 +614,7 @@ float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & p
 
 UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
     CreaseEdgesCalc calc( topology, points, critCos );
@@ -663,7 +663,7 @@ QuadraticForm3f quadraticForm( const MeshTopology & topology, const VertCoords &
 
 float averageEdgeLength( const MeshTopology & topology, const VertCoords & points )
 {
-    MR_TIMER
+    MR_TIMER;
     struct S
     {
         double sum = 0;
@@ -694,7 +694,7 @@ float averageEdgeLength( const MeshTopology & topology, const VertCoords & point
 
 Vector3f findCenterFromPoints( const MeshTopology & topology, const VertCoords & points )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( topology.numValidVerts() <= 0 )
     {
         assert( false );
@@ -714,7 +714,7 @@ Vector3f findCenterFromPoints( const MeshTopology & topology, const VertCoords &
 
 Vector3f findCenterFromFaces( const MeshTopology & topology, const VertCoords & points )
 {
-    MR_TIMER
+    MR_TIMER;
     struct Acc
     {
         Vector3d areaPos;

@@ -27,7 +27,7 @@ Expected<void> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, 
 
 Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     mesh.topology.write( out );
 
     // write points
@@ -58,7 +58,7 @@ Expected<void> toOff( const Mesh & mesh, const std::filesystem::path & file, con
 
 Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
     const int numPoints = vertRenumber.sizeVerts();
@@ -138,7 +138,7 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 
 Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
 {
-    MR_TIMER
+    MR_TIMER;
     out << "# MeshInspector.com\n";
     if ( settings.uvMap )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
@@ -235,7 +235,7 @@ Expected<void> toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& s
 
 static FaceBitSet getNotDegenTris( const Mesh &mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet notDegenTris = mesh.topology.getValidFaces();
     BitSetParallelFor( notDegenTris, [&]( FaceId f )
     {
@@ -263,7 +263,7 @@ Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & fil
 
 Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     char header[80] = "MeshInspector.com";
     out.write( header, 80 );
@@ -370,7 +370,7 @@ Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, con
 
 Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
     const int numPoints = vertRenumber.sizeVerts();

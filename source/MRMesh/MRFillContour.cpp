@@ -96,7 +96,7 @@ const FaceBitSet& ContourLeftFiller::fill()
 
 FaceBitSet fillContourLeft(const MeshTopology& topology, const EdgePath& contour)
 {
-    MR_TIMER
+    MR_TIMER;
     ContourLeftFiller filler( topology );
     filler.addContour( contour );
     return filler.fill();
@@ -104,7 +104,7 @@ FaceBitSet fillContourLeft(const MeshTopology& topology, const EdgePath& contour
 
 FaceBitSet fillContourLeft( const MeshTopology & topology, const std::vector<EdgePath> & contours )
 {
-    MR_TIMER
+    MR_TIMER;
     ContourLeftFiller filler( topology );
     for ( auto & contour : contours )
         filler.addContour( contour );

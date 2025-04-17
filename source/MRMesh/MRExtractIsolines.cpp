@@ -161,7 +161,7 @@ void Tracker<N>::track( const MeshTriPoint& start, const ContinueTrack& continue
     }
     if ( !first )
         return;
-    
+
     restart( first );
     do
     {
@@ -227,7 +227,7 @@ void Isoliner::findNegativeVerts_( const VertBitSet& vertRegion )
 
 IsoLines Isoliner::extract()
 {
-    MR_TIMER
+    MR_TIMER;
     activeEdges_.clear();
     activeEdges_.resize( topology_.undirectedEdgeSize() );
     BitSetParallelForAll( activeEdges_, [&]( UndirectedEdgeId ue )
@@ -371,7 +371,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first )
 IsoLines extractIsolines( const MeshTopology& topology,
     const VertMetric & vertValues, const FaceBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
     Isoliner s( topology, vertValues, region );
     return s.extract();
 }
@@ -379,7 +379,7 @@ IsoLines extractIsolines( const MeshTopology& topology,
 bool hasAnyIsoline( const MeshTopology& topology,
     const VertMetric & vertValues, const FaceBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
     Isoliner s( topology, vertValues, region );
     return s.hasAnyLine();
 }
@@ -398,7 +398,7 @@ bool hasAnyIsoline( const MeshTopology & topology,
 
 PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane, UseAABBTree u )
 {
-    MR_TIMER
+    MR_TIMER;
     auto valueInPoint = [&points = mp.mesh.points, &plane] ( VertId v )
     {
         return plane.distance( points[v] );
@@ -421,7 +421,7 @@ PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane, Us
 
 bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane, UseAABBTree u )
 {
-    MR_TIMER
+    MR_TIMER;
     auto valueInPoint = [&points = mp.mesh.points, &plane] ( VertId v )
     {
         return plane.distance( points[v] );
@@ -444,7 +444,7 @@ bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane, UseAABBTree u
 
 PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel, UseAABBTree u )
 {
-    MR_TIMER
+    MR_TIMER;
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;
@@ -467,7 +467,7 @@ PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel, UseAABB
 
 bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel, UseAABBTree u )
 {
-    MR_TIMER
+    MR_TIMER;
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;
@@ -491,7 +491,7 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel, UseAABBTree u )
 std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, float zLevel,
     std::vector<FaceId> * faces, UseAABBTree u )
 {
-    MR_TIMER
+    MR_TIMER;
     auto valueInPoint = [&points = mp.mesh.points, zLevel] ( VertId v )
     {
         return points[v].z - zLevel;

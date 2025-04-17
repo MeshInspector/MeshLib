@@ -37,7 +37,7 @@ namespace
 /// finds if given mesh has enough sharp edges (>25 degrees) to recommend flat shading
 bool detectFlatShading( const Mesh& mesh )
 {
-    MR_TIMER
+    MR_TIMER;
 
     constexpr float sharpAngle = 25 * PI_F / 180; // Critical angle from planar, degrees
     const float sharpAngleCos = std::cos( sharpAngle );
@@ -46,7 +46,7 @@ bool detectFlatShading( const Mesh& mesh )
     {
         double sumDblArea = 0;
         double sumSharpDblArea = 0;
-        Data operator + ( const Data & b ) const 
+        Data operator + ( const Data & b ) const
         {
             return { sumDblArea + b.sumDblArea, sumSharpDblArea + b.sumSharpDblArea };
         }
@@ -139,7 +139,7 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
 
 Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb, bool returnOnlyMesh )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertColors colors;
     VertUVCoords uvCoords;
@@ -163,7 +163,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
-    
+
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {
         if ( returnOnlyMesh )
@@ -314,7 +314,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    
+
     if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );

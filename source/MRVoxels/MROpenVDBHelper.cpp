@@ -7,7 +7,7 @@ namespace MR
 
 void translateToZero( openvdb::FloatGrid & grid )
 {
-    MR_TIMER
+    MR_TIMER;
     using GridT = openvdb::FloatGrid;
     using TreeT = typename GridT::TreeType;
     typename TreeT::Ptr outTreePtr = std::make_shared<TreeT>();

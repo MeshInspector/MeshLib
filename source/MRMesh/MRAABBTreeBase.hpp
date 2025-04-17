@@ -10,7 +10,7 @@ namespace MR
 template <typename T>
 auto AABBTreeBase<T>::getSubtrees( int minNum ) const -> std::vector<NodeId>
 {
-    MR_TIMER
+    MR_TIMER;
     assert( minNum > 0 );
     std::vector<NodeId> res;
     if ( nodes_.empty() )
@@ -40,7 +40,7 @@ auto AABBTreeBase<T>::getSubtrees( int minNum ) const -> std::vector<NodeId>
 template <typename T>
 auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
 {
-    MR_TIMER
+    MR_TIMER;
     LeafBitSet res;
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -71,7 +71,7 @@ auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
 template <typename T>
 NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) const
 {
-    MR_TIMER
+    MR_TIMER;
     NodeBitSet res( nodes_.size() );
 
     // mark leaves
@@ -96,7 +96,7 @@ NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) cons
 template <typename T>
 void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
 {
-    MR_TIMER
+    MR_TIMER;
     LeafId l( 0 );
     for ( auto & n : nodes_ )
     {
@@ -110,7 +110,7 @@ void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
 template <typename T>
 void AABBTreeBase<T>::getLeafOrderAndReset( LeafBMap & leafMap )
 {
-    MR_TIMER
+    MR_TIMER;
     LeafId l( 0 );
     for ( auto & n : nodes_ )
     {

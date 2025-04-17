@@ -28,7 +28,7 @@ public:
     MeshDecimator( Mesh & mesh, const DecimateSettings & settings );
     DecimateResult run();
 
-private: 
+private:
     Mesh & mesh_;
     const DecimateSettings & settings_;
     const DeloneSettings deloneSettings_;
@@ -299,7 +299,7 @@ bool MeshDecimator::initialize_()
 
 auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto sz = mesh_.topology.undirectedEdgeSize();
     validInQueue_.clear();
@@ -342,7 +342,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
 
 void MeshDecimator::initializeQueue_()
 {
-    MR_TIMER
+    MR_TIMER;
 
     // free space occupied by existing queue
     queue_ = {};
@@ -356,7 +356,7 @@ void MeshDecimator::initializeQueue_()
 
 void MeshDecimator::updateQueue_()
 {
-    MR_TIMER
+    MR_TIMER;
 
     Timer t( "compute" );
     auto & vec = queue_.c;
@@ -764,7 +764,7 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
 static void packMesh( Mesh & mesh, const DecimateSettings & settings,
     FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceMap fmap;
     FaceMap *pFmap = settings.region ? &fmap : outFmap;
     VertMap vmap;
@@ -829,7 +829,7 @@ static void packMesh( Mesh & mesh, const DecimateSettings & settings,
 
 DecimateResult MeshDecimator::run()
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( settings_.bdVerts )
         pBdVerts_ = settings_.bdVerts;
@@ -865,7 +865,7 @@ DecimateResult MeshDecimator::run()
             break;
         }
 
-        if ( settings_.progressCallback && res_.facesDeleted >= 1000 + lastProgressFacesDeleted ) 
+        if ( settings_.progressCallback && res_.facesDeleted >= 1000 + lastProgressFacesDeleted )
         {
             if ( !settings_.progressCallback( 0.25f + 0.75f * res_.facesDeleted / maxFacesDeleted ) )
                 return res_;
@@ -941,7 +941,7 @@ DecimateResult MeshDecimator::run()
 
 static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( settings.maxDeletedFaces <= 0 || settings.maxDeletedVertices <= 0 )
     {
         DecimateResult res;
@@ -969,7 +969,7 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
 
 static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( settings.subdivideParts > 1 );
     const auto sz = settings.subdivideParts;
     const auto numIniVerts = mesh.topology.numValidVerts();
@@ -1240,7 +1240,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
 
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( settings.progressCallback && !settings.progressCallback( 0.0f ) )
         return false;
     if ( settings.targetEdgeLen <= 0 )

@@ -56,7 +56,7 @@ Vector3f vertexPosEqualNeiAreas( const MeshTopology& topology, const VertCoords&
         pi = pn;
         en = topology.next( ei );
         pn = Vector3d( destPnt( topology, points, en ) );
-    } 
+    }
 
     if ( noShrinkage )
     {
@@ -102,7 +102,7 @@ bool equalizeTriAreas( const MeshTopology& topology, VertCoords& points, const M
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertLimiter limiter( points, params );
 
     VertCoords newPoints;
@@ -142,7 +142,7 @@ bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const Me
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertLimiter limiter( points, params );
 
     VertCoords newPoints;
@@ -203,7 +203,7 @@ bool relaxApprox( const MeshTopology& topology, VertCoords& points, const MeshAp
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER
+    MR_TIMER;
     VertLimiter limiter( points, params );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
@@ -306,7 +306,7 @@ void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const Vert
 
 void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( numIters > 0 );
     if ( !regionFaces.any() || numIters <= 0 )
         return;

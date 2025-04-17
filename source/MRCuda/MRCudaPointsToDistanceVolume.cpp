@@ -21,14 +21,14 @@ namespace Cuda
 
 Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& tree = cloud.getAABBTree();
     const auto& nodes = tree.nodes();
 
     DynamicArray<Node3> cudaNodes;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
-        
+
     DynamicArray<OrderedPoint> cudaPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
 
@@ -80,14 +80,14 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
     std::function<Expected<void> ( const SimpleVolumeMinMax&, int )> addPart, int layerOverlap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& tree = cloud.getAABBTree();
     const auto& nodes = tree.nodes();
 
     DynamicArray<Node3> cudaNodes;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
-        
+
     DynamicArray<OrderedPoint> cudaPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
 

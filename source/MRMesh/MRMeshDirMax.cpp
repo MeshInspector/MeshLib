@@ -9,7 +9,7 @@ namespace MR
 
 static VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
 {
-    MR_TIMER
+    MR_TIMER;
     VertId res;
     float furthestProj = -FLT_MAX;
     if ( mp.region )
@@ -117,7 +117,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
             }
             continue;
         }
-        
+
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         // add task with larger projection on line last to descend there first

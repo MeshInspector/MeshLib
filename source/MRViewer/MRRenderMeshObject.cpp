@@ -766,7 +766,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         dirtyPointPos_ = true;
     }
 
-    objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+    objMesh_->resetDirtyExceptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 
 #ifndef __EMSCRIPTEN__
     if ( !cornerMode && bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
@@ -846,7 +846,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 
     if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
     {
-        MR_NAMED_TIMER( "dirty_corners_normals" )
+        MR_NAMED_TIMER( "dirty_corners_normals" );
 
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
@@ -1079,7 +1079,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, !facesNormalsTex_.valid() );
 
-    MR_NAMED_TIMER( "dirty_faces_normals" )
+    MR_NAMED_TIMER( "dirty_faces_normals" );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;

@@ -6,7 +6,7 @@ namespace MR
 
 void Graph::construct( NeighboursPerVertex neighboursPerVertex, EndsPerEdge endsPerEdge )
 {
-    MR_TIMER
+    MR_TIMER;
 
     validVerts_.clear();
     validVerts_.resize( neighboursPerVertex.size(), true );
@@ -101,7 +101,7 @@ void Graph::merge( VertId remnant, VertId dead, std::function<void(EdgeId, EdgeI
 
 bool Graph::checkValidity() const
 {
-    MR_TIMER
+    MR_TIMER;
 
     #define CHECK(x) { assert(x); if (!(x)) return false; }
 

@@ -158,7 +158,7 @@ TEST( MRMesh, DistanceMapWatertight )
     MeshToDistanceMapParams params( xf, Vector2f{ pixelSize,pixelSize }, Vector2i{ 10,10 } );
 
     auto dm1 = computeDistanceMapD( sphere, params );
-    
+
     auto res = distanceMapToMesh( dm1, params );
     EXPECT_TRUE( res.has_value() );
     Mesh meshFromDm1;
@@ -208,7 +208,7 @@ TEST( MRMesh, DistanceMapWatertight )
 
 TEST( MRMesh, DistanceMapCompare )
 {
-    MR_TIMER
+    MR_TIMER;
 
     float pixSize = 0.1f;
     Mesh mesh = makeUVSphere( 1, 100, 100 );
@@ -293,7 +293,7 @@ TEST( MRMesh, DistanceMapOffsetMap )
     for ( auto& off : perEdgeOffset )
         off = 20.0f * ( offsetCounter++ );
 
-    
+
     ContoursDistanceMapOffset offsetParams{ perEdgeOffset, ContoursDistanceMapOffset::OffsetType::Shell };
     ContoursDistanceMapOptions options;
     options.offsetParameters = &offsetParams;

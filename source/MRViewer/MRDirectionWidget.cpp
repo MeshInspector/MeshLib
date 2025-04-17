@@ -5,20 +5,16 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRMatrix3Decompose.h"
 
 namespace MR
 {
 
-void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float length, OnDirectionChangedCallback onDirectionChanged, Object* parent )
+void DirectionWidget::create( Object* parent )
 {
     reset();
-    base_ = base;
-    length_ = length;
-    onDirectionChanged_ = onDirectionChanged;
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, length_ * Vector3f::plusZ(), length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, Vector3f::plusZ(), 0.02f, 0.04f, 0.08f));
     directionObj_ = std::make_shared<ObjectMesh>();
     directionObj_->setMesh( mesh );
     directionObj_->setAncillary( true );
@@ -28,8 +24,13 @@ void DirectionWidget::create( const Vector3f& dir, const Vector3f& base, float l
     if ( !parent )
         parent = &SceneRoot::get();
     parent->addChild( directionObj_ );
+}
 
-    updateDirection( dir );
+void DirectionWidget::create( const Vector3f& worldDir, const Vector3f& worldBase, float worldLength, OnDirectionChangedCallback onDirectionChanged, Object* parent )
+{
+    onDirectionChanged_ = onDirectionChanged;
+    create( parent );
+    updateArrow( { .dir = worldDir, .base = worldBase, .length = worldLength } );
 }
 
 void DirectionWidget::reset()
@@ -38,13 +39,52 @@ void DirectionWidget::reset()
     disconnect();
 }
 
-
 void DirectionWidget::setOnDirectionChangedCallback( OnDirectionChangedCallback cb )
 {
     onDirectionChanged_ = cb;
 }
 
+void DirectionWidget::updateLocalArrow( const Arrow& arrow )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    directionObj_->setXf( AffineXf3f( arrow.length * Matrix3f::rotation( Vector3f::plusZ(), arrow.dir ), arrow.base ) );
+}
+
+void DirectionWidget::updateArrow( const Arrow& arrow )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    directionObj_->setWorldXf( AffineXf3f( arrow.length * Matrix3f::rotation( Vector3f::plusZ(), arrow.dir ), arrow.base ) );
+}
+
+void DirectionWidget::updateLocalDirection( const Vector3f& dir )
+{
+    auto arrow = getLocalArrow();
+    arrow.dir = dir;
+    updateLocalArrow( arrow );
+}
+
 void DirectionWidget::updateDirection( const Vector3f& dir )
+{
+    auto arrow = getArrow();
+    arrow.dir = dir;
+    updateArrow( arrow );
+}
+
+void DirectionWidget::updateLocalBase( const Vector3f& base )
+{
+    if ( !directionObj_ )
+        return assert( false );
+
+    auto xf = directionObj_->xf();
+    xf.b = base;
+    directionObj_->setXf( xf );
+}
+
+void DirectionWidget::updateBase( const Vector3f& base )
 {
     if ( !directionObj_ )
         return assert( false );
@@ -52,38 +92,21 @@ void DirectionWidget::updateDirection( const Vector3f& dir )
     if ( !parent )
         return assert( false );
 
-    dir_ = dir.normalized();
-    Matrix3f rot, scale;
-    builtXf_ = parent->worldXf();
-    decomposeMatrix3( builtXf_.A, rot, scale );
-    directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
+    updateLocalBase( parent->worldXf().inverse()( base ) );
 }
 
-void DirectionWidget::updateBase( const Vector3f& base )
+void DirectionWidget::updateLocalLength( float length )
 {
-    if ( !directionObj_ )
-        return;
-
-    base_ = base;
-    auto xf = directionObj_->xf();
-    xf.b = base_;
-    directionObj_->setXf( xf );
+    auto arrow = getLocalArrow();
+    arrow.length = length;
+    updateLocalArrow( arrow );
 }
 
 void DirectionWidget::updateLength( float length )
 {
-    if ( !directionObj_ )
-        return;
-
-    length_ = length;
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, Vector3f::plusZ() * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
-    directionObj_->setMesh( mesh );
-}
-
-void DirectionWidget::updateArrow( const Vector3f& base, float length )
-{
-    updateBase( base );
-    updateLength( length );
+    auto arrow = getArrow();
+    arrow.length = length;
+    updateArrow( arrow );
 }
 
 void DirectionWidget::setVisible( bool visible )
@@ -140,7 +163,7 @@ bool DirectionWidget::onMouseMove_( int x, int y )
     auto viewer = Viewer::instance();
     const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    const auto newDir = worldEndPoint - parent->worldXf()( base_ );
+    const auto newDir = worldEndPoint - getBase();
     updateDirection( newDir );
     if ( onDirectionChanged_ )
         onDirectionChanged_( newDir, needToSaveHistory_ );
@@ -174,29 +197,83 @@ const Color& DirectionWidget::getColor() const
     return color_;
 }
 
-const Vector3f& DirectionWidget::getBase() const
+Vector3f DirectionWidget::getLocalBase() const
 {
-    return base_;
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return directionObj_->xf().b;
 }
 
+Vector3f DirectionWidget::getBase() const
+{
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return directionObj_->worldXf().b;
+}
+
+Vector3f DirectionWidget::getLocalDirection() const
+{
+    if ( !directionObj_ )
+        return assert( false ), Vector3f{};
+
+    return ( directionObj_->xf().A * Vector3f::plusZ() ).normalized();
+}
 
 Vector3f DirectionWidget::getDirection() const
 {
     if ( !directionObj_ )
         return assert( false ), Vector3f{};
-    auto parent = directionObj_->parent();
-    if ( !parent )
-        return assert( false ), Vector3f{};
 
-    auto wXf = parent->worldXf();
-    if ( wXf != builtXf_ )
-    {
-        auto prevLocalDir = directionObj_->xf().A * Vector3f::plusZ();
-        return wXf.A * prevLocalDir;
-    }
-    return dir_;
+    return ( directionObj_->worldXf().A * Vector3f::plusZ() ).normalized();
 }
 
+float DirectionWidget::getLocalLength() const
+{
+    if ( !directionObj_ )
+        return assert( false ), 0.0f;
+
+    return ( directionObj_->xf().A * Vector3f::plusZ() ).length();
+}
+
+float DirectionWidget::getLength() const
+{
+    if ( !directionObj_ )
+        return assert( false ), 0.0f;
+
+    return ( directionObj_->worldXf().A * Vector3f::plusZ() ).length();
+}
+
+auto DirectionWidget::getLocalArrow() const -> Arrow
+{
+    Arrow res;
+    if ( !directionObj_ )
+        return assert( false ), res;
+
+    const auto xf = directionObj_->xf();
+    const auto arrowVec = xf.A * Vector3f::plusZ();
+    res.length = arrowVec.length();
+    if ( res.length )
+        res.dir = arrowVec / res.length;
+    res.base = xf.b;
+    return res;
+}
+
+auto DirectionWidget::getArrow() const -> Arrow
+{
+    Arrow res;
+    if ( !directionObj_ )
+        return assert( false ), res;
+
+    const auto xf = directionObj_->worldXf();
+    const auto arrowVec = xf.A * Vector3f::plusZ();
+    res.length = arrowVec.length();
+    if ( res.length )
+        res.dir = arrowVec / res.length;
+    res.base = xf.b;
+    return res;
+}
 
 Object* DirectionWidget::getParentPtr() const
 {

@@ -35,7 +35,7 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
         mesh_ = nullptr;
         return;
     }
-    MR_TIMER
+    MR_TIMER;
 
     const AABBTree& tree = mesh->getAABBTree();
     const auto& nodes = tree.nodes();
@@ -52,13 +52,13 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
 void PointsToMeshProjector::findProjections(
       std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !mesh_ )
     {
         assert( false );
         return;
     }
-    
+
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )

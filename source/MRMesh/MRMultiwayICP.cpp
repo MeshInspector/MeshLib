@@ -282,7 +282,7 @@ MultiwayICP::MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingPa
 
 Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;

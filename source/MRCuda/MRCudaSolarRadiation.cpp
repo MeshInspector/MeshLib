@@ -43,7 +43,7 @@ static std::vector<IntersectionPrecomputes> calcPrecs( const std::vector<MR::Sky
 
 BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBitSet& validSamples, const std::vector<MR::SkyPatch>& skyPatches, std::vector<MR::MeshIntersectionResult>* outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& tree = terrain.getAABBTree();
     const auto& nodes = tree.nodes();
@@ -86,7 +86,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     const std::vector<MR::SkyPatch>& skyPatches,
     BitSet* outSkyRays, std::vector<MR::MeshIntersectionResult>* outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& tree = terrain.getAABBTree();
     const auto& nodes = tree.nodes();

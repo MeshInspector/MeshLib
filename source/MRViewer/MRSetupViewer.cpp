@@ -86,7 +86,7 @@ void resetSettings( Viewer * viewer )
 void ViewerSetup::setupExtendedLibraries() const
 {
 #ifndef __EMSCRIPTEN__
-    MR_TIMER
+    MR_TIMER;
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
     std::error_code ec;
@@ -157,7 +157,7 @@ void ViewerSetup::setupExtendedLibraries() const
 void ViewerSetup::unloadExtendedLibraries() const
 {
 #ifndef __EMSCRIPTEN__
-    MR_TIMER
+    MR_TIMER;
     // unload in reverse order
     while ( !loadedModules_.empty() )
     {

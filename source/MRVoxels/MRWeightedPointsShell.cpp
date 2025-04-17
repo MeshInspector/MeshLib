@@ -17,7 +17,7 @@ namespace MR
 
 FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud, const WeightedPointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( !params.signDistanceByNormal || cloud.hasNormals() );
 
@@ -45,7 +45,7 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
 
 FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return FunctionVolume
     {
@@ -71,7 +71,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
 
 Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParametersMetric& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
@@ -117,7 +117,7 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars&
 
 Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParametersMetric& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
@@ -163,7 +163,7 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeig
 VertScalars calculateShellWeightsFromRegions(
     const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( regions.empty() )
         spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
@@ -177,11 +177,12 @@ VertScalars calculateShellWeightsFromRegions(
     {
         if ( regions.empty() )
             return 0.f;
-        float res = 0.f;
+        MinMaxf minmax;
+        float res = 0.0f;
         size_t n = 0;
 
         const auto pt = mesh.points[v];
-        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts]
+        findPointsInBall( mesh, Ball3f{ pt, interRadSq }, [&n, &res, &regions, &allVerts,&minmax]
             ( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
             auto vv = found.vId;
@@ -189,18 +190,22 @@ VertScalars calculateShellWeightsFromRegions(
             {
                 if ( reg.verts.test( vv ) )
                 {
+                    minmax.include( reg.weight );
                     res += reg.weight;
                     n += 1;
                 }
             }
             if ( !allVerts.test( vv ) )
+            {
+                minmax.include( 0.0f );
                 n += 1;
+            }
             return Processing::Continue;
         } );
 
         if ( n == 0 )
             return 0.f;
-        return res / static_cast<float>( n );
+        return std::clamp( res / float( n ), minmax.min, minmax.max ); // not to exceed limits because of floating point errors
     };
 
     // precalculate the weights
@@ -215,7 +220,7 @@ VertScalars calculateShellWeightsFromRegions(
 
 Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
 

@@ -8,7 +8,7 @@
 #include "MRConstants.h"
 #include "MRTimer.h"
 
-namespace 
+namespace
 {
 // This constant modifier was born empirically
 constexpr double TriangleAreaModifier = 1e2;
@@ -21,7 +21,7 @@ const double BadTriangulationMetric = 1e10;
 
 double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegion, const FillHoleMetric & metric )
 {
-    MR_TIMER
+    MR_TIMER;
     auto cm = metric.combineMetric;
     if ( !cm )
         cm = [] ( double a, double b ) { return a + b; };
@@ -175,7 +175,7 @@ FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir 
 
         // sqr penalty and sides length to have valid m^4 power of each argument
         // norm.lengthSq - dbl area Sq - m^4
-        // parallelPenaltySq ~ area cos(angle(updir,norm)) sq - m^4 
+        // parallelPenaltySq ~ area cos(angle(updir,norm)) sq - m^4
         // side length sq sq - m^4
         return
             norm.lengthSq() +

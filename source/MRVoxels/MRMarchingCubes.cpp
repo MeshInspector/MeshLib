@@ -370,7 +370,7 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
 {
     if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return TriMesh{};
-    MR_TIMER
+    MR_TIMER;
 
     VolumeMesher mesher( volume.dims, params, layersPerBlock );
     return mesher.addPart( volume ).and_then( [&]
@@ -378,7 +378,7 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
         // free input volume, since it will not be used below any more
         if ( params.freeVolume )
             params.freeVolume();
-            
+
         return mesher.finalize();
     } );
 }
@@ -433,7 +433,7 @@ Expected<void> VolumeMesher::addPart( const V& part )
 template<typename V, typename Positioner>
 Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const int partFirstZ = nextZ_;
     if ( part.dims.x != indexer_.dims().x || part.dims.y != indexer_.dims().y )
@@ -458,7 +458,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
-    
+
     // avoid false sharing with other local variables
     // by putting processedBits in its own cache line
     constexpr int hardware_destructive_interference_size = 64;
@@ -608,7 +608,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 
 Expected<TriMesh> VolumeMesher::finalize()
 {
-    MR_TIMER
+    MR_TIMER;
     if ( nextZ_ + 1 != indexer_.dims().z )
         return unexpected( "Provided parts do not cover whole volume" );
 
@@ -619,7 +619,7 @@ Expected<TriMesh> VolumeMesher::finalize()
     if ( params_.cb && !params_.cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
-    const size_t cVoxelNeighborsIndexAdd[8] = 
+    const size_t cVoxelNeighborsIndexAdd[8] =
     {
         0,
         1,
@@ -637,7 +637,7 @@ Expected<TriMesh> VolumeMesher::finalize()
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
-    
+
     // avoid false sharing with other local variables
     // by putting processedBits in its own cache line
     constexpr int hardware_destructive_interference_size = 64;
@@ -740,7 +740,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                             if ( !atLeastOneNan && neighIndex > 0 )
                                 atLeastOneNan = true;
                         }
-                
+
                         if ( !voxelValueLowerIso )
                             continue;
                         voxelConfiguration |= cMapNeighbors[i];
@@ -881,7 +881,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const Marc
 
 Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
@@ -899,7 +899,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolumeMinMax& volume, cons
 
 Expected<Mesh> marchingCubes( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
@@ -919,7 +919,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
@@ -937,7 +937,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>

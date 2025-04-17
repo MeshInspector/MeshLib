@@ -3,6 +3,8 @@
 
 Example of usage to get signed distances from points of mesh to another reference mesh
 
+\note Please note that unlike findSignedDistance, this function return distances for each valid points
+
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>

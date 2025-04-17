@@ -23,9 +23,13 @@
         <tab type="user" url="__BEGIN_URL__ExampleMeshBoolean__END_URL__" title="Mesh Boolean"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshDecimate__END_URL__" title="Mesh Decimate"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshOffset__END_URL__" title="Mesh Offset"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshOffsetWeighted__END_URL__" title="Mesh Weighted Offset"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFillHole__END_URL__" title="Mesh Fill Hole"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshStitchHole__END_URL__" title="Mesh Stitch Holes"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFixDegeneracies__END_URL__" title="Mesh Fix Degeneracies"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistance__END_URL__" title="Signed Distance"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistancePointToMesh__END_URL__" title="Signed Distance Point To Mesh"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistances__END_URL__" title="Signed Distances"/>
         <tab type="user" url="__BEGIN_URL__ExampleGlobalRegistration__END_URL__" title="Global Registration"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshICP__END_URL__" title="Mesh ICP"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExtrude__END_URL__" title="Mesh Extrude"/>

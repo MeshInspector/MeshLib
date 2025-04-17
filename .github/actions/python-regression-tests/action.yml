@@ -4,7 +4,7 @@ inputs:
   autotest_data_s3_url:
     required: false
     type: string
-    default: "s3://data-autotest/test_data_2025-04-02"
+    default: "s3://data-autotest/test_data_2025-04-16"
   build_config:
     description: "Build config (Release, Debug)"
     required: true

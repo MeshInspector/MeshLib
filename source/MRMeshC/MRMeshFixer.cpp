@@ -11,7 +11,10 @@ REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( MeshPart )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
+REGISTER_AUTO_CAST2( FixMeshDegeneraciesParams::Mode, MRFixMeshDegeneraciesParamsMode )
 REGISTER_AUTO_CAST2( std::string, MRString )
+
+#define COPY_FROM( obj, field ) . field = auto_cast( ( obj ). field ),
 
 MRFaceBitSet* mrFindHoleComplicatingFaces( MRMesh* mesh_ )
 {
@@ -58,4 +61,47 @@ void findAndFixMultipleEdges( MRMesh* mesh_ )
 {
     ARG( mesh );
     fixMultipleEdges( mesh );
+}
+
+MRFixMeshDegeneraciesParams mrFixMeshDegeneraciesParamsNew( void )
+{
+    static const FixMeshDegeneraciesParams def {};
+    return {
+        COPY_FROM( def, maxDeviation )
+        COPY_FROM( def, tinyEdgeLength )
+        COPY_FROM( def, criticalTriAspectRatio )
+        COPY_FROM( def, maxAngleChange )
+        COPY_FROM( def, stabilizer )
+        .region = NULL,
+        COPY_FROM( def, mode )
+        .cb = NULL,
+    };
+}
+
+void mrFixMeshDegeneracies( MRMesh* mesh_, const MRFixMeshDegeneraciesParams* params_, MRString** errorString )
+{
+    ARG( mesh );
+
+    FixMeshDegeneraciesParams params;
+    if ( params_ )
+    {
+        const auto& src = *params_;
+        params = FixMeshDegeneraciesParams {
+            COPY_FROM( src, maxDeviation )
+            COPY_FROM( src, tinyEdgeLength )
+            COPY_FROM( src, criticalTriAspectRatio )
+            COPY_FROM( src, maxAngleChange )
+            COPY_FROM( src, stabilizer )
+            COPY_FROM( src, region )
+            COPY_FROM( src, mode )
+            .cb = src.cb,
+        };
+    }
+
+    auto res = fixMeshDegeneracies( mesh, params );
+    if ( res )
+        return;
+
+    if ( errorString )
+        *errorString = auto_cast( new_from( std::move( res.error() ) ) );
 }

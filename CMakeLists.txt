@@ -42,6 +42,7 @@ option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding libr
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
+option(MESHLIB_PYTHON_EMBED_SUPPORT "Build embedded Python helper library" ON)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -62,6 +63,10 @@ IF(MR_EMSCRIPTEN)
   set(MESHLIB_BUILD_MRMESH_PY_LEGACY OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
   set(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING OFF)
+ENDIF()
+IF(MESHLIB_USE_VCPKG AND NOT WIN32)
+  # FIXME: vcpkg does not fix Python lib paths
+  set(MESHLIB_PYTHON_EMBED_SUPPORT OFF)
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -270,7 +275,10 @@ ENDIF()
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_PYTHON_SUPPORT)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRPython ./MRPython)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbeddedPython ./MREmbeddedPython)
+
+    IF(MESHLIB_PYTHON_EMBED_SUPPORT)
+      add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbeddedPython ./MREmbeddedPython)
+    ENDIF()
 
     IF(MESHLIB_BUILD_PYTHON_MODULES)
       add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)

@@ -13,7 +13,9 @@
 
 #ifndef MESHLIB_NO_PYTHON
 #include "MRPython/MRPython.h"
+#ifndef MESHLIB_NO_EMBED_PYTHON
 #include "MREmbeddedPython/MREmbeddedPython.h"
+#endif
 #endif
 
 #if !defined(__EMSCRIPTEN__) && !defined(_WIN32)
@@ -101,6 +103,7 @@ int main( int argc, char** argv )
         }
         #endif
 
+        #ifndef MESHLIB_NO_EMBED_PYTHON
         //Test python mrmeshpy
         {
             auto str = "import mrmeshpy\n"
@@ -129,6 +132,7 @@ int main( int argc, char** argv )
             spdlog::error( "Some errors reported from python" );
             return 1;
         }
+        #endif
     }
 #endif
 

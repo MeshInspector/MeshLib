@@ -72,6 +72,10 @@ bool StateBasePlugin::enable( bool on )
             onPluginDisable_(); // virtual call from IPluginCloseCheck
             res = true;
         }
+        else if ( !dialogIsOpen_ )
+        {
+            dialogIsOpen_ = true; // it could be needed if plugin was disabled with `dialogIsOpen_ = false` way
+        }
     }
     if ( res )
     {

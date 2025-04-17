@@ -74,7 +74,7 @@ bool StateBasePlugin::enable( bool on )
         }
         else if ( !dialogIsOpen_ )
         {
-            dialogIsOpen_ = true; // it could be needed if plugin was disabled with `dialogIsOpen_ = false` way
+            dialogIsOpen_ = true; // we are here after setting `dialogIsOpen_ = false` followed by `onDisable_() = false`
         }
     }
     if ( res )

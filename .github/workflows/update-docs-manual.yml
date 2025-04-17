@@ -92,7 +92,6 @@ jobs:
           retention-days: 1
 
   update-dev-documentation:
-    if: ${{ false }}
     needs: [ create-stubs ]
     uses: ./.github/workflows/update-docs.yml
     with:

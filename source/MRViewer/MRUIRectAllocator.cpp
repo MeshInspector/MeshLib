@@ -128,25 +128,6 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
 
 void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
-    // Once per frame, update the window list.
-    if ( lastFrameCount_ != ImGui::GetFrameCount() )
-    {
-        lastFrameCount_ = ImGui::GetFrameCount();
-
-        for ( auto it = windows_.begin(); it != windows_.end(); )
-        {
-            if ( it->second.state_ == AllocationState::None )
-            {
-                it = windows_.erase( it );
-                continue;
-            }
-            else if ( it->second.state_ == AllocationState::Set )
-                it->second.state_ = AllocationState::None; // we will validate that this window is still present in next block
-
-            ++it;
-        }
-    }
-
     bool findLocation = false;
     ImGuiWindow* window = nullptr;
 
@@ -176,12 +157,20 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 
     if ( findLocation )
     {
-        Box2f bounds = getViewerInstance().getViewportsBounds();
-        Box2f boundsFixed = bounds;
-        boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
-        boundsFixed.max.y = boundsFixed.min.y + bounds.size().y;
+        // push into application window if it is out
+        const Vector2f appWindowSize = Vector2f( getViewerInstance().framebufferSize );
+        auto windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
+        defaultPos.x = std::clamp( windowBox.min.x, 0.0f, std::max( 0.0f, windowBox.min.x - ( windowBox.max.x - appWindowSize.x ) ) );
+        defaultPos.y = std::clamp( windowBox.min.y, 0.0f, std::max( 0.0f, windowBox.min.y - ( windowBox.max.y - appWindowSize.y ) ) );
+        windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
-        auto result = findFreeRect( Box2f::fromMinAndSize( defaultPos, window->Size ), boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
+
+        Box2f viewportBounds = getViewerInstance().getViewportsBounds();
+        Box2f boundsFixed = viewportBounds;
+        boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
+        boundsFixed.max.y = boundsFixed.min.y + viewportBounds.size().y;
+
+        auto result = findFreeRect( windowBox, boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
         {
             // Just output all the rects for now.
             // FIXME: An AABB tree would be nice here, for better performance.
@@ -207,6 +196,22 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
     }
 
     ImGui::SetNextWindowPos( defaultPos, cond, pivot );
+}
+
+void WindowRectAllocator::invalidateClosedWindows()
+{
+    for ( auto it = windows_.begin(); it != windows_.end(); )
+    {
+        if ( it->second.state_ == AllocationState::None )
+        {
+            it = windows_.erase( it );
+            continue;
+        }
+        else if ( it->second.state_ == AllocationState::Set )
+            it->second.state_ = AllocationState::None; // we will validate that this window is still present when window Begin function will be called
+
+        ++it;
+    }
 }
 
 WindowRectAllocator& getDefaultWindowRectAllocator()

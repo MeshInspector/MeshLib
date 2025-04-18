@@ -1,7 +1,7 @@
 using System.Reflection;
 using static MR.DotNet;
 
-public class MeshLoadAndSaveExample
+public class MeshICPExample
 {
     public static void Run()
     {

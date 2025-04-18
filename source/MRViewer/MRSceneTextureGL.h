@@ -21,11 +21,10 @@ public:
     // renders texture
     void draw();
     // return true if texture is bound
-    bool isBound() const { return isBound_; }
+    bool isBound() const { return fd_.isBound(); }
 private:
     FramebufferData fd_;
     QuadTextureVertexObject qt_;
-    bool isBound_{ false };
 };
 
 }

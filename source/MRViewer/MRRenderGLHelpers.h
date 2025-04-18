@@ -220,9 +220,12 @@ public:
     unsigned getTexture() const { return resTexture_.getId(); }
 
     const Vector2i& getSize() const { return size_; }
+    // return true if texture is bound
+    bool isBound() const { return isBound_; }
 private:
     void resize_( const Vector2i& size, int msaaPow );
 
+    bool isBound_{ false };
     unsigned mainFramebuffer_{ 0 };
     unsigned colorRenderbuffer_{ 0 };
     unsigned depthRenderbuffer_{ 0 };

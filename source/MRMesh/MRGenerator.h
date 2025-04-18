@@ -1,5 +1,6 @@
 #pragma once
 
+#include <version>
 #if __cpp_lib_generator >= 202207L
 #include <generator>
 #else

@@ -109,6 +109,16 @@ IF(NOT MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 ENDIF()
 
+# enable coroutine support on older compilers
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
+  # work-around libstdc++ guard
+  # more info: https://github.com/llvm/llvm-project/issues/47516
+  add_compile_definitions(__cpp_impl_coroutine)
+endif()
+
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
 # to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
 add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")

@@ -4,6 +4,16 @@
 #include <generator>
 #else
 #include <coroutine>
+#if __clang__ && __clang_major__ < 14
+// work-around Clang's API requirements
+// more info: https://github.com/llvm/llvm-project/issues/47516
+namespace std::experimental
+{
+    template <class Promise = void>
+    using coroutine_handle = std::coroutine_handle<Promise>;
+    using suspend_always = std::suspend_always;
+}
+#endif
 #endif
 
 namespace MR

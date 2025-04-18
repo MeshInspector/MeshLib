@@ -21,7 +21,6 @@ It covers installation on Windows, macOS, and Linux, with detailed steps for Vis
 
 4. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
 \n Simple way of integrating MeshLib to your project via CMake. 
-Useful for linux and macOS users.
 
 Each of these setup guides is tailored to help you quickly and efficiently integrate MeshLib into your development environment. 
 Choose the guide that matches your preferred language and platform, and start building sophisticated 3D applications with MeshLib.

@@ -97,7 +97,6 @@ private:
     void updateDialog_();
     void resetSettings_();
 
-    int curSamples_{ 0 };
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };
     bool gpuOverridesMSAA_{ false };

@@ -43,7 +43,7 @@ These examples are helpful for both developers and testers.
 Additionally, the Python library allows you to explore all the available functions in `mrmeshpy` using the standard `help(meshlib.mrmeshpy)` command.
 
 
-### **Getting Started: MeshLib Viewer and Mesh I/O Examples**
+### Getting Started: MeshLib Viewer and Mesh I/O Examples
 
 After installing MeshLib, a great way to start exploring its capabilities is through interactive examples.
 

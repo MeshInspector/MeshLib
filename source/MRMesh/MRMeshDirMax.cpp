@@ -1,4 +1,5 @@
 #include "MRMeshDirMax.h"
+#include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
@@ -7,43 +8,8 @@
 namespace MR
 {
 
-VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
+namespace
 {
-    MR_TIMER;
-    VertId res;
-    float furthestProj = -FLT_MAX;
-    if ( mp.region )
-    {
-        for ( auto f : *mp.region )
-        {
-            VertId vs[3];
-            mp.mesh.topology.getTriVerts( f, vs );
-            for ( auto v : vs )
-            {
-                auto proj = dot( mp.mesh.points[v], dir );
-                if ( proj > furthestProj )
-                {
-                    furthestProj = proj;
-                    res = v;
-                }
-            }
-        }
-    }
-    else
-    {
-        for ( auto v : mp.mesh.topology.getValidVerts() )
-        {
-            auto proj = dot( mp.mesh.points[v], dir );
-            if ( proj > furthestProj )
-            {
-                furthestProj = proj;
-                res = v;
-            }
-        }
-    }
-
-    return res;
-}
 
 /// this class is intended to quickly compute maximum projection value of a box on given direction
 class FurthestBoxProj
@@ -62,6 +28,8 @@ public:
 private:
     Vector3f minFactor_, maxFactor_;
 };
+
+} // anonymous namespace
 
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {

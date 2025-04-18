@@ -2607,6 +2607,8 @@ bool Viewer::isSceneTextureEnabled() const
 int Viewer::getMSAA() const
 {
     int curSamples = 0;
+    if ( !glInitialized_ )
+        return curSamples;
     if ( !sceneTexture_ || sceneTexture_->isBound() )
         GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
     else

@@ -56,14 +56,17 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     {
         auto& viewer = getViewerInstance();
 
-        GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, &maxSamples_ ) );
-        storedSamples_ = viewer.getMSAA();
-        maxSamples_ = std::max( std::min( maxSamples_, 16 ), storedSamples_ ); // there are some known issues with 32 MSAA
-        gpuOverridesMSAA_ = storedSamples_ != viewer.getRequestedMSAA(); // if it fails on application start - gpu overrides settings
+        if ( viewer.isGLInitialized() && loadGL() )
+        {
+            GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, &maxSamples_ ) );
+            storedSamples_ = viewer.getMSAA();
+            maxSamples_ = std::max( std::min( maxSamples_, 16 ), storedSamples_ ); // there are some known issues with 32 MSAA
+            gpuOverridesMSAA_ = storedSamples_ != viewer.getRequestedMSAA(); // if it fails on application start - gpu overrides settings
 #ifdef __EMSCRIPTEN__
-        if ( !viewer.isSceneTextureEnabled() )
-            maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more then x4 msaa for main framebuffer
+            if ( !viewer.isSceneTextureEnabled() )
+                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more then x4 msaa for main framebuffer
 #endif
+        }
     }, CommandLoop::StartPosition::AfterWindowAppear );
 }
 

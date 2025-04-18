@@ -19,7 +19,7 @@ public class TriangulationExample
                 {
                     float v = vConst * j;
 
-                    points[i * 100 + j] = new Vector3f(
+                    points[i * 99 + j - 1] = new Vector3f(
                         MathF.Cos(u) * MathF.Sin(v),
                         MathF.Sin(u) * MathF.Sin(v),
                         MathF.Cos(v)
@@ -36,6 +36,7 @@ public class TriangulationExample
             if ( triangulated == null)
             {
                 Console.WriteLine("Error during triangulation");
+                return;
             }
 
             // Fix possible issues

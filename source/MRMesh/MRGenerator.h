@@ -4,7 +4,6 @@
 #include <generator>
 #else
 #include <coroutine>
-#include <ranges>
 #endif
 
 namespace MR
@@ -23,7 +22,7 @@ using Generator = std::generator<T>;
 
 /// ...
 template <typename T>
-class Generator : public std::ranges::view_interface<Generator<T>>
+class Generator
 {
 public:
     struct Promise;

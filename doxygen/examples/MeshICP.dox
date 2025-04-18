@@ -11,6 +11,8 @@ Example of mesh ICP (finding transformation to match objects)
 \include MeshICP.dox.py
 - <b class="tab-title">C</b>
 \include MeshICP.dox.c
+- <b class="tab-title">C#</b>
+\include MeshICP.dox.cs
 
 </div>
 

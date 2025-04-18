@@ -44,6 +44,8 @@
         <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpyTriangulation__END_URL__" title="Numpy Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleCudaOffset__END_URL__" title="Offset with Cuda"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDicomFiles__END_URL__" title="Open Dicom Files"/>
       </tab>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">

@@ -11,6 +11,8 @@ namespace std::experimental
 {
     template <class Promise = void>
     using coroutine_handle = std::coroutine_handle<Promise>;
+    template <class R, class... Args>
+    using coroutine_traits = std::coroutine_traits<R, Args...>;
     using suspend_always = std::suspend_always;
 }
 #endif

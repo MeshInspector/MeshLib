@@ -109,6 +109,11 @@ IF(NOT MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 ENDIF()
 
+# enable coroutine support on older compilers
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+endif()
+
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
 # to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
 add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")

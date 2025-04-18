@@ -74,6 +74,33 @@ TEST( MRMesh, Generator )
         i++;
     }
     EXPECT_EQ( i, edges.size() );
+
+    auto splitBy = [] ( std::string_view str, std::string_view sep ) -> Generator<std::string_view>
+    {
+        size_t index = 0, newIndex = str.find( sep );
+        while ( newIndex != std::string_view::npos )
+        {
+            co_yield str.substr( index, newIndex - index );
+            index = newIndex + sep.size();
+            newIndex = str.find( sep, index );
+        }
+        co_yield str.substr( index, newIndex - index );
+    };
+
+    constexpr auto str { "Lorem ipsum dolor sit amet" };
+    auto seq1 = splitBy( str, " " );
+    auto it1 = seq1.begin();
+    EXPECT_EQ( *it1, "Lorem" ); ++it1;
+    EXPECT_EQ( *it1, "ipsum" ); ++it1;
+    EXPECT_EQ( *it1, "dolor" ); ++it1;
+    EXPECT_EQ( *it1, "sit" ); ++it1;
+    EXPECT_EQ( *it1, "amet" ); ++it1;
+    EXPECT_EQ( it1, seq1.end() );
+
+    auto seq2 = splitBy( str, ", " );
+    auto it2 = seq2.begin();
+    EXPECT_EQ( *it2, str ); ++it2;
+    EXPECT_EQ( it2, seq2.end() );
 }
 
 } // namespace MR

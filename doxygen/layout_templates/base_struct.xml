@@ -47,12 +47,12 @@
       </tab>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">
+      <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__MeshStructureOverview__END_URL__" title="Mesh Structure"/>
       <tab type="user" url="__BEGIN_URL__BasicMathTypesOverview__END_URL__" title="Basic Math Types"/>
       <tab type="user" url="__BEGIN_URL__FloatVSDouble__END_URL__" title="Float vs Double"/>
       <tab type="user" url="__BEGIN_URL__DataModel__END_URL__" title="Data Model Class Hierarchy"/>
       <tab type="user" url="__BEGIN_URL__SpacesHelp__END_URL__" title="Spaces and Transformations"/>
-      <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__ExamplePluginOverview__END_URL__" title="How to use С++ Example Plugin"/>
       <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
       <tab type="user" url="__BEGIN_URL__HowtoAddPluginOverview__END_URL__" title="How to Add Plugin"/>

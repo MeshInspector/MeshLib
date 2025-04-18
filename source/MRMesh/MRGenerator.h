@@ -2,9 +2,26 @@
 
 #include <version>
 #if __cpp_lib_generator >= 202207L
+
+#pragma message( "Using std::generator" )
 #include <generator>
+
+namespace MR
+{
+
+/// alias to std::generator for backward compatibility
+template <typename T>
+using Generator = std::generator<T>;
+
+} // namespace MR
+
 #else
+
+#pragma message( "Using MR::Generator" )
 #include <coroutine>
+#include <iterator>
+#include <utility>
+
 #if __clang__ && __clang_major__ < 14
 // work-around Clang's API requirements
 // more info: https://github.com/llvm/llvm-project/issues/47516
@@ -17,25 +34,12 @@ namespace std::experimental
     using suspend_always = std::suspend_always;
 }
 #endif
-#include <iterator>
-#include <utility>
-#endif
 
 namespace MR
 {
 
-#if __cpp_lib_generator >= 202207L
-
-#pragma message( "Using std::generator" )
-
-template <typename T>
-using Generator = std::generator<T>;
-
-#else
-
-#pragma message( "Using MR::Generator" )
-
-/// ...
+/// simplified version of std::generator for C++20
+/// designed to be used in for-loops
 template <typename T>
 class Generator
 {
@@ -43,16 +47,19 @@ public:
     struct Promise;
     using Coroutine = std::coroutine_handle<Promise>;
 
+    /// alias required for coroutine support
     using promise_type = Promise;
     struct Promise
     {
         T value;
 
+        /// methods required for co_yield/co_return support
         auto get_return_object() { return Generator { Coroutine::from_promise( *this ) }; }
         static std::suspend_always initial_suspend() noexcept { return {}; }
         static std::suspend_always final_suspend() noexcept { return {}; }
         static void return_void() { }
         static void unhandled_exception() { }
+        /// disable co_await
         void await_transform() = delete;
 
         template <std::convertible_to<T> From>
@@ -127,6 +134,6 @@ private:
     Coroutine coro_;
 };
 
-#endif
-
 } // namespace MR
+
+#endif

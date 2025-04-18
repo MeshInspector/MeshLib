@@ -5,11 +5,15 @@
 
 \tableofcontents
 
-This instruction will guide you through integrating MeshLib into your C# project using NuGet or .NET Command-Line Interface.
+This instruction will guide you through integrating MeshLib into your C# project using NuGet or the .NET Command-Line Interface.
 
-\note **Important:** MeshLib currently supports x64 builds only, so ensure your project configuration aligns to avoid compatibility issues. 
-While .NET and NuGet offer support for macOS and Linux, the MeshLib package lacks native libraries for these platforms. 
-As of now, MeshLib operates exclusively on Windows when used with C#.
+\note We are planning to deliver full C# support in 2025. Until then, only the core features of MeshLib are available in
+C#, and the API may evolve as we expand functionality. We will strive to minimize disruptions and ensure a smooth
+transition as these changes are introduced.
+
+\note C# integration is currently supported on Windows x64 and Linux x64. Please note that ARM64 builds are not yet
+available, so make sure your project is configured accordingly to avoid compatibility issues.
+
 
 ## Prerequisites
 Before installing MeshLib, ensure you have the following tools installed:
@@ -102,4 +106,21 @@ dotnet run
 
 
 By following these steps, you can integrate MeshLib into your project, giving you more control over the setup process.
+
+
+## Try MeshLib with C# Examples
+
+MeshLib provides a collection of C# code samples to help you get started quickly with common mesh processing tasks.
+These are concise, self-contained examples — perfect for exploring how to use MeshLib’s API in your own projects:
+
+- [Load and Save Meshes](\ref ExampleMeshLoadSave)
+Demonstrates how to load and export mesh files using the MeshLib API.
+
+- [Mesh Boolean Operations](\ref ExampleMeshBoolean)
+Shows how to perform boolean operations like union, intersection, and subtraction between meshes.
+
+- [Mesh Simplification](\ref ExampleMeshDecimate)
+Illustrates how to reduce mesh complexity through decimation, preserving overall shape with fewer polygons.
+
+These samples are a great starting point for integrating MeshLib into C# or .NET-based workflow.
 */

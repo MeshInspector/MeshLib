@@ -77,4 +77,57 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
     return pv.v;
 }
 
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const VertCoords & points, const VertBitSet * region )
+{
+    MR_TIMER;
+
+    return parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 1024 ), MinMaxArg<float, VertId>{},
+        [&] ( const auto & range, MinMaxArg<float, VertId> curr )
+        {
+            for ( VertId v = range.begin(); v < range.end(); ++v )
+            {
+                if ( !contains( region, v ) )
+                    continue;
+                curr.include( dot( points[v], dir ), v );
+            }
+            return curr;
+        },
+        [] ( MinMaxArg<float, VertId> a, const MinMaxArg<float, VertId> & b ) { a.include( b ); return a; }
+    );
+}
+
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const PointCloud & cloud )
+{
+    return findDirMinMaxBruteForce( dir, cloud.points, &cloud.validPoints );
+}
+
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const Polyline3 & polyline )
+{
+    return findDirMinMaxBruteForce( dir, polyline.points, &polyline.topology.getValidVerts() );
+}
+
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
+{
+    if ( !mp.region )
+        return findDirMinMaxBruteForce( dir, mp.mesh.points, &mp.mesh.topology.getValidVerts() );
+
+    MR_TIMER;
+    return parallel_reduce( tbb::blocked_range( 0_f, FaceId( mp.mesh.topology.faceSize() ), 1024 ), MinMaxArg<float, VertId>{},
+        [&] ( const auto & range, MinMaxArg<float, VertId> curr )
+        {
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mp.region->test( f ) )
+                    continue;
+                VertId vs[3];
+                mp.mesh.topology.getTriVerts( f, vs );
+                for ( auto v : vs )
+                    curr.include( dot( mp.mesh.points[v], dir ), v );
+            }
+            return curr;
+        },
+        [] ( MinMaxArg<float, VertId> a, const MinMaxArg<float, VertId> & b ) { a.include( b ); return a; }
+    );
+}
+
 } //namespace MR

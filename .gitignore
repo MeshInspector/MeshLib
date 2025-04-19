@@ -34,3 +34,4 @@ source/MRDotNetTest/obj/*
 /lib64
 /include
 /out/build/
+/.venv

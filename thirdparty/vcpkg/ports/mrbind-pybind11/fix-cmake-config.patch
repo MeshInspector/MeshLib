@@ -1,0 +1,30 @@
+diff --git a/source/non_limited_api/CMakeLists.txt b/source/non_limited_api/CMakeLists.txt
+index 2aa4a01d..a6d7bf81 100644
+--- a/source/non_limited_api/CMakeLists.txt
++++ b/source/non_limited_api/CMakeLists.txt
+@@ -37,14 +37,14 @@ if (${PYBIND11_NONLIMITEDAPI_BUILD_STUBS})
+ 
+   # Probably not the smartest move to mark this directory private, but it's easier than figuring out the proper way.
+   target_include_directories(${PROJECT_NAME} PRIVATE ../../include)
+-  target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
++  target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:Python::Python,INTERFACE_INCLUDE_DIRECTORIES>)
+   target_compile_definitions(${PROJECT_NAME} PUBLIC PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"${PYBIND11_NONLIMITEDAPI_SUFFIX}\")
+ 
+   # We don't link the entire `Python::Python` here because that's minor-version-dependent. It's not entirely clear to me what's the stable-ABI equivalent.
+   # On Mac and Linux, not linking anything at all seems to work so far. But on Windows the Python header forces `python3.lib` (in this case,
+   #   but in generaldepends on `Py_LIMITED_API` and some other things), so we need the correct library directories to be set.
+   if (MSVC)
+-    target_link_directories(${PROJECT_NAME} PUBLIC ${Python_LIBRARY_DIRS})
++    target_link_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:Python::Python,INTERFACE_LINK_DIRECTORIES>)
+   endif()
+ 
+   install(
+@@ -81,7 +81,7 @@ else()
+ 
+   # Probably not the smartest move to mark this directory private, but it's easier than figuring out the proper way.
+   target_include_directories(${PROJECT_NAME} PRIVATE ../../include)
+-  target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
++  target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:Python::Python,INTERFACE_INCLUDE_DIRECTORIES>)
+   if (PYBIND11_NONLIMITEDAPI_BUILD_STUBS)
+     target_link_libraries(${PROJECT_NAME} PUBLIC pybind11nonlimitedapi_stubs)
+   else()

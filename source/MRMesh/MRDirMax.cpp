@@ -2,8 +2,10 @@
 #include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
 #include "MRAABBTreePolyline.h"
+#include "MRAABBTreePoints.h"
 #include "MRMesh.h"
 #include "MRPolyline.h"
+#include "MRPointCloud.h"
 #include <cfloat>
 
 namespace MR
@@ -77,7 +79,7 @@ VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp
 
         if ( node.leaf() )
         {
-            lp( node.leafId(), furthestProj, res );
+            lp( node, furthestProj, res );
             continue;
         }
 
@@ -106,8 +108,9 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
 
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( FaceId face, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
     {
+        FaceId face = node.leafId();
         if ( mp.region && !mp.region->test( face ) )
             return;
         VertId vs[3];
@@ -129,8 +132,9 @@ VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, polyline );
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( EdgeId e, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const AABBTreePolyline3::Node & node, float & furthestProj, VertId & res )
     {
+        EdgeId e = node.leafId();
         VertId vs[2] = { polyline.topology.org( e ), polyline.topology.org( e ) };
         for ( int i = 0; i < 2; ++i )
         {
@@ -139,6 +143,29 @@ VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree
             {
                 furthestProj = proj;
                 res = vs[i];
+            }
+        }
+    } );
+}
+
+VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !cloud.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, cloud );
+
+    const auto& tree = cloud.getAABBTree();
+    const auto& orderedPoints = tree.orderedPoints();
+
+    return findDirMaxT( dir, tree, [&]( const AABBTreePoints::Node & node, float & furthestProj, VertId & res )
+    {
+        auto [first, last] = node.getLeafPointRange();
+        for ( int i = first; i < last; ++i )
+        {
+            auto proj = dot( orderedPoints[i].coord, dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = orderedPoints[i].id;
             }
         }
     } );

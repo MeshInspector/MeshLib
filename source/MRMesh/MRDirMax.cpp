@@ -1,8 +1,9 @@
 #include "MRDirMax.h"
 #include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreePolyline.h"
 #include "MRMesh.h"
-#include "MRTimer.h"
+#include "MRPolyline.h"
 #include <cfloat>
 
 namespace MR
@@ -114,6 +115,26 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         for ( int i = 0; i < 3; ++i )
         {
             auto proj = dot( mp.mesh.points[vs[i]], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = vs[i];
+            }
+        }
+    } );
+}
+
+VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, polyline );
+
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( EdgeId e, float & furthestProj, VertId & res )
+    {
+        VertId vs[2] = { polyline.topology.org( e ), polyline.topology.org( e ) };
+        for ( int i = 0; i < 2; ++i )
+        {
+            auto proj = dot( polyline.points[vs[i]], dir );
             if ( proj > furthestProj )
             {
                 furthestProj = proj;

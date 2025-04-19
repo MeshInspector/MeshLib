@@ -29,19 +29,13 @@ private:
     Vector3f minFactor_, maxFactor_;
 };
 
-template<class Tree>
-class TreeTraverser
+template<class Tree, class LeafProcessor>
+VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp )
 {
-public:
-    TreeTraverser( const Tree & tree, const Vector3f & dir )
-        : tree_( tree ), getFurthestBoxProj_( dir ) {}
+    VertId res;
+    if ( tree.nodes().empty() )
+        return res;
 
-    template<class LeafProcessor>
-    void traverse( LeafProcessor && lp );
-
-private:
-    const Tree& tree_;
-    FurthestBoxProj getFurthestBoxProj_;
     struct SubTask
     {
         NodeId n;
@@ -49,89 +43,27 @@ private:
         SubTask() : n( noInit ) {}
         SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
-    static constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks_[MaxStackSize];
-    int stackSize_ = 0;
-    float furthestProj_ = -FLT_MAX;
 
-private:
-    void addSubTask_( const SubTask & s )
+    FurthestBoxProj getFurthestBoxProj( dir );
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    SubTask subtasks[MaxStackSize];
+    int stackSize = 0;
+    float furthestProj = -FLT_MAX;
+
+    auto addSubTask = [&]( const SubTask & s )
     {
-        if ( s.furthestBoxProj > furthestProj_ )
+        if ( s.furthestBoxProj > furthestProj )
         {
-            assert( stackSize_ < MaxStackSize );
-            subtasks_[stackSize_++] = s;
+            assert( stackSize < MaxStackSize );
+            subtasks[stackSize++] = s;
         }
     };
-    auto getSubTask_( NodeId n ) const
+
+    auto getSubTask = [&]( NodeId n )
     {
-        return SubTask( n, getFurthestBoxProj( tree_.nodes()[n].box ) );
+        return SubTask( n, getFurthestBoxProj( tree.nodes()[n].box ) );
     };
-};
-
-template<class Tree>
-template<class LeafProcessor>
-void TreeTraverser<Tree>::traverse( LeafProcessor && lp )
-{
-    stackSize_ = 0;
-    furthestProj_ = -FLT_MAX;
-
-    addSubTask_( getSubTask_( tree_.rootNodeId() ) );
-
-    while( stackSize_ > 0 )
-    {
-        const auto s = subtasks[--stackSize_];
-        const auto & node = tree[s.n];
-        if ( s.furthestBoxProj < furthestProj_ )
-            continue;
-
-        if ( node.leaf() )
-        {
-            const auto face = node.leafId();
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            VertId vs[3];
-            mp.mesh.topology.getTriVerts( face, vs );
-            for ( int i = 0; i < 3; ++i )
-            {
-                auto proj = dot( mp.mesh.points[vs[i]], dir );
-                if ( proj > furthestProj )
-                {
-                    furthestProj = proj;
-                    res = vs[i];
-                }
-            }
-            continue;
-        }
-
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
-        // add task with larger projection on line last to descend there first
-        if ( s1.furthestBoxProj > s2.furthestBoxProj )
-        {
-            addSubTask( s2 );
-            addSubTask( s1 );
-        }
-        else
-        {
-            addSubTask( s1 );
-            addSubTask( s2 );
-        }
-    }
-}
-
-} // anonymous namespace
-
-VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
-{
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
-        return findDirMaxBruteForce( dir, mp );
-
-    const AABBTree & tree = mp.mesh.getAABBTree();
-
-    VertId res;
-    if ( tree.nodes().empty() )
-        return res;
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
@@ -144,20 +76,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 
         if ( node.leaf() )
         {
-            const auto face = node.leafId();
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            VertId vs[3];
-            mp.mesh.topology.getTriVerts( face, vs );
-            for ( int i = 0; i < 3; ++i )
-            {
-                auto proj = dot( mp.mesh.points[vs[i]], dir );
-                if ( proj > furthestProj )
-                {
-                    furthestProj = proj;
-                    res = vs[i];
-                }
-            }
+            lp( node.leafId(), furthestProj, res );
             continue;
         }
 
@@ -177,6 +96,31 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     }
 
     return res;
+}
+
+} // anonymous namespace
+
+VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, mp );
+
+    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( FaceId face, float & furthestProj, VertId & res )
+    {
+        if ( mp.region && !mp.region->test( face ) )
+            return;
+        VertId vs[3];
+        mp.mesh.topology.getTriVerts( face, vs );
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto proj = dot( mp.mesh.points[vs[i]], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = vs[i];
+            }
+        }
+    } );
 }
 
 } //namespace MR

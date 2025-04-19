@@ -7,7 +7,7 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRSurfaceDistance.h"
-#include "MRMesh/MRMeshDirMax.h"
+#include "MRMesh/MRDirMax.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRExpected.h"

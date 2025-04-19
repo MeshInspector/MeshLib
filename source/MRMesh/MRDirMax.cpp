@@ -1,8 +1,9 @@
-#include "MRMeshDirMax.h"
+#include "MRDirMax.h"
 #include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreePolyline.h"
 #include "MRMesh.h"
-#include "MRTimer.h"
+#include "MRPolyline.h"
 #include <cfloat>
 
 namespace MR
@@ -29,15 +30,9 @@ private:
     Vector3f minFactor_, maxFactor_;
 };
 
-} // anonymous namespace
-
-VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
+template<class Tree, class LeafProcessor>
+VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp )
 {
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
-        return findDirMaxBruteForce( dir, mp );
-
-    const AABBTree & tree = mp.mesh.getAABBTree();
-
     VertId res;
     if ( tree.nodes().empty() )
         return res;
@@ -82,20 +77,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 
         if ( node.leaf() )
         {
-            const auto face = node.leafId();
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            VertId vs[3];
-            mp.mesh.topology.getTriVerts( face, vs );
-            for ( int i = 0; i < 3; ++i )
-            {
-                auto proj = dot( mp.mesh.points[vs[i]], dir );
-                if ( proj > furthestProj )
-                {
-                    furthestProj = proj;
-                    res = vs[i];
-                }
-            }
+            lp( node.leafId(), furthestProj, res );
             continue;
         }
 
@@ -115,6 +97,51 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     }
 
     return res;
+}
+
+} // anonymous namespace
+
+VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, mp );
+
+    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( FaceId face, float & furthestProj, VertId & res )
+    {
+        if ( mp.region && !mp.region->test( face ) )
+            return;
+        VertId vs[3];
+        mp.mesh.topology.getTriVerts( face, vs );
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto proj = dot( mp.mesh.points[vs[i]], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = vs[i];
+            }
+        }
+    } );
+}
+
+VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, polyline );
+
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( EdgeId e, float & furthestProj, VertId & res )
+    {
+        VertId vs[2] = { polyline.topology.org( e ), polyline.topology.org( e ) };
+        for ( int i = 0; i < 2; ++i )
+        {
+            auto proj = dot( polyline.points[vs[i]], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = vs[i];
+            }
+        }
+    } );
 }
 
 } //namespace MR

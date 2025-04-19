@@ -1312,6 +1312,9 @@
     <ClInclude Include="MRDirMaxBruteForce.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRDirMax.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -1483,9 +1486,6 @@
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshDirMax.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRadius.cpp">
@@ -2142,6 +2142,9 @@
     </ClCompile>
     <ClCompile Include="MRDirMaxBruteForce.cpp">
       <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDirMax.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

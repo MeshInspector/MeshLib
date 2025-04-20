@@ -90,8 +90,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
             continue;
         }
 
-        auto s1 = getSubTask( node.leftOrFirst );
-        auto s2 = getSubTask( node.rightOrLast );
+        auto s1 = getSubTask( node.l );
+        auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
         {
@@ -176,8 +176,8 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
             continue;
         }
 
-        auto s1 = getSubTask( node.leftOrFirst );
-        auto s2 = getSubTask( node.rightOrLast );
+        auto s1 = getSubTask( node.l );
+        auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
         {

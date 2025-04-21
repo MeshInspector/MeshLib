@@ -107,6 +107,11 @@ VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
 
 } // anonymous namespace
 
+VertId findDirMax( const Vector3f & dir, const Mesh & m, UseAABBTree u )
+{
+    return findDirMax( dir, MeshPart{ m }, u );
+}
+
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
@@ -131,6 +136,14 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     } );
 }
 
+VertId findDirMax( const Vector3f & dir, const MeshVertPart & mp, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreePointsNotCreate() ) )
+        return findDirMaxBruteForce( dir, mp );
+
+    return findDirMax( dir, mp.mesh.getAABBTreePoints(), mp.region );
+}
+
 VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree u )
 {
     return findDirMaxT( dir, polyline, u );
@@ -141,12 +154,16 @@ VertId findDirMax( const Vector2f & dir, const Polyline2 & polyline, UseAABBTree
     return findDirMaxT( dir, polyline, u );
 }
 
-VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, UseAABBTree u )
+VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, const VertBitSet * region, UseAABBTree u )
 {
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !cloud.getAABBTreeNotCreate() ) )
-        return findDirMaxBruteForce( dir, cloud );
+        return findDirMaxBruteForce( dir, cloud, region );
 
-    const auto& tree = cloud.getAABBTree();
+    return findDirMax( dir, cloud.getAABBTree(), region );
+}
+
+VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const VertBitSet * region )
+{
     const auto& orderedPoints = tree.orderedPoints();
 
     return findDirMaxT( dir, tree, [&]( const AABBTreePoints::Node & node, float & furthestProj, VertId & res )
@@ -154,6 +171,9 @@ VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, UseAABBTree u
         auto [first, last] = node.getLeafPointRange();
         for ( int i = first; i < last; ++i )
         {
+            if ( region )
+                if ( !region->test( orderedPoints[i].id ) )
+                    continue;
             auto proj = dot( orderedPoints[i].coord, dir );
             if ( proj > furthestProj )
             {

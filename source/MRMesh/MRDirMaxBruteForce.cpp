@@ -73,9 +73,9 @@ VertId findDirMaxBruteForce( const Vector2f & dir, const VertCoords2 & points, c
     return findDirMaxBruteForceT( dir, points, region );
 }
 
-VertId findDirMaxBruteForce( const Vector3f & dir, const PointCloud & cloud )
+VertId findDirMaxBruteForce( const Vector3f & dir, const PointCloud & cloud, const VertBitSet * region )
 {
-    return findDirMaxBruteForce( dir, cloud.points, &cloud.validPoints );
+    return findDirMaxBruteForce( dir, cloud.points, region ? region : &cloud.validPoints );
 }
 
 VertId findDirMaxBruteForce( const Vector3f & dir, const Polyline3 & polyline )
@@ -113,6 +113,11 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
     return pv.v;
 }
 
+VertId findDirMaxBruteForce( const Vector3f & dir, const MeshVertPart & mp )
+{
+    return findDirMaxBruteForce( dir, mp.mesh.points, &mp.mesh.topology.getVertIds( mp.region ) );
+}
+
 MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const VertCoords & points, const VertBitSet * region )
 {
     return findDirMinMaxBruteForceT( dir, points, region );
@@ -123,9 +128,9 @@ MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector2f & dir, const Ve
     return findDirMinMaxBruteForceT( dir, points, region );
 }
 
-MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const PointCloud & cloud )
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const PointCloud & cloud, const VertBitSet * region )
 {
-    return findDirMinMaxBruteForce( dir, cloud.points, &cloud.validPoints );
+    return findDirMinMaxBruteForce( dir, cloud.points, region ? region : &cloud.validPoints );
 }
 
 MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const Polyline3 & polyline )
@@ -160,6 +165,11 @@ MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const Me
         },
         [] ( MinMaxArg<float, VertId> a, const MinMaxArg<float, VertId> & b ) { a.include( b ); return a; }
     );
+}
+
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const MeshVertPart & mp )
+{
+    return findDirMinMaxBruteForce( dir, mp.mesh.points, &mp.mesh.topology.getVertIds( mp.region ) );
 }
 
 } //namespace MR

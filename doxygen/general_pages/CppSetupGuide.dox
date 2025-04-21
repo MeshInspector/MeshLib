@@ -60,6 +60,11 @@ git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 git checkout 2024.10.21
 \endcode
+If you're using **Visual Studio 2022**, you can use the latest version of vcpkg:
+\code{.cmd}
+git checkout 2025.04.09
+\endcode
+The version `2024.10.21` is required only for compatibility with **Visual Studio 2019**.
    5. **Run the bootstrap script to build the** `vcpkg` **executable**:
 \code{.cmd}
 bootstrap-vcpkg.bat

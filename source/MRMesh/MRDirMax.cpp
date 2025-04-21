@@ -89,7 +89,7 @@ VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, polyline );
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const AABBTreePolyline<V>::Node & node, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const typename AABBTreePolyline<V>::Node & node, float & furthestProj, VertId & res )
     {
         EdgeId e = node.leafId();
         VertId vs[2] = { polyline.topology.org( e ), polyline.topology.dest( e ) };

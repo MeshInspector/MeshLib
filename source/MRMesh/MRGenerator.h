@@ -22,6 +22,10 @@ using Generator = std::generator<T>;
 #include <iterator>
 #include <utility>
 
+#if __cpp_lib_ranges >= 201911L
+#include <ranges>
+#endif
+
 #if __clang__ && __clang_major__ < 14
 // work-around Clang's API requirements
 // more info: https://github.com/llvm/llvm-project/issues/47516
@@ -42,6 +46,9 @@ namespace MR
 /// designed to be used in for-loops
 template <typename T>
 class Generator
+#if __cpp_lib_ranges >= 201911L
+    : public std::ranges::view_base
+#endif
 {
 public:
     struct Promise;
@@ -73,18 +80,38 @@ public:
     class Iterator
     {
     public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+
         explicit Iterator( Coroutine coro ) : coro_( coro ) {}
-        void operator ++()
+        Iterator& operator ++()
         {
             coro_.resume();
+            return *this;
+        }
+        void operator ++( int )
+        {
+            (void)operator++();
         }
         const T& operator *() const
         {
             return coro_.promise().value;
         }
-        bool operator ==( std::default_sentinel_t ) const
+        friend bool operator ==( const Iterator& it, std::default_sentinel_t )
         {
-            return !coro_ || coro_.done();
+            return !it.coro_ || it.coro_.done();
+        }
+        friend bool operator ==( std::default_sentinel_t s, const Iterator& it )
+        {
+            return it == s;
+        }
+        friend bool operator !=( const Iterator& it, std::default_sentinel_t s )
+        {
+            return !( it == s );
+        }
+        friend bool operator !=( std::default_sentinel_t s, const Iterator& it )
+        {
+            return !( s == it );
         }
 
     private:

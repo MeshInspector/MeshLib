@@ -5,6 +5,10 @@
 
 #include <gtest/gtest.h>
 
+#if __cpp_lib_ranges >= 201911L
+#include <ranges>
+#endif
+
 namespace
 {
 
@@ -101,6 +105,14 @@ TEST( MRMesh, Generator )
     auto it2 = seq2.begin();
     EXPECT_EQ( *it2, str ); ++it2;
     EXPECT_EQ( it2, seq2.end() );
+
+#if __cpp_lib_ranges_join_with >= 202202L && __cpp_lib_ranges_to_container >= 202202L
+    auto joined =
+        splitBy( str, " " )
+        | std::views::join_with( std::string_view { ", " } )
+        | std::ranges::to<std::string>();
+    EXPECT_EQ( joined, "Lorem, ipsum, dolor, sit, amet" );
+#endif
 }
 
 } // namespace MR

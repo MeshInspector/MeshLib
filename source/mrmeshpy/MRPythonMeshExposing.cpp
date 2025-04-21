@@ -82,7 +82,6 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, UndirectedEdgeMap, MR::UndirectedEdgeMap )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, EdgeMap, MR::EdgeMap )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertScalars, MR::VertScalars )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceNormals, MR::FaceNormals )
-using VertCoords2 = Vector<Vector2f, VertId>;
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords2, VertCoords2 )
 
 class DeprecatedVertColorMap : public MR::VertColors

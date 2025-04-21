@@ -14,26 +14,8 @@ namespace MR
 namespace
 {
 
-/// this class is intended to quickly compute maximum projection value of a box on given direction
-class FurthestBoxProj
-{
-public:
-    FurthestBoxProj( const Vector3f& dir ) :
-        minFactor_{ dir.x <= 0 ? dir.x : 0.0f, dir.y <= 0 ? dir.y : 0.0f, dir.z <= 0 ? dir.z : 0.0f },
-        maxFactor_{ dir.x >= 0 ? dir.x : 0.0f, dir.y >= 0 ? dir.y : 0.0f, dir.z >= 0 ? dir.z : 0.0f }
-    {}
-
-    float operator()( const Box3f & box ) const
-    {
-        return dot( minFactor_, box.min ) + dot( maxFactor_, box.max );
-    };
-
-private:
-    Vector3f minFactor_, maxFactor_;
-};
-
-template<class Tree, class LeafProcessor>
-VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp )
+template<class V, class Tree, class LeafProcessor>
+VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 {
     VertId res;
     if ( tree.nodes().empty() )
@@ -47,7 +29,7 @@ VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp
         SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
-    FurthestBoxProj getFurthestBoxProj( dir );
+    const auto maxCorner = Box<V>::getMaxBoxCorner( dir );
 
     constexpr int MaxStackSize = 32; // to avoid allocations
     SubTask subtasks[MaxStackSize];
@@ -65,7 +47,7 @@ VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp
 
     auto getSubTask = [&]( NodeId n )
     {
-        return SubTask( n, getFurthestBoxProj( tree.nodes()[n].box ) );
+        return SubTask( n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) );
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
@@ -101,6 +83,28 @@ VertId findDirMaxT( const Vector3f & dir, const Tree & tree, LeafProcessor && lp
     return res;
 }
 
+template<class V>
+VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, polyline );
+
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const AABBTreePolyline<V>::Node & node, float & furthestProj, VertId & res )
+    {
+        EdgeId e = node.leafId();
+        VertId vs[2] = { polyline.topology.org( e ), polyline.topology.dest( e ) };
+        for ( int i = 0; i < 2; ++i )
+        {
+            auto proj = dot( polyline.points[vs[i]], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = vs[i];
+            }
+        }
+    } );
+}
+
 } // anonymous namespace
 
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
@@ -129,23 +133,12 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 
 VertId findDirMax( const Vector3f & dir, const Polyline3 & polyline, UseAABBTree u )
 {
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
-        return findDirMaxBruteForce( dir, polyline );
+    return findDirMaxT( dir, polyline, u );
+}
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const AABBTreePolyline3::Node & node, float & furthestProj, VertId & res )
-    {
-        EdgeId e = node.leafId();
-        VertId vs[2] = { polyline.topology.org( e ), polyline.topology.org( e ) };
-        for ( int i = 0; i < 2; ++i )
-        {
-            auto proj = dot( polyline.points[vs[i]], dir );
-            if ( proj > furthestProj )
-            {
-                furthestProj = proj;
-                res = vs[i];
-            }
-        }
-    } );
+VertId findDirMax( const Vector2f & dir, const Polyline2 & polyline, UseAABBTree u )
+{
+    return findDirMaxT( dir, polyline, u );
 }
 
 VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, UseAABBTree u )

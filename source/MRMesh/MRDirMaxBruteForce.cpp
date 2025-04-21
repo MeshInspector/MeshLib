@@ -20,9 +20,8 @@ struct ProjectedVertex
     auto operator <=>( const ProjectedVertex& ) const = default;
 };
 
-} // anonymous namespace
-
-VertId findDirMaxBruteForce( const Vector3f & dir, const VertCoords & points, const VertBitSet * region )
+template<class V>
+VertId findDirMaxBruteForceT( const V & dir, const Vector<V, VertId> & points, const VertBitSet * region )
 {
     MR_TIMER;
 
@@ -42,12 +41,49 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const VertCoords & points, co
     return pv.v;
 }
 
+template<class V>
+MinMaxArg<float, VertId> findDirMinMaxBruteForceT( const V & dir, const Vector<V, VertId> & points, const VertBitSet * region )
+{
+    MR_TIMER;
+
+    return parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 1024 ), MinMaxArg<float, VertId>{},
+        [&] ( const auto & range, MinMaxArg<float, VertId> curr )
+        {
+            for ( VertId v = range.begin(); v < range.end(); ++v )
+            {
+                if ( !contains( region, v ) )
+                    continue;
+                curr.include( dot( points[v], dir ), v );
+            }
+            return curr;
+        },
+        [] ( MinMaxArg<float, VertId> a, const MinMaxArg<float, VertId> & b ) { a.include( b ); return a; }
+    );
+}
+
+} // anonymous namespace
+
+VertId findDirMaxBruteForce( const Vector3f & dir, const VertCoords & points, const VertBitSet * region )
+{
+    return findDirMaxBruteForceT( dir, points, region );
+}
+
+VertId findDirMaxBruteForce( const Vector2f & dir, const VertCoords2 & points, const VertBitSet * region )
+{
+    return findDirMaxBruteForceT( dir, points, region );
+}
+
 VertId findDirMaxBruteForce( const Vector3f & dir, const PointCloud & cloud )
 {
     return findDirMaxBruteForce( dir, cloud.points, &cloud.validPoints );
 }
 
 VertId findDirMaxBruteForce( const Vector3f & dir, const Polyline3 & polyline )
+{
+    return findDirMaxBruteForce( dir, polyline.points, &polyline.topology.getValidVerts() );
+}
+
+VertId findDirMaxBruteForce( const Vector2f & dir, const Polyline2 & polyline )
 {
     return findDirMaxBruteForce( dir, polyline.points, &polyline.topology.getValidVerts() );
 }
@@ -79,21 +115,12 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
 
 MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const VertCoords & points, const VertBitSet * region )
 {
-    MR_TIMER;
+    return findDirMinMaxBruteForceT( dir, points, region );
+}
 
-    return parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 1024 ), MinMaxArg<float, VertId>{},
-        [&] ( const auto & range, MinMaxArg<float, VertId> curr )
-        {
-            for ( VertId v = range.begin(); v < range.end(); ++v )
-            {
-                if ( !contains( region, v ) )
-                    continue;
-                curr.include( dot( points[v], dir ), v );
-            }
-            return curr;
-        },
-        [] ( MinMaxArg<float, VertId> a, const MinMaxArg<float, VertId> & b ) { a.include( b ); return a; }
-    );
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector2f & dir, const VertCoords2 & points, const VertBitSet * region )
+{
+    return findDirMinMaxBruteForceT( dir, points, region );
 }
 
 MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const PointCloud & cloud )
@@ -102,6 +129,11 @@ MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const Po
 }
 
 MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector3f & dir, const Polyline3 & polyline )
+{
+    return findDirMinMaxBruteForce( dir, polyline.points, &polyline.topology.getValidVerts() );
+}
+
+MinMaxArg<float, VertId> findDirMinMaxBruteForce( const Vector2f & dir, const Polyline2 & polyline )
 {
     return findDirMinMaxBruteForce( dir, polyline.points, &polyline.topology.getValidVerts() );
 }

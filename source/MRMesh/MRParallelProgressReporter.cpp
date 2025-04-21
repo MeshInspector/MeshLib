@@ -29,7 +29,7 @@ bool ParallelProgressReporter::operator()()
 bool ParallelProgressReporter::updateTask_( float delta )
 {
     std::lock_guard lock( mutex_ );
-    progress_ += delta / static_cast<float>( totalWeight_ );
+    progress_ = std::min( delta / static_cast< float >( totalWeight_ ), 1.0f ); // due to float errors it be 1 + eps, which is asserted in ProgressBar
     if ( mainThreadId_ == std::this_thread::get_id() )
         return continue_ = cb_( progress_ ); // avoid recursive lock here
     return continue_;

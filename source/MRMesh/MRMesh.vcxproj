@@ -30,6 +30,8 @@
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
+    <ClInclude Include="MRDirMax.h" />
+    <ClInclude Include="MRDirMaxBruteForce.h" />
     <ClInclude Include="MRDistanceToMeshOptions.h" />
     <ClInclude Include="MREdgeLengthMesh.h" />
     <ClInclude Include="MREnums.h" />
@@ -417,6 +419,8 @@
     <ClInclude Include="MRGenerator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRDirMax.cpp" />
+    <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
@@ -547,7 +551,6 @@
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
-    <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />

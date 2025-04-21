@@ -33,7 +33,6 @@ jobs:
     runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: ${{ matrix.docker-image }}
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -109,6 +108,8 @@ jobs:
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
           echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements

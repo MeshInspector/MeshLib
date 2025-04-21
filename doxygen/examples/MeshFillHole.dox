@@ -11,6 +11,8 @@ Example of filling holes
 \include MeshFillHole.dox.py
 - <b class="tab-title">C</b>
 \include MeshFillHole.dox.c
+- <b class="tab-title">C#</b>
+\include MeshFillHole.dox.cs
 
 </div>
 

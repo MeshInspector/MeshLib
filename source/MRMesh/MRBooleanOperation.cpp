@@ -363,7 +363,8 @@ VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) co
 
 FaceBitSet BooleanResultMapper::newFaces() const
 {
-    FaceBitSet res( std::max( maps[0].cut2newFaces.size(), maps[1].cut2newFaces.size() ) );
+    FaceBitSet res;
+    res.reserve( std::max( maps[0].cut2newFaces.size(), maps[1].cut2newFaces.size() ) );
     for ( const auto& map : maps )
     {
         for ( FaceId newF = 0_f; newF < map.cut2origin.size(); ++newF )

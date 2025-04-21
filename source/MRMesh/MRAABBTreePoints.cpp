@@ -89,12 +89,12 @@ std::pair<SubtreePoints, SubtreePoints> AABBTreePointsMaker::makeNode( const Sub
     const int midPoint = partitionPoints( node.box, s.firstPoint, s.firstPoint + s.numPoints );
     const int leftNumPoints = midPoint - s.firstPoint;
     const int rightNumPoints = s.numPoints - leftNumPoints;
-    node.leftOrFirst = s.root + 1;
-    node.rightOrLast = s.root + 1 + getNumNodesPoints( leftNumPoints );
+    node.l = s.root + 1;
+    node.r = s.root + 1 + getNumNodesPoints( leftNumPoints );
     return
     {
-        SubtreePoints( node.leftOrFirst, s.firstPoint, leftNumPoints ),
-        SubtreePoints( node.rightOrLast, midPoint,     rightNumPoints )
+        SubtreePoints( node.l, s.firstPoint, leftNumPoints ),
+        SubtreePoints( node.r, midPoint,     rightNumPoints )
     };
 }
 
@@ -285,11 +285,11 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & cha
         auto & node = nodes_[nid];
         if ( node.leaf() )
             continue;
-        if ( !changedNodes.test( node.leftOrFirst ) && !changedNodes.test( node.rightOrLast ) )
+        if ( !changedNodes.test( node.l ) && !changedNodes.test( node.r ) )
             continue;
         changedNodes.set( nid );
-        node.box = nodes_[node.leftOrFirst].box;
-        node.box.include( nodes_[node.rightOrLast].box );
+        node.box = nodes_[node.l].box;
+        node.box.include( nodes_[node.r].box );
     }
 }
 
@@ -305,8 +305,8 @@ TEST( MRMesh, AABBTreePoints )
 
     EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
 
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].leftOrFirst.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].rightOrLast.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
 
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );
@@ -325,8 +325,8 @@ TEST( MRMesh, AABBTreePointsFromMesh )
 
     EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
 
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].leftOrFirst.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].rightOrLast.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
 
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );

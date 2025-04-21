@@ -99,18 +99,18 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
             continue;
         }
 
-        auto lDistSq = boxDistSq( node.leftOrFirst );
-        auto rDistSq = boxDistSq( node.rightOrLast );
+        auto lDistSq = boxDistSq( node.l );
+        auto rDistSq = boxDistSq( node.r );
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
         if ( lDistSq <= rDistSq )
         {
-            addSubTask( node.rightOrLast );
-            addSubTask( node.leftOrFirst );
+            addSubTask( node.r );
+            addSubTask( node.l );
         }
         else
         {
-            addSubTask( node.leftOrFirst );
-            addSubTask( node.rightOrLast );
+            addSubTask( node.l );
+            addSubTask( node.r );
         }
     }
 }

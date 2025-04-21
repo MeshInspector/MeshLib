@@ -15,7 +15,6 @@ jobs:
     runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
-      options: --user root
     strategy:
       fail-fast: false
     env:

@@ -30,31 +30,13 @@ MinMaxArg<T, size_t> parallelMinMaxArg( const T* data, size_t size, const BitSet
                 if ( absVal >= *topExcluding )
                     continue;
             }
-            if ( val < curr.min )
-            {
-                curr.min = val;
-                curr.minArg = i;
-            }
-            if ( val > curr.max )
-            {
-                curr.max = val;
-                curr.maxArg = i;
-            }
+            curr.include( val, i );
         }
         return curr;
     },
     [&] ( MinMaxArg<T, I> a, const MinMaxArg<T, I>& b )
     {
-        if ( b.min < a.min )
-        {
-            a.min = b.min;
-            a.minArg = b.minArg;
-        }
-        if ( b.max > a.max )
-        {
-            a.max = b.max;
-            a.maxArg = b.maxArg;
-        }
+        a.include( b );
         return a;
     } );
 }

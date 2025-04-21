@@ -145,6 +145,7 @@ void FramebufferData::bind( bool clear )
         GL_EXEC( glClearBufferfv( GL_COLOR, 0, cClearValue ) );
         GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
     }
+    isBound_ = true;
 }
 
 void FramebufferData::bindDefault()
@@ -152,6 +153,7 @@ void FramebufferData::bindDefault()
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+    isBound_ = false;
 }
 
 void FramebufferData::bindTexture()

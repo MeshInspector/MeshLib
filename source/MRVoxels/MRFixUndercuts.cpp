@@ -17,7 +17,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRLine3.h"
-#include "MRMesh/MRMeshDirMax.h"
+#include "MRMesh/MRDirMax.h"
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MR2to3.h"

@@ -115,8 +115,7 @@ sudo rpm -i ./meshlib-build-version-example.rpm
 \code{.sh}
 MeshViewer
 \endcode
- 4. **Integrate Using CMake**
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 ### Compile Locally
 #### Prerequisites
@@ -209,13 +208,9 @@ cd MeshLib
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
- 3. **Open MeshViewer**
-\code{.sh}
-MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
-\endcode
-The new window with a viewer must appear.
- 4. **Integrate Using CMake**
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ 3. **Run example**
+We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 \subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 

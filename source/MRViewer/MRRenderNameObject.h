@@ -49,8 +49,12 @@ public:
     // The first segment offset is specified in 3d model coordinates, and the second offset is in screen coordinates.
     // The offsets can be tiny, since any non-zero offset is automatically extended to make sure the text bubble doesn't overlap the attachment point.
 
-    /// The line attachment point in model space.
+    /// The line attachment point.
     Vector3f nameUiPoint;
+
+    /// If true, `nameUiPoint` is relative to the center of the bounding box. Otherwise it's relative to the origin.
+    /// Either way it's in model space.
+    bool nameUiPointIsRelativeToAabbCenter = true;
 
     /// Which way the name is moved relative to the `point`, in model space. The length is respected.
     Vector3f nameUiLocalOffset;

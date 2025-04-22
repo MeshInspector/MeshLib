@@ -138,6 +138,7 @@ RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     }();
     subobject.setPointCloud( pointCloud );
 
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
@@ -169,6 +170,7 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     }();
     subobject.setPolyline( polyline );
 
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiLocalOffset = Vector3f( 0.01f, 0, 0 );
     nameUiRotateLocalOffset90Degrees = true;
 }
@@ -217,6 +219,7 @@ RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object
     // More or less an arbitrary direction. Just something that's not +X to avoid overlaps with other stuff.
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
     nameUiPoint = nameTagDir;
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
 }
 
@@ -258,6 +261,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
         getLines().varPolyline()->addFromPoints( cornerPoints.data(), cornerPoints.size(), true );
     }
 
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
@@ -296,6 +300,7 @@ RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
 
     nameUiPoint = nameTagDir;
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
     nameUiRotateToScreenPlaneAroundSphereCenter = Vector3f( 0, 0, 0 );
 }
@@ -331,6 +336,7 @@ RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& ob
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
 
     nameUiPoint = nameTagDir;
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
 }
 
@@ -372,6 +378,7 @@ RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
 
     nameUiPoint = Vector3f( 0, 0, 1 ) + nameTagDir;
+    nameUiPointIsRelativeToAabbCenter = false;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
 }
 

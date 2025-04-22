@@ -97,19 +97,6 @@ jobs:
       nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
-  fedora-build-test:
-    if: ${{ needs.config.outputs.build_enable_fedora == 'true' }}
-    needs: [ config, prepare-image ]
-    uses: ./.github/workflows/build-test-fedora.yml
-    with:
-      app_version:           ${{ needs.config.outputs.app_version }}
-      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
-      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
-      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-    secrets: inherit
-
   linux-vcpkg-build-test:
     if: ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
     needs: [ config, prepare-image ]
@@ -271,7 +258,6 @@ jobs:
       - create-nuget-package
       - ubuntu-x64-build-test
       - ubuntu-arm64-build-test
-      - fedora-build-test
       - linux-vcpkg-build-test
       - emscripten-build-test
       - macos-build-test

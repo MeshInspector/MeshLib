@@ -458,6 +458,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), V
     ( Vert2RegionMap,  Vector<RegionId, VertId> )
 
     ( VertCoords,  Vector<Vector3f, VertId> )
+    ( VertCoords2, Vector<Vector2f, VertId> )
     ( VertNormals,  Vector<Vector3f, VertId> )
     ( VertUVCoords,  Vector<UVCoord, VertId> )
     ( FaceNormals,  Vector<Vector3f, FaceId> )

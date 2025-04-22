@@ -52,31 +52,22 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     StatePlugin( "Viewer settings" )
 {
     shadowGl_ = std::make_unique<ShadowsGL>();
-    CommandLoop::appendCommand( [maxSamples = &maxSamples_, curSamples = &curSamples_, storedSamples = &storedSamples_] ()
-    {
-        if ( getViewerInstance().isGLInitialized() && loadGL() )
-        {
-            GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, maxSamples ) );
-            GL_EXEC( glGetIntegerv( GL_SAMPLES, curSamples ) );
-            *maxSamples = std::max( std::min( *maxSamples, 16 ), *curSamples ); // there are some known issues with 32 MSAA
-            *storedSamples = *curSamples;
-        }
-    } );
-#ifndef __EMSCRIPTEN__
     CommandLoop::appendCommand( [&] ()
     {
         auto& viewer = getViewerInstance();
-        int samples = 0;
-        if ( auto& settingsManager = viewer.getViewerSettingsManager() )
-            samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
+
         if ( viewer.isGLInitialized() && loadGL() )
         {
-            int realSamples;
-            GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
-            gpuOverridesMSAA_ = ( realSamples != samples );
+            GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, &maxSamples_ ) );
+            storedSamples_ = viewer.getMSAA();
+            maxSamples_ = std::max( std::min( maxSamples_, 16 ), storedSamples_ ); // there are some known issues with 32 MSAA
+            gpuOverridesMSAA_ = storedSamples_ != viewer.getRequestedMSAA(); // if it fails on application start - gpu overrides settings
+#ifdef __EMSCRIPTEN__
+            if ( !viewer.isSceneTextureEnabled() )
+                maxSamples_ = std::min( maxSamples_, 4 ); // web does not allow more then x4 msaa for main framebuffer
+#endif
         }
     }, CommandLoop::StartPosition::AfterWindowAppear );
-#endif
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -745,41 +736,42 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
     {
         if ( maxSamples_ > 1 )
         {
-#ifdef __EMSCRIPTEN__
-            (void)menuScaling;
-            ImGui::Text( "Multisample anti-aliasing (MSAA): x%d", curSamples_ );
-#else
-            auto backUpSamples = storedSamples_;
+            auto backUpSamples = viewer->getRequestedMSAA();
+            auto newSamples = backUpSamples;
             ImGui::Text( "Multisample anti-aliasing (MSAA):" );
             UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
             int counter = 0;
             for ( int i = 0; i <= maxSamples_; i <<= 1 )
             {
+#ifdef __EMSCRIPTEN__
+                if ( !viewer->isSceneTextureEnabled() && i == 2 )
+                    continue; // only OFF and x4 are available for main framebuffer in web
+#endif
                 if ( i == 0 )
                 {
-                    UI::radioButton( "Off", &storedSamples_, i );
+                    UI::radioButton( "Off", &newSamples, i );
                     ++i;
                 }
                 else
                 {
                     std::string label = 'x' + std::to_string( i );
-                    UI::radioButton( label.c_str(), &storedSamples_, i );
+                    UI::radioButton( label.c_str(), &newSamples, i );
                 }
                 if ( i << 1 <= maxSamples_ )
                     ImGui::SameLine( ( ( ++counter ) * 70.f + style.WindowPadding.x ) * menuScaling );
             }
-            if ( backUpSamples != storedSamples_ )
+            if ( newSamples != backUpSamples )
+                viewer->requestChangeMSAA( newSamples );
+            int initMSAA = storedSamples_;
+            int actualMSAA = viewer->getMSAA();
+            int requestedMSAA = viewer->getRequestedMSAA();
+            if ( actualMSAA != requestedMSAA )
             {
-                if ( auto& settingsManager = viewer->getViewerSettingsManager() )
-                    settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
-
-                needReset_ = storedSamples_ != curSamples_;
-            }
-            if ( gpuOverridesMSAA_ )
-                UI::transparentTextWrapped( "GPU multisampling settings override application value." );
-            if ( needReset_ )
-                UI::transparentTextWrapped( "Application requires restart to apply this change" );
-#endif
+                if ( gpuOverridesMSAA_ )
+                    UI::transparentTextWrapped( "GPU multisampling settings override application value." );
+                if ( requestedMSAA != initMSAA && !viewer->isSceneTextureEnabled() )
+                    UI::transparentTextWrapped( "Application requires restart to apply this change" );
+            }                
         }
     }
 
@@ -1324,10 +1316,8 @@ void ViewerSettingsPlugin::resetSettings_()
         shadowGl->enable( false );
     } );
 
-    storedSamples_ = 8;
     if ( auto& settingsManager = viewer->getViewerSettingsManager() )
-        settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
-    needReset_ = storedSamples_ != curSamples_;
+        settingsManager->saveString( "multisampleAntiAliasing", "invalid" );// invalidate record, so next time - default value will be used
 
 #if defined(_WIN32) || defined(__APPLE__)
     if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )

@@ -36,7 +36,7 @@ jobs:
             container-prefix: ""
           - platform: "aarch64"
             runner: [ self-hosted, linux-arm64, spot, meshinspector ]
-            container-options: "--user root"
+            container-options: " " # empty
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        py-version: ["3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

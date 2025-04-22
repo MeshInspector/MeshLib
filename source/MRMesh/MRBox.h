@@ -85,6 +85,13 @@ public:
         return res;
     }
 
+    /// considering all planes with given normal and arbitrary shift: dot(n,x) = d
+    /// finds the box's corner for which d is maximal
+    static Vb getMaxBoxCorner( const V & n )
+    {
+        return getMinBoxCorner( -n );
+    }
+
     /// computes size of the box in all dimensions
     V size() const { assert( valid() ); return max - min; }
 

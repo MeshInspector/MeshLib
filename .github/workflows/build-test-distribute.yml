@@ -40,6 +40,7 @@ jobs:
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
+      need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
       vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}
@@ -152,24 +153,24 @@ jobs:
     timeout-minutes: 60
     runs-on: windows-2019
     env:
-      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
+      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.vcpkg_version}}
+      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{env.vcpkg_version}}
+          git checkout ${{env.vs19_vcpkg_version}}
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.vcpkg_version}}
+          key: vcpkg-cache-${{env.vs19_vcpkg_version}}
           path: |
             C:\vcpkg\*
 

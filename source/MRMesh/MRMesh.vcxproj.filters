@@ -82,9 +82,6 @@
     <Filter Include="Source Files\Polyline">
       <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Relax">
-      <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Voxels">
       <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
     </Filter>
@@ -99,6 +96,9 @@
     </Filter>
     <Filter Include="Source Files\SelfIntersectoins">
       <UniqueIdentifier>{7a9f7691-d5a0-49ca-936f-cc25cfe18f8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Algorithms">
+      <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -661,16 +661,16 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRRelaxParams.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudRelax.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineRelax.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRPrism.h">
       <Filter>Source Files\Primitives</Filter>
@@ -1084,7 +1084,7 @@
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRAddNoise.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRVectorTraits.h">
       <Filter>Source Files\Basic</Filter>
@@ -1156,7 +1156,7 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRParallel.h">
       <Filter>Source Files\Basic</Filter>
@@ -1308,6 +1308,12 @@
     </ClInclude>
     <ClInclude Include="MRMeshMath.h">
       <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDirMaxBruteForce.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDirMax.h">
+      <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1480,9 +1486,6 @@
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshDirMax.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRadius.cpp">
@@ -1723,13 +1726,13 @@
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRelax.cpp">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineRelax.cpp">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPrism.cpp">
       <Filter>Source Files\Primitives</Filter>
@@ -1996,7 +1999,7 @@
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRAddNoise.cpp">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRLogWindowsExceptions.cpp">
       <Filter>Source Files\System</Filter>
@@ -2136,6 +2139,12 @@
     </ClCompile>
     <ClCompile Include="MRMeshMath.cpp">
       <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDirMaxBruteForce.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDirMax.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

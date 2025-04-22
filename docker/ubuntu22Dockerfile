@@ -7,7 +7,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip ninja-build \
+        tzdata git sudo time ninja-build \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -38,6 +38,8 @@ COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY scripts/patches scripts/patches
 COPY requirements requirements
+COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
+COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
@@ -51,9 +53,10 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl wget unzip ninja-build patchelf \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
+ && ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
  && apt-get update -y \

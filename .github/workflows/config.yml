@@ -26,6 +26,9 @@ on:
       need_linux_image_rebuild:
         description:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+      need_linux_vcpkg_rebuild:
+        description:
+        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
@@ -80,6 +83,7 @@ jobs:
       docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
+      linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
@@ -119,13 +123,23 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/*Dockerfile'
-              - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
+              - 'docker/(ubuntu20|ubuntu22|ubuntu24|fedora39|emscripten)Dockerfile'
+              - 'requirements/(ubuntu|fedora|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/install_dnf_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'
+
+      - name: Filter Linux vcpkg paths
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: linux-vcpkg-changes
+        with:
+          filters: |
+            src:
+              - 'docker/vcpkgDockerfile'
+              - 'requirements/vcpkg-linux.txt'
+              - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3

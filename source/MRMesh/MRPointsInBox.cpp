@@ -62,8 +62,8 @@ void findPointsInBox( const AABBTreePoints& tree, const Box3f& box,
             continue;
         }
 
-        addSubTask( node.rightOrLast ); // look at right node later
-        addSubTask( node.leftOrFirst ); // look at left node first
+        addSubTask( node.r ); // look at right node later
+        addSubTask( node.l ); // look at left node first
     }
 }
 

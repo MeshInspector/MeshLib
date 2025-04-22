@@ -150,7 +150,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     auto xf = task_.object->worldXf();
 
     Vector3f localPoint = nameUiPoint;
-    if ( nameUiPointIsRelativeToAabbCenter )
+    if ( nameUiPointIsRelativeToBoundingBoxCenter )
     {
         Box3f box = task_.object->getBoundingBox();
         assert(box.valid());

@@ -54,7 +54,7 @@ public:
 
     /// If true, `nameUiPoint` is relative to the center of the bounding box. Otherwise it's relative to the origin.
     /// Either way it's in model space.
-    bool nameUiPointIsRelativeToAabbCenter = true;
+    bool nameUiPointIsRelativeToBoundingBoxCenter = true;
 
     /// Which way the name is moved relative to the `point`, in model space. The length is respected.
     Vector3f nameUiLocalOffset;

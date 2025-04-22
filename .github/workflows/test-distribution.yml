@@ -111,6 +111,7 @@ jobs:
           cmake --build build
 
       - name: Ubuntu python test
+        if: ${{ always() }}
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python

@@ -32,6 +32,6 @@ if ! apt-get install -s clang-$CLANG_VER >/dev/null 2>/dev/null; then
 fi
 
 # Install the packages.
-# Could also add `sudo` here for `install_mrbind_ubuntu.sh`, but I think the user can do that themselves.
+# Could also add `sudo` here for `install_mrbind_linux.sh`, but I think the user can do that themselves.
 # `procps` is for the `free` utility, to measure how much RAM we have.
 apt install -y make cmake ninja-build gawk procps clang-$CLANG_VER lld-$CLANG_VER clang-tools-$CLANG_VER libclang-$CLANG_VER-dev llvm-$CLANG_VER-dev

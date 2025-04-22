@@ -87,11 +87,31 @@ ENDIF()
 IF(MESHLIB_PYTHON_SUPPORT)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRPython
-    MREmbeddedPython
-    pybind11nonlimitedapi_stubs
   )
-  IF(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
+
+  if(NOT WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      Python::Python
+    )
+
+    IF(MESHLIB_USE_VCPKG)
+      find_package(pybind11nonlimitedapi REQUIRED)
+      target_link_libraries(${PROJECT_NAME} PRIVATE
+        pybind11nonlimitedapi::pybind11nonlimitedapi_stubs
+      )
+    ELSE()
+      target_link_libraries(${PROJECT_NAME} PRIVATE
+        pybind11nonlimitedapi_stubs
+      )
+    ENDIF()
+  ENDIF()
+
+  IF(MESHLIB_PYTHON_EMBED_SUPPORT)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MREmbeddedPython
+    )
+  ELSE()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_EMBED_PYTHON)
   ENDIF()
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_PYTHON)

@@ -18,6 +18,14 @@ IF(APPLE)
     pybind11nonlimitedapi_stubs
     ${CMAKE_DL_LIBS}
   )
+ELSEIF(MESHLIB_USE_VCPKG AND NOT WIN32)
+  find_package(pybind11nonlimitedapi CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    spdlog::spdlog
+    pybind11nonlimitedapi::pybind11nonlimitedapi_stubs
+    ${CMAKE_DL_LIBS}
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh

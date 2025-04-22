@@ -277,7 +277,7 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
             if ( params.region )
                 *params.region |= newFaces;
         }
-        if ( !sb( ( i + 1.f ) / boundaryEdges.size() ) )
+        if ( !reportProgress( sb, ( i + 1.f ) / boundaryEdges.size() ) )
             return unexpectedOperationCanceled();
     }
     if ( params.region )

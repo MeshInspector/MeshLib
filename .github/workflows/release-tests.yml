@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -47,6 +47,9 @@ jobs:
           - os: "debian:11-slim"
             py-version: "3.9"
             py-cmd: "python3.9"
+          - os: "fedora:37"
+            py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,6 +59,10 @@ jobs:
       - name: Ubuntu system setup
         if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
+
+      - name: Fedora 37 system setup
+        if: ${{matrix.os == 'fedora:37'}}
+        run: dnf -y install python3 pip
 
       - name: Pip setup
         run: |

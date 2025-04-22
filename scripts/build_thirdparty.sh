@@ -27,8 +27,6 @@ elif [[ $OSTYPE == 'linux'* ]]; then
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
   if [[ "${ID}" == "ubuntu" ]] || [[ "${ID_LIKE}" == *"ubuntu"* ]]; then
     INSTALL_REQUIREMENTS="install_apt_requirements.sh"
-  elif [[ "${ID}" == "fedora" ]] || [[ "${ID_LIKE}" == *"fedora"* ]]; then
-    INSTALL_REQUIREMENTS="install_dnf_requirements.sh"
   fi
 else
   echo "Host system: ${OSTYPE}"

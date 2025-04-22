@@ -9,6 +9,9 @@ on:
       need_linux_image_rebuild:
         required: true
         type: boolean
+      need_linux_vcpkg_rebuild:
+        required: true
+        type: boolean
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
@@ -35,11 +38,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu20, ubuntu22, ubuntu24, vcpkg, emscripten ]
+        distro: [ ubuntu20, ubuntu22, ubuntu24, emscripten ]
         arch: [ x64, arm64 ]
         exclude:
-          - distro: vcpkg
-            arch: arm64
           - distro: emscripten
             arch: x64
         include:
@@ -92,6 +93,46 @@ jobs:
         run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
 
       - name: Push Linux image
+        run: docker push ${{ env.image }}
+
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+  linux-vcpkg-build-upload:
+    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x64 ]
+        include:
+          - arch: x64
+            image-suffix: ''
+            os: ubuntu-latest
+          - arch: arm64
+            image-suffix: '-arm64'
+            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+    runs-on: ${{ matrix.os }}
+    env:
+      image: meshlib/meshlib-vcpkg${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+      vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
+    steps:
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Linux vcpkg image
+        run: docker build -f ./docker/vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+
+      - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}
 
       - name: Remove unused Docker data

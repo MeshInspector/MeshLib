@@ -47,6 +47,9 @@ on:
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
+      vcpkg_docker_image_tag:
+        description:
+        value: ${{ jobs.prepare-config.outputs.vcpkg-docker-image-tag }}
       run_unity_nuget_test:
         description: "expression to run unity-nuget-test.yml"
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
@@ -82,6 +85,7 @@ jobs:
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # please list the required tags here
       tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
@@ -154,6 +158,17 @@ jobs:
         id: select-docker-image-tag
         run: |
           if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+            # https://stackoverflow.com/q/58033366/7325599
+            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          else
+            IMAGE_TAG="latest"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Select vcpkg Docker image tag
+        id: select-vcpkg-docker-image-tag
+        run: |
+          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
             # https://stackoverflow.com/q/58033366/7325599
             IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else

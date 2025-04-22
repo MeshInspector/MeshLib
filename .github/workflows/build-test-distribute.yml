@@ -40,6 +40,7 @@ jobs:
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
+      need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
       vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}

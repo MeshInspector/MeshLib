@@ -12,6 +12,7 @@ int main()
     MR::Mesh meshFloating = *MR::MeshLoad::fromAnySupportedFormat( "meshA.stl" );
     MR::Mesh meshFixed = *MR::MeshLoad::fromAnySupportedFormat( "meshB.stl" );
 
+//! [0]
     // Prepare ICP parameters
     float diagonal = meshFixed.getBoundingBox().diagonal();
     float icpSamplingVoxelSize = diagonal * 0.01f; // To sample points from object
@@ -30,6 +31,7 @@ int main()
 
     // Transform floating mesh
     meshFloating.transform( xf );
+//! [0]
 
     // Output information string
     std::string info = icp.getStatusInfo();

@@ -7,6 +7,7 @@
 
 int main()
 {
+//! [0]
     // create first sphere with radius of 1 unit
     MR::Mesh sphere1 = MR::makeUVSphere( 1.0f, 64, 64 );
 
@@ -17,9 +18,11 @@ int main()
 
     // perform boolean operation
     MR::BooleanResult result = MR::boolean( sphere1, sphere2, MR::BooleanOperation::Intersection );
-    MR::Mesh resultMesh = *result;
     if ( !result.valid() )
         std::cerr << result.errorString << std::endl;
+
+    MR::Mesh resultMesh = *result;
+//! [0]
 
     // save result to STL file
     MR::MeshSave::toAnySupportedFormat( resultMesh, "out_boolean.stl" );

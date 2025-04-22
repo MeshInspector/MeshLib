@@ -13,6 +13,7 @@ int main()
     MR::Mesh mesh = std::move( meshARes.value() );
     mesh.addMesh( meshBRes.value() );
 
+//! [0]    
     // Find holes (expect that there are exactly 2 holes)
     std::vector<MR::EdgeId> edges = mesh.topology.findHoleRepresentiveEdges();
     if ( edges.size() != 2 )
@@ -22,6 +23,7 @@ int main()
     MR::StitchHolesParams params;
     params.metric = MR::getUniversalMetric( mesh );
     MR::buildCylinderBetweenTwoHoles( mesh, edges.front(), edges.back(), params );
+//! [0]    
 
     // Save result
     auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "stitchedMesh.stl" );

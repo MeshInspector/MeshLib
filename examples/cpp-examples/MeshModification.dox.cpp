@@ -16,9 +16,11 @@ int main()
     props.maxDeviationAfterFlip = 0.5f;
     MR::subdivideMesh( mesh, props );
 
+//! [MeshTransform]
     // Rotate mesh
     MR::AffineXf3f rotationXf = MR::AffineXf3f::linear( MR::Matrix3f::rotation( MR::Vector3f::plusZ(), MR::PI_F * 0.5f ) );
     mesh.transform( rotationXf );
+//! [MeshTransform]
 
     return 0;
 }

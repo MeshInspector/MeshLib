@@ -340,6 +340,7 @@ struct [[nodiscard]] Mesh
 
     /// applies given transformation to specified vertices
     /// if region is nullptr, all valid mesh vertices are used
+    /// \snippet cpp-examples/MeshModification.dox.cpp MeshTransform
     MRMESH_API void transform( const AffineXf3f& xf, const VertBitSet* region = nullptr );
 
     /// creates new point and assigns given position to it

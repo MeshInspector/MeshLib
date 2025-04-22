@@ -46,6 +46,8 @@ struct BooleanResult
 * 
   * \ingroup BooleanGroup
   * Makes new mesh - result of boolean operation on mesh `A` and mesh `B`
+  * \snippet cpp-examples/MeshBoolean.dox.cpp 0
+  *
   * \param meshA Input mesh `A`
   * \param meshB Input mesh `B`
   * \param operation CSG operation to perform

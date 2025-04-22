@@ -95,6 +95,8 @@ struct StitchHolesParams
   * \ref MR::subdivideMesh
   * \image html fill/stitch_smooth.png "Stitch with smooth" width = 250cm
   * 
+  * \snippet cpp-examples/MeshStitchHole.dox.cpp 0
+  * 
   * \param mesh mesh with hole
   * \param a EdgeId which represents 1st hole (should not have valid left FaceId)
   * \param b EdgeId which represents 2nd hole (should not have valid left FaceId)

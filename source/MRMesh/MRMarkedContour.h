@@ -38,8 +38,9 @@ struct MarkedContour3f
 
 /// \param in input marked contour
 /// \param markStability a positive value, the more the value the closer marked points will be to their original positions
+/// \param normals if provided the curve at marked points will try to be orthogonal to given normal there
 /// \return contour with same number of points and same marked, where each return point tries to be on a smooth curve
-[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( MarkedContour3f in, float markStability = 1 );
+[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( MarkedContour3f in, float markStability = 1, const Contour3f * normals = nullptr );
 
 /// \param in input marked contour
 /// \param normals the curve at marked points will try to be orthogonal to given normal there
@@ -63,6 +64,9 @@ struct SplineSettings
 
     /// optional parameter with the normals of input points that will be resampled to become normals of output points
     Contour3f * normals = nullptr;
+
+    /// if true and normals are provided, then the curve at marked points will try to be orthogonal to given normal there
+    bool normalsAffectShape = false;
 };
 
 /// \param controlPoints ordered point the spline to interpolate

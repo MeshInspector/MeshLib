@@ -104,8 +104,13 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
     return res;
 }
 
-MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
+MarkedContour3f makeSpline( MarkedContour3f mc, float markStability, const Contour3f * normals )
 {
+    if ( normals )
+    {
+        mc = makeSpline( std::move( mc ), *normals, markStability );
+        return mc;
+    }
     MR_TIMER;
     assert( markStability > 0 );
     if ( mc.contour.empty() )
@@ -335,7 +340,8 @@ MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSetting
             for ( auto m : res.marks )
                 res.contour[m] = controlPoints[n++];
         }
-        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability );
+        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability,
+            settings.normalsAffectShape ? settings.normals : nullptr );
     }
     return res;
 }

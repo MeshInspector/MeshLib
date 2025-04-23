@@ -729,9 +729,9 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
 {
     std::ifstream ifs( path, std::ios_base::binary );
 
-#ifdef __EMSCRIPTEN__
-    // try to detect by ourselves
-    // GDCM uses exceptions which causes problems on Wasm
+    // try to detect by ourselves for the reasons as follows:
+    // 1) GDCM uses exceptions which causes problems in Wasm,
+    // 2) ImageReader::CanRead() reports false positives e.g. on some bindary STL files with empty header
     constexpr auto cDicomMagicNumberOffset = 0x80;
     constexpr std::array cDicomMagicNumber { 'D', 'I', 'C', 'M' };
     // NOTE: std::ifstream::get appends a null character
@@ -742,7 +742,6 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
         return DicomStatusEnum::Invalid;
     ifs.seekg( 0, std::ios::beg );
     assert( ifs );
-#endif
 
     gdcm::ImageReader ir;
     ir.SetStream( ifs );

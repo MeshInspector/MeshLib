@@ -184,13 +184,10 @@ struct DecimateResult
 /**
  * \brief Collapse edges in mesh region according to the settings
  * \ingroup DecimateGroup
- * \details Have version for parallel computing - \ref decimateParallelMesh
+ * \snippet cpp-examples/MeshDecimate.dox.cpp 0
  *
  * \image html decimate/decimate_before.png "Before" width = 350cm
  * \image html decimate/decimate_after.png "After" width = 350cm
- *
- * \sa \ref decimateParallelMesh
- * \sa \ref resolveMeshDegenerations
  */
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 

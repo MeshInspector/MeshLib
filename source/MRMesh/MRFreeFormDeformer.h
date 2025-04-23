@@ -7,7 +7,8 @@
 
 namespace MR
 {
-// Class for deforming mesh using Bernstein interpolation
+/// \brief Class for deforming mesh using Bernstein interpolation
+/// \snippet cpp-examples/FreeFormDeformation.dox.cpp 0
 class FreeFormDeformer
 {
 public:

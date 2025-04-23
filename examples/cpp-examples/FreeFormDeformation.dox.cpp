@@ -9,11 +9,12 @@ int main()
     auto mesh = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
     assert( mesh );
 
-    // Compute mesh bounding box
-    const auto box = mesh->computeBoundingBox();
-
+//! [0]
     // Construct deformer on mesh vertices
     MR::FreeFormDeformer ffDeformer( mesh->points, mesh->topology.getValidVerts() );
+
+    // Compute mesh bounding box
+    const auto box = mesh->computeBoundingBox();
 
     // Init deformer with 3x3 grid on mesh box
     ffDeformer.init( MR::Vector3i::diagonal( 3 ), box );
@@ -31,6 +32,7 @@ int main()
 
     // Invalidate the mesh because of external vertex changes
     mesh->invalidateCaches();
+//! [0]
 
     // Save deformed mesh
     MR::MeshSave::toAnySupportedFormat( *mesh, "deformed_mesh.stl" );

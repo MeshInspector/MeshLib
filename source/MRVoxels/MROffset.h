@@ -105,6 +105,7 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 };
 
 /// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
+/// \snippet cpp-examples/MeshOffset.dox.cpp 0
 [[nodiscard]] MRVOXELS_API Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params );
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);

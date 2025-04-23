@@ -41,7 +41,11 @@ struct MarkedContour3f
 /// \return contour with same number of points and same marked, where each return point tries to be on a smooth curve
 [[nodiscard]] MRMESH_API MarkedContour3f makeSpline( MarkedContour3f in, float markStability = 1 );
 
-[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( MarkedContour3f in, const std::vector<Vector3f> & markNormals, float markStability = 1 );
+/// \param in input marked contour
+/// \param normals the curve at marked points will try to be orthogonal to given normal there
+/// \param markStability a positive value, the more the value the closer marked points will be to their original positions
+/// \return contour with same number of points and same marked, where each return point tries to be on a smooth curve
+[[nodiscard]] MRMESH_API MarkedContour3f makeSpline( MarkedContour3f in, const Contour3f & normals, float markStability = 1 );
 
 struct SplineSettings
 {

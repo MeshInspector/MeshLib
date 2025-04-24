@@ -312,7 +312,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
                 {
                     auto& point = points[i];
                     const auto& pos = point->getCurrentPosition();
-                    if ( isPickedPointValid( obj.get(), pos ) )
+                    if ( getPickedPointPosition( *obj, pos ).has_value() )
                         point->setCurrentPosition( pos ); // updates coordinates even for the same pos
                     else
                         removePoint( obj, i ); // questionable, but how to get here?

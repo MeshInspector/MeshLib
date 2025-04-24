@@ -3,6 +3,7 @@
 #include "MRPointOnFace.h"
 #include "MRMeshTriPoint.h"
 #include "MREdgePoint.h"
+#include <optional>
 #include <variant>
 
 namespace MR
@@ -33,19 +34,23 @@ struct PointOnObject
 // For long-term storage of picked points on an object, such as point and contour widgets,
 // it is more convenient to use the local coordinates of the object rather than 3D coordinates,
 // which can change depending on the xf of the object.
-// --- MeshTriPoint for ObjectMeshHolder 
-// --- EdgePoint for ObjectPointsHolder 
-// --- VertId for ObjectLinesHolder (polylines)
-// --- int value (eq. -1) means not valid pick (pick in empty space). 
-using PickedPoint = std::variant<MeshTriPoint, EdgePoint, VertId, int>;
+// --- MeshTriPoint for ObjectMeshHolder
+// --- EdgePoint for ObjectLinesHolder (polylines)
+// --- VertId for ObjectPointsHolder
+// --- std::monostate means not valid pick (pick in empty space). 
+using PickedPoint = std::variant<std::monostate, MeshTriPoint, EdgePoint, VertId>;
 
-// Converts pickedPoint coordinates depending on the object type into a 3D Vector3 
-MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point );
-
-// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
+/// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
 MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos );
 
-// Checks that the picked point presents in the object's topology
-MRMESH_API bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
+/// Converts pickedPoint into local coordinates of its object,
+/// returns std::nullopt if object or point is invalid, or if it does not present in the object's topology
+MRMESH_API std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, const PickedPoint& point );
+
+/// Converts pickedPoint into local coordinates of its object
+[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point );
+
+/// Checks that the picked point presents in the object's topology
+[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
 
 } //namespace MR

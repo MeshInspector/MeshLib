@@ -100,7 +100,7 @@ public:
     [[nodiscard]] const SurfaceContours& getSurfaceContours() const { return pickedPoints_; }
 
     /// check whether the contour is closed for a particular object.
-    [[nodiscard]] MRVIEWER_API bool isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const;
+    [[nodiscard]] MRVIEWER_API bool isClosedContour( const std::shared_ptr<VisualObject>& obj ) const;
 
     /// returns the total number of pick points (including extra point if the contour is closed) on given object
     [[nodiscard]] MRVIEWER_API size_t numPickPoints( const std::shared_ptr<VisualObject>& obj ) const;

@@ -192,17 +192,17 @@ void parallelPrepareLinkedLists( const std::vector<EdgeTri>& edgesAtrisB, const 
     } );
 }
 
-struct CountourInfo
+struct ContourInfo
 {
     size_t startIndex;
     size_t size;
 };
 
-std::vector<CountourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
+std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
     auto aSize = accumulativeSet.nListA.size();
     BitSet queuedRecords( aSize + accumulativeSet.nListB.size(), true );
-    std::vector<CountourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
+    std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
     while ( queuedRecords.any() )
     {
         auto& currInfo = contInfos.emplace_back();

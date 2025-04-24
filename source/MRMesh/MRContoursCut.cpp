@@ -2166,8 +2166,8 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
-    res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
-    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithCountourIntersections.count() > 0 )
+    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
+    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.count() > 0 )
         return res;
 
     // find one edge for every hole to fill
@@ -2198,7 +2198,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         {
             FaceId oldf = preRes.removedFaces[pathId][edgeId].f;
             if ( !oldf.valid() ||
-                ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithCountourIntersections.test( oldf ) ) )
+                ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithContourIntersections.test( oldf ) ) )
                 continue;
             if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
                 addHoleDesc( path[edgeId], oldf );
@@ -2265,7 +2265,7 @@ Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, con
         return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
 
     auto cutRes = cutMesh( mesh, { *meshContour } );
-    if ( !cutRes.fbsWithCountourIntersections.none() )
+    if ( !cutRes.fbsWithContourIntersections.none() )
         return unexpected( "Cannot cut mesh because of contour self intersections" );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );
     return sideFbv;

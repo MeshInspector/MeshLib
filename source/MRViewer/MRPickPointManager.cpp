@@ -249,7 +249,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
         }
         moveClosedPoint_ = false;
         const auto& contour = pickedPoints_[obj];
-        if ( isClosedCountour( obj ) )
+        if ( isClosedContour( obj ) )
             moveClosedPoint_ = &pointWidget == contour[0].get();
         if ( params.writeHistory )
         {
@@ -331,7 +331,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     return newPoint;
 }
 
-bool PickPointManager::isClosedCountour( const std::shared_ptr<VisualObject>& obj ) const
+bool PickPointManager::isClosedContour( const std::shared_ptr<VisualObject>& obj ) const
 {
     auto pointsIt = pickedPoints_.find( obj );
     if ( pointsIt == pickedPoints_.end() )
@@ -382,7 +382,7 @@ void PickPointManager::colorLast2Points_( const std::shared_ptr<VisualObject>& o
     if ( lastPointId > 0 )
     {
         contour[lastPointId - 1]->setBaseColor( params.ordinaryPointColor );
-        if ( !isClosedCountour( obj ) )
+        if ( !isClosedContour( obj ) )
             contour[lastPointId]->setBaseColor( params.lastPointColor );
         else
             contour[lastPointId]->setBaseColor( params.closeContourPointColor );
@@ -467,7 +467,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
             return false;
 
         // all pick in point (without mod) must not comes here. Point widget must "eat" them.
-        if ( isClosedCountour( objVisual ) )
+        if ( isClosedContour( objVisual ) )
             return false;
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
@@ -479,18 +479,18 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {
         // Try to find parent object
-        auto isFirstPointOnCountourClicked = false;
+        auto isFirstPointOnContourClicked = false;
         std::shared_ptr<VisualObject> objectToCloseCoutour = nullptr;
         for ( const auto& [parentObj, contour] : pickedPoints_ )
         {
             if ( contour.size() > 2 && obj == contour[0]->getPickSphere() )
             {
-                isFirstPointOnCountourClicked = true;
+                isFirstPointOnContourClicked = true;
                 objectToCloseCoutour = parentObj;
                 break;
             }
         }
-        if ( !isFirstPointOnCountourClicked )
+        if ( !isFirstPointOnContourClicked )
             return false;
         return closeContour( objectToCloseCoutour );
     }
@@ -522,7 +522,7 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
         if ( params.canRemovePoint && !params.canRemovePoint( obj, pickedIndex ) )
             return false;
 
-        if ( isClosedCountour( pickedObj ) )
+        if ( isClosedContour( pickedObj ) )
         {
             assert( pickedIndex >= 0 );
             assert( pickedObj != nullptr );

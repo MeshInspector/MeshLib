@@ -176,7 +176,7 @@ Expected<VertBitSet> TerrainEmbedder::createCutStructure_()
     if ( !structPrecutRes.contours.empty() )
     {
         auto structCutRes = cutMesh( structPrecutRes.mesh, structPrecutRes.contours );
-        if ( structCutRes.fbsWithCountourIntersections.any() )
+        if ( structCutRes.fbsWithContourIntersections.any() )
             return unexpected( "Intersection contour of structure and terrain has self-intersections" );
         cutVerts = getIncidentVerts( structPrecutRes.mesh.topology,
                                                      fillContourLeft( structPrecutRes.mesh.topology, structCutRes.resultCut ) );
@@ -363,7 +363,7 @@ Expected<std::vector<EdgeLoop>> TerrainEmbedder::cutTerrain( const MappedMeshCon
     CutMeshParameters cutParams;
     cutParams.new2OldMap = params_.new2oldFaces;
     auto cutRes = cutMesh( result_, mmc.contours, cutParams );
-    if ( cutRes.fbsWithCountourIntersections.any() )
+    if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( "Wall contours have self-intersections" );
     auto facesToDelete = result_.topology.getValidFaces() - fillContourLeft( result_.topology, cutRes.resultCut );
     if ( params_.new2oldFaces )

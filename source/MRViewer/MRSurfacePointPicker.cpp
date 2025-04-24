@@ -30,7 +30,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
 {
     if ( !surface )
     {
-        currentPos_ = -1;
+        currentPos_ = {};
         return currentPos_;
     }
     return create( surface, pointOnObjectToPickedPoint( surface.get(), startPos ) );
@@ -41,7 +41,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     reset();
     if ( !surface )
     {
-        currentPos_ = -1;
+        currentPos_ = {};
         return currentPos_;
     }
     baseObject_ = surface;
@@ -207,11 +207,10 @@ bool SurfacePointWidget::onMouseMove_( int, int )
     return false;
 }
 
-MR::Vector3f SurfacePointWidget::toVector3f() const
+Vector3f SurfacePointWidget::toVector3f() const
 {
-    return pickedPointToVector3( baseObject_.get(), currentPos_ );
+    return getPickedPointPosition( *baseObject_, currentPos_ ).value_or( Vector3f{} );
 }
-
 
 void SurfacePointWidget::updatePositionAndRadiusPoints_( const VertId& /* v */ )
 {
@@ -302,12 +301,8 @@ void SurfacePointWidget::updatePositionAndRadius_()
     {
         updatePositionAndRadiusPoints_( *vertId );
     }
-    else if ( std::get_if<int>( &currentPos_ ) )
-    {
-        return; // pick in empty space
-    }
+    // pick in empty space
 }
-
 
 void SurfacePointWidget::setPointRadius_()
 {

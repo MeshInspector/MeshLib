@@ -34,7 +34,7 @@ struct RequestContext
 
 std::mutex sRequestContextMutex;
 int sRequestContextCounter = 0;
-std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
+std::unordered_map<int, std::shared_ptr<RequestContext>> sRequestContextMap;
 
 #ifdef __EMSCRIPTEN__
 std::string methodToString( MR::WebRequest::Method method )
@@ -243,12 +243,12 @@ void WebRequest::setLogName( std::string logName )
 void WebRequest::send( std::string urlP, std::string logName, ResponseCallback callback, bool async /*= true */ )
 {
     int ctxId;
-    RequestContext* ctx;
+    std::shared_ptr<RequestContext> ctx;
     {
         std::unique_lock lock( sRequestContextMutex );
         ctxId = sRequestContextCounter++;
-        auto [it, _] = sRequestContextMap.emplace( ctxId, std::make_unique<RequestContext>() );
-        ctx = it->second.get();
+        auto [it, _] = sRequestContextMap.emplace( ctxId, std::make_shared<RequestContext>() );
+        ctx = it->second;
     }
 
     ctx->uploadCallback = uploadCallback_;
@@ -345,6 +345,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
                 r = session.Delete();
                 break;
         }
+        spdlog::debug( "WebResponse {}: finished, updating context", logName );
 
         if ( ctx->output )
             ctx->output->close();

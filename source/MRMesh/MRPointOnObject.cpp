@@ -16,7 +16,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
     if ( auto* objMesh = dynamic_cast< const ObjectMeshHolder* >( object ) )
         return objMesh->mesh()->toTriPoint( pos );
 
-    if ( auto* objPoints  = dynamic_cast< const ObjectPointsHolder* >( object ) )
+    if ( dynamic_cast< const ObjectPointsHolder* >( object ) )
         return pos.vert;
 
     if ( auto* objLines  = dynamic_cast< const ObjectLinesHolder* >( object ) )

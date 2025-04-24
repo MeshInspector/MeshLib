@@ -211,6 +211,8 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     auto stopFar = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
 
     auto prevNorm = plane_.n;
+    if ( prevNorm == Vector3f() )
+        prevNorm = viewport.getRightDirection();
     plane_ = Plane3f::fromDirAndPt( cross( ( stopFar - stop ).normalized(), ( stop - start ).normalized() ).normalized(), start );
     if ( angle( -plane_.n, prevNorm ) < angle( plane_.n, prevNorm ) )
         plane_ = -plane_;

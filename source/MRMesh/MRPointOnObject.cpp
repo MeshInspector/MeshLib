@@ -77,6 +77,48 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
     }, point );
 }
 
+std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point )
+{
+    return std::visit( overloaded{
+        []( const std::monostate& ) -> std::optional<Vector3f>
+        {
+            return {};
+        },
+        [&object]( const MeshTriPoint& triPoint ) -> std::optional<Vector3f>
+        {
+            if ( auto objMesh = dynamic_cast< const ObjectMeshHolder* >( &object ) )
+            {
+                if ( const auto& mesh = objMesh->mesh() )
+                {
+                    const auto & topology = mesh->topology;
+                    if ( topology.hasEdge( triPoint.e ) )
+                    {
+                        if ( triPoint.bary.b == 0 || topology.left( triPoint.e ) )
+                            return mesh->normal( triPoint );
+                    }
+                }
+            }
+            return {};
+        },
+        []( const EdgePoint& ) -> std::optional<Vector3f>
+        {
+            return {};
+        },
+        [&object]( VertId vertId ) -> std::optional<Vector3f>
+        {
+            if ( auto objPoints = dynamic_cast< const ObjectPointsHolder* >( &object ) )
+            {
+                if ( const auto& pointCloud = objPoints->pointCloud() )
+                {
+                    if ( vertId < pointCloud->normals.size() && pointCloud->validPoints.test( vertId ) )
+                        return pointCloud->normals[vertId];
+                }
+            }
+            return {};
+        }
+    }, point );
+}
+
 Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point )
 {
     auto opt = getPickedPointPosition( *object, point );

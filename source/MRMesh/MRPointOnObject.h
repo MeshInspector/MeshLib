@@ -43,7 +43,7 @@ using PickedPoint = std::variant<std::monostate, MeshTriPoint, EdgePoint, VertId
 /// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
 MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos );
 
-/// Converts pickedPoint into local coordinates of its object,
+/// Converts given point into local coordinates of its object,
 /// returns std::nullopt if object or point is invalid, or if it does not present in the object's topology
 MRMESH_API std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, const PickedPoint& point );
 
@@ -52,5 +52,9 @@ MRMESH_API std::optional<Vector3f> getPickedPointPosition( const VisualObject& o
 
 /// Checks that the picked point presents in the object's topology
 [[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
+
+/// Returns object normal in local coordinates at given point,
+/// returns std::nullopt if object or point is invalid, or if it is ObjectLines or ObjectPoints without normals
+MRMESH_API std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point );
 
 } //namespace MR

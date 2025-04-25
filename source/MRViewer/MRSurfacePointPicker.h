@@ -24,7 +24,7 @@ public:
         Faces, // point can be in any place of surface
         FaceCenters, // point can be only in face center
         Edges, // point can be only on edges
-        EdgeCeneters, // point can be only in edge center
+        EdgeCenters, // point can be only in edge center
         Verts // point can be only in vertex
     };
 
@@ -102,8 +102,12 @@ public:
         return currentPos_;
     }
 
-    /// return current position transformed to Vector3f
-    MRVIEWER_API Vector3f toVector3f() const;
+    /// return local object's coordinates at the current position, or std::nullopt if it is invalid
+    std::optional<Vector3f> toCoords() const { return getPickedPointPosition( *baseObject_, currentPos_ ); }
+    [[deprecated]] Vector3f toVector3f() const { return toCoords().value_or( Vector3f{} ); }
+
+    /// return the normal in local object's coordinates at the current position, or std::nullopt if it is invalid or normal is not defined
+    std::optional<Vector3f> toNormal() const { return getPickedPointNormal( *baseObject_, currentPos_ ); }
 
     /// returns stored position as MeshTriPoint, otherwise returns invalid (default) MeshTriPoint
     MeshTriPoint getCurrentPositionMeshTriPoint() const
@@ -162,8 +166,6 @@ private:
 
     void updatePositionAndRadius_();
     void updatePositionAndRadiusMesh_( MeshTriPoint mtp );
-    void updatePositionAndRadiusPoints_( const VertId& v );
-    void updatePositionAndRadiusLines_( const EdgePoint& ep );
 
     Parameters params_;
 

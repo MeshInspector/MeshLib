@@ -79,6 +79,7 @@ struct MultiwayICPSamplingParameters
 /// This class allows you to register many objects having similar parts
 /// and known initial approximations of orientations/locations using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
+/// \snippet cpp-samples/GlobalRegistration.cpp 0
 class MRMESH_CLASS MultiwayICP
 {
 public:

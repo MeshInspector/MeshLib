@@ -341,7 +341,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                         ( *cut2oldAPtr )[i] = it->second;
                 } );
             }
-            result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
+            result.meshABadContourFaces = std::move( res.fbsWithContourIntersections );
             cutA = std::move( res.resultCut );
         } );
     }
@@ -373,7 +373,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     ( *cut2oldBPtr )[i] = it->second;
             } );
         }
-        result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );
+        result.meshBBadContourFaces = std::move( res.fbsWithContourIntersections );
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();

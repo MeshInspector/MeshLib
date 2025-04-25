@@ -102,12 +102,15 @@ public:
         return currentPos_;
     }
 
+    /// return local object's coordinates at the current position where the center of sphere is located
+    MRVIEWER_API Vector3f getCoords() const;
+    [[deprecated]] Vector3f toVector3f() const { return getCoords(); }
+
     /// return local object's coordinates at the current position, or std::nullopt if it is invalid
-    std::optional<Vector3f> toCoords() const { return getPickedPointPosition( *baseObject_, currentPos_ ); }
-    [[deprecated]] Vector3f toVector3f() const { return toCoords().value_or( Vector3f{} ); }
+    std::optional<Vector3f> findCoords() const { return getPickedPointPosition( *baseObject_, currentPos_ ); }
 
     /// return the normal in local object's coordinates at the current position, or std::nullopt if it is invalid or normal is not defined
-    std::optional<Vector3f> toNormal() const { return getPickedPointNormal( *baseObject_, currentPos_ ); }
+    std::optional<Vector3f> findNormal() const { return getPickedPointNormal( *baseObject_, currentPos_ ); }
 
     /// returns stored position as MeshTriPoint, otherwise returns invalid (default) MeshTriPoint
     MeshTriPoint getCurrentPositionMeshTriPoint() const

@@ -271,7 +271,7 @@ void SurfacePointWidget::updatePositionAndRadius_()
     if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &currentPos_ ) )
         updatePositionAndRadiusMesh_( *triPoint );
 
-    if ( auto p = toCoords() )
+    if ( auto p = findCoords() )
     {
         pickSphere_->setCenter( *p );
         setPointRadius_();
@@ -316,6 +316,11 @@ void SurfacePointWidget::setPointRadius_()
 void SurfacePointWidget::preDraw_()
 {
     setPointRadius_();
+}
+
+Vector3f SurfacePointWidget::getCoords() const
+{
+    return pickSphere_ ? pickSphere_->getCenter() : Vector3f{};
 }
 
 void SurfacePointWidget::setCurrentPosition( const PointOnObject& pos )

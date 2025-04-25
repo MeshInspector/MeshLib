@@ -463,6 +463,13 @@ Vector3f dirDblArea( const MeshTopology & topology, const VertCoords & points, V
 
 Vector3f normal( const MeshTopology & topology, const VertCoords & points, const MeshTriPoint & p )
 {
+    if ( p.bary.b == 0 )
+    {
+        // do not require to have triangular face to the left of p.e
+        const Vector3f n0 = normal( topology, points, topology.org( p.e ) );
+        const Vector3f n1 = normal( topology, points, topology.dest( p.e ) );
+        return lerp( n0, n1, p.bary.a ).normalized();
+    }
     VertId a, b, c;
     topology.getLeftTriVerts( p.e, a, b, c );
     auto n0 = normal( topology, points, a );

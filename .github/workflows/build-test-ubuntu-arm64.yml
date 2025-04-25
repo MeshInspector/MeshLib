@@ -200,6 +200,17 @@ jobs:
             --build cpp-examples-build \
             --parallel $(nproc)
 
+      - name: Build C++ samples
+        run: |
+          cmake \
+            -S examples/cpp-samples \
+            -B cpp-samples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
+          cmake \
+            --build cpp-samples-build \
+            --parallel $(nproc)
+
       - name: Build C examples
         run: |
           cmake \

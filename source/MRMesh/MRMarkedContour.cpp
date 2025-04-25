@@ -265,8 +265,8 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
             ++nextRow;
         }
 
-        assert( nextRow == d * numEqs1 );
-        assert( mTriplets.size() == d * nonZeros1 );
+        assert( nextRow == ( d + 1 ) * numEqs1 );
+        assert( mTriplets.size() == ( d + 1 ) * nonZeros1 );
     }
 
     // equations for normals at marked points

@@ -28,6 +28,7 @@ namespace MR
 /// 3. Optionally call updateSolver()
 /// 4. Call apply() to change the remaining vertices within the region
 /// Then steps 1-4 or 2-4 can be repeated.
+/// \snippet cpp-samples/LaplacianDeformation.cpp 0
 class Laplacian
 {
 public:

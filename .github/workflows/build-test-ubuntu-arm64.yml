@@ -189,7 +189,7 @@ jobs:
       - name: Extract Deb
         run: dpkg --extract meshlib_${{matrix.os}}-arm64-dev.deb $(pwd)/meshlib_install/
 
-      - name: Build C++ examples
+      - name: Build C++ examples and samples
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -198,6 +198,14 @@ jobs:
             -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
           cmake \
             --build cpp-examples-build \
+            --parallel $(nproc)
+          cmake \
+            -S examples/cpp-samples \
+            -B cpp-samples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
+          cmake \
+            --build cpp-samples-build \
             --parallel $(nproc)
 
       - name: Build C examples

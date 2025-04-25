@@ -104,8 +104,13 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
     return res;
 }
 
-MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
+MarkedContour3f makeSpline( MarkedContour3f mc, float markStability, const Contour3f * normals )
 {
+    if ( normals )
+    {
+        mc = makeSpline( std::move( mc ), *normals, markStability );
+        return mc;
+    }
     MR_TIMER;
     assert( markStability > 0 );
     if ( mc.contour.empty() )
@@ -194,6 +199,132 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability )
     return mc;
 }
 
+MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float markStability )
+{
+    MR_TIMER;
+    assert( markStability > 0 );
+    if ( mc.contour.empty() )
+        return mc;
+    assert( firstLastMarked( mc ) );
+    const bool closed = isClosed( mc.contour );
+
+    const auto sz = mc.contour.size();
+    assert( sz == normals.size() );
+    const auto mz = mc.marks.count();
+
+    std::vector<Eigen::Triplet<double>> mTriplets;
+    const auto numVars1 = int( closed ? sz - 1 : sz );
+    const auto numVars = 3 * numVars1;
+    const auto numEqs1 = sz + mz - 2;
+    const auto numNormEqs = int( closed ? mz - 1 : mz );
+    const auto numEqs = 3 * numEqs1 + numNormEqs;
+    const auto nonZeros1 = closed ? 3 * ( sz - 1 ) + mz - 1 : 3 * ( sz - 2 ) + mz;
+    const auto nonZeros = 3 * nonZeros1 + 6 * numNormEqs;
+    mTriplets.reserve( nonZeros );
+
+    Eigen::VectorXd r;
+    r.resize( numEqs );
+    int nextRow = 0;
+
+    // separable equations
+    for ( int d = 0; d < 3; ++d )
+    {
+        const auto vd = d * (int)numVars1;
+
+        // Smoothness at middle points
+        for ( int i = 0; i + 2 + closed < sz; ++i )
+        {
+            mTriplets.emplace_back( nextRow, vd + i    , -0.5 );
+            mTriplets.emplace_back( nextRow, vd + i + 1,  1.0 );
+            mTriplets.emplace_back( nextRow, vd + i + 2, -0.5 );
+            r[nextRow] = 0;
+            ++nextRow;
+        }
+        if ( closed )
+        {
+            mTriplets.emplace_back( nextRow, vd + int( sz - 3 ), -0.5 );
+            mTriplets.emplace_back( nextRow, vd + int( sz - 2 ),  1.0 );
+            mTriplets.emplace_back( nextRow, vd + 0,             -0.5 );
+            r[nextRow] = 0;
+            ++nextRow;
+
+            mTriplets.emplace_back( nextRow, vd + int( sz - 2 ), -0.5 );
+            mTriplets.emplace_back( nextRow, vd + 0,              1.0 );
+            mTriplets.emplace_back( nextRow, vd + 1,             -0.5 );
+            r[nextRow] = 0;
+            ++nextRow;
+        }
+
+        // Stabilization mc marked points
+        for ( auto i : mc.marks )
+        {
+            if ( closed && i + 1 == sz )
+                break;
+            mTriplets.emplace_back( nextRow, vd + int( i ), markStability );
+            r[nextRow] = markStability * mc.contour[i][d];
+            ++nextRow;
+        }
+
+        assert( nextRow == ( d + 1 ) * numEqs1 );
+        assert( mTriplets.size() == ( d + 1 ) * nonZeros1 );
+    }
+
+    // equations for normals at marked points
+    auto addNorm = [&]( int in, int p0, int p1 )
+    {
+        auto n = normals[in];
+        // dot( p1 - p0, n ) = 0
+        mTriplets.emplace_back( nextRow, p0,                -n.x * markStability );
+        mTriplets.emplace_back( nextRow, p0 + numVars1,     -n.y * markStability );
+        mTriplets.emplace_back( nextRow, p0 + numVars1 * 2, -n.z * markStability );
+        mTriplets.emplace_back( nextRow, p1,                 n.x * markStability );
+        mTriplets.emplace_back( nextRow, p1 + numVars1,      n.y * markStability );
+        mTriplets.emplace_back( nextRow, p1 + numVars1 * 2,  n.z * markStability );
+        r[nextRow] = 0;
+        ++nextRow;
+    };
+
+    // equations for normals at inner marked points
+    for ( auto i : mc.marks )
+    {
+        if ( i == 0 )
+        {
+            addNorm( int(i), closed ? int(sz) - 2 : 0, 1 );
+        }
+        else if ( i + 1 == sz )
+        {
+            if ( closed )
+                break;
+            addNorm( int(i), int(i) - 1, int(i) );
+        }
+        else
+            addNorm( int(i), int(i) - 1, int(i) + 1 );
+    }
+
+    assert( nextRow == numEqs );
+    assert( mTriplets.size() == nonZeros );
+
+    Eigen::SparseMatrix<double,Eigen::RowMajor> C;
+    C.resize( numEqs, numVars );
+    C.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+
+    // minimum squares solution:
+    // C^T * C * x = C^T * rhs
+    Eigen::SparseMatrix<double,Eigen::RowMajor> A = C.adjoint() * C;
+    Eigen::VectorXd b = C.adjoint() * r;
+
+    Eigen::SimplicialLDLT< Eigen::SparseMatrix<double,Eigen::ColMajor> > chol;
+    chol.compute( A );
+    Eigen::VectorXd x = chol.solve( b );
+
+    // produce output
+    for ( int i = 0; i < numVars1; ++i )
+        mc.contour[i] = Vector3f( (float)x[i], (float)x[i + numVars1], (float)x[i + 2*numVars1] );
+    if ( closed )
+        mc.contour.back() = mc.contour.front();
+    return mc;
+}
+
 MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSettings & settings )
 {
     MR_TIMER;
@@ -209,7 +340,8 @@ MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSetting
             for ( auto m : res.marks )
                 res.contour[m] = controlPoints[n++];
         }
-        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability );
+        res = makeSpline( resample( res, settings.samplingStep, settings.normals ), settings.controlStability,
+            settings.normalsAffectShape ? settings.normals : nullptr );
     }
     return res;
 }

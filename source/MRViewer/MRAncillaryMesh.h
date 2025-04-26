@@ -15,7 +15,7 @@ struct MRVIEWER_CLASS AncillaryMesh
     AncillaryMesh() = default;
 
     /// since this uniquely owns an ancillary object, we provide only move operations, not copy
-    AncillaryMesh( AncillaryMesh && b ) noexcept : obj{ std::move( b.obj ) } {}
+    AncillaryMesh( AncillaryMesh && b ) noexcept = default;
     AncillaryMesh & operator =( AncillaryMesh && b ) { reset(); obj = std::move( b.obj ); return *this; }
 
     /// Make not-pickable object, link it to parent object

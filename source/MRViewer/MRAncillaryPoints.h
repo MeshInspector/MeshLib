@@ -15,7 +15,7 @@ struct MRVIEWER_CLASS AncillaryPoints
     AncillaryPoints() = default;
 
     /// since this uniquely owns an ancillary object, we provide only move operations, not copy
-    AncillaryPoints( AncillaryPoints && b ) noexcept : obj{ std::move( b.obj ) } {}
+    AncillaryPoints( AncillaryPoints && b ) noexcept = default;
     AncillaryPoints & operator =( AncillaryPoints && b ) { reset(); obj = std::move( b.obj ); return *this; }
 
     /// Make not-pickable object, link it to parent object

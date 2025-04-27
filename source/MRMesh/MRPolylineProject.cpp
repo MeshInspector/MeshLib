@@ -8,6 +8,8 @@
 #include "MRRayBoxIntersection.h"
 #include "MRIntersection.h"
 #include "MRMatrix2.h"
+#include "MRMinMaxArg.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <cfloat>
@@ -121,6 +123,38 @@ PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Po
     }, loDistLimitSq,
     [pt]( const Box3f & box ) { return box.getDistanceSq( pt ); },
     [pt]( const LineSegm3f & ls ) { return LineSegm3f{ pt, closestPointOnLineSegm( pt, ls ) }; } );
+}
+
+PolylineProjectionResult3Arg findMaxProjectionOnPolyline( const VertCoords& points, const Polyline3& polyline,
+    const VertBitSet* pointsRegion, AffineXf3f* xf, float loDistLimitSq )
+{
+    MR_TIMER;
+    std::atomic<float> currMaxDistSq{ loDistLimitSq };
+    auto pv = parallel_reduce( tbb::blocked_range( 0_v, points.endId() ), MaxArg<float, VertId>{},
+        [&] ( const auto & range, MaxArg<float, VertId> curr )
+        {
+            for ( VertId v = range.begin(); v < range.end(); ++v )
+            {
+                if ( !contains( pointsRegion, v ) )
+                    continue;
+                auto myLoDistLimitSq = currMaxDistSq.load( std::memory_order_relaxed );
+                auto myRes = findProjectionOnPolyline( points[v], polyline, FLT_MAX, xf, myLoDistLimitSq );
+                while ( myRes.distSq > myLoDistLimitSq && currMaxDistSq.compare_exchange_strong( myLoDistLimitSq, myRes.distSq, std::memory_order_relaxed ) )
+                    {}
+                curr.include( myRes.distSq, v );
+            }
+            return curr;
+        },
+        [] ( MaxArg<float, VertId> a, const MaxArg<float, VertId> & b ) { a.include( b ); return a; }
+    );
+    PolylineProjectionResult3Arg res;
+    if ( pv.arg )
+    {
+        res.pointId = pv.arg;
+        assert( pv.val <= currMaxDistSq ); // it can be less only if the closest distance for all points was smaller than given loDistLimitSq
+        static_cast<PolylineProjectionResult3&>( res ) = findProjectionOnPolyline( points[res.pointId], polyline, FLT_MAX, xf, currMaxDistSq );
+    }
+    return res;
 }
 
 PolylineProjectionResult3 findProjectionOnPolyline( const Line3f& ln, const Polyline3& polyline,

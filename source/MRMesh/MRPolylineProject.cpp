@@ -139,8 +139,9 @@ PolylineProjectionResult3Arg findMaxProjectionOnPolyline( const VertCoords& poin
                     continue;
                 auto myLoDistLimitSq = currMaxDistSq.load( std::memory_order_relaxed );
                 auto myRes = findProjectionOnPolyline( points[v], polyline, FLT_MAX, xf, myLoDistLimitSq );
-                while ( myRes.distSq > myLoDistLimitSq && currMaxDistSq.compare_exchange_strong( myLoDistLimitSq, myRes.distSq, std::memory_order_relaxed ) )
+                while ( myRes.distSq > myLoDistLimitSq && !currMaxDistSq.compare_exchange_strong( myLoDistLimitSq, myRes.distSq, std::memory_order_relaxed ) )
                     {}
+                assert( myRes.distSq <= currMaxDistSq );
                 curr.include( myRes.distSq, v );
             }
             return curr;

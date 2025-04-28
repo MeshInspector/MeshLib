@@ -124,7 +124,7 @@ TEST(MRMesh, AABBTree)
 TEST(MRMesh, ProjectionToEmptyMesh)
 {
     Vector3f p( 1.f, 2.f, 3.f );
-    bool hasProjection = Mesh{}.projectPoint( p ).has_value();
+    bool hasProjection = Mesh{}.projectPoint( p ).valid();
     EXPECT_FALSE( hasProjection );
 }
 

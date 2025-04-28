@@ -457,8 +457,8 @@ struct [[nodiscard]] Mesh
     /// \param xf is mesh-to-point transformation, if not specified then identity transformation is assumed and works much faster;
     /// \return found closest point including Euclidean coordinates, barycentric coordinates, FaceId and squared distance to point
     ///         or std::nullopt if no mesh point is found in the ball with sqrt(maxDistSq) radius around given point
-    [[nodiscard]] MRMESH_API std::optional<MeshProjectionResult> projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
-    [[nodiscard]] std::optional<MeshProjectionResult> findClosestPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const { return projectPoint( point, maxDistSq, region, xf ); }
+    [[nodiscard]] MRMESH_API MeshProjectionResult projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MeshProjectionResult findClosestPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const { return projectPoint( point, maxDistSq, region, xf ); }
 
     /// returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;

@@ -308,11 +308,33 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
     return result;
 }
 
-FaceBitSet findDisorientedFaces( const Mesh& mesh )
+Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorientationParams& params )
 {
     MR_TIMER;
     auto disorientedFaces = mesh.topology.getValidFaces();
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+
+    Mesh cpyMesh;
+    const Mesh* targetMesh{ &mesh };
+    EdgeBitSet outHoles;
+    if ( params.virtualFillHoles && mesh.topology.findNumHoles( &outHoles ) > 0 )
+    {
+        cpyMesh = mesh;
+        targetMesh = &cpyMesh;
+        auto sb = subprogress( params.cb, 0.0f, 0.5f );
+        int i = 0;
+        int num = int( outHoles.count() );
+        for ( auto e : outHoles )
+        {
+            ++i;
+            fillHoleTrivially( cpyMesh, e ); // use simplest filling
+            if ( !reportProgress( sb, float( i ) / float( num ) ) )
+                return unexpectedOperationCanceled();
+        }
+    }
+
+    auto sb = subprogress( params.cb, targetMesh == &mesh ? 0.0f : 0.5f, 1.0f );
+
+    auto keepGoing = BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
     {
         auto normal = Vector3d( mesh.normal( f ) );
         auto triCenter = Vector3d( mesh.triCenter( f ) );
@@ -323,26 +345,36 @@ FaceBitSet findDisorientedFaces( const Mesh& mesh )
                 ++counter;
             return true;
         };
-        rayMeshIntersectAll( mesh, Line3d( triCenter, normal ), interPred );
+        rayMeshIntersectAll( *targetMesh, Line3d( triCenter, normal ), interPred );
         bool pValid = counter % 2 == 0;
         auto pCounter = counter;
-        counter = 0;
-        rayMeshIntersectAll( mesh, Line3d( triCenter, -normal ), interPred );
-        bool nValid = counter % 2 == 1;
-        auto nCounter = counter - 1; // ideal face has 0-pCounter and 1-nCounter: so we decrement nCounter for fair compare
-
-        bool valid = pValid;
-        if ( pValid != nValid )
+        bool nValid = true;
+        int nCounter = INT_MAX;
+        bool resValid = pValid;
+        if ( params.mode != FindDisorientationParams::RayMode::Positive )
         {
-            if ( pCounter == nCounter )
-                valid = true;
-            else if ( nCounter < pCounter )
-                valid = nValid;
+            counter = 0;
+            rayMeshIntersectAll( *targetMesh, Line3d( triCenter, -normal ), interPred );
+            nValid = counter % 2 == 1;
+            nCounter = counter - 1; // ideal face has 0-pCounter and 1-nCounter: so we decrement nCounter for fair compare
+
+            resValid = pValid && nValid;
+            if ( params.mode == FindDisorientationParams::RayMode::Shallowest && pValid != nValid )
+            {
+                if ( pCounter == nCounter )
+                    resValid = true;
+                else if ( nCounter < pCounter )
+                    resValid = nValid;
+            }
         }
 
-        if ( valid )
+        if ( resValid )
             disorientedFaces.reset( f );
-    } );
+    }, sb );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
     return disorientedFaces;
 }
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30320.27
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35913.81 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRViewerApp", "MRViewerApp\MRViewerApp.vcxproj", "{169A85E3-BE12-4B21-A5D3-9D3234645A0E}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -118,8 +118,8 @@ Global
 		{16E3DAF5-B110-4812-A3B8-495BA172089E}.Debug|x64.Build.0 = Debug|x64
 		{16E3DAF5-B110-4812-A3B8-495BA172089E}.Release|x64.ActiveCfg = Release|x64
 		{16E3DAF5-B110-4812-A3B8-495BA172089E}.Release|x64.Build.0 = Release|x64
-		{DAA055AF-38ED-4836-A553-7539216BB64F}.Debug|x64.ActiveCfg = Debug|x64
-		{DAA055AF-38ED-4836-A553-7539216BB64F}.Debug|x64.Build.0 = Debug|x64
+		{DAA055AF-38ED-4836-A553-7539216BB64F}.Debug|x64.ActiveCfg = Release|x64
+		{DAA055AF-38ED-4836-A553-7539216BB64F}.Debug|x64.Build.0 = Release|x64
 		{DAA055AF-38ED-4836-A553-7539216BB64F}.Release|x64.ActiveCfg = Release|x64
 		{DAA055AF-38ED-4836-A553-7539216BB64F}.Release|x64.Build.0 = Release|x64
 		{C6994376-089D-46E8-A88D-BA27EE69C9A8}.Debug|x64.ActiveCfg = Debug|x64

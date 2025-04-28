@@ -358,6 +358,7 @@ Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorient
             nValid = counter % 2 == 1;
             nCounter = counter - 1; // ideal face has 0-pCounter and 1-nCounter: so we decrement nCounter for fair compare
 
+            resValid = pValid && nValid;
             if ( params.mode == FindDisorientationParams::RayMode::Shallowest && pValid != nValid )
             {
                 if ( pCounter == nCounter )

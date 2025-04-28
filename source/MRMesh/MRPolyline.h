@@ -22,11 +22,11 @@ public:
 
     Polyline() = default;
 
-    /// creates polyline from 2D contours, 3D polyline will get zero z-component
-    MRMESH_API Polyline( const Contours2f& contours );
+    /// creates polyline from one contour (open or closed)
+    MRMESH_API Polyline( const Contour<V>& contour );
 
-    /// creates polyline from 3D contours, 2D polyline will lose z-component
-    MRMESH_API Polyline( const Contours3f& contours );
+    /// creates polyline from several contours (each can be open or closed)
+    MRMESH_API Polyline( const Contours<V>& contours );
 
     /// creates comp2firstVert.size()-1 not-closed polylines
     /// each pair (a,b) of indices in \param comp2firstVert defines vertex range of a polyline [a,b)

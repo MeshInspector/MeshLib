@@ -20,10 +20,13 @@ struct MRVIEWER_CLASS AncillaryLines
     AncillaryLines & operator =( AncillaryLines && b ) { reset(); obj = std::move( b.obj ); return *this; }
 
     /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    explicit AncillaryLines( Object& parent, const Contours3f& contours = {} ) { make( parent, contours ); }
+    explicit AncillaryLines( Object& parent, const Contour3f& contour = {} ) { make( parent, contour ); }
+    explicit AncillaryLines( Object& parent, const Contours3f& contours ) { make( parent, contours ); }
 
     /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    MRVIEWER_API void make( Object& parent, const Contours3f& contours = {} );
+    MRVIEWER_API void make( Object& parent );
+    MRVIEWER_API void make( Object& parent, const Contour3f& contour );
+    MRVIEWER_API void make( Object& parent, const Contours3f& contours );
 
     /// detach owned object from parent, stops owning it
     MRVIEWER_API void reset();

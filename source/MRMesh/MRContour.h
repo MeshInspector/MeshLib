@@ -65,7 +65,7 @@ R calcLength( const Contour<V>& contour )
     return l;
 }
 
-/// copy double-contour to float-contour, or vice versa
+/// copy double-contour to float-contour, or 2D contour to 3D contour, or vice versa
 template<typename To, typename From>
 To copyContour( const From & from )
 {
@@ -76,7 +76,7 @@ To copyContour( const From & from )
     return res;
 }
 
-/// copy double-contours to float-contours, or vice versa
+/// copy double-contours to float-contours, or 2D contours to 3D contours, or vice versa
 template<typename To, typename From>
 To copyContours( const From & from )
 {

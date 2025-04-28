@@ -240,7 +240,7 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
 
     auto viewportStop = viewer->screenToViewport(  { endMousePos_.x, endMousePos_.y, screenOrigin.z } , viewport.id );
     auto stop = viewport.unprojectFromViewportSpace( viewportStop );
-    const Polyline3 polyline( { { start, stop } } );
+    const Polyline3 polyline( { start, stop } );
    
     line_->setPolyline( std::make_shared<Polyline3>( polyline ) );
 

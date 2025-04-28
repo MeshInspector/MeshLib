@@ -33,7 +33,9 @@ struct Vector2
     constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
     explicit Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
-    explicit constexpr Vector2( const Vector3<T> & v ) noexcept : x( v.x ), y( v.y ) { }
+
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( std::constructible_from<T, U> )
+    explicit constexpr Vector2( const Vector3<U> & v ) noexcept : x( v.x ), y( v.y ) { }
 
     static constexpr Vector2 diagonal( T a ) noexcept { return Vector2( a, a ); }
     static constexpr Vector2 plusX() noexcept { return Vector2( 1, 0 ); }

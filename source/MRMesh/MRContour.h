@@ -102,5 +102,10 @@ MR_BIND_TEMPLATE( Contour2<float> copyContour( const Contour2<double> & from ) )
 MR_BIND_TEMPLATE( Contour3<float> copyContour( const Contour3<double> & from ) )
 MR_BIND_TEMPLATE( Contour2<double> copyContour( const Contour2<float> & from ) )
 MR_BIND_TEMPLATE( Contour3<double> copyContour( const Contour3<float> & from ) )
+// Mixed vec2-vec3 conversions:
+MR_BIND_TEMPLATE( Contour3<float> copyContour( const Contour2<double> & from ) )
+MR_BIND_TEMPLATE( Contour2<float> copyContour( const Contour3<double> & from ) )
+MR_BIND_TEMPLATE( Contour3<double> copyContour( const Contour2<float> & from ) )
+MR_BIND_TEMPLATE( Contour2<double> copyContour( const Contour3<float> & from ) )
 
 } // namespace MR

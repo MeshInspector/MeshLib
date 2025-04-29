@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRUnionFind.h"
+#include "MRExpected.h"
 #include <functional>
 
 namespace MR
@@ -51,6 +52,24 @@ enum FaceIncidence
 /// given prepared union-find structure returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps = nullptr );
+
+struct ExpandToComponentsParams
+{
+    /// expands only if seeds cover at least this ratio of the component area
+    /// <=0 - expands all seeds
+    /// > 1 - none
+    float coverRatio = 0.0f;
+    
+    FaceIncidence incidence = FaceIncidence::PerEdge;
+
+    /// optional predicate of boundaries between components
+    UndirectedEdgePredicate isCompBd;
+
+    ProgressCallback cb;
+};
+
+/// expands given seeds to whole components
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params = {} );
 
 struct LargeByAreaComponentsSettings
 {

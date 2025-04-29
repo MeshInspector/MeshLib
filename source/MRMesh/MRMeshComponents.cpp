@@ -227,6 +227,8 @@ Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& s
     if ( params.coverRatio <= 0.0f )
         return getComponents( mp, seeds, params.incidence, params.isCompBd );
 
+    MR_TIMER;
+
     auto res = seeds;
     auto compMapRes = MeshComponents::getAllComponentsMap( mp, params.incidence, params.isCompBd );
     const auto& compMap = compMapRes.first;

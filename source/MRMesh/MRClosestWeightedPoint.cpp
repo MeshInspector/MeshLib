@@ -163,6 +163,7 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         if ( dist < res.dist )
         {
             res.dist = dist;
+            res.weight = c->w;
             res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
             if ( dist < params.minDistance )
                 return Processing::Stop;

@@ -31,7 +31,7 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
             auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
             if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
                 return cQuietNan;
-            if ( params.signDistanceByNormal )
+            if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere )
             {
                 assert( pd.dist >= 0 );
                 if ( dot( cloud.normals[pd.vId], voxelCenter - cloud.points[pd.vId] ) < 0 )
@@ -55,14 +55,22 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
+            if ( !( pd.dist < params.dist.maxDistance ) )
                 return cQuietNan;
-            if ( params.signDistanceByNormal )
+            if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere )
             {
                 assert( pd.dist >= 0 );
                 if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
                     pd.dist = -pd.dist;
             }
+            else if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::OnNonZeroWeight && pd.weight != 0 )
+            {
+                assert( pd.dist >= 0 );
+                if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
+                    pd.dist = std::sqrt( mesh.findClosestPoint( voxelCenter )->distSq );
+            }
+            if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
+                return cQuietNan;
             return pd.dist;
         },
         .dims = params.vol.dimensions,
@@ -77,7 +85,7 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
     const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
 
-    auto distanceOffset = params.signDistanceByNormal ?
+    auto distanceOffset = params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere ?
         std::abs( params.offset ) : params.offset;
 
     WeightedPointsToDistanceVolumeParams wp2vparams
@@ -123,7 +131,7 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
 
-    auto distanceOffset = params.signDistanceByNormal ?
+    auto distanceOffset = params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere ?
         std::abs( params.offset ) : params.offset;
 
     WeightedPointsToDistanceVolumeParams wp2vparams
@@ -234,14 +242,14 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
         return weights[v];
     };
 
-    ParallelFor( weights, [&] ( VertId i )
-    {
-        weights[i] -= distParams.maxWeight;
-    } );
+//    ParallelFor( weights, [&] ( VertId i )
+//    {
+//        weights[i] -= distParams.maxWeight;
+//    } );
 
     WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
-    resParams.dist.maxWeight = 0.0f;
-    resParams.offset += distParams.maxWeight;
+//    resParams.dist.maxWeight = 0.0f;
+//    resParams.offset += distParams.maxWeight;
 
     return weightedMeshShell( mesh, resParams );
 }

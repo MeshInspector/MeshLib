@@ -29,6 +29,9 @@ struct MeshPointAndDistance
     /// the distance from input location to mtp considering point's weight
     float dist = 0;
 
+    /// the weight of the point
+    float weight = 0;
+
     /// check for validity, otherwise there is no point closer than maxDistance
     [[nodiscard]] bool valid() const { return mtp.valid(); }
     [[nodiscard]] explicit operator bool() const { return mtp.valid(); }

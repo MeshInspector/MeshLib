@@ -17,9 +17,14 @@ struct WeightedPointsToDistanceVolumeParams
 
     DistanceFromWeightedPointsComputeParams dist;
 
-    /// if true, then the distance will get its sign from the normal of the closest point (positive values in the half space pointed by normal);
-    /// initial distances must be unsigned then (e.g. all point weights are negative)
-    bool signDistanceByNormal = false;
+    /// if the offset is signed by normal or not
+    enum class SignDistanceByNormal : int
+    {
+        Nowhere,            // usual shell offset
+        Everywhere,         // usual one-sided offset
+        OnNonZeroWeight     // make one-sided offset when weight is nonzero, otherwise make two sided offset
+    };
+    SignDistanceByNormal signDistanceByNormal = SignDistanceByNormal::Nowhere;
 };
 
 /// makes FunctionVolume representing minimal distance to weighted points
@@ -40,7 +45,7 @@ struct WeightedPointsShellParametersBase
     /// if true, then the distance will get its sign from the normal of the closest point (positive values in the half space pointed by normal);
     /// initial distances must be unsigned then (e.g. all point weights are negative);
     /// true here allows one to construct one directional offset instead of bidirectional shell
-    bool signDistanceByNormal = false;
+    WeightedPointsToDistanceVolumeParams::SignDistanceByNormal signDistanceByNormal = WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Nowhere;
 
     /// Progress callback
     ProgressCallback progress;

@@ -9,7 +9,7 @@ def test_dm_from_contour(tmp_path):
     #  Load input point
     input_folder = Path(test_files_path) / "algorithms" / "lines_to_dm"
     pl3 = mrmeshpy.loadLines(input_folder / "input.mrlines")
-    pl2 = mrmeshpy.Polyline2(pl3.contours2())
+    pl2 = mrmeshpy.Polyline2(mrmeshpy.convertContoursTo2f(pl3.contours()))
 
     # process
     params = mrmeshpy.ContourToDistanceMapParams()

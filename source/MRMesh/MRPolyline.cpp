@@ -233,18 +233,6 @@ Contours<V> Polyline<V>::contours( std::vector<std::vector<VertId>>* vertMap ) c
 }
 
 template<typename V>
-Contours2f Polyline<V>::contours2( std::vector<std::vector<VertId>>* vertMap ) const
-{
-    MR_TIMER;
-    return topology.convertToContours<Vector2f>(
-        [&points = this->points] ( VertId v )
-        {
-            return Vector2f{ points[v] };
-        }, vertMap
-    );
-}
-
-template<typename V>
 EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
     assert( isEdgePath( mesh.topology, path ) );

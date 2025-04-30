@@ -224,6 +224,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     mTriplets.reserve( nonZeros );
     auto addTriplet = [&mTriplets, numVars]( int r, int c, double v )
     {
+        (void)numVars;
         assert( c >= 0 && c < numVars );
         mTriplets.emplace_back( r, c, v );
     };

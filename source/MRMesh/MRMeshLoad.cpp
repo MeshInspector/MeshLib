@@ -226,7 +226,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         {
             forseStop = true;
         }
-    }, settings.callback );
+    }, subprogress( settings.callback, 0.0f, 0.3f ) );
 
     if ( forseStop )
     {
@@ -252,6 +252,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
     }
+    if ( !reportProgress( settings.callback, 0.4f ) )
+        return unexpectedOperationCanceled();
 
     std::vector<VertId> flatPolygonIndices( faces.back().lastVertex );
 
@@ -270,7 +272,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         {
             forseStop = true;
         }
-    }, settings.callback );
+    }, subprogress( settings.callback, 0.4f, 0.7f ) );
 
     if ( forseStop )
     {
@@ -281,7 +283,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         return unexpectedOperationCanceled();
     }
 
-    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, { .skippedFaceCount = settings.skippedFaceCount } );
+    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces,
+        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f )  );
     if ( res.topology.lastValidVert() + 1 > res.points.size() )
         return unexpected( "vertex id is larger than total point coordinates" );
     return res;

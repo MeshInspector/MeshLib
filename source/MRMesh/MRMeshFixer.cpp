@@ -323,10 +323,11 @@ Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorient
         auto sb = subprogress( params.cb, 0.0f, 0.5f );
         int i = 0;
         int num = int( outHoles.count() );
+        auto metric = getMinAreaMetric( mesh );
         for ( auto e : outHoles )
         {
             ++i;
-            fillHoleTrivially( cpyMesh, e ); // use simplest filling
+            fillHole( cpyMesh, e, { .metric = metric } ); // use simplest filling
             if ( !reportProgress( sb, float( i ) / float( num ) ) )
                 return unexpectedOperationCanceled();
         }

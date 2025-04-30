@@ -279,6 +279,8 @@ Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& s
     } );
     if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();
+    if ( params.optOutNumComponents )
+        *params.optOutNumComponents = int( largeSeedsCompsBs.count() );
     return res;
 }
 

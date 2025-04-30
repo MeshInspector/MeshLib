@@ -666,12 +666,12 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
     if ( settings_.workMode == WorkMode::Patch && mousePressed_ )
     {
       BitSetParallelFor( generalEditingRegion_,
-                        updateUVsByRegionFunction( visualizationEditingRegionDistanceMap_ ) );
+          updateUVsByRegionFunction( visualizationEditingRegionDistanceMap_ ) );
     }
     else
     {
       BitSetParallelFor( visualizationRegion_,
-                        updateUVsByRegionFunction( visualizationDistanceMap_ ) );
+          updateUVsByRegionFunction( visualizationDistanceMap_ ) );
     }
     obj_->setAncillaryUVCoords( std::move( uvs ) );
 }

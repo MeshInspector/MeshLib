@@ -65,6 +65,9 @@ struct ExpandToComponentsParams
     /// optional predicate of boundaries between components
     UndirectedEdgePredicate isCompBd;
 
+    /// optional output number of components
+    int* optOutNumComponents = nullptr;
+
     ProgressCallback cb;
 };
 

@@ -33,6 +33,11 @@ public:
     /// creates bitset of given size filled with given value
     explicit BitSet( size_t numBits, bool fillValue ) { resize( numBits, fillValue ); }
 
+    /// prohibit these constructors inherited from boost::dynamic_bitset, which can initialize only few initial bits
+    explicit BitSet( size_t, unsigned long ) = delete;
+    template<class T> MR_REQUIRES_IF_SUPPORTED( std::is_arithmetic_v<T> )
+    explicit BitSet( T, T ) = delete;
+
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }

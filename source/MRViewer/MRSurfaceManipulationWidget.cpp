@@ -537,6 +537,7 @@ void SurfaceManipulationWidget::reallocData_( size_t size )
     pointsShift_.resize( size, 0.f );
     editingDistanceMap_.resize( size, 0.f );
     visualizationDistanceMap_.resize( size, 0.f );
+    visualizationEditingRegionDistanceMap_.resize( size, 0.f );
     changedRegion_.resize( size, false );
     valueChanges_.resize( size, 0.f );
 }
@@ -549,6 +550,7 @@ void SurfaceManipulationWidget::clearData_()
     pointsShift_.clear();
     editingDistanceMap_.clear();
     visualizationDistanceMap_.clear();
+    visualizationEditingRegionDistanceMap_.clear();
     changedRegion_.clear();
     valueChanges_.clear();
 }
@@ -652,13 +654,25 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
-    BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
+    auto updateUVsByRegionFunction = [&](const VertScalars& distanceMap) {
+        return [&]( VertId v ) {
+            if ( set )
+                uvs[v] = UVCoord( palette_->getUVcoord(valueChanges_[v], true ).x,
+                               ( distanceMap[v] * normalize - 0.5f ) * 100 + 0.5f );
+            else
+                uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
+        };
+    };
+    if ( settings_.workMode == WorkMode::Patch && mousePressed_ )
     {
-        if ( set )
-            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );
-        else
-            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
-    } );
+      BitSetParallelFor( generalEditingRegion_,
+                        updateUVsByRegionFunction( visualizationEditingRegionDistanceMap_ ) );
+    }
+    else
+    {
+      BitSetParallelFor( visualizationRegion_,
+                        updateUVsByRegionFunction( visualizationDistanceMap_ ) );
+    }
     obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
 

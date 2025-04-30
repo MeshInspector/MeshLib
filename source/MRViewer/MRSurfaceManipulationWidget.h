@@ -147,6 +147,7 @@ private:
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
+    VertScalars visualizationEditingRegionDistanceMap_;
     VertBitSet changedRegion_;
     VertScalars valueChanges_;
     VertScalars lastStableValueChanges_;

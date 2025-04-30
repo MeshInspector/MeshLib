@@ -35,7 +35,7 @@ public:
 
     /// prohibit these constructors inherited from boost::dynamic_bitset, which can initialize only few initial bits
     explicit BitSet( size_t, unsigned long ) = delete;
-    template<class T> MR_REQUIRES_IF_SUPPORTED( std::is_arithmetic_v<T> )
+    template<class T, std::enable_if_t<std::is_arithmetic<T>::value, std::nullptr_t> = nullptr>
     explicit BitSet( T, T ) = delete;
 
     // all bits after size() we silently consider as not-set

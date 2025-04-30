@@ -351,7 +351,7 @@ void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
     }
 
     vertTriples.clear();
-    FaceBitSet region( numTri, 1 );
+    FaceBitSet region( numTri, true );
     addTriangles( res, t, { .region = &region, .shiftFaceId = firstNewFace } );
     for ( FaceId f : region )
     {

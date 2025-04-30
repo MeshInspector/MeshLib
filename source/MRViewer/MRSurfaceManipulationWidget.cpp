@@ -654,10 +654,10 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
-    auto updateUVsByRegionFunction = [&](const VertScalars& distanceMap) {
+    auto updateUVsByRegionFunction = [&]( const VertScalars& distanceMap ) {
         return [&]( VertId v ) {
             if ( set )
-                uvs[v] = UVCoord( palette_->getUVcoord(valueChanges_[v], true ).x,
+                uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x,
                                ( distanceMap[v] * normalize - 0.5f ) * 100 + 0.5f );
             else
                 uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );

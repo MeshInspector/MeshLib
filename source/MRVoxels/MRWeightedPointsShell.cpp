@@ -67,6 +67,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             {
                 if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
                 {
+                    // need to find the closest point again without taking weights into account
                     pd.distance = std::sqrt( mesh.findClosestPoint( voxelCenter )->distSq );
                     pd.weight = 0.f;
                 }

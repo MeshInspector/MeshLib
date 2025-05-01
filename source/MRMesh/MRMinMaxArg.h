@@ -6,7 +6,73 @@
 namespace MR
 {
 
-/// minimum and maximum of some vector with values of type T,
+/// minimum of some elements of type T,
+/// and the index of where minimum is reached of type I
+template<typename T, typename I>
+struct MinArg
+{
+    T val = std::numeric_limits<T>::max();
+    I arg;
+
+    auto asPair() const { return std::make_pair( val, arg ); }
+
+    /// changes val and arg if given point is smaller
+    void include( const std::pair<T,I>& p )
+    {
+        if ( p < asPair() )
+        {
+            val = p.first;
+            arg = p.second;
+        }
+    }
+
+    /// changes val and arg if given point is smaller
+    void include( T testVal, I testArg )
+    {
+        include( std::make_pair( testVal, testArg ) );
+    }
+
+    /// changes val and arg if given point is smaller
+    void include( const MinArg & s )
+    {
+        include( s.asPair() );
+    }
+};
+
+/// maximum of some elements of type T,
+/// and the index of where maximum is reached of type I
+template<typename T, typename I>
+struct MaxArg
+{
+    T val = std::numeric_limits<T>::lowest();
+    I arg;
+
+    auto asPair() const { return std::make_pair( val, arg ); }
+
+    /// changes val and arg if given point is larger
+    void include( const std::pair<T,I>& p )
+    {
+        if ( p > asPair() )
+        {
+            val = p.first;
+            arg = p.second;
+        }
+    }
+
+    /// changes val and arg if given point is larger
+    void include( T testVal, I testArg )
+    {
+        include( std::make_pair( testVal, testArg ) );
+    }
+
+    /// changes val and arg if given point is larger
+    void include( const MaxArg & s )
+    {
+        include( s.asPair() );
+    }
+};
+
+/// minimum and maximum of some elements of type T,
 /// and the indices of where minimum and maximum are reached of type I
 template<typename T, typename I>
 struct MinMaxArg

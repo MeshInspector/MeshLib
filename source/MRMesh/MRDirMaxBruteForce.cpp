@@ -5,7 +5,6 @@
 #include "MRTimer.h"
 #include <MRPch/MRTBB.h>
 #include <cfloat>
-#include <compare>
 
 namespace MR
 {
@@ -13,32 +12,25 @@ namespace MR
 namespace
 {
 
-struct ProjectedVertex
-{
-    float proj = -FLT_MAX; //projection of points[v] on the direction of interest
-    VertId v;
-    auto operator <=>( const ProjectedVertex& ) const = default;
-};
-
 template<class V>
 VertId findDirMaxBruteForceT( const V & dir, const Vector<V, VertId> & points, const VertBitSet * region )
 {
     MR_TIMER;
 
-    auto pv = parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 1024 ), ProjectedVertex{},
-        [&] ( const auto & range, ProjectedVertex curr )
+    auto pv = parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 1024 ), MaxArg<float, VertId>{},
+        [&] ( const auto & range, MaxArg<float, VertId> curr )
         {
             for ( VertId v = range.begin(); v < range.end(); ++v )
             {
                 if ( !contains( region, v ) )
                     continue;
-                curr = std::max( curr, ProjectedVertex{ dot( points[v], dir ), v } );
+                curr.include( dot( points[v], dir ), v );
             }
             return curr;
         },
-        [] ( ProjectedVertex a, const ProjectedVertex & b ) { a = std::max( a, b ); return a; }
+        [] ( MaxArg<float, VertId> a, const MaxArg<float, VertId> & b ) { a.include( b ); return a; }
     );
-    return pv.v;
+    return pv.arg;
 }
 
 template<class V>
@@ -94,8 +86,8 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
         return findDirMaxBruteForce( dir, mp.mesh.points, &mp.mesh.topology.getValidVerts() );
 
     MR_TIMER;
-    auto pv = parallel_reduce( tbb::blocked_range( 0_f, FaceId( mp.mesh.topology.faceSize() ), 1024 ), ProjectedVertex{},
-        [&] ( const auto & range, ProjectedVertex curr )
+    auto pv = parallel_reduce( tbb::blocked_range( 0_f, FaceId( mp.mesh.topology.faceSize() ), 1024 ), MaxArg<float, VertId>{},
+        [&] ( const auto & range, MaxArg<float, VertId> curr )
         {
             for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
@@ -104,13 +96,13 @@ VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
                 VertId vs[3];
                 mp.mesh.topology.getTriVerts( f, vs );
                 for ( auto v : vs )
-                    curr = std::max( curr, ProjectedVertex{ dot( mp.mesh.points[v], dir ), v } );
+                    curr.include( dot( mp.mesh.points[v], dir ), v );
             }
             return curr;
         },
-        [] ( ProjectedVertex a, const ProjectedVertex & b ) { a = std::max( a, b ); return a; }
+        [] ( MaxArg<float, VertId> a, const MaxArg<float, VertId> & b ) { a.include( b ); return a; }
     );
-    return pv.v;
+    return pv.arg;
 }
 
 VertId findDirMaxBruteForce( const Vector3f & dir, const MeshVertPart & mp )

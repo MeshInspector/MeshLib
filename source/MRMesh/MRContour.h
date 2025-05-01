@@ -65,9 +65,11 @@ R calcLength( const Contour<V>& contour )
     return l;
 }
 
-/// copy double-contour to float-contour, or vice versa
+/// Copy double-contour to float-contour, or vice versa. Also handles 2D-3D conversions (zeroing or dropping the Z component).
+/// This is excluded from the bindings for simplicity. While it does bind (if manually instantiated),
+///   the resulting names are quite ugly. Instead we provide wrapper functions with nicer names below.
 template<typename To, typename From>
-To copyContour( const From & from )
+MR_BIND_IGNORE To convertContour( const From & from )
 {
     To res;
     res.reserve( from.size() );
@@ -76,14 +78,16 @@ To copyContour( const From & from )
     return res;
 }
 
-/// copy double-contours to float-contours, or vice versa
+/// Copy double-contours to float-contours, or vice versa. Also handles 2D-3D conversions (zeroing or dropping the Z component).
+/// This is excluded from the bindings for simplicity. While it does bind (if manually instantiated),
+///   the resulting names are quite ugly. Instead we provide wrapper functions with nicer names below.
 template<typename To, typename From>
-To copyContours( const From & from )
+MR_BIND_IGNORE To convertContours( const From & from )
 {
     To res;
     res.reserve( from.size() );
     for ( const auto & c : from )
-        res.push_back( copyContour<typename To::value_type>( c ) );
+        res.push_back( convertContour<typename To::value_type>( c ) );
     return res;
 }
 
@@ -98,9 +102,50 @@ MR_BIND_TEMPLATE( float calcLength( const Contour3<float>& contour ) )
 MR_BIND_TEMPLATE( double calcLength( const Contour3<double>& contour ) )
 MR_BIND_TEMPLATE( Vector3<float> calcOrientedArea( const Contour3<float> & contour ) )
 MR_BIND_TEMPLATE( Vector3<double> calcOrientedArea( const Contour3<double> & contour ) )
-MR_BIND_TEMPLATE( Contour2<float> copyContour( const Contour2<double> & from ) )
-MR_BIND_TEMPLATE( Contour3<float> copyContour( const Contour3<double> & from ) )
-MR_BIND_TEMPLATE( Contour2<double> copyContour( const Contour2<float> & from ) )
-MR_BIND_TEMPLATE( Contour3<double> copyContour( const Contour3<float> & from ) )
+
+
+template <typename From> [[nodiscard]] Contour2f convertContourTo2f( const From &from ) { return convertContour<Contour2f>( from ); }
+template <typename From> [[nodiscard]] Contour3f convertContourTo3f( const From &from ) { return convertContour<Contour3f>( from ); }
+template <typename From> [[nodiscard]] Contour2d convertContourTo2d( const From &from ) { return convertContour<Contour2d>( from ); }
+template <typename From> [[nodiscard]] Contour3d convertContourTo3d( const From &from ) { return convertContour<Contour3d>( from ); }
+
+template <typename From> [[nodiscard]] Contours2f convertContoursTo2f( const From &from ) { return convertContours<Contours2f>( from ); }
+template <typename From> [[nodiscard]] Contours3f convertContoursTo3f( const From &from ) { return convertContours<Contours3f>( from ); }
+template <typename From> [[nodiscard]] Contours2d convertContoursTo2d( const From &from ) { return convertContours<Contours2d>( from ); }
+template <typename From> [[nodiscard]] Contours3d convertContoursTo3d( const From &from ) { return convertContours<Contours3d>( from ); }
+
+MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour2f & from ) )
+MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour2d & from ) )
+MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour3f & from ) )
+MR_BIND_TEMPLATE( Contour2f convertContourTo2f( const Contour3d & from ) )
+MR_BIND_TEMPLATE( Contour2d convertContourTo2d( const Contour2f & from ) )
+MR_BIND_TEMPLATE( Contour2d convertContourTo2d( const Contour2d & from ) )
+MR_BIND_TEMPLATE( Contour2d convertContourTo2d( const Contour3f & from ) )
+MR_BIND_TEMPLATE( Contour2d convertContourTo2d( const Contour3d & from ) )
+MR_BIND_TEMPLATE( Contour3f convertContourTo3f( const Contour2f & from ) )
+MR_BIND_TEMPLATE( Contour3f convertContourTo3f( const Contour2d & from ) )
+MR_BIND_TEMPLATE( Contour3f convertContourTo3f( const Contour3f & from ) )
+MR_BIND_TEMPLATE( Contour3f convertContourTo3f( const Contour3d & from ) )
+MR_BIND_TEMPLATE( Contour3d convertContourTo3d( const Contour2f & from ) )
+MR_BIND_TEMPLATE( Contour3d convertContourTo3d( const Contour2d & from ) )
+MR_BIND_TEMPLATE( Contour3d convertContourTo3d( const Contour3f & from ) )
+MR_BIND_TEMPLATE( Contour3d convertContourTo3d( const Contour3d & from ) )
+
+MR_BIND_TEMPLATE( Contours2f convertContoursTo2f( const Contours2f & from ) )
+MR_BIND_TEMPLATE( Contours2f convertContoursTo2f( const Contours2d & from ) )
+MR_BIND_TEMPLATE( Contours2f convertContoursTo2f( const Contours3f & from ) )
+MR_BIND_TEMPLATE( Contours2f convertContoursTo2f( const Contours3d & from ) )
+MR_BIND_TEMPLATE( Contours2d convertContoursTo2d( const Contours2f & from ) )
+MR_BIND_TEMPLATE( Contours2d convertContoursTo2d( const Contours2d & from ) )
+MR_BIND_TEMPLATE( Contours2d convertContoursTo2d( const Contours3f & from ) )
+MR_BIND_TEMPLATE( Contours2d convertContoursTo2d( const Contours3d & from ) )
+MR_BIND_TEMPLATE( Contours3f convertContoursTo3f( const Contours2f & from ) )
+MR_BIND_TEMPLATE( Contours3f convertContoursTo3f( const Contours2d & from ) )
+MR_BIND_TEMPLATE( Contours3f convertContoursTo3f( const Contours3f & from ) )
+MR_BIND_TEMPLATE( Contours3f convertContoursTo3f( const Contours3d & from ) )
+MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours2f & from ) )
+MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours2d & from ) )
+MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours3f & from ) )
+MR_BIND_TEMPLATE( Contours3d convertContoursTo3d( const Contours3d & from ) )
 
 } // namespace MR

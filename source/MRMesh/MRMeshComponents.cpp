@@ -220,6 +220,70 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
     return getLargeByAreaComponents( mp, unionFind, minArea );
 }
 
+Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )
+{
+    if ( params.coverRatio > 1.0f )
+        return FaceBitSet();
+    if ( params.coverRatio <= 0.0f )
+        return getComponents( mp, seeds, params.incidence, params.isCompBd );
+
+    MR_TIMER;
+
+    auto res = seeds;
+    auto compMapRes = MeshComponents::getAllComponentsMap( mp, params.incidence, params.isCompBd );
+    const auto& compMap = compMapRes.first;
+    int numComps = compMapRes.second;
+
+    if ( !reportProgress( params.cb, 0.3f ) )
+        return unexpectedOperationCanceled();
+
+    RegionBitSet compsWithSeeds( numComps );
+    for ( auto f : res )
+        compsWithSeeds.set( compMap[f] );
+
+    if ( !reportProgress( params.cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    const auto& region = mp.mesh.topology.getFaceIds( mp.region );
+
+    struct AreaCounter
+    {
+        float seedArea = 0.0f;
+        float totalArea = 0.0f;
+    };
+    Vector<AreaCounter, RegionId> areas( numComps );
+    for ( auto f : region )
+    {
+        auto rId = compMap[f];
+        if ( !compsWithSeeds.test( rId ) )
+            continue;
+        auto area = mp.mesh.area( f );
+        areas[rId].totalArea += area;
+        if ( res.test( f ) )
+            areas[rId].seedArea += area;
+    }
+
+    if ( !reportProgress( params.cb, 0.9f ) )
+        return unexpectedOperationCanceled();
+
+    auto largeSeedsCompsBs = compsWithSeeds;
+    for ( auto rId : compsWithSeeds )
+    {
+        if ( areas[rId].seedArea / areas[rId].totalArea < params.coverRatio )
+            largeSeedsCompsBs.reset( rId );
+    }
+    res.resize( region.size() );
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        res.set( f, largeSeedsCompsBs.test( compMap[f] ) );
+    } );
+    if ( !reportProgress( params.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    if ( params.optOutNumComponents )
+        *params.optOutNumComponents = int( largeSeedsCompsBs.count() );
+    return res;
+}
+
 FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {

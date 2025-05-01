@@ -26,6 +26,7 @@
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
+    <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
@@ -46,9 +47,6 @@
     </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\mrmeshpy\mrmeshpy.vcxproj">
-      <Project>{cc7f9661-34a7-4756-8791-acfd10a427eb}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>

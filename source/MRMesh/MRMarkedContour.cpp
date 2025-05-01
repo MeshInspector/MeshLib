@@ -212,7 +212,6 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     assert( sz == normals.size() );
     const auto mz = mc.marks.count();
 
-    std::vector<Eigen::Triplet<double>> mTriplets;
     const auto numVars1 = int( closed ? sz - 1 : sz );
     const auto numVars = 3 * numVars1;
     const auto numEqs1 = sz + mz - 2;
@@ -220,7 +219,15 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     const auto numEqs = 3 * numEqs1 + numNormEqs;
     const auto nonZeros1 = closed ? 3 * ( sz - 1 ) + mz - 1 : 3 * ( sz - 2 ) + mz;
     const auto nonZeros = 3 * nonZeros1 + 6 * numNormEqs;
+
+    std::vector<Eigen::Triplet<double>> mTriplets;
     mTriplets.reserve( nonZeros );
+    auto addTriplet = [&mTriplets, numVars]( int r, int c, double v )
+    {
+        (void)numVars;
+        assert( c >= 0 && c < numVars );
+        mTriplets.emplace_back( r, c, v );
+    };
 
     Eigen::VectorXd r;
     r.resize( numEqs );
@@ -234,23 +241,23 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
         // Smoothness at middle points
         for ( int i = 0; i + 2 + closed < sz; ++i )
         {
-            mTriplets.emplace_back( nextRow, vd + i    , -0.5 );
-            mTriplets.emplace_back( nextRow, vd + i + 1,  1.0 );
-            mTriplets.emplace_back( nextRow, vd + i + 2, -0.5 );
+            addTriplet( nextRow, vd + i    , -0.5 );
+            addTriplet( nextRow, vd + i + 1,  1.0 );
+            addTriplet( nextRow, vd + i + 2, -0.5 );
             r[nextRow] = 0;
             ++nextRow;
         }
         if ( closed )
         {
-            mTriplets.emplace_back( nextRow, vd + int( sz - 3 ), -0.5 );
-            mTriplets.emplace_back( nextRow, vd + int( sz - 2 ),  1.0 );
-            mTriplets.emplace_back( nextRow, vd + 0,             -0.5 );
+            addTriplet( nextRow, vd + int( sz - 3 ), -0.5 );
+            addTriplet( nextRow, vd + int( sz - 2 ),  1.0 );
+            addTriplet( nextRow, vd + 0,             -0.5 );
             r[nextRow] = 0;
             ++nextRow;
 
-            mTriplets.emplace_back( nextRow, vd + int( sz - 2 ), -0.5 );
-            mTriplets.emplace_back( nextRow, vd + 0,              1.0 );
-            mTriplets.emplace_back( nextRow, vd + 1,             -0.5 );
+            addTriplet( nextRow, vd + int( sz - 2 ), -0.5 );
+            addTriplet( nextRow, vd + 0,              1.0 );
+            addTriplet( nextRow, vd + 1,             -0.5 );
             r[nextRow] = 0;
             ++nextRow;
         }
@@ -260,7 +267,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
         {
             if ( closed && i + 1 == sz )
                 break;
-            mTriplets.emplace_back( nextRow, vd + int( i ), markStability );
+            addTriplet( nextRow, vd + int( i ), markStability );
             r[nextRow] = markStability * mc.contour[i][d];
             ++nextRow;
         }
@@ -274,12 +281,12 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     {
         auto n = normals[in];
         // dot( p1 - p0, n ) = 0
-        mTriplets.emplace_back( nextRow, p0,                -n.x * markStability );
-        mTriplets.emplace_back( nextRow, p0 + numVars1,     -n.y * markStability );
-        mTriplets.emplace_back( nextRow, p0 + numVars1 * 2, -n.z * markStability );
-        mTriplets.emplace_back( nextRow, p1,                 n.x * markStability );
-        mTriplets.emplace_back( nextRow, p1 + numVars1,      n.y * markStability );
-        mTriplets.emplace_back( nextRow, p1 + numVars1 * 2,  n.z * markStability );
+        addTriplet( nextRow, p0,                -n.x * markStability );
+        addTriplet( nextRow, p0 + numVars1,     -n.y * markStability );
+        addTriplet( nextRow, p0 + numVars1 * 2, -n.z * markStability );
+        addTriplet( nextRow, p1,                 n.x * markStability );
+        addTriplet( nextRow, p1 + numVars1,      n.y * markStability );
+        addTriplet( nextRow, p1 + numVars1 * 2,  n.z * markStability );
         r[nextRow] = 0;
         ++nextRow;
     };
@@ -298,7 +305,12 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
             addNorm( int(i), int(i) - 1, int(i) );
         }
         else
-            addNorm( int(i), int(i) - 1, int(i) + 1 );
+        {
+            if ( closed && i + 2 == sz )
+                addNorm( int(i), int(i) - 1, 0 );
+            else
+                addNorm( int(i), int(i) - 1, int(i) + 1 );
+        }
     }
 
     assert( nextRow == numEqs );

@@ -362,11 +362,11 @@ Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt 
         const float maxDistSq = 2 * toolRadius * toolRadius;
         const auto mpr = offset ? offset->mesh.projectPoint( *it, maxDistSq ) : mp.mesh.projectPoint( *it, maxDistSq );
 
-        bool isInsideSelection = mpr.has_value();
+        bool isInsideSelection = mpr.valid();
 
         if ( isInsideSelection )
         {
-            const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
+            const auto faceId = offset ? offset->mesh.topology.left( mpr.mtp.e ) : mp.mesh.topology.left( mpr.mtp.e );
 
             isInsideSelection = offset ?
                 ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :

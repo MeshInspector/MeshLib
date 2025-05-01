@@ -350,6 +350,10 @@ template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;
 template <typename T> using Box3 = Box<Vector3<T>>;
 
+template<typename T, typename I> struct MinArg;
+template<typename T, typename I> struct MaxArg;
+template<typename T, typename I> struct MinMaxArg;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
     ( Ball1f,  Ball<float>     )
     ( Ball1d,  Ball<double>    )

@@ -557,13 +557,9 @@ bool Mesh::projectPoint( const Vector3f& point, MeshProjectionResult& res, float
     return true;
 }
 
-std::optional<MeshProjectionResult> Mesh::projectPoint( const Vector3f& point, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
+MeshProjectionResult Mesh::projectPoint( const Vector3f& point, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
 {
-    auto proj = findProjection( point, { *this, region }, maxDistSq, xf );
-    if ( !( proj.distSq < maxDistSq ) )
-        return {};
-
-    return proj;
+    return findProjection( point, { *this, region }, maxDistSq, xf );
 }
 
 const AABBTree & Mesh::getAABBTree() const

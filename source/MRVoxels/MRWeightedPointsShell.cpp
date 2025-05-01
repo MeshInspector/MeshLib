@@ -20,7 +20,7 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
 {
     MR_TIMER;
 
-    assert( !params.signDistanceByNormal || cloud.hasNormals() );
+    assert( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Nowhere || cloud.hasNormals() );
 
     return FunctionVolume
     {
@@ -68,7 +68,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
                 if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
                 {
                     // need to find the closest point again without taking weights into account
-                    pd.distance = std::sqrt( mesh.findClosestPoint( voxelCenter )->distSq );
+                    pd.distance = std::sqrt( mesh.findClosestPoint( voxelCenter ).distSq );
                     pd.weight = 0.f;
                 }
             }

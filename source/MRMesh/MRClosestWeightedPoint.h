@@ -26,11 +26,14 @@ struct MeshPointAndDistance
     /// a point on mesh in barycentric representation
     MeshTriPoint mtp;
 
-    /// the distance from input location to mtp considering point's weight
-    float dist = 0;
+    /// the distance from input location to mtp (not considering weight)
+    float distance = 0;
 
     /// the weight of the point
     float weight = 0;
+
+    /// the distance from input location to mtp considering point's weight
+    [[nodiscard]] float weightedDistance() const { return distance - weight; }
 
     /// check for validity, otherwise there is no point closer than maxDistance
     [[nodiscard]] bool valid() const { return mtp.valid(); }

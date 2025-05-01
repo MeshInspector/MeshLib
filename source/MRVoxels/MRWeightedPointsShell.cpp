@@ -55,23 +55,25 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            if ( !( pd.dist < params.dist.maxDistance ) )
+            if ( !( pd.weightedDistance() < params.dist.maxDistance ) )
                 return cQuietNan;
-            if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere )
+            if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::Everywhere
+                    && pd.weightedDistance() >= params.dist.minDistance )
             {
-                assert( pd.dist >= 0 );
                 if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
-                    pd.dist = -pd.dist;
+                    pd.distance = -pd.distance;
             }
             else if ( params.signDistanceByNormal == WeightedPointsToDistanceVolumeParams::SignDistanceByNormal::OnNonZeroWeight && pd.weight != 0 )
             {
-                assert( pd.dist >= 0 );
                 if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
-                    pd.dist = std::sqrt( mesh.findClosestPoint( voxelCenter )->distSq );
+                {
+                    pd.distance = std::sqrt( mesh.findClosestPoint( voxelCenter )->distSq );
+                    pd.weight = 0.f;
+                }
             }
-            if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
+            if ( !( pd.weightedDistance() >= params.dist.minDistance && pd.weightedDistance() < params.dist.maxDistance ) )
                 return cQuietNan;
-            return pd.dist;
+            return pd.weightedDistance();
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
@@ -242,15 +244,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
         return weights[v];
     };
 
-//    ParallelFor( weights, [&] ( VertId i )
-//    {
-//        weights[i] -= distParams.maxWeight;
-//    } );
-
     WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
-//    resParams.dist.maxWeight = 0.0f;
-//    resParams.offset += distParams.maxWeight;
-
     return weightedMeshShell( mesh, resParams );
 }
 

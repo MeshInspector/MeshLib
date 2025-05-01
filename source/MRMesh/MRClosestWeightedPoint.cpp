@@ -143,7 +143,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
 MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params )
 {
-    MeshPointAndDistance res{ .dist = params.maxDistance };
+    MeshPointAndDistance res{ .distance = params.maxDistance };
     assert( params.pointWeight );
     if ( !params.pointWeight )
         return res;
@@ -160,9 +160,9 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
 
         const auto r = distance( loc, c->pos );
         const auto dist = r - c->w;
-        if ( dist < res.dist )
+        if ( dist < res.weightedDistance() )
         {
-            res.dist = dist;
+            res.distance = r;
             res.weight = c->w;
             res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
             if ( dist < params.minDistance )

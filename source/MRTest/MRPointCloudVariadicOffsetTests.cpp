@@ -63,7 +63,7 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
     {
         auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
         assert( !pd.mtp.onEdge( mesh.topology ) );
-        return pd.dist;
+        return pd.weightedDistance();
     };
 
     params.pointWeight = [&]( VertId ) { return 1; };

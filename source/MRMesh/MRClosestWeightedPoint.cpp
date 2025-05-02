@@ -83,6 +83,7 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
         ws[i] = pointWeight( vs[i] );
     }
 
+    // considering unsigned distances, each triangle has two planes where euclidean distance equals interpolated point weight
     const auto maybePlane = ( dot( locd - ps[0], dirDblArea( ps ) ) >= 0 ) ?
         tangentPlaneToSpheres( ps[0], ps[1], ps[2], ws[0], ws[1], ws[2] ) :
         tangentPlaneToSpheres( ps[1], ps[0], ps[2], ws[1], ws[0], ws[2] );

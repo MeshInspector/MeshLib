@@ -1,5 +1,6 @@
 #include <MRMesh/MRClosestWeightedPoint.h>
 #include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRMesh.h>
 #include <MRMesh/MRGTest.h>
 
 namespace MR
@@ -43,6 +44,37 @@ TEST( MRMesh, findClosestWeightedPoint )
         res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
+}
+
+TEST( MRMesh, findClosestWeightedMeshPoint )
+{
+    Triangulation t{
+        { 0_v, 1_v, 2_v }
+    };
+    VertCoords vs{
+        {-1, -1, 0 },  //0_v
+        {-1,  1, 0 },  //1_v
+        { 1,  0, 0 },  //2_v
+    };
+    auto mesh = Mesh::fromTriangles( std::move( vs ), t );
+
+    DistanceFromWeightedPointsComputeParams params;
+    auto distance = [&]( Vector3f loc )
+    {
+        auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
+        assert( !pd.mtp.onEdge( mesh.topology ) );
+        return pd.dist;
+    };
+
+    params.pointWeight = [&]( VertId ) { return 1; };
+    params.maxWeight = 1;
+    for ( float z = -2; z <= 2; z += 0.1f )
+        EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 + std::abs( z ), 1e-7f );
+
+    params.pointWeight = [&]( VertId ) { return -1; };
+    params.maxWeight = -1;
+    for ( float z = -2; z <= 2; z += 0.1f )
+        EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 + std::abs( z ), 1e-7f );
 }
 
 } //namespace MR

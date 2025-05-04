@@ -25,8 +25,19 @@ struct WeightedPointsToDistanceVolumeParams
 /// makes FunctionVolume representing minimal distance to weighted points
 [[nodiscard]] MRVOXELS_API FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud, const WeightedPointsToDistanceVolumeParams& params );
 
+struct WeightedMeshPointsToDistanceVolumeParams
+{
+    DistanceVolumeParams vol;
+
+    DistanceFromWeightedMeshPointsComputeParams dist;
+
+    /// if true, then the distance will get its sign from the normal of the closest point (positive values in the half space pointed by normal);
+    /// initial distances must be unsigned then (e.g. all point weights are negative)
+    bool signDistanceByNormal = false;
+};
+
 /// makes FunctionVolume representing minimal distance to mesh with weighted vertices
-[[nodiscard]] MRVOXELS_API FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params );
+[[nodiscard]] MRVOXELS_API FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedMeshPointsToDistanceVolumeParams& params );
 
 struct WeightedPointsShellParametersBase
 {
@@ -71,6 +82,10 @@ struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
     /// interpolation distance between the weights of the regions
     /// determines the sharpness of transitions between different regions
     float interpolationDist = 0;
+
+    /// if true the distances grow in both directions from each triangle, reaching minimum in the triangle;
+    /// if false the distances grow to infinity in the direction of triangle's normals, and decrease to minus infinity in the opposite direction
+    bool bidirectionalMode = true;
 };
 
 /// consider a point cloud where each point has additive weight,

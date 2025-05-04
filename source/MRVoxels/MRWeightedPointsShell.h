@@ -16,10 +16,6 @@ struct WeightedPointsToDistanceVolumeParams
     DistanceVolumeParams vol;
 
     DistanceFromWeightedPointsComputeParams dist;
-
-    /// if true, then the distance will get its sign from the normal of the closest point (positive values in the half space pointed by normal);
-    /// initial distances must be unsigned then (e.g. all point weights are negative)
-    bool signDistanceByNormal = false;
 };
 
 /// makes FunctionVolume representing minimal distance to weighted points

@@ -66,15 +66,33 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
         return pd.dist;
     };
 
-    params.pointWeight = [&]( VertId ) { return 1; };
-    params.maxWeight = 1;
-    for ( float z = -2; z <= 2; z += 0.1f )
-        EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 + std::abs( z ), 1e-7f );
+    {
+        params.bidirectionalMode = false;
 
-    params.pointWeight = [&]( VertId ) { return -1; };
-    params.maxWeight = -1;
-    for ( float z = -2; z <= 2; z += 0.1f )
-        EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 + std::abs( z ), 1e-7f );
+        params.pointWeight = [&]( VertId ) { return 1; };
+        params.maxWeight = 1;
+        for ( float z = -2; z <= 2; z += 0.1f )
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 - z, 1e-7f );
+
+        params.pointWeight = [&]( VertId ) { return -1; };
+        params.maxWeight = -1;
+        for ( float z = -2; z <= 2; z += 0.1f )
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 - z, 1e-7f );
+    }
+
+    {
+        params.bidirectionalMode = true;
+
+        params.pointWeight = [&]( VertId ) { return 1; };
+        params.maxWeight = 1;
+        for ( float z = -2; z <= 2; z += 0.1f )
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 + std::abs( z ), 1e-7f );
+
+        params.pointWeight = [&]( VertId ) { return -1; };
+        params.maxWeight = -1;
+        for ( float z = -2; z <= 2; z += 0.1f )
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 + std::abs( z ), 1e-7f );
+    }
 }
 
 } //namespace MR

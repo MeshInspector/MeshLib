@@ -44,7 +44,7 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
     };
 }
 
-FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedMeshPointsToDistanceVolumeParams& params )
+FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params )
 {
     MR_TIMER;
 
@@ -126,7 +126,7 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     auto distanceOffset = params.signDistanceByNormal ?
         std::abs( params.offset ) : params.offset;
 
-    WeightedMeshPointsToDistanceVolumeParams wp2vparams
+    WeightedPointsToDistanceVolumeParams wp2vparams
     {
         .vol =
         {
@@ -134,14 +134,11 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
             .voxelSize = Vector3f::diagonal( params.voxelSize ),
             .dimensions = dimensions,
         },
-        .dist = DistanceFromWeightedMeshPointsComputeParams
+        .dist =
         {
-            DistanceFromWeightedPointsComputeParams{
-                params.dist,
-                distanceOffset - 1.001f * params.voxelSize, //minDistance
-                distanceOffset + 1.001f * params.voxelSize  //maxDistance
-            },
-            params.bidirectionalMode
+            params.dist,
+            distanceOffset - 1.001f * params.voxelSize, //minDistance
+            distanceOffset + 1.001f * params.voxelSize  //maxDistance
         },
         .signDistanceByNormal = params.signDistanceByNormal
     };

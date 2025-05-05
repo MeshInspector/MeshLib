@@ -50,7 +50,7 @@ struct MultiRayMeshIntersectResult
 {
     // outputs (each one if optional) for every ray:
     BitSet * intersectingRays = nullptr;         ///< true if the ray has intersection with mesh part, false otherwise
-    std::vector<float> * rayParams = nullptr;    ///< distance along each ray till the intersection point or NaN if no intersection
+    std::vector<float> * rayDistances = nullptr;    ///< distance along each ray till the intersection point or NaN if no intersection
     std::vector<FaceId> * isectFaces = nullptr;  ///< intersected triangles from mesh
     std::vector<TriPointf> * isectBary = nullptr;///< barycentric coordinates of the intersection point within intersected triangle or NaNs if no intersection
     std::vector<Vector3f> * isectPts = nullptr;  ///< intersection points or NaNs if no intersection

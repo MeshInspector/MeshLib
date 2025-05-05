@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 
 #include <ctime>
+#include <optional>
 
 namespace MR
 {

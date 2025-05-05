@@ -47,6 +47,11 @@ struct DistanceFromWeightedPointsParams
     /// if maxWeightGrad < 1 then more search optimizations can be done
     float maxWeightGrad = FLT_MAX;
 
+    /// for points, it must always true;
+    /// for triangles:
+    ///   if true the distances grow in both directions from each triangle, reaching minimum in the triangle;
+    ///   if false the distances grow to infinity in the direction of triangle's normals, and decrease to minus infinity in the opposite direction
+    bool bidirectionalMode = true;
 
     // To allow passing Python lambdas into `pointWeight`.
     MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM

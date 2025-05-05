@@ -20,23 +20,15 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
 {
     MR_TIMER;
 
-    assert( !params.signDistanceByNormal || cloud.hasNormals() );
-
     return FunctionVolume
     {
-        .data = [params, &tree = cloud.getAABBTree(), &cloud] ( const Vector3i& pos ) -> float
+        .data = [params, &tree = cloud.getAABBTree()] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
             if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
                 return cQuietNan;
-            if ( params.signDistanceByNormal )
-            {
-                assert( pd.dist >= 0 );
-                if ( dot( cloud.normals[pd.vId], voxelCenter - cloud.points[pd.vId] ) < 0 )
-                    pd.dist = -pd.dist;
-            }
             return pd.dist;
         },
         .dims = params.vol.dimensions,
@@ -57,12 +49,6 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
             if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
                 return cQuietNan;
-            if ( params.signDistanceByNormal )
-            {
-                assert( pd.dist >= 0 );
-                if ( dot( mesh.pseudonormal( pd.mtp ), voxelCenter - mesh.triPoint( pd.mtp ) ) < 0 )
-                    pd.dist = -pd.dist;
-            }
             return pd.dist;
         },
         .dims = params.vol.dimensions,
@@ -77,9 +63,6 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
     const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
 
-    auto distanceOffset = params.signDistanceByNormal ?
-        std::abs( params.offset ) : params.offset;
-
     WeightedPointsToDistanceVolumeParams wp2vparams
     {
         .vol =
@@ -91,10 +74,9 @@ Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPoin
         .dist =
         {
             params.dist,
-            distanceOffset - 1.001f * params.voxelSize, //minDistance
-            distanceOffset + 1.001f * params.voxelSize  //maxDistance
-        },
-        .signDistanceByNormal = params.signDistanceByNormal
+            params.offset - 1.001f * params.voxelSize, //minDistance
+            params.offset + 1.001f * params.voxelSize  //maxDistance
+        }
     };
 
     MarchingCubesParams vmParams
@@ -123,9 +105,6 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
     const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
 
-    auto distanceOffset = params.signDistanceByNormal ?
-        std::abs( params.offset ) : params.offset;
-
     WeightedPointsToDistanceVolumeParams wp2vparams
     {
         .vol =
@@ -137,10 +116,9 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
         .dist =
         {
             params.dist,
-            distanceOffset - 1.001f * params.voxelSize, //minDistance
-            distanceOffset + 1.001f * params.voxelSize  //maxDistance
-        },
-        .signDistanceByNormal = params.signDistanceByNormal
+            params.offset - 1.001f * params.voxelSize, //minDistance
+            params.offset + 1.001f * params.voxelSize  //maxDistance
+        }
     };
 
     MarchingCubesParams vmParams

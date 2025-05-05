@@ -68,9 +68,10 @@ struct ClosestTriPoint
     Vector3f pos;
     TriPointf tp;
     float w = 0;
+    bool outside = false;
 };
 
-std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd, const Mesh& mesh, FaceId f, const VertMetric& pointWeight )
+std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd, const Mesh& mesh, FaceId f, const VertMetric& pointWeight, bool bidirectionalMode )
 {
     auto vs = mesh.topology.getTriVerts( f );
 
@@ -83,8 +84,9 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
         ws[i] = pointWeight( vs[i] );
     }
 
+    const bool outside = dot( locd - ps[0], dirDblArea( ps ) ) >= 0;
     // considering unsigned distances, each triangle has two planes where euclidean distance equals interpolated point weight
-    const auto maybePlane = ( dot( locd - ps[0], dirDblArea( ps ) ) >= 0 ) ?
+    const auto maybePlane = ( !bidirectionalMode || outside ) ?
         tangentPlaneToSpheres( ps[0], ps[1], ps[2], ws[0], ws[1], ws[2] ) :
         tangentPlaneToSpheres( ps[1], ps[0], ps[2], ws[1], ws[0], ws[2] );
     if ( !maybePlane )
@@ -100,7 +102,8 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
     {
         .pos = Vector3f( baryD.interpolate( ps[0], ps[1], ps[2] ) ), // not projD, since it is on tangent plane
         .tp = TriPointf( baryD ),
-        .w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) )
+        .w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) ),
+        .outside = outside
     };
 }
 
@@ -155,13 +158,13 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     const Vector3d locd( loc );
     findBoxedTrisInBall( mesh, { loc, sqr( ballRadiusAssessor.maxSearchRadius() ) }, [&]( FaceId f, Ball3f & ball )
     {
-        auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight );
+        auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight, params.bidirectionalMode );
         if ( !c )
             return Processing::Continue;
 
         const auto r = distance( loc, c->pos );
-        const auto dist = r - c->w;
-        if ( dist < res.dist )
+        const auto dist = ( params.bidirectionalMode || c->outside ) ? ( r - c->w ) : ( -r - c->w );
+        if ( ( params.bidirectionalMode && dist < res.dist ) || ( !params.bidirectionalMode && std::abs( dist ) < std::abs( res.dist ) ) )
         {
             res.dist = dist;
             res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };

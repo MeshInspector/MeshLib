@@ -959,6 +959,9 @@ void VoxelGraphCut::augment_( Context & context, SeqVoxelId sSource, OutEdge vSo
 #if __GNUC__ >= 12 //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104165
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
+#if __GNUC__ >= 15
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 
 void VoxelGraphCut::adopt_( Context & context )
 {

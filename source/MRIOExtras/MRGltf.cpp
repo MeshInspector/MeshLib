@@ -28,12 +28,13 @@
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#if __GNUC__ == 14
+#if __GNUC__ >= 14
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
+#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
 #include <tiny_gltf.h>
-#if __GNUC__ == 14
+#if __GNUC__ >= 14
 #pragma GCC diagnostic pop
 #endif
 

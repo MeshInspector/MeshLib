@@ -229,14 +229,14 @@ void AngleTask::renderPass()
             (void)b;
             if ( numGeneratedDepthSteps <=/*sic*/ depth )
             {
-                #if __GNUC__ >= 11 && __GNUC__ <= 14
+                #if __GNUC__ >= 11 && __GNUC__ <= 15
                 #pragma GCC diagnostic push
                 // A false positive, it seems? `bisectState()` ensures `depths < curveMaxSubdivisionDepth`.
                 // And `numGEneratedDepthSteps` starts from 1, it can't be zero either.
                 #pragma GCC diagnostic ignored "-Warray-bounds"
                 #endif
                 depthStepData[numGeneratedDepthSteps].angleStep = depthStepData[numGeneratedDepthSteps - 1].angleStep / 2;
-                #if __GNUC__ >= 11 && __GNUC__ <= 14
+                #if __GNUC__ >= 11 && __GNUC__ <= 15
                 #pragma GCC diagnostic pop
                 #endif
                 depthStepData[numGeneratedDepthSteps].matrix = Matrix3f::rotation( rotationAxis, depthStepData[numGeneratedDepthSteps].angleStep );

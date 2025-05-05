@@ -1,4 +1,5 @@
 #include "MRIOFilesMenuItems.h"
+#include "MRMesh/MRChrono.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
@@ -160,10 +161,10 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
         hierarchyRoot["Errors"] = errors;
         hierarchyRoot["Warnings"] = warnings;
         auto hierarchyLine = hierarchyRoot.toStyledString();
-#pragma GCC diagnostic push 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
         EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarchyLine.c_str() );
-#pragma GCC diagnostic pop   
+#pragma GCC diagnostic pop
     };
     getViewerInstance().loadFiles( paths, opts );
 }
@@ -769,7 +770,7 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", Localtime( t ).value() );
 
         auto savePath = saveFileDialog( {
             .fileName = name,
@@ -819,7 +820,7 @@ bool CaptureUIScreenshotMenuItem::action()
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", Localtime( t ).value() );
 
         auto savePath = saveFileDialog( {
             .fileName = name,

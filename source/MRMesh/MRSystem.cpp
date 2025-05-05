@@ -1,4 +1,5 @@
 #include "MRSystem.h"
+#include "MRMesh/MRChrono.h"
 #include "MRStringConvert.h"
 #include "MRSystemPath.h"
 #include "MRConfig.h"
@@ -608,7 +609,7 @@ void setupLoggerByDefault()
     fileName /= "Logs";
     removeOldLogs( fileName );
 
-    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", fmt::localtime( t ),
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", LocaltimeOrZero( t ),
                 std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
 
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );

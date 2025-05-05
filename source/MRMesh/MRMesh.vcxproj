@@ -23,6 +23,7 @@
     <ClInclude Include="MRChangeMeshDataAction.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRChrono.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
     <ClInclude Include="MRConeObject.h" />
@@ -446,6 +447,7 @@
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
+    <ClCompile Include="MRChrono.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
     <ClCompile Include="MRCloseVertices.cpp" />
     <ClCompile Include="MRCNCMachineSettings.cpp" />

@@ -770,7 +770,7 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", Localtime( t ).value() );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", LocaltimeOrZero( t ) );
 
         auto savePath = saveFileDialog( {
             .fileName = name,
@@ -820,7 +820,7 @@ bool CaptureUIScreenshotMenuItem::action()
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", Localtime( t ).value() );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", LocaltimeOrZero( t ) );
 
         auto savePath = saveFileDialog( {
             .fileName = name,

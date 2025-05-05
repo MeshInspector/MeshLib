@@ -1,5 +1,3 @@
-
-
 #include "MRChrono.h"
 
 
@@ -29,6 +27,14 @@ std::optional<std::tm> Localtime( std::time_t time )
     std::tm ret{};
     if ( auto ptr = localtime_r( &time, &ret ) )
         return *ptr;
+    else
+        return {};
+}
+
+std::tm LocaltimeOrZero( std::time_t time )
+{
+    if ( auto ret = Localtime( time ) )
+        return *ret;
     else
         return {};
 }

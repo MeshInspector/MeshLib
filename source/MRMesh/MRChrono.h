@@ -10,4 +10,7 @@ namespace MR
 // A threadsafe equivalent for `std::localtime()`. Returns null on failure.
 [[nodiscard]] MRMESH_API std::optional<std::tm> Localtime( std::time_t time );
 
+// Same, but returns a struct full of zeroes on error.
+[[nodiscard]] MRMESH_API std::tm LocaltimeOrZero( std::time_t time );
+
 }

@@ -35,7 +35,7 @@ namespace MR
 {
 
 void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& start, float range, const Vector3f& dir,
-                                             VertScalars& distances, VertBitSet& verts )
+                                             VertScalars& distances, VertBitSet& verts, const VertBitSet* untouchable )
 {
     MR_TIMER;
 
@@ -44,13 +44,14 @@ void findSpaceDistancesAndCodirectedVerts( const Mesh& mesh, const PointOnFace& 
     {
         const float dist = ( start.point - mesh.points[v] ).length();
         const bool valid = ( dist <= range ) && ( dot( mesh.normal( v ), dir ) >= 0.f );
-        distances[v] = dist;
         verts.set( v, valid );
+        if ( !untouchable || dist < distances[v] || !untouchable->test( v ) )
+            distances[v] = dist;
         return valid;
     } );
 }
 
-void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, float range, VertScalars& distances, VertBitSet& verts )
+void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, float range, VertScalars& distances, VertBitSet& verts, const VertBitSet* untouchable )
 {
     // note! better update bitset for interesting verts than check for all verts from distances
     MR_TIMER;
@@ -60,8 +61,9 @@ void findSpaceDistancesAndVerts( const Mesh& mesh, const PointOnFace& start, flo
     {
         const float dist = ( start.point - mesh.points[v] ).length();
         const bool valid = ( dist <= range );
-        distances[v] = dist;
         verts.set( v, valid );
+        if ( !untouchable || dist < distances[v] || !untouchable->test( v ) )
+            distances[v] = dist;
         return valid;
     } );
 }
@@ -356,12 +358,12 @@ void SurfaceManipulationWidget::compressChangePointsAction_()
     }
 }
 
-void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region )
+void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
 {
     if ( editOnlyCodirectedSurface_ )
-        findSpaceDistancesAndCodirectedVerts( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region );
+        findSpaceDistancesAndCodirectedVerts( mesh, pOnFace, settings_.radius, mesh.normal( mesh.toTriPoint( pOnFace ) ), distances, region, untouchable );
     else
-        findSpaceDistancesAndVerts( mesh, pOnFace, settings_.radius, distances, region );
+        findSpaceDistancesAndVerts( mesh, pOnFace, settings_.radius, distances, region, untouchable );
 }
 
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
@@ -385,6 +387,12 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     const auto & oldMesh = *obj_->varMesh();
     if ( settings_.workMode == WorkMode::Patch )
     {
+        {
+            // clear UV
+            visualizationRegion_ |= generalEditingRegion_;
+            expand( oldMesh.topology, visualizationRegion_, 2 );
+            updateUVmap_( false );
+        }
         auto faces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( faces.any() )
         {
@@ -733,7 +741,8 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         {
             // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
             const PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
-            updateDistancesAndRegion_( mesh, pOnFace, editingDistanceMap_, singleEditingRegion_ );
+            bool keepOld = settings_.workMode == WorkMode::Patch;
+            updateDistancesAndRegion_( mesh, pOnFace, editingDistanceMap_, singleEditingRegion_, keepOld ? &generalEditingRegion_ : nullptr );
         }
         else
         {
@@ -795,10 +804,12 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 
 void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& objAndPick )
 {
-    updateUVmap_( false );
+    bool keepOld = settings_.workMode == WorkMode::Patch && mousePressed_;
+    if ( !keepOld )
+        updateUVmap_( false );
+    visualizationRegion_.reset();
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
-    visualizationRegion_.reset();
     badRegion_ = false;
     if ( objAndPick.first == objMeshPtr )
     {
@@ -814,7 +825,7 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
             pOnFace = PointOnFace{ objAndPick.second.face, mesh.points[vert] };
         }
 
-        updateDistancesAndRegion_( mesh, pOnFace, visualizationDistanceMap_, visualizationRegion_ );
+        updateDistancesAndRegion_( mesh, pOnFace, visualizationDistanceMap_, visualizationRegion_, keepOld ? &generalEditingRegion_ : nullptr );
         expand( mesh.topology, visualizationRegion_ );
         {
             int pointsCount = 0;

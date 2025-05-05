@@ -133,7 +133,7 @@ private:
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
 
-    void updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region );
+    void updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
     Settings settings_;
 

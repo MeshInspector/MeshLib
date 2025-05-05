@@ -219,6 +219,7 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
 
     WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
     resParams.dist.maxWeight = 0.0f;
+    resParams.dist.bidirectionalMode = params.bidirectionalMode;
     resParams.offset += distParams.maxWeight;
 
     return weightedMeshShell( mesh, resParams );

@@ -33,11 +33,6 @@ struct WeightedPointsShellParametersBase
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;
 
-    /// if true, then the distance will get its sign from the normal of the closest point (positive values in the half space pointed by normal);
-    /// initial distances must be unsigned then (e.g. all point weights are negative);
-    /// true here allows one to construct one directional offset instead of bidirectional shell
-    bool signDistanceByNormal = false;
-
     /// Progress callback
     ProgressCallback progress;
 
@@ -67,6 +62,10 @@ struct WeightedPointsShellParametersRegions : WeightedPointsShellParametersBase
     /// interpolation distance between the weights of the regions
     /// determines the sharpness of transitions between different regions
     float interpolationDist = 0;
+
+    /// if true the distances grow in both directions from each triangle, reaching minimum in the triangle;
+    /// if false the distances grow to infinity in the direction of triangle's normals, and decrease to minus infinity in the opposite direction
+    bool bidirectionalMode = true;
 };
 
 /// consider a point cloud where each point has additive weight,

@@ -34,3 +34,6 @@ source/MRDotNetTest/obj/*
 /lib64
 /include
 /out/build/
+
+/source/MRCppSharp/bin
+/source/MRCppSharp/obj

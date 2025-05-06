@@ -20,8 +20,8 @@ public:
     // This constructor is written like this instead of a plain `Id(int)`, because we also wish to disable construction
     //   from other unrelated `Id<U>` specializations, which themselves have implicit conversions to `int`.
     // We could also achieve that using `template <typename U> Id(Id<U>) = delete;`, but it turns out that that causes issues
-    //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `EdgeId x = UndirectedEdgeId{};` compiles with this approach,
-    //   but `EdgeId x(UndirectedEdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
+    //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
+    //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
     template <typename U, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
     explicit constexpr Id( U i ) noexcept : id_( int( i ) ) { }
 

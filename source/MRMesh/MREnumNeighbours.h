@@ -12,8 +12,9 @@ public:
     /// invokes given predicate for vertices starting from \param start,
     /// and continuing to all immediate neighbours in depth-first order until the predicate returns false
     MRMESH_API void run( const MeshTopology & topology, VertId start, const VertPredicate & pred );
-
+    MRMESH_API void run( const MeshTopology& topology, const VertBitSet& start, const VertPredicate& pred );
 private:
+    void run_( const MeshTopology& topology, const VertPredicate& pred );
     VertBitSet visited_;
     std::vector<VertId> bd_;
 };

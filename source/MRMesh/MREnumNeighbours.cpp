@@ -9,14 +9,34 @@ namespace MR
 
 void EnumNeihbourVertices::run( const MeshTopology & topology, VertId start, const VertPredicate & pred )
 {
-    MR_TIMER;
-
-    assert( start );
+    assert( start.valid() );
     assert( bd_.empty() );
+    bd_.push_back( start );
     visited_.resize( topology.vertSize() );
 
     visited_.set( start );
-    bd_.push_back( start );
+
+    run_( topology, pred );
+}
+
+void EnumNeihbourVertices::run( const MeshTopology& topology, const VertBitSet& start, const VertPredicate& pred )
+{
+    assert( start.any() );
+    assert( bd_.empty() );
+    bd_.reserve( start.count() * 2 );
+    for ( auto v : start )
+        bd_.push_back( v );
+    visited_.resize( topology.vertSize() );
+
+    visited_ |= start;
+
+    run_( topology, pred );
+
+}
+
+void EnumNeihbourVertices::run_( const MeshTopology& topology, const VertPredicate& pred )
+{
+    MR_TIMER;
     while ( !bd_.empty() )
     {
         const auto v = bd_.back();

@@ -23,6 +23,7 @@ struct SubTask
 
 } //anonymous namespace
 
+
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
     float upDistLimitSq /*= FLT_MAX*/,
     const AffineXf3f* xf /*= nullptr*/,
@@ -30,6 +31,15 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
     VertPredicate skipCb /*= {}*/ )
 {
     const auto& tree = pc.getAABBTree();
+    return findProjectionOnPoints( pt, tree, upDistLimitSq, xf, loDistLimitSq, skipCb );
+}
+
+PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTreePoints& tree,
+    float upDistLimitSq /*= FLT_MAX*/,
+    const AffineXf3f* xf /*= nullptr*/,
+    float loDistLimitSq /*= 0*/,
+    VertPredicate skipCb /*= {}*/ )
+{
     const auto& orderedPoints = tree.orderedPoints();
 
     PointsProjectionResult res;

@@ -650,7 +650,7 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
         if ( set )
-            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) /** 100*/ + 0.5f );
+            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );
         else
             uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
     } );

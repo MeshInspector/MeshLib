@@ -181,8 +181,8 @@ class ThreeMFLoader
         std::unique_ptr<tinyxml2::XMLDocument> doc;
         bool loaded{ false };
     };
-    std::unordered_map<std::filesystem::path, LoadedXml> xmlDocuments_;
-    std::unordered_map<std::filesystem::path, Json::Value> jsonDocuments_;
+    std::unordered_map<std::string, LoadedXml> xmlDocuments_;
+    std::unordered_map<std::string, Json::Value> jsonDocuments_;
     std::filesystem::path rootPath_;    
     // Object tree - each node is either a mesh or compound object
 
@@ -264,7 +264,7 @@ Expected<void> ThreeMFLoader::loadFiles_( const std::vector<std::filesystem::pat
         if ( *docRes != nullptr )
         {
             // Store parsed XML
-            xmlDocuments_[file] = { .doc = std::move( *docRes ) };
+            xmlDocuments_[utf8string( file.lexically_normal() )] = { .doc = std::move( *docRes ) };
         }
         else
         {
@@ -272,7 +272,7 @@ Expected<void> ThreeMFLoader::loadFiles_( const std::vector<std::filesystem::pat
             auto jsonRes = deserializeJsonValue( file );
             if ( !jsonRes.has_value() )
                 continue;
-            jsonDocuments_[file] = std::move( *jsonRes );
+            jsonDocuments_[utf8string( file.lexically_normal() )] = std::move( *jsonRes );
         }
     }
     return {};
@@ -315,7 +315,7 @@ Expected<Node*> ThreeMFLoader::getNodeById_( int id, const char* pathAttr )
         return unexpected( "Invalid 'p:path attribute'" );
 
     std::filesystem::path path = rootPath_ / ( "./" + std::string( pathAttr ) );
-    auto docIt = xmlDocuments_.find( path.lexically_normal() );
+    auto docIt = xmlDocuments_.find( utf8string( path.lexically_normal() ) );
     if ( docIt == xmlDocuments_.end() )
         return unexpected( "Cannot find file specified in p:path" );
 
@@ -980,7 +980,7 @@ void ThreeMFLoader::initFilamentColors_()
     const Json::Value* foundProjSettings{ nullptr };
     for ( const auto& [path, json] : jsonDocuments_ )
     {
-        if ( utf8string( path.stem() ) == "project_settings" )
+        if ( pathFromUtf8( path ).stem() == "project_settings" )
         {
             foundProjSettings = &json;
             break;

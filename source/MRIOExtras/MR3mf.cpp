@@ -17,6 +17,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRJson.h"
 
 #include <tinyxml2.h>
 

@@ -39,7 +39,7 @@ public:
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num, bool closed );
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)
-    /// \details if vs[0] == vs[num-1] then a closed line is created
+    /// \details if num > 2 && vs[0] == vs[num-1] then a closed line is created
     /// \return the edge from first new to second new vertex
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num );
 

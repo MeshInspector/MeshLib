@@ -80,7 +80,7 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
         assert( false );
         return {};
     }
-    const bool closed = vs[0] == vs[num-1];
+    const bool closed = num > 2 && vs[0] == vs[num-1];
     return addFromPoints( vs, num - ( closed ? 1 : 0 ), closed );
 }
 

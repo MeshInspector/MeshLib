@@ -47,9 +47,10 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            if ( !( pd.dist >= params.dist.minDistance && pd.dist < params.dist.maxDistance ) )
+            const auto dist = pd.weightedDist( params.dist.bidirectionalMode );
+            if ( !( dist >= params.dist.minDistance && dist < params.dist.maxDistance ) )
                 return cQuietNan;
-            return pd.dist;
+            return dist;
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
@@ -212,15 +213,8 @@ Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellPar
         return weights[v];
     };
 
-    ParallelFor( weights, [&] ( VertId i )
-    {
-        weights[i] -= distParams.maxWeight;
-    } );
-
     WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
-    resParams.dist.maxWeight = 0.0f;
     resParams.dist.bidirectionalMode = params.bidirectionalMode;
-    resParams.offset += distParams.maxWeight;
 
     return weightedMeshShell( mesh, resParams );
 }

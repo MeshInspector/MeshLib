@@ -155,6 +155,7 @@ target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_LIBRARY_DIRS}
 )
 IF(MR_EMSCRIPTEN)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
@@ -162,6 +163,7 @@ IF(MR_EMSCRIPTEN)
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(APPLE)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt
@@ -178,6 +180,7 @@ ELSEIF(WIN32)
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt::fmt

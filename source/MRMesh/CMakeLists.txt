@@ -65,7 +65,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 
   IF(APPLE)
     find_library(COCOA_LIBRARY Cocoa ONLY)
-    set(MRMESH_OPTIONAL_INCLUDE_DIRS "${MRMESH_OPTIONAL_INCLUDE_DIRS} ${jsoncpp_INCLUDE_DIRS}")
+    include_directories(${jsoncpp_INCLUDE_DIRS})
     target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
     target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
       ${MRMESH_OPTIONAL_INCLUDE_DIRS}
@@ -126,7 +126,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   )
 ELSE()
   find_package(tl-expected REQUIRED)
-  set(MRMESH_OPTIONAL_INCLUDE_DIRS "${MRMESH_OPTIONAL_INCLUDE_DIRS} ${jsoncpp_INCLUDE_DIRS}")
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
     ${MRMESH_OPTIONAL_INCLUDE_DIRS}
   )

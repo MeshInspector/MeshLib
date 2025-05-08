@@ -161,16 +161,17 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight, params.bidirectionalMode );
         if ( !c )
             return Processing::Continue;
-        c->outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
 
         const auto r = distance( loc, c->pos );
-        const auto dist = ( params.bidirectionalMode || c->outside ) ? ( r - c->w ) : ( -r - c->w );
-        if ( ( params.bidirectionalMode && dist < res.dist ) || ( !params.bidirectionalMode && std::abs( dist ) < std::abs( res.dist ) ) )
+        if ( r - c->w < res.weightedDist( true ) )
         {
-            res.dist = dist;
+            res.dist = r;
+            res.w = c->w;
+            res.outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
             res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
-            if ( dist < params.minDistance )
-                return Processing::Stop;
+//            what to do here?
+//            if ( std::abs( r - c->w ) < params.minDistance )
+//                return Processing::Stop;
         }
         if ( ballRadiusAssessor.pointFound( r, c->w ) )
             ball.radiusSq = sqr( ballRadiusAssessor.maxSearchRadius() );

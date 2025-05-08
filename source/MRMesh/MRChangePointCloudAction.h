@@ -117,4 +117,74 @@ private:
     std::string name_;
 };
 
-}
+/// Undo action that modifies one point's coordinates inside ObjectPoints
+/// \ingroup HistoryGroup
+class ChangeOnePointInCloudAction : public HistoryAction
+{
+public:
+    using Obj = ObjectPoints;
+
+    /// use this constructor to remember point's coordinates before making any changes in it
+    ChangeOnePointInCloudAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, VertId pointId ) :
+        objPoints_{ obj },
+        pointId_{ pointId },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            if ( auto m = obj->pointCloud() )
+                if ( m->points.size() > pointId_ )
+                    safeCoords_ = m->points[pointId_];
+        }
+    }
+
+    /// use this constructor to remember point's coordinates and immediate set new coordinates
+    ChangeOnePointInCloudAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, VertId pointId, const Vector3f & newCoords ) :
+        objPoints_{ obj },
+        pointId_{ pointId },
+        safeCoords_{ newCoords },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objPoints_ )
+            return;
+
+        if ( auto m = objPoints_->varPointCloud() )
+        {
+            if ( m->points.size() > pointId_ )
+            {
+                std::swap( safeCoords_, m->points[pointId_] );
+                objPoints_->setDirtyFlags( DIRTY_POSITION );
+            }
+        }
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectPoints>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_POSITION );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
+private:
+    std::shared_ptr<ObjectPoints> objPoints_;
+    VertId pointId_;
+    Vector3f safeCoords_;
+
+    std::string name_;
+};
+
+} //namespace MR

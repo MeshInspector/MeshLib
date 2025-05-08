@@ -161,6 +161,7 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         auto c = findClosestWeightedTriPoint( locd, mesh, f, params.pointWeight, params.bidirectionalMode );
         if ( !c )
             return Processing::Continue;
+        c->outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
 
         const auto r = distance( loc, c->pos );
         const auto dist = ( params.bidirectionalMode || c->outside ) ? ( r - c->w ) : ( -r - c->w );

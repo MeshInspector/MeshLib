@@ -119,7 +119,7 @@ private:
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
-    void updateVizualizeSelection_( const ObjAndPick& objAndPick );
+    void updateVizualizeSelection_();
 
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
@@ -133,7 +133,7 @@ private:
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
 
-    void updateDistancesAndRegion_( const Mesh& mesh, const PointOnFace& pOnFace, VertScalars& distances, VertBitSet& region );
+    void updateDistancesAndRegion_( const Mesh& mesh, const VertBitSet& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
     Settings settings_;
 
@@ -141,6 +141,7 @@ private:
     VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
+    VertBitSet activePickedVertices_; ///< vertices that are considered under mouse in curernt frame (could be many in case of fast mouse mouvement)
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
     VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
     VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down

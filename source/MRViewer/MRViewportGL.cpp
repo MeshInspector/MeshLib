@@ -347,7 +347,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
     }
 
     unsigned int cClearValue[4] = { 0xffffffff,0xffffffff,0xffffffff,0xffffffff };
-    GL_EXEC( glClearBufferuiv( GL_COLOR, 0, cClearValue ) );
+    GL_EXEC( glClearBufferfv( GL_COLOR, 0, (float*)cClearValue ) );
     GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
     // Save old viewport
 
@@ -372,7 +372,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
     if ( rect.valid() )
     {
         // read data from gpu
-        GL_EXEC( glReadPixels( rect.min.x, height - rect.max.y - 1, size.x, size.y, GL_RGBA_INTEGER, GL_UNSIGNED_INT, resColors.data() ) );
+        GL_EXEC( glReadPixels( rect.min.x, height - rect.max.y - 1, size.x, size.y, GL_RGBA, GL_FLOAT, (float*)resColors.data() ) );
     }
     // Clean up
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
@@ -399,7 +399,7 @@ void ViewportGL::PickTextureFrameBuffer::resize( const Vector2i& size )
     // create a color attachment texture
     GL_EXEC( glGenTextures( 1, &colorTexture_ ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, colorTexture_ ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32UI, size_.x, size_.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL ) );
+    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, size_.x, size_.y, 0, GL_RGBA, GL_FLOAT, NULL ) ); // GL_RGBA32F using float because Google Chrome v136 on Mac seems to have bug with GL_RGBA32UI 
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, 0 ) );
     GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture_, 0 ) );
     // create a renderbuffer object for depth

@@ -108,7 +108,7 @@ TEST( MRMesh, weightedMeshShell )
 
     ASSERT_TRUE( remesh( cube, { .maxEdgeSplits = 10000 } ) );
 
-    auto offCube = weightedMeshShell( cube, WeightedPointsShellParametersRegions{ { 0.02, 0.01, 10.f }, {}, 0.f, false } );
+    auto offCube = weightedMeshShell( cube, WeightedPointsShellParametersRegions{ { 0.02f, 0.01f, 10.f }, {}, 0.f, false } );
     ASSERT_TRUE( offCube );
     auto components = MeshComponents::getAllComponents( MeshPart{ *offCube } );
     EXPECT_EQ( components.size(), 1 );

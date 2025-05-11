@@ -2,6 +2,10 @@
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRGTest.h>
+#include <MRMesh/MRCube.h>
+#include <MRMesh/MRMeshDecimate.h>
+#include <MRVoxels/MRWeightedPointsShell.h>
+#include <MRMesh/MRMeshComponents.h>
 
 namespace MR
 {
@@ -93,6 +97,22 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
         for ( float z = -2; z <= 2; z += 0.1f )
             EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 + std::abs( z ), 1e-7f );
     }
+}
+
+TEST( MRMesh, weightedMeshShell )
+{
+    auto cube = makeCube();
+    auto rot = Matrix3f::rotation( { 1.f, 1.f, 1.f }, PI_F / 6.f );
+    for ( auto& pt : cube.points )
+        pt = rot * pt;
+
+    ASSERT_TRUE( remesh( cube, { .maxEdgeSplits = 10000 } ) );
+
+    auto offCube = weightedMeshShell( cube, WeightedPointsShellParametersRegions{ { 0.02, 0.01, 10.f }, {}, 0.f, false } );
+    ASSERT_TRUE( offCube );
+    auto components = MeshComponents::getAllComponents( MeshPart{ *offCube } );
+    EXPECT_EQ( components.size(), 1 );
+    EXPECT_EQ( offCube->topology.findNumHoles(), 0 );
 }
 
 } //namespace MR

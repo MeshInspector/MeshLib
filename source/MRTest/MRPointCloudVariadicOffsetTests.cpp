@@ -63,11 +63,11 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
     auto mesh = Mesh::fromTriangles( std::move( vs ), t );
 
     DistanceFromWeightedPointsComputeParams params;
-    auto distance = [&]( Vector3f loc )
+    auto distance = [&]( Vector3f loc, bool bidirectional )
     {
         auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
         assert( !pd.mtp.onEdge( mesh.topology ) );
-        return pd.dist;
+        return pd.weightedDist( bidirectional );
     };
 
     {
@@ -76,12 +76,12 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
         params.pointWeight = [&]( VertId ) { return 1; };
         params.maxWeight = 1;
         for ( float z = -2; z <= 2; z += 0.1f )
-            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 - z, 1e-7f );
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ), params.bidirectionalMode ), -1 - z, 1e-7f );
 
         params.pointWeight = [&]( VertId ) { return -1; };
         params.maxWeight = -1;
         for ( float z = -2; z <= 2; z += 0.1f )
-            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 - z, 1e-7f );
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ), params.bidirectionalMode ),  1 - z, 1e-7f );
     }
 
     {
@@ -90,12 +90,12 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
         params.pointWeight = [&]( VertId ) { return 1; };
         params.maxWeight = 1;
         for ( float z = -2; z <= 2; z += 0.1f )
-            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ), -1 + std::abs( z ), 1e-7f );
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ), params.bidirectionalMode ), -1 + std::abs( z ), 1e-7f );
 
         params.pointWeight = [&]( VertId ) { return -1; };
         params.maxWeight = -1;
         for ( float z = -2; z <= 2; z += 0.1f )
-            EXPECT_NEAR( distance( Vector3f( 0, 0, z ) ),  1 + std::abs( z ), 1e-7f );
+            EXPECT_NEAR( distance( Vector3f( 0, 0, z ), params.bidirectionalMode ),  1 + std::abs( z ), 1e-7f );
     }
 }
 

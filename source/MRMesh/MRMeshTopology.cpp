@@ -634,7 +634,7 @@ int MeshTopology::findNumHoles( EdgeBitSet * holeRepresentativeEdges ) const
         holeRepresentativeEdges->resize( edgeSize(), false );
     }
 
-    auto bdEdges = findBdEdges();
+    auto bdEdges = findLeftBdEdges();
     std::atomic<int> res;
 
     const int endBlock = int( bdEdges.size() + bdEdges.bits_per_block - 1 ) / bdEdges.bits_per_block;
@@ -720,7 +720,7 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     return res;
 }
 
-EdgeBitSet MeshTopology::findBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
+EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
 {
     MR_TIMER;
     EdgeBitSet res( edges_.size() );
@@ -728,7 +728,7 @@ EdgeBitSet MeshTopology::findBdEdges( const FaceBitSet * region, const EdgeBitSe
     {
         if ( test && !test->test( e ) )
             return;
-        if ( isBdEdge( e, region ) ) // shall skip lone edges
+        if ( isLeftInRegion( e.sym(), region ) && !isLeftInRegion( e, region ) ) // shall skip lone edges
             res.set( e );
     } );
     return res;

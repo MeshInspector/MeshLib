@@ -312,8 +312,8 @@ public:
     /// If the region contains all faces of the mesh then isBdEdge(e) == isBdEdge(e, region).
     [[nodiscard]] bool isBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region ); }
 
-    /// returns all (test) edges for which isBdEdge(e, region) is true
-    [[nodiscard]] MRMESH_API EdgeBitSet findBdEdges( const FaceBitSet * region = nullptr, const EdgeBitSet * test = nullptr ) const;
+    /// returns all (test) edges for which right(e) belongs to the region and isBdEdge(e, region) is true
+    [[nodiscard]] MRMESH_API EdgeBitSet findLeftBdEdges( const FaceBitSet * region = nullptr, const EdgeBitSet * test = nullptr ) const;
 
     /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same origin;
     /// returns invalid edge if no boundary edge is found
@@ -370,7 +370,7 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> getLeftRings( const std::vector<EdgeId> & es ) const;
 
     /// returns all boundary edges, where each edge does not have valid left face
-    [[nodiscard]] [[deprecated( "Use findBdEdges")]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
+    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
 
     /// returns all boundary faces, having at least one boundary edge;
     /// \param region if given then search among faces there otherwise among all valid faces

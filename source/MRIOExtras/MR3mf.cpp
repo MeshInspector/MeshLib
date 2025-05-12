@@ -623,7 +623,9 @@ Expected<void> Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
     if ( !nodeRes.has_value() )
         return unexpected( std::string( "3DF model has incorrect 'texid' attribute" ) );
 
+#if TINYXML2_MAJOR_VERSION > 10
     uvGroup.reserve( xmlNode->ChildElementCount( "m:tex2coord" ) );
+#endif
     for ( auto coordNode = xmlNode->FirstChildElement( "m:tex2coord" ); coordNode; coordNode = coordNode->NextSiblingElement( "m:tex2coord" ) )
     {
         auto& uv = uvGroup.emplace_back();
@@ -653,7 +655,9 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     }
 
     VertCoords vertexCoordinates;
+#if TINYXML2_MAJOR_VERSION > 10
     vertexCoordinates.reserve( verticesNode->ChildElementCount( "vertex" ) );
+#endif
     for ( auto vertexNode = verticesNode->FirstChildElement( "vertex" ); vertexNode;
           vertexNode = vertexNode->NextSiblingElement( "vertex" ) )
     {
@@ -679,7 +683,9 @@ Expected<void> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     VertUVCoords vUVCoords;
 
     Triangulation tris;
+#if TINYXML2_MAJOR_VERSION > 10
     tris.reserve( trianglesNode->ChildElementCount( "triangle" ) );
+#endif
     for ( auto triangleNode = trianglesNode->FirstChildElement( "triangle" ); triangleNode; triangleNode = triangleNode->NextSiblingElement( "triangle" ) )
     {
         int vs[3];

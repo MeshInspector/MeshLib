@@ -720,6 +720,16 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     return res;
 }
 
+bool MeshTopology::isBdEdge( EdgeId e, const FaceBitSet * region ) const
+{
+    if ( !region )
+    {
+        assert( !isLoneEdge( e ) );
+        return !left( e ) || !right( e );
+    }
+    return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region );
+}
+
 EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
 {
     MR_TIMER;
@@ -728,6 +738,8 @@ EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeB
     {
         if ( test && !test->test( e ) )
             return;
+        if ( !region && !left( e ) && !isLoneEdge( e ) )
+            res.set( e );
         if ( isLeftInRegion( e.sym(), region ) && !isLeftInRegion( e, region ) ) // shall skip lone edges
             res.set( e );
     } );

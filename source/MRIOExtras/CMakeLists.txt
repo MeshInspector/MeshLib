@@ -160,6 +160,7 @@ IF(MR_EMSCRIPTEN)
     MRMesh
     spdlog
     tbb
+    jsoncpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(APPLE)
@@ -169,6 +170,7 @@ ELSEIF(APPLE)
     fmt
     spdlog
     tbb
+    jsoncpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(WIN32)
@@ -177,6 +179,7 @@ ELSEIF(WIN32)
     fmt::fmt
     spdlog::spdlog
     TBB::tbb
+    JsonCpp::JsonCpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
@@ -186,6 +189,7 @@ ELSE()
     fmt::fmt
     spdlog::spdlog
     tbb
+    JsonCpp::JsonCpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ENDIF()

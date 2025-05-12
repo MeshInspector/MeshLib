@@ -280,19 +280,23 @@ public:
         return region ? *region : validFaces_;
     }
 
-    /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same left;
+    /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same left face or hole;
     /// returns invalid edge if no boundary edge is found
     [[nodiscard]] MRMESH_API EdgeId bdEdgeSameLeft( EdgeId e, const FaceBitSet * region = nullptr ) const;
 
-    /// returns true if edge's left is on (region) boundary
-    [[nodiscard]] bool isBdVertexInLeft( EdgeId e, const FaceBitSet * region = nullptr ) const { return bdEdgeSameLeft( e, region ).valid(); }
+    /// returns true if left(e) is a valid (region) face,
+    /// and it has a boundary edge (isBdEdge(e,region) == true)
+    [[nodiscard]] bool isLeftBdFace( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ) && bdEdgeSameLeft( e, region ).valid(); }
 
     /// returns a boundary edge with given left face considering boundary of given region (or for whole mesh if region is nullptr);
     /// returns invalid edge if no boundary edge is found
     [[nodiscard]] EdgeId bdEdgeWithLeft( FaceId f, const FaceBitSet * region = nullptr ) const { return bdEdgeSameLeft( edgeWithLeft( f ), region ); }
 
-    /// returns true if given face is on (region) boundary
-    [[nodiscard]] bool isBdFace( FaceId f, const FaceBitSet * region = nullptr ) const { return isBdVertexInLeft( edgeWithLeft( f ), region ); }
+    /// returns true if given face belongs to the region and it has a boundary edge (isBdEdge(e,region) == true)
+    [[nodiscard]] bool isBdFace( FaceId f, const FaceBitSet * region = nullptr ) const { return isLeftBdFace( edgeWithLeft( f ), region ); }
+
+    /// returns all faces for which isBdFace(f, region) is true
+    [[nodiscard]] MRMESH_API FaceBitSet findBdFaces( const FaceBitSet * region = nullptr ) const;
 
 
     /// return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
@@ -301,8 +305,15 @@ public:
     /// return true if given edge is inner for given region (or for whole mesh if region is nullptr)
     [[nodiscard]] bool isInnerEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) && isLeftInRegion( e.sym(), region ); }
 
-    /// return true if given edge is boundary for given region (or for whole mesh if region is nullptr)
-    [[nodiscard]] bool isBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region ); }
+    /// isBdEdge(e) returns true, if the edge (e) is a boundary edge of the mesh:
+    ///     (e) has a hole from one or both sides.
+    /// isBdEdge(e, region) returns true, if the edge (e) is a boundary edge of the given region:
+    ///     (e) has a region's face from one side (region.test(f0)==true) and a hole or not-region face from the other side (!f1 || region.test(f1)==false).
+    /// If the region contains all faces of the mesh then isBdEdge(e) is the union of isBdEdge(e, region) and not-lone edges without both left and right faces.
+    [[nodiscard]] MRMESH_API bool isBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const;
+
+    /// returns all (test) edges for which left(e) does not belong to the region and isBdEdge(e, region) is true
+    [[nodiscard]] MRMESH_API EdgeBitSet findLeftBdEdges( const FaceBitSet * region = nullptr, const EdgeBitSet * test = nullptr ) const;
 
     /// returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same origin;
     /// returns invalid edge if no boundary edge is found
@@ -317,6 +328,9 @@ public:
 
     /// returns true if given vertex is on (region) boundary
     [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
+
+    /// returns all (test) vertices for which isBdVertex(v, region) is true
+    [[nodiscard]] MRMESH_API VertBitSet findBdVerts( const FaceBitSet * region = nullptr, const VertBitSet * test = nullptr ) const;
 
     /// returns true if one of incident faces of given vertex pertain to given region (or any such face exists if region is nullptr)
     [[nodiscard]] MRMESH_API bool isInnerOrBdVertex( VertId v, const FaceBitSet * region = nullptr ) const;
@@ -356,15 +370,15 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> getLeftRings( const std::vector<EdgeId> & es ) const;
 
     /// returns all boundary edges, where each edge does not have valid left face
-    [[nodiscard]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
+    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
 
     /// returns all boundary faces, having at least one boundary edge;
     /// \param region if given then search among faces there otherwise among all valid faces
-    [[nodiscard]] MRMESH_API FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdFaces")]] MRMESH_API FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
 
     /// returns all boundary vertices, incident to at least one boundary edge;
     /// \param region if given then search among vertices there otherwise among all valid vertices
-    [[nodiscard]] MRMESH_API VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdVerts")]] MRMESH_API VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
 
 
     /// returns all vertices incident to path edges

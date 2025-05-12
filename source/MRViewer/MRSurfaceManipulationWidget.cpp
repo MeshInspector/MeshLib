@@ -641,13 +641,13 @@ void SurfaceManipulationWidget::changeSurface_()
     obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
-void SurfaceManipulationWidget::updateUVmap_( bool set )
+void SurfaceManipulationWidget::updateUVmap_( bool set, bool wholeMesh )
 {
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
-    BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
+    BitSetParallelFor( wholeMesh ? obj_->mesh()->topology.getValidVerts() : visualizationRegion_, [&] ( VertId v )
     {
         if ( set )
             uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );
@@ -765,6 +765,8 @@ void SurfaceManipulationWidget::abortEdit_()
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
+    if ( settings_.workMode == WorkMode::Patch )
+        updateUVmap_( false, true );
 }
 
 void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )

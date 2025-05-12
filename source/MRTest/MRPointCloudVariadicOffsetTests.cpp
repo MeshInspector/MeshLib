@@ -106,8 +106,6 @@ TEST( MRMesh, weightedMeshShell )
     for ( auto& pt : cube.points )
         pt = rot * pt;
 
-    ASSERT_TRUE( remesh( cube, { .maxEdgeSplits = 10000 } ) );
-
     auto offCube = weightedMeshShell( cube, WeightedPointsShellParametersRegions{ { 0.02f, 0.01f, 10.f }, {}, 0.f, false } );
     ASSERT_TRUE( offCube );
     auto components = MeshComponents::getAllComponents( MeshPart{ *offCube } );

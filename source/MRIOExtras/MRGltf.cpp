@@ -9,40 +9,37 @@
 #include "MRMesh/MRQuaternion.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRPch/MRSuppressWarning.h"
+
+MR_SUPPRESS_WARNING_PUSH
 
 #if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
-#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #if __EMSCRIPTEN__
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
-#endif
 
-#pragma warning( push )
 #pragma warning( disable : 4018 ) //'>=': signed/unsigned mismatch
 #pragma warning( disable : 4062 ) //enumerator 'nlohmann::json_abi_v3_11_2::detail::value_t::binary' in switch of enum 'nlohmann::json_abi_v3_11_2::detail::value_t' is not handled
 #pragma warning( disable : 4242 ) //'argument': conversion from 'int' to 'short', possible loss of data
 #pragma warning( disable : 4244 ) //'argument': conversion from 'int' to 'short', possible loss of data
 #pragma warning( disable : 4267 ) //'argument': conversion from 'size_t' to 'int', possible loss of data
 #pragma warning( disable : 4866 ) //compiler may not enforce left-to-right evaluation order for call to 'nlohmann::json_abi_v3_11_2::basic_json<std::map,std::vector,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,bool,__int64,unsigned __int64,double,std::allocator,nlohmann::json_abi_v3_11_2::adl_serializer,std::vector<unsigned char,std::allocator<unsigned char> > >::operator[]'
+
+#if __GNUC__ >= 14
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+#if __GNUC__ >= 15
+#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+#endif
+
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#if __GNUC__ >= 14
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
-#endif
 #include <tiny_gltf.h>
-#if __GNUC__ >= 14
-#pragma GCC diagnostic pop
-#endif
 
-#pragma warning( pop)
-
-#if (defined(__APPLE__) && defined(__clang__)) || __EMSCRIPTEN__
-#pragma clang diagnostic pop
-#endif
+MR_SUPPRESS_WARNING_POP
 
 #include <stack>
 

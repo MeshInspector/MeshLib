@@ -449,16 +449,6 @@ EdgeId MeshTopology::bdEdgeSameLeft( EdgeId e, const FaceBitSet * region ) const
     return {};
 }
 
-bool MeshTopology::isLeftBdFace( EdgeId e, const FaceBitSet * region ) const
-{
-    const auto l = left( e );
-    if ( !l )
-        return true;
-    if ( region && !region->test( l ) )
-        return false;
-    return bdEdgeSameLeft( e, region ).valid();
-}
-
 EdgeId MeshTopology::bdEdgeSameOrigin( EdgeId e, const FaceBitSet * region ) const
 {
     for ( auto ei : orgRing( *this, e ) )

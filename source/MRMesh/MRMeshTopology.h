@@ -284,9 +284,9 @@ public:
     /// returns invalid edge if no boundary edge is found
     [[nodiscard]] MRMESH_API EdgeId bdEdgeSameLeft( EdgeId e, const FaceBitSet * region = nullptr ) const;
 
-    /// returns true if there is a hole to the left of edge,
-    /// or left face belongs to the region and it has a boundary edge (isBdEdge(e,region) == true)
-    [[nodiscard]] MRMESH_API bool isLeftBdFace( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    /// returns true if left(e) is a valid (region) face,
+    /// and it has a boundary edge (isBdEdge(e,region) == true)
+    [[nodiscard]] bool isLeftBdFace( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ) && bdEdgeSameLeft( e, region ).valid(); }
 
     /// returns a boundary edge with given left face considering boundary of given region (or for whole mesh if region is nullptr);
     /// returns invalid edge if no boundary edge is found

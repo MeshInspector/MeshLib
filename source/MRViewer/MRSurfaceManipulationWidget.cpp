@@ -562,6 +562,8 @@ void SurfaceManipulationWidget::initConnections_()
         }
         abortEdit_();
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
+        if ( settings_.workMode == WorkMode::Patch )
+            updateUVmap_( false, true );
         sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
         setDeviationCalculationMethod( deviationCalculationMethod_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
@@ -765,8 +767,6 @@ void SurfaceManipulationWidget::abortEdit_()
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
-    if ( settings_.workMode == WorkMode::Patch )
-        updateUVmap_( false, true );
 }
 
 void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )

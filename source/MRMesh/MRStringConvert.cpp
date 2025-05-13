@@ -2,39 +2,33 @@
 #include <codecvt>
 #include <locale>
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
 
 #include "MRPch/MRWinapi.h"
 
 namespace MR
 {
 
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+
 std::wstring utf8ToWide( const char* utf8 )
 {
-#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
+    // FIXME: std::wstring_convert will be removed in C++26
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter.from_bytes( utf8 );
-#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 }
 
 std::string wideToUtf8( const wchar_t * wide )
 {
     if ( !wide )
         return {};
-#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
+    // FIXME: std::wstring_convert will be removed in C++26
     std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
     return conv.to_bytes( wide );
-#if defined(__EMSCRIPTEN__) || defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 }
+
+MR_SUPPRESS_WARNING_POP
 
 #ifdef _WIN32
 std::string Utf16ToUtf8( const std::wstring_view & utf16 )

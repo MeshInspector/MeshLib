@@ -634,7 +634,7 @@ int MeshTopology::findNumHoles( EdgeBitSet * holeRepresentativeEdges ) const
         holeRepresentativeEdges->resize( edgeSize(), false );
     }
 
-    auto bdEdges = findBoundaryEdges();
+    auto bdEdges = findLeftBdEdges();
     std::atomic<int> res;
 
     const int endBlock = int( bdEdges.size() + bdEdges.bits_per_block - 1 ) / bdEdges.bits_per_block;
@@ -720,6 +720,32 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     return res;
 }
 
+bool MeshTopology::isBdEdge( EdgeId e, const FaceBitSet * region ) const
+{
+    if ( !region )
+    {
+        assert( !isLoneEdge( e ) );
+        return !left( e ) || !right( e );
+    }
+    return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region );
+}
+
+EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
+{
+    MR_TIMER;
+    EdgeBitSet res( edges_.size() );
+    BitSetParallelForAll( res, [&]( EdgeId e )
+    {
+        if ( test && !test->test( e ) )
+            return;
+        if ( !region && !left( e ) && !isLoneEdge( e ) )
+            res.set( e );
+        if ( isLeftInRegion( e.sym(), region ) && !isLeftInRegion( e, region ) ) // shall skip lone edges
+            res.set( e );
+    } );
+    return res;
+}
+
 FaceBitSet MeshTopology::findBoundaryFaces( const FaceBitSet * region ) const
 {
     MR_TIMER;
@@ -739,6 +765,19 @@ FaceBitSet MeshTopology::findBoundaryFaces( const FaceBitSet * region ) const
     return res;
 }
 
+FaceBitSet MeshTopology::findBdFaces( const FaceBitSet * region ) const
+{
+    MR_TIMER;
+    const auto & fs = getFaceIds( region );
+    FaceBitSet res( fs.size() );
+    BitSetParallelFor( fs, [&]( FaceId f )
+    {
+        if ( isBdFace( f, region ) )
+            res.set( f );
+    } );
+    return res;
+}
+
 VertBitSet MeshTopology::findBoundaryVerts( const VertBitSet * region ) const
 {
     MR_TIMER;
@@ -754,6 +793,18 @@ VertBitSet MeshTopology::findBoundaryVerts( const VertBitSet * region ) const
                 break;
             }
         }
+    } );
+    return res;
+}
+
+VertBitSet MeshTopology::findBdVerts( const FaceBitSet * region, const VertBitSet * test ) const
+{
+    MR_TIMER;
+    VertBitSet res( vertSize() );
+    BitSetParallelFor( getVertIds( test ), [&]( VertId v )
+    {
+        if ( isBdVertex( v, region ) )
+            res.set( v );
     } );
     return res;
 }

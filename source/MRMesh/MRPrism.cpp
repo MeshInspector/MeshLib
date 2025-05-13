@@ -6,14 +6,16 @@
 
 namespace MR
 {
+
 Mesh makePrism( float c, float alp, float bet, float height )
 {
     const float gam = PI_F - alp - bet;
     const float b = c * sin( bet ) / sin( gam );
     const float a = c * sin( alp ) / sin( gam );
 
+    assert( c > 0 );
     const float ah = ( b * b - a * a + c * c ) / ( 2 * c );
-    const float ch = sqrt( b * b - ah * ah );
+    const float ch = std::sqrt( std::max( b * b - ah * ah, 0.0f ) );
 
     Vector2f points[3] =
     {
@@ -46,4 +48,5 @@ Mesh makePrism( float c, float alp, float bet, float height )
 
     return meshObj;
 }
-}
+
+} //namespace MR

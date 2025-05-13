@@ -187,7 +187,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     }
     else
     {
-        auto boundaryEdges = mesh.topology.findBoundaryEdges();
+        auto boundaryEdges = mesh.topology.findLeftBdEdges();
         mesh.topology.deleteFaces( *res );
         mesh.topology.deleteFaces( findHoleComplicatingFaces( mesh ) );
         mesh.invalidateCaches();

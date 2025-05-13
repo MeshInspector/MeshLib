@@ -60,7 +60,7 @@ struct DistanceFromWeightedPointsParams
 struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParams
 {
     /// stop searching as soon as any point within this distance is found
-    float minDistance = 0;
+    float minDistance = -FLT_MAX;
 
     /// find the closest point only if the distance to it is less than given value
     float maxDistance = FLT_MAX;

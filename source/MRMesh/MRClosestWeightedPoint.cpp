@@ -109,8 +109,9 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
 PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     const AABBTreePoints& tree, const DistanceFromWeightedPointsComputeParams& params )
 {
+    assert( params.bidirectionalMode || params.minDistance >= 0 );
     assert( params.minDistance <= params.maxDistance );
-    assert( params.maxDistance >= 0 );
+    assert( params.maxDistance + params.maxWeight >= 0 );
     assert( params.maxWeightGrad >= 0 );
     // if params.maxWeightGrad == 0 then you need to find euclidean closest point - a much simpler algorithm than below
 
@@ -131,7 +132,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
         {
             res.dist = dist;
             res.vId = found.vId;
-            if ( dist < params.minDistance )
+            if ( ( params.bidirectionalMode && dist < params.minDistance ) || ( !params.bidirectionalMode && std::abs( dist ) < params.minDistance ) )
                 return Processing::Stop;
         }
         if ( ballRadiusAssessor.pointFound( r, w ) )
@@ -168,7 +169,7 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         {
             res.dist = dist;
             res.mtp = mtp;
-            if ( dist < params.minDistance )
+            if ( ( params.bidirectionalMode && dist < params.minDistance ) || ( !params.bidirectionalMode && std::abs( dist ) < params.minDistance ) )
                 return Processing::Stop;
         }
         if ( ballRadiusAssessor.pointFound( r, c->w ) )

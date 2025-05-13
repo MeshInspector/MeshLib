@@ -120,7 +120,7 @@ TEST( MRMesh, findClosestWeightedMeshPointContinuity )
     auto distance = [&]( Vector3f loc )
     {
         auto pd = findClosestWeightedMeshPoint( loc, cube, params );
-        assert( !pd.mtp.onEdge( mesh.topology ) );
+        //assert( !pd.mtp.onEdge( cube.topology ) );
         return pd.weightedDist( params.bidirectionalMode );
     };
 

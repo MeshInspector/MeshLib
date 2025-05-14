@@ -257,14 +257,14 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
     return {};
 }
 
-void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
+Expected<void> fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension } );
+    return fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension } );
 }
 
-void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
+Expected<void> fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
-    fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension,.region = &faceBitSet } );
+    return fix( mesh, { .findParameters = {.upDirection = upDirectionMeshSpace},.voxelSize = voxelSize,.bottomExtension = bottomExtension,.region = &faceBitSet } );
 }
 
 UndercutMetric getUndercutAreaMetric( const Mesh& mesh )

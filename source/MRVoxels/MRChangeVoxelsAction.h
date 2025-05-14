@@ -41,7 +41,7 @@ public:
             return;
 
         float newIso = objVoxels_->getIsoValue();
-        objVoxels_->setIsoValue( storedIso_, {}, false );
+        (void)objVoxels_->setIsoValue( storedIso_, {}, false ); //TODO: process potential error
         storedIso_ = newIso;
     }
 

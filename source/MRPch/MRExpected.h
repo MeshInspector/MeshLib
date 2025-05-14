@@ -13,6 +13,7 @@
 #if MR_USE_STD_EXPECTED
 #include <expected>
 #else
+namespace tl { template <class T, class E> class [[nodiscard]] expected; } // declare tl::expected as nodiscard
 #include <tl/expected.hpp>
 /// we have C++/CLI project MRMeshDotNet which doesn't support std::expected
 /// So we have to wrap tl::expected with this class in std namespace for correct linking

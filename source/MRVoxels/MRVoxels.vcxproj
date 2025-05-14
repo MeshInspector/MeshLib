@@ -34,6 +34,7 @@
     <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPointsToDistanceVolume.cpp" />
     <ClCompile Include="MRPointsToMeshFusion.cpp" />
+    <ClCompile Include="MRPointsToVoxels.cpp" />
     <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
@@ -73,6 +74,7 @@
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPointsToDistanceVolume.h" />
     <ClInclude Include="MRPointsToMeshFusion.h" />
+    <ClInclude Include="MRPointsToVoxels.h" />
     <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />

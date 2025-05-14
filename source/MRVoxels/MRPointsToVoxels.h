@@ -1,0 +1,13 @@
+#pragma once
+#include "MRMesh/MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
+#include "MRMesh/MRExpected.h"
+
+namespace MR
+{
+
+/// convert polyline to voxels distance field
+// offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
+MRVOXELS_API Expected<FloatGrid> polylineToDistanceField( const Polyline3& polyline, const Vector3f& voxelSize, float offsetCount = 3, ProgressCallback cb = {} );
+
+}

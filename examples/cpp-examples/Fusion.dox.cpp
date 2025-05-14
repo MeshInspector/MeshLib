@@ -10,7 +10,7 @@
 int main()
 {
     // load points
-    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "NefertitiPoints.ply" );
+    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "Points.ply" );
     if ( !loadRes.has_value() )
     {
         std::cerr << loadRes.error() << "\n";
@@ -18,8 +18,8 @@ int main()
     }
 
     MR::PointsToMeshParameters params;
-    params.voxelSize = loadRes->computeBoundingBox().diagonal() * 1e-3f;
-    params.sigma = std::max( params.voxelSize, MR::findAvgPointsRadius( *loadRes, 40 ) );
+    params.voxelSize = loadRes->computeBoundingBox().diagonal() * 1e-2f;
+    params.sigma = std::max( params.voxelSize, MR::findAvgPointsRadius( *loadRes, 50 ) );
     params.minWeight = 1.0f;
 
     auto fusionRes = MR::pointsToMeshFusion( *loadRes, params );
@@ -29,7 +29,7 @@ int main()
         return 1; // error while saving file
     }
 
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( *fusionRes, "NefertitiMesh.ply" );
+    auto saveRes = MR::MeshSave::toAnySupportedFormat( *fusionRes, "Mesh.ctm" );
     if ( !saveRes.has_value() )
     {
         std::cerr << saveRes.error() << "\n";

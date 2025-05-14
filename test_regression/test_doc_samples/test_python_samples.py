@@ -74,8 +74,8 @@ def run_code_sample(code_path: str, args: list):
                                  marks=pytest.mark.bindingsV3),
                              pytest.param(
                                  {'sample': "PointsToMesh.dox.py",
-                                  'input_files': ['NefertitiPoints.ply'],
-                                  'output_files': ['NefertitiMesh.ctm']
+                                  'input_files': ['Points.ply'],
+                                  'output_files': ['Mesh.ctm']
                                  },
                                  id="PointsToMesh.dox.py" ),
                              pytest.param(
@@ -86,14 +86,14 @@ def run_code_sample(code_path: str, args: list):
                                  id="ContourTriangulation.dox.py" ),
                              pytest.param(
                                  {'sample': "TerrainTriangulation.dox.py",
-                                  'input_files': ['TerrainScan.e57'],
+                                  'input_files': ['TerrainPoints.ply'],
                                   'output_files': ['TerrainMesh.ctm']
                                  },
                                  id="TerrainTriangulation.dox.py" ),
                              pytest.param(
                                  {'sample': "Fusion.dox.py",
-                                  'input_files': ['NefertitiPoints.ply'],
-                                  'output_files': ['NefertitiMesh.ply']
+                                  'input_files': ['Points.ply'],
+                                  'output_files': ['Mesh.ctm']
                                  },
                                  id="Fusion.dox.py" ),
                              pytest.param(

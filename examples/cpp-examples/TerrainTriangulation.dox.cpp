@@ -11,7 +11,7 @@ int main()
     MR::VertColors colors;
     MR::PointsLoadSettings pls;
     pls.colors = &colors;
-    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "TerrainScan.e57", pls );
+    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "TerrainPoints.ply", pls );
     if ( !loadRes.has_value() )
     {
         std::cerr << loadRes.error() << "\n";

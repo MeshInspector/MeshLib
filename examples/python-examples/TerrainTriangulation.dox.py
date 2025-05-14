@@ -6,7 +6,7 @@ wdir = Path(__file__).parent
 colors = mm.VertColors()
 lps = mm.PointsLoadSettings()
 lps.colors = colors
-pc = mm.loadPoints(wdir / "TerrainScan.e57",lps)
+pc = mm.loadPoints(wdir / "TerrainPoints.ply",lps)
 
 terrain_mesh = mm.terrainTriangulation(pc.points.vec)
 

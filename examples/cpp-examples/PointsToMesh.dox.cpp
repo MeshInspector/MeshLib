@@ -7,7 +7,7 @@
 int main()
 {
     // load points
-    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "NefertitiPoints.ply" );
+    auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "Points.ply" );
     if ( !loadRes.has_value() )
     {
         std::cerr << loadRes.error() << "\n";
@@ -16,7 +16,7 @@ int main()
     auto triangulationRes = MR::triangulatePointCloud( *loadRes );
     assert( triangulationRes ); // can be nullopt only if canceled by progress callback
 
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( *triangulationRes, "NefertitiMesh.ctm" );
+    auto saveRes = MR::MeshSave::toAnySupportedFormat( *triangulationRes, "Mesh.ctm" );
     if ( !saveRes.has_value() )
     {
         std::cerr << saveRes.error() << "\n";

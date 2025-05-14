@@ -23,8 +23,8 @@ TEST( MRCuda, PointsProjector )
     std::vector<PointsProjectionResult> cpuResults;
     {
         PointsProjector cpuProjector;
-        cpuProjector.setPointCloud( torusPoints );
-        cpuProjector.findProjections( cpuResults, cube.points.vec_, {} );
+        ASSERT_EXPECTED( cpuProjector.setPointCloud( torusPoints ) );
+        ASSERT_EXPECTED( cpuProjector.findProjections( cpuResults, cube.points.vec_, {} ) );
     }
     ASSERT_EQ( cpuResults.size(), cube.points.size() );
     for ( auto i = 0; i < cube.points.size(); ++i )

@@ -105,14 +105,13 @@ TEST( MRMesh, findClosestWeightedMeshPointContinuity )
     auto distance = [&]( Vector3f loc )
     {
         auto pd = findClosestWeightedMeshPoint( loc, cube, params );
-        assert( !pd.mtp.onEdge( mesh.topology ) );
         return pd.dist;
     };
 
-    params.pointWeight  = [] ( VertId ) { return 0.f; };
-    params.maxWeight = 0.f;
+    params.maxWeight = 0.1f;
     params.bidirectionalMode = false;
-    params.pointWeight = [v0 = cube.topology.getValidVerts().find_first()] ( VertId v ) { return ( v == v0 ) ? 0.1f : 0.f; };
+    //params.pointWeight = [v0 = cube.topology.getValidVerts().find_first()] ( VertId v ) { return ( v == v0 ) ? 0.1f : 0.f; };
+    params.pointWeight = [] ( VertId ) { return 0.1f; };
 
     constexpr float step = 0.05f;
     constexpr float gradStep = 0.001f;

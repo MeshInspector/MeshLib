@@ -28,7 +28,6 @@ set(EXAMPLES
   PointsToMesh
   ContourTriangulation
   TerrainTriangulation
-  Fusion
 )
 
 foreach(TARGET ${EXAMPLES})

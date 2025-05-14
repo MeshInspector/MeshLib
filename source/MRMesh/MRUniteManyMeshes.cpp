@@ -55,13 +55,14 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
 class BooleanReduce
 {
 public:
-    BooleanReduce( std::vector<Mesh>& mehses, const std::vector<Vector3f>& shifts, float maxError, bool fixDegenerations, bool collectNewFaces, bool mergeMode ) :
+    BooleanReduce( std::vector<Mesh>& mehses, const std::vector<Vector3f>& shifts, float maxError, bool fixDegenerations, bool collectNewFaces, bool mergeMode, bool mergeOnFail ) :
         maxError_{ maxError },
         fixDegenerations_{ fixDegenerations },
         mergedMeshes_{ mehses },
         shifts_{ shifts },
         collectNewFaces_{ collectNewFaces },
-        mergeMode_{ mergeMode }
+        mergeMode_{ mergeMode },
+        mergeOnFail_{ mergeOnFail }
     {}
 
     BooleanReduce( BooleanReduce& x, tbb::split ) :
@@ -71,7 +72,8 @@ public:
         mergedMeshes_{ x.mergedMeshes_ },
         shifts_{ x.shifts_ },
         collectNewFaces_{ x.collectNewFaces_ },
-        mergeMode_{ x.mergeMode_ }
+        mergeMode_{ x.mergeMode_ },
+        mergeOnFail_{ x.mergeOnFail_ }
     {
     }
 
@@ -109,7 +111,7 @@ public:
         }
         if ( !res.has_value() )
         {
-            if ( !mergeMode_ )
+            if ( !mergeOnFail_ )
             {
                 error = std::move( res.error() );
                 return;
@@ -163,6 +165,7 @@ private:
     const std::vector<Vector3f>& shifts_;
     bool collectNewFaces_{ false };
     bool mergeMode_{ false };
+    bool mergeOnFail_{ false };
 };
 
 Expected<Mesh> uniteManyMeshes(
@@ -320,7 +323,7 @@ Expected<Mesh> uniteManyMeshes(
     }
 
     // parallel reduce unite merged meshes
-    BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations, params.newFaces != nullptr, mergeNestedComponents );
+    BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations, params.newFaces != nullptr, mergeNestedComponents, params.mergeOnFail );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
         return unexpected( "Error while uniting meshes: " + reducer.error );

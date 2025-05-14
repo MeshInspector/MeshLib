@@ -85,6 +85,18 @@ def run_code_sample(code_path: str, args: list):
                                  },
                                  id="ContourTriangulation.dox.py" ),
                              pytest.param(
+                                 {'sample': "TerrainTriangulation.dox.py",
+                                  'input_files': ['TerrainPoints.ply'],
+                                  'output_files': ['TerrainMesh.ctm']
+                                 },
+                                 id="TerrainTriangulation.dox.py" ),
+                             pytest.param(
+                                 {'sample': "Fusion.dox.py",
+                                  'input_files': ['Points.ply'],
+                                  'output_files': ['Mesh.ctm']
+                                 },
+                                 id="Fusion.dox.py" ),
+                             pytest.param(
                                  {'sample': "GlobalRegistration.dox.py",
                                   'input_files': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
                                   'output_files': ["out.ply"],

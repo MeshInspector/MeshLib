@@ -259,7 +259,7 @@ void pythonAddVoxelsToScene( const MR::VdbVolume& model, const std::string& name
         newObject->construct( model );
         auto bins = newObject->histogram().getBins();
         auto minMax = newObject->histogram().getBinMinMax( bins.size() / 3 );
-        newObject->setIsoValue( minMax.first );
+        (void)newObject->setIsoValue( minMax.first ); //TODO: process potential error
         newObject->setName( name );
         MR::SceneRoot::get().addChild( newObject );
     } );

@@ -39,11 +39,13 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
     if ( fixDegenerations )
     {
         auto newFaces = mapper_.newFaces();
-        fixMeshDegeneracies( res.mesh, {
+        auto e = fixMeshDegeneracies( res.mesh, {
             .maxDeviation = maxError,
             .region = &newFaces,
             .mode = FixMeshDegeneraciesParams::Mode::Decimate
         } );
+        if ( !e )
+            return unexpected( std::move( e.error() ) );
     }
 
     if ( mapper != nullptr )

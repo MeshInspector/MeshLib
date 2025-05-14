@@ -115,7 +115,11 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     }
 
                     ProgressBar::nextTask( "Create ISO surface" );
-                    object->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( auto e = object->setIsoValue( minMax.first, ProgressBar::callBackSetProgress ); !e )
+                    {
+                        *error = std::move( e.error() );
+                        return showError;
+                    }
                     object->select( true );
 
                     if ( ProgressBar::isCanceled() )

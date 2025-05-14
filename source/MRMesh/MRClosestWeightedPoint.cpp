@@ -11,6 +11,16 @@ namespace MR
 namespace
 {
 
+[[maybe_unused]] bool compareDistances( float distA, float weightA, bool outsideA, float distB, float weightB, bool outsideB, bool bidirectional )
+{
+    if ( bidirectional )
+        return distA - weightA < distB - weightB;
+    float ofa = 2.f * static_cast<float>( outsideA ) - 1.f;
+    float ofb = 2.f * static_cast<float>( outsideB ) - 1.f;
+    return distA - ofa*weightA < distB - ofb*weightB;
+}
+
+
 class BallRadiusAssessor
 {
 public:
@@ -162,12 +172,13 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         if ( !c )
             return Processing::Continue;
 
+        const bool outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
         const auto r = distance( loc, c->pos );
-        if ( r - c->w < res.weightedDist( true ) )
+        if ( compareDistances( r, c->w, outside, res.dist, res.w, res.outside, params.bidirectionalMode ) )
         {
             res.dist = r;
             res.w = c->w;
-            res.outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
+            res.outside = outside;
             res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
 //            what to do here?
 //            if ( std::abs( r - c->w ) < params.minDistance )

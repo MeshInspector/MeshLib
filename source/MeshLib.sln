@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35913.81 d17.13
+VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRViewerApp", "MRViewerApp\MRViewerApp.vcxproj", "{169A85E3-BE12-4B21-A5D3-9D3234645A0E}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -63,6 +63,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pybind11nonlimitedapi_meshlib", "..\thirdparty\pybind11nonlimitedapi.vcxproj", "{5612E480-6980-4242-9039-BE367F4ECBF0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MREmbeddedPython", "MREmbeddedPython\MREmbeddedPython.vcxproj", "{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRTestCuda", "MRTestCuda\MRTestCuda.vcxproj", "{FFB8D063-FF1E-4F18-8479-249B36714EF7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -158,6 +160,10 @@ Global
 		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Debug|x64.Build.0 = Debug|x64
 		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Release|x64.ActiveCfg = Release|x64
 		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0}.Release|x64.Build.0 = Release|x64
+		{FFB8D063-FF1E-4F18-8479-249B36714EF7}.Debug|x64.ActiveCfg = Debug|x64
+		{FFB8D063-FF1E-4F18-8479-249B36714EF7}.Debug|x64.Build.0 = Debug|x64
+		{FFB8D063-FF1E-4F18-8479-249B36714EF7}.Release|x64.ActiveCfg = Release|x64
+		{FFB8D063-FF1E-4F18-8479-249B36714EF7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -185,6 +191,7 @@ Global
 		{CB6D82FB-E91D-4D62-B82E-BE644244E30A} = {DAEF3759-BD96-475D-AA71-96ACC5279E43}
 		{5612E480-6980-4242-9039-BE367F4ECBF0} = {DAEF3759-BD96-475D-AA71-96ACC5279E43}
 		{E0202297-EDB2-4CDC-9CD0-8921EFF08DA0} = {AE8B4895-7920-4AD3-B554-C858A08B1680}
+		{FFB8D063-FF1E-4F18-8479-249B36714EF7} = {E0BE85ED-C366-40EF-8BDE-70E1EDC8860F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6F7912D7-5687-4CBB-828B-1BEDD18B8249}

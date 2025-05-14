@@ -7,12 +7,7 @@
 
 #include <parallel_hashmap/phmap.h>
 
-#include <version>
-#ifdef __cpp_lib_expected
-#include <expected>
-#else
-#include <tl/expected.hpp>
-#endif
+#include "MRExpected.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4619) //#pragma warning: there is no warning number
@@ -95,6 +90,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <version>
 
 #ifdef MR_PCH_USE_EXTRA_HEADERS
 #include "MRMesh/MRIOFilters.h"

@@ -73,6 +73,30 @@ def run_code_sample(code_path: str, args: list):
                                  id="Triangulation_v3.dox.py",
                                  marks=pytest.mark.bindingsV3),
                              pytest.param(
+                                 {'sample': "PointsToMesh.dox.py",
+                                  'input_files': ['NefertitiPoints.ply'],
+                                  'output_files': ['NefertitiMesh.ctm']
+                                 },
+                                 id="PointsToMesh.dox.py" )
+                             pytest.param(
+                                 {'sample': "ContourTriangulation.dox.py",
+                                  'input_files': ['logo.jpg'],
+                                  'output_files': ['LogoMesh.ctm']
+                                 },
+                                 id="ContourTriangulation.dox.py" )
+                             pytest.param(
+                                 {'sample': "TerrainTriangulation.dox.py",
+                                  'input_files': ['TerrainScan.e57'],
+                                  'output_files': ['TerrainMesh.ctm']
+                                 },
+                                 id="TerrainTriangulation.dox.py" )
+                             pytest.param(
+                                 {'sample': "Fusion.dox.py",
+                                  'input_files': ['NefertitiPoints.ply'],
+                                  'output_files': ['NefertitiMesh.ply']
+                                 },
+                                 id="Fusion.dox.py" )
+                             pytest.param(
                                  {'sample': "GlobalRegistration.dox.py",
                                   'input_files': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
                                   'output_files': ["out.ply"],

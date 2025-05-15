@@ -6,34 +6,37 @@
 
 namespace MR
 {
-// Mode of processing components
+/// Mode of processing components
 enum class NestedComponenetsMode
 {
-    Remove, // Default: separate nested meshes and remove them, just like union operation should do, use this if input meshes are single component
-    Merge, // merge nested meshes, useful if input meshes are components of single object
-    Union // does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has multiple components
+    Remove, ///< Default: separate nested meshes and remove them, just like union operation should do, use this if input meshes are single component
+    Merge, ///< merge nested meshes, useful if input meshes are components of single object
+    Union ///< does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has multiple components
 };
 
-// Parameters structure for uniteManyMeshes function
+/// Parameters structure for uniteManyMeshes function
 struct UniteManyMeshesParams
 {
-    // Apply random shift to each mesh, to prevent degenerations on coincident surfaces
+    /// Apply random shift to each mesh, to prevent degenerations on coincident surfaces
     bool useRandomShifts{ false };
-    // Try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces
-    // useful on meshes with many coincident surfaces 
-    // (useRandomShifts used for same issue)
+    /// Try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces
+    /// useful on meshes with many coincident surfaces 
+    /// (useRandomShifts used for same issue)
     bool fixDegenerations{ false };
-    // Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
-    // not used if both flags (useRandomShifts,fixDegenerations) are false
+    /// Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
+    /// not used if both flags (useRandomShifts,fixDegenerations) are false
     float maxAllowedError{ 1e-5f };
-    // Seed that is used for random shifts
+    /// Seed that is used for random shifts
     unsigned int randomShiftsSeed{ 0 };
-    // If set, the bitset will store new faces created by boolean operations
+    /// If set, the bitset will store new faces created by boolean operations
     FaceBitSet* newFaces{ nullptr };
 
-    // By default function separate nested meshes and remove them, just like union operation should do
-    // read comment of NestedComponenetsMode enum for more information
+    /// By default function separate nested meshes and remove them, just like union operation should do
+    /// read comment of NestedComponenetsMode enum for more information
     NestedComponenetsMode nestedComponentsMode{ NestedComponenetsMode::Remove };
+
+    /// If set - merges meshes instead of booleaning it if boolean operation fails
+    bool mergeOnFail{ false };
 
     ProgressCallback progressCb;
 };

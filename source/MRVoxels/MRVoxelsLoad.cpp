@@ -274,7 +274,8 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
         obj->setName( name );
 
         obj->construct( volume );
-        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb );
+        if ( auto e = obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb ); !e )
+            return unexpected( std::move( e.error() ) );
         if ( !reportProgress( cb, 1.0f ) )
             return unexpected( getCancelMessage( file ) );
 

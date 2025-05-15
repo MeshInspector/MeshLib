@@ -110,9 +110,18 @@ IF(NOT MSVC)
 ENDIF()
 
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-# to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
-add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
+#   to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
+# We allow customizing those so that our clients can prevent their modules from talking to ours, e.g. to provide their own simplified bindings
+#   for our classes, to avoid having our modules as dependencies.
+# Pass empty strings to those to avoid customizing them at all.
+set(MESHLIB_PYBIND11_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
+set(MESHLIB_PYBIND11_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
+IF(NOT "${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}" STREQUAL "")
+  add_compile_definitions(PYBIND11_COMPILER_TYPE=\"${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}\")
+ENDIF()
+IF(NOT "${MESHLIB_PYBIND11_BUILD_ABI_STRING}" STREQUAL "")
+  add_compile_definitions(PYBIND11_BUILD_ABI=\"${MESHLIB_PYBIND11_BUILD_ABI_STRING}\")
+ENDIF()
 
 # Things for our patched pybind: --- [
 
@@ -124,7 +133,8 @@ add_compile_definitions(Py_LIMITED_API=0x030800f0)
 add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
 
 # This affects the naming of our pybind shims.
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"meshlib\")
+set(MESHLIB_PYBIND11_LIB_SUFFIX "meshlib" CACHE STRING "")
+add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"${MESHLIB_PYBIND11_LIB_SUFFIX}\")
 
 # ] --- end things for our patched pybind
 

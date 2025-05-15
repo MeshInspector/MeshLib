@@ -295,7 +295,8 @@ TEST( MRMesh, fillContours2D )
     sphereBig.pack();
 
     auto firstNewFace = sphereBig.topology.lastValidFace() + 1;
-    fillContours2D( sphereBig, sphereBig.topology.findHoleRepresentiveEdges() );
+    auto v = fillContours2D( sphereBig, sphereBig.topology.findHoleRepresentiveEdges() );
+    EXPECT_TRUE( v.has_value() );
     for ( FaceId f = firstNewFace; f <= sphereBig.topology.lastValidFace(); ++f )
     {
         EXPECT_TRUE( std::abs( dot( sphereBig.dirDblArea( f ).normalized(), Vector3f::minusZ() ) - 1.0f ) < std::numeric_limits<float>::epsilon() );

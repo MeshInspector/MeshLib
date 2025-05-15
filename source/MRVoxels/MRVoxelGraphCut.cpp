@@ -1164,7 +1164,7 @@ Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolum
                 if ( parts.size() > 1 )
                     vgc.cutOutOfSpanNeiNeighbors( context );
                 vgc.buildForest( context, parts.size() == numSubtasks );
-                vgc.segment( context );
+                (void)vgc.segment( context ); // cannot fail without callback
                 if ( parts.size() > 1 )
                     vgc.restoreCutNeighbor( context );
                 part.stat = context.stat;

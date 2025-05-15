@@ -22,7 +22,7 @@ namespace FixUndercuts
 // 
 // if voxelSize == 0.0f it will be counted automaticly
 [[deprecated( "Use fix( mesh, params )" )]]
-MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
+MRVOXELS_API Expected<void> fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
 // Changes mesh:
 // Fills all holes first, then:
@@ -35,7 +35,7 @@ MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float v
 // 
 // if voxelSize == 0.0f it will be counted automaticly
 [[deprecated( "Use fix( mesh, params )" )]]
-MRVOXELS_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
+MRVOXELS_API Expected<void> fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
 /// Parameters that is used to find undercuts
 struct FindParams

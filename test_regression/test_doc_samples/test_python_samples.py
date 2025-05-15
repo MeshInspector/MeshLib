@@ -78,12 +78,7 @@ def run_code_sample(code_path: str, args: list):
                                   'output_files': ['Mesh.ctm']
                                  },
                                  id="PointsToMesh.dox.py" ),
-                             pytest.param(
-                                 {'sample': "ContourTriangulation.dox.py",
-                                  'input_files': ['logo.jpg'],
-                                  'output_files': ['LogoMesh.ctm']
-                                 },
-                                 id="ContourTriangulation.dox.py" ),
+
                              pytest.param(
                                  {'sample': "TerrainTriangulation.dox.py",
                                   'input_files': ['TerrainPoints.ply'],

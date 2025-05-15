@@ -25,6 +25,7 @@ int main()
     }
 
     MR::SaveSettings ss;
+    if ( loadRes->points.vec_.size() == colors.size() )
     ss.colors = &colors;
     auto saveRes = MR::MeshSave::toAnySupportedFormat( *triangulationRes, "TerrainMesh.ctm", ss );
     if ( !saveRes.has_value() )

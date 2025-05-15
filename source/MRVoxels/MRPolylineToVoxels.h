@@ -24,20 +24,18 @@ MRVOXELS_API Expected<FloatGrid> polylineToDistanceField( const Polyline3& polyl
 /// \param offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
 MRVOXELS_API Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params );
 
-/// convert polyline to simple volume
-/// \param offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
-MRVOXELS_API Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params );
-
-
-/// Settings to conversion polyline to function volume
-struct PolylineToFunctionVolumeParams
+/// Settings to conversion polyline to volume
+struct PolylineToVolumeParams
 {
     DistanceVolumeParams vol;
 
     DistanceToMeshOptions dist;
 };
 
+/// convert polyline to simple volume
+MRVOXELS_API Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToVolumeParams& params );
+
 /// convert polyline to function volume
-MRVOXELS_API Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToFunctionVolumeParams& params );
+MRVOXELS_API Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToVolumeParams& params );
 
 }

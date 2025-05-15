@@ -55,21 +55,16 @@ Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const Polyli
     return meshToDistanceVdbVolume( mesh, meshParams );
 }
 
-Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
-{
-    PolylineToDistanceVolumeParams newParams = params;
-    newParams.cb = subprogress( params.cb, 0.f, 0.5f );
-    auto vdbVolume = polylineToVdbVolume( polyline, newParams );
-    if ( !vdbVolume.has_value() )
-        return unexpected( vdbVolume.error() );
-    return vdbVolumeToSimpleVolume( *vdbVolume, {}, subprogress( params.cb, 0.5f, 1.f ) );
-}
-
-Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToFunctionVolumeParams& params )
+Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    if ( !reportProgress( params.vol.cb, 0.5f ) )
-        return unexpectedOperationCanceled();
+    MeshToDistanceVolumeParams meshParams{ params.vol, params.dist, {} };
+    return meshToDistanceVolume( mesh, meshParams );
+}
+
+Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToVolumeParams& params )
+{
+    const Mesh mesh = polylineToDegenerateMesh( polyline );
     MeshToDistanceVolumeParams meshParams{ params.vol, params.dist, {} };
     return meshToDistanceFunctionVolume( mesh, meshParams );
 }

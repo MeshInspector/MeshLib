@@ -123,8 +123,8 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
         .dist =
         {
             params.dist,
-            params.offset - params.extraLayers * params.voxelSize, //minDistance
-            params.offset + params.extraLayers * params.voxelSize  //maxDistance
+            params.offset - params.numLayers * params.voxelSize, //minDistance
+            params.offset + params.numLayers * params.voxelSize  //maxDistance
         }
     };
 

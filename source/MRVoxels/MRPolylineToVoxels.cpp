@@ -37,33 +37,35 @@ Mesh polylineToDegenerateMesh( const Polyline3& polyline )
     return mesh;
 }
 
-Expected<FloatGrid> polylineToDistanceField( const Polyline3& polyline, const Vector3f& voxelSize, float offsetCount /*= 3*/, ProgressCallback cb /*= {}*/ )
+Expected<FloatGrid> polylineToDistanceField( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
 {
     MR_TIMER;
 
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    return meshToDistanceField( mesh, {}, voxelSize, offsetCount, cb );
+    return meshToDistanceField( mesh, {}, params.voxelSize, params.offsetCount, params.cb );
 }
 
-Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const Vector3f& voxelSize, float offsetCount /*= 3*/, ProgressCallback cb /*= {} */ )
+Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    MeshToVolumeParams params;
-    params.voxelSize = voxelSize;
-    params.surfaceOffset = offsetCount;
-    params.cb = cb;
-    return meshToDistanceVdbVolume( mesh, params );
+    MeshToVolumeParams meshParams;
+    meshParams.voxelSize = params.voxelSize;
+    meshParams.surfaceOffset = params.offsetCount;
+    meshParams.cb = params.cb;
+    return meshToDistanceVdbVolume( mesh, meshParams );
 }
 
-Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const Vector3f& voxelSize, float offsetCount /*= 3*/, ProgressCallback cb /*= {} */ )
+Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
 {
-    auto vdbVolume = polylineToVdbVolume( polyline, voxelSize, offsetCount, subprogress( cb, 0.f, 0.9f ) );
+    PolylineToDistanceVolumeParams newParams = params;
+    newParams.cb = subprogress( params.cb, 0.f, 0.5f );
+    auto vdbVolume = polylineToVdbVolume( polyline, newParams );
     if ( !vdbVolume.has_value() )
         return unexpected( vdbVolume.error() );
-    return vdbVolumeToSimpleVolume( *vdbVolume, {}, subprogress( cb, 0.9f, 1.f ) );
+    return vdbVolumeToSimpleVolume( *vdbVolume, {}, subprogress( params.cb, 0.5f, 1.f ) );
 }
 
-Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
+Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToFunctionVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
     if ( !reportProgress( params.vol.cb, 0.5f ) )

@@ -16,7 +16,7 @@ class BallRadiusAssessor
 public:
     explicit BallRadiusAssessor( const DistanceFromWeightedPointsComputeParams& params )
         : params_( params )
-        , maxSearchRadius_( params.maxDistance + params.maxWeight )
+        , maxSearchRadius_( params.maxBidirDistance + params.maxWeight )
         , maxLocWeight_ ( params.maxWeight )
     {
     }
@@ -51,8 +51,8 @@ bool BallRadiusAssessor::pointFound( float r, float w )
         {
             // try to reduce search radius knowing that the weights of nearby points are limited by known gradient
             maxLocWeight_ = locWeight;
-            const auto searchRadius = ( params_.maxDistance + maxLocWeight_ ) / ( 1 - params_.maxWeightGrad );
-            assert( searchRadius >= 0 ); // if params_.maxDistance + maxLocWeight_ >= 0 and params_.maxWeightGrad < 1
+            const auto searchRadius = ( params_.maxBidirDistance + maxLocWeight_ ) / ( 1 - params_.maxWeightGrad );
+            assert( searchRadius >= 0 ); // if params_.maxBidirDistance + maxLocWeight_ >= 0 and params_.maxWeightGrad < 1
             if ( searchRadius < maxSearchRadius_ )
             {
                 maxSearchRadius_ = searchRadius;
@@ -109,12 +109,12 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
 PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
     const AABBTreePoints& tree, const DistanceFromWeightedPointsComputeParams& params )
 {
-    assert( params.minDistance <= params.maxDistance );
-    assert( params.maxDistance >= 0 );
+    assert( !params.bidirectionalMode || params.minBidirDistance <= params.maxBidirDistance );
+    assert( params.maxBidirDistance + params.maxWeight >= 0 );
     assert( params.maxWeightGrad >= 0 );
     // if params.maxWeightGrad == 0 then you need to find euclidean closest point - a much simpler algorithm than below
 
-    PointAndDistance res{ .dist = params.maxDistance };
+    PointAndDistance res{ .dist = params.maxBidirDistance };
     assert( params.pointWeight );
     if ( !params.pointWeight )
         return res;
@@ -131,7 +131,7 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
         {
             res.dist = dist;
             res.vId = found.vId;
-            if ( dist < params.minDistance )
+            if ( params.bidirectionalMode && dist < params.minBidirDistance )
                 return Processing::Stop;
         }
         if ( ballRadiusAssessor.pointFound( r, w ) )
@@ -144,7 +144,8 @@ PointAndDistance findClosestWeightedPoint( const Vector3f & loc,
 MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
     const Mesh& mesh, const DistanceFromWeightedPointsComputeParams& params )
 {
-    MeshPointAndDistance res{ .dist = params.maxDistance };
+    MeshPointAndDistance res{ .eucledeanDist = params.maxBidirDistance };
+    assert( res.weightedBidirDist() == params.maxBidirDistance );
     assert( params.pointWeight );
     if ( !params.pointWeight )
         return res;
@@ -163,18 +164,18 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         const MeshPointAndDistance candidate
         {
             .mtp = mtp,
-            .dist = distance( loc, c->pos ),
+            .eucledeanDist = distance( loc, c->pos ),
             .w = c->w,
             .bidirectionalOrOutside = params.bidirectionalMode || dot( mesh.pseudonormal( mtp ), loc - c->pos ) >= 0
         };
         if ( candidate.innerDist() < res.innerDist() )
         {
+            assert( candidate.weightedBidirDist() < params.maxBidirDistance );
             res = candidate;
-//            what to do here?
-//            if ( std::abs( r - c->w ) < params.minDistance )
-//                return Processing::Stop;
+            if ( params.bidirectionalMode && res.weightedDist() < params.minBidirDistance )
+                return Processing::Stop;
         }
-        if ( ballRadiusAssessor.pointFound( candidate.dist, c->w ) )
+        if ( ballRadiusAssessor.pointFound( candidate.eucledeanDist, c->w ) )
             ball.radiusSq = sqr( ballRadiusAssessor.maxSearchRadius() );
         return Processing::Continue;
     } );

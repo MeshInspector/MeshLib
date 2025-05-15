@@ -29,7 +29,7 @@ TEST( MRMesh, findClosestWeightedPoint )
         ASSERT_EQ( res.vId,  0_v );
         ASSERT_EQ( res.dist, 1 );
 
-        params.maxDistance = 0.5f;
+        params.maxBidirDistance = 0.5f;
         res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
@@ -45,7 +45,7 @@ TEST( MRMesh, findClosestWeightedPoint )
         ASSERT_EQ( res.vId,  1_v );
         ASSERT_EQ( res.dist, 2 );
 
-        params.maxDistance = 1.5f;
+        params.maxBidirDistance = 1.5f;
         res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }

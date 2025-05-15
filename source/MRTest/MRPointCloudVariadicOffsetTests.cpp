@@ -68,7 +68,7 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
     {
         auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
         assert( !pd.mtp.onEdge( mesh.topology ) );
-        return pd.weightedDist( params.bidirectionalMode );
+        return pd.weightedDist();
     };
 
     {
@@ -113,25 +113,27 @@ TEST( MRMesh, weightedMeshShell )
     EXPECT_EQ( offCube->topology.findNumHoles(), 0 );
 }
 
-TEST( MRMesh, findClosestWeightedMeshPointContinuity )
+static void testClosestWeightedMeshPointContinuity( bool bidir )
 {
     auto cube = makeCube();
     DistanceFromWeightedPointsComputeParams params;
     auto distance = [&]( Vector3f loc )
     {
         auto pd = findClosestWeightedMeshPoint( loc, cube, params );
-        //assert( !pd.mtp.onEdge( cube.topology ) );
-        return pd.weightedDist( params.bidirectionalMode );
+        return pd.weightedDist();
     };
 
-    params.pointWeight  = [] ( VertId ) { return 0.f; };
-    params.maxWeight = 0.f;
-    params.bidirectionalMode = false;
+    params.pointWeight = [] ( VertId v ) { return (int)v * 0.1f; };
+    params.maxWeight = 0.7f;
+    params.bidirectionalMode = bidir;
 
-    constexpr float step = 0.01f;
+    for ( auto v : cube.topology.getValidVerts() )
+        EXPECT_NEAR( distance( cube.points[v] ), -params.pointWeight( v ), 1e-6f );
+
+    constexpr float step = 0.05f;
     constexpr float gradStep = 0.001f;
-    constexpr float rangeMin = -0.8f;
-    constexpr float rangeMax = 0.8f;
+    constexpr float rangeMin = -0.6f;
+    constexpr float rangeMax =  0.6f;
     std::vector<float> zVals;
     for ( float z = rangeMin; z < rangeMax; z += step )
         zVals.push_back( z );
@@ -162,6 +164,12 @@ TEST( MRMesh, findClosestWeightedMeshPointContinuity )
         maxGrad = std::max( maxGrad, val );
 
     EXPECT_NEAR( maxGrad, 1.f, 0.1f ); // gradient should be 1 as distance should change linearly
+}
+
+TEST( MRMesh, findClosestWeightedMeshPointContinuity )
+{
+    testClosestWeightedMeshPointContinuity( false );
+    testClosestWeightedMeshPointContinuity( true );
 }
 
 } //namespace MR

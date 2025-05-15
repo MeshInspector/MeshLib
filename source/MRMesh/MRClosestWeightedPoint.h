@@ -32,20 +32,23 @@ struct MeshPointAndDistance
     /// point's weight
     float w = 0;
 
-    /// if input location is locally outside of the surface (by pseudonormal)
-    bool outside = false;
+    /// either
+    /// 1) bidirectional distances are computed, or
+    /// 2) input location is locally outside of the surface (by pseudonormal)
+    bool bidirectionalOrOutside = true;
 
-    /// the distance from input location to mtp considering point's weight and location inside/outside
-    [[nodiscard]] float weightedDist( bool bidirectional ) const
+    /// the distance from input location to mtp considering point's weight and location inside/outside;
+    /// weightedDist() is continuous function of location unlike innerDist(), which makes 2*weight jump if the location moves through the surface
+    [[nodiscard]] float weightedDist() const
     {
-        return ( outside || bidirectional ? dist : -dist ) - w;
+        return ( bidirectionalOrOutside ? dist : -dist ) - w;
     }
 
     /// this distance is used internally to find the best surface point, which has the smallest inner distance;
-    /// innerDist(...) must grow in both directions of the surface weightedDist(false)
-    [[nodiscard]] float innerDist( bool bidirectional ) const
+    /// innerDist() grows in both directions of the surface unlike weightedDist()
+    [[nodiscard]] float innerDist() const
     {
-        return dist + ( outside || bidirectional ? -w : w );
+        return dist + ( bidirectionalOrOutside ? -w : w );
     }
 
     /// check for validity, otherwise there is no point closer than maxDistance

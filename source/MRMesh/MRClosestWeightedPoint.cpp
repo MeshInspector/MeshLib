@@ -11,16 +11,6 @@ namespace MR
 namespace
 {
 
-[[maybe_unused]] bool compareDistances( float distA, float weightA, bool outsideA, float distB, float weightB, bool outsideB, bool bidirectional )
-{
-    if ( bidirectional )
-        return distA - weightA < distB - weightB;
-    float ofa = 2.f * static_cast<float>( outsideA ) - 1.f;
-    float ofb = 2.f * static_cast<float>( outsideB ) - 1.f;
-    return distA - ofa*weightA < distB - ofb*weightB;
-}
-
-
 class BallRadiusAssessor
 {
 public:
@@ -78,7 +68,6 @@ struct ClosestTriPoint
     Vector3f pos;
     TriPointf tp;
     float w = 0;
-    bool outside = false;
 };
 
 std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd, const Mesh& mesh, FaceId f, const VertMetric& pointWeight, bool bidirectionalMode )
@@ -94,9 +83,8 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
         ws[i] = pointWeight( vs[i] );
     }
 
-    const bool outside = dot( locd - ps[0], dirDblArea( ps ) ) >= 0;
     // considering unsigned distances, each triangle has two planes where euclidean distance equals interpolated point weight
-    const auto maybePlane = ( !bidirectionalMode || outside ) ?
+    const auto maybePlane = ( !bidirectionalMode || dot( locd - ps[0], dirDblArea( ps ) ) >= 0 ) ?
         tangentPlaneToSpheres( ps[0], ps[1], ps[2], ws[0], ws[1], ws[2] ) :
         tangentPlaneToSpheres( ps[1], ps[0], ps[2], ws[1], ws[0], ws[2] );
     if ( !maybePlane )
@@ -112,8 +100,7 @@ std::optional<ClosestTriPoint> findClosestWeightedTriPoint( const Vector3d& locd
     {
         .pos = Vector3f( baryD.interpolate( ps[0], ps[1], ps[2] ) ), // not projD, since it is on tangent plane
         .tp = TriPointf( baryD ),
-        .w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) ),
-        .outside = outside
+        .w = float( baryD.interpolate( ws[0], ws[1], ws[2] ) )
     };
 }
 
@@ -172,19 +159,22 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
         if ( !c )
             return Processing::Continue;
 
-        const bool outside = dot( mesh.pseudonormal( MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp } ), loc - c->pos ) > 0;
-        const auto r = distance( loc, c->pos );
-        if ( compareDistances( r, c->w, outside, res.dist, res.w, res.outside, params.bidirectionalMode ) )
+        const auto mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
+        const MeshPointAndDistance candidate
         {
-            res.dist = r;
-            res.w = c->w;
-            res.outside = outside;
-            res.mtp = MeshTriPoint{ mesh.topology.edgeWithLeft( f ), c->tp };
+            .mtp = mtp,
+            .dist = distance( loc, c->pos ),
+            .w = c->w,
+            .bidirectionalOrOutside = params.bidirectionalMode || dot( mesh.pseudonormal( mtp ), loc - c->pos ) >= 0
+        };
+        if ( candidate.innerDist() < res.innerDist() )
+        {
+            res = candidate;
 //            what to do here?
 //            if ( std::abs( r - c->w ) < params.minDistance )
 //                return Processing::Stop;
         }
-        if ( ballRadiusAssessor.pointFound( r, c->w ) )
+        if ( ballRadiusAssessor.pointFound( candidate.dist, c->w ) )
             ball.radiusSq = sqr( ballRadiusAssessor.maxSearchRadius() );
         return Processing::Continue;
     } );

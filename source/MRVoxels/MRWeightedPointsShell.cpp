@@ -47,7 +47,7 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            const auto dist = pd.weightedDist( params.dist.bidirectionalMode );
+            const auto dist = pd.weightedDist();
             if ( !( dist >= params.dist.minDistance && dist < params.dist.maxDistance ) )
                 return cQuietNan;
             return dist;

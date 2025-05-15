@@ -26,22 +26,31 @@ struct MeshPointAndDistance
     /// a point on mesh in barycentric representation
     MeshTriPoint mtp;
 
-    /// the distance from input location to mtp
+    /// euclidean distance from input location to mtp
     float dist = 0;
 
     /// point's weight
     float w = 0;
 
-    /// if points locally outside (by pseudonormal)
+    /// if input location is locally outside of the surface (by pseudonormal)
     bool outside = false;
 
-    /// check for validity, otherwise there is no point closer than maxDistance
-    [[nodiscard]] bool valid() const { return mtp.valid(); }
-    [[nodiscard]] explicit operator bool() const { return mtp.valid(); }
+    /// the distance from input location to mtp considering point's weight and location inside/outside
     [[nodiscard]] float weightedDist( bool bidirectional ) const
     {
         return ( outside || bidirectional ? dist : -dist ) - w;
     }
+
+    /// this distance is used internally to find the best surface point, which has the smallest inner distance;
+    /// innerDist(...) must grow in both directions of the surface weightedDist(false)
+    [[nodiscard]] float innerDist( bool bidirectional ) const
+    {
+        return dist + ( outside || bidirectional ? -w : w );
+    }
+
+    /// check for validity, otherwise there is no point closer than maxDistance
+    [[nodiscard]] bool valid() const { return mtp.valid(); }
+    [[nodiscard]] explicit operator bool() const { return mtp.valid(); }
 };
 
 struct DistanceFromWeightedPointsParams

@@ -110,6 +110,25 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// deleting such faces simplifies the holes and makes them easier to fill
 [[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const Mesh & mesh );
 
+/// Parameters structure for `fixMeshCreases` function
+struct FixCreasesParams
+{
+    /// edges with dihedral angle sharper this will be considered as creases
+    float creaseAngle = PI_F * 175.0f / 180.0f;
+    
+    /// area around creases will be considered as planar if edge angle does not exceed this cos value
+    float planarCritCos = 0.8f;
+
+    /// planar check is skipped for faces with worse aspect ratio
+    float criticalTriAspectRatio = 1e3f;
+
+    /// maximum number of algorithm iterations
+    int maxIters = 10;
+};
+
+/// Finds creases edges and re-triangulates planar areas around them, useful to fix double faces
+MRMESH_API void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params = {} );
+
 /// Parameters for `findDisorientedFaces` function
 struct FindDisorientationParams
 {

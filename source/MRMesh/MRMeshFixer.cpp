@@ -676,4 +676,62 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
     return res;
 }
 
+void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
+{
+    for ( int iter = 0; iter < params.maxIters; ++iter )
+    {
+        auto creases = mesh.findCreaseEdges( params.creaseAngle );
+        if ( creases.none() )
+            return;
+
+        FaceBitSet fixFacesBuffer( mesh.topology.getValidFaces().size() );
+        for ( auto ue : creases )
+        {
+            auto creaseEdge = EdgeId( ue );
+            if ( mesh.topology.getOrgDegree( creaseEdge ) < mesh.topology.getOrgDegree( creaseEdge.sym() ) )
+                creaseEdge = creaseEdge.sym(); // important part to triangulate worse end of the edge (mb we should change degree check to area check?)
+
+            fixFacesBuffer.reset();
+
+            auto findBadFaces = [&] ( bool left )
+            {
+                for ( auto e = creaseEdge;; )
+                {
+                    auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
+                    if ( !f )
+                        return;
+                    fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
+                    e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
+                    if ( e == creaseEdge )
+                        return; // full cycle
+                    auto nextF = left ? mesh.topology.left( e ) : mesh.topology.right( e );
+                    if ( !nextF )
+                        return;
+                    if ( creases.test( e.undirected() ) )
+                        continue;
+                    if ( mesh.triangleAspectRatio( f ) > params.criticalTriAspectRatio || mesh.triangleAspectRatio( nextF ) > params.criticalTriAspectRatio )
+                        continue;
+                    auto digAngCos = mesh.dihedralAngleCos( e.undirected() );
+                    if ( digAngCos < params.planarCritCos )
+                        return; // stop propagation on sharp angle
+                }
+            };
+            findBadFaces( true );
+            findBadFaces( false );
+            if ( fixFacesBuffer.none() )
+                continue;
+
+            auto loops = delRegionKeepBd( mesh, fixFacesBuffer );
+            for ( const auto& loop : loops )
+            {
+                int i = 0;
+                while ( i < loop.size() && mesh.topology.left( loop[i] ) ) ++i;
+                if ( i == loop.size() )
+                    continue;
+                fillHole( mesh, loop[i], { .metric = getMinAreaMetric( mesh ) } );
+            }
+        }
+    }
+}
+
 } //namespace MR

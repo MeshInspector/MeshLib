@@ -1,4 +1,4 @@
-#include "MRPointsToVoxels.h"
+#include "MRPolylineToVoxels.h"
 #include "MRFloatGrid.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRVector3.h"
@@ -63,13 +63,13 @@ Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const 
     return vdbVolumeToSimpleVolume( *vdbVolume, {}, subprogress( cb, 0.9f, 1.f ) );
 }
 
-Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const Vector3f& voxelSize, ProgressCallback cb /*= {} */ )
+Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    MeshToDistanceVolumeParams params;
-    params.vol.voxelSize = voxelSize;
-    params.vol.cb = cb;
-    return meshToDistanceFunctionVolume( mesh, params );
+    if ( !reportProgress( params.vol.cb, 0.5f ) )
+        return unexpectedOperationCanceled();
+    MeshToDistanceVolumeParams meshParams{ params.vol, params.dist, {} };
+    return meshToDistanceFunctionVolume( mesh, meshParams );
 }
 
 }

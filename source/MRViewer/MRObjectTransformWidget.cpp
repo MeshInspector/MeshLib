@@ -548,6 +548,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             translateControls_[i] = std::make_shared<ObjectMesh>();
             translateControls_[i]->setAncillary( true );
             translateControls_[i]->setFrontColor( params_.translationColors[i], false );
+            translateControls_[i]->setBackColor( params_.translationColors[i] );
             translateControls_[i]->setFlatShading( true );
             translateControls_[i]->setName( "TranslationC " + std::to_string( i ) );
             if ( parent )
@@ -582,6 +583,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             rotateControls_[i] = std::make_shared<ObjectMesh>();
             rotateControls_[i]->setAncillary( true );
             rotateControls_[i]->setFrontColor( params_.rotationColors[i], false );
+            rotateControls_[i]->setBackColor( params_.rotationColors[i] );
             rotateControls_[i]->setFlatShading( true );
             rotateControls_[i]->setName( "RotationC " + std::to_string( i ) );
             if ( parent )

@@ -16,7 +16,7 @@ struct PointAndDistance
     /// the distance from input location to point vId considering point's weight
     float dist = 0;
 
-    /// check for validity, otherwise there is no point closer than maxDistance
+    /// check for validity, otherwise there is no point closer than maxBidirDist
     [[nodiscard]] bool valid() const { return vId.valid(); }
     [[nodiscard]] explicit operator bool() const { return vId.valid(); }
 };
@@ -38,7 +38,7 @@ struct MeshPointAndDistance
     bool bidirectionalOrOutside = true;
 
     /// bidirectional distance from input location to mtp considering point's weight
-    [[nodiscard]] float weightedBidirDist() const
+    [[nodiscard]] float bidirDist() const
     {
         return eucledeanDist - w;
     }
@@ -46,7 +46,7 @@ struct MeshPointAndDistance
     /// the distance from input location to mtp considering point's weight and location inside/outside;
     /// weightedDist(false) is continuous function of location unlike innerDist(false),
     /// which makes 2*weight jump if the location moves through the surface
-    [[nodiscard]] float weightedDist() const
+    [[nodiscard]] float dist() const
     {
         return ( bidirectionalOrOutside ? eucledeanDist : -eucledeanDist ) - w;
     }
@@ -58,7 +58,7 @@ struct MeshPointAndDistance
         return eucledeanDist + ( bidirectionalOrOutside ? -w : w );
     }
 
-    /// check for validity, otherwise there is no point closer than maxDistance
+    /// check for validity, otherwise there is no point closer than maxBidirDist
     [[nodiscard]] bool valid() const { return mtp.valid(); }
     [[nodiscard]] explicit operator bool() const { return mtp.valid(); }
 };
@@ -88,12 +88,12 @@ struct DistanceFromWeightedPointsParams
 
 struct DistanceFromWeightedPointsComputeParams : DistanceFromWeightedPointsParams
 {
-    /// stop searching as soon as any point within this distance is found,
+    /// stop searching as soon as any point within this weighted distance is found,
     /// ignored if bidirectionalMode=false, because in one-directional mode, weighted distance approximation not only decreases
-    float minBidirDistance = -FLT_MAX; // default 0 here does not work for negative distances
+    float minBidirDist = -FLT_MAX; // default 0 here does not work for negative distances
 
-    /// find the closest point only if bidirectional distance to it is less than given value
-    float maxBidirDistance = FLT_MAX;
+    /// find the closest point only if weighted bidirectional distance to it is less than given value
+    float maxBidirDist = FLT_MAX;
 };
 
 /// consider a point cloud where each point has additive weight,

@@ -29,7 +29,7 @@ TEST( MRMesh, findClosestWeightedPoint )
         ASSERT_EQ( res.vId,  0_v );
         ASSERT_EQ( res.dist, 1 );
 
-        params.maxBidirDistance = 0.5f;
+        params.maxBidirDist = 0.5f;
         res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
@@ -45,7 +45,7 @@ TEST( MRMesh, findClosestWeightedPoint )
         ASSERT_EQ( res.vId,  1_v );
         ASSERT_EQ( res.dist, 2 );
 
-        params.maxBidirDistance = 1.5f;
+        params.maxBidirDist = 1.5f;
         res = findClosestWeightedPoint( Vector3f( 1, 0, 0 ), pc.getAABBTree(), params );
         ASSERT_FALSE( res.valid() );
     }
@@ -68,7 +68,7 @@ TEST( MRMesh, findClosestWeightedMeshPoint )
     {
         auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
         assert( !pd.mtp.onEdge( mesh.topology ) );
-        return pd.weightedDist();
+        return pd.dist();
     };
 
     {
@@ -120,7 +120,7 @@ static void testClosestWeightedMeshPointContinuity( bool bidir )
     auto distance = [&]( Vector3f loc )
     {
         auto pd = findClosestWeightedMeshPoint( loc, cube, params );
-        return pd.weightedDist();
+        return pd.dist();
     };
 
     params.pointWeight = [] ( VertId v ) { return (int)v * 0.1f; };

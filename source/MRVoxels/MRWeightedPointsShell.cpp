@@ -28,9 +28,9 @@ FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud,
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
             assert( std::isfinite( pd.dist ) );
-            if ( pd.dist >= params.dist.maxBidirDistance )
+            if ( pd.dist >= params.dist.maxBidirDist )
                 return cQuietNan;
-            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDistance )
+            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDist )
                 return cQuietNan;
             return pd.dist;
         },
@@ -50,13 +50,13 @@ FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const We
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            const auto bdist = pd.weightedBidirDist();
+            const auto bdist = pd.bidirDist();
             assert( std::isfinite( bdist ) );
-            if ( bdist >= params.dist.maxBidirDistance )
+            if ( bdist >= params.dist.maxBidirDist )
                 return cQuietNan;
-            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDistance )
+            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDist )
                 return cQuietNan;
-            return pd.weightedDist();
+            return pd.dist();
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize

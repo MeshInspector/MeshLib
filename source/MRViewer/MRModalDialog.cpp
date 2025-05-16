@@ -22,8 +22,10 @@ bool ModalDialog::beginPopup( float menuScaling )
 
     const ImVec2 windowPadding { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling };
     const ImVec2 itemSpacing { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling };
+    const ImVec2 itemInnerSpacing { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling };
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, itemInnerSpacing );
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar;
     if ( !ImGui::BeginModalNoAnimation( label_.c_str(), nullptr, flags ) )
@@ -100,6 +102,7 @@ void ModalDialog::endPopup( float )
 
     ImGui::EndPopup();
 
+    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemInnerSpacing
     ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
     ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
 }

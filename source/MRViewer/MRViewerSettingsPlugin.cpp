@@ -22,6 +22,7 @@
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRFileDialog.h"
+#include "MRModalDialog.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRUnitSettings.h"
@@ -873,18 +874,11 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated, float menuScaling )
 {
     if ( activated )
         ImGui::OpenPopup( "Settings reset" );
-    const ImVec2 windowSize{ cModalWindowWidth * menuScaling, -1 };
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    if ( ImGui::BeginModalNoAnimation( "Settings reset", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog dialog( "Settings reset", {
+        .text = "Reset all application settings?",
+    } );
+    if ( dialog.beginPopup( menuScaling ) )
     {
-        std::string text = "Reset all application settings?";
-        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
-        ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
-        ImGui::Text( "%s", text.c_str() );
-
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
@@ -900,10 +894,9 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated, float menuScaling )
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        ImGui::PopStyleVar();
-        ImGui::EndPopup();
+        ImGui::PopStyleVar(); // ImGuiStyleVar_FramePadding
+        dialog.endPopup( menuScaling );
     }
-    ImGui::PopStyleVar( 2 );
 }
 
 void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScaling, float toolWidth )

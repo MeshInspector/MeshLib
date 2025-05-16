@@ -2,6 +2,9 @@
 
 #include "exports.h"
 
+#include <functional>
+#include <string>
+
 namespace MR
 {
 

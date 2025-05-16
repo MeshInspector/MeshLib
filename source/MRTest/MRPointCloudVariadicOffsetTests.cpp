@@ -172,4 +172,48 @@ TEST( MRMesh, findClosestWeightedMeshPointContinuity )
     testClosestWeightedMeshPointContinuity( true );
 }
 
+TEST( MRMesh, WeightedClosed )
+{
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 4_v, 5_v }
+    };
+    VertCoords vs{
+        {-1, -1, 0 },  //0_v
+        {-1,  1, 0 },  //1_v
+        { 1,  0, 0 },  //2_v
+        {-1,  1, 3 },  //0_v
+        {-1, -1, 3 },  //1_v
+        { 1,  0, 3 }   //2_v
+    };
+    auto mesh = Mesh::fromTriangles( std::move( vs ), t );
+
+    VertScalars weights {
+        2, 2, 2, 0, 0, 0    // TODO: fix method for 4,4,4,0,0,0
+    };
+
+    DistanceFromWeightedPointsComputeParams params;
+    params.pointWeight = [&]( VertId v ) { return weights[v]; };
+    params.maxWeight = 2;
+    params.bidirectionalMode = false;
+
+    auto smartDistance = [&]( Vector3f loc )
+    {
+        auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
+        assert( !pd.mtp.onEdge( mesh.topology ) );
+        return pd.dist();
+    };
+
+//    std::ofstream f( "/tmp/test.csv" );
+//    f << "z,d\n";
+//    for ( float z = -1; z <= 4; z += 0.1f )
+//        f << z << ',' << smartDistance( Vector3f( 0, 0, z ) ) << '\n';
+//    f.close();
+
+    float maxDiff = 0.f;
+    for ( float z = -1; z <= 4; z += 0.1f )
+        maxDiff = std::max( maxDiff, std::abs( smartDistance( Vector3f{ 0.f, 0.f, z - 0.5f } ) - smartDistance( Vector3f{ 0.f, 0.f, z + 0.5f } ) ) );
+    ASSERT_FLOAT_EQ( maxDiff, 1.f );
+}
+
 } //namespace MR

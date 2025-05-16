@@ -33,6 +33,9 @@ struct WeightedPointsShellParametersBase
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;
 
+    /// number of voxels to compute near the offset (should be left default unless used for debugging)
+    float numLayers = 1.001f;
+
     /// Progress callback
     ProgressCallback progress;
 

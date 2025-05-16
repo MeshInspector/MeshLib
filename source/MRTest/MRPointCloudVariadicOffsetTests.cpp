@@ -242,16 +242,16 @@ TEST( MRMesh, findClosestWeightedMeshPointSharpAngle )
         return pd.dist();
     };
 
-    std::ofstream f( "/tmp/test.csv" );
-    f << "z,d\n";
-    for ( float z = -0.5; z <= 0.5; z += 0.05f )
-        f << z << ',' << smartDistance( Vector3f( 0.1, 0.1, z ) ) << '\n';
-    f.close();
+//    std::ofstream f( "/tmp/test.csv" );
+//    f << "z,d\n";
+//    for ( float z = -0.5; z <= 0.5; z += 0.05f )
+//        f << z << ',' << smartDistance( Vector3f( 0.1, 0.1, z ) ) << '\n';
+//    f.close();
 
-//    float maxDiff = 0.f;
-//    for ( float z = -1; z <= 4; z += 0.1f )
-//        maxDiff = std::max( maxDiff, std::abs( smartDistance( Vector3f{ 0.f, 0.f, z - 0.5f } ) - smartDistance( Vector3f{ 0.f, 0.f, z + 0.5f } ) ) );
-//    ASSERT_FLOAT_EQ( maxDiff, 1.f );
+    float maxDiff = 0.f;
+    for ( float z = -0.5f; z <= 0.5f; z += 0.05f )
+        maxDiff = std::max( maxDiff, std::abs( smartDistance( Vector3f{ 0.1f, 0.1f, z - 0.025f } ) - smartDistance( Vector3f{ 0.1f, 0.1f, z + 0.025f } ) ) );
+    ASSERT_NEAR( maxDiff, 0.05f, 0.001f );
 }
 
 } //namespace MR

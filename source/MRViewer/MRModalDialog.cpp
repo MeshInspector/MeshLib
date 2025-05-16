@@ -20,18 +20,12 @@ bool ModalDialog::beginPopup( float menuScaling )
     const ImVec2 windowSize { windowWidth, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    const ImVec2 windowPadding { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling };
-    const ImVec2 itemSpacing { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling };
-    const ImVec2 itemInnerSpacing { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling };
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, itemInnerSpacing );
+    setStyle_( menuScaling );
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar;
     if ( !ImGui::BeginModalNoAnimation( label_.c_str(), nullptr, flags ) )
     {
-        ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
-        ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
+        unsetStyle_();
         return false;
     }
 
@@ -101,15 +95,24 @@ void ModalDialog::endPopup( float )
     }
 
     ImGui::EndPopup();
-
-    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemInnerSpacing
-    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
-    ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
+    unsetStyle_();
 }
 
 float ModalDialog::windowWidth()
 {
     return ImGui::GetCurrentWindow()->Size.x;
+}
+
+void ModalDialog::setStyle_( float menuScaling )
+{
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding,    { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,      { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
+}
+
+void ModalDialog::unsetStyle_()
+{
+    ImGui::PopStyleVar( 3 );
 }
 
 } // namespace MR

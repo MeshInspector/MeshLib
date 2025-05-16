@@ -46,6 +46,10 @@ public:
     [[nodiscard]] MRVIEWER_API static float windowWidth();
 
 private:
+    void setStyle_( float menuScaling );
+    void unsetStyle_();
+
+private:
     std::string label_;
     ModalDialogSettings settings_;
 };

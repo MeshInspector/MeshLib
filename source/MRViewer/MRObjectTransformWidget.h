@@ -82,6 +82,8 @@ public:
     // xf - widget current xf
     virtual void updateRotation( Axis ax, const AffineXf3f& xf, float startAngle, float endAngle, ViewportId vpId ) = 0;
 
+    virtual std::optional<int> getSphereHovered() = 0;
+
     // build-in history action class for change center
     class ChangeCenterAction : public HistoryAction
     {
@@ -191,6 +193,8 @@ public:
 
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
+
+    MRVIEWER_API virtual std::optional<int> getSphereHovered() override;
 private:
     // forgets specific transform for pixel size (if you need to disable this option)
     void resetSizeInPixel_();
@@ -203,6 +207,7 @@ private:
 
     // Control objects
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControlsSphere_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
 
     // if active line is visible, other lines are not

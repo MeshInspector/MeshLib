@@ -19,6 +19,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
+#include "MRMesh/MRMakeSphereMesh.h"
 
 namespace
 {
@@ -191,12 +192,47 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;
+
+    auto mayBeHoveredSPhere = controls_->getSphereHovered();
+
+    if ( mayBeHoveredSPhere.has_value() )
+    {
+        std::cout << "mayBeHoveredSPhereeredSPhere=" << mayBeHoveredSPhere.value() << std::endl;
+
+        auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
+        auto& vp = getViewerInstance().viewport( hoveredViewportId );
+        auto controlsXf = getControlsXf();
+        auto dirX = (controlsXf.A * MR::Vector3f::plusX()).normalized();
+        auto dirY = (controlsXf.A * MR::Vector3f::plusY()).normalized();
+        auto dirZ = (controlsXf.A * MR::Vector3f::plusZ()).normalized();
+
+        switch ( mayBeHoveredSPhere.value() )
+        {
+        case  0:
+            vp.cameraLookAlong( -dirX, -dirZ );
+            break;
+        case  1:
+            vp.cameraLookAlong( -dirY, -dirZ );
+            break;
+        case  2:
+            vp.cameraLookAlong( -dirZ, dirX );
+            break;
+        default:
+            break;
+        }
+
+
+        vp.preciseFitDataToScreenBorder();
+    }
+
     if ( controls_->getHoveredControl() == ControlBit::None )
         return false;
     if ( !controlsRoot_ )
         return false;
     if ( !controlsRoot_->globalVisibility( getViewerInstance().getHoveredViewportId() ) )
         return false;
+
+
 
     if ( startModifyCallback_ )
         startModifyCallback_();
@@ -554,6 +590,19 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             if ( parent )
                 parent->addChild( translateControls_[i] );
         }
+
+        if ( !translateControlsSphere_[i] )
+        {
+            translateControlsSphere_[i] = std::make_shared<ObjectMesh>();
+            translateControlsSphere_[i]->setAncillary( true );
+            translateControlsSphere_[i]->setFrontColor( params_.translationColors[i], false );
+            translateControlsSphere_[i]->setBackColor( params_.translationColors[i] );
+            translateControlsSphere_[i]->setFlatShading( true );
+            translateControlsSphere_[i]->setName( "TranslationCSphere " + std::to_string( i ) );
+            if ( parent )
+                parent->addChild( translateControlsSphere_[i] );
+        }
+
         if ( !translateLines_[i] )
         {
             translateLines_[i] = std::make_shared<ObjectLines>();
@@ -574,6 +623,11 @@ void TransformControls::init( std::shared_ptr<Object> parent )
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
             makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );
+
+        const float sphereR = 1.5f * params_.coneRadiusFactor * width;
+        std::shared_ptr<MR::Mesh> sphere = std::make_shared<MR::Mesh>( makeUVSphere( sphereR ) );
+        sphere->transform( MR::AffineXf3f::translation( translationPoints[1] + sphereR  * (translationPoints[1] - translationPoints[0]).normalized() ) );
+        translateControlsSphere_[i]->setMesh( sphere );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -901,6 +955,22 @@ TransformModesValidator TransformControls::ThresholdDotValidator( float threshol
 
         return showMask;
     };
+}
+
+std::optional<int> TransformControls::getSphereHovered()
+{
+    auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
+    const auto& vp = getViewerInstance().viewport( hoveredViewportId );
+    auto [obj, pick] =  vp.pick_render_object();
+    for ( int ax = int( Axis::X ); ax < int( Axis::Count ); ++ax )
+    {
+        if ( translateControlsSphere_[ax] == obj )
+        {
+            return ax;
+        }
+    }
+
+    return std::nullopt;
 }
 
 int TransformControls::findHoveredIndex_() const

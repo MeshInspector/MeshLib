@@ -58,14 +58,18 @@ Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const Polyli
 Expected<SimpleVolume> polylineToSimpleVolume( const Polyline3& polyline, const PolylineToVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    MeshToDistanceVolumeParams meshParams{ params.vol, params.dist, {} };
+    MeshToDistanceVolumeParams meshParams;
+    meshParams.vol = params.vol;
+    meshParams.dist = { params.dist };
     return meshToDistanceVolume( mesh, meshParams );
 }
 
 Expected<FunctionVolume> polylineToFunctionVolume( const Polyline3& polyline, const PolylineToVolumeParams& params )
 {
     const Mesh mesh = polylineToDegenerateMesh( polyline );
-    MeshToDistanceVolumeParams meshParams{ params.vol, params.dist, {} };
+    MeshToDistanceVolumeParams meshParams;
+    meshParams.vol = params.vol;
+    meshParams.dist = { params.dist };
     return meshToDistanceFunctionVolume( mesh, meshParams );
 }
 

@@ -5,7 +5,7 @@
 namespace MR
 {
 
-/// ...
+/// \brief Settings for ModalDialog.
 struct ModalDialogSettings
 {
     /// Dialog window width. If the value is zero or negative, defaults to cModalWindowWidth * menuScaling.
@@ -26,15 +26,17 @@ struct ModalDialogSettings
     std::function<void ()> onWindowClose;
 };
 
-/// ...
+/// \brief Helper class to display modal dialogs.
+/// \ref ModalDialogSettings
 class ModalDialog
 {
 public:
     MRVIEWER_API ModalDialog( std::string label, ModalDialogSettings settings );
 
-    /// ...
+    /// Open the dialog and render its header (headline, close button, text).
+    /// Returns true if the dialog window is open.
     MRVIEWER_API bool beginPopup( float menuScaling );
-    /// ...
+    /// Render the dialog's footer ("Don't show again" checkbox) and finish the dialog.
     MRVIEWER_API void endPopup( float menuScaling );
 
     /// Returns the current window width in pixels.

@@ -25,6 +25,9 @@ set(EXAMPLES
   MeshStitchHole
   NoiseDenoise
   Triangulation
+  PointsToMesh
+  ContourTriangulation
+  TerrainTriangulation
 )
 
 foreach(TARGET ${EXAMPLES})

@@ -44,7 +44,7 @@ struct MeshPointAndDistance
     }
 
     /// the distance from input location to mtp considering point's weight and location inside/outside;
-    /// weightedDist(false) is continuous function of location unlike innerDist(false),
+    /// dist() is continuous function of location unlike innerDist(),
     /// which makes 2*weight jump if the location moves through the surface
     [[nodiscard]] float dist() const
     {
@@ -52,7 +52,7 @@ struct MeshPointAndDistance
     }
 
     /// this distance is used internally to find the best surface point, which has the smallest inner distance;
-    /// innerDist(false) grows in both directions of the surface unlike weightedDist(false)
+    /// innerDist() grows in both directions of the surface unlike weightedDist()
     [[nodiscard]] float innerDist() const
     {
         return eucledeanDist + ( bidirectionalOrOutside ? -w : w );

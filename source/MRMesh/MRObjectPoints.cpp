@@ -162,7 +162,7 @@ std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoi
             continue;
 
         VertMap vertMap{};
-        pointCloud->addPartByMask( *obj->pointCloud(), obj->pointCloud()->validPoints, { .src2tgtVerts = &vertMap },
+        pointCloud->addPartByMask( *obj->pointCloud(), obj->pointCloud()->validPoints, { .src2tgtVertHashMap = &vertMap },
             allWithNormals ? nullptr : &emptyNormals );
 
         const bool withColors = ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
@@ -200,7 +200,7 @@ std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoint
     VertMap vertMap;
     CloudPartMapping partMapping;
     if ( !objPoints->getVertsColorMap().empty() )
-        partMapping.tgt2srcVerts = &vertMap;
+        partMapping.tgt2srcVertMap = &vertMap;
     std::shared_ptr<PointCloud> newCloud = std::make_shared<PointCloud>();
     newCloud->addPartByMask( *objPoints->pointCloud(), region, partMapping );
 

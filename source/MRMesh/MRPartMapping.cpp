@@ -4,24 +4,40 @@
 namespace MR
 {
 
+void PartMapping::clear()
+{
+    if ( src2tgtFaceHashMap )
+        src2tgtFaceHashMap->clear();
+    if ( src2tgtVertHashMap )
+        src2tgtVertHashMap->clear();
+    if ( src2tgtWholeEdgeHashMap )
+        src2tgtWholeEdgeHashMap->clear();
+    if ( tgt2srcFaceMap )
+        tgt2srcFaceMap->clear();
+    if ( tgt2srcVertMap )
+        tgt2srcVertMap->clear();
+    if ( tgt2srcWholeEdgeMap )
+        tgt2srcWholeEdgeMap->clear();
+}
+
 HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
     : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
 {
     if ( outFmap )
     {
-        map_.src2tgtFaces = &src2tgtFaces_;
+        map_.src2tgtFaceHashMap = &src2tgtFaces_;
         outFmap->clear();
         outFmap->resize( (int)srcTopology.lastValidFace() + 1 );
     }
     if ( outVmap )
     {
-        map_.src2tgtVerts = &src2tgtVerts_;
+        map_.src2tgtVertHashMap = &src2tgtVerts_;
         outVmap->clear();
         outVmap->resize( (int)srcTopology.lastValidVert() + 1 );
     }
     if ( outEmap )
     {
-        map_.src2tgtEdges = &src2tgtEdges_;
+        map_.src2tgtWholeEdgeHashMap = &src2tgtEdges_;
         outEmap->clear();
         outEmap->resize( srcTopology.undirectedEdgeSize() );
     }

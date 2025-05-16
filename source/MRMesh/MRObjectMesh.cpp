@@ -415,9 +415,9 @@ std::shared_ptr<MR::ObjectMesh> cloneRegion( const std::shared_ptr<ObjectMesh>& 
     FaceMap faceMap;
     PartMapping partMapping;
     if ( !objMesh->getVertsColorMap().empty() || !objMesh->getUVCoords().empty() )
-        partMapping.tgt2srcVerts = &vertMap;
+        partMapping.tgt2srcVertMap = &vertMap;
     if ( !objMesh->getFacesColorMap().empty() || !objMesh->getTexturePerFace().empty() )
-        partMapping.tgt2srcFaces = &faceMap;
+        partMapping.tgt2srcFaceMap = &faceMap;
     std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( objMesh->mesh()->cloneRegion( region, false, partMapping ) );
     std::shared_ptr<ObjectMesh> newObj = std::make_shared<ObjectMesh>();
     newObj->setFrontColor( objMesh->getFrontColor( true ), true );

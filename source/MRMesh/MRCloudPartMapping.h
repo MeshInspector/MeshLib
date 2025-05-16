@@ -9,9 +9,9 @@ namespace MR
 struct CloudPartMapping
 {
     // from.id -> this.id, efficient when full cloud without many invalid points is added into another cloud
-    VertMap * src2tgtVerts = nullptr;
+    VertMap * src2tgtVertHashMap = nullptr;
     // this.id -> from.id, efficient when any cloud or its part is added into empty cloud
-    VertMap * tgt2srcVerts = nullptr;
+    VertMap * tgt2srcVertMap = nullptr;
 };
 
 } //namespace MR

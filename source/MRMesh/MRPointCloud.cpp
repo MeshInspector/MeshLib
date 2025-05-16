@@ -67,19 +67,19 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     validPoints.resize( newSize, true );
     if ( useNormals )
         normals.resize( newSize );
-    if ( outMap.src2tgtVerts )
-        outMap.src2tgtVerts->resize( fromValidVerts.find_last() + 1 );
-    if ( outMap.tgt2srcVerts )
-        outMap.tgt2srcVerts->resizeNoInit( points.size() );
+    if ( outMap.src2tgtVertHashMap )
+        outMap.src2tgtVertHashMap->resize( fromValidVerts.find_last() + 1 );
+    if ( outMap.tgt2srcVertMap )
+        outMap.tgt2srcVertMap->resizeNoInit( points.size() );
     for ( auto v : fromValidVerts )
     {
         points[idIt] = fromPoints[v];
         if ( useNormals )
             normals[idIt] = fromNormals[v];
-        if ( outMap.src2tgtVerts )
-            ( *outMap.src2tgtVerts )[v] = idIt;
-        if ( outMap.tgt2srcVerts )
-            ( *outMap.tgt2srcVerts )[idIt] = v;
+        if ( outMap.src2tgtVertHashMap )
+            ( *outMap.src2tgtVertHashMap )[v] = idIt;
+        if ( outMap.tgt2srcVertMap )
+            ( *outMap.tgt2srcVertMap )[idIt] = v;
         idIt++;
     }
 

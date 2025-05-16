@@ -51,11 +51,15 @@ struct MeshPointAndDistance
         return ( bidirectionalOrOutside ? eucledeanDist : -eucledeanDist ) - w;
     }
 
-    /// this distance is used internally to find the best surface point, which has the smallest inner distance;
-    /// innerDist() grows in both directions of the surface unlike weightedDist()
-    [[nodiscard]] float innerDist() const
+    /// comparison telling which point is closer to the location
+    auto operator <=> ( const MeshPointAndDistance& other ) const
     {
-        return eucledeanDist + ( bidirectionalOrOutside ? -w : w );
+        if ( bidirectionalOrOutside && other.bidirectionalOrOutside  )
+            return eucledeanDist - w <=> other.eucledeanDist - other.w;
+        if ( bidirectionalOrOutside != other.bidirectionalOrOutside )
+            return eucledeanDist <=> other.eucledeanDist;
+        return eucledeanDist + ( bidirectionalOrOutside ? -w : w ) <=>
+                other.eucledeanDist + ( other.bidirectionalOrOutside ? -other.w : other.w );
     }
 
     /// check for validity, otherwise there is no point closer than maxBidirDist

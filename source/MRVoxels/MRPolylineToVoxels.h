@@ -11,7 +11,7 @@ namespace MR
 
 struct PolylineToDistanceVolumeParams
 {
-    const Vector3f& voxelSize = Vector3f::diagonal( 1.f );
+    Vector3f voxelSize = Vector3f::diagonal( 1.f );
     /// offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
     float offsetCount = 3;
     ProgressCallback cb = {};

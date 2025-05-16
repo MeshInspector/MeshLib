@@ -5,6 +5,7 @@
 #include "MRViewer/MRViewerInstance.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRViewer/ImGuiHelpers.h"
+#include "MRViewer/MRModalDialog.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
@@ -103,38 +104,12 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
             "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
     }
 
-    const ImVec2 windowSize{ MR::cModalWindowWidth * menuScaling, -1 };
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    if ( ImGui::BeginModalNoAnimation( "File already exists", nullptr,
-                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog modalDialog( "File already exists", {
+        .headline = "File already exists",
+        .text = "Theme with name " + themeName_ + " already exists, override it?",
+    } );
+    if ( modalDialog.beginPopup( menuScaling ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( "File already exists" ).x;
-
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "File already exists" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        std::string text = "Theme with name " + themeName_ + " already exists, override it?";
-        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
-
-        if ( textWidth < windowSize.x )
-        {
-            ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
-            ImGui::Text( "%s", text.c_str() );
-        }
-        else
-        {
-            ImGui::TextWrapped( "%s", text.c_str() );
-        }
-
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
@@ -156,9 +131,9 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
 
         ImGui::PopStyleVar();
-        ImGui::EndPopup();
+
+        modalDialog.endPopup( menuScaling );
     }
-    ImGui::PopStyleVar( 2 );
 
     ImGui::PopItemWidth();
     ImGui::EndCustomStatePlugin();

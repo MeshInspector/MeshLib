@@ -17,51 +17,51 @@ namespace MR
         {
 
             /// creates a new PointCloud object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudNew();
 
             /// creates a new point cloud from existing points
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudFromPoints(IntPtr points, ulong pointsNum);
 
             /// coordinates of points
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudPoints(IntPtr pc);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudPointsRef(IntPtr pc);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrPointCloudPointsNum(IntPtr pc);
 
             /// unit normal directions of points (can be empty if no normals are known)
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudNormals(IntPtr pc);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrPointCloudNormalsNum(IntPtr pc);
 
             /// only points and normals corresponding to set bits here are valid
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrPointCloudValidPoints(IntPtr pc);
 
             /// passes through all valid points and finds the minimal bounding box containing all of them;
             /// if toWorld transformation is given then returns minimal bounding box in world space
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRBox3f mrPointCloudComputeBoundingBox(IntPtr pc, IntPtr toWorld);
 
             /// appends a point and returns its VertId
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern VertId mrPointCloudAddPoint(IntPtr pc, ref MRVector3f point);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern VertId mrPointCloudAddPointWithNormal(IntPtr pc, ref MRVector3f point, ref MRVector3f normal);
 
             /// deallocates a PointCloud object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrPointCloudFree(IntPtr pc);                
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
             /// creates a new PointCloud object

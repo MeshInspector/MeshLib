@@ -172,6 +172,9 @@ public:
         float min{ 0.0f };
         // maximum colored value (voxels with higher values are transparent)
         float max{ 0.0f };
+        // step to sample each ray with
+        // if <= 0 then default sampling is used
+        float samplingStep{ -1.0f };
         // type of alpha function on texture
         enum class AlphaType
         {

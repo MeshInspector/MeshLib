@@ -184,6 +184,24 @@ struct DistanceMapToWorld
     Vector3f direction{ Vector3f::plusZ() };
 };
 
+/// settings for loading distance maps from external formats
+struct DistanceMapLoadSettings
+{
+    /// optional output: distance map to world transform
+    DistanceMapToWorld* distanceMapToWorld = nullptr;
+    /// to report load progress and cancel loading if user desires
+    ProgressCallback progress;
+};
+
+/// determines how to save distance maps
+struct DistanceMapSaveSettings
+{
+    /// optional distance map to world transform
+    const AffineXf3f* xf = nullptr;
+    /// to report save progress and cancel saving if user desires
+    ProgressCallback progress;
+};
+
 /// \}
 
 } // namespace MR

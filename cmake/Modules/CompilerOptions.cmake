@@ -83,9 +83,6 @@ ENDIF()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_COMMON_C_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MESHLIB_COMMON_C_CXX_FLAGS}")
 
-# Some macros.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS -DIMGUI_ENABLE_FREETYPE")
-
 IF(WIN32)
   IF(MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
@@ -108,10 +105,23 @@ IF(MSVC)
   add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 ENDIF()
 
+IF(NOT MSVC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
+ENDIF()
+
 # This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-# to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
-add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
+#   to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
+# We allow customizing those so that our clients can prevent their modules from talking to ours, e.g. to provide their own simplified bindings
+#   for our classes, to avoid having our modules as dependencies.
+# Pass empty strings to those to avoid customizing them at all.
+set(MESHLIB_PYBIND11_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
+set(MESHLIB_PYBIND11_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
+IF(NOT "${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}" STREQUAL "")
+  add_compile_definitions(PYBIND11_COMPILER_TYPE=\"${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}\")
+ENDIF()
+IF(NOT "${MESHLIB_PYBIND11_BUILD_ABI_STRING}" STREQUAL "")
+  add_compile_definitions(PYBIND11_BUILD_ABI=\"${MESHLIB_PYBIND11_BUILD_ABI_STRING}\")
+ENDIF()
 
 # Things for our patched pybind: --- [
 
@@ -123,7 +133,8 @@ add_compile_definitions(Py_LIMITED_API=0x030800f0)
 add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
 
 # This affects the naming of our pybind shims.
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"meshlib\")
+set(MESHLIB_PYBIND11_LIB_SUFFIX "meshlib" CACHE STRING "")
+add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"${MESHLIB_PYBIND11_LIB_SUFFIX}\")
 
 # ] --- end things for our patched pybind
 
@@ -164,9 +175,9 @@ IF(MR_EMSCRIPTEN)
   )
 
   IF(MR_EMSCRIPTEN_SINGLETHREAD)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,node")
   ELSE()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker,node -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
 
     # uncomment to enable source map for debugging in browsers (slow)
     #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -gsource-map")

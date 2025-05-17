@@ -25,11 +25,11 @@ namespace MR
             }
 
             /// returns a vector with face-normal in every element for valid mesh faces
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRFaceNormals* mrComputePerFaceNormals(IntPtr mesh);
 
             /// returns a vector with vertex normals in every element for valid mesh vertices
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRFaceNormals* mrComputePerVertNormals(IntPtr mesh);
 
             unsafe public static VertNormals ComputePerVertNormals(Mesh mesh)

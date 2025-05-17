@@ -1,14 +1,5 @@
 #pragma once
 
-#include "MRMeshPart.h"
-#include "MREnums.h"
+#pragma message("this header is deprecated, please include \"MRDirMax.h\" instead")
 
-namespace MR
-{
-
-/// finds the vertex in the mesh part having the largest projection on given direction,
-/// uses aabb-tree inside for faster computation
-/// \ingroup AABBTreeGroup
-MRMESH_API VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u = UseAABBTree::Yes );
-
-} //namespace MR
+#include "MRDirMax.h"

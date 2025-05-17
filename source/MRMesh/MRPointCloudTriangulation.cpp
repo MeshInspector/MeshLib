@@ -47,7 +47,7 @@ PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, co
 
 std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progressCb )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( ( params_.numNeighbours <= 0 && params_.radius > 0 )
          || ( params_.numNeighbours > 0 && params_.radius <= 0 ) );
 
@@ -76,7 +76,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
 
 std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2, ProgressCallback progressCb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Mesh mesh;
     mesh.points = pointCloud_.points;
@@ -142,7 +142,7 @@ std::optional<Mesh> PointCloudTriangulator::makeMesh_( Triangulation && t3, Tria
 std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */,
     ProgressCallback progressCb )
 {
-    MR_TIMER
+    MR_TIMER;
     PointCloudTriangulator triangulator( pointCloud, params );
     return triangulator.triangulate( progressCb );
 }

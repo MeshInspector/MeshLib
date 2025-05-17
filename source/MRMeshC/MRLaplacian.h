@@ -26,7 +26,7 @@ MRMESHC_API void mrLaplacianFree( MRLaplacian* laplacian );
 
 // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
 // \param freeVerts must not include all vertices of a mesh connected component
-MRMESHC_API void mrLaplacianInit( MRLaplacian* laplacian, const MRVertBitSet* freeVerts, MREdgeWeights weights, MRLaplacianRememberShape rem );
+MRMESHC_API void mrLaplacianInit( MRLaplacian* laplacian, const MRVertBitSet* freeVerts, MREdgeWeights weights, MRVertexMass vmass, MRLaplacianRememberShape rem );
 
 // sets position of given vertex after init and it must be fixed during apply (THIS METHOD CHANGES THE MESH);
 // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)

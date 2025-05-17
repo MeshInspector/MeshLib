@@ -156,7 +156,7 @@ void multiRayMeshIntersect(
     const FacePredicate & validFaces
 )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto sz = origins.size();
     assert( dirs.size() == sz );
@@ -166,10 +166,10 @@ void multiRayMeshIntersect(
         result.intersectingRays->resize( sz, false );
     }
     constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
-    if ( result.rayParams )
+    if ( result.rayDistances )
     {
-        result.rayParams->clear();
-        result.rayParams->resize( sz, cQuietNan );
+        result.rayDistances->clear();
+        result.rayDistances->resize( sz, cQuietNan );
     }
     if ( result.isectFaces )
     {
@@ -196,6 +196,8 @@ void multiRayMeshIntersect(
             return;
         if ( result.intersectingRays )
             result.intersectingRays->set( i );
+        if ( result.rayDistances )
+            ( *result.rayDistances )[i] = res.distanceAlongLine;
         if ( result.isectFaces )
             (*result.isectFaces)[i] = res.proj.face;
         if ( result.isectBary )
@@ -389,7 +391,7 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
 void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( fs || ues || vs || fsVec );
 
     const auto& m = meshPart.mesh;
@@ -468,7 +470,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
 void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( fs || ues || vs || fsVec );
 
     const auto& m = meshPart.mesh;

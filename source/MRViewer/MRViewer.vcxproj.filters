@@ -463,6 +463,12 @@
     <ClCompile Include="MRRibbonLayoutConfig.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonRegisterItem.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRModalDialog.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -908,6 +914,12 @@
     </ClInclude>
     <ClInclude Include="MRRibbonLayoutConfig.h">
       <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonRegisterItem.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRModalDialog.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

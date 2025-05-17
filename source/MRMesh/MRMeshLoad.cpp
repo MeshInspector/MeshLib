@@ -128,7 +128,7 @@ Expected<Mesh> fromMrmesh( const std::filesystem::path& file, const MeshLoadSett
 
 Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Mesh mesh;
     auto readRes = mesh.topology.read( in, subprogress( settings.callback, 0.f, 0.5f) );
@@ -166,7 +166,7 @@ Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSetting
 
 Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::string header;
     in >> header;
@@ -195,7 +195,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
             break;
         }
     }
-    
+
     size_t strBorder = 0;
     for ( size_t i = numPoints + strHeader; i < splitLines.size(); i++ )
     {
@@ -207,7 +207,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     }
 
     std::vector<Vector3f> pointsBlocks( numPoints );
-    
+
     std::atomic<bool> forseStop = false;
     bool keepGoing = ParallelFor( pointsBlocks, [&] ( size_t numPoint )
     {
@@ -226,7 +226,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         {
             forseStop = true;
         }
-    }, settings.callback );
+    }, subprogress( settings.callback, 0.0f, 0.3f ) );
 
     if ( forseStop )
     {
@@ -245,13 +245,16 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     for ( size_t i = 0; i < numPolygons; i++ )
     {
         size_t numLine = delta + i;
-        
+
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
-        parseFirstNum( line, numPolygonPoint );
+        if ( auto e = parseFirstNum( line, numPolygonPoint ); !e )
+            return unexpected( std::move( e.error() ) );
 
         faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
     }
+    if ( !reportProgress( settings.callback, 0.4f ) )
+        return unexpectedOperationCanceled();
 
     std::vector<VertId> flatPolygonIndices( faces.back().lastVertex );
 
@@ -270,7 +273,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         {
             forseStop = true;
         }
-    }, settings.callback );
+    }, subprogress( settings.callback, 0.4f, 0.7f ) );
 
     if ( forseStop )
     {
@@ -281,7 +284,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         return unexpectedOperationCanceled();
     }
 
-    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, { .skippedFaceCount = settings.skippedFaceCount } );
+    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces,
+        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f )  );
     if ( res.topology.lastValidVert() + 1 > res.points.size() )
         return unexpected( "vertex id is larger than total point coordinates" );
     return res;
@@ -298,7 +302,7 @@ Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettin
 
 Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     ObjLoadSettings objLoadSettings
     {
@@ -358,7 +362,7 @@ Expected<Mesh> fromBinaryStl( const std::filesystem::path & file, const MeshLoad
 
 Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     char header[80];
     in.read( header, 80 );
@@ -555,7 +559,7 @@ Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSetting
 
 Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto posStart = in.tellg();
     miniply::PLYReader reader( in );
@@ -609,14 +613,14 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
                 return unexpected( std::string( "PLY file open: need vertex positions to triangulate faces" ) );
 
             Triangulation tris;
-            if (polys) 
+            if (polys)
             {
                 Timer t( "extractTriangles" );
                 auto numIndices = reader.num_triangles( indecies[0] );
                 tris.resize( numIndices );
                 reader.extract_triangles( indecies[0], &res.points.front().x, (std::uint32_t)res.points.size(), miniply::PLYPropertyType::Int, &tris.front() );
             }
-            else 
+            else
             {
                 Timer t( "extractTriples" );
                 auto numIndices = reader.num_rows();
@@ -688,14 +692,14 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
     int code = {};
     if ( !parseSingleNumber<int>( str, code ) )
         return unexpected( "File is corrupted" );
-    
+
     bool is3DfaceFound = false;
 
     for ( int i = 0; !in.eof(); ++i )
     {
         if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() - posStart ) / float( size ) ) )
             return unexpectedOperationCanceled();
-        
+
         std::getline( in, str );
 
         if ( str == "3DFACE" )
@@ -718,7 +722,7 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
         std::getline( in, str );
         if ( str.empty() )
             continue;
-        
+
         if ( !parseSingleNumber<int>( str, code ) )
             return unexpected( "File is corrupted" );
 

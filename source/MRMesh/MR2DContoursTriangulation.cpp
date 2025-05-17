@@ -139,7 +139,7 @@ private:
 
     bool less_( VertId l, VertId r ) const
     {
-        return std::tuple( pts_[l].x, pts_[l].y, l ) < std::tuple( pts_[r].x, pts_[r].y, r );
+        return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } );
     }
 
 // INITIALIZATION CLASS BLOCK
@@ -1285,7 +1285,7 @@ Mesh getOutlineMesh( const Contours2d& contsd, IntersectionsMap* interMap /*= nu
 
 Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
-    const auto contsd = copyContours<Contours2d>( contours );
+    const auto contsd = convertContours<Contours2d>( contours );
     return getOutlineMesh( contsd, interMap, params );
 }
 
@@ -1333,7 +1333,7 @@ Contours2f getOutline( const Contours2d& contours, const OutlineParameters& para
 
 Contours2f getOutline( const Contours2f& contours, const OutlineParameters& params )
 {
-    const auto contsd = copyContours<Contours2d>( contours );
+    const auto contsd = convertContours<Contours2d>( contours );
     return getOutline( contsd, params );
 }
 
@@ -1352,7 +1352,7 @@ Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVe
 
 Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
-    const auto contsd = copyContours<Contours2d>( contours );
+    const auto contsd = convertContours<Contours2d>( contours );
     return triangulateContours( contsd, holeVertsIds );
 }
 
@@ -1366,7 +1366,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
-    const auto contsd = copyContours<Contours2d>( contours );
+    const auto contsd = convertContours<Contours2d>( contours );
     return triangulateDisjointContours( contsd, holeVertsIds, outBoundaries );
 }
 

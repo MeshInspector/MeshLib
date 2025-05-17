@@ -31,10 +31,11 @@ namespace MR
     { return findRightBoundary( topology, &region ); }
 
 /// deletes all region faces, inner edges and vertices, but keeps boundary edges and vertices of the region (or whole mesh if region is null);
+/// if `keepLoneHoles` is set - keeps boundary even if it has no valid faces on other side
 /// returns edge loops, each having deleted region faces on the left, and not-region faces or holes on the right
-MRMESH_API std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region = nullptr );
-inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet & region )
-    { return delRegionKeepBd( mesh, &region ); }
+MRMESH_API std::vector<EdgeLoop> delRegionKeepBd( Mesh& mesh, const FaceBitSet* region = nullptr, bool keepLoneHoles = false );
+inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet & region, bool keepLoneHoles = false )
+    { return delRegionKeepBd( mesh, &region, keepLoneHoles ); }
 
 /// returns all region boundary paths;
 /// every path has region faces on the left, and valid not-region faces on the right

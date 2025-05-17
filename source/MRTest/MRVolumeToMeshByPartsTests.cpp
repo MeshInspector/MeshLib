@@ -154,7 +154,8 @@ TEST( MRMesh, volumeToMeshByParts )
                 }
             }
         } );
-        mc.addPart( part );
+        auto e = mc.addPart( part );
+        EXPECT_TRUE( e.has_value() );
     }
     Mesh mesh = Mesh::fromTriMesh( *mc.finalize() );
     EXPECT_NEAR( expectedVolume, mesh.volume(), 0.001f );

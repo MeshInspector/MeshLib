@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include <cassert>
 #include <cstddef>
+#include <type_traits>
 
 namespace MR
 {
@@ -14,10 +15,15 @@ class Id
 public:
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
-    explicit constexpr Id( int i ) noexcept : id_( i ) { }
-    explicit constexpr Id( unsigned int i ) noexcept : id_( i ) { }
-    explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
-    template <typename U> Id( Id<U> ) = delete;
+
+    // Allow constructing from `int` and other integral types.
+    // This constructor is written like this instead of a plain `Id(int)`, because we also wish to disable construction
+    //   from other unrelated `Id<U>` specializations, which themselves have implicit conversions to `int`.
+    // We could also achieve that using `template <typename U> Id(Id<U>) = delete;`, but it turns out that that causes issues
+    //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
+    //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
+    template <typename U, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    explicit constexpr Id( U i ) noexcept : id_( int( i ) ) { }
 
     constexpr operator int() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }

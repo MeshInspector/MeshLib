@@ -5,7 +5,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include <tuple>
@@ -15,7 +15,7 @@ namespace MR
 
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( cParams.dist.signMode == SignDetectionMode::OpenVDB )
     {
         MeshToVolumeParams m2vPrams
@@ -67,7 +67,7 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
 
     // prepare all trees before returned function will be called from parallel threads
@@ -92,7 +92,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
 Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !region.any() )
     {
         assert( false );
@@ -109,7 +109,7 @@ Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, cons
     const FaceBitSet notRegion = mesh.topology.getValidFaces() - region;
     //TODO: check that notRegion is not empty
     AABBTree notRegionTree( { mesh, &notRegion } );
-    
+
     const auto voxelSize = std::max( { params.voxelSize.x, params.voxelSize.y, params.voxelSize.z } );
 
     if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
@@ -135,7 +135,7 @@ Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, cons
 
 Expected<std::array<SimpleVolumeMinMax, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     VolumeIndexer indexer( params.vol.dimensions );
     std::vector<MeshProjectionResult> projs;
 

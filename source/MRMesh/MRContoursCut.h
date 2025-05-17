@@ -218,7 +218,7 @@ struct CutMeshResult
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
     /// \sa \ref MR::CutMeshParameters
-    FaceBitSet fbsWithCountourIntersections;
+    FaceBitSet fbsWithContourIntersections;
 };
 
 /** \ingroup BooleanGroup

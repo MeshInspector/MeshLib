@@ -71,6 +71,13 @@ if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
 
+if [ "${MESHLIB_USE_VCPKG}" == "ON" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+    -D MESHLIB_USE_VCPKG=ON \
+    -D VCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET:?VCPKG_TRIPLET must be set} \
+  "
+fi
+
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   if [ -n "${CMAKE_C_COMPILER}" ] ; then
     MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"

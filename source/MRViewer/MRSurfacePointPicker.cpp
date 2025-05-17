@@ -30,7 +30,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
 {
     if ( !surface )
     {
-        currentPos_ = -1;
+        currentPos_ = {};
         return currentPos_;
     }
     return create( surface, pointOnObjectToPickedPoint( surface.get(), startPos ) );
@@ -41,7 +41,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     reset();
     if ( !surface )
     {
-        currentPos_ = -1;
+        currentPos_ = {};
         return currentPos_;
     }
     baseObject_ = surface;
@@ -207,25 +207,6 @@ bool SurfacePointWidget::onMouseMove_( int, int )
     return false;
 }
 
-MR::Vector3f SurfacePointWidget::toVector3f() const
-{
-    return pickedPointToVector3( baseObject_.get(), currentPos_ );
-}
-
-
-void SurfacePointWidget::updatePositionAndRadiusPoints_( const VertId& /* v */ )
-{
-    pickSphere_->setCenter( toVector3f() );
-    setPointRadius_();
-}
-
-void SurfacePointWidget::updatePositionAndRadiusLines_( const EdgePoint& /* ep */ )
-{
-    pickSphere_->setCenter( toVector3f() );
-    setPointRadius_();
-}
-
-
 void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
 {
     assert( pickSphere_ );
@@ -254,7 +235,7 @@ void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
                 currentPos_ = mesh.toTriPoint( f, ep );
             }
             break;
-        case PositionType::EdgeCeneters:
+        case PositionType::EdgeCenters:
         {
             auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ f, mesh.triPoint( mtp ) } ) );
             if ( mesh.topology.left( closestEdge ) != f )
@@ -283,31 +264,19 @@ void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
             }
             break;
     }
-
-    pickSphere_->setCenter( toVector3f() );
-    setPointRadius_();
 }
 
 void SurfacePointWidget::updatePositionAndRadius_()
 {
     if ( const MeshTriPoint* triPoint = std::get_if<MeshTriPoint>( &currentPos_ ) )
-    {
         updatePositionAndRadiusMesh_( *triPoint );
-    }
-    else if ( const EdgePoint* edgePoint = std::get_if<EdgePoint>( &currentPos_ ) )
+
+    if ( auto p = findCoords() )
     {
-        updatePositionAndRadiusLines_( *edgePoint );
-    }
-    else if ( const VertId* vertId = std::get_if<VertId>( &currentPos_ ) )
-    {
-        updatePositionAndRadiusPoints_( *vertId );
-    }
-    else if ( std::get_if<int>( &currentPos_ ) )
-    {
-        return; // pick in empty space
+        pickSphere_->setCenter( *p );
+        setPointRadius_();
     }
 }
-
 
 void SurfacePointWidget::setPointRadius_()
 {
@@ -347,6 +316,11 @@ void SurfacePointWidget::setPointRadius_()
 void SurfacePointWidget::preDraw_()
 {
     setPointRadius_();
+}
+
+Vector3f SurfacePointWidget::getCoords() const
+{
+    return pickSphere_ ? pickSphere_->getCenter() : Vector3f{};
 }
 
 void SurfacePointWidget::setCurrentPosition( const PointOnObject& pos )

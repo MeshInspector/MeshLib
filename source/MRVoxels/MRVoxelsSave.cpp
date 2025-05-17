@@ -10,7 +10,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRTimer.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectsAccess.h"
 
 #include "MRPch/MRJson.h"
@@ -30,7 +30,7 @@ namespace VoxelsSave
 
 Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !writeByBlocks( out, (const char*) simpleVolume.data.data(), simpleVolume.data.size() * sizeof( float ), callback ) )
         return unexpectedOperationCanceled();
     if ( !out )
@@ -40,7 +40,7 @@ Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out,
 
 Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     return vdbVolumeToSimpleVolume( vdbVolume, {}, subprogress( callback, 0.0f, 0.2f ) ).and_then(
         [&out, sp = subprogress( callback, 0.2f, 1.0f )]( auto && sv )
         {
@@ -135,7 +135,7 @@ Expected<void> writeGavHeader( std::ostream & out, const Vector3i & dims, const 
 
 Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return openRawAutonameStream( vdbVolume.dims, vdbVolume.voxelSize, vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET, file ).and_then(
         [&]( NamedOutFileStream && s )
@@ -147,7 +147,7 @@ Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem:
 
 Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return openRawAutonameStream( simpleVolume.dims, simpleVolume.voxelSize, false, file ).and_then(
         [&]( NamedOutFileStream && s )
@@ -159,7 +159,7 @@ Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::files
 
 Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
@@ -169,7 +169,7 @@ Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& f
 
 Expected<void> toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     return writeGavHeader( out, vdbVolume.dims, vdbVolume.voxelSize, { vdbVolume.min, vdbVolume.max } ).and_then(
         [&]()
         {
@@ -180,7 +180,7 @@ Expected<void> toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCa
 
 Expected<void> toGav( const SimpleVolumeMinMax& simpleVolumeMinMax, const std::filesystem::path& file, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
@@ -190,7 +190,7 @@ Expected<void> toGav( const SimpleVolumeMinMax& simpleVolumeMinMax, const std::f
 
 Expected<void> toGav( const SimpleVolumeMinMax& simpleVolumeMinMax, std::ostream & out, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     return writeGavHeader( out, simpleVolumeMinMax.dims, simpleVolumeMinMax.voxelSize, { simpleVolumeMinMax.min, simpleVolumeMinMax.max } ).and_then(
         [&]()
         {
@@ -201,7 +201,7 @@ Expected<void> toGav( const SimpleVolumeMinMax& simpleVolumeMinMax, std::ostream
 
 Expected<void> toGav( const SimpleVolume& simpleVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
@@ -211,7 +211,7 @@ Expected<void> toGav( const SimpleVolume& simpleVolume, const std::filesystem::p
 
 Expected<void> toGav( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto [min, max] = parallelMinMax( simpleVolume.data );
     return writeGavHeader( out, simpleVolume.dims, simpleVolume.voxelSize, { min, max } ).and_then(
         [&]()
@@ -223,7 +223,7 @@ Expected<void> toGav( const SimpleVolume& simpleVolume, std::ostream & out, Prog
 
 Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
     gridPtr->setTree( vdbVolume.data->treePtr() );
     gridPtr->setGridClass( vdbVolume.data->getGridClass() );
@@ -320,10 +320,10 @@ Expected<void> saveSliceToImage( const std::filesystem::path& path, const VdbVol
     default:
         return unexpected( "Slice plain is invalid" );
     }
- 
+
     const auto& grid = vdbVolume.data;
     const auto accessor = grid->getConstAccessor();
-  
+
     for ( int i = 0; i < int( texture.size() ); ++i )
     {
         openvdb::Coord coord;
@@ -343,7 +343,7 @@ Expected<void> saveSliceToImage( const std::filesystem::path& path, const VdbVol
     auto saveRes = ImageSave::toAnySupportedFormat( meshTexture, path );
     if ( !saveRes.has_value() )
         return unexpected( saveRes.error() );
-    
+
     if ( callback )
         callback( 1.0f );
 

@@ -19,13 +19,13 @@ namespace MR
                 public MRCoordinateConverters() { }
             }
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRCoordinateConverters mrGetVectorConverters(ref MRMeshPart a, ref MRMeshPart b, IntPtr rigidB2A);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrConvertToIntVectorFree(IntPtr conv);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrConvertToFloatVectorFree(IntPtr conv);
 
             /// creates new converters for given pair of meshes

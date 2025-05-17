@@ -184,7 +184,7 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     toolMesh_ = std::make_shared<ObjectMesh>();
     toolMesh_->setName( utf8string( path.filename().stem() ) );
     toolMesh_->setMesh( std::make_shared<Mesh>( *loadRes ) );
-    MeshSave::toMrmesh( *loadRes, folderPath / ( toolMesh_->name() + ".mrmesh" ) );
+    (void)MeshSave::toMrmesh( *loadRes, folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
     selectedFileName_ = toolMesh_->name();
 }
 
@@ -194,7 +194,7 @@ void GcodeToolsLibrary::addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& 
     if ( folderPath.empty() )
         return;
     toolMesh_ = std::dynamic_pointer_cast< ObjectMesh >( objMesh->clone() );
-    MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) );
+    (void)MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
     selectedFileName_ = toolMesh_->name();
 }
 

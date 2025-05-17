@@ -21,7 +21,7 @@ namespace MR
 
 Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & folder, bool dicomOnly, const ProgressCallback& callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( callback && !callback( 0.f ) )
         return unexpected( getCancelMessage( folder ) );
@@ -65,9 +65,6 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                 auto ext = utf8string( path.extension() );
                 for ( auto& c : ext )
                     c = ( char )tolower( c );
-
-                if ( ext.empty() )
-                    continue;
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
                 if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
@@ -180,12 +177,15 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
             completed += 1;
         } );
     }
-
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
     while ( !loadingCanceled && completed < nodes.size() )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
         loadingCanceled = !cb();
+        if ( loadingCanceled )
+            group.cancel(); // cancel faster if possible
     }
+#endif
     group.wait();
 
     if ( loadingCanceled )

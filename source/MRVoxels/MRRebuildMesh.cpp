@@ -13,7 +13,7 @@ namespace MR
 
 Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto progress = settings.progress;
 

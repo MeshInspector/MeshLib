@@ -150,6 +150,13 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     auto xf = task_.object->worldXf();
 
     Vector3f localPoint = nameUiPoint;
+    if ( nameUiPointIsRelativeToBoundingBoxCenter )
+    {
+        Box3f box = task_.object->getBoundingBox();
+        assert(box.valid());
+        if ( box.valid() )
+            localPoint += box.center();
+    }
 
     Vector3f worldPoint = xf( localPoint );
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );

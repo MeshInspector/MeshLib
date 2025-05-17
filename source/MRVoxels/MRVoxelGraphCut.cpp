@@ -215,7 +215,7 @@ struct alignas(64) VoxelGraphCut::Subtask
 
 void VoxelGraphCut::Statistics::log( std::string_view prefix ) const
 {
-    spdlog::info( "VoxelGraphCut{}: {} augmentations, {} growths, {} adoptions, {} grand_calls, {} grand_false; total flow = {} ", 
+    spdlog::info( "VoxelGraphCut{}: {} augmentations, {} growths, {} adoptions, {} grand_calls, {} grand_false; total flow = {} ",
         prefix, augmentations, growths, adoptions, grand_calls, grand_false, totalFlow );
 }
 
@@ -232,7 +232,7 @@ VoxelGraphCut::Statistics & VoxelGraphCut::Statistics::operator += ( const Stati
 
 void VoxelGraphCut::allocate_( size_t numVoxels )
 {
-    MR_TIMER
+    MR_TIMER;
     seq2voxel_.reserve( numVoxels );
     toSeqId_.reserve( numVoxels );
     neighbors_.resize( numVoxels );
@@ -245,14 +245,14 @@ void VoxelGraphCut::allocate_( size_t numVoxels )
 
 void VoxelGraphCut::fillSeq2voxel_( const VoxelBitSet & region )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto vid : region )
         seq2voxel_.push_back( vid );
 }
 
 void VoxelGraphCut::fillToSeqId_()
 {
-    MR_TIMER
+    MR_TIMER;
     const auto subcnt = toSeqId_.subcnt();
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt ), [&]( const tbb::blocked_range<size_t> & range )
     {
@@ -274,7 +274,7 @@ void VoxelGraphCut::fillToSeqId_()
 
 void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VoxelBitSet region( size_, true );
     region -= sourceSeeds;
@@ -284,7 +284,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
     const auto cnt = region.count();
     const auto srcCnt = sourceSeeds.count();
     const auto snkCnt = sinkSeeds.count();
-    spdlog::info( "VoxelGraphCut: {} ({:.3}%) source voxels, {} ({:.3}%) sink voxels, {} ({:.3}%) voxels to classify, {} ({:.3}%) including extra layer", 
+    spdlog::info( "VoxelGraphCut: {} ({:.3}%) source voxels, {} ({:.3}%) sink voxels, {} ({:.3}%) voxels to classify, {} ({:.3}%) including extra layer",
         srcCnt, float( 100 * srcCnt ) / size_,
         snkCnt, float( 100 * snkCnt ) / size_,
         cnt0, float( 100 * cnt0 ) / size_,
@@ -341,7 +341,7 @@ void VoxelGraphCut::setupNeighbors_( SeqVoxelId s )
 
 void VoxelGraphCut::setupNeighbors()
 {
-    MR_TIMER
+    MR_TIMER;
     BitSetParallelForAll( sourceSeeds_, [&]( SeqVoxelId s )
     {
         setupNeighbors_( s );
@@ -350,7 +350,7 @@ void VoxelGraphCut::setupNeighbors()
 
 void VoxelGraphCut::restoreCutNeighbor( const Context & context )
 {
-    MR_TIMER
+    MR_TIMER;
     BitSetParallelFor( context.cutNeis, [&]( SpanVoxelId p )
     {
         setupNeighbors_( context.span.toSeqId( p ) );
@@ -359,7 +359,7 @@ void VoxelGraphCut::restoreCutNeighbor( const Context & context )
 
 void VoxelGraphCut::cutOutOfSpanNeiNeighbors( Context & context )
 {
-    MR_TIMER
+    MR_TIMER;
     context.cutNeis.clear();
     context.cutNeis.resize( context.span.size(), false );
     BitSetParallelForAll( context.cutNeis, [&]( SpanVoxelId p )
@@ -385,7 +385,7 @@ void VoxelGraphCut::cutOutOfSpanNeiNeighbors( Context & context )
 
 void VoxelGraphCut::makeSubtasks_()
 {
-    MR_TIMER
+    MR_TIMER;
     makeSubtasks_( getFullSpan(), subtasks_.data(), subtasks_.size() );
 }
 
@@ -410,7 +410,7 @@ void VoxelGraphCut::makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size
 
 [[maybe_unused]] ComputedFlow VoxelGraphCut::computeFlow() const
 {
-    MR_TIMER
+    MR_TIMER;
     return tbb::parallel_reduce( tbb::blocked_range( SeqVoxelId( 0 ), SeqVoxelId( seq2voxel_.size() ) ), ComputedFlow{},
     [&] ( const tbb::blocked_range<SeqVoxelId> range, ComputedFlow localAcc )
     {
@@ -501,7 +501,7 @@ SeqVoxelId VoxelGraphCut::partitionVoxelsByAxis_( const SeqVoxelSpan & span, int
 
 void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
 {
-    MR_TIMER
+    MR_TIMER;
 
     // prevent infinite capacities
     constexpr float maxCapacity = FLT_MAX / 10;
@@ -546,7 +546,7 @@ void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k
 
 void VoxelGraphCut::buildForest( Context & context, bool initial )
 {
-    MR_TIMER
+    MR_TIMER;
 
     context.unknown.resize( context.span.size(), true );
     assert( ( context.span.begin % BitSet::bits_per_block ) == 0 );
@@ -618,15 +618,15 @@ void VoxelGraphCut::buildForest( Context & context, bool initial )
 
 Expected<void> VoxelGraphCut::segment( Context & context )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     findActiveVoxels_( context );
-    
+
     float progress = 1.0f / 16;
     if ( !reportProgress( context.cb, progress ) )
         return unexpectedOperationCanceled();
     const float targetProgress = 1.0f;
-    
+
     for ( size_t i = 0;; ++i )
     {
         constexpr size_t STEP = 1024ull * 1024;
@@ -654,7 +654,7 @@ Expected<void> VoxelGraphCut::segment( Context & context )
 
 VoxelBitSet VoxelGraphCut::getResult( const VoxelBitSet & sourceSeeds ) const
 {
-    MR_TIMER
+    MR_TIMER;
     VoxelBitSet res = sourceSeeds;
     for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
         if ( voxelData_[s].side() == Side::Source )
@@ -668,7 +668,7 @@ VoxelBitSet VoxelGraphCut::getResult( const VoxelBitSet & sourceSeeds ) const
 
 void VoxelGraphCut::findActiveVoxels_( Context & context )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( ( context.span.begin % BitSet::bits_per_block ) == 0 );
     context.active.resize( context.span.size() );
@@ -1120,7 +1120,7 @@ inline bool VoxelGraphCut::isGrandparent_( SeqVoxelId s, SeqVoxelId sGrand ) con
 
 Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
@@ -1164,7 +1164,7 @@ Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolum
                 if ( parts.size() > 1 )
                     vgc.cutOutOfSpanNeiNeighbors( context );
                 vgc.buildForest( context, parts.size() == numSubtasks );
-                vgc.segment( context );
+                (void)vgc.segment( context ); // cannot fail without callback
                 if ( parts.size() > 1 )
                     vgc.restoreCutNeighbor( context );
                 part.stat = context.stat;

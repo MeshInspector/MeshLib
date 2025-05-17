@@ -2,8 +2,9 @@
 
 #include "MRId.h"
 #include "MRProgressCallback.h"
-#include <cfloat>
 #include "MRExpected.h"
+#include "MRConstants.h"
+#include <cfloat>
 #include <string>
 
 namespace MR
@@ -31,6 +32,41 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh );
 
 /// finds edges having length <= criticalLength
 [[nodiscard]] MRMESH_API Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb = {} );
+
+struct FixMeshDegeneraciesParams
+{
+    /// maximum permitted deviation from the original surface
+    float maxDeviation{ 0.0f };
+
+    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    float tinyEdgeLength{ 0.0f };
+
+    /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
+    /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
+    float criticalTriAspectRatio{ 1e4f };
+
+    /// Permit edge flips if it does not change dihedral angle more than on this value
+    float maxAngleChange{ PI_F / 3 };
+
+    /// Small stabilizer is important to achieve good results on completely planar mesh parts,
+    /// if your mesh is not-planer everywhere, then you can set it to zero
+    float stabilizer = 1e-6f;
+
+    /// degenerations will be fixed only in given region, it is updated during the operation
+    FaceBitSet* region = nullptr;
+
+    enum class Mode
+    {
+        Decimate, ///< use decimation only to fix degeneracies
+        Remesh,   ///< if decimation does not succeed, perform subdivision too
+        RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
+    } mode{ Mode::Remesh };
+
+    ProgressCallback cb;
+};
+
+/// Fixes degenerate faces and short edges in mesh (changes topology)
+MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params );
 
 /// finds vertices in region with complete ring of N edges
 [[nodiscard]] MRMESH_API VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );
@@ -74,8 +110,44 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// deleting such faces simplifies the holes and makes them easier to fill
 [[nodiscard]] MRMESH_API FaceBitSet findHoleComplicatingFaces( const Mesh & mesh );
 
+/// Parameters structure for `fixMeshCreases` function
+struct FixCreasesParams
+{
+    /// edges with dihedral angle sharper this will be considered as creases
+    float creaseAngle = PI_F * 175.0f / 180.0f;
+    
+    /// area around creases will be considered as planar if edge angle does not exceed this cos value
+    float planarCritCos = 0.8f;
+
+    /// planar check is skipped for faces with worse aspect ratio
+    float criticalTriAspectRatio = 1e3f;
+
+    /// maximum number of algorithm iterations
+    int maxIters = 10;
+};
+
+/// Finds creases edges and re-triangulates planar areas around them, useful to fix double faces
+MRMESH_API void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params = {} );
+
+/// Parameters for `findDisorientedFaces` function
+struct FindDisorientationParams
+{
+    /// Mode of detecting disoriented face
+    enum class RayMode
+    {
+        Positive, ///< positive (normal) direction of face should have even number of intersections
+        Shallowest, ///< positive or negative (normal or -normal) direction (the one with lowest number of intersections) should have even/odd number of intersections
+        Both ///< both direction should have correct number of intersections (positive - even; negative - odd)
+    } mode{ RayMode::Shallowest };
+
+    /// if set - copy mesh, and fills holes for better quality in case of ray going out through hole
+    bool virtualFillHoles{ true };
+
+    ProgressCallback cb;
+};
+
 /// returns all faces that are oriented inconsistently, based on number of ray intersections
-MRMESH_API FaceBitSet findDisorientedFaces( const Mesh& mesh );
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorientationParams& params = {} );
 
 
 /// \}

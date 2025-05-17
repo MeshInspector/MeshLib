@@ -14,7 +14,7 @@ namespace MR
 
 float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints, int samples )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( avgPoints > 0 );
     assert( samples > 0 );

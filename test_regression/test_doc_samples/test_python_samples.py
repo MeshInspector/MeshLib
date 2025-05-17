@@ -73,6 +73,25 @@ def run_code_sample(code_path: str, args: list):
                                  id="Triangulation_v3.dox.py",
                                  marks=pytest.mark.bindingsV3),
                              pytest.param(
+                                 {'sample': "PointsToMesh.dox.py",
+                                  'input_files': ['Points.ply'],
+                                  'output_files': ['Mesh.ctm']
+                                 },
+                                 id="PointsToMesh.dox.py" ),
+
+                             pytest.param(
+                                 {'sample': "TerrainTriangulation.dox.py",
+                                  'input_files': ['TerrainPoints.ply'],
+                                  'output_files': ['TerrainMesh.ctm']
+                                 },
+                                 id="TerrainTriangulation.dox.py" ),
+                             pytest.param(
+                                 {'sample': "Fusion.dox.py",
+                                  'input_files': ['Points.ply'],
+                                  'output_files': ['Mesh.ctm']
+                                 },
+                                 id="Fusion.dox.py" ),
+                             pytest.param(
                                  {'sample': "GlobalRegistration.dox.py",
                                   'input_files': ["cloud0.ply", "cloud1.ply", "cloud2.ply"],
                                   'output_files': ["out.ply"],
@@ -80,6 +99,10 @@ def run_code_sample(code_path: str, args: list):
                                   'verify': 'points'
                                   },
                                  id="GlobalRegistration.dox.py",
+                                 marks=pytest.mark.bindingsV3,),
+                             pytest.param(
+                                 {'sample': "MeshOffsetWeighted.dox.py", 'input_files': [], 'output_files': ["offset_weighted.ctm"]},
+                                 id="MeshOffsetWeighted.dox.py",
                                  marks=pytest.mark.bindingsV3),
                          ])
 @pytest.mark.smoke

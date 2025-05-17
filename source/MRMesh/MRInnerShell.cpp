@@ -39,7 +39,7 @@ ShellVertexInfo classifyShellVert( const MeshPart & mp, const Vector3f & shellPo
 
 VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const FindInnerShellSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     VertBitSet mySide( shell.topology.vertSize() ), notBd( shell.topology.vertSize() );
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
@@ -64,7 +64,7 @@ VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const F
 
 FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, const FindInnerShellSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto innerVerts = findInnerShellVerts( mp, shell, settings );
 
     // find all edges connecting inner and not-inner vertices

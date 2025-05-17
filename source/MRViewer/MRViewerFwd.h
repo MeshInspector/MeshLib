@@ -34,6 +34,7 @@ class SceneTextureGL;
 class SpaceMouseHandlerHidapi;
 class SplashWindow;
 class StateBasePlugin;
+class Toolbar;
 class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
@@ -47,6 +48,9 @@ class RibbonFontManager;
 class ShortcutManager;
 struct ShortcutKey;
 enum class ShortcutCategory : char;
+
+class DirectionWidget;
+class PlaneWidget;
 
 class TouchpadController;
 struct TouchpadParameters;

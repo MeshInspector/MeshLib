@@ -4,13 +4,11 @@ cpr
 fmt
 gdcm
 glfw
-gtkmm3
 hidapi
 jpeg-turbo
 jsoncpp
 libharu
 libpng
-libsigc++
 libtiff
 libzip
 llvm@14

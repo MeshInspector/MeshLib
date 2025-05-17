@@ -1,0 +1,158 @@
+name: Build and test Linux vcpkg
+
+on:
+  workflow_call:
+    inputs:
+      app_version:
+        required: true
+        type: string
+      docker_image_tag:
+        required: true
+        type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
+      internal_build:
+        required: false
+        type: boolean
+      upload_artifacts:
+        required: true
+        type: boolean
+      upload_test_artifacts:
+        required: true
+        type: boolean
+
+jobs:
+  linux-vcpkg-build-test:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshlib/meshlib-vcpkg:${{ inputs.docker_image_tag }}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+        compiler: [Clang 18, GCC 11]
+        full_config_build:
+          - ${{ fromJSON( inputs.full_config_build ) }}
+        exclude:
+          # Do not run Debug Clang 18 build on every commit (but only once a day)
+          - full_config_build: false
+            compiler: Clang 18
+            config: Debug
+          # Do not run Release GCC 11 build on every commit (but only once a day)
+          - full_config_build: false
+            compiler: GCC 11
+            config: Release
+        include:
+          - compiler: Clang 18
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
+          - compiler: GCC 11
+            cxx-compiler: /usr/bin/g++
+            c-compiler: /usr/bin/gcc
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
+
+    env:
+      # Disables AWS Instance Metadata Service (IMDS), that not in use.
+      # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
+      # https://github.com/aws/aws-cli/issues/5623#issuecomment-801240811
+      AWS_EC2_METADATA_DISABLED: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-runner-stats
+        with:
+          target_os: linux-vcpkg
+          target_arch: x64
+          cxx_compiler: ${{ matrix.cxx-compiler }}
+          build_config: ${{ matrix.config }}
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git submodule update --init --depth 1 thirdparty/imgui
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          MR_VERSION: ${{ inputs.app_version }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=23
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_PYTHON_SUPPORT=OFF
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v4
+        with:
+          name: Timing_Logs_linux-vcpkg_${{matrix.config}}_${{matrix.compiler}}
+          path: time_log/
+
+      - name: Run Start-and-Exit Tests
+        timeout-minutes: 3
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Create Package
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        run: ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
+
+      - name: Extract Package
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        run: |
+          mkdir meshlib_install
+          tar -xf meshlib_linux-vcpkg-x64.tar.xz -C meshlib_install
+
+      - name: Build C++ examples
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        run: |
+          cmake \
+            -S examples/cpp-examples \
+            -B cpp-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
+          cmake \
+            --build cpp-examples-build \
+            --parallel $(nproc)
+
+      - name: Build C examples
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 18'}}
+        run: |
+          cmake \
+            -S examples/c-examples \
+            -B c-examples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_C_COMPILER=${{ matrix.c-compiler }}
+          cmake \
+            --build c-examples-build \
+            --parallel $(nproc)
+
+      - name: Upload vcpkg Distribution
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 18' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Distributives_linux-vcpkg-x64
+          path: meshlib_linux-vcpkg-x64.tar.xz
+          retention-days: 1

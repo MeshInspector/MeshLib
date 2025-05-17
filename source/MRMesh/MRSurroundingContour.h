@@ -17,7 +17,7 @@ namespace MR
  * 
  * \param includeEdges contain all edges in arbitrary order that must be present in the returned loop, probably with reversed direction (should have at least 2 elements)
  * \param edgeMetric returned loop will minimize the sum of this metric
- * \param dir direction approximately orthogonal to the loop
+ * \param dir direction approximately orthogonal to the loop, the resulting loop will be oriented clockwise if look from the direction's tip
  */
 [[nodiscard]] MRMESH_API Expected<EdgeLoop> surroundingContour(
     const Mesh & mesh,
@@ -35,7 +35,7 @@ namespace MR
  * 
  * \param keyVertices contain all vertices in arbitrary order that returned loop must pass (should have at least 2 elements)
  * \param edgeMetric returned loop will minimize the sum of this metric
- * \param dir direction approximately orthogonal to the loop
+ * \param dir direction approximately orthogonal to the loop, the resulting loop will be oriented clockwise if look from the direction's tip
  */
 [[nodiscard]] MRMESH_API Expected<EdgeLoop> surroundingContour(
     const Mesh & mesh,

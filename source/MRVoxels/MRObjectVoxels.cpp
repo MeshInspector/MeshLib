@@ -13,7 +13,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
@@ -55,7 +55,7 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb, bool normalPlusGrad )
@@ -87,7 +87,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 
     updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
-        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
+        setDirtyFlags( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume )
@@ -113,7 +113,7 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
         data_.mesh.reset();
 
         const float progressFrom = cb ? 0.5f : 0.f;
-        setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
+        (void)setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) ); //TODO: propagate error outside
     }
 }
 
@@ -133,7 +133,7 @@ Expected<bool> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool u
         updateIsoSurface( *recRes );
     }
     if ( volumeRendering_ )
-        dirty_ |= DIRTY_TEXTURE;
+        setDirtyFlags( DIRTY_TEXTURE );
     return updateSurface;
 }
 
@@ -159,8 +159,6 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
     volumeRenderActiveVoxels_.clear();
     setDirtyFlags( DIRTY_ALL );
-    if ( volumeRendering_ )
-        dirty_ |= DIRTY_SELECTION; // This flag is not set in ObjectMeshHolder::setDirtyFlags
     return oldVdbVolume;
 }
 
@@ -178,7 +176,7 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( float iso, 
 
 Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
 {
-    MR_TIMER
+    MR_TIMER;
     auto vdbVolume = vdbVolumeCopy;
     if ( !vdbVolume.data )
         return unexpected("No VdbVolume available");
@@ -316,7 +314,7 @@ Histogram ObjectVoxels::recalculateHistogram( std::optional<Vector2f> minmax, Pr
 
 void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     dualMarchingCubes_ = on;
     if ( updateSurface )
     {
@@ -392,7 +390,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 void ObjectVoxels::invalidateActiveBoundsCaches()
 {
     volumeRenderActiveVoxels_.clear();
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
     activeVoxels_.reset();
     activeBounds_.reset();
 }
@@ -423,7 +421,7 @@ void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels 
     if ( !valid )
         return;
     volumeRenderActiveVoxels_ = activeVoxels;
-    dirty_ |= DIRTY_SELECTION;
+    setDirtyFlags( DIRTY_SELECTION );
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const
@@ -479,7 +477,7 @@ void ObjectVoxels::setVolumeRenderingParams( const VolumeRenderingParams& params
         return;
     volumeRenderingParams_ = params;
     if ( isVolumeRenderingEnabled() )
-        dirty_ |= DIRTY_TEXTURE;
+        setDirtyFlags( DIRTY_TEXTURE );
 }
 
 bool ObjectVoxels::hasVisualRepresentation() const
@@ -497,7 +495,7 @@ void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
     if ( !data_.mesh || data_.mesh->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
     data_.mesh.reset();
-    setIsoValue( isoValue_ );
+    (void)setIsoValue( isoValue_ ); //TODO: propagate error outside
 }
 
 std::shared_ptr<Object> ObjectVoxels::clone() const
@@ -658,7 +656,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     if ( activeBox.valid() && ( activeBox.min != Vector3i() || activeBox.max != vdbVolume_.dims ) )
         setActiveBounds( activeBox );
     else
-        setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
+        (void)setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
@@ -678,7 +676,7 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
     auto res = VoxelsLoad::fromAnySupportedFormat( modelPath, progressCb );
     if ( !res.has_value() )
         return unexpected( res.error() );
-    
+
     if ( res->empty() )
         return unexpected( "No voxels found in file: " + utf8string( modelPath ) );
     assert( res->size() == 1 );
@@ -714,7 +712,7 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
     res.push_back( fmt::format( "dims: ({}, {}, {})", vdbVolume_.dims.x, vdbVolume_.dims.y, vdbVolume_.dims.z ) );
     res.push_back( fmt::format( "voxel size: ({:.3}, {:.3}, {:.3})", vdbVolume_.voxelSize.x, vdbVolume_.voxelSize.y, vdbVolume_.voxelSize.z ) );
-    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})", 
+    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})",
         vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
         vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
         vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );

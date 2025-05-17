@@ -1,8 +1,30 @@
+import argparse
 import os
+import re
 import sys
 import platform
-import argparse
+import subprocess
 import shutil
+from pathlib import Path
+
+def get_vcpkg_root_from_where():
+    try:
+        output = subprocess.check_output(["where", "vcpkg"], universal_newlines=True)
+        first_line = output.strip().splitlines()[0]
+        return Path(first_line).resolve().parent
+    except Exception as e:
+        print(e)
+        return None
+
+def detect_vcpkg_python_version(vcpkg_root, triplet="x64-windows-meshlib"):
+    include_dir = vcpkg_root / "installed" / triplet / "include"
+    if include_dir.exists():
+        for entry in include_dir.iterdir():
+            match = re.match(r"python3\.(\d+)", entry.name)
+            if match:
+                minor_version = match.group(1)
+                return f"3.{minor_version}"
+    return None
 
 parser = argparse.ArgumentParser(description="Python Test Script")
 
@@ -36,10 +58,7 @@ if platformSystem == 'Linux':
                 os_version = line.split('=')[-1].replace('"', '')
 
     if "ubuntu" in os_name.lower():
-        if os_version.startswith("20"):
-            python_cmds = ["python3.8"]
-        elif os_version.startswith("22"):
-            python_cmds = ["python3.10"]
+        python_cmds = ["python3"] # use the same python version as in venv
     elif "fedora" in os_name.lower():
         if os_version.startswith("35"):
             python_cmds = ["python3.9"]
@@ -50,6 +69,14 @@ if platformSystem == 'Linux':
 
 elif platformSystem == 'Darwin':
     python_cmds = ["python3.10"]
+
+elif platformSystem == "Windows":
+    python_cmds = ["py -3"]
+    vcpkg_root = get_vcpkg_root_from_where()
+    if vcpkg_root:
+        detected_version = detect_vcpkg_python_version(vcpkg_root)
+        if detected_version:
+            python_cmds = [f"py -{detected_version}"]
 
 if args.cmd:
     python_cmds = [str(args.cmd).strip()]
@@ -108,7 +135,7 @@ for py_cmd in python_cmds:
         print("CREATING VENV --- [  " + py_cmd + " -m venv venv_" + py_cmd)
         if os.system(py_cmd + " -m venv venv_" + py_cmd) != 0:
             venv_failed = True
-        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest numpy"):
+        if os.system(". venv_" + py_cmd + "/bin/activate && pip install pytest pytest_check numpy"):
             venv_failed = True
         py_cmd_fixed = ". venv_" + py_cmd + "/bin/activate && " + py_cmd
     else:

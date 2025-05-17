@@ -69,7 +69,7 @@ int AABBTreePointsMaker::partitionPoints( Box3f& box, int firstPoint, int lastPo
 
     int midPoint = firstPoint + ( lastPoint - firstPoint ) / 2;
     // to minimize the total number of nodes
-    midPoint += ( AABBTreePoints::MaxNumPointsInLeaf - ( midPoint % AABBTreePoints::MaxNumPointsInLeaf ) ) % AABBTreePoints::MaxNumPointsInLeaf; 
+    midPoint += ( AABBTreePoints::MaxNumPointsInLeaf - ( midPoint % AABBTreePoints::MaxNumPointsInLeaf ) ) % AABBTreePoints::MaxNumPointsInLeaf;
     std::nth_element( orderedPoints_.data() + firstPoint, orderedPoints_.data() + midPoint, orderedPoints_.data() + lastPoint,
         [&]( const AABBTreePoints::Point& a, const AABBTreePoints::Point& b )
     {
@@ -89,12 +89,12 @@ std::pair<SubtreePoints, SubtreePoints> AABBTreePointsMaker::makeNode( const Sub
     const int midPoint = partitionPoints( node.box, s.firstPoint, s.firstPoint + s.numPoints );
     const int leftNumPoints = midPoint - s.firstPoint;
     const int rightNumPoints = s.numPoints - leftNumPoints;
-    node.leftOrFirst = s.root + 1;
-    node.rightOrLast = s.root + 1 + getNumNodesPoints( leftNumPoints );
+    node.l = s.root + 1;
+    node.r = s.root + 1 + getNumNodesPoints( leftNumPoints );
     return
     {
-        SubtreePoints( node.leftOrFirst, s.firstPoint, leftNumPoints ),
-        SubtreePoints( node.rightOrLast, midPoint,     rightNumPoints )
+        SubtreePoints( node.l, s.firstPoint, leftNumPoints ),
+        SubtreePoints( node.r, midPoint,     rightNumPoints )
     };
 }
 
@@ -175,7 +175,7 @@ std::pair<AABBTreePoints::NodeVec, std::vector<AABBTreePoints::Point>> AABBTreeP
 AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
 {
     auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( pointCloud.points, &pointCloud.validPoints );
-    nodes_ = std::move( nodes ); 
+    nodes_ = std::move( nodes );
     orderedPoints_ = std::move( orderedPoints );
 }
 
@@ -195,7 +195,7 @@ AABBTreePoints::AABBTreePoints( const VertCoords & points, const VertBitSet * va
 
 void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
 {
-    MR_TIMER
+    MR_TIMER;
     VertId newId = 0_v;
     for ( auto & n : nodes_ )
     {
@@ -213,7 +213,7 @@ void AABBTreePoints::getLeafOrder( VertBMap & vertMap ) const
 
 void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
 {
-    MR_TIMER
+    MR_TIMER;
         VertId newId = 0_v;
     for ( auto& n : nodes_ )
     {
@@ -232,15 +232,15 @@ void AABBTreePoints::getLeafOrderAndReset( VertBMap& vertMap )
 
 size_t AABBTreePoints::heapBytes() const
 {
-    return 
+    return
         nodes_.heapBytes() +
         MR::heapBytes( orderedPoints_ );
 }
 
 void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & changedVerts )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     // find changed orderedPoints_ and update them
     BitSet changedPoints( orderedPoints_.size() );
     BitSetParallelForAll( changedPoints, [&]( size_t i )
@@ -285,11 +285,11 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & cha
         auto & node = nodes_[nid];
         if ( node.leaf() )
             continue;
-        if ( !changedNodes.test( node.leftOrFirst ) && !changedNodes.test( node.rightOrLast ) )
+        if ( !changedNodes.test( node.l ) && !changedNodes.test( node.r ) )
             continue;
         changedNodes.set( nid );
-        node.box = nodes_[node.leftOrFirst].box;
-        node.box.include( nodes_[node.rightOrLast].box );
+        node.box = nodes_[node.l].box;
+        node.box.include( nodes_[node.r].box );
     }
 }
 
@@ -305,8 +305,8 @@ TEST( MRMesh, AABBTreePoints )
 
     EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
 
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].leftOrFirst.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].rightOrLast.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
 
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );
@@ -325,8 +325,8 @@ TEST( MRMesh, AABBTreePointsFromMesh )
 
     EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
 
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].leftOrFirst.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].rightOrLast.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
 
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );

@@ -25,7 +25,7 @@ Expected<Polyline3> fromMrLines( const std::filesystem::path & file, ProgressCal
 
 Expected<Polyline3> fromMrLines( std::istream & in, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Polyline3 polyline;
     if ( !polyline.topology.read( in ) )

@@ -10,7 +10,7 @@ namespace MR
 UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDelete )
     : onPreTempFolderDelete_( std::move( onPreTempFolderDelete ) )
 {
-    MR_TIMER
+    MR_TIMER;
 
     std::error_code ec;
     const auto tmp = std::filesystem::temp_directory_path( ec );
@@ -43,7 +43,7 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
     if ( folder_.empty() )
         return;
 
-    MR_TIMER
+    MR_TIMER;
 
     if ( onPreTempFolderDelete_ )
         onPreTempFolderDelete_( folder_ );

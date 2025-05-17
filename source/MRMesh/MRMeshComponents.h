@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRUnionFind.h"
+#include "MRExpected.h"
 #include <functional>
 
 namespace MR
@@ -51,6 +52,27 @@ enum FaceIncidence
 /// given prepared union-find structure returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps = nullptr );
+
+struct ExpandToComponentsParams
+{
+    /// expands only if seeds cover at least this ratio of the component area
+    /// <=0 - expands all seeds
+    /// > 1 - none
+    float coverRatio = 0.0f;
+    
+    FaceIncidence incidence = FaceIncidence::PerEdge;
+
+    /// optional predicate of boundaries between components
+    UndirectedEdgePredicate isCompBd;
+
+    /// optional output number of components
+    int* optOutNumComponents = nullptr;
+
+    ProgressCallback cb;
+};
+
+/// expands given seeds to whole components
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params = {} );
 
 struct LargeByAreaComponentsSettings
 {
@@ -138,19 +160,21 @@ struct LargeByAreaComponentsSettings
 
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
+[[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection );
 
-/// if all vertices of a mesh connected component are present in selection exludes these vertices
+/// if all vertices of a mesh connected component are present in selection, excludes these vertices
 MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
-/// it is guaranteed that isCompBd is invoked in a thead-safe manner (that left and right face are always processed by one thread)
+/// it is guaranteed that isCompBd is invoked in a thread-safe manner (that left and right face are always processed by one thread)
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd = {} );
 
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
+[[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region = nullptr );
 
 /// gets union-find structure for vertices, considering connections by given edges only
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges );

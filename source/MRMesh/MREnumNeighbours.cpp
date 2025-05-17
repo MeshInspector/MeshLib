@@ -9,14 +9,34 @@ namespace MR
 
 void EnumNeihbourVertices::run( const MeshTopology & topology, VertId start, const VertPredicate & pred )
 {
-    MR_TIMER
-
-    assert( start );
+    assert( start.valid() );
     assert( bd_.empty() );
+    bd_.push_back( start );
     visited_.resize( topology.vertSize() );
 
     visited_.set( start );
-    bd_.push_back( start );
+
+    run_( topology, pred );
+}
+
+void EnumNeihbourVertices::run( const MeshTopology& topology, const VertBitSet& start, const VertPredicate& pred )
+{
+    assert( start.any() );
+    assert( bd_.empty() );
+    bd_.reserve( start.count() * 2 );
+    for ( auto v : start )
+        bd_.push_back( v );
+    visited_.resize( topology.vertSize() );
+
+    visited_ |= start;
+
+    run_( topology, pred );
+
+}
+
+void EnumNeihbourVertices::run_( const MeshTopology& topology, const VertPredicate& pred )
+{
+    MR_TIMER;
     while ( !bd_.empty() )
     {
         const auto v = bd_.back();
@@ -37,7 +57,7 @@ void EnumNeihbourVertices::run( const MeshTopology & topology, VertId start, con
 
 VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, float range )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertScalars res( mesh.topology.vertSize(), FLT_MAX );
     EnumNeihbourVertices e;
@@ -51,17 +71,17 @@ VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, 
     return res;
 }
 
-VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float range )
+VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float rangeSq )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet res( mesh.topology.vertSize() );
     EnumNeihbourVertices e;
     e.run( mesh.topology, mesh.getClosestVertex( start ), [&] ( VertId v )
     {
-        const auto inRange = ( start.point - mesh.points[v] ).length() <= range;
+        const auto inRange = ( start.point - mesh.points[v] ).lengthSq() <= rangeSq;
         res.set( v, inRange );
-        return inRange; // mb better <= ?
+        return inRange;
     } );
 
     return res;
@@ -69,7 +89,7 @@ VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float 
 
 void EnumNeihbourFaces::run( const MeshTopology & topology, VertId start, const FacePredicate & pred )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( start );
     assert( bd_.empty() );

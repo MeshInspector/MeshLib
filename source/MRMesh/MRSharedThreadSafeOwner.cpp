@@ -4,8 +4,8 @@
 #include "MRAABBTreePoints.h"
 #include "MRDipole.h"
 #include "MRHeapBytes.h"
+#include "MRTbbTaskArenaAndGroup.h"
 #include "MRPch/MRSuppressWarning.h"
-#include "MRPch/MRTBB.h"
 #include <cassert>
 
 #if _GLIBCXX_RELEASE >= 14
@@ -17,13 +17,12 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
 namespace MR
 {
 
-struct TaskGroup : tbb::task_group
-{};
-
 template<typename T>
 void SharedThreadSafeOwner<T>::reset()
 {
     assert( !construction_ ); // one thread constructs the object, and this thread resets it
+    if ( !obj_ ) // fast path avoiding unnecessary writing in obj_ when it is already null
+        return;
     atomic_store( &obj_, {} );
 }
 
@@ -61,7 +60,7 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
         auto construction = atomic_load( &construction_ );
         if ( !construction )
         {
-            firstConstructor = atomic_compare_exchange_strong( &construction_, &construction, std::make_shared<TaskGroup>() );
+            firstConstructor = atomic_compare_exchange_strong( &construction_, &construction, std::make_shared<TbbTaskArenaAndGroup>() );
             if ( firstConstructor )
                 construction = atomic_load( &construction_ );
             assert( construction );
@@ -76,17 +75,11 @@ const T & SharedThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
 
         if ( firstConstructor )
         {
-            // we do not want this thread while inside creator steal outside piece of work 
-            // and call this function recursively, and stopping forever (because creator() never returns)
-            // in construction->wait()
-            tbb::this_task_arena::isolate( [&]
+            construction->execute( [&]
             {
-               construction->run( [&]
-               {
-                   atomic_store( &obj_, std::make_shared<T>( creator() ) );
-                   assert( construction == atomic_load( &construction_ ) );
-                   atomic_store( &construction_, {} );
-               } );
+                atomic_store( &obj_, std::make_shared<T>( creator() ) );
+                assert( construction == atomic_load( &construction_ ) );
+                atomic_store( &construction_, {} );
             } );
         }
         construction->wait();

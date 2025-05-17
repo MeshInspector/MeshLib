@@ -20,7 +20,7 @@ class GraphCut
 public:
     GraphCut( const MeshTopology & topology, const EdgeMetric & metric );
     void addContour( const EdgePath & contour );
-    void addFaces( const FaceBitSet& source, const FaceBitSet& sink );
+    void addFaces( FaceBitSet source, FaceBitSet sink );
     FaceBitSet fill();
 
 private:
@@ -45,7 +45,7 @@ private:
 
 GraphCut::GraphCut( const MeshTopology & topology, const EdgeMetric & metric ) : topology_( topology )
 {
-    MR_TIMER
+    MR_TIMER;
 
         auto szF = topology.lastValidFace() + 1;
     filled_[0].resize( szF );
@@ -59,7 +59,7 @@ GraphCut::GraphCut( const MeshTopology & topology, const EdgeMetric & metric ) :
 
 void GraphCut::addContour( const EdgePath & contour )
 {
-    MR_TIMER
+    MR_TIMER;
 
     for ( auto e : contour )
         capacity_[e] = ContourEdge;
@@ -89,28 +89,36 @@ void GraphCut::addContour( const EdgePath & contour )
     filled_[Right] -= bothLabels;
 }
 
-void GraphCut::addFaces( const FaceBitSet& source, const FaceBitSet& sink )
+void GraphCut::addFaces( FaceBitSet source, FaceBitSet sink )
 {
-    MR_TIMER
+    MR_TIMER;
+    assert( !filled_[Left].intersects( filled_[Right] ) );
 
-    auto unionFilled = filled_[Left] | filled_[Right];
-    for ( auto f : source - unionFilled )
+    // ignore faces marked simultaneously as source and sink
+    const auto bothLabels = source & sink;
+    source -= bothLabels;
+    sink -= bothLabels;
+
+    // do not change already filled faces
+    const auto alreadyFilled = filled_[Left] | filled_[Right];
+    source -= alreadyFilled;
+    sink -= alreadyFilled;
+
+    for ( auto f : source )
         active_[Left].push_back( f );
 
-    for ( auto f : sink - unionFilled )
+    for ( auto f : sink )
         active_[Right].push_back( f );
 
     filled_[Left] |= source;
     filled_[Right] |= sink;
 
-    auto bothLabels = filled_[Left] & filled_[Right];
-    filled_[Left] -= bothLabels;
-    filled_[Right] -= bothLabels;
+    assert( !filled_[Left].intersects( filled_[Right] ) );
 }
 
 FaceBitSet GraphCut::fill()
 {
-    MR_TIMER
+    MR_TIMER;
     while ( !active_[Left].empty() && !active_[Right].empty() )
     {
         auto lf = active_[Left].front();
@@ -328,7 +336,7 @@ bool GraphCut::checkNotSaturatedPath_( FaceId f, int side ) const
 
 FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour, const EdgeMetric & metric )
 {
-    MR_TIMER
+    MR_TIMER;
     GraphCut filler( topology, metric );
     filler.addContour( contour );
     return filler.fill();
@@ -336,7 +344,7 @@ FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgeP
 
 FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours, const EdgeMetric & metric )
 {
-    MR_TIMER
+    MR_TIMER;
     GraphCut filler( topology, metric );
     for ( auto & contour : contours )
         filler.addContour( contour );
@@ -345,7 +353,7 @@ FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::
 
 FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, const FaceBitSet& sink, const EdgeMetric& metric )
 {
-    MR_TIMER
+    MR_TIMER;
     GraphCut filler( topology, metric );
     filler.addFaces( source, sink );
     return filler.fill();

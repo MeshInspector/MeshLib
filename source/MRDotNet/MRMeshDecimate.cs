@@ -128,7 +128,6 @@ namespace MR
         /// parameters for ResolveMeshDegenerations
         public struct ResolveMeshDegenParameters
         {
-            public int maxIters = 1;
             /// maximum permitted deviation from the original surface
             public float maxDeviation = 0;
             /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
@@ -194,7 +193,6 @@ namespace MR
         [StructLayout(LayoutKind.Sequential)]
         public struct MRResolveMeshDegenParameters
         {
-            public int maxIters = 1;
             public float maxDeviation = 0;
             public float tinyEdgeLength = 0;
             public float maxAngleChange = (float)Math.PI / 3;
@@ -204,15 +202,15 @@ namespace MR
             public MRResolveMeshDegenParameters() { }
         };
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         private static extern DecimateResult mrDecimateMesh(IntPtr mesh, ref MRDecimateParameters settings);
 
         /// Splits too long and eliminates too short edges from the mesh
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
         private static extern bool mrRemesh(IntPtr mesh, ref MRRemeshParameters settings);
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
         [return: MarshalAs(UnmanagedType.U1)]
         private static extern bool mrResolveMeshDegenerations(IntPtr mesh, ref MRResolveMeshDegenParameters settings );
 
@@ -266,10 +264,10 @@ namespace MR
         /// Resolves degenerate triangles in given mesh
         /// This function performs decimation, so it can affect topology
         /// \return true if the mesh has been changed
+        [Obsolete("use FixMeshDegeneracies instead")]
         public static bool ResolveMeshDegenerations(ref Mesh mesh, ResolveMeshDegenParameters settings)
         {
             MRResolveMeshDegenParameters mrParameters = new MRResolveMeshDegenParameters();
-            mrParameters.maxIters = settings.maxIters;
             mrParameters.maxDeviation = settings.maxDeviation;
             mrParameters.tinyEdgeLength = settings.tinyEdgeLength;
             mrParameters.maxAngleChange = settings.maxAngleChange;

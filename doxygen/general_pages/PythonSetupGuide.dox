@@ -42,6 +42,14 @@ MeshLib provides a set of example scripts that are available [here](\ref Example
 These examples are helpful for both developers and testers. 
 Additionally, the Python library allows you to explore all the available functions in `mrmeshpy` using the standard `help(meshlib.mrmeshpy)` command.
 
-### Example: Using the Viewer with MeshLib
-Now that you have installed MeshLib, you can start exploring its features. [Here's](\ref ExampleViewer) an example of how to open and manipulate a 3D mesh using the MeshLib Viewer in Python. 
+
+### Getting Started: MeshLib Viewer and Mesh I/O Examples
+
+After installing MeshLib, a great way to start exploring its capabilities is through interactive examples.
+
+- **On Windows and Linux**, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started.
+- **On macOS**, the Viewer is not yet supported due to platform-specific limitations. As an alternative, we suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
+
+These examples are a great entry point for integrating MeshLib into your workflow, regardless of your operating system.
+
 */

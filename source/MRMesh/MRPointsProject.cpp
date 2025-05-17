@@ -23,13 +23,23 @@ struct SubTask
 
 } //anonymous namespace
 
+
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
-    float upDistLimitSq /*= FLT_MAX*/, 
-    const AffineXf3f* xf /*= nullptr*/, 
+    float upDistLimitSq /*= FLT_MAX*/,
+    const AffineXf3f* xf /*= nullptr*/,
     float loDistLimitSq /*= 0*/,
     VertPredicate skipCb /*= {}*/ )
 {
     const auto& tree = pc.getAABBTree();
+    return findProjectionOnPoints( pt, tree, upDistLimitSq, xf, loDistLimitSq, skipCb );
+}
+
+PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTreePoints& tree,
+    float upDistLimitSq /*= FLT_MAX*/,
+    const AffineXf3f* xf /*= nullptr*/,
+    float loDistLimitSq /*= 0*/,
+    VertPredicate skipCb /*= {}*/ )
+{
     const auto& orderedPoints = tree.orderedPoints();
 
     PointsProjectionResult res;
@@ -90,8 +100,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
             continue;
         }
 
-        auto s1 = getSubTask( node.leftOrFirst );
-        auto s2 = getSubTask( node.rightOrLast );
+        auto s1 = getSubTask( node.l );
+        auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
         {
@@ -176,8 +186,8 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
             continue;
         }
 
-        auto s1 = getSubTask( node.leftOrFirst );
-        auto s2 = getSubTask( node.rightOrLast );
+        auto s1 = getSubTask( node.l );
+        auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
         {
@@ -194,7 +204,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
 Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( numNei >= 1 );
     Buffer<VertId> res( pc.points.size() * numNei );
 
@@ -224,7 +234,7 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, con
 
 VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress )
 {
-    MR_TIMER
+    MR_TIMER;
     std::atomic<float> minDistSq{ FLT_MAX };
     tbb::enumerable_thread_specific<VertPair> threadData;
     BitSetParallelFor( pc.validPoints, [&]( VertId v )
@@ -288,6 +298,11 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
     settings.cb );
 
     return {};
+}
+
+size_t PointsProjector::projectionsHeapBytes( size_t ) const
+{
+    return 0;
 }
 
 } //namespace MR

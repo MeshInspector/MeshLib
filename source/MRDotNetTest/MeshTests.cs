@@ -181,7 +181,7 @@ namespace MR.Test
                 objects.Add(obj);
 
                 obj.mesh = Mesh.MakeSphere(1.0f, 100);
-                obj.name = "Sphere";
+                obj.name = "LongSphereName"; // must be long enough to deactivate short string optimization (SSO) in C++
                 obj.toWorld = new AffineXf3f(Vector3f.Diagonal(-2));
                 objects.Add(obj);
 
@@ -211,7 +211,7 @@ namespace MR.Test
                     return;
 
                 Assert.That(loadedMesh.Points.Count == 100);
-                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == 0.0f);
 
                 settings.customXf = true;
@@ -237,7 +237,7 @@ namespace MR.Test
                     return;
 
                 Assert.That(loadedMesh.Points.Count == 100);
-                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].name == "LongSphereName");
                 Assert.That(loadedXf.B.X == -2.0f);
 
                 loadedMesh = loadedObjs[0].mesh;
@@ -267,6 +267,21 @@ namespace MR.Test
             validPoints.Set(7);
 
             Assert.That(cubeMesh.Volume(validPoints), Is.EqualTo(0.5).Within(1e-6));
+        }
+
+        [Test]
+        public void TestAddMesh()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            Assert.That(cubeMesh.ValidFaces.Count() == 12);
+            var cpyMesh = cubeMesh.Clone();
+            cubeMesh.AddMesh(cpyMesh);
+            Assert.That(cubeMesh.ValidFaces.Count() == 24);
+            FaceBitSet bs = new FaceBitSet(12);
+            bs.Set(0);
+            MeshPart mp = new MeshPart(cpyMesh,bs);
+            cubeMesh.AddMeshPart(ref mp);
+            Assert.That(cubeMesh.ValidFaces.Count() == 25);
         }
 
         [Test]

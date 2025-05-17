@@ -9,7 +9,7 @@ VCXPROJ_NAMESPACES = {
 }
 
 KNOWN_ITEM_GROUPS = {
-    'ClCompile': {".cpp"},
+    'ClCompile': {".c", ".cpp"},
     'ClInclude': {".h", ".hpp", ".cuh"},
     'CudaCompile': {".cu"},
 }
@@ -19,6 +19,7 @@ IGNORED_FILENAMES = {
     "config.h",
     "config_cmake.h",
     # macOS-specific files
+    "mrfiledialogcocoa.h",
     "mrtouchpadcocoahandler.h",
 }
 

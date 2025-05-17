@@ -1,0 +1,13 @@
+/**
+ \page ExampleMeshOffsetWeighted Mesh Weighted Offset
+
+Example of mesh weighted offset
+
+<div class="tabbed">
+
+- <b class="tab-title">Python</b>
+\include MeshOffsetWeighted.dox.py
+
+</div>
+
+ */

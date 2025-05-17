@@ -73,7 +73,7 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
-OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours, 
+OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours,
     const AffineXf3f* rigidB2A = nullptr )
 {
     AffineXf3f inverseXf;
@@ -341,7 +341,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                         ( *cut2oldAPtr )[i] = it->second;
                 } );
             }
-            result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
+            result.meshABadContourFaces = std::move( res.fbsWithContourIntersections );
             cutA = std::move( res.resultCut );
         } );
     }
@@ -373,7 +373,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     ( *cut2oldBPtr )[i] = it->second;
             } );
         }
-        result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );
+        result.meshBBadContourFaces = std::move( res.fbsWithContourIntersections );
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
@@ -413,10 +413,10 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     return result;
 }
 
-Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
+Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& meshB,
     BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
-    MR_TIMER
+    MR_TIMER;
 
     BooleanResultPoints result;
     result.meshAVerts.resize( meshA.topology.lastValidVert() + 1 );

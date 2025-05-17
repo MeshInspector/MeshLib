@@ -22,8 +22,9 @@ struct PolylineProjectionResult
     /// squared distance from pt to proj
     float distSq = 0;
 
-    /// check for validity
-    explicit operator bool() const { return line.valid(); }
+    /// check for validity, otherwise the projection was not found
+    [[nodiscard]] bool valid() const { return line.valid(); }
+    [[nodiscard]] explicit operator bool() const { return line.valid(); }
 };
 
 /**
@@ -43,6 +44,20 @@ MRMESH_API PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& 
  */
 MRMESH_API PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline,
     float upDistLimitSq = FLT_MAX, AffineXf3f* xf = nullptr, float loDistLimitSq = 0 );
+
+struct PolylineProjectionResult3Arg : PolylineProjectionResult3
+{
+    VertId pointId; // id of source point from which closest point was searched
+};
+
+/**
+ * \brief for each of points (pointsRegion) computes the closest point on polyline and returns the point for which maximum distance is reached,
+ * \param xf polyline-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ */
+MRMESH_API PolylineProjectionResult3Arg findMaxProjectionOnPolyline( const VertCoords& points, const Polyline3& polyline,
+    const VertBitSet* pointsRegion = nullptr, AffineXf3f* xf = nullptr, float loDistLimitSq = 0 );
+
 
 /**
  * \brief computes the closest point on polyline to given straight line

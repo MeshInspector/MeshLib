@@ -203,7 +203,10 @@ std::string getVolumeFragmentShader()
     uint dimsX = uint( dims.x );
     while ( outColor.a < 1.0 )
     {
-        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        if ( step <= 0.0 )
+            rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        else
+            rayStart = rayStart + normRayDir*step;
         
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
@@ -291,7 +294,7 @@ std::string getVolumePickerFragmentShader()
   uniform vec4 clippingPlane;        // (in from base) clipping plane
 
   uniform uint uniGeomId;
-  out highp uvec4 outColor;
+  out highp vec4 outColor;
 
   float getVal( in float value )
   {
@@ -401,7 +404,10 @@ std::string getVolumePickerFragmentShader()
     uint dimsX = uint( dims.x );
     while ( !firstFound )
     {
-        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        if ( step <= 0.0 )
+            rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        else
+            rayStart = rayStart + normRayDir*step;
 
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
@@ -439,10 +445,8 @@ std::string getVolumePickerFragmentShader()
     float depth = projCoord.z / projCoord.w * 0.5 + 0.5;
     gl_FragDepth = depth;
 
-    outColor.r = uint(0); // find VoxelId by world pos
-    outColor.g = uniGeomId;
-
-    outColor.a = uint(depth * 4294967295.0);
+    // find VoxelId by world pos
+    outColor = vec4( uintBitsToFloat(0u),uintBitsToFloat(uniGeomId),0.0,uintBitsToFloat(uint(depth * 4294967295.0)));
   }
 )";
 }

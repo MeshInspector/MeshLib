@@ -2,14 +2,14 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
 
 namespace MR
 {
 
 Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     SimpleVolumeMinMax res;
     res.voxelSize = volume.voxelSize;
     res.dims = volume.dims;
@@ -26,4 +26,4 @@ Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume&
     return res;
 }
 
-}
+} //namespace MR

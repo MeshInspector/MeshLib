@@ -27,7 +27,7 @@ bool isEdgeLoop( const MeshTopology & topology, const std::vector<EdgeId> & edge
 
 std::vector<EdgeLoop> splitOnSimpleLoops( const MeshTopology & topology, std::vector<EdgeLoop> && loops )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<EdgeLoop> res;
     res.reserve( loops.size() );
     HashMap<VertId, int> vmap; // vertex -> edge# in loop with origin in vertex
@@ -95,7 +95,7 @@ Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
 
 void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto sz = paths.size();
     std::vector<int> sortedIds( sz );
     std::vector<double> lens( sz );
@@ -159,7 +159,7 @@ static EdgePath buildSmallestMetricPath( VertId start, EdgePathsBuilder& b, floa
 
 EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric& metric, VertId start, const VertBitSet& finish, float maxPathMetric /*= FLT_MAX */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     EdgePathsBuilder b( topology, metric );
     for ( VertId v : finish )
@@ -171,7 +171,7 @@ EdgePath buildSmallestMetricPath(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
-    MR_TIMER
+    MR_TIMER;
 
     EdgePathsBuilder b( topology, metric );
     b.addStart( finish, 0 );
@@ -192,7 +192,7 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
     const TerminalVertex * finishes, int numFinishes,
     VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( numStarts > 0 && numFinishes > 0 );
 
     VertId join;
@@ -335,7 +335,7 @@ EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish,
 EdgePath buildShortestPathAStar( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & finish,
     VertId * outPathStart, VertId * outPathFinish, float maxPathLen )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgePathsAStarBuilder b( mesh, start, finish );
 
     VertId starts[3];
@@ -373,12 +373,12 @@ EdgePath buildShortestPathAStar( const Mesh & mesh, const MeshTriPoint & start, 
 
 std::vector<VertId> getVertexOrdering( const MeshTopology & topology, VertBitSet region )
 {
-    MR_TIMER
+    MR_TIMER;
 
-    auto metric = [&]( EdgeId e ) 
-    { 
-        return region.test( topology.dest( e ) ) ? 1.0f : FLT_MAX; 
-    }; 
+    auto metric = [&]( EdgeId e )
+    {
+        return region.test( topology.dest( e ) ) ? 1.0f : FLT_MAX;
+    };
     EdgePathsBuilder b( topology, metric );
 
     std::vector<VertId> res;
@@ -406,7 +406,7 @@ std::vector<VertId> getVertexOrdering( const MeshTopology & topology, VertBitSet
 
 std::vector<EdgeLoop> extractClosedLoops( const MeshTopology & topology, EdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<EdgeLoop> res;
     for ( ;; )
     {
@@ -450,7 +450,7 @@ std::vector<EdgeLoop> extractClosedLoops( const MeshTopology & topology, EdgeBit
 
 std::vector<EdgeLoop> extractClosedLoops( const MeshTopology & topology, const std::vector<EdgeId> & inEdges, EdgeBitSet * outNotLoopEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeBitSet edges;
     for ( auto e : inEdges )
     {
@@ -465,7 +465,7 @@ std::vector<EdgeLoop> extractClosedLoops( const MeshTopology & topology, const s
 
 EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> & inEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     auto loops = extractClosedLoops( mesh.topology, inEdges );
     if ( loops.empty() )
         return {};
@@ -475,7 +475,7 @@ EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> 
 
 bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto vertRegion = getRegionBoundaryVerts( topology, region );
     if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
@@ -486,7 +486,7 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
 
 bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
 
     EdgePathsBuilder builder( topology, metric );
     for( VertId v : region )
@@ -513,7 +513,7 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
 
 bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto vertRegion = getIncidentVerts( topology, region );
     if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
@@ -524,7 +524,7 @@ bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metri
 
 bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto vertRegion = getRegionBoundaryVerts( topology, region );
     if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
@@ -535,7 +535,7 @@ bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metr
 
 bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, VertBitSet& region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto faceRegion = getInnerFaces( topology, region );
     if ( !erodeRegionByMetric( topology, metric, faceRegion, dilation, callback ) )
         return false;
@@ -546,7 +546,7 @@ bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric
 
 bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
-    MR_TIMER
+    MR_TIMER;
     auto vertRegion = getIncidentVerts( topology, region );
     if ( !erodeRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
         return false;
@@ -570,6 +570,21 @@ bool dilateRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilatio
     return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool dilateRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
 bool erodeRegion( const Mesh& mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
@@ -585,10 +600,25 @@ bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, FaceBitSet & region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, VertBitSet & region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
+bool erodeRegion( const MeshTopology& topology, const VertCoords& points, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( topology, edgeLengthMetric( topology, points ), region, dilation, callback );
+}
+
 int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,
     std::vector<MeshEdgePoint> * outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
     int found = 0;
     for ( auto e : path )
     {
@@ -607,7 +637,7 @@ int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const P
 int getContourPlaneIntersections( const Contour3f & path, const Plane3f & plane,
     std::vector<Vector3f> * outIntersections )
 {
-    MR_TIMER
+    MR_TIMER;
     int found = 0;
     for ( int i = 0; i + 1 < path.size(); ++i )
     {
@@ -645,7 +675,7 @@ int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f
     return found;
 }
 
-TEST(MRMesh, BuildShortestPath) 
+TEST(MRMesh, BuildShortestPath)
 {
     Mesh cube = makeCube();
     auto path = buildShortestPath( cube, 0_v, 6_v );

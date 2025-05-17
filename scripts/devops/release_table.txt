@@ -49,21 +49,39 @@
       </td>
     </tr>
     <tr>
-      <td align="center">Fedora 39 x64</td>
+      <td align="center">Linux vcpkg (glibc 2.34) x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION-dev.rpm">rpm</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_linux-vcpkg-x64.tar.xz">tar.xz</a>
       </td>
     </tr>
     <tr>
-      <td align="center">MacOS x64 (Intel)</td>
+      <td align="center">macOS x64 (Intel)</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_x64.pkg">x64 pkg</a>
       </td>
     </tr>
     <tr>
-      <td align="center">MacOS arm (Apple Silicon)</td>
+      <td align="center">macOS Arm (Apple Silicon)</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm.pkg">arm pkg</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Emscripten multi-thread (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-multithreaded.zip">zip</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Emscripten single-thread (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-singlethreaded.zip">zip</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Emscripten multi-thread Wasm64 (web environment)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_emscripten-multithreaded-64bit.zip">zip</a>
       </td>
     </tr>
   </tbody>

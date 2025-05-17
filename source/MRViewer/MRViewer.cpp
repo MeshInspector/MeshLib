@@ -71,6 +71,7 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRPch/MRJson.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
@@ -714,16 +715,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     }
 #endif
 #endif
-
-#ifdef __APPLE__
-    constexpr int cDefaultMSAA = 2;
-#else
-    constexpr int cDefaultMSAA = 8;
-#endif
-    if ( !settingsMng_ )
-        glfwWindowHint( GLFW_SAMPLES, cDefaultMSAA );
-    else
-        glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA ) );
+    glfwWindowHint( GLFW_SAMPLES, getRequiredMSAA_( params.render3dSceneInTexture, false ) );
 #ifndef __EMSCRIPTEN__
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
     glfwWindowHint( GLFW_FOCUS_ON_SHOW, GLFW_TRUE );
@@ -817,7 +809,7 @@ int Viewer::launchInit_( const LaunchParams& params )
 
         enableAlphaSort( true );
         if ( sceneTexture_ )
-            sceneTexture_->reset( { width, height }, -1 );
+            sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
 
         if ( alphaSorter_ )
         {
@@ -1194,7 +1186,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : DistanceMapLoad::Filters )
+    for ( auto& filter : DistanceMapLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
@@ -1253,28 +1245,35 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
 
             if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
-                // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( undoName );
-                auto newRoot = result.scene;
-                std::swap( newRoot, SceneRoot::getSharedPtr() );
-                setSceneDirty();
-                onSceneSaved( result.loadedFiles.front() );
+                {
+                    // the scene is taken as is from a single file, replace the current scene with it
+                    AppendHistory<SwapRootAction>( undoName );
+                    auto newRoot = result.scene;
+                    std::swap( newRoot, SceneRoot::getSharedPtr() );
+                    setSceneDirty();
+                    onSceneSaved( result.loadedFiles.front() );
+                }
+                if ( options.loadedCallback ) // strictly after history is added
+                    options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
                 // not-scene file was open, or several scenes were open, append them to the current scene
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
-
-                SCOPED_HISTORY( undoName );
-
                 const auto children = result.scene->children();
-                result.scene->removeAllChildren();
-                for ( const auto& obj : children )
                 {
-                    AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
+                    SCOPED_HISTORY( undoName );
+
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                    {
+                        AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
                 }
+                if ( options.loadedCallback ) // strictly after history is added
+                    options.loadedCallback( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1286,6 +1285,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             }
 
             viewport().preciseFitDataToScreenBorder( { 0.9f } );
+        }
+        else
+        {
+            if ( options.loadedCallback )
+                options.loadedCallback( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
@@ -1914,7 +1918,7 @@ void Viewer::postResize( int w, int h )
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
     if ( sceneTexture_ )
-        sceneTexture_->reset( framebufferSize, -1 );
+        sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ) );
 
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
@@ -2595,6 +2599,48 @@ void Viewer::bindSceneTexture( bool bind )
         sceneTexture_->unbind();
 }
 
+bool Viewer::isSceneTextureEnabled() const
+{
+    return bool( sceneTexture_ );
+}
+
+int Viewer::getMSAA() const
+{
+    int curSamples = 0;
+    if ( !glInitialized_ )
+        return curSamples;
+    if ( !sceneTexture_ || sceneTexture_->isBound() )
+        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
+    else
+    {
+        sceneTexture_->bind( false );
+        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
+        sceneTexture_->unbind();
+    }
+    return curSamples;
+}
+
+void Viewer::requestChangeMSAA( int newMSAA )
+{
+    if ( settingsMng_ )
+        settingsMng_->saveInt( "multisampleAntiAliasing", newMSAA );
+    if ( sceneTexture_ )
+    {
+        CommandLoop::appendCommand( [newMSAA, this] ()
+        {
+            sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ) );
+            setSceneDirty();
+        } );
+    }
+}
+
+int Viewer::getRequestedMSAA() const
+{
+    if ( sceneTexture_ )
+        return getRequiredMSAA_( true, true );
+    return getRequiredMSAA_( false, false );
+}
+
 void Viewer::setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng )
 {
     settingsMng_ = std::move( mng );
@@ -2677,8 +2723,8 @@ void Viewer::enableGlobalHistory( bool on )
         globalHistoryStore_ = std::make_shared<HistoryStore>();
         globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
         {
-            if ( type == HistoryStore::ChangeType::Undo ||
-                 type == HistoryStore::ChangeType::Redo ||
+            if ( type == HistoryStore::ChangeType::PostUndo ||
+                 type == HistoryStore::ChangeType::PostRedo ||
                  type == HistoryStore::ChangeType::AppendAction )
                 makeTitleFromSceneRootPath();
         } );
@@ -2749,6 +2795,29 @@ void Viewer::updatePixelRatio_()
     int winWidth, winHeight;
     glfwGetWindowSize( window, &winWidth, &winHeight );
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
+}
+
+int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
+{
+    if ( !sceneTextureOn && forSceneTexture )
+    {
+        assert( false );
+        return -1;
+    }
+    if ( sceneTextureOn && !forSceneTexture )
+        return 1; // disable msaa for main framebuffer if scene texture is used
+    
+    int cDefaultMSAA = 8;
+#if defined(__EMSCRIPTEN__)
+    cDefaultMSAA = 4;
+    if ( bool( EM_ASM_INT( return is_mac() ) ) && forSceneTexture )
+        cDefaultMSAA = 2;
+#elif defined(__APPLE__)
+    cDefaultMSAA = 2;
+#endif
+    if ( !settingsMng_ )
+        return cDefaultMSAA;
+    return settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA );
 }
 
 void Viewer::EventsCounter::reset()

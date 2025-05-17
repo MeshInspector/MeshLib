@@ -19,6 +19,7 @@
     <ClCompile Include="MRMesh.c" />
     <ClCompile Include="MRMeshBoolean.c" />
     <ClCompile Include="MRMeshBuilder.c" />
+    <ClCompile Include="MRMeshCollide.c" />
     <ClCompile Include="MRMeshCollidePrecise.c" />
     <ClCompile Include="MRMeshComponents.c" />
     <ClCompile Include="MRMeshDecimate.c" />
@@ -29,8 +30,13 @@
     <ClCompile Include="MRMeshSubdivide.c" />
     <ClCompile Include="MRMeshTopology.c" />
     <ClCompile Include="MRPointCloud.c" />
+    <ClCompile Include="MRAffineXf.c" />
+    <ClCompile Include="MRColor.c" />
+    <ClCompile Include="MRMatrix3.c" />
     <ClCompile Include="MRTestCApp.c" />
     <ClCompile Include="MRVDBConversions.c" />
+    <ClCompile Include="MRVector3.c" />
+    <ClCompile Include="SimpleObjects.c" />
     <ClCompile Include="TestFunctions.c" />
   </ItemGroup>
   <ItemGroup>
@@ -47,6 +53,7 @@
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRMeshCollide.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDecimate.h" />
@@ -60,6 +67,11 @@
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="TestFunctions.h" />
     <ClInclude Include="TestMacros.h" />
+    <ClInclude Include="MRAffineXf.h" />
+    <ClInclude Include="MRColor.h" />
+    <ClInclude Include="MRMatrix3.h" />
+    <ClInclude Include="MRVector3.h" />
+    <ClInclude Include="SimpleObjects.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

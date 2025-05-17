@@ -36,7 +36,7 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
         auto image = viewer->captureSceneScreenShot();
-        MR::ImageSave::toAnySupportedFormat( image, path );
+        (void)MR::ImageSave::toAnySupportedFormat( image, path ); //TODO: process potential error
     } );
 }
 
@@ -47,7 +47,7 @@ static void pythonCaptureUIScreenShot( MR::Viewer* viewer, const char* path )
     {
         viewer->captureUIScreenShot( [filename] ( const MR::Image& image )
         {
-            MR::ImageSave::toAnySupportedFormat( image, filename );
+            (void)MR::ImageSave::toAnySupportedFormat( image, filename ); //TODO: process potential error
         } );
     } );
 }

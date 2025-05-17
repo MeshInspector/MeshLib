@@ -1,6 +1,6 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/ImGuiHelpers.h"
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRViewport.h"

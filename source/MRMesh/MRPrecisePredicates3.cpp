@@ -13,7 +13,7 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 namespace MR
 {
 
-bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
+bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
     auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
     if ( vhp ) return vhp > 0;
@@ -39,8 +39,11 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
 
     if ( c.z ) return c.z > 0;
 
+#ifndef NDEBUG
     v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
+    assert( v == 0 );
     if ( v ) return v > 0;
+#endif
 
     v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
     if ( v ) return v > 0;
@@ -54,15 +57,10 @@ bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c )
     return true;
 }
 
-bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
-{
-    return orient3d( vs.data() );
-}
-
 bool orient3d( const PreciseVertCoords* vs )
 {
     bool odd = false;
-    std::array<int, 4> order = {0, 1, 2, 3};
+    std::array<int, 4> order = { 0, 1, 2, 3 };
 
     for ( int i = 0; i < 3; ++i )
     {
@@ -78,6 +76,11 @@ bool orient3d( const PreciseVertCoords* vs )
     }
 
     return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+}
+
+bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+{
+    return orient3d( vs.data() );
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )
@@ -148,6 +151,53 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     };
 }
 
+// ab - segment
+// cd - segment
+// if segments intersects - returns intersection point, nullopt otherwise
+std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
+{
+    auto ab = Vector3hp{ bi - ai };
+    auto ac = Vector3hp{ ci - ai };
+    auto ad = Vector3hp{ di - ai };
+    auto abc = cross( ab, ac );
+    auto abd = cross( ab, ad );
+
+    if ( dot( abc, abd ) > 0 )
+        return std::nullopt; // CD is on one side of AB
+
+    auto cd = Vector3hp{ di - ci };
+    auto cb = Vector3hp{ bi - ci };
+    auto cda = cross( cd, -ac );
+    auto cdb = cross( cd, cb );
+    if ( dot( cda, cdb ) > 0 )
+        return std::nullopt; // AB is on one side of CD
+
+    auto abcHSq = abc.lengthSq();
+    auto abdHSq = abd.lengthSq();
+    if ( ( abcHSq == 0 && abdHSq == 0 ) || ( cda.lengthSq() == 0 && cdb.lengthSq() == 0 ) ) // collinear
+    {
+        auto dAC = dot( ab, ac );
+        auto dAD = dot( ab, ad );
+        if ( dAC < 0 && dAD < 0 )
+            return std::nullopt; // both C and D are lower than A (on the AB segment)
+
+        auto dBC = dot( -ab, -cb );
+        auto dBD = dot( -ab, Vector3hp{ di - bi } );
+        if ( dBC < 0 && dBD < 0 )
+            return std::nullopt; // both C and D are greater than B (on the AB segment)
+
+        // have common points
+        auto onePoint = dAC < 0 ? ai : ci; // find point that is closer to B
+        auto otherPoint = dBD < 0 ? bi : di; // find point that is closer to A
+        return Vector3i( ( onePoint + otherPoint ) / 2 ); // return middle point of overlapping segment
+    }
+
+    // common intersection - non-collinear
+    auto abcS = boost::multiprecision::sqrt( abcHSq );
+    auto abdS = boost::multiprecision::sqrt( abdHSq );
+    return Vector3i( Vector3d( abdS * Vector3hp{ ci } + abcS * Vector3hp{ di } ) / double( abcS + abdS ) );
+}
+
 Vector3f findTriangleSegmentIntersectionPrecise( 
     const Vector3f& a, const Vector3f& b, const Vector3f& c, 
     const Vector3f& d, const Vector3f& e, 
@@ -165,7 +215,32 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     if ( abce < 0 )
         abce = -abce;
     auto sum = abcd + abce;
-    return converters.toFloat( Vector3i{ Vector3d( abcd * Vector3hp{ ei } + abce * Vector3hp{ di } ) / double( sum ) } );
+    if ( sum != 0 )
+        return converters.toFloat( Vector3i{ Vector3d( abcd * Vector3hp{ ei } + abce * Vector3hp{ di } ) / double( sum ) } );
+    // rare case when `sum == 0` 
+    // suggest finding middle point of edge segment laying inside triangle
+    Vector3hp sumVec;
+    int numSum = 0;
+    if ( auto iABDE = findTwoSegmentsIntersection( ai, bi, di, ei ) )
+    {
+        sumVec += Vector3hp{ *iABDE };
+        ++numSum;
+    }
+    if ( auto iBCDE = findTwoSegmentsIntersection( bi, ci, di, ei ) )
+    {
+        sumVec += Vector3hp{ *iBCDE };
+        ++numSum;
+    }
+    if ( auto iCADE = findTwoSegmentsIntersection( ci, ai, di, ei ) )
+    {
+        sumVec += Vector3hp{ *iCADE };
+        ++numSum;
+    }
+    if ( numSum > 0 )
+        return converters.toFloat( Vector3i{ Vector3d( sumVec ) / double( numSum ) } );
+
+    // rare case when `numSum == 0` - segment is fully inside face
+    return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
 }
 
 TEST( MRMesh, PrecisePredicates3 )

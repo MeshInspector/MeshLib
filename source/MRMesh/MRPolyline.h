@@ -22,11 +22,11 @@ public:
 
     Polyline() = default;
 
-    /// creates polyline from 2D contours, 3D polyline will get zero z-component
-    MRMESH_API Polyline( const Contours2f& contours );
+    /// creates polyline from one contour (open or closed)
+    MRMESH_API Polyline( const Contour<V>& contour );
 
-    /// creates polyline from 3D contours, 2D polyline will lose z-component
-    MRMESH_API Polyline( const Contours3f& contours );
+    /// creates polyline from several contours (each can be open or closed)
+    MRMESH_API Polyline( const Contours<V>& contours );
 
     /// creates comp2firstVert.size()-1 not-closed polylines
     /// each pair (a,b) of indices in \param comp2firstVert defines vertex range of a polyline [a,b)
@@ -39,7 +39,7 @@ public:
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num, bool closed );
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)
-    /// \details if vs[0] == vs[num-1] then a closed line is created
+    /// \details if num > 2 && vs[0] == vs[num-1] then a closed line is created
     /// \return the edge from first new to second new vertex
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num );
 
@@ -131,11 +131,6 @@ public:
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
     /// \param vertMap optional output map for for each contour point to corresponding VertId
     [[nodiscard]] MRMESH_API Contours<V> contours( std::vector<std::vector<VertId>>* vertMap = nullptr ) const;
-
-    /// convert Polyline to simple 2D contour structures with vector of points inside
-    /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    /// \param vertMap optional output map for for each contour point to corresponding VertId
-    [[nodiscard]] MRMESH_API Contours2f contours2( std::vector<std::vector<VertId>>* vertMap = nullptr ) const;
 
     /// convert Polyline3 to Polyline2 or vice versa
     template<typename U>

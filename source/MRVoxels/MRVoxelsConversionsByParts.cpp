@@ -21,22 +21,6 @@ namespace
 
 using namespace MR;
 
-void clearPartMapping( PartMapping& mapping )
-{
-    if ( mapping.src2tgtFaces )
-        mapping.src2tgtFaces->clear();
-    if ( mapping.src2tgtVerts )
-        mapping.src2tgtVerts->clear();
-    if ( mapping.src2tgtEdges )
-        mapping.src2tgtEdges->clear();
-    if ( mapping.tgt2srcFaces )
-        mapping.tgt2srcFaces->clear();
-    if ( mapping.tgt2srcVerts )
-        mapping.tgt2srcVerts->clear();
-    if ( mapping.tgt2srcEdges )
-        mapping.tgt2srcEdges->clear();
-}
-
 void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 {
     std::sort( paths.begin(), paths.end(), [&] ( const EdgePath& ep1, const EdgePath& ep2 )
@@ -62,7 +46,7 @@ Expected<void>
 mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume,
                float leftCutPosition, float rightCutPosition, const MergeVolumePartSettings &settings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Expected<Mesh> res;
     if constexpr ( std::is_same_v<Volume, VdbVolume> )
@@ -124,13 +108,13 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         settings.postCut( part );
 
     auto mapping = settings.mapping;
-    clearPartMapping( mapping );
+    mapping.clear();
 
     if ( leftCutContours.empty() && cutContours.empty() )
     {
-        WholeEdgeHashMap src2tgtEdges;
-        if ( !mapping.src2tgtEdges )
-            mapping.src2tgtEdges = &src2tgtEdges;
+        WholeEdgeHashMap src2tgtWholeEdgeHashMap;
+        if ( !mapping.src2tgtWholeEdgeHashMap )
+            mapping.src2tgtWholeEdgeHashMap = &src2tgtWholeEdgeHashMap;
 
         mesh.addMeshPart( part, mapping );
 
@@ -141,7 +125,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         {
             for ( auto& e : contour )
             {
-                const auto ue = ( *mapping.src2tgtEdges )[e];
+                const auto ue = ( *mapping.src2tgtWholeEdgeHashMap )[e];
                 e = e.even() ? ue : ue.sym();
             }
         }
@@ -156,9 +140,9 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         if ( cutContours[i].size() != leftCutContours[i].size() )
             return unexpected( "Mesh cut contours mismatch" );
 
-    WholeEdgeHashMap src2tgtEdges;
-    if ( !mapping.src2tgtEdges )
-        mapping.src2tgtEdges = &src2tgtEdges;
+    WholeEdgeHashMap src2tgtWholeEdgeHashMap;
+    if ( !mapping.src2tgtWholeEdgeHashMap )
+        mapping.src2tgtWholeEdgeHashMap = &src2tgtWholeEdgeHashMap;
 
     mesh.addMeshPart( part, false, cutContours, leftCutContours, mapping );
 
@@ -169,7 +153,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     {
         for ( auto& e : contour )
         {
-            const auto ue = ( *mapping.src2tgtEdges )[e];
+            const auto ue = ( *mapping.src2tgtWholeEdgeHashMap )[e];
             e = e.even() ? ue : ue.sym();
         }
     }
@@ -183,7 +167,7 @@ Expected<Mesh>
 volumeToMeshByParts( const VolumePartBuilder<Volume> &builder, const Vector3i &dimensions, const Vector3f &voxelSize,
                      const VolumeToMeshByPartsSettings &settings, const MergeVolumePartSettings &mergeSettings )
 {
-    MR_TIMER
+    MR_TIMER;
 
     constexpr float cMemOverhead = 1.25f;
     const auto maxSliceMemoryUsage = size_t( float( dimensions.y * dimensions.z * sizeof( float ) ) * cMemOverhead );

@@ -11,7 +11,7 @@
 #endif
 
 #ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 150)"
+#define MR_GLSL_VERSION_LINE R"(#version 330)"
 #else
 #define MR_GLSL_VERSION_LINE R"(#version 300 es)"
 #endif
@@ -34,6 +34,21 @@ inline int loadGL()
 #else
 return 1;
 #endif
+}
+
+// finds power of 2 that represents given msaa number
+// ==log2(msaa)
+inline int getMSAAPow( int msaa )
+{
+    if ( msaa <= 1 )
+        return 0;
+    int i = 1;
+    for ( ; i < 4; ++i )
+    {
+        if ( ( msaa & ( 1 << i ) ) != 0 )
+            return i;
+    }
+    return i;
 }
 
 } //namespace MR

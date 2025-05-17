@@ -100,4 +100,18 @@ MR_FORMAT_REGISTRY_IMPL( SceneSaver )
 
 } // namespace SceneSave
 
+namespace DistanceMapLoad
+{
+
+MR_FORMAT_REGISTRY_IMPL( DistanceMapLoader )
+
+} // namespace DistanceMapLoad
+
+namespace DistanceMapSave
+{
+
+MR_FORMAT_REGISTRY_IMPL( DistanceMapSaver )
+
+} // namespace DistanceMapSave
+
 } // namespace MR

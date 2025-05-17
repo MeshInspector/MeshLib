@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
 
@@ -33,9 +37,6 @@ IF(MR_EMSCRIPTEN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   ENDIF()
 ENDIF()
-
-#imgui build
-add_subdirectory(../source/imgui ./imgui)
 
 IF(APPLE)
   set(INSTALL_GTEST ON)
@@ -83,7 +84,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
-add_subdirectory(./OpenCTM ./OpenCTM)
+add_subdirectory(./OpenCTM-git ./OpenCTM)
 
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
@@ -152,8 +153,6 @@ ELSE() # not MR_EMSCRIPTEN
   set(BUILD_SHARED_LIBS ON)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip)
-  file(GLOB CLIP_HEADERS "clip/*.h")
-  install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 
   set(E57_GIT_SUBMODULE_UPDATE OFF)
   set(E57_XML_PARSER TinyXML2 CACHE STRING "")
@@ -169,6 +168,14 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)
+  # We want to build the stubs in our main `CMakeLists.txt` instead of here.
+  # It seems to work fine either way, but I'm not comfortable not having the stubs see the customized cmake variables
+  #   that we set in our main `CMakeLists.txt`, such as those influencing the Pybind ABI strings.
+  # Even though the stubs shouldn't call any Pybind functions right now, they still include the Pybind header.
+  # Accidentally calling some inline Pybind function in it could have weird effects, I reckon.
+  # Note that regardless of this setting, the python-version-specific shims always need to be built in our main `CMakeLists.txt`,
+  #   to see our configuration CMake variables.
+  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" OFF)
   add_subdirectory(./mrbind-pybind11)
 ENDIF()
 
@@ -179,9 +186,5 @@ set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
-file(GLOB IMGUI_HEADERS "imgui/*.h")
-install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <MRMesh/MRVector2.h>
 #include <MRMesh/MRColor.h>
+#include <MRMesh/MRVector2.h>
 
 #ifdef _WIN32
-#   ifdef MRIMGUI_EXPORT
+#   ifdef imgui_EXPORTS
 #       define IMGUI_API __declspec(dllexport)
 #   else
 #       define IMGUI_API __declspec(dllimport)

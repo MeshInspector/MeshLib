@@ -51,14 +51,14 @@ public:
     const VertColors& getVertsColorMap() const { return vertsColorMap_; }
 
     /// sets per-vertex colors of the object
-    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void setVertsColorMap( VertColors vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); setDirtyFlags( DIRTY_VERTS_COLORMAP ); }
 
     /// swaps per-vertex colors of the object with given argument
-    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void updateVertsColorMap( VertColors& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap );  setDirtyFlags( DIRTY_VERTS_COLORMAP ); }
 
     const UndirectedEdgeColors& getLinesColorMap() const { return linesColorMap_; }
-    virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap ) { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
-    virtual void updateLinesColorMap( UndirectedEdgeColors& updated ) { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
+    virtual void setLinesColorMap( UndirectedEdgeColors linesColorMap ) { linesColorMap_ = std::move( linesColorMap );  setDirtyFlags( DIRTY_PRIMITIVE_COLORMAP ); }
+    virtual void updateLinesColorMap( UndirectedEdgeColors& updated ) { std::swap( linesColorMap_, updated );  setDirtyFlags( DIRTY_PRIMITIVE_COLORMAP ); }
 
     [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
     /// get all visualize properties masks

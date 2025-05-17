@@ -165,6 +165,13 @@ template<typename T>
 
 /// computes twice the area of given triangle
 template<typename T>
+[[nodiscard]] inline T dblArea( const Triangle3<T> & t )
+{
+    return dirDblArea( t ).length();
+}
+
+/// computes twice the area of given triangle
+template<typename T>
 [[nodiscard]] inline T dblArea( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
     return dirDblArea( p, q, r ).length();
@@ -289,8 +296,9 @@ template <typename T>
     return Vector2<T>{ x, y };
 }
 
-/// given the lengths of 4 edges of a quadrangle, and one of its diagonals (c);
-/// returns the length of the other diagonal if the quadrangle is valid and convex or std::nullopt otherwise
+/// given two triangles on same plane sharing one side, with edge lengths in same order: (a, b, c) and (b1, a1, c);
+/// they can be considered as a quadrangle with a diagonal of length (c); and the lengths of consecutive edges (a, b, b1, a1);
+/// returns the length of the other quadrangle's diagonal if the quadrangle is valid and convex or std::nullopt otherwise
 template <typename T>
 [[nodiscard]] std::optional<T> quadrangleOtherDiagonal( T a, T b, T c, T a1, T b1 )
 {
@@ -306,6 +314,51 @@ template <typename T>
     if ( y < 0 || y > c )
         return {};
     return ( *p - *p1 ).length();
+}
+
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the squared tangent of half angle opposite the side with length (a)
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T tanSqOfHalfAngle( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return 0;
+    return num / den;
+}
+
+/// given triangle by its three vertices: t[0], t[1], t[2],
+/// returns the cotangent of the angle at t[2], but not larger by magnitude than absMaxVal
+template <typename T>
+[[nodiscard]] inline T cotan( const Triangle3<T> & t, T absMaxVal = std::numeric_limits<T>::max() )
+{
+    auto a = t[0] - t[2];
+    auto b = t[1] - t[2];
+    auto nom = dot( a, b );
+    auto den = cross( a, b ).length();
+    if ( fabs( nom ) >= absMaxVal * den )
+        return absMaxVal * sgn( nom );
+    return nom / den;
+}
+
+/// given (a, b, c) - the side lengths of a triangle,
+/// returns the cotangent of the angle opposite the side with length a
+/// see "An Algorithm for the Construction of Intrinsic Delaunay Triangulations with Applications to Digital Geometry Processing". https://page.math.tu-berlin.de/~bobenko/papers/InDel.pdf
+template <typename T>
+[[nodiscard]] inline T cotan( T a, T b, T c )
+{
+    const T den = ( a + b + c ) * ( b + c - a );
+    if ( den <= 0 )
+        return -std::numeric_limits<T>::infinity();
+    const T num = ( a + c - b ) * ( a + b - c );
+    if ( num <= 0 )
+        return std::numeric_limits<T>::infinity();
+    const auto tanSq = num / den;
+    return ( 1 - tanSq ) / ( 2 * std::sqrt( tanSq ) );
 }
 
 /// Consider triangle 0BC, where a linear scalar field is defined in all 3 vertices: v(0) = 0, v(b) = vb, v(c) = vc;

@@ -3,6 +3,8 @@
 
 Example of usage to get signed distance from mesh to mesh
 
+\note Please note that unlike findSignedDistances, this function return minimal distance between two meshes
+
 <div class="tabbed">
 
 - <b class="tab-title">Python</b>

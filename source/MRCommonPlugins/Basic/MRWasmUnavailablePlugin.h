@@ -2,7 +2,7 @@
 #ifdef __EMSCRIPTEN__
 #include "MRCommonPlugins/exports.h"
 #include "MRViewer/MRStatePlugin.h"
-#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRPch/MRWasm.h"
@@ -40,6 +40,6 @@ public:
 }
 
 #define MR_REGISTER_WASM_UNAVAILABLE_ITEM( pluginType, name )\
-    static MR::RibbonMenuItemAdder<MR::WasmUnavailableItem> ribbonMenuItemAdder##pluginType##_(name);
+    static MR::RibbonMenuItemAdderT<MR::WasmUnavailableItem> ribbonMenuItemAdder##pluginType##_(name);
 
 #endif

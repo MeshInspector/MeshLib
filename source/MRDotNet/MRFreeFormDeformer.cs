@@ -10,22 +10,22 @@ namespace MR
     {
         public class FreeFormDeformer : IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrFreeFormDeformerNewFromMesh(IntPtr mesh, IntPtr region);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrFreeFormDeformerFree(IntPtr deformer);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrFreeFormDeformerInit(IntPtr deformer, ref MRVector3i resolution, ref MRBox3f initialBox);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrFreeFormDeformerSetRefGridPointPosition(IntPtr deformer, ref MRVector3i coordOfPointInGrid, ref MRVector3f newPos);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRVector3f mrFreeFormDeformerGetRefGridPointPosition(IntPtr deformer, ref MRVector3i coordOfPointInGrid);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrFreeFormDeformerApply(IntPtr deformer);
 
             internal IntPtr deformer_;

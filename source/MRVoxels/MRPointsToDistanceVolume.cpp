@@ -46,14 +46,14 @@ FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const P
 
 Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params )
 {
-    MR_TIMER
+    MR_TIMER;
     return functionVolumeToSimpleVolume( pointsToDistanceFunctionVolume( cloud, params ), params.cb );
 }
 
 Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,
     const VertCoords & tgtPoints, const VertBitSet & tgtVerts, float sigma, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( sigma > 0 );
 
     VertColors res;

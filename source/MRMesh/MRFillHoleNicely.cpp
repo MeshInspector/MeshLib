@@ -16,7 +16,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     EdgeId holeEdge,
     const FillHoleNicelySettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( !mesh.topology.left( holeEdge ) );
 
     FaceBitSet newFaces;
@@ -67,9 +67,9 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         if ( settings.smoothCurvature )
         {
             // exclude boundary vertices from positionVertsSmoothly(), since it tends to move them inside the mesh
-            auto vertsForSmoothing = newVerts - mesh.topology.findBoundaryVerts( &newVerts );
+            auto vertsForSmoothing = newVerts - mesh.topology.findBdVerts( nullptr, &newVerts );
             positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights );
+            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
             if ( settings.naturalSmooth )
             {
                 auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
@@ -79,9 +79,9 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
                 MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
                 if ( incidentVerts.any() )
                 {
-                    vertsForSmoothing = incidentVerts - mesh.topology.findBoundaryVerts( &incidentVerts );
+                    vertsForSmoothing = incidentVerts - mesh.topology.findBdVerts( nullptr, &incidentVerts );
                     positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights );
+                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
                 }
             }
         }

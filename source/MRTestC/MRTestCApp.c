@@ -4,6 +4,7 @@
 #include "MRBox.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
+#include "MRMeshCollide.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRMeshDecimate.h"
 #include "MRMeshExtrude.h"
@@ -18,6 +19,11 @@
 #include "MRExpandShrink.h"
 #include "MRPointCloud.h"
 #include "MRVDBConversions.h"
+#include "MRColor.h"
+#include "MRMatrix3.h"
+#include "MRAffineXf.h"
+#include "SimpleObjects.h"
+#include "MRVector3.h"
 
 int main( void )
 {
@@ -40,6 +46,7 @@ int main( void )
     RUN_TEST( testMeshSubdivide )
     RUN_TEST( testBooleanMultipleEdgePropogationSort )
     RUN_TEST( testBooleanMapper )
+    RUN_TEST( testMeshCollide )
     RUN_TEST( testMeshCollidePrecise )
     RUN_TEST( testMeshDecimate )
     RUN_TEST( testMeshFillHole )
@@ -74,6 +81,56 @@ int main( void )
     RUN_TEST( testMrMeshTopologyFindNumHoles )
     RUN_TEST( testMrMeshTopologyFaceSize )
     RUN_TEST( testMrMeshTopologyGetTriangulation )
-      
+
+    // MRColor
+    RUN_TEST( testMrColorNew )
+    RUN_TEST( testMrColorFromComponents )
+    RUN_TEST( testMrColorFromFloatComponents )
+    RUN_TEST( testMrColorGetUInt32 )
+    RUN_TEST( testMrVertColorsNewSized )
+
+    // MRMatrix3
+
+    RUN_TEST( testMrMatrix3fIdentity )
+    RUN_TEST( testMrMatrix3fRotationScalar )
+    RUN_TEST( testMrMatrix3fRotationVector )
+    RUN_TEST( testMrMatrix3fAdd )
+    RUN_TEST( testMrMatrix3fSub )
+    RUN_TEST( testMrMatrix3fMul )
+    RUN_TEST( testMrMatrix3fMulVector )
+    RUN_TEST( testMrMatrix3fEqual )
+
+    // MRAffineXf
+
+    RUN_TEST( testMrAffineXf3fNew );
+    RUN_TEST( testMrAffineXf3fTranslation );
+    RUN_TEST( testMrAffineXf3fLinear );
+    RUN_TEST( testMrAffineXf3fMul );
+    RUN_TEST( testMrAffineXf3fApply );
+
+    // MRSimpleObjects
+    RUN_TEST( testMrMakeCube );
+    RUN_TEST( testMrMakeCylinderAdvanced );
+    RUN_TEST( testMrMakeTorus );
+    RUN_TEST( testMrMakeTorusWithSelfIntersections );
+    RUN_TEST( testMrMakeSphere );
+    RUN_TEST( testMrMakeUVSphere );
+
+    //MRVector
+    RUN_TEST( testMrVector3fDiagonal );
+    RUN_TEST( testMrVector3fPlusX );
+    RUN_TEST( testMrVector3fPlusY );
+    RUN_TEST( testMrVector3fPlusZ );
+    RUN_TEST( testMrVector3fAdd );
+    RUN_TEST( testMrVector3fSub );
+    RUN_TEST( testMrVector3fMulScalar );
+    RUN_TEST( testMrVector3fLengthSq );
+    RUN_TEST( testMrVector3fLength );
+    RUN_TEST( testMrVector3iDiagonal );
+    RUN_TEST( testMrVector3iPlusX );
+    RUN_TEST( testMrVector3iPlusY );
+    RUN_TEST( testMrVector3iPlusZ );
+
+
     printf("Tests finished\n");
 }

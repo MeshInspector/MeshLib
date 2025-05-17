@@ -15,9 +15,10 @@ This page contains some examples of using MeshLib
  - \ref ExampleMeshBoolean
  - \ref ExampleMeshDecimate
  - \ref ExampleMeshOffset
+ - \ref ExampleMeshOffsetWeighted
  - \ref ExampleMeshFillHole
  - \ref ExampleMeshStitchHole
- - \ref ExampleMeshResolveDegenerations
+ - \ref ExampleMeshFixDegeneracies
  - \ref ExampleSignedDistance
  - \ref ExampleSignedDistancePointToMesh
  - \ref ExampleSignedDistances
@@ -28,6 +29,10 @@ This page contains some examples of using MeshLib
  - \ref ExampleLaplacian
  - \ref ExampleNoiseDenoise
  - \ref ExampleTriangulation
+ - \ref ExamplePointsToMesh
+ - \ref ExampleContourTriangulation
+ - \ref ExampleTerrainTriangulation
+ - \ref ExampleFusion
  - \ref ExampleMeshFromText
 
 \subsection PythonSpecificExamples Python Specific Samples

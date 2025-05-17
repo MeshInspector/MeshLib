@@ -167,6 +167,7 @@ MRMESH_API void updatePointPairs( PointPairs& pairs,
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
+/// \snippet cpp-examples/MeshICP.dox.cpp 0
 class [[nodiscard]] ICP
 {
 public:

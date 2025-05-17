@@ -5,4 +5,4 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4245 /wd4456 /wd4458 /wd5051")
 set(WITH_TESTS OFF CACHE BOOL "Choose if LAZPERF unit tests should be built")
-add_subdirectory(../../thirdparty/laz-perf ./laz-perf)
+add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/laz-perf ./laz-perf)

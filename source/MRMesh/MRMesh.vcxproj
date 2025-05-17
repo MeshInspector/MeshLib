@@ -23,6 +23,7 @@
     <ClInclude Include="MRChangeMeshDataAction.h" />
     <ClInclude Include="MRChangeScaleAction.h" />
     <ClInclude Include="MRChangeValue.h" />
+    <ClInclude Include="MRChrono.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
     <ClInclude Include="MRConeObject.h" />
@@ -30,7 +31,10 @@
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
+    <ClInclude Include="MRDirMax.h" />
+    <ClInclude Include="MRDirMaxBruteForce.h" />
     <ClInclude Include="MRDistanceToMeshOptions.h" />
+    <ClInclude Include="MREdgeLengthMesh.h" />
     <ClInclude Include="MREnums.h" />
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
@@ -56,6 +60,7 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
+    <ClInclude Include="MRMeshMath.h" />
     <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -140,6 +145,7 @@
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
+    <ClInclude Include="MRMinMaxArg.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMultiwayAligningTransform.h" />
@@ -153,9 +159,11 @@
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
     <ClInclude Include="MRParallel.h" />
+    <ClInclude Include="MRParallelMinMax.h" />
     <ClInclude Include="MRPartialChangeMeshAction.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
+    <ClInclude Include="MRClosestWeightedPoint.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
@@ -232,6 +240,7 @@
     <ClInclude Include="MRSurfaceLineOffset.h" />
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRSystemPath.h" />
+    <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -410,6 +419,10 @@
     <ClInclude Include="MRTbbThreadMutex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRDirMax.cpp" />
+    <ClCompile Include="MRDirMaxBruteForce.cpp" />
+    <ClCompile Include="MREdgeLengthMesh.cpp" />
+    <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
@@ -434,6 +447,7 @@
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
+    <ClCompile Include="MRChrono.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
     <ClCompile Include="MRCloseVertices.cpp" />
     <ClCompile Include="MRCNCMachineSettings.cpp" />
@@ -529,6 +543,7 @@
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
+    <ClCompile Include="MRClosestWeightedPoint.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />
@@ -537,7 +552,6 @@
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
-    <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />

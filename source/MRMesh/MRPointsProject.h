@@ -36,6 +36,19 @@ struct PointsProjectionResult
     VertPredicate skipCb = {} );
 
 /**
+ * \brief computes the closest point on AABBTreePoints to given point
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
+ * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ * \param skipCb callback to discard VertId projection candidate
+ */
+[[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTreePoints& tree,
+    float upDistLimitSq = FLT_MAX,
+    const AffineXf3f* xf = nullptr,
+    float loDistLimitSq = 0,
+    VertPredicate skipCb = {} );
+
+/**
  * \brief finds a number of the closest points in the cloud (as configured in \param res) to given point
  * \param upDistLimitSq upper limit on the distance in question, points with larger distance than it will not be returned
  * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
@@ -85,6 +98,9 @@ public:
     /// computes the closest points on point cloud to given points
     virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const = 0;
+
+    /// Returns amount of memory needed to compute projections
+    virtual size_t projectionsHeapBytes( size_t numProjections ) const = 0;
 };
 
 /// default implementation of IPointsProjector
@@ -98,6 +114,8 @@ public:
     MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
 
+    /// Returns amount of memory needed to compute projections
+    MRMESH_API virtual size_t projectionsHeapBytes( size_t numProjections ) const override;
 private:
     const PointCloud* pointCloud_{ nullptr };
 };

@@ -51,7 +51,7 @@
 // #endif
 
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Warray-bounds"
   #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -59,7 +59,7 @@
 
 #include <array>
 
-#if defined(__GNUC__) && __GNUC__ == 13
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
   #pragma GCC diagnostic pop
 #endif
 
@@ -350,6 +350,10 @@ template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;
 template <typename T> using Box3 = Box<Vector3<T>>;
 
+template<typename T, typename I> struct MinArg;
+template<typename T, typename I> struct MaxArg;
+template<typename T, typename I> struct MinMaxArg;
+
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
     ( Ball1f,  Ball<float>     )
     ( Ball1d,  Ball<double>    )
@@ -458,6 +462,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), V
     ( Vert2RegionMap,  Vector<RegionId, VertId> )
 
     ( VertCoords,  Vector<Vector3f, VertId> )
+    ( VertCoords2, Vector<Vector2f, VertId> )
     ( VertNormals,  Vector<Vector3f, VertId> )
     ( VertUVCoords,  Vector<UVCoord, VertId> )
     ( FaceNormals,  Vector<Vector3f, FaceId> )
@@ -528,6 +533,7 @@ template <typename T, typename I, typename P> class Heap;
 
 class MRMESH_CLASS MeshTopology;
 struct MRMESH_CLASS Mesh;
+struct MRMESH_CLASS EdgeLengthMesh;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
@@ -631,6 +637,8 @@ class FewSmallest;
 class Graph;
 class WatershedGraph;
 
+struct TbbTaskArenaAndGroup;
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup
@@ -689,6 +697,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
 class IPointsToMeshProjector;
+class IPointsProjector;
 
 namespace MeshBuilder
 {

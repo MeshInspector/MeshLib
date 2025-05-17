@@ -64,13 +64,19 @@ struct LaunchParams
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };
 
+using FilesLoadedCallback = std::function<void(const std::vector<std::shared_ptr<Object>>& objs,const std::string& errors, const std::string& warnings)>;
+
 struct FileLoadOptions
 {
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-    // true here will replace existing scene even if more than one file is open
+    /// true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
+
+    /// if this callback is set - it is called once when all obects are added to scene
+    /// top level objects only are present here
+    FilesLoadedCallback loadedCallback;
 };
 
 // GLFW-based mesh viewer
@@ -348,6 +354,18 @@ public:
     // Binds or unbinds scene texture (should be called only with valid window)
     // note that it does not clear framebuffer
     MRVIEWER_API void bindSceneTexture( bool bind );
+    // Returns true if 3d scene is rendering in scene texture instead of main framebuffer
+    MRVIEWER_API bool isSceneTextureEnabled() const;
+
+    // Returns actual msaa level of:
+    //  scene texture if it is present, or main framebuffer
+    MRVIEWER_API int getMSAA() const;
+    // Requests changing MSAA level
+    // if scene texture is using, request should be executed in the beginig of next frame
+    // otherwise restart of the app is required to apply change to main framebuffer
+    MRVIEWER_API void requestChangeMSAA( int newMSAA );
+    // Returns MSAA level that have been requested (might be different from actual MSAA using, because of GPU limitations or need to restart app)
+    MRVIEWER_API int getRequestedMSAA() const;
 
     // Sets manager of viewer settings which loads user personal settings on beginning of app
     // and saves it in app's ending
@@ -649,6 +667,11 @@ private:
 
     // recalculate pixel ratio
     void updatePixelRatio_();
+
+    // return MSAA that is required for framebuffer
+    // sceneTextureOn - true means that app is using scene texture for rendering (false means that scene is rendered directly in main framebuffer)
+    // forSceneTexture - true request MSAA required for scene texture (calling with !sceneTextureOn is invalid), false - request MSAA for main framebuffer
+    int getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const;
 
     bool stopEventLoop_{ false };
 

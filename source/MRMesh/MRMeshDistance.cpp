@@ -12,9 +12,20 @@ namespace MR
 std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op )
 {
     assert( op.signMode != SignDetectionMode::OpenVDB );
-    const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
 
-    if ( op.nullOutsideMinMax && ( proj.distSq < op.minDistSq || proj.distSq >= op.maxDistSq ) ) // note that proj.distSq == op.minDistSq (e.g. == 0) is a valid situation
+    auto minDistSq = op.minDistSq;
+    auto maxDistSq = op.maxDistSq;
+    if ( !op.nullOutsideMinMax && op.signMode == SignDetectionMode::ProjectionNormal )
+    {
+        // if the sign is determined by the normal at projection point then projection point must be found precisely
+        minDistSq = 0;
+        maxDistSq = FLT_MAX;
+    }
+    const auto proj = findProjection( p, mp, maxDistSq, nullptr, minDistSq );
+    if ( !proj && op.signMode == SignDetectionMode::ProjectionNormal )
+        return {}; // no projection point found
+
+    if ( op.nullOutsideMinMax && ( proj.distSq < minDistSq || proj.distSq >= maxDistSq ) ) // note that proj.distSq == minDistSq (e.g. == 0) is a valid situation
         return {}; // distance is too small or too large, discard them
 
     float dist = std::sqrt( proj.distSq );

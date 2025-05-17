@@ -12,6 +12,7 @@ int main()
     // Create mesh
     MR::Mesh mesh = MR::makeCube();
 
+//! [0]    
     // Setup parameters
     MR::GeneralOffsetParameters params;
     // calculate voxel size depending on desired accuracy and/or memory consumption
@@ -22,6 +23,7 @@ int main()
     // Make offset mesh
     float offset = mesh.computeBoundingBox().diagonal() * 0.1f;
     auto meshRes = MR::generalOffsetMesh( mesh, offset, params );
+//! [0]    
     if ( !meshRes.has_value() )
     {
         std::cerr << meshRes.error() << std::endl;

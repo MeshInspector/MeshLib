@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MREigenCore.h" />
+    <ClInclude Include="MRExpected.h" />
     <ClInclude Include="MRFilesystem.h" />
     <ClInclude Include="MRFmt.h" />
     <ClInclude Include="MRWasm.h" />

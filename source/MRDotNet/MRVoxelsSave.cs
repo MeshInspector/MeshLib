@@ -8,11 +8,11 @@ namespace MR
     {
         public class VoxelsSave
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrVoxelsSaveToAnySupportedFormat( ref MRVdbVolume volume, string file, IntPtr cb, ref IntPtr errorStr );
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
             
             /// Saves voxels in a file, detecting the format from file extension
@@ -24,7 +24,7 @@ namespace MR
                 if (errorStr != IntPtr.Zero)
                 {
                     var errData = mrStringData(errorStr);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
             }

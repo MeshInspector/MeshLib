@@ -29,6 +29,10 @@ on:
         default: true
         required: false
         type: boolean
+      nuget_build_patch:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   ubuntu-x64-build-test:
@@ -82,6 +86,8 @@ jobs:
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
@@ -105,16 +111,17 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
         uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.compiler}}
+          name: Timing_Logs_${{matrix.os}}-x86_${{matrix.config}}_${{matrix.cxx-compiler}}
           path: time_log/
 
       - name: Run Start-and-Exit Tests
@@ -133,11 +140,13 @@ jobs:
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
+        env:
+          RUN_CUDA_ARG: ${{ matrix.build_mrcuda == 'ON' && '--run-cuda=negative' || '' }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
           mrbind: ${{ inputs.mrbind }}
-          pytest_args: "--run-cuda=negative"
+          pytest_args: ${{ env.RUN_CUDA_ARG }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: ${{ matrix.os }}/${{matrix.config}}/${{matrix.compiler}}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
@@ -155,7 +164,7 @@ jobs:
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
-      - name: Build C++ examples
+      - name: Build C++ examples and samples
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |
           cmake \
@@ -165,6 +174,14 @@ jobs:
             -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
           cmake \
             --build cpp-examples-build \
+            --parallel $(nproc)
+          cmake \
+            -S examples/cpp-samples \
+            -B cpp-samples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
+          cmake \
+            --build cpp-samples-build \
             --parallel $(nproc)
 
       - name: Build C examples
@@ -180,9 +197,26 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86
           path: meshlib_${{matrix.os}}-dev.deb
+          retention-days: 1
+
+      - name: Create and fix fake Wheel for NuGet
+        if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          python3 -m venv ./wheel_venv
+          source ./wheel_venv/bin/activate
+          python3 -m pip install auditwheel
+          python3 ./scripts/nuget_patch/patch_library_deps.py "./build/Release/bin/libMRMeshC.so" "./patched_content/"
+
+      - name: Upload NuGet files to Artifacts
+        if: ${{ inputs.nuget_build_patch && matrix.os == 'ubuntu20' && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DotNetPatchArchiveLinux-x64
+          path: ./patched_content/*
           retention-days: 1

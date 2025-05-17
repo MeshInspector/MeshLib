@@ -144,7 +144,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path, const ProgressCa
 
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
 
@@ -260,7 +260,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
 
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::vector<VdbVolume>& volumes, const std::filesystem::path& file, const ProgressCallback& callback )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<std::shared_ptr<ObjectVoxels>> res;
     const auto size = volumes.size();
     for ( size_t i = 0; i < size; ++i )
@@ -274,7 +274,8 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
         obj->setName( name );
 
         obj->construct( volume );
-        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb );
+        if ( auto e = obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb ); !e )
+            return unexpected( std::move( e.error() ) );
         if ( !reportProgress( cb, 1.0f ) )
             return unexpected( getCancelMessage( file ) );
 
@@ -298,7 +299,7 @@ LoadedObjects toObjects( std::vector<std::shared_ptr<ObjectVoxels>>&& voxels )
 template <VoxelsLoader voxelsLoader>
 Expected<LoadedObjects> toObjectLoader( const std::filesystem::path& path, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     return voxelsLoader( path, subprogress( cb, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return toObjectVoxels( volumes, path, subprogress( cb, 1.f / 3.f, 1.f ) ); } )
         .transform( toObjects );
@@ -339,7 +340,7 @@ struct TiffParams
 
 Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
-    MR_TIMER
+    MR_TIMER;
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
         return unexpected( "Given path is not directory" );
@@ -439,7 +440,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
@@ -448,7 +449,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParamet
 
 Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
         return unexpected( "Wrong volume dimension parameter value" );
 
@@ -586,7 +587,7 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
 
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     return VoxelsLoad::fromAnySupportedFormat( file, subprogress( callback, 0.f, 1.f / 3.f ) )
         .and_then( [&] ( auto&& volumes ) { return VoxelsLoad::toObjectVoxels( volumes, file, subprogress( callback, 1.f / 3.f, 1.f ) ); } );

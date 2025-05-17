@@ -23,9 +23,13 @@
         <tab type="user" url="__BEGIN_URL__ExampleMeshBoolean__END_URL__" title="Mesh Boolean"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshDecimate__END_URL__" title="Mesh Decimate"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshOffset__END_URL__" title="Mesh Offset"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshOffsetWeighted__END_URL__" title="Mesh Weighted Offset"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFillHole__END_URL__" title="Mesh Fill Hole"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshStitchHole__END_URL__" title="Mesh Stitch Holes"/>
-        <tab type="user" url="__BEGIN_URL__ExampleMeshResolveDegenerations__END_URL__" title="Mesh Resolve Degenerations"/>
+        <tab type="user" url="__BEGIN_URL__ExampleMeshFixDegeneracies__END_URL__" title="Mesh Fix Degeneracies"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistance__END_URL__" title="Signed Distance"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistancePointToMesh__END_URL__" title="Signed Distance Point To Mesh"/>
+        <tab type="user" url="__BEGIN_URL__ExampleSignedDistances__END_URL__" title="Signed Distances"/>
         <tab type="user" url="__BEGIN_URL__ExampleGlobalRegistration__END_URL__" title="Global Registration"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshICP__END_URL__" title="Mesh ICP"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshExtrude__END_URL__" title="Mesh Extrude"/>
@@ -33,6 +37,10 @@
         <tab type="user" url="__BEGIN_URL__ExampleLaplacian__END_URL__" title="Mesh Laplacian Deformation"/>
         <tab type="user" url="__BEGIN_URL__ExampleNoiseDenoise__END_URL__" title="Mesh Denoise"/>
         <tab type="user" url="__BEGIN_URL__ExampleTriangulation__END_URL__" title="Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExamplePointsToMesh__END_URL__" title="Points to Mesh"/>
+        <tab type="user" url="__BEGIN_URL__ExampleContourTriangulation__END_URL__" title="Contour Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleTerrainTriangulation__END_URL__" title="Terrain Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleFusion__END_URL__" title="Fusion"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#PythonSpecificExamples" title="Python Specific Samples">
@@ -40,15 +48,17 @@
         <tab type="user" url="__BEGIN_URL__ExamplePlotly__END_URL__" title="Plotly Visualization"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpy__END_URL__" title="Using Numpy"/>
         <tab type="user" url="__BEGIN_URL__ExampleNumpyTriangulation__END_URL__" title="Numpy Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleCudaOffset__END_URL__" title="Offset with Cuda"/>
+        <tab type="user" url="__BEGIN_URL__ExampleDicomFiles__END_URL__" title="Open Dicom Files"/>
       </tab>
     </tab>
     <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">
+      <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__MeshStructureOverview__END_URL__" title="Mesh Structure"/>
       <tab type="user" url="__BEGIN_URL__BasicMathTypesOverview__END_URL__" title="Basic Math Types"/>
       <tab type="user" url="__BEGIN_URL__FloatVSDouble__END_URL__" title="Float vs Double"/>
       <tab type="user" url="__BEGIN_URL__DataModel__END_URL__" title="Data Model Class Hierarchy"/>
       <tab type="user" url="__BEGIN_URL__SpacesHelp__END_URL__" title="Spaces and Transformations"/>
-      <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__ExamplePluginOverview__END_URL__" title="How to use С++ Example Plugin"/>
       <tab type="user" url="__BEGIN_URL__StatePluginsHelp__END_URL__" title="State Plugins Overview"/>
       <tab type="user" url="__BEGIN_URL__HowtoAddPluginOverview__END_URL__" title="How to Add Plugin"/>

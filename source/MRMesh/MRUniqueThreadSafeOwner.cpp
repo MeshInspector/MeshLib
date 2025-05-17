@@ -4,14 +4,11 @@
 #include "MRAABBTreePoints.h"
 #include "MRDipole.h"
 #include "MRHeapBytes.h"
-#include "MRPch/MRTBB.h"
+#include "MRTbbTaskArenaAndGroup.h"
 #include <cassert>
 
 namespace MR
 {
-
-struct TaskGroup : tbb::task_group
-{};
 
 template<typename T>
 UniqueThreadSafeOwner<T>::UniqueThreadSafeOwner() = default;
@@ -65,6 +62,8 @@ UniqueThreadSafeOwner<T>::~UniqueThreadSafeOwner() = default;
 template<typename T>
 void UniqueThreadSafeOwner<T>::reset()
 {
+    if ( !obj_ ) // fast path avoiding locking and unnecessary writing in obj_ when it is already null
+        return;
     std::unique_lock lock( mutex_ );
     assert( !construction_ ); // one thread constructs the object, and this thread resets it
     obj_.reset();
@@ -90,7 +89,7 @@ T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
             return *obj_;
         assert( creator );
         bool firstConstructor = false;
-        std::shared_ptr<TaskGroup> construction;
+        std::shared_ptr<TbbTaskArenaAndGroup> construction;
         {
             std::unique_lock lock( mutex_ );
             if ( obj_ ) // already constructed while we waited for lock
@@ -100,7 +99,7 @@ T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
             }
             if ( !construction_ )
             {
-                construction_ = std::make_unique<TaskGroup>();
+                construction_ = std::make_unique<TbbTaskArenaAndGroup>();
                 firstConstructor = true;
             }
             construction = construction_;
@@ -108,19 +107,13 @@ T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
         assert( construction );
         if ( firstConstructor )
         {
-            // we do not want this thread while inside creator steal outside piece of work 
-            // and call this function recursively, and stopping forever (because creator() never returns)
-            // in construction->wait()
-            tbb::this_task_arena::isolate( [&]
+            construction->execute( [&]
             {
-               construction->run( [&]
-               {
-                   auto newObj = std::make_unique<T>( creator() );
-                   std::unique_lock lock( mutex_ );
-                   assert( construction == construction_ );
-                   construction_.reset();
-                   obj_ = std::move( newObj );
-               } );
+                auto newObj = std::make_unique<T>( creator() );
+                std::unique_lock lock( mutex_ );
+                assert( construction == construction_ );
+                construction_.reset();
+                obj_ = std::move( newObj );
             } );
         }
         construction->wait();

@@ -60,6 +60,11 @@ git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 git checkout 2024.10.21
 \endcode
+If you're using **Visual Studio 2022**, you can use the latest version of vcpkg:
+\code{.cmd}
+git checkout 2025.04.09
+\endcode
+The version `2024.10.21` is required only for compatibility with **Visual Studio 2019**.
    5. **Run the bootstrap script to build the** `vcpkg` **executable**:
 \code{.cmd}
 bootstrap-vcpkg.bat
@@ -115,8 +120,7 @@ sudo rpm -i ./meshlib-build-version-example.rpm
 \code{.sh}
 MeshViewer
 \endcode
- 4. **Integrate Using CMake**
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 ### Compile Locally
 #### Prerequisites
@@ -209,19 +213,17 @@ cd MeshLib
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
- 3. **Open MeshViewer**
-\code{.sh}
-MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer
-\endcode
-The new window with a viewer must appear.
- 4. **Integrate Using CMake**
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ 3. **Run example**
+We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 \subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
-#### Install Emscripten
+\note Only web and worker environments (i.e. web browsers) are officially supported.
+
+### Install Emscripten
 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
@@ -241,11 +243,11 @@ git pull origin
 \endcode
  - Install a Specific Version of Emscripten
 \code{.sh}
-./emsdk install 3.1.73
+./emsdk install 4.0.5
 \endcode
  - Activate the Installed Version
 \code{.sh}
-./emsdk activate 3.1.73
+./emsdk activate 4.0.5
 \endcode
  - Set Up Environment Variables
   - **macOS and Linux**:
@@ -256,9 +258,23 @@ source ./emsdk_env.sh
 \note **For Windows Users:**
 \n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
-#### Building MeshLib
+### Installing the release build
+ 1. **Download the Built Version**
+ \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest Emscripten built version.
+ 2. **Extract the Package**
+ \n Extract the package using an archiving tool or with the unzip command:
+\code{.sh}
+unzip -d path_to_install meshlib_package.zip
+\endcode
+ 3. **Integrate Using CMake**
+ \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
+\code{.sh}
+emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
+\endcode
+ \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-Now that Emscripten is set up, you can proceed to build MeshLib for WebAssembly.
+### Compile locally
+
  - Navigate to the MeshLib directory:
 \code{.sh}
 cd ~/MeshLib

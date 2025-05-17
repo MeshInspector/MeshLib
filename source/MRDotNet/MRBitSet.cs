@@ -10,24 +10,24 @@ namespace MR
         /// container of bits with read-only access
         public abstract class BitSetReadOnly
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrBitSetSize(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrBitSetCount(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             [return: MarshalAs(UnmanagedType.I1)]
             private static extern bool mrBitSetEq(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             [return: MarshalAs(UnmanagedType.I1)]
             private static extern bool mrBitSetTest(IntPtr bs, ulong index);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrBitSetFindFirst(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrBitSetFindLast(IntPtr bs);
 
             internal IntPtr bs_;
@@ -83,28 +83,28 @@ namespace MR
         /// container of bits with full access
         public class BitSet : BitSetReadOnly, IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetNew(ulong numBits, bool fillValue);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrBitSetSet(IntPtr bs, ulong index, bool value);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrBitSetResize(IntPtr bs, ulong size, bool value);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrBitSetAutoResizeSet(IntPtr bs, ulong pos, bool value);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrBitSetFree(IntPtr bs);
 
             /// creates empty bitset
@@ -204,13 +204,13 @@ namespace MR
         /// container of bits representing vert indices
         public class VertBitSet : BitSet
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal VertBitSet(IntPtr bs) : base(bs) { }
@@ -238,13 +238,13 @@ namespace MR
         /// container of bits representing face indices
         public class FaceBitSet : BitSet
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal FaceBitSet(IntPtr bs) : base(bs) { }
@@ -273,13 +273,13 @@ namespace MR
         /// container of bits representing edge indices
         public class EdgeBitSet : BitSet
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal EdgeBitSet(IntPtr bs) : base(bs) { }
@@ -309,13 +309,13 @@ namespace MR
         /// container of bits representing undirected edge indices
         public class UndirectedEdgeBitSet : BitSet
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal UndirectedEdgeBitSet(IntPtr bs) : base(bs) { }
@@ -345,13 +345,13 @@ namespace MR
         /// container of bits representing voxel indices
         public class VoxelBitSet : BitSet
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetCopy(IntPtr bs);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrBitSetOr(IntPtr a, IntPtr b);
 
             internal VoxelBitSet(IntPtr bs) : base(bs) { }

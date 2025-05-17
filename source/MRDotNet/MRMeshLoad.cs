@@ -34,7 +34,7 @@ namespace MR
         // inherits List<NamedMesh> and correctly disposes native resource
         public class NamedMeshList : List<NamedMesh>, IDisposable
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrVectorMeshLoadNamedMeshFree(IntPtr vector);
 
             internal NamedMeshList(IntPtr nativeList) : base()
@@ -98,25 +98,25 @@ namespace MR
 
         public class MeshLoad
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRMeshLoadNamedMesh mrVectorMeshLoadNamedMeshGet(IntPtr vector, ulong index);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrVectorMeshLoadNamedMeshSize(IntPtr vector);
 
 
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMeshLoadFromSceneObjFile(string file, bool combineAllObjects, ref MRMeshLoadObjLoadSettings settings, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             unsafe private static extern IntPtr mrMeshLoadFromAnySupportedFormat(string file, IntPtr* errorStr);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLoadIOExtras();
             /// loads mesh from file of any supported format
             unsafe public static Mesh FromAnySupportedFormat(string path)
@@ -129,7 +129,7 @@ namespace MR
                 if (errString != IntPtr.Zero)
                 {
                     var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
 
@@ -152,7 +152,7 @@ namespace MR
                 {
 
                     var errData = mrStringData(errString);
-                    string errorMessage = Marshal.PtrToStringAnsi(errData);
+                    string errorMessage = MarshalNativeUtf8ToManagedString(errData);
                     throw new SystemException(errorMessage);
                 }
 
@@ -163,7 +163,8 @@ namespace MR
                 {
                     var mrNamedMesh = mrVectorMeshLoadNamedMeshGet(vector, (ulong)i);
                     var namedMesh = new NamedMesh();
-                    namedMesh.name = Marshal.PtrToStringAnsi(mrNamedMesh.name);
+                    var nameData = mrStringData(mrNamedMesh.name);
+                    namedMesh.name = MarshalNativeUtf8ToManagedString(nameData);
                     namedMesh.mesh = new Mesh(mrNamedMesh.mesh);
                     namedMesh.mesh.SkipDisposingAtFinalize();
                     namedMesh.xf = new AffineXf3f(mrNamedMesh.xf);

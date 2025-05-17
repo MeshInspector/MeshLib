@@ -29,7 +29,7 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
 
 AABBTree::AABBTree( const MeshPart & mp )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
@@ -64,7 +64,7 @@ AABBTree::AABBTree( const MeshPart & mp )
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto changedFaces = getIncidentFaces( mesh.topology, changedVerts );
 
@@ -124,7 +124,7 @@ TEST(MRMesh, AABBTree)
 TEST(MRMesh, ProjectionToEmptyMesh)
 {
     Vector3f p( 1.f, 2.f, 3.f );
-    bool hasProjection = Mesh{}.projectPoint( p ).has_value();
+    bool hasProjection = Mesh{}.projectPoint( p ).valid();
     EXPECT_FALSE( hasProjection );
 }
 

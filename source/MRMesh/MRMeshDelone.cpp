@@ -8,6 +8,7 @@
 #include "MRVector2.h"
 #include "MRGeodesicPath.h"
 #include "MRTriDist.h"
+#include "MREdgeLengthMesh.h"
 
 namespace MR
 {
@@ -49,42 +50,71 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     return checkDeloneQuadrangle( Vector3d( a ), Vector3d( b ), Vector3d( c ), Vector3d( d ), double( maxAngleChange ) );
 }
 
-bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
+FlipEdge canFlipEdge( const MeshTopology & topology, EdgeId edge, const FaceBitSet* region, const UndirectedEdgeBitSet* notFlippable, const VertBitSet* vertRegion )
 {
-    if ( settings.notFlippable && settings.notFlippable->test( edge.undirected() ) )
-        return true; // consider condition satisfied for not-flippable edges
+    if ( notFlippable && notFlippable->test( edge ) )
+        return FlipEdge::Cannot;
 
-    if ( !mesh.topology.isInnerEdge( edge, settings.region ) )
-        return true; // consider condition satisfied for not inner edges
+    if ( !topology.isInnerEdge( edge, region ) )
+        return FlipEdge::Cannot;
 
     VertId a, b, c, d;
-    mesh.topology.getLeftTriVerts( edge, a, c, d );
+    topology.getLeftTriVerts( edge, a, c, d );
     assert( a != c );
-    b = mesh.topology.dest( mesh.topology.prev( edge ) );
+    b = topology.dest( topology.prev( edge ) );
     if( b == d )
-        return true; // consider condition satisfied to avoid creation of loop edges
+        return FlipEdge::Cannot; // avoid creation of loop edges
+
+    if ( vertRegion )
+    {
+        if ( !vertRegion->test( a )
+          && !vertRegion->test( b )
+          && !vertRegion->test( c )
+          && !vertRegion->test( d ) )
+            return FlipEdge::Cannot;
+    }
 
     bool edgeIsMultiple = false;
-    for ( auto e : orgRing0( mesh.topology, edge ) )
+    for ( auto e : orgRing0( topology, edge ) )
     {
-        if ( mesh.topology.dest( e ) == c )
+        if ( topology.dest( e ) == c )
         {
             edgeIsMultiple = true;
             break;
         }
     }
 
-    bool flipEdgeWillBeMultiple = mesh.topology.findEdge( b, d ).valid();
+    bool flipEdgeWillBeMultiple = topology.findEdge( b, d ).valid();
 
     if ( edgeIsMultiple && !flipEdgeWillBeMultiple )
-        return false;
+        return FlipEdge::Must;
     if ( !edgeIsMultiple && flipEdgeWillBeMultiple )
-        return true;
+        return FlipEdge::Cannot;
 
-    auto ap = mesh.points[a];
-    auto bp = mesh.points[b];
-    auto cp = mesh.points[c];
-    auto dp = mesh.points[d];
+    return FlipEdge::Can;
+}
+
+bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
+{
+    return checkDeloneQuadrangleInMesh( mesh.topology, mesh.points, edge, settings, deviationSqAfterFlip );
+}
+
+bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoords & points, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
+{
+    const auto can = canFlipEdge( topology, edge, settings.region, settings.notFlippable, settings.vertRegion );
+    if ( can == FlipEdge::Cannot )
+        return true;
+    if ( can == FlipEdge::Must )
+        return false;
+
+    VertId a, b, c, d;
+    topology.getLeftTriVerts( edge, a, c, d );
+    b = topology.dest( topology.prev( edge ) );
+
+    auto ap = points[a];
+    auto bp = points[b];
+    auto cp = points[c];
+    auto dp = points[d];
 
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
@@ -127,12 +157,84 @@ bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3
     return metricAC <= metricBD;
 }
 
-int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
+void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
+{
+    mesh.invalidateCaches( false ); // false means that vertex coordinates are not changed
+    makeDeloneOriginRing( mesh.topology, mesh.points, e, settings );
+}
+
+void makeDeloneOriginRing( MeshTopology& topology, const VertCoords& points, EdgeId e, const DeloneSettings& settings )
+{
+    topology.flipEdgesIn( e, [&]( EdgeId testEdge )
+    {
+        return !checkDeloneQuadrangleInMesh( topology, points, testEdge, settings );
+    } );
+}
+
+int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
+{
+    int flipsDone = makeDeloneEdgeFlips( mesh.topology, mesh.points, settings, numIters, progressCallback );
+    if ( flipsDone > 0 )
+        mesh.invalidateCaches( false ); // false means that vertex coordinates are not changed
+    return flipsDone;
+}
+
+int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
     MR_TIMER;
-    MR_WRITER( mesh );
+
+    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+
+    int flipsDone = 0;
+    for ( int iter = 0; iter < numIters; ++iter )
+    {
+        if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
+            return flipsDone;
+
+        flipCandidates.reset();
+        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
+        {
+            if ( !checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+                flipCandidates.set( e );
+        } );
+        nextFlipCandidates.reset();
+        int flipsDoneBeforeThisIter = flipsDone;
+        for ( UndirectedEdgeId e : flipCandidates )
+        {
+            if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+                continue;
+
+            ++flipsDone;
+            topology.flipEdge( e );
+            nextFlipCandidates.set( topology.next( EdgeId( e ) ) );
+            nextFlipCandidates.set( topology.prev( EdgeId( e ) ) );
+            nextFlipCandidates.set( topology.next( EdgeId( e ).sym() ) );
+            nextFlipCandidates.set( topology.prev( EdgeId( e ).sym() ) );
+        }
+        if ( flipsDoneBeforeThisIter == flipsDone )
+            break;
+    }
+    return flipsDone;
+}
+
+int makeDeloneEdgeFlips( EdgeLengthMesh & mesh, const IntrinsicDeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
+{
+    if ( numIters <= 0 )
+        return 0;
+    MR_TIMER;
+
+    auto checkDeloneQuadrangleInMesh = [&]( EdgeId e )
+    {
+        const auto can = canFlipEdge( mesh.topology, e, settings.region, settings.notFlippable, settings.vertRegion );
+        if ( can == FlipEdge::Cannot )
+            return true;
+        if ( can == FlipEdge::Must )
+            return false;
+        return mesh.isDelone( e, settings.threshold );
+    };
 
     UndirectedEdgeBitSet flipCandidates( mesh.topology.undirectedEdgeSize() );
     UndirectedEdgeBitSet nextFlipCandidates( mesh.topology.undirectedEdgeSize(), true );
@@ -146,36 +248,29 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         flipCandidates.reset();
         BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
         {
-            if ( !checkDeloneQuadrangleInMesh( mesh, e, settings ) )
+            if ( !checkDeloneQuadrangleInMesh( e ) )
                 flipCandidates.set( e );
         } );
         nextFlipCandidates.reset();
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : flipCandidates )
         {
-            if ( checkDeloneQuadrangleInMesh( mesh, e, settings ) )
+            if ( checkDeloneQuadrangleInMesh( e ) )
                 continue;
 
-            mesh.topology.flipEdge( e );
-            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ).undirected() );
-            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ).undirected() );
-            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ).undirected() );
-            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ).undirected() );
+            if ( !mesh.flipEdge( e ) )
+                continue;
+
             ++flipsDone;
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ) );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ) );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ) );
         }
         if ( flipsDoneBeforeThisIter == flipsDone )
             break;
     }
     return flipsDone;
-}
-
-void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
-{
-    MR_WRITER( mesh );
-    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
-    {
-        return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
-    } );
 }
 
 } //namespace MR

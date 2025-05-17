@@ -18,11 +18,11 @@ namespace MR
 namespace SelfIntersections
 {
 
-Expected<FaceBitSet> getFaces( const Mesh& mesh, ProgressCallback cb )
+Expected<FaceBitSet> getFaces( const Mesh& mesh, bool touchIsIntersection, ProgressCallback cb )
 {
     auto [faceToRegionMap, componentsCount] = MeshComponents::getAllComponentsMap(
         { mesh }, MeshComponents::FaceIncidence::PerEdge );
-    return findSelfCollidingTrianglesBS( mesh, cb, &faceToRegionMap );
+    return findSelfCollidingTrianglesBS( mesh, cb, &faceToRegionMap, touchIsIntersection );
 }
 
 // Helper function to fix self-intersections on part of mesh
@@ -43,7 +43,7 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh }, MeshComponents::FaceIncidence::PerEdge ).first;
     auto res = findSelfCollidingTrianglesBS( mesh,
         subprogress( settings.callback, 0.0f, progress ),
-        &faceToRegionMap);
+        &faceToRegionMap, currentSettings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
     FaceBitSet badFaces = std::move( res.value() );
@@ -81,7 +81,7 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh }, MeshComponents::FaceIncidence::PerEdge ).first;
     res = findSelfCollidingTrianglesBS( mesh,
         subprogress( settings.callback, endProgress, 1.0f ),
-        &faceToRegionMap );
+        &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
     badFaces = res.value() - badFaces; // Exclude incurable faces
@@ -111,14 +111,26 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     if ( !reportProgress( settings.callback, 0.0f ) )
         return unexpectedOperationCanceled();
 
+    if ( settings.touchIsIntersection )
+    {
+        FixMeshDegeneraciesParams fdParams;
+        fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
+        fdParams.tinyEdgeLength = fdParams.tinyEdgeLength * 0.1f;
+        fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+        fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
+        auto fdRes = fixMeshDegeneracies( mesh, fdParams );
+        if ( !fdRes.has_value() )
+            return fdRes;
+    }
+
     auto faceToRegionMap = MeshComponents::getAllComponentsMap( { mesh } ).first;
 
-    if ( !reportProgress( settings.callback, 0.05f ) )
+    if ( !reportProgress( settings.callback, 0.25f ) )
         return unexpectedOperationCanceled();
 
     auto res = findSelfCollidingTrianglesBS( mesh,
-                                             subprogress( settings.callback, 0.05f, 0.3f ),
-                                             &faceToRegionMap );
+                                             subprogress( settings.callback, 0.25f, 0.4f ),
+                                             &faceToRegionMap, settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
@@ -134,14 +146,13 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( currentSettings.subdivideEdgeLen <= 0.0f )
             currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;
 
-
         SubdivideSettings ssettings;
         ssettings.region = &res.value();
         ssettings.maxEdgeLen = currentSettings.subdivideEdgeLen;
         ssettings.maxEdgeSplits = 1000;
         ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
         ssettings.criticalAspectRatioFlip = FLT_MAX;
-        ssettings.progressCallback = subprogress( settings.callback, 0.3f, 0.5f );
+        ssettings.progressCallback = subprogress( settings.callback, 0.4f, 0.5f );
         subdivideMesh( mesh, ssettings );
     }
 
@@ -155,7 +166,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 
     res = findSelfCollidingTrianglesBS( MeshPart( mesh, &res.value() ),
                                         subprogress( settings.callback, 0.55f, 0.7f ),
-                                        &faceToRegionMap );
+                                        &faceToRegionMap,settings.touchIsIntersection );
 
     if ( !res.has_value() )
         return unexpected( res.error() );
@@ -176,7 +187,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     }
     else
     {
-        auto boundaryEdges = mesh.topology.findBoundaryEdges();
+        auto boundaryEdges = mesh.topology.findLeftBdEdges();
         mesh.topology.deleteFaces( *res );
         mesh.topology.deleteFaces( findHoleComplicatingFaces( mesh ) );
         mesh.invalidateCaches();
@@ -185,8 +196,6 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         if ( !reportProgress( settings.callback, 0.8f ) )
             return unexpectedOperationCanceled();
 
-        FaceBitSet newFaces;
-        VertBitSet newVerts;
         auto sp = subprogress( settings.callback, 0.8f, 0.95f );
         for ( int i = 0; i < holes.size(); ++i )
         {
@@ -205,14 +214,12 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
             // Fill hole
             // MultipleEdgesResolveMode::Simple should be enough after deleting findHoleComplicatingFaces(...)
             // But if multiple edges appear often, could be changed to MultipleEdgesResolveMode::Strong
-            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),.outNewFaces = &newFaces,
+            fillHole( mesh, holes[i].front(), {.metric = getMinAreaMetric(mesh),
                 .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Simple });
 
             if ( !reportProgress( sp, float( i + 1 ) / float( holes.size() ) ) )
                 return unexpectedOperationCanceled();
         }
-
-        relax( mesh, { {currentSettings.relaxIterations, &newVerts } } );
 
         if ( !reportProgress( settings.callback, 1.0f ) )
             return unexpectedOperationCanceled();
@@ -221,19 +228,19 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 }
 
 // Helper function to find own self-intersections on a mesh part
-static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb )
+static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb, bool touchIsIntersection )
 {
-    FaceMap tgt2srcFaces;
+    FaceMap tgt2srcFaceMap;
     PartMapping mapping;
-    mapping.tgt2srcFaces = &tgt2srcFaces;
+    mapping.tgt2srcFaceMap = &tgt2srcFaceMap;
     Mesh partMesh = mesh.cloneRegion( part, false, mapping );
     // Faster than searching in mesh part due to AABB tree rebuild
-    auto res = findSelfCollidingTrianglesBS( { partMesh }, cb );
+    auto res = findSelfCollidingTrianglesBS( { partMesh }, cb, nullptr, touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
     FaceBitSet result( mesh.topology.lastValidFace() + 1 );
     for ( FaceId f : *res )
-        result.set( tgt2srcFaces[f] );
+        result.set( tgt2srcFaceMap[f] );
     return result;
 }
 
@@ -245,7 +252,7 @@ static Expected<void> doFix( Mesh &mesh, FaceBitSet &part, const Settings & sett
     // Find colliding triangles
     float progress = 0.1f, endProgress = 0.9f;
     auto res = findSelfCollidingTrianglesBSForPart( mesh, part, 
-        subprogress( cb, 0.0f, progress ) );
+        subprogress( cb, 0.0f, progress ), settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
     // Get area around colliding triangles
@@ -327,7 +334,7 @@ static Expected<void> doFix( Mesh &mesh, FaceBitSet &part, const Settings & sett
     }
     // Find resulting self-intersections
     res = findSelfCollidingTrianglesBSForPart( mesh, part,
-        subprogress( cb, endProgress, 1.0 ) );
+        subprogress( cb, endProgress, 1.0 ), settings.touchIsIntersection );
     if ( !res.has_value() )
         return unexpected( res.error() );
     accumBadFaces |= res.value();

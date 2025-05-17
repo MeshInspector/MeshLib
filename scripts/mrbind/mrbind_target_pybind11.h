@@ -76,4 +76,11 @@ struct MRBind::pb11::IgnoreFieldsWithType<T> : std::true_type {};
 template <>
 struct MRBind::pb11::AllowAutomaticPrinting<MR::OpenVdbFloatGrid> : std::false_type {};
 
+
+// Custom GIL handling:
+
+// Handle the `MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM` macro.
+template <typename T> requires requires{typename std::remove_cvref_t<T>::_prefer_gil_unlock_when_used_as_param;}
+struct MRBind::pb11::ParamGilHandling<T> : std::integral_constant<MRBind::pb11::GilHandling, MRBind::pb11::GilHandling::prefer_unlock> {};
+
 #endif

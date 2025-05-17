@@ -24,7 +24,7 @@ namespace MeshComponents
 template<typename T>
 static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
 {
-    MR_TIMER
+    MR_TIMER;
     Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto f : region )
@@ -42,7 +42,7 @@ static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id
 
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
@@ -60,7 +60,7 @@ FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence inci
 
 VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
 
@@ -79,7 +79,7 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, float minArea, int * numSmallerComponents )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
@@ -130,7 +130,7 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
@@ -165,7 +165,7 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
 
 VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( minVerts >= 2 );
     if ( minVerts <= 1 )
         return mesh.topology.getVertIds( region );
@@ -183,7 +183,7 @@ VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBit
 
 FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER
+    MR_TIMER;
 
     FaceBitSet res;
     if ( seeds.none() )
@@ -220,6 +220,70 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
     return getLargeByAreaComponents( mp, unionFind, minArea );
 }
 
+Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )
+{
+    if ( params.coverRatio > 1.0f )
+        return FaceBitSet();
+    if ( params.coverRatio <= 0.0f )
+        return getComponents( mp, seeds, params.incidence, params.isCompBd );
+
+    MR_TIMER;
+
+    auto res = seeds;
+    auto compMapRes = MeshComponents::getAllComponentsMap( mp, params.incidence, params.isCompBd );
+    const auto& compMap = compMapRes.first;
+    int numComps = compMapRes.second;
+
+    if ( !reportProgress( params.cb, 0.3f ) )
+        return unexpectedOperationCanceled();
+
+    RegionBitSet compsWithSeeds( numComps );
+    for ( auto f : res )
+        compsWithSeeds.set( compMap[f] );
+
+    if ( !reportProgress( params.cb, 0.6f ) )
+        return unexpectedOperationCanceled();
+
+    const auto& region = mp.mesh.topology.getFaceIds( mp.region );
+
+    struct AreaCounter
+    {
+        float seedArea = 0.0f;
+        float totalArea = 0.0f;
+    };
+    Vector<AreaCounter, RegionId> areas( numComps );
+    for ( auto f : region )
+    {
+        auto rId = compMap[f];
+        if ( !compsWithSeeds.test( rId ) )
+            continue;
+        auto area = mp.mesh.area( f );
+        areas[rId].totalArea += area;
+        if ( res.test( f ) )
+            areas[rId].seedArea += area;
+    }
+
+    if ( !reportProgress( params.cb, 0.9f ) )
+        return unexpectedOperationCanceled();
+
+    auto largeSeedsCompsBs = compsWithSeeds;
+    for ( auto rId : compsWithSeeds )
+    {
+        if ( areas[rId].seedArea / areas[rId].totalArea < params.coverRatio )
+            largeSeedsCompsBs.reset( rId );
+    }
+    res.resize( region.size() );
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        res.set( f, largeSeedsCompsBs.test( compMap[f] ) );
+    } );
+    if ( !reportProgress( params.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    if ( params.optOutNumComponents )
+        *params.optOutNumComponents = int( largeSeedsCompsBs.count() );
+    return res;
+}
+
 FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
@@ -231,7 +295,7 @@ FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, fl
 FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
-    MR_TIMER
+    MR_TIMER;
 
     HashMap<FaceId, float> root2area;
     const FaceBitSet& region = mp.mesh.topology.getFaceIds( mp.region );
@@ -278,7 +342,7 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
 
 std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const LargeByAreaComponentsSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<FaceBitSet> res;
 
     assert( settings.maxLargeComponents > 0 );
@@ -348,7 +412,7 @@ std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const Lar
 
 VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region /*= nullptr */ )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet res;
     if ( seeds.none() )
@@ -381,7 +445,7 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
 
 size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
@@ -405,7 +469,7 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
 std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
     FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( maxComponentCount > 1 );
     if ( maxComponentCount < 1 )
         maxComponentCount = INT_MAX;
@@ -450,7 +514,7 @@ std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceInci
 
 static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
@@ -502,8 +566,8 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
 
 std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& unionFindStruct )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     getUnionFindStructureFacesPerEdge( meshPart, isCompBd, unionFindStruct );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
@@ -561,7 +625,7 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
         const float zMin = std::min( zRanges[root0].x, zRanges[root1].x );
 
         if ( zMax - zMin < zTolerance )
-        {           
+        {
             zRanges[root0].x = zRanges[root1].x = zMin;
             zRanges[root0].y = zRanges[root1].y = zMax;
             return false;
@@ -573,7 +637,7 @@ std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zT
 
 std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
@@ -585,7 +649,7 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
 Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
     const Face2RegionMap & regionMap, int numRegions )
 {
-    MR_TIMER
+    MR_TIMER;
     Vector<double, RegionId> res( numRegions );
     for ( auto f : meshPart.mesh.topology.getFaceIds( meshPart.region ) )
         res[regionMap[f]] += meshPart.mesh.dblArea( f );
@@ -599,7 +663,7 @@ Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
 std::pair<FaceBitSet, int> getLargeByAreaRegions( const MeshPart& meshPart,
     const Face2RegionMap & regionMap, int numRegions, float minArea )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto regionAreas = getRegionAreas( meshPart, regionMap, numRegions );
 
     FaceBitSet largeRegions( meshPart.mesh.topology.faceSize() );
@@ -619,7 +683,7 @@ std::pair<FaceBitSet, int> getLargeByAreaRegions( const MeshPart& meshPart,
 
 static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFindStruct, const VertBitSet& vertsRegion, const VertBitSet* doNotOutput )
 {
-    MR_TIMER
+    MR_TIMER;
 
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, vertsRegion );
@@ -636,7 +700,7 @@ static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFi
 
 std::vector<VertBitSet> getAllComponentsVerts( const Mesh& mesh, const VertBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
     const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
     return getAllComponentsVerts( unionFindStruct, vertsRegion, nullptr );
@@ -660,7 +724,7 @@ std::vector<VertBitSet> getAllComponentsVertsSeparatedByPaths( const Mesh& mesh,
 
 std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureVerts( mesh, edges );
 
     const auto& allRoots = unionFindStruct.roots();
@@ -691,8 +755,8 @@ std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSe
 
 std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& edges )
 {
-    MR_TIMER
-    
+    MR_TIMER;
+
     auto unionFindStruct = getUnionFindStructureVerts( mesh, edges );
 
     const auto& allRoots = unionFindStruct.roots();
@@ -721,13 +785,13 @@ std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& m
     return res;
 }
 
-bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
+bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection )
 {
     MR_TIMER;
 
-    auto unionFindStruct = getUnionFindStructureVerts( mesh );   
+    auto unionFindStruct = getUnionFindStructureVerts( topology );
     const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, mesh.topology.getValidVerts() );
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, topology.getValidVerts() );
     RegionBitSet remainKeysBitSets( k );
     for ( VertId v( 0 ); v < uniqueRootsMap.size(); ++v )
     {
@@ -737,6 +801,11 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
             remainKeysBitSets.set( rId );
     }
     return remainKeysBitSets.count() != remainKeysBitSets.size();
+}
+
+bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
+{
+    return hasFullySelectedComponent( mesh.topology, selection );
 }
 
 void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
@@ -771,10 +840,10 @@ UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, c
 UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
     UnionFind<FaceId> res;
-    if ( incidence == FaceIncidence::PerEdge )    
+    if ( incidence == FaceIncidence::PerEdge )
         return getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
 
-    MR_TIMER
+    MR_TIMER;
     assert( !isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
@@ -800,11 +869,11 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
     return res;
 }
 
-UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )
+UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region )
 {
-    MR_TIMER
+    MR_TIMER;
 
-    const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
+    const VertBitSet& vertsRegion = topology.getVertIds( region );
 
     auto test = [region]( VertId v )
     {
@@ -820,9 +889,9 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
     VertId v1;
     for ( auto v0 : vertsRegion )
     {
-        for ( auto e : orgRing( mesh.topology, v0 ) )
+        for ( auto e : orgRing( topology, v0 ) )
         {
-            v1 = mesh.topology.dest( e );
+            v1 = topology.dest( e );
             if ( v1.valid() && test( v1 ) && v1 < v0 )
                 unionFindStructure.unite( v0, v1 );
         }
@@ -830,9 +899,14 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
     return unionFindStructure;
 }
 
+UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )
+{
+    return getUnionFindStructureVerts( mesh.topology, region );
+}
+
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
 
@@ -847,7 +921,7 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet
 
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const UndirectedEdgeBitSet& uEdges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
 
@@ -862,7 +936,7 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const Undirected
 
 UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const UndirectedEdgeBitSet & ignoreEdges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
 
@@ -879,7 +953,7 @@ UnionFind<VertId> getUnionFindStructureVertsEx( const Mesh& mesh, const Undirect
 
 UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, const SurfacePath& path, VertBitSet * outPathVerts )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
 
     for ( const MeshEdgePoint & ep : path )
@@ -899,7 +973,7 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, c
 
 UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, const std::vector<SurfacePath>& paths, VertBitSet* outPathVerts )
 {
-    MR_TIMER
+    MR_TIMER;
     UndirectedEdgeBitSet ignoreEdges( mesh.topology.undirectedEdgeSize() );
 
     for ( const auto& path: paths )
@@ -919,7 +993,7 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, 
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
 }
 
-TEST(MRMesh, getAllComponentsEdges) 
+TEST(MRMesh, getAllComponentsEdges)
 {
     Triangulation t{
         { 0_v, 1_v, 2_v },
@@ -958,7 +1032,7 @@ TEST(MRMesh, getAllComponentsEdges)
 
 UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots )
 {
-    MR_TIMER
+    MR_TIMER;
 
     UnionFind<UndirectedEdgeId> res( mesh.topology.undirectedEdgeSize() );
     const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
@@ -969,7 +1043,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
         BitSetParallelForAllRanged( lastPass, [&] ( UndirectedEdgeId ue, const auto & range )
         {
             const EdgeId e = ue;
-            const UndirectedEdgeId ues[4] = 
+            const UndirectedEdgeId ues[4] =
             {
                 mesh.topology.prev( e ),
                 mesh.topology.next( e ),
@@ -993,7 +1067,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
     for ( auto ue : lastPass )
     {
         const EdgeId e = ue;
-        const UndirectedEdgeId ues[4] = 
+        const UndirectedEdgeId ues[4] =
         {
             mesh.topology.prev( e ),
             mesh.topology.next( e ),
@@ -1023,7 +1097,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
 
 UndirectedEdgeBitSet getComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& seeds )
 {
-    MR_TIMER
+    MR_TIMER;
     auto unionFindStruct = getUnionFindStructureUndirectedEdges( mesh, true );
 
     UndirectedEdgeId commonRoot;

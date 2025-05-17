@@ -3,6 +3,16 @@
 namespace MR
 {
 
+/// determines the weight or mass of each vertex in applications like Laplacian
+enum class VertexMass
+{
+    /// all vertices have same mass=1
+    Unit = 0,
+
+    /// vertex mass depends on local geometry and proportional to the area of first-ring triangles
+    NeiArea
+};
+
 /// determines the weight of each edge in applications like Laplacian
 enum class EdgeWeights
 {
@@ -10,13 +20,10 @@ enum class EdgeWeights
     Unit = 0,
 
     /// edge weight depends on local geometry and uses cotangent values
-    Cotan,
-
-    /// [deprecated] edge weight is equal to edge length times cotangent weight
-    CotanTimesLength,
+    Cotan
 
     /// cotangent edge weights and equation weights inversely proportional to square root of local area
-    CotanWithAreaEqWeight
+    // CotanWithAreaEqWeight => use EdgeWeights::Cotan and VertexMass::NeiArea instead
 };
 
 /// typically returned from callbacks to control the behavior of main algorithm

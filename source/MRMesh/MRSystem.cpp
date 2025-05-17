@@ -1,4 +1,5 @@
 #include "MRSystem.h"
+#include "MRMesh/MRChrono.h"
 #include "MRStringConvert.h"
 #include "MRSystemPath.h"
 #include "MRConfig.h"
@@ -355,6 +356,8 @@ std::filesystem::path GetWindowsInstallDirectory()
 std::string GetCpuId()
 {
 #ifdef __EMSCRIPTEN__
+    if constexpr ( sizeof( void* ) == 8 )
+        return "Web Browser (Memory64 enabled)";
     return "Web Browser";
 #elif defined(__APPLE__)
     char CPUBrandString[0x40] = {};
@@ -430,7 +433,17 @@ std::string GetDetailedOSName()
     return winName;
 #else
 #ifdef __EMSCRIPTEN__
-    return "Wasm";
+#ifdef __EMSCRIPTEN_PTHREADS__
+    if constexpr ( sizeof( void* ) == 8 )
+        return "wasm64-mt";
+    else
+        return "wasm32-mt";
+#else
+    if constexpr ( sizeof( void* ) == 8 )
+        return "wasm64-st"; // now we don't have this configuration
+    else
+        return "wasm32-st";
+#endif
 #else
 // if linux
 #ifndef __APPLE__
@@ -577,9 +590,15 @@ void setupLoggerByDefault()
 #endif
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
+
+#ifndef NDEBUG
+    const auto minLevel = spdlog::level::trace;
+#else
+    const auto minLevel = spdlog::level::info;
+#endif
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level( spdlog::level::trace );
+    console_sink->set_level( minLevel );
     console_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( console_sink );
 
@@ -590,27 +609,27 @@ void setupLoggerByDefault()
     fileName /= "Logs";
     removeOldLogs( fileName );
 
-    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", fmt::localtime( t ),
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", LocaltimeOrZero( t ),
                 std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
 
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );
-    file_sink->set_level( spdlog::level::trace );
+    file_sink->set_level( minLevel );
     file_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( file_sink );
 
 #ifdef _WIN32
     auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-    msvc_sink->set_level( spdlog::level::trace );
+    msvc_sink->set_level( minLevel );
     msvc_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( msvc_sink );
 #endif
 
     auto logger = Logger::instance().getSpdLogger();
 
-    logger->set_level( spdlog::level::trace );
+    logger->set_level( minLevel );
 
     // update file on each msg
-    logger->flush_on( spdlog::level::trace );
+    logger->flush_on( minLevel );
 
     spdlog::info( "MR Version info: {}", GetMRVersionString() );
 }

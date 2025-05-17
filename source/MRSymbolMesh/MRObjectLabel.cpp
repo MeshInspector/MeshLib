@@ -173,7 +173,7 @@ void ObjectLabel::setDefaultColors_()
 
 void ObjectLabel::buildMeshFromText() const
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<std::string> splited = split( label_.text, "\n" );
 
     mesh_ = std::make_shared<Mesh>();

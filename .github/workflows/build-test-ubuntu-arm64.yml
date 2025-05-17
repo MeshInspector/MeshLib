@@ -30,10 +30,9 @@ on:
 jobs:
   ubuntu-arm-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux-arm64]
+    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: ${{ matrix.docker-image }}
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -105,6 +104,8 @@ jobs:
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
           echo $PATH >> $GITHUB_PATH
 
       - name: Setup python requirements
@@ -188,7 +189,7 @@ jobs:
       - name: Extract Deb
         run: dpkg --extract meshlib_${{matrix.os}}-arm64-dev.deb $(pwd)/meshlib_install/
 
-      - name: Build C++ examples
+      - name: Build C++ examples and samples
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -197,6 +198,14 @@ jobs:
             -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
           cmake \
             --build cpp-examples-build \
+            --parallel $(nproc)
+          cmake \
+            -S examples/cpp-samples \
+            -B cpp-samples-build \
+            -D CMAKE_FIND_ROOT_PATH=$(pwd)/meshlib_install/ \
+            -D CMAKE_CXX_COMPILER=${{ matrix.cxx-compiler }}
+          cmake \
+            --build cpp-samples-build \
             --parallel $(nproc)
 
       - name: Build C examples

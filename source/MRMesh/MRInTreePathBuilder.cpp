@@ -11,7 +11,7 @@ InTreePathBuilder::InTreePathBuilder( const MeshTopology & topology, const Undir
     : topology_( topology )
     , treeEdges_( treeEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     vertDistance_.resize( topology_.vertSize(), -1 );
 
     VertBitSet unvisited = topology_.getValidVerts();
@@ -61,7 +61,7 @@ EdgeId InTreePathBuilder::getEdgeBack_( VertId v0 ) const
 
 EdgePath InTreePathBuilder::build( VertId start, VertId finish ) const
 {
-    MR_TIMER
+    MR_TIMER;
     EdgePath res;
     auto ds = vertDistance_[start];
     if ( ds < 0 )
@@ -78,7 +78,7 @@ EdgePath InTreePathBuilder::build( VertId start, VertId finish ) const
 
     EdgePath start2branch;
     start2branch.reserve( ds );
-    
+
     auto oneStartStep = [&]()
     {
         assert( ds > 0 );

@@ -21,10 +21,13 @@ set(EXAMPLES
   MeshLoadSave
   MeshModification
   MeshOffset
-  MeshResolveDegenerations
+  MeshFixDegeneracies
   MeshStitchHole
   NoiseDenoise
   Triangulation
+  PointsToMesh
+  ContourTriangulation
+  TerrainTriangulation
 )
 
 foreach(TARGET ${EXAMPLES})

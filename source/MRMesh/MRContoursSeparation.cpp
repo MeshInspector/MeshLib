@@ -23,9 +23,8 @@ std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vect
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
-            auto projRes = mesh.projectPoint( contour[i] );
-            if ( projRes )
-                projections[i] = projRes->mtp;
+            if ( auto projRes = mesh.projectPoint( contour[i] ) )
+                projections[i] = projRes.mtp;
         }
     } );
     for ( const auto& mtp : projections )

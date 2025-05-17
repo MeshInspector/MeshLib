@@ -12,7 +12,7 @@ namespace MR
 
 FaceBitSet findOuterLayer( const Mesh & mesh )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto szFaces = mesh.topology.faceSize();
     FaceBitSet innerSeeds( szFaces ), outerSeeds( szFaces );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )

@@ -22,7 +22,7 @@ namespace MR
 {
 
 void MeshTopology::vertResize( size_t newSize )
-{ 
+{
     if ( edgePerVertex_.size() >= newSize )
         return;
     edgePerVertex_.resize( newSize );
@@ -31,7 +31,7 @@ void MeshTopology::vertResize( size_t newSize )
 }
 
 void MeshTopology::vertResizeWithReserve( size_t newSize )
-{ 
+{
     if ( edgePerVertex_.size() >= newSize )
         return;
     edgePerVertex_.resizeWithReserve( newSize );
@@ -44,7 +44,7 @@ void MeshTopology::faceResize( size_t newSize )
     if ( edgePerFace_.size() >= newSize )
         return;
     edgePerFace_.resize( newSize );
-    if ( updateValids_ ) 
+    if ( updateValids_ )
         validFaces_.resize( newSize );
 }
 
@@ -53,7 +53,7 @@ void MeshTopology::faceResizeWithReserve( size_t newSize )
     if ( edgePerFace_.size() >= newSize )
         return;
     edgePerFace_.resizeWithReserve( newSize );
-    if ( updateValids_ ) 
+    if ( updateValids_ )
         validFaces_.resizeWithReserve( newSize );
 }
 
@@ -104,7 +104,7 @@ EdgeId MeshTopology::lastNotLoneEdge() const
 
 void MeshTopology::excludeLoneEdges( UndirectedEdgeBitSet & edges ) const
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto ue : edges )
         if ( isLoneEdge( ue ) )
             edges.reset( ue );
@@ -112,7 +112,7 @@ void MeshTopology::excludeLoneEdges( UndirectedEdgeBitSet & edges ) const
 
 size_t MeshTopology::computeNotLoneUndirectedEdges() const
 {
-    MR_TIMER
+    MR_TIMER;
 
     return parallel_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ undirectedEdgeSize() } ), size_t(0),
     [&] ( const auto & range, size_t curr )
@@ -129,7 +129,7 @@ size_t MeshTopology::computeNotLoneUndirectedEdges() const
 
 UndirectedEdgeBitSet MeshTopology::findNotLoneUndirectedEdges() const
 {
-    MR_TIMER
+    MR_TIMER;
 
     UndirectedEdgeBitSet res( undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
@@ -152,7 +152,7 @@ size_t MeshTopology::heapBytes() const
 
 void MeshTopology::shrinkToFit()
 {
-    MR_TIMER
+    MR_TIMER;
     edges_.vec_.shrink_to_fit();
     edgePerVertex_.vec_.shrink_to_fit();
     validVerts_.shrink_to_fit();
@@ -323,7 +323,7 @@ bool MeshTopology::fromSameOriginRing( EdgeId a, EdgeId b ) const
         if ( ia == ib ) return true;
         ib = prev( ib );
         if ( ib == b )  return false;
-    } 
+    }
 }
 
 bool MeshTopology::fromSameLeftRing( EdgeId a, EdgeId b ) const
@@ -340,7 +340,7 @@ bool MeshTopology::fromSameLeftRing( EdgeId a, EdgeId b ) const
         if ( ia == ib ) return true;
         ib = next( ib ).sym();
         if ( ib == b )  return false;
-    } 
+    }
 }
 
 int MeshTopology::getOrgDegree( EdgeId a ) const
@@ -387,9 +387,8 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
-void MeshTopology::getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const
+void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const
 {
-    e0 = edgeWithLeft( f );
     e1 = prev( e0.sym() );
     e2 = prev( e1.sym() );
     assert( e0 == prev( e2.sym() ) );
@@ -397,7 +396,7 @@ void MeshTopology::getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 
 
 std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<ThreeVertIds> res;
     assert( updateValids_ );
     res.reserve( numValidFaces_ );
@@ -413,7 +412,7 @@ std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 
 Triangulation MeshTopology::getTriangulation() const
 {
-    MR_TIMER
+    MR_TIMER;
     Triangulation res;
     res.resize( faceSize() ); //TODO: resizeNoInit
     assert( updateValids_ );
@@ -581,7 +580,7 @@ EdgeId MeshTopology::findEdge( VertId o, VertId d ) const
 
 bool MeshTopology::isClosed( const FaceBitSet * region ) const
 {
-    MR_TIMER
+    MR_TIMER;
     std::atomic_bool res{ true };
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
@@ -608,7 +607,7 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
 
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges( const FaceBitSet * region ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     EdgeBitSet representativeEdges;
     const auto num = findNumHoles( &representativeEdges );
@@ -627,7 +626,7 @@ std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges( const FaceBitSet * 
 
 int MeshTopology::findNumHoles( EdgeBitSet * holeRepresentativeEdges ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( holeRepresentativeEdges )
     {
@@ -635,11 +634,11 @@ int MeshTopology::findNumHoles( EdgeBitSet * holeRepresentativeEdges ) const
         holeRepresentativeEdges->resize( edgeSize(), false );
     }
 
-    auto bdEdges = findBoundaryEdges();
+    auto bdEdges = findLeftBdEdges();
     std::atomic<int> res;
 
     const int endBlock = int( bdEdges.size() + bdEdges.bits_per_block - 1 ) / bdEdges.bits_per_block;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, endBlock ), 
+    tbb::parallel_for( tbb::blocked_range<int>( 0, endBlock ),
         [&]( const tbb::blocked_range<int> & range )
         {
             int myHoles = 0; // with smallest edge in my range
@@ -691,7 +690,7 @@ EdgeLoop MeshTopology::getLeftRing( EdgeId e ) const
 
 std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es ) const
 {
-    MR_TIMER
+    MR_TIMER;
     std::vector<EdgeLoop> res;
     EdgeBitSet inRes;
     for ( auto e : es )
@@ -711,7 +710,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
 
 EdgeBitSet MeshTopology::findBoundaryEdges() const
 {
-    MR_TIMER
+    MR_TIMER;
     EdgeBitSet res( edges_.size() );
     BitSetParallelForAll( res, [&]( EdgeId e )
     {
@@ -721,9 +720,35 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     return res;
 }
 
+bool MeshTopology::isBdEdge( EdgeId e, const FaceBitSet * region ) const
+{
+    if ( !region )
+    {
+        assert( !isLoneEdge( e ) );
+        return !left( e ) || !right( e );
+    }
+    return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region );
+}
+
+EdgeBitSet MeshTopology::findLeftBdEdges( const FaceBitSet * region, const EdgeBitSet * test ) const
+{
+    MR_TIMER;
+    EdgeBitSet res( edges_.size() );
+    BitSetParallelForAll( res, [&]( EdgeId e )
+    {
+        if ( test && !test->test( e ) )
+            return;
+        if ( !region && !left( e ) && !isLoneEdge( e ) )
+            res.set( e );
+        if ( isLeftInRegion( e.sym(), region ) && !isLeftInRegion( e, region ) ) // shall skip lone edges
+            res.set( e );
+    } );
+    return res;
+}
+
 FaceBitSet MeshTopology::findBoundaryFaces( const FaceBitSet * region ) const
 {
-    MR_TIMER
+    MR_TIMER;
     const auto & fs = getFaceIds( region );
     FaceBitSet res( fs.size() );
     BitSetParallelFor( fs, [&]( FaceId f )
@@ -740,9 +765,22 @@ FaceBitSet MeshTopology::findBoundaryFaces( const FaceBitSet * region ) const
     return res;
 }
 
+FaceBitSet MeshTopology::findBdFaces( const FaceBitSet * region ) const
+{
+    MR_TIMER;
+    const auto & fs = getFaceIds( region );
+    FaceBitSet res( fs.size() );
+    BitSetParallelFor( fs, [&]( FaceId f )
+    {
+        if ( isBdFace( f, region ) )
+            res.set( f );
+    } );
+    return res;
+}
+
 VertBitSet MeshTopology::findBoundaryVerts( const VertBitSet * region ) const
 {
-    MR_TIMER
+    MR_TIMER;
     const auto & vs = getVertIds( region );
     VertBitSet res( vs.size() );
     BitSetParallelFor( vs, [&]( VertId v )
@@ -755,6 +793,18 @@ VertBitSet MeshTopology::findBoundaryVerts( const VertBitSet * region ) const
                 break;
             }
         }
+    } );
+    return res;
+}
+
+VertBitSet MeshTopology::findBdVerts( const FaceBitSet * region, const VertBitSet * test ) const
+{
+    MR_TIMER;
+    VertBitSet res( vertSize() );
+    BitSetParallelFor( getVertIds( test ), [&]( VertId v )
+    {
+        if ( isBdVertex( v, region ) )
+            res.set( v );
     } );
     return res;
 }
@@ -905,7 +955,7 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
 
 void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
-    MR_TIMER
+    MR_TIMER;
     for ( auto f : fs )
         deleteFace( f, keepEdges );
 }
@@ -1148,7 +1198,7 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new
 
 void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
 {
-    MR_TIMER
+    MR_TIMER;
 
     ParallelFor( edgePerFace_, [&]( FaceId f )
     {
@@ -1175,7 +1225,7 @@ void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents 
 void MeshTopology::addPart( const MeshTopology & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( from.updateValids_ );
     // in all maps: from index -> to index
@@ -1283,7 +1333,7 @@ void MeshTopology::addPart( const MeshTopology & from,
 
 bool MeshTopology::operator ==( const MeshTopology & b ) const
 {
-    MR_TIMER
+    MR_TIMER;
     // make fast comparisons first
     if ( updateValids_ && b.updateValids_ )
     {
@@ -1309,7 +1359,7 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
 
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
 {
-    MR_TIMER
+    MR_TIMER;
 
     updateValids_ = false;
 
@@ -1324,7 +1374,7 @@ void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, si
 
 void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, const FaceMap & fmap, const VertMap & vmap )
 {
-    MR_TIMER
+    MR_TIMER;
 
     assert( toEdgeId.valid() );
     assert( (int)toEdgeId + from.edges_.size() <= edges_.size() );
@@ -1383,7 +1433,7 @@ void MeshTopology::stopUpdatingValids()
 
 void MeshTopology::preferEdges( const UndirectedEdgeBitSet & stableEdges )
 {
-    MR_TIMER
+    MR_TIMER;
 
     tbb::parallel_for( tbb::blocked_range( 0_f, edgePerFace_.endId() ), [&]( const tbb::blocked_range<FaceId> & range )
     {
@@ -1410,7 +1460,7 @@ void MeshTopology::preferEdges( const UndirectedEdgeBitSet & stableEdges )
 
 bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
 
     stopUpdatingValids();
 
@@ -1520,7 +1570,7 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
             if ( edgeRing.empty() )
             {
                 // grid has valid vertex with no connections
-                // init edgePerVertex_[v] with invalid edge to override garbage from resizeNoInit 
+                // init edgePerVertex_[v] with invalid edge to override garbage from resizeNoInit
                 // (this is only possible case of unpacked vertices here)
                 edgePerVertex_[v] = {};
                 continue;
@@ -1546,7 +1596,7 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
 
 bool MeshTopology::computeValidsFromEdges( ProgressCallback cb )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( !updateValids_ );
 
     validVerts_.clear();
@@ -1603,7 +1653,7 @@ bool MeshTopology::computeValidsFromEdges( ProgressCallback cb )
 
 void MeshTopology::computeAllFromEdges_()
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertId maxValidVert;
     FaceId maxValidFace;
@@ -1657,7 +1707,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
@@ -1665,7 +1715,7 @@ void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & 
     const std::vector<EdgePath> & thisContours, const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
@@ -1675,7 +1725,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
 
@@ -1687,12 +1737,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
     VertHashMap vmap;
     vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
-    if ( map.tgt2srcEdges )
-        map.tgt2srcEdges->resize( undirectedEdgeSize() );
-    if ( map.tgt2srcVerts )
-        map.tgt2srcVerts->resize( vertSize() );
-    if ( map.tgt2srcFaces )
-        map.tgt2srcFaces->resize( faceSize() );
+    if ( map.tgt2srcWholeEdgeMap )
+        map.tgt2srcWholeEdgeMap->resize( undirectedEdgeSize() );
+    if ( map.tgt2srcVertMap )
+        map.tgt2srcVertMap->resize( vertSize() );
+    if ( map.tgt2srcFaceMap )
+        map.tgt2srcFaceMap->resize( faceSize() );
 
     VertBitSet fromVerts = from.getValidVerts();
     auto setVmap = [&] ( VertId key, VertId val )
@@ -1756,9 +1806,9 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 assert( inserted );
                 edges_.push_back( from.edges_[EdgeId{ ue }] );
                 edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-                if ( map.tgt2srcEdges )
+                if ( map.tgt2srcWholeEdgeMap )
                 {
-                    map.tgt2srcEdges->push_back( EdgeId{ ue } );
+                    map.tgt2srcWholeEdgeMap->push_back( EdgeId{ ue } );
                 }
             }
             if ( auto v = from.org( e ); v.valid() )
@@ -1768,8 +1818,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                     auto nv = addVertId();
                     [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
                     assert( inserted );
-                    if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts->push_back( v );
+                    if ( map.tgt2srcVertMap )
+                        map.tgt2srcVertMap->push_back( v );
                     edgePerVertex_[nv] = mapEdge( emap, e );
                     if ( updateValids_ )
                     {
@@ -1780,8 +1830,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             }
         }
         auto nf = addFaceId();
-        if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->push_back( f );
+        if ( map.tgt2srcFaceMap )
+            map.tgt2srcFaceMap ->push_back( f );
         fmap[f] = nf;
         edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
         if ( updateValids_ )
@@ -1886,19 +1936,19 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         edges_[eNx].prev = ePr;
     }
 
-    if ( map.tgt2srcEdges )
-        assert( map.tgt2srcEdges->size() == undirectedEdgeSize() );
-    if ( map.tgt2srcVerts )
-        assert( map.tgt2srcVerts->size() == vertSize() );
-    if ( map.tgt2srcFaces )
-        assert( map.tgt2srcFaces->size() == faceSize() );
+    if ( map.tgt2srcWholeEdgeMap )
+        assert( map.tgt2srcWholeEdgeMap->size() == undirectedEdgeSize() );
+    if ( map.tgt2srcVertMap )
+        assert( map.tgt2srcVertMap->size() == vertSize() );
+    if ( map.tgt2srcFaceMap )
+        assert( map.tgt2srcFaceMap->size() == faceSize() );
 
-    if ( map.src2tgtFaces )
-        *map.src2tgtFaces = std::move( fmap );
-    if ( map.src2tgtVerts )
-        *map.src2tgtVerts = std::move( vmap );
-    if ( map.src2tgtEdges )
-        *map.src2tgtEdges = std::move( emap );
+    if ( map.src2tgtFaceHashMap )
+        *map.src2tgtFaceHashMap = std::move( fmap );
+    if ( map.src2tgtVertHashMap )
+        *map.src2tgtVertHashMap = std::move( vmap );
+    if ( map.src2tgtWholeEdgeHashMap )
+        *map.src2tgtWholeEdgeHashMap = std::move( emap );
 }
 
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
@@ -1914,7 +1964,7 @@ template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
 
 void MeshTopology::rotateTriangles()
 {
-    MR_TIMER
+    MR_TIMER;
 
     tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, FaceId{edgePerFace_.size()} ), [&]( const tbb::blocked_range<FaceId> & range )
     {
@@ -1940,7 +1990,7 @@ void MeshTopology::rotateTriangles()
 
 void MeshTopology::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( rearrangeTriangles )
         rotateTriangles();
@@ -1966,7 +2016,7 @@ inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, Ed
 
 void MeshTopology::pack( const PackMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
 
     Vector<NoDefInit<HalfEdgeRecord>, UndirectedEdgeId> tmp( map.e.tsize );
     auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
@@ -2068,7 +2118,7 @@ void MeshTopology::pack( const PackMapping & map )
 template<typename T, typename G, typename P>
 static void shuffle( const BMap<Id<T>, Id<T>> & map, G && get, P && put )
 {
-    MR_TIMER
+    MR_TIMER;
 
     TaggedBitSet<T> replacedByNew( map.tsize );
     for ( Id<T> i{0}; i < map.b.size(); ++i )
@@ -2102,7 +2152,7 @@ static void shuffle( const BMap<Id<T>, Id<T>> & map, G && get, P && put )
 
 void MeshTopology::packMinMem( const PackMapping & map )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( map.f.tsize == numValidFaces_ );
     assert( map.v.tsize == numValidVerts_ );
     assert( map.e.tsize <= edgeSize() );
@@ -2262,7 +2312,7 @@ Expected<void> MeshTopology::read( std::istream & s, ProgressCallback callback )
 
 bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
 {
-    MR_TIMER
+    MR_TIMER;
 
     #define CHECK(x) { assert(x); if (!(x)) return false; }
     CHECK( updateValids_ );

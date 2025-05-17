@@ -10,6 +10,7 @@ int main()
     // Load mesh
     MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
     
+//! [0]
     // Repack mesh optimally.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing
     mesh.packOptimally();
@@ -27,6 +28,7 @@ int main()
 
     // Decimate mesh
     MR::decimateMesh( mesh, settings );
+//! [0]
 
     // Save result
     MR::MeshSave::toAnySupportedFormat( mesh, "decimated_mesh.stl" );

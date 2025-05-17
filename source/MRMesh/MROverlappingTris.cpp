@@ -9,7 +9,7 @@ namespace MR
 
 Expected<FaceBitSet> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings )
 {
-    MR_TIMER
+    MR_TIMER;
     FaceBitSet res( mp.mesh.topology.faceSize() );
     if ( BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
     {

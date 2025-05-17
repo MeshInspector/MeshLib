@@ -41,7 +41,9 @@ ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_CTM)
   list(APPEND MRIOEXTRAS_DEPENDENCIES OpenCTM)
-  include_directories(${MESHLIB_THIRDPARTY_DIR})
+  IF(NOT MR_EMSCRIPTEN)
+    target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/OpenCTM-git/lib>)
+  ENDIF()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_E57)
@@ -85,7 +87,7 @@ ENDIF()
 IF(NOT MRIOEXTRAS_NO_LAS)
   list(APPEND MRIOEXTRAS_DEPENDENCIES lazperf)
   IF(NOT MR_EMSCRIPTEN)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${MESHLIB_THIRDPARTY_DIR}/laz-perf/cpp)
+    target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/laz-perf/cpp>)
   ENDIF()
 ENDIF()
 
@@ -153,18 +155,22 @@ target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_LIBRARY_DIRS}
 )
 IF(MR_EMSCRIPTEN)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
     tbb
+    jsoncpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(APPLE)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt
     spdlog
     tbb
+    jsoncpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(WIN32)
@@ -173,14 +179,17 @@ ELSEIF(WIN32)
     fmt::fmt
     spdlog::spdlog
     TBB::tbb
+    JsonCpp::JsonCpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
+  include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     fmt::fmt
     spdlog::spdlog
     tbb
+    JsonCpp::JsonCpp
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ENDIF()

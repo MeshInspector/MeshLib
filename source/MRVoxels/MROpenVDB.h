@@ -1,5 +1,6 @@
 #pragma once
 
+#include <MRPch/MRSuppressWarning.h>
 #include <MRPch/MRTBB.h>
 
 #ifndef M_PI
@@ -10,8 +11,9 @@
 #define M_PI_2 1.5707963267948966192313216916398
 #endif
 
-#pragma warning(push)
+MR_SUPPRESS_WARNING_PUSH
 
+#ifdef _MSC_VER
 #pragma warning(disable:4005) // 'M_PI': macro redefinition
 #pragma warning(disable:4127)
 #pragma warning(disable:4146)
@@ -36,21 +38,20 @@
 
 // unknown pragmas
 #pragma warning(disable:4068)
+#endif
+
 #if defined(__GNUC__)
-#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if __GNUC__ == 12 || __GNUC__ == 13
 #pragma GCC diagnostic ignored "-Wmissing-template-keyword"
 #endif
 #endif
 
-#if __clang_major__ >= 19
-#pragma clang diagnostic push
+#if __clang_major__ >= 19 || __apple_build_version__ >= 17000000
 #pragma clang diagnostic ignored "-Wmissing-template-arg-list-after-template-kw"
 #endif
 
 #ifdef __EMSCRIPTEN__
-#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wabsolute-value"
 #endif
 
@@ -94,18 +95,7 @@ namespace OPENVDB_VERSION_NAME
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
 
-#ifdef __EMSCRIPTEN__
-#pragma clang diagnostic pop
-#endif
-
-#if __clang_major__ >= 19
-#pragma clang diagnostic pop
-#endif
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-#pragma warning(pop)
+MR_SUPPRESS_WARNING_POP
 
 #ifdef _WIN32
 //clean up after windows.h

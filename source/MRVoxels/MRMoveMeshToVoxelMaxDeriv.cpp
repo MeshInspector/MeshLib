@@ -169,7 +169,7 @@ struct OneIterSettings
 template<typename MeshType, typename VolumeType>
 VertBitSet adjustOneIter( MeshOnVoxelsT<MeshType, VolumeType>& mv, OneIterSettings s )
 {
-    MR_TIMER
+    MR_TIMER;
 
     VertBitSet correctedPoints( mv.mesh().points.size() );
     Vector<Vector3f, VertId> shifts( mv.mesh().points.size(), Vector3f{ 0.f, 0.f, 0.f } );
@@ -177,23 +177,19 @@ VertBitSet adjustOneIter( MeshOnVoxelsT<MeshType, VolumeType>& mv, OneIterSettin
     struct ThreadSpecific {
         MeshOnVoxelsT<MeshType, VolumeType> mv;            // Volume accessors are copied for thread safety
         std::vector<float> values;  // Pre-allocate working vectors
-        std::vector<float> derivatives;
     } threadSpecificExemplar {
         mv,
         std::vector<float>( s.samplePoints ),
-        std::vector<float>( s.samplePoints - 1 )
     };
     tbb::enumerable_thread_specific<ThreadSpecific> threadSpecific( std::move( threadSpecificExemplar ) );
     BitSetParallelFor( mv.mesh().topology.getValidVerts(), threadSpecific,
         [&correctedPoints, &shifts, &s] ( VertId v, ThreadSpecific &local )
         {
             std::vector<float> &values = local.values;
-            std::vector<float> &derivatives = local.derivatives;
 
             // Calculate values
             Vector3f pt = local.mv.point( v ), offset = local.mv.getOffsetVector( v );
             local.mv.getValues( values, pt, offset );
-            local.mv.getDerivatives( derivatives, values );
 
             const auto argMinD = local.mv.pseudoIndex( 2, s.samplePoints );
             const auto argMaxD = local.mv.pseudoIndex( s.samplePoints - 3, s.samplePoints - 1 );
@@ -250,7 +246,7 @@ Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
     ProgressCallback callback
 )
 {
-    MR_TIMER
+    MR_TIMER;
 
     if ( !relax( mesh, { { .iterations = 1, .force = settings.preparationSmoothForce } }, subprogress( callback, 0.0f, 0.1f ) ) )
         return unexpectedOperationCanceled();

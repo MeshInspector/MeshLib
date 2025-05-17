@@ -13,7 +13,7 @@ namespace MR
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radius,
     Triangulation & appendTris, std::vector<VertId> & neis, bool onlyLargerVids )
 {
-    MR_TIMER
+    MR_TIMER;
     assert( radius > 0 );
     const auto r = double( radius );
     const auto rr = sqr( r );
@@ -59,7 +59,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, float radiu
 
 Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius )
 {
-    MR_TIMER
+    MR_TIMER;
     struct ThreadData
     {
         Triangulation tris;

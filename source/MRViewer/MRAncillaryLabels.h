@@ -22,7 +22,7 @@ struct MRVIEWER_CLASS AncillaryLabel
     AncillaryLabel() = default;
 
     /// since this uniquely owns an ancillary object, we provide only move operations, not copy
-    AncillaryLabel( AncillaryLabel && b ) noexcept : obj{ std::move( b.obj ) } {}
+    AncillaryLabel( AncillaryLabel && b ) noexcept = default;
     AncillaryLabel & operator =( AncillaryLabel && b ) { reset(); obj = std::move( b.obj ); return *this; }
 
     /// Make not-pickable ancillary object, link it to parent object, and set label text

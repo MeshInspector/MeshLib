@@ -1,4 +1,5 @@
 #include "MRIOFilesMenuItems.h"
+#include "MRMesh/MRChrono.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
@@ -66,7 +67,7 @@
 #endif
 
 #if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-#include <clip/clip.h>
+#include <clip.h>
 #endif
 
 #include <unordered_set>
@@ -106,16 +107,38 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
     } );
 }
 
+#ifdef __EMSCRIPTEN__
+
+Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
+{
+    Json::Value root;
+    root["Name"] = obj.name();
+    for (const auto& child : obj.children())
+    {
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
+    }
+    return root;
+}
+
+Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Object>>& objs )
+{
+    Json::Value root;
+    for (const auto& obj : objs )
+        root["Children"].append( prepareJsonObjHierarchyRecursive( *obj ) );
+    return root;
+}
+#endif
+
 }
 
 
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
+EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId )
 {
     using namespace MR;
-    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters
+    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
 #ifndef MRMESH_NO_OPENVDB
         | VoxelsLoad::getFilters()
 #endif
@@ -131,7 +154,19 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
         showError( stringUnsupportedFileExtension() );
         return;
     }
-    getViewerInstance().loadFiles( paths );
+    FileLoadOptions opts;
+    opts.loadedCallback = [contextId]( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )
+    {
+        auto hierarchyRoot = prepareJsonObjsHierarchy(objs);
+        hierarchyRoot["Errors"] = errors;
+        hierarchyRoot["Warnings"] = warnings;
+        auto hierarchyLine = hierarchyRoot.toStyledString();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+        EM_ASM( emplace_file_in_local_FS_and_open_notifier[$0]( UTF8ToString($1) ), contextId, hierarchyLine.c_str() );
+#pragma GCC diagnostic pop
+    };
+    getViewerInstance().loadFiles( paths, opts );
 }
 
 EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )
@@ -177,7 +212,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifndef __EMSCRIPTEN__
             AllFilter |
 #endif
-            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters | ObjectLoad::getFilters();
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif
@@ -445,7 +480,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
-    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
+    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
 #ifndef MESHLIB_NO_VOXELS
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
 #endif
@@ -735,7 +770,7 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", LocaltimeOrZero( t ) );
 
         auto savePath = saveFileDialog( {
             .fileName = name,
@@ -785,7 +820,7 @@ bool CaptureUIScreenshotMenuItem::action()
     {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t( now );
-        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
+        auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", LocaltimeOrZero( t ) );
 
         auto savePath = saveFileDialog( {
             .fileName = name,

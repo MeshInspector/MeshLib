@@ -18,13 +18,14 @@ public:
     struct Node
     {
         Box3f box; ///< bounding box of whole subtree
-        NodeId leftOrFirst, rightOrLast; ///< child nodes indices if >=0, points indices if < 0
+        NodeId l;  ///< left child node for an inner node, or -(l+1) is the index of the first point in a leaf node
+        NodeId r;  ///< right child node for an inner node, or -(r+1) is the index of the last point in a leaf node
         /// returns true if node represent real points, false if it has child nodes
-        bool leaf() const { return !leftOrFirst.valid(); }
+        bool leaf() const { return !l.valid(); }
         /// returns [first,last) indices of leaf points
-        std::pair<int, int> getLeafPointRange() const { assert( leaf() ); return {-( leftOrFirst + 1 ),-( rightOrLast + 1 )}; }
+        std::pair<int, int> getLeafPointRange() const { assert( leaf() ); return { -( l + 1 ),-( r + 1 ) }; }
         /// sets [first,last) to this node (leaf)
-        void setLeafPointRange( int first, int last ) { leftOrFirst = NodeId( -( first + 1 ) ); rightOrLast = NodeId( -( last + 1 ) ); }
+        void setLeafPointRange( int first, int last ) { l = NodeId( -( first + 1 ) ); r = NodeId( -( last + 1 ) ); }
     };
     using NodeVec = Vector<Node, NodeId>;
     using NodeBitSet = TaggedBitSet<NodeTag>;

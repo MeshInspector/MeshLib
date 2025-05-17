@@ -90,6 +90,11 @@ public:
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
     MRVIEWER_API bool ignoreOcclusion() const { return ignoreOcclusion_; }
+
+    /// restricts editable area to vertices whose normals look into the same half-space as normal under cursor
+    void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
+    /// get state of an editable region restriction 
+    bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -107,14 +112,14 @@ private:
     void resetConnections_();
 
     void changeSurface_();
-    void updateUVmap_( bool set );
+    void updateUVmap_( bool set, bool wholeMesh = false );
     void updateRegion_( const Vector2f& mousePos );
     void abortEdit_();
     /// Laplacian
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
-    void updateVizualizeSelection_( const ObjAndPick& objAndPick );
+    void updateVizualizeSelection_();
 
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
@@ -128,12 +133,15 @@ private:
     /// if we previously appended SmartChangeMeshPointsAction, then switch it from uncompressed to compressed format to occupy less amount of memory
     void compressChangePointsAction_();
 
+    void updateDistancesAndRegion_( const Mesh& mesh, const VertBitSet& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
+
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
     VertBitSet unchangeableVerts_;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
+    VertBitSet activePickedVertices_; ///< vertices that are considered under mouse in curernt frame (could be many in case of fast mouse mouvement)
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
     VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
     VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down
@@ -177,6 +185,7 @@ private:
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
+    bool editOnlyCodirectedSurface_ = true;
 };
 
 }

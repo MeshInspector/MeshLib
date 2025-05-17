@@ -84,34 +84,34 @@ namespace MR
             };
 
             ///
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern float mrSuggestVoxelSize(MRMeshPart mp, float approxNumVoxels);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrDoubleOffsetMesh(MRMeshPart mp, float offsetA, float offsetB, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMcOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMcShellMeshRegion(IntPtr mesh, IntPtr region, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
 
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrSharpOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGeneralOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrThickenMesh(IntPtr mesh, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
 
             /// computes size of a cubical voxel to get approximately given number of voxels during rasterization
@@ -135,7 +135,7 @@ namespace MR
                 IntPtr res = mrOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -157,7 +157,7 @@ namespace MR
                 IntPtr res = mrDoubleOffsetMesh(mp.mrMeshPart, offsetA, offsetB, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -178,7 +178,7 @@ namespace MR
                 IntPtr res = mrMcOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -205,7 +205,7 @@ namespace MR
                 IntPtr res = mrMcShellMeshRegion(mp.mesh.mesh_, mp.region.bs_, offset, ref mrParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -233,7 +233,7 @@ namespace MR
                 IntPtr res = mrSharpOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -260,7 +260,7 @@ namespace MR
                 IntPtr res = mrGeneralOffsetMesh(mp.mrMeshPart, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);
@@ -291,7 +291,7 @@ namespace MR
                 IntPtr res = mrThickenMesh(mesh.mesh_, offset, ref mrParameters, ref mrGeneralOffsetParameters, ref errorStr);
                 if (errorStr != IntPtr.Zero)
                 {
-                    string error = Marshal.PtrToStringAnsi(errorStr);
+                    string error = MarshalNativeUtf8ToManagedString(errorStr);
                     throw new Exception(error);
                 }
                 return new Mesh(res);

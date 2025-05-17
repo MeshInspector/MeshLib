@@ -63,7 +63,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             res.emplace_back( aFace, bFace );
             continue;
         }
-        
+
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
@@ -170,9 +170,10 @@ Expected<bool> findSelfCollidingTriangles(
     const MeshPart& mp,
     std::vector<FaceFace> * outCollidingPairs,
     ProgressCallback cb,
-    const Face2RegionMap * regionMap )
+    const Face2RegionMap * regionMap,
+    bool touchIsIntersection )
 {
-    MR_TIMER
+    MR_TIMER;
     const AABBTree & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return false;
@@ -186,7 +187,7 @@ Expected<bool> findSelfCollidingTriangles(
     for( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
-            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; }, 
+            [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; },
             [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
@@ -215,7 +216,7 @@ Expected<bool> findSelfCollidingTriangles(
             mySubtasks.push_back( subtasks[is] );
             std::vector<FaceFace> myRes;
             processSelfSubtasks( tree, mySubtasks, mySubtasks,
-                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing]( const NodeNode & s )
+                [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing, touchIsIntersection]( const NodeNode & s )
                 {
                     const auto & aNode = tree[s.aNode];
                     const auto & bNode = tree[s.bNode];
@@ -225,34 +226,70 @@ Expected<bool> findSelfCollidingTriangles(
                     const auto bFace = bNode.leafId();
                     if ( mp.region && !mp.region->test( bFace ) )
                         return Processing::Continue;
-                    if ( mp.mesh.topology.sharedEdge( aFace, bFace ) )
-                        return Processing::Continue;
-                    if ( regionMap && (*regionMap)[aFace] != (*regionMap)[bFace] )
+                    if ( regionMap && ( *regionMap )[aFace] != ( *regionMap )[bFace] )
                         return Processing::Continue;
 
                     VertId av[3], bv[3];
-                    mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                    mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
-
                     Vector3d ap[3], bp[3];
+
+                    auto se = mp.mesh.topology.sharedEdge( aFace, bFace );
+                    if ( se )
+                    {
+                        mp.mesh.topology.getLeftTriVerts( se, av[0], av[1], av[2] );
+                        mp.mesh.topology.getLeftTriVerts( se.sym(), bv[0], bv[1], bv[2] );
+                    }
+                    else
+                    {
+                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
+                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                    }
                     for ( int j = 0; j < 3; ++j )
                     {
                         ap[j] = Vector3d{ mp.mesh.points[av[j]] };
                         bp[j] = Vector3d{ mp.mesh.points[bv[j]] };
                     }
-
-                    auto sv = sharedVertex( av, bv );
-                    if ( sv.first >= 0 )
+                    if ( se )
+                    {
+                        // check coplanar
+                        if ( !touchIsIntersection || ( !isPointInTriangle( bp[2], ap[0], ap[1], ap[2] ) && !isPointInTriangle( ap[2], bp[0], bp[1], bp[2] ) ) )
+                            return Processing::Continue;
+                        // else not coplanar
+                    }
+                    else if ( auto sv = sharedVertex( av, bv ); sv.first >= 0 )
                     {
                         // shared vertex
                         const int j = sv.first;
                         const int k = sv.second;
-                        if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[ ( k + 1 ) % 3 ], bp[ ( k + 2 ) % 3 ] ) &&
-                             !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[ ( j + 1 ) % 3 ], ap[ ( j + 2 ) % 3 ] ) )
-                            return Processing::Continue;
+                        if ( !doTriangleSegmentIntersect( ap[0], ap[1], ap[2], bp[( k + 1 ) % 3], bp[( k + 2 ) % 3] ) &&
+                             !doTriangleSegmentIntersect( bp[0], bp[1], bp[2], ap[( j + 1 ) % 3], ap[( j + 2 ) % 3] ) )
+                        {
+                            // check touching too
+                            if ( !touchIsIntersection ||
+                                  ( !isPointInTriangle( ap[( j + 1 ) % 3], bp[0], bp[1], bp[2] ) &&
+                                    !isPointInTriangle( ap[( j + 2 ) % 3], bp[0], bp[1], bp[2] ) &&
+                                    !isPointInTriangle( bp[( k + 1 ) % 3], ap[0], ap[1], ap[2] ) &&
+                                    !isPointInTriangle( bp[( k + 2 ) % 3], ap[0], ap[1], ap[2] ) ) )
+                                return Processing::Continue;
+                            // else not touching
+                        }
                     }
                     else if ( !doTrianglesIntersectExt( ap[0], ap[1], ap[2], bp[0], bp[1], bp[2] ) )
-                        return Processing::Continue;
+                    {
+                        if ( !touchIsIntersection )
+                            return Processing::Continue;
+                        // check touching too
+                        bool touching = false;
+                        for ( int i = 0; i < 3; ++i )
+                        {
+                            if ( isPointInTriangle( ap[i], bp[0], bp[1], bp[2] ) || isPointInTriangle( bp[i], ap[0], ap[1], ap[2] ) )
+                            {
+                                touching = true;
+                                break;
+                            }
+                        }
+                        if ( !touching )
+                            return Processing::Continue;
+                    }
                     myRes.emplace_back( aFace, bFace );
                     if ( !outCollidingPairs )
                     {
@@ -302,20 +339,21 @@ Expected<bool> findSelfCollidingTriangles(
 }
 
 Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb,
-    const Face2RegionMap * regionMap )
+    const Face2RegionMap* regionMap,
+    bool touchIsIntersection )
 {
     std::vector<FaceFace> res;
-    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap );
+    auto exp = findSelfCollidingTriangles( mp, &res, cb, regionMap, touchIsIntersection );
     if ( !exp )
         return unexpected( std::move( exp.error() ) );
     return res;
 }
 
-Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb, const Face2RegionMap * regionMap )
+Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressCallback cb, const Face2RegionMap* regionMap, bool touchIsIntersection )
 {
-    MR_TIMER
-    
-    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap );
+    MR_TIMER;
+
+    auto ffs = findSelfCollidingTriangles( mp, cb, regionMap, touchIsIntersection );
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
 
@@ -331,7 +369,7 @@ Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart & mp, Progress
 
 bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A )
 {
-    auto cols = findCollidingTriangles( a, b, rigidB2A );
+    auto cols = findCollidingTriangles( a, b, rigidB2A, true );
     if ( !cols.empty() )
         return false; // meshes intersect
 
@@ -363,8 +401,8 @@ TEST( MRMesh, DegenerateTrianglesIntersect )
     Vector3f b{-24.6611996f,-17.7504997f,-21.3423004f};
     Vector3f c{-24.6392994f,-17.7071991f,-21.3542995f};
 
-    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f}; 
-    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f}; 
+    Vector3f d{-24.5401993f,-17.7504997f,-21.3390007f};
+    Vector3f e{-24.5401993f,-17.7504997f,-21.3390007f};
     Vector3f f{-24.5862007f,-17.7504997f,-21.3586998f};
 
     bool intersection = doTrianglesIntersect(

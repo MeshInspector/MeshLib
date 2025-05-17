@@ -16,15 +16,18 @@ struct MRVIEWER_CLASS AncillaryLines
     AncillaryLines() = default;
 
     /// since this uniquely owns an ancillary object, we provide only move operations, not copy
-    AncillaryLines( AncillaryLines && b ) noexcept : obj{ std::move( b.obj ) } {}
+    AncillaryLines( AncillaryLines && b ) noexcept = default;
     AncillaryLines & operator =( AncillaryLines && b ) { reset(); obj = std::move( b.obj ); return *this; }
-    AncillaryLines( AncillaryLines& b ) = default;
 
     /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    explicit AncillaryLines( Object& parent, const Contours3f& contours = {} ) { make( parent, contours ); }
+    explicit AncillaryLines( Object& parent ) { make( parent ); }
+    explicit AncillaryLines( Object& parent, const Contour3f& contour ) { make( parent, contour ); }
+    explicit AncillaryLines( Object& parent, const Contours3f& contours ) { make( parent, contours ); }
 
     /// Make not-pickable ancillary object, link it to parent object, and set line geometry
-    MRVIEWER_API void make( Object& parent, const Contours3f& contours = {} );
+    MRVIEWER_API void make( Object& parent );
+    MRVIEWER_API void make( Object& parent, const Contour3f& contour );
+    MRVIEWER_API void make( Object& parent, const Contours3f& contours );
 
     /// detach owned object from parent, stops owning it
     MRVIEWER_API void reset();

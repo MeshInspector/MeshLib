@@ -221,78 +221,78 @@ namespace MR
                 public MRICPProperties() { }
             };
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ref MRICPPairData mrIPointPairsGet(IntPtr pp, ulong idx);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrIPointPairsSize(IntPtr pp);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ref MRICPPairData mrIPointPairsGetRef(IntPtr pp, ulong idx);
 
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrICPNew(IntPtr fltObj, IntPtr refObj, float samplingVoxelSize);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrICPNewFromSamples(IntPtr fltObj, IntPtr refObj, IntPtr fltSamples, IntPtr refSamples);
 
             /// tune algorithm params before run calculateTransformation()
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrICPSetParams(IntPtr icp, ref MRICPProperties prop);
 
             /// select pairs with origin samples on both objects
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrICPSamplePoints(IntPtr icp, float samplingVoxelSize);
 
             /// automatically selects initial transformation for the floating object
             /// based on covariance matrices of both floating and reference objects;
             /// applies the transformation to the floating object and returns it
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRAffineXf3f mrICPAutoSelectFloatXf(IntPtr icp);
 
             /// recompute point pairs after manual change of transformations or parameters
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrICPUpdatePointPairs(IntPtr icp);
 
             /// returns status info string
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrICPGetStatusInfo(IntPtr icp);
 
             /// computes the number of samples able to form pairs
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrICPGetNumSamples(IntPtr icp);
 
             /// computes the number of active point pairs
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrICPGetNumActivePairs(IntPtr icp);
 
             /// computes root-mean-square deviation between points
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrICPGetMeanSqDistToPoint(IntPtr icp);
 
             /// computes root-mean-square deviation from points to target planes
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern float mrICPGetMeanSqDistToPlane(IntPtr icp);
 
             /// returns current pairs formed from samples on floating object and projections on reference object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrICPGetFlt2RefPairs(IntPtr icp);
 
             /// returns current pairs formed from samples on reference object and projections on floating object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrICPGetRef2FltPairs(IntPtr icp);
 
             /// runs ICP algorithm given input objects, transformations, and parameters;
             /// \return adjusted transformation of the floating object to match reference object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRAffineXf3f mrICPCalculateTransformation(IntPtr icp);
 
             /// deallocates an ICP object
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrICPFree(IntPtr icp);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
 
             /// Constructs ICP framework with given sample points on both objects
@@ -365,7 +365,7 @@ namespace MR
             public string GetStatusInfo()
             {
                 var mrStr = mrICPGetStatusInfo(mrICP_);
-                return Marshal.PtrToStringAnsi(mrStringData(mrStr));
+                return MarshalNativeUtf8ToManagedString(mrStringData(mrStr));
             }
             /// computes the number of samples able to form pairs
             public int GetNumSamples()

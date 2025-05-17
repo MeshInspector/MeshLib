@@ -36,7 +36,7 @@ public:
     std::vector<ObjVertId> setSamplesPerModel() const;
 
 private:
-    Box3f box_; 
+    Box3f box_;
     Vector3f voxelSize_;
     Vector3f recipVoxelSize_;
     std::vector<GridElement> voxels_;
@@ -124,7 +124,7 @@ std::vector<MR::ObjVertId> Grid::setSamplesPerModel() const
 
 std::optional<VertBitSet> verticesGridSampling( const MeshPart & mp, float voxelSize, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if (voxelSize <= 0.f)
     {
         if ( mp.region )
@@ -169,7 +169,7 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
 {
     if (voxelSize <= 0.f)
         return cloud.validPoints;
-    MR_TIMER
+    MR_TIMER;
 
     const auto bbox = cloud.getBoundingBox();
     const auto bboxSz = bbox.max - bbox.min;
@@ -197,7 +197,7 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
     const auto res = grid.getSamples();
     if ( cb && !cb( 1.0f ) )
         return {};
-    
+
     return res;
 }
 
@@ -242,7 +242,7 @@ std::optional<std::vector<ObjVertId>> multiModelGridSampling( const Vector<Model
             else
                 grid.addVertex( ( *model.points )[v], v, useOId );
         }
-       
+
 
         if ( !reportProgress( sb, float( oId + 1 ) / models.size() ) )
             return {};

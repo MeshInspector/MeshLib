@@ -9,7 +9,7 @@ namespace MR::Cuda
 {
 
 // struct from MRPointCloud.cuh
-MR_BIND_IGNORE struct PointCloudDataHolder;
+struct MR_BIND_IGNORE PointCloudDataHolder;
 
 /// CUDA-backed implementation of IPointsProjector
 class MRCUDA_CLASS PointsProjector : public IPointsProjector
@@ -21,6 +21,9 @@ public:
     /// computes the closest points on point cloud to given points
     MRCUDA_API Expected<void> findProjections( std::vector<MR::PointsProjectionResult>& results,
         const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
+
+    /// Returns amount of additional memory needed to compute projections
+    MRCUDA_API size_t projectionsHeapBytes( size_t numProjections ) const override;
 
 private:
     std::shared_ptr<PointCloudDataHolder> data_;

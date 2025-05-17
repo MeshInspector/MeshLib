@@ -45,6 +45,7 @@ typedef struct MRAffineXf3f MRAffineXf3f;
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
+typedef struct MRMeshPart MRMeshPart;
 
 typedef struct MRPointCloud MRPointCloud;
 typedef struct MRPointsLoadSettings MRPointsLoadSettings;

@@ -30,13 +30,13 @@ namespace MR
                 public MRContinuousContour() { }
             }
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRContinuousContour mrContinuousContoursGet(IntPtr contours, ulong index);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern ulong mrContinuousContoursSize(IntPtr contours);
 
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern void mrContinuousContoursFree(IntPtr contours);
 
             internal ContinousContours(IntPtr mrContours)
@@ -103,7 +103,7 @@ namespace MR
         }
         public class IntersectionContour
         {
-            [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern IntPtr mrOrderIntersectionContours(IntPtr topologyA, IntPtr topologyB, IntPtr intersections);
             /// combines individual intersections into ordered contours with the properties:
             /// a. left  of contours on mesh A is inside of mesh B,

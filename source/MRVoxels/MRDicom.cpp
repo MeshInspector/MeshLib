@@ -126,7 +126,6 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
         for (int i = 0; i < 3; ++i) {
             res.xf.b[i] = float( atPos.GetValue( i ) );
         }
-        res.xf.b /= 1000.0f;
     }
 
     if( ds.FindDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() ) )
@@ -305,7 +304,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
 template <typename T>
 Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -324,6 +323,7 @@ Expected<DicomVolumeT<T>> loadDicomFile( const std::filesystem::path& file, cons
     DicomVolumeT<T> res;
     res.vol = std::move( vol );
     res.name = utf8string( file.stem() );
+    res.xf = fileRes.xf;
     return res;
 }
 
@@ -551,7 +551,7 @@ template <typename T>
 Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                  unsigned maxNumThreads, const ProgressCallback& cb )
 {
-    MR_TIMER
+    MR_TIMER;
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -727,14 +727,11 @@ Expected<DicomVolumeT<T>> loadDicomFolder( const std::filesystem::path& path, un
 
 DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
-    if ( utf8string( path.extension() ) != ".dcm" )
-        return DicomStatusEnum::Invalid;
-
     std::ifstream ifs( path, std::ios_base::binary );
 
-#ifdef __EMSCRIPTEN__
-    // try to detect by ourselves
-    // GDCM uses exceptions which causes problems on Wasm
+    // try to detect by ourselves for the reasons as follows:
+    // 1) GDCM uses exceptions which causes problems in Wasm,
+    // 2) ImageReader::CanRead() reports false positives e.g. on some bindary STL files with empty header
     constexpr auto cDicomMagicNumberOffset = 0x80;
     constexpr std::array cDicomMagicNumber { 'D', 'I', 'C', 'M' };
     // NOTE: std::ifstream::get appends a null character
@@ -745,7 +742,6 @@ DicomStatus isDicomFile( const std::filesystem::path& path, std::string* seriesU
         return DicomStatusEnum::Invalid;
     ifs.seekg( 0, std::ios::beg );
     assert( ifs );
-#endif
 
     gdcm::ImageReader ir;
     ir.SetStream( ifs );
@@ -823,11 +819,23 @@ bool isDicomFolder( const std::filesystem::path& dirPath )
         {
             const auto& path = entry.path();
             const auto ext = toLower( utf8string( path.extension() ) );
-            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+            if ( VoxelsLoad::isDicomFile( path ) )
                 return true;
         }
     }
     return false;
+}
+
+std::vector<std::filesystem::path> findDicomFoldersRecursively( const std::filesystem::path& path )
+{
+    std::vector<std::filesystem::path> res;
+    std::error_code ec;
+    for ( auto entry : DirectoryRecursive{ path, ec } )
+    {
+        if ( entry.is_directory() && isDicomFolder( entry.path() ) )
+            res.push_back( entry.path() );
+    }
+    return res;
 }
 
 std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
@@ -858,7 +866,7 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderTreeAsVdb( const std::fi
 
 Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsVdb & dcm, const ProgressCallback & cb )
 {
-    MR_TIMER
+    MR_TIMER;
     std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
     obj->setName( dcm.name );
     obj->construct( dcm.vol );
@@ -879,7 +887,7 @@ Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const DicomVolumeAsV
 
 Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
 {
-    MR_TIMER
+    MR_TIMER;
     LoadedObjects res;
     auto loaded = loadDicomsFolder<VdbVolume>( folder, 4, subprogress( callback, 0.0f, 0.7f ) );
     auto sc = subprogress( callback, 0.7f, 1.f );

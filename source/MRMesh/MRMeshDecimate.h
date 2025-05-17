@@ -184,13 +184,10 @@ struct DecimateResult
 /**
  * \brief Collapse edges in mesh region according to the settings
  * \ingroup DecimateGroup
- * \details Have version for parallel computing - \ref decimateParallelMesh
+ * \snippet cpp-examples/MeshDecimate.dox.cpp 0
  *
  * \image html decimate/decimate_before.png "Before" width = 350cm
  * \image html decimate/decimate_after.png "After" width = 350cm
- *
- * \sa \ref decimateParallelMesh
- * \sa \ref resolveMeshDegenerations
  */
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
@@ -241,8 +238,9 @@ struct ResolveMeshDegenSettings
  *
  * \sa \ref decimateMesh
  */
+[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
-[[deprecated(" use the version with parameter struct instead" )]]
+[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 

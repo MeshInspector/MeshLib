@@ -7,8 +7,8 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRSurfaceDistance.h"
-#include "MRMesh/MRMeshDirMax.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRDirMax.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshIntersect.h"
@@ -24,8 +24,6 @@
 #include "MRMesh/MRInnerShell.h"
 #include "MRMesh/MRRingIterator.h"
 
-#include "MRMesh/MRParallelFor.h"
-#include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
 
@@ -97,7 +95,8 @@ Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& para
     if ( !reportProgress( params.cb, 0.15f ) )
         return unexpectedOperationCanceled();
     
-    FixUndercuts::fixUndercuts( meshCopy, Vector3f::plusZ(), params.voxelSize );
+    if ( auto e = FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } ); !e )
+        return unexpected( std::move( e.error() ) );
     
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
@@ -276,7 +275,7 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     distances = computeSurfaceDistances( res.meshAfterCut, startVerticesWithDists );
 
     const float topExcluded = FLT_MAX;
-    const auto [min, max] = parallelMinMax( distances.vec_, &topExcluded );
+    const auto [min, max] = parallelMinMax( distances, &res.meshAfterCut.topology.getValidVerts(), &topExcluded );
     
     size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
     if ( numIsolines == 0 )
@@ -364,11 +363,11 @@ Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt 
         const float maxDistSq = 2 * toolRadius * toolRadius;
         const auto mpr = offset ? offset->mesh.projectPoint( *it, maxDistSq ) : mp.mesh.projectPoint( *it, maxDistSq );
 
-        bool isInsideSelection = mpr.has_value();
+        bool isInsideSelection = mpr.valid();
 
         if ( isInsideSelection )
         {
-            const auto faceId = offset ? offset->mesh.topology.left( mpr->mtp.e ) : mp.mesh.topology.left( mpr->mtp.e );
+            const auto faceId = offset ? offset->mesh.topology.left( mpr.mtp.e ) : mp.mesh.topology.left( mpr.mtp.e );
 
             isInsideSelection = offset ?
                 ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :

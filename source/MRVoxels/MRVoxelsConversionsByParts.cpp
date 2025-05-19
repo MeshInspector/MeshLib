@@ -22,22 +22,6 @@ namespace
 
 using namespace MR;
 
-void clearPartMapping( PartMapping& mapping )
-{
-    if ( mapping.src2tgtFaces )
-        mapping.src2tgtFaces->clear();
-    if ( mapping.src2tgtVerts )
-        mapping.src2tgtVerts->clear();
-    if ( mapping.src2tgtEdges )
-        mapping.src2tgtEdges->clear();
-    if ( mapping.tgt2srcFaces )
-        mapping.tgt2srcFaces->clear();
-    if ( mapping.tgt2srcVerts )
-        mapping.tgt2srcVerts->clear();
-    if ( mapping.tgt2srcEdges )
-        mapping.tgt2srcEdges->clear();
-}
-
 void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 {
     std::sort( paths.begin(), paths.end(), [&] ( const EdgePath& ep1, const EdgePath& ep2 )
@@ -125,7 +109,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         settings.postCut( part );
 
     auto mapping = settings.mapping;
-    clearPartMapping( mapping );
+    mapping.clear();
 
     if ( leftCutContours.empty() && cutContours.empty() )
     {

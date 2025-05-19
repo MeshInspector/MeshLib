@@ -7,6 +7,9 @@
 namespace MR
 {
 
+/// stores a mapping from keys K to values V in one of two forms:
+/// 1) as dense map (vector) preferable when there are few missing keys in a range [0, endKey)
+/// 2) as hash map preferable when valid keys are a small subset of the range
 template <typename K, typename V>
 struct MapOrHashMap
 {

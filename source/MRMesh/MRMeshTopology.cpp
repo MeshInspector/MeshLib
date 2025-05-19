@@ -1696,7 +1696,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
 
-    // in all maps: from index -> to index;
+    // maps: from index -> to index;
     // use dense map only if requested by the user, otherwise hash map
     auto fmap = ( map.src2tgtFaces && map.src2tgtFaces->getMap() ) ?
         FaceMapOrHashMap::createMap( from.faceSize() ) :
@@ -1707,6 +1707,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     auto vmap = ( map.src2tgtVerts && map.src2tgtVerts->getMap() ) ?
         VertMapOrHashMap::createMap( from.vertSize() ) :
         VertMapOrHashMap::createHashMap( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+
+    // maps: to index -> from index
     if ( map.tgt2srcEdges )
         map.tgt2srcEdges->resize( undirectedEdgeSize() );
     if ( map.tgt2srcVerts )

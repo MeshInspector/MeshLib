@@ -408,8 +408,16 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
 
-    for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
-        points[thisVert] = from.points[fromVert];
+    if ( auto * vec = map.src2tgtVerts->getMap() )
+    {
+        for ( auto fromVert = 0_v; fromVert < vec->size(); ++fromVert )
+            points[(*vec)[fromVert]] = from.points[fromVert];
+    }
+    else
+    {
+        for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
+            points[thisVert] = from.points[fromVert];
+    }
 
     invalidateCaches();
 }

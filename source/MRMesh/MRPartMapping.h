@@ -9,6 +9,8 @@ namespace MR
 struct PartMapping
 {
     // source.id -> target.id
+    // each map here can be either dense vector or hash map, the type is set by the user and preserved by mesh copying functions;
+    // dense maps are better by speed and memory when source mesh is packed and must be copied entirely;
     // hash maps minimize memory consumption when only a small portion of source mesh is copied
     FaceMapOrHashMap * src2tgtFaces = nullptr;
     VertMapOrHashMap * src2tgtVerts = nullptr;
@@ -19,9 +21,12 @@ struct PartMapping
     FaceMap * tgt2srcFaces = nullptr;
     VertMap * tgt2srcVerts = nullptr;
     WholeEdgeMap * tgt2srcEdges = nullptr;
+
+    /// clears all member maps
+    MRMESH_API void clear();
 };
 
-/// the class to convert mappings from new HashMap format to old Vector format
+/// adapter for old code expecting source to target mapping in vector format
 class HashToVectorMappingConverter
 {
 public:

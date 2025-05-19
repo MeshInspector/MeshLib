@@ -336,7 +336,7 @@ jobs:
   collect-stats:
     timeout-minutes: 5
     runs-on: aws-micro
-    needs: [ upload-distributions ]
+    needs: [ config, upload-distributions ]
     if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
     steps:

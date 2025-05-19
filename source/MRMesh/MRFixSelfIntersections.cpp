@@ -230,9 +230,9 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 // Helper function to find own self-intersections on a mesh part
 static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb, bool touchIsIntersection )
 {
-    FaceMap tgt2srcFaceMap;
+    FaceMap tgt2srcFaces;
     PartMapping mapping;
-    mapping.tgt2srcFaceMap = &tgt2srcFaceMap;
+    mapping.tgt2srcFaces = &tgt2srcFaces;
     Mesh partMesh = mesh.cloneRegion( part, false, mapping );
     // Faster than searching in mesh part due to AABB tree rebuild
     auto res = findSelfCollidingTrianglesBS( { partMesh }, cb, nullptr, touchIsIntersection );
@@ -240,7 +240,7 @@ static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, con
         return unexpected( res.error() );
     FaceBitSet result( mesh.topology.lastValidFace() + 1 );
     for ( FaceId f : *res )
-        result.set( tgt2srcFaceMap[f] );
+        result.set( tgt2srcFaces[f] );
     return result;
 }
 

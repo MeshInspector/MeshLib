@@ -88,18 +88,19 @@ TEST(MRMesh, AddPartByMask)
     FaceBitSet faces( 2 );
     faces.set( 1_f );
 
-    FaceHashMap meshIntoMesh2;
+    auto meshIntoMesh2 = FaceMapOrHashMap::createHashMap();
     FaceMap mesh2IntoMesh;
     PartMapping mapping;
-    mapping.src2tgtFaceHashMap = &meshIntoMesh2;
-    mapping.tgt2srcFaceMap = &mesh2IntoMesh;
+    mapping.src2tgtFaces = &meshIntoMesh2;
+    mapping.tgt2srcFaces = &mesh2IntoMesh;
 
     mesh.addMeshPart( { mesh2, &faces }, mapping );
-    for ( auto [f, f2] : meshIntoMesh2 )
+    EXPECT_TRUE( meshIntoMesh2.getHashMap() != nullptr );
+    for ( auto [f, f2] : *meshIntoMesh2.getHashMap() )
         EXPECT_EQ( mesh2IntoMesh[f2], f );
 
     faces.set( 0_f ); // set an id without mapping
-    auto added = faces.getMapping( meshIntoMesh2 );
+    auto added = faces.getMapping( *meshIntoMesh2.getHashMap() );
 
     EXPECT_EQ( mesh.points.size(), 7 );
     EXPECT_EQ( mesh.topology.edgePerVertex().size(), 7 );

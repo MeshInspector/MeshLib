@@ -117,7 +117,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf,
     SceneRoot::get().addChild( controlsRoot_ );
     setControlsXf_( worldXf, true );
 
-    setTransformMode( ControlBit::FullMask );
+    setTransformMode( defaultAvailableControls_ );
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -189,6 +189,11 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
+static ControlBit sScaleControlToTranslationControl( const ControlBit rotationContrilBit )
+{
+    return ControlBit( unsigned(rotationContrilBit) >> 3 );
+}
+
 bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
 {
     if ( button != Viewer::MouseButton::Left )
@@ -237,15 +242,18 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifi
         lastClickTimeOnScaleControl_ = currentTime;
     }
 
-    if ( (controls_->getHoveredControl() & ControlBit::ScaleMask) != ControlBit::None )
+    if ( ( hoveredControl & ControlBit::ScaleMask) != ControlBit::None )
     {
         if( modifier == GLFW_MOD_CONTROL )
         {
             axisTransformMode_ = AxisScaling;
+            //keep only axis and sphere
+            setTransformMode( hoveredControl | sScaleControlToTranslationControl(hoveredControl) );
         }
         else
         {
             axisTransformMode_ = UniformScaling;
+            setTransformMode( ControlBit::ScaleMask | ControlBit::MoveMask );
         }
     }
     else
@@ -271,6 +279,7 @@ bool ObjectTransformWidget::onMouseUp_( Viewer::MouseButton button, int )
     if ( !controlsRoot_ )
         return false;
 
+    setTransformMode(defaultAvailableControls_ );
     stopModify_();
 
     return true;

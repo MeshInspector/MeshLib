@@ -255,6 +255,12 @@ public:
     // Sets current axis transform mode (translate/scale object while dragging an axis)
     void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
 
+    //We may automatically hide some controls and automatically restore them.
+    void setDefaultAvailableControls( ControlBit defaultAvailableControls )
+    {
+        defaultAvailableControls_ = defaultAvailableControls;
+    }
+
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
 
@@ -346,6 +352,8 @@ private:
     void processRotation_( Axis ax, bool press );
 
     void setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id = {} );
+
+    ControlBit defaultAvailableControls_ = ControlBit::FullMask;
 
     std::weak_ptr<Object> visibilityParent_;
 

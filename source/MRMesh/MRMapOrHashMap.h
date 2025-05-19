@@ -13,19 +13,19 @@ namespace MR
 template <typename K, typename V>
 struct MapOrHashMap
 {
-    using Map = Vector<V, K>;
-    using HashMap = HashMap<K, V>;
+    using Dense = Vector<V, K>;
+    using Hash = HashMap<K, V>;
     // default construction will select dense map
-    std::variant<Map, HashMap> var;
+    std::variant<Dense, Hash> var;
 
     [[nodiscard]] static MapOrHashMap createMap( size_t size = 0 );
     [[nodiscard]] static MapOrHashMap createHashMap( size_t capacity = 0 );
 
-    [[nodiscard]]       Map* getMap()       { return get_if<Map>( &var ); }
-    [[nodiscard]] const Map* getMap() const { return get_if<Map>( &var ); }
+    [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
+    [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
 
-    [[nodiscard]]       HashMap* getHashMap()       { return get_if<HashMap>( &var ); }
-    [[nodiscard]] const HashMap* getHashMap() const { return get_if<HashMap>( &var ); }
+    [[nodiscard]]       Hash* getHashMap()       { return get_if<Hash>( &var ); }
+    [[nodiscard]] const Hash* getHashMap() const { return get_if<Hash>( &var ); }
 
     void clear();
 };
@@ -34,7 +34,7 @@ template <typename K, typename V>
 inline MapOrHashMap<K,V> MapOrHashMap<K,V>::createMap( size_t size )
 {
     MapOrHashMap<K,V> res;
-    res.var = Map( size );
+    res.var = Dense( size );
     return res;
 }
 
@@ -42,7 +42,7 @@ template <typename K, typename V>
 inline MapOrHashMap<K,V> MapOrHashMap<K,V>::createHashMap( size_t capacity )
 {
     MapOrHashMap<K,V> res;
-    HashMap hmap;
+    Hash hmap;
     if ( capacity > 0 )
         hmap.reserve( capacity );
     res.var = std::move( hmap );
@@ -53,8 +53,8 @@ template <typename K, typename V>
 void MapOrHashMap<K,V>::clear()
 {
     std::visit( overloaded{
-        []( Map& map ) { map.clear(); },
-        []( HashMap& hashMap ) { hashMap.clear(); }
+        []( Dense& map ) { map.clear(); },
+        []( Hash& hashMap ) { hashMap.clear(); }
     }, var );
 }
 

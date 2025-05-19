@@ -411,7 +411,8 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     if ( auto * vec = map.src2tgtVerts->getMap() )
     {
         for ( auto fromVert = 0_v; fromVert < vec->size(); ++fromVert )
-            points[(*vec)[fromVert]] = from.points[fromVert];
+            if ( auto thisVert = (*vec)[fromVert] )
+                points[thisVert] = from.points[fromVert];
     }
     else
     {

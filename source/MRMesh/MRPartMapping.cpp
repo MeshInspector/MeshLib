@@ -31,7 +31,7 @@ HashToVectorMappingConverter::~HashToVectorMappingConverter()
 {
     if ( outFmap_ )
     {
-        for ( const auto & [ fromFace, thisFace ] : src2tgtFaces_ )
+        for ( const auto & [ fromFace, thisFace ] : *src2tgtFaces_.getHashMap() )
             (*outFmap_)[fromFace] = thisFace;
     }
     if ( outVmap_ )

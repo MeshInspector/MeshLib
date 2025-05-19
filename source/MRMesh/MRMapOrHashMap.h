@@ -12,13 +12,16 @@ struct MapOrHashMap
 {
     using Map = Vector<V, K>;
     using HashMap = HashMap<K, V>;
+    // default construction will select dense map
     std::variant<Map, HashMap> var;
 
-    static MapOrHashMap createMap( size_t size = 0 );
-    static MapOrHashMap createHashMap( size_t capacity = 0 );
+    [[nodiscard]] static MapOrHashMap createMap( size_t size = 0 );
+    [[nodiscard]] static MapOrHashMap createHashMap( size_t capacity = 0 );
 
-    bool isMap() const;
-    bool isHashMap() const { return !isMap(); }
+    [[nodiscard]] const Map* getMap() const { return get_if<Map>( &var ); }
+    [[nodiscard]] const HashMap* getHashMap() const { return get_if<HashMap>( &var ); }
+
+    void clear();
 };
 
 template <typename K, typename V>
@@ -41,20 +44,20 @@ inline MapOrHashMap<K,V> MapOrHashMap<K,V>::createHashMap( size_t capacity )
 }
 
 template <typename K, typename V>
-inline bool MapOrHashMap<K,V>::isMap() const
+void MapOrHashMap<K,V>::clear()
 {
     std::visit( overloaded{
-        []( const Map& map ) { return true; },
-        []( const HashMap& hashMap ) { return false; }
+        []( Map& map ) { map.clear(); },
+        []( HashMap& hashMap ) { hashMap.clear(); }
     }, var );
 }
 
 template <typename K, typename V>
-inline V getAt( const MapOrHashMap<K, V> & m, K key, V def = {} )
+[[nodiscard]] inline V getAt( const MapOrHashMap<K, V> & m, K key, V def = {} )
 {
-    std::visit( overloaded{
-        []( const Vector<V, K>& map ) { getAt( map, key, def ); },
-        []( const HashMap<K, V>& hashMap ) { getAt( hashMap, key, def ); }
+    return std::visit( overloaded{
+        [key, def]( const Vector<V, K>& map ) { return getAt( map, key, def ); },
+        [key, def]( const HashMap<K, V>& hashMap ) { return getAt( hashMap, key, def ); }
     }, m.var );
 }
 
@@ -62,8 +65,8 @@ template <typename K, typename V>
 inline void setAt( MapOrHashMap<K, V> & m, K key, V val )
 {
     std::visit( overloaded{
-        []( Vector<V, K>& map ) { map[key] = val; },
-        []( HashMap<K, V>& hashMap ) { hashMap[key] = val; }
+        [key, val]( Vector<V, K>& map ) { map[key] = val; },
+        [key, val]( HashMap<K, V>& hashMap ) { hashMap[key] = val; }
     }, m.var );
 }
 

@@ -1696,10 +1696,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
 
-
     // in all maps: from index -> to index
-    FaceHashMap fmap;
-    fmap.reserve( fcount );
+    auto fmap = MapOrHashMap<FaceId, FaceId>::createHashMap( fcount );
     WholeEdgeHashMap emap;
     emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
     VertHashMap vmap;
@@ -1799,7 +1797,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         auto nf = addFaceId();
         if ( map.tgt2srcFaces )
             map.tgt2srcFaces ->push_back( f );
-        fmap[f] = nf;
+        setAt( fmap, f, nf );
         edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
         if ( updateValids_ )
         {
@@ -1825,7 +1823,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 eNx = flipOrientation ? from.prev( eNx ) : from.next( eNx );
                 auto cf = flipOrientation ? from.right( eNx ) : from.left( eNx );
-                if ( ( cf && fmap[cf] ) || eNx == e.sym() )
+                if ( getAt( fmap, cf ) || eNx == e.sym() )
                     break;
             }
             if ( !existingEdges.test( eNx.undirected() ) )
@@ -1839,7 +1837,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 ePr = flipOrientation ? from.next( ePr ) : from.prev( ePr );
                 auto cf = flipOrientation ? from.left( ePr ) : from.right( ePr );
-                if ( ( cf && fmap[cf] ) || ePr == e )
+                if ( getAt( fmap, cf ) || ePr == e )
                     break;
             }
             if ( !existingEdges.test( ePr.undirected() ) )

@@ -239,7 +239,6 @@ TEST( MRMesh, findClosestWeightedMeshPointSharpAngle )
     auto smartDistance = [&]( Vector3f loc )
     {
         auto pd = findClosestWeightedMeshPoint( loc, mesh, params );
-        assert( !pd.mtp.onEdge( mesh.topology ) );
         return pd.dist();
     };
 

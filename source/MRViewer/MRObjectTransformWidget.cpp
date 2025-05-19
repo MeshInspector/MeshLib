@@ -19,6 +19,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
+#include "MRMesh/MRMakeSphereMesh.h"
+#include "GLFW/glfw3.h"
 
 namespace
 {
@@ -187,16 +189,69 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
-bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
+bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;
+
     if ( controls_->getHoveredControl() == ControlBit::None )
         return false;
     if ( !controlsRoot_ )
         return false;
     if ( !controlsRoot_->globalVisibility( getViewerInstance().getHoveredViewportId() ) )
         return false;
+
+    //Double click on scalingSpheres detection
+    const ControlBit hoveredControl = controls_->getHoveredControl();
+    if ( ( hoveredControl & ControlBit::ScaleMask ) != ControlBit::None )
+    {
+        std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+        if ( currentTime - lastClickTimeOnScaleControl_ < std::chrono::milliseconds( 500 ) )
+        {
+            //double click detected (technically an can be on another scaling sphere but it is hard physically to do)
+
+            auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
+            auto& vp = getViewerInstance().viewport( hoveredViewportId );
+            auto controlsXf = getControlsXf();
+            auto dirX = ( controlsXf.A * MR::Vector3f::plusX() ).normalized();
+            auto dirY = ( controlsXf.A * MR::Vector3f::plusY() ).normalized();
+            auto dirZ = ( controlsXf.A * MR::Vector3f::plusZ() ).normalized();
+
+            switch ( hoveredControl )
+            {
+            case ControlBit::ScaleX:
+                vp.cameraLookAlong( -dirX, -dirZ );
+                break;
+            case ControlBit::ScaleY:
+                vp.cameraLookAlong( -dirY, -dirZ );
+                break;
+            case ControlBit::ScaleZ:
+                vp.cameraLookAlong( -dirZ, dirX );
+                break;
+            default: break;
+            }
+
+            vp.preciseFitDataToScreenBorder();
+        }
+
+        lastClickTimeOnScaleControl_ = currentTime;
+    }
+
+    if ( (controls_->getHoveredControl() & ControlBit::ScaleMask) != ControlBit::None )
+    {
+        if( modifier == GLFW_MOD_CONTROL )
+        {
+            axisTransformMode_ = AxisScaling;
+        }
+        else
+        {
+            axisTransformMode_ = UniformScaling;
+        }
+    }
+    else
+    {
+        axisTransformMode_ = AxisTranslation;
+    }
 
     if ( startModifyCallback_ )
         startModifyCallback_();
@@ -295,6 +350,21 @@ void ObjectTransformWidget::activeMove_( bool press )
                 break;
             }
         }
+        else if ( bool( activeControl & ControlBit::ScaleMask ) )
+        {
+            switch ( axisTransformMode_ )
+            {
+            case AxisTranslation:
+                activeEditMode_ = UniformScalingMode;// TranslationMode;
+                break;
+            case AxisScaling:
+                activeEditMode_ = ScalingMode;
+                break;
+            case UniformScaling:
+                activeEditMode_ = UniformScalingMode;
+                break;
+            }
+        }
         else
         {
             activeEditMode_ = RotationMode;
@@ -305,14 +375,17 @@ void ObjectTransformWidget::activeMove_( bool press )
     {
     case MR::ControlBit::MoveX:
     case MR::ControlBit::RotX:
+    case MR::ControlBit::ScaleX:
         activeAxis = Axis::X;
         break;
     case MR::ControlBit::MoveY:
     case MR::ControlBit::RotY:
+    case MR::ControlBit::ScaleY:
         activeAxis = Axis::Y;
         break;
     case MR::ControlBit::MoveZ:
     case MR::ControlBit::RotZ:
+    case MR::ControlBit::ScaleZ:
         activeAxis = Axis::Z;
         break;
     default:
@@ -530,6 +603,14 @@ TransformControls::~TransformControls()
         obj.reset();
     }
 
+    for ( auto& obj : scaleControls_ )
+    {
+        if ( !obj )
+            continue;
+        obj->detachFromParent();
+        obj.reset();
+    }
+
     if ( activeLine_ )
     {
         activeLine_->detachFromParent();
@@ -554,6 +635,7 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             if ( parent )
                 parent->addChild( translateControls_[i] );
         }
+
         if ( !translateLines_[i] )
         {
             translateLines_[i] = std::make_shared<ObjectLines>();
@@ -589,6 +671,27 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             if ( parent )
                 parent->addChild( rotateControls_[i] );
         }
+
+        if ( !scaleControls_[i] )
+        {
+
+            scaleControls_[i] = std::make_shared<ObjectMesh>();
+            scaleControls_[i]->setAncillary( true );
+            scaleControls_[i]->setFrontColor( params_.translationColors[i], false );
+            scaleControls_[i]->setBackColor( params_.translationColors[i] );
+            scaleControls_[i]->setFlatShading( true );
+            scaleControls_[i]->setName( "ScaleSphere " + std::to_string( i ) );
+
+            const float sphereR = 3.f * params_.coneRadiusFactor * width;
+            //const float coneHeight = params_.coneSizeFactor * width;
+            std::shared_ptr<MR::Mesh> sphere = std::make_shared<MR::Mesh>( makeUVSphere( sphereR ) );
+            sphere->transform( MR::AffineXf3f::translation( getCenter() + radius * baseAxis[i] ) );
+            scaleControls_[i]->setMesh( std::move( sphere ) );
+
+            if ( parent )
+                parent->addChild( scaleControls_[i] );
+        }
+
         if ( !rotateLines_[i] )
         {
             rotateLines_[i] = std::make_shared<ObjectLines>();
@@ -704,9 +807,13 @@ ControlBit TransformControls::hover_( bool pickThrough )
 {
     int hoveredInd = findHoveredIndex_();
 
-    auto& linesArray = hoveredInd < 3 ? translateLines_ : rotateLines_;
-    if ( hoveredInd > 2 )
-        hoveredInd -= 3;
+    auto& linesArray = (hoveredInd < 3 || hoveredInd > 5) ? translateLines_ : rotateLines_;
+    //if ( hoveredInd > 2 )
+    //    hoveredInd -= 3;
+    if ( hoveredInd >= 0 )
+    {
+        hoveredInd %= 3;
+    }
 
     auto dropCurrentObj = [&] ()
     {
@@ -723,7 +830,7 @@ ControlBit TransformControls::hover_( bool pickThrough )
     };
 
     std::vector<VisualObject*> objsToPick_;
-    objsToPick_.reserve( 6 );
+    objsToPick_.reserve( 9 );
     auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
 
     if ( pickThrough )
@@ -734,6 +841,11 @@ ControlBit TransformControls::hover_( bool pickThrough )
                 objsToPick_.push_back( obj.get() );
         }
         for ( auto obj : rotateControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+        for ( auto obj : scaleControls_ )
         {
             if ( obj->isVisible( hoveredViewportId ) )
                 objsToPick_.push_back( obj.get() );
@@ -777,9 +889,13 @@ ControlBit TransformControls::hover_( bool pickThrough )
         {
             hoveredInd = findHoveredIndex_();
             assert( hoveredInd >= 0 );
-            auto& newPickLinesArray = hoveredInd < 3 ? translateLines_ : rotateLines_;
-            if ( hoveredInd > 2 )
-                hoveredInd -= 3;
+            auto& newPickLinesArray = (hoveredInd < 3 || hoveredInd > 5 ) ? translateLines_ : rotateLines_;
+            //if ( hoveredInd > 2 )
+            //    hoveredInd -= 3;
+            if ( hoveredInd >= 0 )
+            {
+                hoveredInd %= 3;
+            }
             newPickLinesArray[hoveredInd]->setFrontColor( hoveredObject_->getFrontColor( true ), false );
             newPickLinesArray[hoveredInd]->setLineWidth( 3.0f );
         }
@@ -799,6 +915,12 @@ ControlBit TransformControls::hover_( bool pickThrough )
         return ControlBit::RotY;
     case 5:
         return ControlBit::RotZ;
+    case 6:
+        return ControlBit::ScaleX;
+    case 7:
+        return ControlBit::ScaleY;
+    case 8:
+        return ControlBit::ScaleZ;
     default:
         return ControlBit::None;
     }
@@ -827,6 +949,10 @@ void TransformControls::updateVisualTransformMode_( ControlBit showMask, Viewpor
         checkMask = ControlBit( int( ControlBit::RotX ) << i );
         enable = ( showMask & checkMask ) == checkMask;
         rotateControls_[i]->setVisible( enable, viewportMask );
+
+        checkMask = ControlBit( int( ControlBit::ScaleX ) << i );
+        enable = ( showMask & checkMask ) == checkMask;
+        scaleControls_[i]->setVisible( enable, viewportMask );
     }
 }
 
@@ -908,13 +1034,15 @@ int TransformControls::findHoveredIndex_() const
     if ( !hoveredObject_ )
         return -1;
 
-    // 0-2 three is translation, 3-5 is rotation
+    // 0-2 three is translation, 3-5 is rotation, 6-8 0scaling sphere
     for ( int ax = int( Axis::X ); ax < int( Axis::Count ); ++ax )
     {
         if ( hoveredObject_ == translateControls_[ax] )
             return ax;
         else if ( hoveredObject_ == rotateControls_[ax] )
             return 3 + ax;
+        else if ( hoveredObject_ == scaleControls_[ax] )
+            return 6 + ax;
     }
     return -1;
 }

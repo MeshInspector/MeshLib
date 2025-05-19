@@ -28,7 +28,11 @@ enum class ControlBit
     MoveY = 0x10,
     MoveZ = 0x20,
     MoveMask = MoveX | MoveY | MoveZ,
-    FullMask = RotMask | MoveMask
+    ScaleX = 0x40,
+    ScaleY = 0x80,
+    ScaleZ = 0x100,
+    ScaleMask = ScaleX | ScaleY| ScaleZ,
+    FullMask = RotMask | MoveMask | ScaleMask
 };
 MR_MAKE_FLAG_OPERATORS( ControlBit )
 
@@ -191,6 +195,7 @@ public:
 
     // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
+
 private:
     // forgets specific transform for pixel size (if you need to disable this option)
     void resetSizeInPixel_();
@@ -204,6 +209,7 @@ private:
     // Control objects
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> scaleControls_;
 
     // if active line is visible, other lines are not
     std::shared_ptr<ObjectLines> activeLine_;
@@ -377,6 +383,8 @@ private:
 
     float startAngle_ = 0;
     float accumAngle_ = 0;
+
+    std::chrono::system_clock::time_point lastClickTimeOnScaleControl_;
 
     ViewportProperty<ControlBit> transformModeMask_{ ControlBit::FullMask };
     bool picked_{ false };

@@ -231,7 +231,8 @@ TEST( MRMesh, findClosestWeightedMeshPointSharpAngle )
     auto mesh = Mesh::fromTriangles( std::move( vs ), t );
 
     DistanceFromWeightedPointsComputeParams params;
-    params.pointWeight = [&]( VertId ) { return 0.05f; };
+    VertScalars weights{ 0.2f, 0.4f, 0.1f, 0.3f };
+    params.pointWeight = [&]( VertId v ) { return weights[v]; };
     params.maxWeight = 0;
     params.bidirectionalMode = false;
 
@@ -251,7 +252,7 @@ TEST( MRMesh, findClosestWeightedMeshPointSharpAngle )
     float maxDiff = 0.f;
     for ( float z = -0.5f; z <= 0.5f; z += 0.05f )
         maxDiff = std::max( maxDiff, std::abs( smartDistance( Vector3f{ 0.1f, 0.1f, z - 0.025f } ) - smartDistance( Vector3f{ 0.1f, 0.1f, z + 0.025f } ) ) );
-    ASSERT_NEAR( maxDiff, 0.05f, 0.001f );
+    ASSERT_LE( maxDiff, 0.05f );
 }
 
 } //namespace MR

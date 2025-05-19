@@ -88,10 +88,10 @@ struct Matrix2
             return b * ( 1 / a );
     }
 
-    friend constexpr Matrix2<T> & operator +=( Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; return a; }
-    friend constexpr Matrix2<T> & operator -=( Matrix2<T> & a, const Matrix2<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; return a; }
-    friend constexpr Matrix2<T> & operator *=( Matrix2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; return a; }
-    friend constexpr Matrix2<T> & operator /=( Matrix2<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    friend constexpr Matrix2<T> & operator +=( Matrix2<T> & a, const Matrix2<T> & b ) { a.x += b.x; a.y += b.y; return a; }
+    friend constexpr Matrix2<T> & operator -=( Matrix2<T> & a, const Matrix2<T> & b ) { a.x -= b.x; a.y -= b.y; return a; }
+    friend constexpr Matrix2<T> & operator *=( Matrix2<T> & a,               T    b ) { a.x *= b; a.y *= b; return a; }
+    friend constexpr Matrix2<T> & operator /=( Matrix2<T> & a,               T    b )
     {
         if constexpr ( std::is_integral_v<T> )
             { a.x /= b; a.y /= b; return a; }

@@ -1698,15 +1698,14 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
 
     // maps: from index -> to index;
     // use dense map only if requested by the user, otherwise hash map
-    auto fmap = ( map.src2tgtFaces && map.src2tgtFaces->getMap() ) ?
-        FaceMapOrHashMap::createMap( from.faceSize() ) :
-        FaceMapOrHashMap::createHashMap( fcount );
-    auto emap = ( map.src2tgtEdges && map.src2tgtEdges->getMap() ) ?
-        WholeEdgeMapOrHashMap::createMap( from.undirectedEdgeSize() ) :
-        WholeEdgeMapOrHashMap::createHashMap( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
-    auto vmap = ( map.src2tgtVerts && map.src2tgtVerts->getMap() ) ?
-        VertMapOrHashMap::createMap( from.vertSize() ) :
-        VertMapOrHashMap::createHashMap( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+    auto fmap = map.src2tgtFaces ? std::move( *map.src2tgtFaces ) : FaceMapOrHashMap::createHashMap();
+    fmap.resizeReserve( from.faceSize(), fcount );
+
+    auto emap = map.src2tgtEdges ? std::move( *map.src2tgtEdges ) : WholeEdgeMapOrHashMap::createHashMap();
+    emap.resizeReserve( from.undirectedEdgeSize(), std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
+
+    auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createHashMap();
+    vmap.resizeReserve( from.vertSize(), std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
 
     // maps: to index -> from index
     if ( map.tgt2srcEdges )

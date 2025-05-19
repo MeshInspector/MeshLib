@@ -24,6 +24,10 @@ struct MapOrHashMap
     void setMap( Dense && m ) { var = std::move( m ); }
     void setHashMap( Hash && m ) { var = std::move( m ); }
 
+    /// if this stores dense map then resizes it to denseTotalSize;
+    /// if this stores hash map then sets its capacity to size()+hashAdditionalCapacity
+    void resizeReserve( size_t denseTotalSize, size_t hashAdditionalCapacity );
+
     [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
 
@@ -50,6 +54,15 @@ inline MapOrHashMap<K,V> MapOrHashMap<K,V>::createHashMap( size_t capacity )
         hmap.reserve( capacity );
     res.var = std::move( hmap );
     return res;
+}
+
+template <typename K, typename V>
+void MapOrHashMap<K,V>::resizeReserve( size_t denseTotalSize, size_t hashAdditionalCapacity )
+{
+    std::visit( overloaded{
+        [denseTotalSize]( Dense& map ) { map.resize( denseTotalSize ); },
+        [hashAdditionalCapacity]( Hash& hashMap ) { hashMap.reserve( hashMap.size() + hashAdditionalCapacity ); }
+    }, var );
 }
 
 template <typename K, typename V>

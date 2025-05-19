@@ -9,21 +9,18 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology &
 {
     if ( outFmap )
     {
-        src2tgtFaces_ = FaceMapOrHashMap::createHashMap();
         map_.src2tgtFaces = &src2tgtFaces_;
         outFmap->clear();
         outFmap->resize( (int)srcTopology.lastValidFace() + 1 );
     }
     if ( outVmap )
     {
-        src2tgtVerts_ = VertMapOrHashMap::createHashMap();
         map_.src2tgtVerts = &src2tgtVerts_;
         outVmap->clear();
         outVmap->resize( (int)srcTopology.lastValidVert() + 1 );
     }
     if ( outEmap )
     {
-        src2tgtEdges_ = WholeEdgeMapOrHashMap::createHashMap();
         map_.src2tgtEdges = &src2tgtEdges_;
         outEmap->clear();
         outEmap->resize( srcTopology.undirectedEdgeSize() );
@@ -33,20 +30,11 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology &
 HashToVectorMappingConverter::~HashToVectorMappingConverter()
 {
     if ( outFmap_ )
-    {
-        for ( const auto & [ fromFace, thisFace ] : *src2tgtFaces_.getHashMap() )
-            (*outFmap_)[fromFace] = thisFace;
-    }
+        *outFmap_ = std::move( *src2tgtFaces_.getMap() );
     if ( outVmap_ )
-    {
-        for ( const auto & [ fromVert, thisVert ] : *src2tgtVerts_.getHashMap() )
-            (*outVmap_)[fromVert] = thisVert;
-    }
+        *outVmap_ = std::move( *src2tgtVerts_.getMap() );
     if ( outEmap_ )
-    {
-        for ( const auto & [ fromEdge, thisEdge ] : *src2tgtEdges_.getHashMap() )
-            (*outEmap_)[fromEdge] = thisEdge;
-    }
+        *outEmap_ = std::move( *src2tgtEdges_.getMap() );
 }
 
 } //namespace MR

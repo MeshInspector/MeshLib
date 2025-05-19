@@ -18,7 +18,10 @@ struct MapOrHashMap
     [[nodiscard]] static MapOrHashMap createMap( size_t size = 0 );
     [[nodiscard]] static MapOrHashMap createHashMap( size_t capacity = 0 );
 
+    [[nodiscard]]       Map* getMap()       { return get_if<Map>( &var ); }
     [[nodiscard]] const Map* getMap() const { return get_if<Map>( &var ); }
+
+    [[nodiscard]]       HashMap* getHashMap()       { return get_if<HashMap>( &var ); }
     [[nodiscard]] const HashMap* getHashMap() const { return get_if<HashMap>( &var ); }
 
     void clear();

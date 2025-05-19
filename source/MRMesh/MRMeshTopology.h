@@ -561,14 +561,11 @@ private:
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
-    void translateNoFlip_( HalfEdgeRecord & r,
-        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const;
+    template<typename FM, typename VM, typename WEM>
+    void translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const;
+    template<typename FM, typename VM, typename WEM>
     void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
-    void translateNoFlip_( HalfEdgeRecord & r,
-        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const;
-    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
+        const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;

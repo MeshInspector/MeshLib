@@ -960,42 +960,8 @@ void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         deleteFace( f, keepEdges );
 }
 
-void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const
-{
-    for ( auto n = r.next; ; n = next( n ) )
-    {
-        if ( (  r.next = mapEdge( emap, n ) ) )
-            break;
-    }
-
-    for ( auto p = r.prev; ; p = prev( p ) )
-    {
-        if ( ( r.prev = mapEdge( emap, p ) ) )
-            break;
-    }
-
-    if ( r.org.valid() )
-        r.org = vmap[r.org];
-
-    if ( r.left.valid() )
-        r.left = fmap[r.left];
-}
-
-void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-    const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const
-{
-    translateNoFlip_( r, fmap, vmap, emap );
-    translateNoFlip_( rsym, fmap, vmap, emap );
-
-    if ( flipOrientation )
-    {
-        std::swap( r.prev, r.next );
-        std::swap( rsym.prev, rsym.next );
-        std::swap( r.left, rsym.left );
-    }
-}
-
-void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const
+template<typename FM, typename VM, typename WEM>
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const
 {
     for ( auto n = r.next; ; n = next( n ) )
     {
@@ -1016,8 +982,9 @@ void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceHashMap & fma
         r.left = getAt( fmap, r.left );
 }
 
+template<typename FM, typename VM, typename WEM>
 void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-    const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const
+    const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const
 {
     translateNoFlip_( r, fmap, vmap, emap );
     translateNoFlip_( rsym, fmap, vmap, emap );

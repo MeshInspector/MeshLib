@@ -20,9 +20,6 @@
 namespace MR
 {
 
-#if !defined _MSC_VER || _MSC_VER < 1944 // Visual Studio 2022 version 17.14
-// https://developercommunity.visualstudio.com/t/Internal-compiler-error-ICE-on-explici/10903887
-
 // verifies that templates can be instantiated with typical parameters
 
 template struct Matrix2<float>;
@@ -96,7 +93,5 @@ template Matrix3<double> orthonormalized( const Matrix3<double> & m );
 
 template AffineXf3<float>  orthonormalized( const AffineXf3<float> & xf,  const Vector3<float> & center );
 template AffineXf3<double> orthonormalized( const AffineXf3<double> & xf, const Vector3<double> & center );
-
-#endif
 
 } //namespace MR

@@ -1697,7 +1697,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     assert( szContours == fromContours.size() );
 
     // in all maps: from index -> to index
-    auto fmap = MapOrHashMap<FaceId, FaceId>::createHashMap( fcount );
+    auto fmap = FaceMapOrHashMap::createHashMap( fcount );
     WholeEdgeHashMap emap;
     emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
     VertHashMap vmap;

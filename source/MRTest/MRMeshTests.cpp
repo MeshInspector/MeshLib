@@ -88,7 +88,7 @@ TEST(MRMesh, AddPartByMask)
     FaceBitSet faces( 2 );
     faces.set( 1_f );
 
-    FaceMapOrHashMap meshIntoMesh2;
+    auto meshIntoMesh2 = FaceMapOrHashMap::createHashMap();
     FaceMap mesh2IntoMesh;
     PartMapping mapping;
     mapping.src2tgtFaces = &meshIntoMesh2;

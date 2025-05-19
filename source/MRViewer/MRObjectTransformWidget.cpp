@@ -259,6 +259,7 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifi
     else
     {
         axisTransformMode_ = AxisTranslation;
+        setTransformMode( hoveredControl );
     }
 
     if ( startModifyCallback_ )
@@ -279,7 +280,7 @@ bool ObjectTransformWidget::onMouseUp_( Viewer::MouseButton button, int )
     if ( !controlsRoot_ )
         return false;
 
-    setTransformMode(defaultAvailableControls_ );
+    setTransformMode( defaultAvailableControls_ );
     stopModify_();
 
     return true;

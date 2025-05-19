@@ -21,6 +21,9 @@ struct MapOrHashMap
     [[nodiscard]] static MapOrHashMap createMap( size_t size = 0 );
     [[nodiscard]] static MapOrHashMap createHashMap( size_t capacity = 0 );
 
+    void setMap( Dense && m ) { var = std::move( m ); }
+    void setHashMap( Hash && m ) { var = std::move( m ); }
+
     [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
 

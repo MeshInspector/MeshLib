@@ -112,7 +112,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     leftPart = preparePart( origin, compsMap, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
 
     outMesh.addMeshPart( { origin, &leftPart }, needFlip, {}, {},
-        HashToVectorMappingConverter( origin.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
+        HashToVectorMappingConverter( fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
 
     for ( auto& path : cutPaths )
         for ( auto& e : path )
@@ -146,10 +146,10 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
     {
         if ( !pathsHaveLeftHole )
             partA.addMeshPart( partB, false, pathsA, pathsB,
-                HashToVectorMappingConverter( partB.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
+                HashToVectorMappingConverter( fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
         else
             partB.addMeshPart( partA, false, pathsB, pathsA,
-                HashToVectorMappingConverter( partA.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
+                HashToVectorMappingConverter( fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
     }
 
     if ( mapper )
@@ -204,7 +204,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newVerts : nullptr;
 
         aPart.addMeshPart( { meshACut, &aPartFbs }, operation == BooleanOperation::DifferenceBA,
-                             {}, {}, HashToVectorMappingConverter( meshACut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
+                             {}, {}, HashToVectorMappingConverter( fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 
     if ( bPartFbs.count() != 0 )
@@ -214,7 +214,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newVerts : nullptr;
 
         bPart.addMeshPart( { meshBCut, &bPartFbs }, operation == BooleanOperation::DifferenceAB,
-                             {}, {}, HashToVectorMappingConverter( meshBCut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
+                             {}, {}, HashToVectorMappingConverter( fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 
     connectPreparedParts( aPart, bPart, false, {}, {}, rigidB2A, mapper );

@@ -30,7 +30,10 @@ struct PartMapping
 class HashToVectorMappingConverter
 {
 public:
-    MRMESH_API HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
+    MRMESH_API HashToVectorMappingConverter( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
+    [[deprecated]] HashToVectorMappingConverter( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+        : HashToVectorMappingConverter( outFmap, outVmap, outEmap ) {}
+
     const PartMapping & getPartMapping() const { return map_; }
     MRMESH_API ~HashToVectorMappingConverter(); //conversion takes place here
 

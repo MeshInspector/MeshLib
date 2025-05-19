@@ -20,26 +20,23 @@ void PartMapping::clear()
         tgt2srcEdges->clear();
 }
 
-HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+HashToVectorMappingConverter::HashToVectorMappingConverter( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
     : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
 {
     if ( outFmap )
     {
+        src2tgtFaces_.setMap( std::move( *outFmap_ ) );
         map_.src2tgtFaces = &src2tgtFaces_;
-        outFmap->clear();
-        outFmap->resize( (int)srcTopology.lastValidFace() + 1 );
     }
     if ( outVmap )
     {
+        src2tgtVerts_.setMap( std::move( *outVmap_ ) );
         map_.src2tgtVerts = &src2tgtVerts_;
-        outVmap->clear();
-        outVmap->resize( (int)srcTopology.lastValidVert() + 1 );
     }
     if ( outEmap )
     {
+        src2tgtEdges_.setMap( std::move( *outEmap_ ) );
         map_.src2tgtEdges = &src2tgtEdges_;
-        outEmap->clear();
-        outEmap->resize( srcTopology.undirectedEdgeSize() );
     }
 }
 

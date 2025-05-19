@@ -91,10 +91,10 @@ struct Vector4
             return b * ( 1 / a );
     }
 
-    friend constexpr Vector4<T> & operator +=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a + b; } ) { a.x += b.x; a.y += b.y; a.z += b.z; a.w += b.w; return a; }
-    friend constexpr Vector4<T> & operator -=( Vector4<T> & a, const Vector4<T> & b ) MR_REQUIRES_IF_SUPPORTED( requires{ a - b; } ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
-    friend constexpr Vector4<T> & operator *=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a * b; } ) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
-    friend constexpr Vector4<T> & operator /=( Vector4<T> & a,               T    b ) MR_REQUIRES_IF_SUPPORTED( requires{ a / b; } )
+    friend constexpr Vector4<T> & operator +=( Vector4<T> & a, const Vector4<T> & b ) { a.x += b.x; a.y += b.y; a.z += b.z; a.w += b.w; return a; }
+    friend constexpr Vector4<T> & operator -=( Vector4<T> & a, const Vector4<T> & b ) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
+    friend constexpr Vector4<T> & operator *=( Vector4<T> & a,               T    b ) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
+    friend constexpr Vector4<T> & operator /=( Vector4<T> & a,               T    b )
     {
         if constexpr ( std::is_integral_v<T> )
             { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }

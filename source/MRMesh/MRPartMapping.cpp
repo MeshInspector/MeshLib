@@ -23,6 +23,7 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology &
     }
     if ( outEmap )
     {
+        src2tgtEdges_ = WholeEdgeMapOrHashMap::createHashMap();
         map_.src2tgtEdges = &src2tgtEdges_;
         outEmap->clear();
         outEmap->resize( srcTopology.undirectedEdgeSize() );
@@ -43,7 +44,7 @@ HashToVectorMappingConverter::~HashToVectorMappingConverter()
     }
     if ( outEmap_ )
     {
-        for ( const auto & [ fromEdge, thisEdge ] : src2tgtEdges_ )
+        for ( const auto & [ fromEdge, thisEdge ] : *src2tgtEdges_.getHashMap() )
             (*outEmap_)[fromEdge] = thisEdge;
     }
 }

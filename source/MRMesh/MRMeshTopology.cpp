@@ -1704,12 +1704,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
     VertHashMap vmap;
     vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
-    if ( map.tgt2srcWholeEdgeMap )
-        map.tgt2srcWholeEdgeMap->resize( undirectedEdgeSize() );
-    if ( map.tgt2srcVertMap )
-        map.tgt2srcVertMap->resize( vertSize() );
-    if ( map.tgt2srcFaceMap )
-        map.tgt2srcFaceMap->resize( faceSize() );
+    if ( map.tgt2srcEdges )
+        map.tgt2srcEdges->resize( undirectedEdgeSize() );
+    if ( map.tgt2srcVerts )
+        map.tgt2srcVerts->resize( vertSize() );
+    if ( map.tgt2srcFaces )
+        map.tgt2srcFaces->resize( faceSize() );
 
     VertBitSet fromVerts = from.getValidVerts();
     auto setVmap = [&] ( VertId key, VertId val )
@@ -1773,9 +1773,9 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 assert( inserted );
                 edges_.push_back( from.edges_[EdgeId{ ue }] );
                 edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-                if ( map.tgt2srcWholeEdgeMap )
+                if ( map.tgt2srcEdges )
                 {
-                    map.tgt2srcWholeEdgeMap->push_back( EdgeId{ ue } );
+                    map.tgt2srcEdges->push_back( EdgeId{ ue } );
                 }
             }
             if ( auto v = from.org( e ); v.valid() )
@@ -1785,8 +1785,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                     auto nv = addVertId();
                     [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
                     assert( inserted );
-                    if ( map.tgt2srcVertMap )
-                        map.tgt2srcVertMap->push_back( v );
+                    if ( map.tgt2srcVerts )
+                        map.tgt2srcVerts->push_back( v );
                     edgePerVertex_[nv] = mapEdge( emap, e );
                     if ( updateValids_ )
                     {
@@ -1797,8 +1797,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             }
         }
         auto nf = addFaceId();
-        if ( map.tgt2srcFaceMap )
-            map.tgt2srcFaceMap ->push_back( f );
+        if ( map.tgt2srcFaces )
+            map.tgt2srcFaces ->push_back( f );
         fmap[f] = nf;
         edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
         if ( updateValids_ )
@@ -1903,19 +1903,19 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         edges_[eNx].prev = ePr;
     }
 
-    if ( map.tgt2srcWholeEdgeMap )
-        assert( map.tgt2srcWholeEdgeMap->size() == undirectedEdgeSize() );
-    if ( map.tgt2srcVertMap )
-        assert( map.tgt2srcVertMap->size() == vertSize() );
-    if ( map.tgt2srcFaceMap )
-        assert( map.tgt2srcFaceMap->size() == faceSize() );
+    if ( map.tgt2srcEdges )
+        assert( map.tgt2srcEdges->size() == undirectedEdgeSize() );
+    if ( map.tgt2srcVerts )
+        assert( map.tgt2srcVerts->size() == vertSize() );
+    if ( map.tgt2srcFaces )
+        assert( map.tgt2srcFaces->size() == faceSize() );
 
-    if ( map.src2tgtFaceHashMap )
-        *map.src2tgtFaceHashMap = std::move( fmap );
-    if ( map.src2tgtVertHashMap )
-        *map.src2tgtVertHashMap = std::move( vmap );
-    if ( map.src2tgtWholeEdgeHashMap )
-        *map.src2tgtWholeEdgeHashMap = std::move( emap );
+    if ( map.src2tgtFaces )
+        *map.src2tgtFaces = std::move( fmap );
+    if ( map.src2tgtVerts )
+        *map.src2tgtVerts = std::move( vmap );
+    if ( map.src2tgtEdges )
+        *map.src2tgtEdges = std::move( emap );
 }
 
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,

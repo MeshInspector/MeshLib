@@ -91,8 +91,8 @@ TEST(MRMesh, AddPartByMask)
     FaceHashMap meshIntoMesh2;
     FaceMap mesh2IntoMesh;
     PartMapping mapping;
-    mapping.src2tgtFaceHashMap = &meshIntoMesh2;
-    mapping.tgt2srcFaceMap = &mesh2IntoMesh;
+    mapping.src2tgtFaces = &meshIntoMesh2;
+    mapping.tgt2srcFaces = &mesh2IntoMesh;
 
     mesh.addMeshPart( { mesh2, &faces }, mapping );
     for ( auto [f, f2] : meshIntoMesh2 )

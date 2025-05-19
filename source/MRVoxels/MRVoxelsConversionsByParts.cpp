@@ -21,6 +21,22 @@ namespace
 
 using namespace MR;
 
+void clearPartMapping( PartMapping& mapping )
+{
+    if ( mapping.src2tgtFaces )
+        mapping.src2tgtFaces->clear();
+    if ( mapping.src2tgtVerts )
+        mapping.src2tgtVerts->clear();
+    if ( mapping.src2tgtEdges )
+        mapping.src2tgtEdges->clear();
+    if ( mapping.tgt2srcFaces )
+        mapping.tgt2srcFaces->clear();
+    if ( mapping.tgt2srcVerts )
+        mapping.tgt2srcVerts->clear();
+    if ( mapping.tgt2srcEdges )
+        mapping.tgt2srcEdges->clear();
+}
+
 void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 {
     std::sort( paths.begin(), paths.end(), [&] ( const EdgePath& ep1, const EdgePath& ep2 )
@@ -108,13 +124,13 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         settings.postCut( part );
 
     auto mapping = settings.mapping;
-    mapping.clear();
+    clearPartMapping( mapping );
 
     if ( leftCutContours.empty() && cutContours.empty() )
     {
-        WholeEdgeHashMap src2tgtWholeEdgeHashMap;
-        if ( !mapping.src2tgtWholeEdgeHashMap )
-            mapping.src2tgtWholeEdgeHashMap = &src2tgtWholeEdgeHashMap;
+        WholeEdgeHashMap src2tgtEdges;
+        if ( !mapping.src2tgtEdges )
+            mapping.src2tgtEdges = &src2tgtEdges;
 
         mesh.addMeshPart( part, mapping );
 
@@ -125,7 +141,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         {
             for ( auto& e : contour )
             {
-                const auto ue = ( *mapping.src2tgtWholeEdgeHashMap )[e];
+                const auto ue = ( *mapping.src2tgtEdges )[e];
                 e = e.even() ? ue : ue.sym();
             }
         }
@@ -140,9 +156,9 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         if ( cutContours[i].size() != leftCutContours[i].size() )
             return unexpected( "Mesh cut contours mismatch" );
 
-    WholeEdgeHashMap src2tgtWholeEdgeHashMap;
-    if ( !mapping.src2tgtWholeEdgeHashMap )
-        mapping.src2tgtWholeEdgeHashMap = &src2tgtWholeEdgeHashMap;
+    WholeEdgeHashMap src2tgtEdges;
+    if ( !mapping.src2tgtEdges )
+        mapping.src2tgtEdges = &src2tgtEdges;
 
     mesh.addMeshPart( part, false, cutContours, leftCutContours, mapping );
 
@@ -153,7 +169,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     {
         for ( auto& e : contour )
         {
-            const auto ue = ( *mapping.src2tgtWholeEdgeHashMap )[e];
+            const auto ue = ( *mapping.src2tgtEdges )[e];
             e = e.even() ? ue : ue.sym();
         }
     }

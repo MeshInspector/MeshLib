@@ -9,12 +9,14 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology &
 {
     if ( outFmap )
     {
+        src2tgtFaces_ = FaceMapOrHashMap::createHashMap();
         map_.src2tgtFaces = &src2tgtFaces_;
         outFmap->clear();
         outFmap->resize( (int)srcTopology.lastValidFace() + 1 );
     }
     if ( outVmap )
     {
+        src2tgtVerts_ = VertMapOrHashMap::createHashMap();
         map_.src2tgtVerts = &src2tgtVerts_;
         outVmap->clear();
         outVmap->resize( (int)srcTopology.lastValidVert() + 1 );
@@ -36,7 +38,7 @@ HashToVectorMappingConverter::~HashToVectorMappingConverter()
     }
     if ( outVmap_ )
     {
-        for ( const auto & [ fromVert, thisVert ] : src2tgtVerts_ )
+        for ( const auto & [ fromVert, thisVert ] : *src2tgtVerts_.getHashMap() )
             (*outVmap_)[fromVert] = thisVert;
     }
     if ( outEmap_ )

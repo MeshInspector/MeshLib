@@ -11,7 +11,7 @@ struct PartMapping
     // source.id -> target.id
     // hash maps minimize memory consumption when only a small portion of source mesh is copied
     FaceMapOrHashMap * src2tgtFaces = nullptr;
-    VertHashMap * src2tgtVerts = nullptr;
+    VertMapOrHashMap * src2tgtVerts = nullptr;
     WholeEdgeHashMap * src2tgtEdges = nullptr;
 
     // target.id -> source.id
@@ -35,7 +35,7 @@ private:
     WholeEdgeMap * outEmap_ = nullptr;
     PartMapping map_;
     FaceMapOrHashMap src2tgtFaces_;
-    VertHashMap src2tgtVerts_;
+    VertMapOrHashMap src2tgtVerts_;
     WholeEdgeHashMap src2tgtEdges_;
 };
 

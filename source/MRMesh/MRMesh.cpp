@@ -400,7 +400,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
 {
     MR_TIMER;
 
-    VertHashMap localVmap;
+    auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
     topology.addPartBy( from.topology, fbegin, fend, fcount, flipOrientation, thisContours, fromContours, map );
@@ -408,7 +408,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
 
-    for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts )
+    for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
         points[thisVert] = from.points[fromVert];
 
     invalidateCaches();

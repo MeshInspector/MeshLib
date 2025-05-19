@@ -1700,8 +1700,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     auto fmap = FaceMapOrHashMap::createHashMap( fcount );
     WholeEdgeHashMap emap;
     emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
-    VertHashMap vmap;
-    vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+    auto vmap = VertMapOrHashMap::createHashMap( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
     if ( map.tgt2srcEdges )
         map.tgt2srcEdges->resize( undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
@@ -1714,14 +1713,13 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     {
         if ( fromVerts.test_set( key, false ) )
         {
-            [[maybe_unused]] bool inserted = vmap.insert( std::make_pair( key, val ) ).second;
-            assert( inserted );
+            assert( !getAt( vmap, key ) );
+            setAt( vmap, key, val );
         }
 #ifndef NDEBUG
         else
         {
-            auto it = vmap.find( key );
-            assert( it != vmap.end() && it->second == val );
+            assert( getAt( vmap, key ) == val );
         }
 #endif
     };
@@ -1781,8 +1779,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 if ( fromVerts.test_set( v, false ) )
                 {
                     auto nv = addVertId();
-                    [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
-                    assert( inserted );
+                    assert( !getAt( vmap, v ) );
+                    setAt( vmap, v, nv );
                     if ( map.tgt2srcVerts )
                         map.tgt2srcVerts->push_back( v );
                     edgePerVertex_[nv] = mapEdge( emap, e );

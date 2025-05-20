@@ -1904,6 +1904,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         edges_[eNx].prev = ePr;
     }
 
+#ifndef NDEBUG
     if ( map.tgt2srcEdges )
         if ( auto m = map.tgt2srcEdges->getMap() )
             assert( m->size() == undirectedEdgeSize() );
@@ -1913,6 +1914,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     if ( map.tgt2srcFaces )
         if ( auto m = map.tgt2srcFaces->getMap() )
             assert( m->size() == faceSize() );
+#endif
 
     if ( map.src2tgtFaces )
         *map.src2tgtFaces = std::move( fmap );

@@ -32,9 +32,13 @@ struct MeshPointAndDistance
     /// point's weight
     float w = 0;
 
+    /// input location is locally outside of the surface
+    bool outside = true;
+
     /// either
     /// 1) bidirectional distances are computed, or
     /// 2) input location is locally outside of the surface (by pseudonormal)
+    /// used for optimization
     bool bidirectionalOrOutside = true;
 
     /// bidirectional distance from input location to mtp considering point's weight

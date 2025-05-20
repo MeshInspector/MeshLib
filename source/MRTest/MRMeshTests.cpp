@@ -89,7 +89,7 @@ TEST(MRMesh, AddPartByMask)
     faces.set( 1_f );
 
     auto meshIntoMesh2 = FaceMapOrHashMap::createHashMap();
-    FaceMap mesh2IntoMesh;
+    FaceMapOrHashMap mesh2IntoMesh;
     PartMapping mapping;
     mapping.src2tgtFaces = &meshIntoMesh2;
     mapping.tgt2srcFaces = &mesh2IntoMesh;
@@ -97,7 +97,7 @@ TEST(MRMesh, AddPartByMask)
     mesh.addMeshPart( { mesh2, &faces }, mapping );
     EXPECT_TRUE( meshIntoMesh2.getHashMap() != nullptr );
     for ( auto [f, f2] : *meshIntoMesh2.getHashMap() )
-        EXPECT_EQ( mesh2IntoMesh[f2], f );
+        EXPECT_EQ( getAt( mesh2IntoMesh, f2 ), f );
 
     faces.set( 0_f ); // set an id without mapping
     auto added = faces.getMapping( *meshIntoMesh2.getHashMap() );

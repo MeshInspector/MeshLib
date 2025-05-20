@@ -28,6 +28,10 @@ struct MapOrHashMap
     /// if this stores hash map then sets its capacity to size()+hashAdditionalCapacity
     void resizeReserve( size_t denseTotalSize, size_t hashAdditionalCapacity );
 
+    /// appends one element in the map,
+    /// in case of dense map, key must be equal to vector.endId()
+    void pushBack( K key, V val );
+
     [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
 
@@ -62,6 +66,15 @@ void MapOrHashMap<K,V>::resizeReserve( size_t denseTotalSize, size_t hashAdditio
     std::visit( overloaded{
         [denseTotalSize]( Dense& map ) { map.resize( denseTotalSize ); },
         [hashAdditionalCapacity]( Hash& hashMap ) { hashMap.reserve( hashMap.size() + hashAdditionalCapacity ); }
+    }, var );
+}
+
+template <typename K, typename V>
+void MapOrHashMap<K,V>::pushBack( K key, V val )
+{
+    std::visit( overloaded{
+        [=]( Dense& map ) { assert( key == map.endId() ); map.push_back( val ); },
+        [=]( Hash& hashMap ) { hashMap[key] = val; }
     }, var );
 }
 

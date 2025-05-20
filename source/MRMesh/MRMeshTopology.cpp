@@ -1713,7 +1713,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     if ( map.tgt2srcVerts )
         map.tgt2srcVerts->resize( vertSize() );
     if ( map.tgt2srcFaces )
-        map.tgt2srcFaces->resize( faceSize() );
+        map.tgt2srcFaces->resizeReserve( faceSize(), fcount );
 
     VertBitSet fromVerts = from.getValidVerts();
     auto setVmap = [&] ( VertId key, VertId val )
@@ -1801,7 +1801,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         }
         auto nf = addFaceId();
         if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->push_back( f );
+            map.tgt2srcFaces ->pushBack( nf, f );
         setAt( fmap, f, nf );
         edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
         if ( updateValids_ )
@@ -1911,7 +1911,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     if ( map.tgt2srcVerts )
         assert( map.tgt2srcVerts->size() == vertSize() );
     if ( map.tgt2srcFaces )
-        assert( map.tgt2srcFaces->size() == faceSize() );
+        if ( auto v = map.tgt2srcFaces->getMap() )
+            assert( v->size() == faceSize() );
 
     if ( map.src2tgtFaces )
         *map.src2tgtFaces = std::move( fmap );

@@ -1709,7 +1709,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
 
     // maps: to index -> from index
     if ( map.tgt2srcEdges )
-        map.tgt2srcEdges->resize( undirectedEdgeSize() );
+        map.tgt2srcEdges->resizeReserve( undirectedEdgeSize(), std::min( 2 * fcount, from.undirectedEdgeSize() ) );
     if ( map.tgt2srcVerts )
         map.tgt2srcVerts->resizeReserve( vertSize(), std::min( fcount, from.vertSize() ) );
     if ( map.tgt2srcFaces )
@@ -1774,12 +1774,10 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 assert( !getAt( emap, ue ) );
                 setAt( emap, ue, edges_.endId() );
+                if ( map.tgt2srcEdges )
+                    map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ ue } );
                 edges_.push_back( from.edges_[EdgeId{ ue }] );
                 edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-                if ( map.tgt2srcEdges )
-                {
-                    map.tgt2srcEdges->push_back( EdgeId{ ue } );
-                }
             }
             if ( auto v = from.org( e ); v.valid() )
             {
@@ -1907,7 +1905,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     }
 
     if ( map.tgt2srcEdges )
-        assert( map.tgt2srcEdges->size() == undirectedEdgeSize() );
+        if ( auto m = map.tgt2srcEdges->getMap() )
+            assert( m->size() == undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
         if ( auto m = map.tgt2srcVerts->getMap() )
             assert( m->size() == vertSize() );

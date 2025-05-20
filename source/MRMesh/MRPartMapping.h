@@ -26,16 +26,17 @@ struct PartMapping
     MRMESH_API void clear();
 };
 
-/// adapter for old code expecting source to target mapping in vector format
-class HashToVectorMappingConverter
+/// use this adapter to call functions expecting PartMapping parameter to receive src2tgt dense maps
+class Src2TgtMaps
 {
 public:
-    MRMESH_API HashToVectorMappingConverter( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
-    [[deprecated]] HashToVectorMappingConverter( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
-        : HashToVectorMappingConverter( outFmap, outVmap, outEmap ) {}
+    MRMESH_API Src2TgtMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
+    [[deprecated]] Src2TgtMaps( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+        : Src2TgtMaps( outFmap, outVmap, outEmap ) {}
+    MRMESH_API ~Src2TgtMaps(); // maps are moved back to user here
 
+    operator const PartMapping &() const { return map_; }
     const PartMapping & getPartMapping() const { return map_; }
-    MRMESH_API ~HashToVectorMappingConverter(); //conversion takes place here
 
 private:
     FaceMap * outFmap_ = nullptr;
@@ -47,4 +48,6 @@ private:
     WholeEdgeMapOrHashMap src2tgtEdges_;
 };
 
-}
+using HashToVectorMappingConverter [[deprecated]] = Src2TgtMaps;
+
+} //namespace MR

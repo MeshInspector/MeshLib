@@ -18,9 +18,9 @@ struct PartMapping
 
     // target.id -> source.id
     // dense vectors are better by speed and memory when target mesh was empty before copying
-    FaceMap * tgt2srcFaces = nullptr;
-    VertMap * tgt2srcVerts = nullptr;
-    WholeEdgeMap * tgt2srcEdges = nullptr;
+    FaceMapOrHashMap * tgt2srcFaces = nullptr;
+    VertMapOrHashMap * tgt2srcVerts = nullptr;
+    WholeEdgeMapOrHashMap * tgt2srcEdges = nullptr;
 
     /// clears all member maps
     MRMESH_API void clear();

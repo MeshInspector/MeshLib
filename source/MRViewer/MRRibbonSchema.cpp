@@ -10,6 +10,7 @@
 #include "MRMesh/MRString.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
+#include "MRSceneCache.h"
 
 namespace MR
 {
@@ -300,6 +301,17 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             rawResult.erase( tailIt, rawResult.end() );
         }
     }
+
+    // sort by available - unavailable tools
+    const auto& selectedObjs = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+    std::sort( rawResult.begin(), rawResult.end(), [&selectedObjs] ( const auto& a, const auto& b )
+    {
+        if ( !a.first.item->item->isAvailable( selectedObjs ).empty() &&
+            b.first.item->item->isAvailable( selectedObjs ).empty() )
+            return false;
+        else
+            return true;
+    } );
 
     std::vector<SearchResult> res( rawResult.size() );
     if ( weights )

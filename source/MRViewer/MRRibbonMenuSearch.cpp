@@ -204,6 +204,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
             {
+                pushRecentItem( foundItem.item->item );
                 onToolActivateSignal( foundItem.item->item );
                 deactivateSearch_();
             }

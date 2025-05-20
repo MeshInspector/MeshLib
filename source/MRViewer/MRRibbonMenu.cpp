@@ -1492,7 +1492,6 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
 
     if ( !wasActive )
     {
-        searcher_.pushRecentItem( item );
         if ( stateChanged && getViewerInstance().mouseController().getMouseConflicts() > conflicts )
         {
             pushNotification( {

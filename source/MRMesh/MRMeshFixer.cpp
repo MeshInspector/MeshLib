@@ -687,22 +687,18 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
         FaceBitSet fixFacesBuffer( mesh.topology.getValidFaces().size() );
         for ( auto ue : creases )
         {
-            auto creaseEdge = EdgeId( ue );
-            if ( mesh.topology.getOrgDegree( creaseEdge ) < mesh.topology.getOrgDegree( creaseEdge.sym() ) )
-                creaseEdge = creaseEdge.sym(); // important part to triangulate worse end of the edge (mb we should change degree check to area check?)
-
-            fixFacesBuffer.reset();
-
-            auto findBadFaces = [&] ( bool left )
+            if ( mesh.topology.isLoneEdge( EdgeId( ue ) ) )
+                continue;
+            auto findBadFaces = [&] ( EdgeId ce, bool left )
             {
-                for ( auto e = creaseEdge;; )
+                for ( auto e = ce;; )
                 {
                     auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
                     if ( !f )
                         return;
                     fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
                     e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
-                    if ( e == creaseEdge )
+                    if ( e == ce )
                         return; // full cycle
                     auto nextF = left ? mesh.topology.left( e ) : mesh.topology.right( e );
                     if ( !nextF )
@@ -716,12 +712,33 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                         return; // stop propagation on sharp angle
                 }
             };
-            findBadFaces( true );
-            findBadFaces( false );
+
+            int numIncidentLCreases = 0;
+            int numIncidentRCreases = 0;
+            auto creaseEdge = EdgeId( ue );
+            for ( auto e : orgRing( mesh.topology, creaseEdge ) )
+            {
+                if ( creases.test( e.undirected() ) )
+                    numIncidentLCreases++;
+            }
+            for ( auto e : orgRing( mesh.topology, creaseEdge.sym() ) )
+            {
+                if ( creases.test( e.undirected() ) )
+                    numIncidentRCreases++;
+            }
+            if ( ( numIncidentRCreases > numIncidentLCreases )
+                || ( numIncidentRCreases == numIncidentLCreases &&
+                    mesh.topology.getOrgDegree( creaseEdge ) < mesh.topology.getOrgDegree( creaseEdge.sym() ) ) )
+            {
+                creaseEdge = creaseEdge.sym();// important part to triangulate worse end of the edge (mb we should change degree check to area check?)
+            }
+            fixFacesBuffer.reset();
+            findBadFaces( creaseEdge, true );
+            findBadFaces( creaseEdge, false );
             if ( fixFacesBuffer.none() )
                 continue;
 
-            auto loops = delRegionKeepBd( mesh, fixFacesBuffer );
+            auto loops = delRegionKeepBd( mesh, fixFacesBuffer, true );
             for ( const auto& loop : loops )
             {
                 int i = 0;

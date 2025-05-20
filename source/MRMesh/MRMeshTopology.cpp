@@ -960,42 +960,8 @@ void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         deleteFace( f, keepEdges );
 }
 
-void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const
-{
-    for ( auto n = r.next; ; n = next( n ) )
-    {
-        if ( (  r.next = mapEdge( emap, n ) ) )
-            break;
-    }
-
-    for ( auto p = r.prev; ; p = prev( p ) )
-    {
-        if ( ( r.prev = mapEdge( emap, p ) ) )
-            break;
-    }
-
-    if ( r.org.valid() )
-        r.org = vmap[r.org];
-
-    if ( r.left.valid() )
-        r.left = fmap[r.left];
-}
-
-void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-    const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const
-{
-    translateNoFlip_( r, fmap, vmap, emap );
-    translateNoFlip_( rsym, fmap, vmap, emap );
-
-    if ( flipOrientation )
-    {
-        std::swap( r.prev, r.next );
-        std::swap( rsym.prev, rsym.next );
-        std::swap( r.left, rsym.left );
-    }
-}
-
-void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const
+template<typename FM, typename VM, typename WEM>
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const
 {
     for ( auto n = r.next; ; n = next( n ) )
     {
@@ -1016,8 +982,9 @@ void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceHashMap & fma
         r.left = getAt( fmap, r.left );
 }
 
+template<typename FM, typename VM, typename WEM>
 void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
-    const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const
+    const FM & fmap, const VM & vmap, const WEM & emap, bool flipOrientation ) const
 {
     translateNoFlip_( r, fmap, vmap, emap );
     translateNoFlip_( rsym, fmap, vmap, emap );
@@ -1729,14 +1696,18 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
 
+    // maps: from index -> to index;
+    // use dense map only if requested by the user, otherwise hash map
+    auto fmap = map.src2tgtFaces ? std::move( *map.src2tgtFaces ) : FaceMapOrHashMap::createHashMap();
+    fmap.resizeReserve( from.faceSize(), fcount );
 
-    // in all maps: from index -> to index
-    FaceHashMap fmap;
-    fmap.reserve( fcount );
-    WholeEdgeHashMap emap;
-    emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
-    VertHashMap vmap;
-    vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+    auto emap = map.src2tgtEdges ? std::move( *map.src2tgtEdges ) : WholeEdgeMapOrHashMap::createHashMap();
+    emap.resizeReserve( from.undirectedEdgeSize(), std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
+
+    auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createHashMap();
+    vmap.resizeReserve( from.vertSize(), std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+
+    // maps: to index -> from index
     if ( map.tgt2srcEdges )
         map.tgt2srcEdges->resize( undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
@@ -1749,14 +1720,13 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     {
         if ( fromVerts.test_set( key, false ) )
         {
-            [[maybe_unused]] bool inserted = vmap.insert( std::make_pair( key, val ) ).second;
-            assert( inserted );
+            assert( !getAt( vmap, key ) );
+            setAt( vmap, key, val );
         }
 #ifndef NDEBUG
         else
         {
-            auto it = vmap.find( key );
-            assert( it != vmap.end() && it->second == val );
+            assert( getAt( vmap, key ) == val );
         }
 #endif
     };
@@ -1784,8 +1754,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
             setVmap( from.org( e ), org( e1 ) );
             setVmap( from.dest( e ), dest( e1 ) );
-            [[maybe_unused]] bool eInserted = emap.insert( { e.undirected(), e.even() ? e1 : e1.sym() } ).second;
-            assert( eInserted ); // all contour edges must be unique
+            assert( !getAt( emap, e.undirected() ) );
+            setAt( emap, e.undirected(), e.even() ? e1 : e1.sym() );
             existingEdges.autoResizeSet( e.undirected() );
         }
     }
@@ -1802,8 +1772,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             const UndirectedEdgeId ue = e.undirected();
             if ( fromEdges.test_set( ue, false ) )
             {
-                [[maybe_unused]] bool inserted = emap.insert( { ue, edges_.endId() } ).second;
-                assert( inserted );
+                assert( !getAt( emap, ue ) );
+                setAt( emap, ue, edges_.endId() );
                 edges_.push_back( from.edges_[EdgeId{ ue }] );
                 edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
                 if ( map.tgt2srcEdges )
@@ -1816,8 +1786,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 if ( fromVerts.test_set( v, false ) )
                 {
                     auto nv = addVertId();
-                    [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
-                    assert( inserted );
+                    assert( !getAt( vmap, v ) );
+                    setAt( vmap, v, nv );
                     if ( map.tgt2srcVerts )
                         map.tgt2srcVerts->push_back( v );
                     edgePerVertex_[nv] = mapEdge( emap, e );
@@ -1832,7 +1802,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         auto nf = addFaceId();
         if ( map.tgt2srcFaces )
             map.tgt2srcFaces ->push_back( f );
-        fmap[f] = nf;
+        setAt( fmap, f, nf );
         edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
         if ( updateValids_ )
         {
@@ -1858,7 +1828,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 eNx = flipOrientation ? from.prev( eNx ) : from.next( eNx );
                 auto cf = flipOrientation ? from.right( eNx ) : from.left( eNx );
-                if ( ( cf && fmap[cf] ) || eNx == e.sym() )
+                if ( getAt( fmap, cf ) || eNx == e.sym() )
                     break;
             }
             if ( !existingEdges.test( eNx.undirected() ) )
@@ -1872,7 +1842,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 ePr = flipOrientation ? from.next( ePr ) : from.prev( ePr );
                 auto cf = flipOrientation ? from.left( ePr ) : from.right( ePr );
-                if ( ( cf && fmap[cf] ) || ePr == e )
+                if ( getAt( fmap, cf ) || ePr == e )
                     break;
             }
             if ( !existingEdges.test( ePr.undirected() ) )

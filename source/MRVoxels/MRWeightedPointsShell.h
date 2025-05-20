@@ -2,10 +2,12 @@
 
 #include "MRVoxelsFwd.h"
 #include "MRDistanceVolumeParams.h"
+#include "MRMarchingCubes.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRClosestWeightedPoint.h"
 #include "MRMesh/MRBitSet.h"
+#include "MRMesh/MRBox.h"
 #include "MRPch/MRBindingMacros.h"
 
 namespace MR
@@ -99,5 +101,25 @@ MRVOXELS_API VertScalars calculateShellWeightsFromRegions(
 
 /// this overload supports linear interpolation between the regions with different weight
 [[nodiscard]] MRVOXELS_API Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params );
+
+
+/// A strategy that generalizes functions above and allows to easily overrride some intermidiate steps
+class MRVOXELS_API WeightedShellStrategy
+{
+public:
+    template <typename T>
+    Expected<Mesh> run( const T& meshOrCloud, const WeightedPointsShellParametersMetric& params );
+    Expected<Mesh> run( const Mesh& mesh, const WeightedPointsShellParametersRegions& params );
+
+protected:
+    virtual FunctionVolume getDistanceField( const PointCloud& cloud, const WeightedPointsToDistanceVolumeParams& params ) const;
+    virtual FunctionVolume getDistanceField( const Mesh& mesh, const WeightedPointsToDistanceVolumeParams& params ) const;
+
+    virtual WeightedPointsToDistanceVolumeParams getDistanceFieldParams() const;
+    virtual MarchingCubesParams getMarchingCubesParams() const;
+
+    Box3f bbox_;
+    WeightedPointsShellParametersMetric params_;
+};
 
 } //namespace MR

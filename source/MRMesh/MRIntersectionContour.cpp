@@ -344,6 +344,14 @@ Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, co
     return res;
 }
 
+bool isClosed( const ContinuousContour& contour )
+{
+    return contour.size() > 1 &&
+        contour.front().isEdgeATriB == contour.back().isEdgeATriB &&
+        contour.front().edge.undirected() == contour.back().edge.undirected() &&
+        contour.front().tri == contour.back().tri;
+}
+
 std::vector<int> detectLoneContours( const ContinuousContours& contours )
 {
     std::vector<int> res;

@@ -96,6 +96,9 @@ MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanO
 MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 
+/// performs boolean operation on on mesh with it-self, cutting simple intersections contours and flipping their connectivity
+/// this function is experemental and likely to change signature and/or behaviour in future 
+MRMESH_API Expected<Mesh> selfBoolean( const Mesh& mesh );
 
 /// returns intersection contours of given meshes
 MRMESH_API Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A = nullptr );

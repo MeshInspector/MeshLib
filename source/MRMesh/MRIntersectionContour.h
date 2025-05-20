@@ -32,6 +32,9 @@ MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology&
 MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
 const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+/// returns true if contour is closed
+MRMESH_API bool isClosed( const ContinuousContour& contour );
+
 /// Detects contours that fully lay inside one triangle
 /// returns they indices in contours
 MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours );

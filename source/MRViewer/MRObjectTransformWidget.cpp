@@ -189,9 +189,23 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
-static ControlBit sScaleControlToTranslationControl( const ControlBit rotationContrilBit )
+static ControlBit sScaleControlToTranslationControl( const ControlBit scaleControlBit )
 {
-    return ControlBit( unsigned(rotationContrilBit) >> 3 );
+    switch ( scaleControlBit )
+    {
+    case ControlBit::ScaleX: [[fallthrough]];
+    case ControlBit::ScaleY: [[fallthrough]];
+    case ControlBit::ScaleZ: 
+        return ControlBit( unsigned( scaleControlBit ) >> 3 );
+    case ControlBit::ScaleRearX: [[fallthrough]];
+    case ControlBit::ScaleRearY: [[fallthrough]];
+    case ControlBit::ScaleRearZ:
+        return ControlBit( unsigned( scaleControlBit ) >> 6 );
+
+    default:
+        break;
+    }
+    return ControlBit::None;
 }
 
 bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
@@ -225,13 +239,22 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifi
             switch ( hoveredControl )
             {
             case ControlBit::ScaleX:
-                vp.cameraLookAlong( -dirX, -dirZ );
+                vp.cameraLookAlong( -dirX, dirZ );
                 break;
             case ControlBit::ScaleY:
-                vp.cameraLookAlong( -dirY, -dirZ );
+                vp.cameraLookAlong( -dirY, dirZ );
                 break;
             case ControlBit::ScaleZ:
-                vp.cameraLookAlong( -dirZ, dirX );
+                vp.cameraLookAlong( -dirZ, dirY );
+                break;
+            case ControlBit::ScaleRearX:
+                vp.cameraLookAlong( dirX, dirZ );
+                break;
+            case ControlBit::ScaleRearY:
+                vp.cameraLookAlong( dirY, dirZ );
+                break;
+            case ControlBit::ScaleRearZ:
+                vp.cameraLookAlong( dirZ, dirY );
                 break;
             default: break;
             }
@@ -621,6 +644,14 @@ TransformControls::~TransformControls()
         obj.reset();
     }
 
+    for ( auto& obj : scaleRearControls_ )
+    {
+        if ( !obj )
+            continue;
+        obj->detachFromParent();
+        obj.reset();
+    }
+
     if ( activeLine_ )
     {
         activeLine_->detachFromParent();
@@ -682,25 +713,31 @@ void TransformControls::init( std::shared_ptr<Object> parent )
                 parent->addChild( rotateControls_[i] );
         }
 
-        if ( !scaleControls_[i] )
+        auto addScaleSphere = [this, i, width, &parent] ( std::shared_ptr<ObjectMesh>& scaleControlRef,
+            const float offset,
+            const char namePrefix[])
         {
+            if ( !scaleControlRef )
+            {
+                scaleControlRef = std::make_shared<ObjectMesh>();
+                scaleControlRef->setAncillary( true );
+                scaleControlRef->setFrontColor( params_.translationColors[i], false );
+                scaleControlRef->setBackColor( params_.translationColors[i] );
+                scaleControlRef->setFlatShading( true );
+                scaleControlRef->setName( namePrefix + std::to_string(i) );
 
-            scaleControls_[i] = std::make_shared<ObjectMesh>();
-            scaleControls_[i]->setAncillary( true );
-            scaleControls_[i]->setFrontColor( params_.translationColors[i], false );
-            scaleControls_[i]->setBackColor( params_.translationColors[i] );
-            scaleControls_[i]->setFlatShading( true );
-            scaleControls_[i]->setName( "ScaleSphere " + std::to_string( i ) );
+                const float sphereR = 3.f * params_.coneRadiusFactor * width;
+                std::shared_ptr<MR::Mesh> sphere = std::make_shared<MR::Mesh>( makeUVSphere( sphereR ) );
+                sphere->transform( MR::AffineXf3f::translation( getCenter() + offset * baseAxis[i] ) );
+                scaleControlRef->setMesh( std::move( sphere ) );
 
-            const float sphereR = 3.f * params_.coneRadiusFactor * width;
-            //const float coneHeight = params_.coneSizeFactor * width;
-            std::shared_ptr<MR::Mesh> sphere = std::make_shared<MR::Mesh>( makeUVSphere( sphereR ) );
-            sphere->transform( MR::AffineXf3f::translation( getCenter() + radius * baseAxis[i] ) );
-            scaleControls_[i]->setMesh( std::move( sphere ) );
+                if ( parent )
+                    parent->addChild( scaleControlRef );
+            }
+        };
 
-            if ( parent )
-                parent->addChild( scaleControls_[i] );
-        }
+        addScaleSphere( scaleRearControls_[i], -radius, "ScaleSphereRear "); //Rear
+        addScaleSphere( scaleControls_[i], radius, "ScaleSphere " );//front
 
         if ( !rotateLines_[i] )
         {
@@ -840,7 +877,7 @@ ControlBit TransformControls::hover_( bool pickThrough )
     };
 
     std::vector<VisualObject*> objsToPick_;
-    objsToPick_.reserve( 9 );
+    objsToPick_.reserve( 12 );
     auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
 
     if ( pickThrough )
@@ -856,6 +893,11 @@ ControlBit TransformControls::hover_( bool pickThrough )
                 objsToPick_.push_back( obj.get() );
         }
         for ( auto obj : scaleControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+        for ( auto obj : scaleRearControls_ )
         {
             if ( obj->isVisible( hoveredViewportId ) )
                 objsToPick_.push_back( obj.get() );
@@ -931,6 +973,12 @@ ControlBit TransformControls::hover_( bool pickThrough )
         return ControlBit::ScaleY;
     case 8:
         return ControlBit::ScaleZ;
+    case 9:
+        return ControlBit::ScaleRearX;
+    case 10:
+        return ControlBit::ScaleRearY;
+    case 11:
+        return ControlBit::ScaleRearZ;
     default:
         return ControlBit::None;
     }
@@ -963,6 +1011,10 @@ void TransformControls::updateVisualTransformMode_( ControlBit showMask, Viewpor
         checkMask = ControlBit( int( ControlBit::ScaleX ) << i );
         enable = ( showMask & checkMask ) == checkMask;
         scaleControls_[i]->setVisible( enable, viewportMask );
+
+        checkMask = ControlBit( int( ControlBit::ScaleRearX ) << i );
+        enable = ( showMask & checkMask ) == checkMask;
+        scaleRearControls_[i]->setVisible( enable, viewportMask );
     }
 }
 
@@ -1053,6 +1105,8 @@ int TransformControls::findHoveredIndex_() const
             return 3 + ax;
         else if ( hoveredObject_ == scaleControls_[ax] )
             return 6 + ax;
+        else if ( hoveredObject_ == scaleRearControls_[ax] )
+            return 9 + ax;
     }
     return -1;
 }

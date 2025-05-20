@@ -31,7 +31,10 @@ enum class ControlBit
     ScaleX = 0x40,
     ScaleY = 0x80,
     ScaleZ = 0x100,
-    ScaleMask = ScaleX | ScaleY| ScaleZ,
+    ScaleRearX = 0x200,//We need to separate spheres for for setting view on double-click  functionality
+    ScaleRearY = 0x400,
+    ScaleRearZ = 0x800,
+    ScaleMask = ScaleX | ScaleY| ScaleZ | ScaleRearX | ScaleRearY | ScaleRearZ,
     FullMask = RotMask | MoveMask | ScaleMask
 };
 MR_MAKE_FLAG_OPERATORS( ControlBit )
@@ -210,6 +213,7 @@ private:
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
     std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> scaleControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> scaleRearControls_;
 
     // if active line is visible, other lines are not
     std::shared_ptr<ObjectLines> activeLine_;

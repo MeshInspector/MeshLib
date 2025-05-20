@@ -29,6 +29,8 @@ constexpr std::array<MR::Vector3f, 3> baseAxis =
 
 using namespace MR;
 
+constexpr int cDefaultAlpha = 0;
+
 float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, const Vector3f& norm,
                           const Line3f& ray, Viewport& vp, const Vector3f& vpPoint )
 {
@@ -673,6 +675,8 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             translateControls_[i]->setBackColor( params_.translationColors[i] );
             translateControls_[i]->setFlatShading( true );
             translateControls_[i]->setName( "TranslationC " + std::to_string( i ) );
+
+            translateControls_[i]->setGlobalAlpha( cDefaultAlpha );
             if ( parent )
                 parent->addChild( translateControls_[i] );
         }
@@ -709,6 +713,8 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             rotateControls_[i]->setBackColor( params_.rotationColors[i] );
             rotateControls_[i]->setFlatShading( true );
             rotateControls_[i]->setName( "RotationC " + std::to_string( i ) );
+
+            rotateControls_[i]->setGlobalAlpha( cDefaultAlpha );
             if ( parent )
                 parent->addChild( rotateControls_[i] );
         }
@@ -730,6 +736,8 @@ void TransformControls::init( std::shared_ptr<Object> parent )
                 std::shared_ptr<MR::Mesh> sphere = std::make_shared<MR::Mesh>( makeUVSphere( sphereR ) );
                 sphere->transform( MR::AffineXf3f::translation( getCenter() + offset * baseAxis[i] ) );
                 scaleControlRef->setMesh( std::move( sphere ) );
+
+                scaleControlRef->setGlobalAlpha( cDefaultAlpha );
 
                 if ( parent )
                     parent->addChild( scaleControlRef );
@@ -936,6 +944,7 @@ ControlBit TransformControls::hover_( bool pickThrough )
         color = 0.5f * color;
         color.a = 255;
         hoveredObject_->setFrontColor( color, false );
+        hoveredObject_->setGlobalAlpha( 255 );
 
         if ( pickThrough )
         {
@@ -953,35 +962,121 @@ ControlBit TransformControls::hover_( bool pickThrough )
         }
     }
 
+    ControlBit hoveredBit = ControlBit::None;
+
     switch ( findHoveredIndex_() )
     {
     case 0:
-        return ControlBit::MoveX;
+        hoveredBit = ControlBit::MoveX;
+        break;
     case 1:
-        return ControlBit::MoveY;
+        hoveredBit = ControlBit::MoveY;
+        break;
     case 2:
-        return ControlBit::MoveZ;
+        hoveredBit = ControlBit::MoveZ;
+        break;
     case 3:
-        return ControlBit::RotX;
+        hoveredBit = ControlBit::RotX;
+        break;
     case 4:
-        return ControlBit::RotY;
+        hoveredBit = ControlBit::RotY;
+        break;
     case 5:
-        return ControlBit::RotZ;
+        hoveredBit = ControlBit::RotZ;
+        break;
     case 6:
-        return ControlBit::ScaleX;
+        hoveredBit = ControlBit::ScaleX;
+        break;
     case 7:
-        return ControlBit::ScaleY;
+        hoveredBit = ControlBit::ScaleY;
+        break;
     case 8:
-        return ControlBit::ScaleZ;
+        hoveredBit = ControlBit::ScaleZ;
+        break;
     case 9:
-        return ControlBit::ScaleRearX;
+        hoveredBit = ControlBit::ScaleRearX;
+        break;
     case 10:
-        return ControlBit::ScaleRearY;
+        hoveredBit = ControlBit::ScaleRearY;
+        break;
     case 11:
-        return ControlBit::ScaleRearZ;
+        hoveredBit = ControlBit::ScaleRearZ;
+        break;
     default:
-        return ControlBit::None;
+        hoveredBit =  ControlBit::None;
+        break;
     }
+
+    for ( size_t axis : {size_t(Axis::X), size_t(Axis::Y), size_t(Axis::Z)} )
+    {
+        translateControls_[axis]->setGlobalAlpha( cDefaultAlpha );
+        rotateControls_[axis]->setGlobalAlpha( cDefaultAlpha );
+        scaleControls_[axis]->setGlobalAlpha( cDefaultAlpha );
+        scaleRearControls_[axis]->setGlobalAlpha( cDefaultAlpha );
+    }
+
+    //we want to show more controls (scaling spheres along with axis)
+    switch ( hoveredBit )
+    {
+    case MR::ControlBit::MoveX:
+        translateControls_[0]->setGlobalAlpha( 255 );
+        scaleControls_[0]->setGlobalAlpha( 255 );
+        scaleRearControls_[0]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::MoveY:
+        translateControls_[1]->setGlobalAlpha( 255 );
+        scaleControls_[1]->setGlobalAlpha( 255 );
+        scaleRearControls_[1]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::MoveZ:
+        translateControls_[2]->setGlobalAlpha( 255 );
+        scaleControls_[2]->setGlobalAlpha( 255 );
+        scaleRearControls_[2]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::RotX:
+        rotateControls_[0]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::RotY:
+        rotateControls_[1]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::RotZ:
+        rotateControls_[2]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleX:
+        translateControls_[0]->setGlobalAlpha( 255 );
+        scaleControls_[0]->setGlobalAlpha( 255 );
+        scaleRearControls_[0]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleY:
+        translateControls_[1]->setGlobalAlpha( 255 );
+        scaleControls_[1]->setGlobalAlpha( 255 );
+        scaleRearControls_[1]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleZ:
+        translateControls_[2]->setGlobalAlpha( 255 );
+        scaleControls_[2]->setGlobalAlpha( 255 );
+        scaleRearControls_[2]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleRearX:
+        translateControls_[0]->setGlobalAlpha( 255 );
+        scaleControls_[0]->setGlobalAlpha( 255 );
+        scaleRearControls_[0]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleRearY:
+        translateControls_[1]->setGlobalAlpha( 255 );
+        scaleControls_[1]->setGlobalAlpha( 255 );
+        scaleRearControls_[1]->setGlobalAlpha( 255 );
+        break;
+    case MR::ControlBit::ScaleRearZ:
+        translateControls_[2]->setGlobalAlpha( 255 );
+        scaleControls_[2]->setGlobalAlpha( 255 );
+        scaleRearControls_[2]->setGlobalAlpha( 255 );
+        break;
+    default:
+        break;
+    }
+
+    return hoveredBit;
 }
 
 void TransformControls::stopModify_()

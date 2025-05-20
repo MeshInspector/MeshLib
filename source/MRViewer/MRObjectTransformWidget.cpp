@@ -614,6 +614,14 @@ TransformControls::~TransformControls()
         obj.reset();
     }
 
+    for ( auto& obj : translateDottedLines_ )
+    {
+        if ( !obj )
+            continue;
+        obj->detachFromParent();
+        obj.reset();
+    }
+
     for ( auto& obj : translateControls_ )
     {
         if ( !obj )
@@ -686,9 +694,19 @@ void TransformControls::init( std::shared_ptr<Object> parent )
             translateLines_[i] = std::make_shared<ObjectLines>();
             translateLines_[i]->setAncillary( true );
             translateLines_[i]->setFrontColor( params_.helperLineColor, false );
-            translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+            translateLines_[i]->setVisualizeProperty( true, VisualizeMaskType::DepthTest, ViewportMask::all() );
             translateLines_[i]->setName( "TranslationL " + std::to_string( i ) );
             translateControls_[i]->addChild( translateLines_[i] );
+        }
+
+        if ( !translateDottedLines_[i] )
+        {
+            translateDottedLines_[i] = std::make_shared<ObjectLines>();
+            translateDottedLines_[i]->setAncillary( true );
+            translateDottedLines_[i]->setFrontColor( params_.helperLineColor, false );
+            translateDottedLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+            translateDottedLines_[i]->setName( "TranslationL " + std::to_string( i ) );
+            translateControls_[i]->addChild( translateDottedLines_[i] );
         }
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
@@ -698,6 +716,25 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
+
+        auto transDottedPolyline = std::make_shared<Polyline3>();
+
+        //transDottedPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
+        const int N = 100;
+        std::vector<MR::Vector3f> points;
+        for ( int j = 0; j <= N; ++j)
+        {
+
+            points.emplace_back( (1.f / N) * ( float(j) * translationPoints[0] + float( N - j ) * translationPoints[1]) );
+        }
+
+        for ( int j = 0; j < N ; j += 2 )
+        {
+            assert( j < points.size() );
+            transDottedPolyline->addFromPoints( &points[j], 2 );
+        }
+
+        translateDottedLines_[i]->setPolyline( transDottedPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
             makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );

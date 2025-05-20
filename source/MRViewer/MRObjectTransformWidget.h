@@ -218,6 +218,7 @@ private:
     // if active line is visible, other lines are not
     std::shared_ptr<ObjectLines> activeLine_;
     std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> translateLines_;
+    std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> translateDottedLines_;
     std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> rotateLines_;
 
     std::shared_ptr<ObjectMesh> hoveredObject_;

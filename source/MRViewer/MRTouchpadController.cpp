@@ -176,10 +176,7 @@ bool TouchpadController::touchpadSwipeGestureEnd_()
 bool TouchpadController::touchpadZoomGestureBegin_()
 {
     auto& viewer = getViewerInstance();
-
     initZoomParams_ = viewer.viewport().getParameters();
-
-    viewer.mouseController().setMouseScroll( true );
 
     return true;
 }
@@ -211,10 +208,6 @@ bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 
 bool TouchpadController::touchpadZoomGestureEnd_()
 {
-    auto& viewer = getViewerInstance();
-
-    viewer.mouseController().setMouseScroll( false );
-
     return true;
 }
 

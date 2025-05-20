@@ -42,7 +42,11 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 #elif defined( __APPLE__ )
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
-        return SystemPath::getExecutableDirectory().value_or( "/" );
+    {
+        // Back out from `<AppName>.app/Contents/MacOS`. This is only needed for apps that are MacOS bundles, but we do it unconditionally for simplicity.
+        // It's easier to require all apps to be bundles (which is needed to package them anyway) than to make this conditional.
+        return SystemPath::getExecutableDirectory().value_or( "/" ) / "../../..";
+    }
 
     const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     using Directory = SystemPath::Directory;

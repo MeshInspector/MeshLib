@@ -300,7 +300,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
     assert( size_ == sinkSeeds.size() );
     assert( sourceSeeds.any() );
     assert( sinkSeeds.any() );
-    assert( ( sourceSeeds & sinkSeeds ).count() == 0 );
+    assert( !sourceSeeds.intersects( sinkSeeds ) );
     BitSetParallelForAll( sourceSeeds_, [&]( SeqVoxelId s )
     {
         auto v = seq2voxel_[s];

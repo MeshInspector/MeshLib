@@ -300,7 +300,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
     assert( size_ == sinkSeeds.size() );
     assert( sourceSeeds.any() );
     assert( sinkSeeds.any() );
-    assert( ( sourceSeeds & sinkSeeds ).count() == 0 );
+    assert( !sourceSeeds.intersects( sinkSeeds ) );
     BitSetParallelForAll( sourceSeeds_, [&]( SeqVoxelId s )
     {
         auto v = seq2voxel_[s];
@@ -1164,7 +1164,7 @@ Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolum
                 if ( parts.size() > 1 )
                     vgc.cutOutOfSpanNeiNeighbors( context );
                 vgc.buildForest( context, parts.size() == numSubtasks );
-                vgc.segment( context );
+                (void)vgc.segment( context ); // cannot fail without callback
                 if ( parts.size() > 1 )
                     vgc.restoreCutNeighbor( context );
                 part.stat = context.stat;

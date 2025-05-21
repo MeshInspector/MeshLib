@@ -187,7 +187,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     }
     else
     {
-        auto boundaryEdges = mesh.topology.findBoundaryEdges();
+        auto boundaryEdges = mesh.topology.findLeftBdEdges();
         mesh.topology.deleteFaces( *res );
         mesh.topology.deleteFaces( findHoleComplicatingFaces( mesh ) );
         mesh.invalidateCaches();
@@ -230,7 +230,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
 // Helper function to find own self-intersections on a mesh part
 static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, const FaceBitSet& part, ProgressCallback cb, bool touchIsIntersection )
 {
-    FaceMap tgt2srcFaces;
+    FaceMapOrHashMap tgt2srcFaces;
     PartMapping mapping;
     mapping.tgt2srcFaces = &tgt2srcFaces;
     Mesh partMesh = mesh.cloneRegion( part, false, mapping );
@@ -239,8 +239,13 @@ static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, con
     if ( !res.has_value() )
         return unexpected( res.error() );
     FaceBitSet result( mesh.topology.lastValidFace() + 1 );
-    for ( FaceId f : *res )
-        result.set( tgt2srcFaces[f] );
+    if ( auto map = tgt2srcFaces.getMap() )
+    {
+        for ( FaceId f : *res )
+            result.set( (*map)[f] );
+    }
+    else
+        assert( false );
     return result;
 }
 

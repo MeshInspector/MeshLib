@@ -1,0 +1,17 @@
+/**
+ \page ExampleContourTriangulation Fusion Example
+
+Example of Fusion.
+
+<div class="tabbed">
+
+- <b class="tab-title">C++</b>
+\include Fusion.dox.cpp
+
+- <b class="tab-title">Python</b>
+\include Fusion.dox.py
+
+</div>
+
+ */
+ 

@@ -95,7 +95,8 @@ Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& para
     if ( !reportProgress( params.cb, 0.15f ) )
         return unexpectedOperationCanceled();
     
-    FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } );
+    if ( auto e = FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } ); !e )
+        return unexpected( std::move( e.error() ) );
     
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
@@ -1556,7 +1557,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
     VertBitSet extendedVerts;
     for ( const auto& component : components )
     {
-        if ( ( component & innerVerts ).count() != 0 )
+        if ( component.intersects( innerVerts ) )
             extendedVerts |= component;
     }
 

@@ -15,6 +15,7 @@
     <ClInclude Include="MRFilesystem.h" />
     <ClInclude Include="MRBindingMacros.h" />
     <ClInclude Include="MRWinapi.h" />
+    <ClInclude Include="MRExpected.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

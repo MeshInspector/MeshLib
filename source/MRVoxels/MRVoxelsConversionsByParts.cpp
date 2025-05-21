@@ -13,6 +13,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRMapEdge.h"
 
 #include "MRPch/MRFmt.h"
 
@@ -20,22 +21,6 @@ namespace
 {
 
 using namespace MR;
-
-void clearPartMapping( PartMapping& mapping )
-{
-    if ( mapping.src2tgtFaces )
-        mapping.src2tgtFaces->clear();
-    if ( mapping.src2tgtVerts )
-        mapping.src2tgtVerts->clear();
-    if ( mapping.src2tgtEdges )
-        mapping.src2tgtEdges->clear();
-    if ( mapping.tgt2srcFaces )
-        mapping.tgt2srcFaces->clear();
-    if ( mapping.tgt2srcVerts )
-        mapping.tgt2srcVerts->clear();
-    if ( mapping.tgt2srcEdges )
-        mapping.tgt2srcEdges->clear();
-}
 
 void sortEdgePaths( const Mesh& mesh, std::vector<EdgePath>& paths )
 {
@@ -124,11 +109,11 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         settings.postCut( part );
 
     auto mapping = settings.mapping;
-    clearPartMapping( mapping );
+    mapping.clear();
 
     if ( leftCutContours.empty() && cutContours.empty() )
     {
-        WholeEdgeHashMap src2tgtEdges;
+        WholeEdgeMapOrHashMap src2tgtEdges;
         if ( !mapping.src2tgtEdges )
             mapping.src2tgtEdges = &src2tgtEdges;
 
@@ -140,10 +125,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         for ( auto& contour : rightCutContours )
         {
             for ( auto& e : contour )
-            {
-                const auto ue = ( *mapping.src2tgtEdges )[e];
-                e = e.even() ? ue : ue.sym();
-            }
+                e = mapEdge( src2tgtEdges, e );
         }
         cutContours = std::move( rightCutContours );
 
@@ -156,7 +138,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         if ( cutContours[i].size() != leftCutContours[i].size() )
             return unexpected( "Mesh cut contours mismatch" );
 
-    WholeEdgeHashMap src2tgtEdges;
+    WholeEdgeMapOrHashMap src2tgtEdges;
     if ( !mapping.src2tgtEdges )
         mapping.src2tgtEdges = &src2tgtEdges;
 
@@ -168,10 +150,7 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     for ( auto& contour : rightCutContours )
     {
         for ( auto& e : contour )
-        {
-            const auto ue = ( *mapping.src2tgtEdges )[e];
-            e = e.even() ? ue : ue.sym();
-        }
+            e = mapEdge( src2tgtEdges, e );
     }
     cutContours = std::move( rightCutContours );
 

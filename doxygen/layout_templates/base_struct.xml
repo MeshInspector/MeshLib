@@ -37,6 +37,10 @@
         <tab type="user" url="__BEGIN_URL__ExampleLaplacian__END_URL__" title="Mesh Laplacian Deformation"/>
         <tab type="user" url="__BEGIN_URL__ExampleNoiseDenoise__END_URL__" title="Mesh Denoise"/>
         <tab type="user" url="__BEGIN_URL__ExampleTriangulation__END_URL__" title="Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExamplePointsToMesh__END_URL__" title="Points to Mesh"/>
+        <tab type="user" url="__BEGIN_URL__ExampleContourTriangulation__END_URL__" title="Contour Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleTerrainTriangulation__END_URL__" title="Terrain Triangulation"/>
+        <tab type="user" url="__BEGIN_URL__ExampleFusion__END_URL__" title="Fusion"/>
         <tab type="user" url="__BEGIN_URL__ExampleMeshFromText__END_URL__" title="Text to Mesh"/>
       </tab>
       <tab type="usergroup" url="__BEGIN_URL__Examples__END_URL__#PythonSpecificExamples" title="Python Specific Samples">

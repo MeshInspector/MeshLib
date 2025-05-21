@@ -16,6 +16,7 @@
 #include "MRUIStyle.h"
 #include "MRDirectionWidget.h"
 #include "MRAppendHistory.h"
+#include "MRModalDialog.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRStringConvert.h"
@@ -1326,29 +1327,15 @@ PaletteChanges Palette(
         ImGui::SameLine();
     ImGui::PopStyleVar();
 
-    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
-    if ( ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog saveDialog( popupName.c_str(), {
+        .headline = "Save Palette",
+    } );
+    if ( saveDialog.beginPopup( menuScaling ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            PushFont( headerFont );
-
-        const auto headerWidth = CalcTextSize( "Save Palette" ).x;
-
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        Text( "Save Palette" );
-
-        if ( headerFont )
-            PopFont();
-
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
         static std::string currentPaletteName;
 
-        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
+        ImGui::SetNextItemWidth( saveDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
         UI::inputText( "Palette Name", currentPaletteName );
         ImGui::PopStyleVar();
 
@@ -1386,10 +1373,11 @@ PaletteChanges Palette(
         }
 
         bool closeTopPopup = false;
-        if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
-            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        ModalDialog warningPopup( "Palette already exists##PaletteHelper", {
+            .text = "Palette preset with this name already exists, override?",
+        } );
+        if ( warningPopup.beginPopup( menuScaling ) )
         {
-            ImGui::Text( "Palette preset with this name already exists, override?" );
             auto w = GetContentRegionAvail().x;
             auto p = GetStyle().FramePadding.x;
             if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
@@ -1411,22 +1399,21 @@ PaletteChanges Palette(
             {
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::EndPopup();
+            warningPopup.endPopup( menuScaling );
         }
         if ( closeTopPopup )
             ImGui::CloseCurrentPopup();
 
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        ImGui::SetCursorPosX( saveDialog.windowWidth() - btnWidth - style.WindowPadding.x );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
         ImGui::PopStyleVar();
 
-        ImGui::EndPopup();
+        saveDialog.endPopup( menuScaling );
     }
-    PopStyleVar( 3 );
 
     if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
     {

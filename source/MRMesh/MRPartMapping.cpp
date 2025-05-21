@@ -4,46 +4,80 @@
 namespace MR
 {
 
-HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+void PartMapping::clear()
+{
+    if ( src2tgtFaces )
+        src2tgtFaces->clear();
+    if ( src2tgtVerts )
+        src2tgtVerts->clear();
+    if ( src2tgtEdges )
+        src2tgtEdges->clear();
+    if ( tgt2srcFaces )
+        tgt2srcFaces->clear();
+    if ( tgt2srcVerts )
+        tgt2srcVerts->clear();
+    if ( tgt2srcEdges )
+        tgt2srcEdges->clear();
+}
+
+Src2TgtMaps::Src2TgtMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
     : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
 {
     if ( outFmap )
     {
+        src2tgtFaces_.setMap( std::move( *outFmap_ ) );
         map_.src2tgtFaces = &src2tgtFaces_;
-        outFmap->clear();
-        outFmap->resize( (int)srcTopology.lastValidFace() + 1 );
     }
     if ( outVmap )
     {
+        src2tgtVerts_.setMap( std::move( *outVmap_ ) );
         map_.src2tgtVerts = &src2tgtVerts_;
-        outVmap->clear();
-        outVmap->resize( (int)srcTopology.lastValidVert() + 1 );
     }
     if ( outEmap )
     {
+        src2tgtEdges_.setMap( std::move( *outEmap_ ) );
         map_.src2tgtEdges = &src2tgtEdges_;
-        outEmap->clear();
-        outEmap->resize( srcTopology.undirectedEdgeSize() );
     }
 }
 
-HashToVectorMappingConverter::~HashToVectorMappingConverter()
+Src2TgtMaps::~Src2TgtMaps()
 {
     if ( outFmap_ )
-    {
-        for ( const auto & [ fromFace, thisFace ] : src2tgtFaces_ )
-            (*outFmap_)[fromFace] = thisFace;
-    }
+        *outFmap_ = std::move( *src2tgtFaces_.getMap() );
     if ( outVmap_ )
-    {
-        for ( const auto & [ fromVert, thisVert ] : src2tgtVerts_ )
-            (*outVmap_)[fromVert] = thisVert;
-    }
+        *outVmap_ = std::move( *src2tgtVerts_.getMap() );
     if ( outEmap_ )
+        *outEmap_ = std::move( *src2tgtEdges_.getMap() );
+}
+
+Tgt2SrcMaps::Tgt2SrcMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+    : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
+{
+    if ( outFmap )
     {
-        for ( const auto & [ fromEdge, thisEdge ] : src2tgtEdges_ )
-            (*outEmap_)[fromEdge] = thisEdge;
+        tgt2srcFaces_.setMap( std::move( *outFmap_ ) );
+        map_.tgt2srcFaces = &tgt2srcFaces_;
     }
+    if ( outVmap )
+    {
+        tgt2srcVerts_.setMap( std::move( *outVmap_ ) );
+        map_.tgt2srcVerts = &tgt2srcVerts_;
+    }
+    if ( outEmap )
+    {
+        tgt2srcEdges_.setMap( std::move( *outEmap_ ) );
+        map_.tgt2srcEdges = &tgt2srcEdges_;
+    }
+}
+
+Tgt2SrcMaps::~Tgt2SrcMaps()
+{
+    if ( outFmap_ )
+        *outFmap_ = std::move( *tgt2srcFaces_.getMap() );
+    if ( outVmap_ )
+        *outVmap_ = std::move( *tgt2srcVerts_.getMap() );
+    if ( outEmap_ )
+        *outEmap_ = std::move( *tgt2srcEdges_.getMap() );
 }
 
 } //namespace MR

@@ -6,7 +6,12 @@ import pprint
 from pathlib import Path
 from typing import List
 
+import boto3
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
 import requests
+
+API_URL = "https://api.meshinspector.com/ci-stats/v2/log"
 
 def parse_iso8601(s):
     return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
@@ -76,6 +81,23 @@ def fetch_jobs(repo: str, run_id: str):
         'X-GitHub-Api-Version': '2022-11-28',
     })
 
+def sign_api_request(url, method, headers, body, region, service):
+    # Use the credentials from the assumed role
+    session = boto3.Session()
+    credentials = session.get_credentials().get_frozen_credentials()
+
+    request = AWSRequest(
+        method=method,
+        url=url,
+        headers=headers,
+        data=json.dumps(body)
+    )
+
+    # Sign the request with the SigV4Auth class
+    SigV4Auth(credentials, service, region).add_auth(request)
+
+    return request
+
 if __name__ == "__main__":
     branch = os.environ.get('GIT_BRANCH')
     commit = os.environ.get('GIT_COMMIT')
@@ -95,8 +117,29 @@ if __name__ == "__main__":
     }
     pprint.pp(result, indent=2, width=150)
 
-    resp = requests.post("https://api.meshinspector.com/ci-stats/v1/log", json=result, headers={
-        'Authorization': f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}',
-    })
-    if resp.status_code != 200:
-        raise RuntimeError(f'{resp.status_code}: {resp.text}')
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    if os.environ.get("CI_STATS_AUTH_TOKEN"):
+        headers['Authorization'] = f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}'
+
+    signed_request = sign_api_request(
+        API_URL,
+        'POST',
+        headers,
+        result,
+        'us-east-1',
+        'execute-api' # Service name for API Gateway
+    )
+
+    response = requests.post(
+        API_URL,
+        headers=dict(signed_request.headers.items()),  # Use signed headers
+        data=signed_request.body
+    )
+
+    if response.status_code == 200:
+        print("Successfully sent the CI stats to the API")
+    else:
+        raise RuntimeError(f'{response.status_code}: {response.text}')

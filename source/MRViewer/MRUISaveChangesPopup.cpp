@@ -9,6 +9,7 @@
 #include "MRShowModal.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
+#include "MRModalDialog.h"
 #include "MRSceneCache.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -23,33 +24,16 @@ namespace UI
 
 void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& settings )
 {
-    const ImVec2 windowSize{ cModalWindowWidth * settings.scaling, -1 };
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    // do not suggest saving empty scene
+    const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * settings.scaling, 3.0f * cDefaultItemSpacing * settings.scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * settings.scaling, cModalWindowPaddingY * settings.scaling } );
-    if ( ImGui::BeginModalNoAnimation( str_id, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog dialog( str_id, {
+        .headline = settings.header,
+        .text = showSave ? "Save your changes?" : "",
+        .closeOnClickOutside = true,
+    } );
+    if ( dialog.beginPopup( settings.scaling ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( settings.header.c_str() ).x;
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "%s", settings.header.c_str() );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        // do not suggest saving empty scene
-        const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
-        if ( showSave )
-        {
-            const char* text = "Save your changes?";
-            ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
-            ImGui::Text( "%s", text );
-        }
-
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * settings.scaling } );
 
@@ -96,19 +80,16 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
         }
         if ( !settings.dontSaveTooltip.empty() )
             UI::setTooltipIfHovered( settings.dontSaveTooltip.c_str(), settings.scaling );
+
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
-
         if ( !settings.cancelTooltip.empty() )
-        UI::setTooltipIfHovered( settings.cancelTooltip.c_str(), settings.scaling);
+            UI::setTooltipIfHovered( settings.cancelTooltip.c_str(), settings.scaling );
 
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-            ImGui::CloseCurrentPopup();
-        ImGui::PopStyleVar();
-        ImGui::EndPopup();
+        ImGui::PopStyleVar(); // ImGuiStyleVar_FramePadding
+        dialog.endPopup( settings.scaling );
     }
-    ImGui::PopStyleVar( 2 );
 }
 
 }

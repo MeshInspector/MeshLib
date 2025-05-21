@@ -94,7 +94,7 @@ std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const Face
     return findRegionBoundary( topology, region, true );
 }
 
-std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */ )
+std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */, bool keepLoneHoles )
 {
     MR_TIMER;
 
@@ -104,7 +104,7 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
     filteredBds.reserve( bds.size() );
     for ( auto & bd : bds )
     {
-        if ( std::all_of( bd.begin(), bd.end(), [&]( EdgeId e ) { return !mesh.topology.right( e ); } ) )
+        if ( !keepLoneHoles && std::all_of( bd.begin(), bd.end(), [&]( EdgeId e ) { return !mesh.topology.right( e ); } ) )
             continue; // delete boundary loops not having any single triangle outside of region
         for ( auto e : bd )
             uset.set( e );

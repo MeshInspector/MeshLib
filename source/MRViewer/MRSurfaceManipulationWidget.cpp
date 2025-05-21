@@ -562,6 +562,8 @@ void SurfaceManipulationWidget::initConnections_()
         }
         abortEdit_();
         reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
+        if ( settings_.workMode == WorkMode::Patch )
+            updateUVmap_( false, true );
         sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();
         setDeviationCalculationMethod( deviationCalculationMethod_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
@@ -641,13 +643,13 @@ void SurfaceManipulationWidget::changeSurface_()
     obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
-void SurfaceManipulationWidget::updateUVmap_( bool set )
+void SurfaceManipulationWidget::updateUVmap_( bool set, bool wholeMesh )
 {
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
-    BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
+    BitSetParallelFor( wholeMesh ? obj_->mesh()->topology.getValidVerts() : visualizationRegion_, [&] ( VertId v )
     {
         if ( set )
             uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );

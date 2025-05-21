@@ -83,7 +83,7 @@ Expected<void> RadiusCompensator::init()
     vertRegion_ = getInnerVerts( mesh_.topology, *faceRegion );
     auto vertRegionWithBounds = getIncidentVerts( mesh_.topology, *faceRegion );
 
-    if ( MeshComponents::hasFullySelectedComponent( mesh_, vertRegion_ - mesh_.topology.findBoundaryVerts( &vertRegion_ ) ) )
+    if ( MeshComponents::hasFullySelectedComponent( mesh_, vertRegion_ - mesh_.topology.findBdVerts( nullptr, &vertRegion_ ) ) )
         return unexpected( "MeshPart should not contain closed components" );
 
     auto [xvec, yvec] = params_.direction.perpendicular();

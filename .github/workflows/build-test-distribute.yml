@@ -336,7 +336,7 @@ jobs:
   collect-stats:
     timeout-minutes: 5
     runs-on: aws-micro
-    needs: [ upload-distributions ]
+    needs: [ config, upload-distributions ]
     if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
     continue-on-error: true
     steps:
@@ -348,6 +348,16 @@ jobs:
         with:
           pattern: RunnerSysStats*
           merge-multiple: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        id: aws-creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
+          output-credentials: true
+
+      - name: Install dependencies
+        run: python3 -m pip install boto3 botocore
 
       - name: Collect stats
         env:

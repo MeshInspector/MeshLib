@@ -168,6 +168,14 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)
+  # We want to build the stubs in our main `CMakeLists.txt` instead of here.
+  # It seems to work fine either way, but I'm not comfortable not having the stubs see the customized cmake variables
+  #   that we set in our main `CMakeLists.txt`, such as those influencing the Pybind ABI strings.
+  # Even though the stubs shouldn't call any Pybind functions right now, they still include the Pybind header.
+  # Accidentally calling some inline Pybind function in it could have weird effects, I reckon.
+  # Note that regardless of this setting, the python-version-specific shims always need to be built in our main `CMakeLists.txt`,
+  #   to see our configuration CMake variables.
+  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" OFF)
   add_subdirectory(./mrbind-pybind11)
 ENDIF()
 

@@ -175,7 +175,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
     InternalZoneWithProjections res;
     res.projectons.resize( ref.mesh.points.size(), { {}, 0.0f } );
 
-    while ( queue.count() != 0 )
+    while ( queue.any() )
     {
         tbb::enumerable_thread_specific<std::vector<VertId>> threadData;
         BitSetParallelFor( queue, threadData, [&]( VertId id, auto& localData )

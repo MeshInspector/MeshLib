@@ -1318,6 +1318,9 @@
     <ClInclude Include="MRChrono.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRMapOrHashMap.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

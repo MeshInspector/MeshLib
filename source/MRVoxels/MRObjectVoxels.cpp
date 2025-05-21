@@ -113,7 +113,7 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
         data_.mesh.reset();
 
         const float progressFrom = cb ? 0.5f : 0.f;
-        setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
+        (void)setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) ); //TODO: propagate error outside
     }
 }
 
@@ -495,7 +495,7 @@ void ObjectVoxels::setMaxSurfaceVertices( int maxVerts )
     if ( !data_.mesh || data_.mesh->topology.numValidVerts() <= maxSurfaceVertices_ )
         return;
     data_.mesh.reset();
-    setIsoValue( isoValue_ );
+    (void)setIsoValue( isoValue_ ); //TODO: propagate error outside
 }
 
 std::shared_ptr<Object> ObjectVoxels::clone() const
@@ -656,7 +656,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     if ( activeBox.valid() && ( activeBox.min != Vector3i() || activeBox.max != vdbVolume_.dims ) )
         setActiveBounds( activeBox );
     else
-        setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
+        (void)setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();

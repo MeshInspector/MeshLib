@@ -51,7 +51,7 @@
 // #endif
 
 
-#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Warray-bounds"
   #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -59,7 +59,7 @@
 
 #include <array>
 
-#if defined(__GNUC__) && (__GNUC__ == 13 || __GNUC__ == 14)
+#if defined(__GNUC__) && (__GNUC__ >= 13 && __GNUC__ <= 15)
   #pragma GCC diagnostic pop
 #endif
 
@@ -527,6 +527,16 @@ using EdgeHashMap = HashMap<EdgeId, EdgeId>;
 using UndirectedEdgeHashMap = HashMap<UndirectedEdgeId, UndirectedEdgeId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
 using WholeEdgeHashMap = HashMap<UndirectedEdgeId, EdgeId>;
+
+template <typename K, typename V>
+struct MapOrHashMap;
+
+using FaceMapOrHashMap = MapOrHashMap<FaceId, FaceId>;
+using VertMapOrHashMap = MapOrHashMap<VertId, VertId>;
+using EdgeMapOrHashMap = MapOrHashMap<EdgeId, EdgeId>;
+using UndirectedEdgeMapOrHashMap = MapOrHashMap<UndirectedEdgeId, UndirectedEdgeId>;
+///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
+using WholeEdgeMapOrHashMap = MapOrHashMap<UndirectedEdgeId, EdgeId>;
 
 template <typename I> class UnionFind;
 template <typename T, typename I, typename P> class Heap;

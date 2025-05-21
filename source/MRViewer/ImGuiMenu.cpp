@@ -43,6 +43,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRProgressBar.h"
 #include "MRFileDialog.h"
+#include "MRModalDialog.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectLoad.h>
@@ -834,26 +835,12 @@ void ImGuiMenu::draw_helpers()
     }
 
     const auto menuScaling = menu_scaling();
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
-
-    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-
-    if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog renameDialog( "Rename object", {
+        .headline = "Rename Object",
+        .closeOnClickOutside = true,
+    } );
+    if ( renameDialog.beginPopup( menuScaling ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( "Rename Object" ).x ) * 0.5f );
-        ImGui::Text( "Rename Object" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
         const auto& obj = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>().front();
         if ( !obj )
         {
@@ -864,7 +851,7 @@ void ImGuiMenu::draw_helpers()
 
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
-        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        ImGui::SetNextItemWidth( renameDialog.windowWidth() - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
         UI::inputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopStyleVar();
 
@@ -877,20 +864,15 @@ void ImGuiMenu::draw_helpers()
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        ImGui::SetCursorPosX( renameDialog.windowWidth() - btnWidth - style.WindowPadding.x );
         if ( UI::button( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-        {
-            ImGui::CloseCurrentPopup();
-        }
 
-        ImGui::EndPopup();
+        renameDialog.endPopup( menuScaling );
     }
-    ImGui::PopStyleVar( 3 );
 
     drawModalMessage_();
 }
@@ -960,52 +942,27 @@ void ImGuiMenu::drawModalMessage_()
     }
 
     const auto menuScaling = menu_scaling();
-    const ImVec2 errorWindowSize{ MR::cModalWindowWidth * menuScaling, -1 };
-    ImGui::SetNextWindowSize( errorWindowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
-    if ( ImGui::BeginModalNoAnimation( titleImGui.c_str(), nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    ModalDialog modal( titleImGui, {
+        .headline = title,
+        .text = storedModalMessage_,
+        .closeOnClickOutside = true,
+    } );
+    if ( modal.beginPopup( menuScaling ) )
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( title.c_str() ).x;
-
-        ImGui::SetCursorPosX( ( errorWindowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "%s", title.c_str());
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        const float textWidth = ImGui::CalcTextSize( storedModalMessage_.c_str() ).x;
-
-        if ( textWidth + ImGui::GetStyle().WindowPadding.x * 2.0f < errorWindowSize.x )
-        {
-            ImGui::SetCursorPosX( ( errorWindowSize.x - textWidth ) * 0.5f );
-            ImGui::Text( "%s", storedModalMessage_.c_str() );
-        }
-        else
-        {
-            ImGui::TextWrapped( "%s", storedModalMessage_.c_str() );
-        }
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-        if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
-           ( ImGui::IsMouseClicked( 0 ) && !ImGui::IsWindowAppearing() && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ) ) )
-        {
+        if ( UI::button( "Okay", Vector2f( -1, 0 ), ImGuiKey_Enter ) )
             ImGui::CloseCurrentPopup();
-        }
         ImGui::PopStyleVar();
-        ImGui::EndPopup();
+
+        modal.endPopup( menuScaling );
         needModalBgChange_ = true;
     }
     else
     {
         needModalBgChange_ = false;
     }
-    ImGui::PopStyleVar( 2 );
+
     ImGui::PopStyleColor();
 }
 

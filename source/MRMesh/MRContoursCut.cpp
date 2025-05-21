@@ -70,14 +70,6 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
-bool isClosed( const ContinuousContour& contour )
-{
-    return contour.size() > 1 &&
-        contour.front().isEdgeATriB == contour.back().isEdgeATriB &&
-        contour.front().edge.undirected() == contour.back().edge.undirected() &&
-        contour.front().tri == contour.back().tri;
-}
-
 enum class TrianglesSortRes
 {
     Undetermined, // triangles positions cannot be determined
@@ -2167,7 +2159,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
     res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
-    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.count() > 0 )
+    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 
     // find one edge for every hole to fill

@@ -847,7 +847,7 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     MR_TIMER;
     VertBitSet bdVerts;
     if ( uniteOnlyBd )
-        bdVerts = mesh.topology.findBoundaryVerts();
+        bdVerts = mesh.topology.findBdVerts();
 
     const VertMap vertOldToNew = uniteOnlyBd ?
         *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :

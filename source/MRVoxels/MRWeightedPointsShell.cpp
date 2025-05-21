@@ -12,6 +12,7 @@
 
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MREdgePaths.h"
 
 namespace MR
 {

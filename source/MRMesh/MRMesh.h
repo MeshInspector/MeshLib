@@ -380,9 +380,10 @@ struct [[nodiscard]] Mesh
     VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr ) { return splitFace( f, triCenter( f ), region, new2Old ); }
 
     /// appends another mesh as separate connected component(s) to this
+    MRMESH_API void addMesh( const Mesh & from, PartMapping map = {}, bool rearrangeTriangles = false );
     MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
-        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+        FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     [[deprecated]] void addPart( const Mesh & from, FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false )
         { addMesh( from, outFmap, outVmap, outEmap, rearrangeTriangles ); }
 

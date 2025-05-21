@@ -32,6 +32,10 @@ struct MapOrHashMap
     /// in case of dense map, key must be equal to vector.endId()
     void pushBack( K key, V val );
 
+    /// executes given function for all pairs (key, value) with valid value for dense map
+    template<typename F>
+    void forEach( F && f ) const;
+
     [[nodiscard]]       Dense* getMap()       { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const { return get_if<Dense>( &var ); }
 
@@ -75,6 +79,25 @@ void MapOrHashMap<K,V>::pushBack( K key, V val )
     std::visit( overloaded{
         [=]( Dense& map ) { assert( key == map.endId() ); map.push_back( val ); },
         [=]( Hash& hashMap ) { hashMap[key] = val; }
+    }, var );
+}
+
+template <typename K, typename V>
+template <typename F>
+void MapOrHashMap<K,V>::forEach( F && f ) const
+{
+    std::visit( overloaded{
+        [&f]( const Dense& map )
+        {
+            for ( K key( 0 ); key < map.size(); ++key )
+                if ( auto val = map[key] )
+                    f( key, val );
+        },
+        [&f]( const Hash& hashMap )
+        {
+            for ( const auto & [ key, val ] : hashMap )
+                f( key, val );
+        }
     }, var );
 }
 

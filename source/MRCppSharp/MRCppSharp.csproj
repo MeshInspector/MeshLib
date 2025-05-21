@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CppSharp" Version="1.1.5.3168" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.4" />
+  </ItemGroup>
+
+</Project>

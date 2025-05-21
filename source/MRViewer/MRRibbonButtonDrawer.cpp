@@ -373,8 +373,8 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     if ( pressed )
     {
         onPressAction_( item.item, requirements );
-        if ( params.isActivated )
-            *params.isActivated = true;
+        if ( params.isPressed )
+            *params.isPressed = true;
     }
 
     if ( ImGui::IsItemHovered() )

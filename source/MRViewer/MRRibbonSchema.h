@@ -94,8 +94,13 @@ public:
         float tooltipOrderWeight{ 1.f };
     };
 
-    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
-        std::vector<SearchResultWeight>* weights = nullptr, std::function<std::string( const std::shared_ptr<RibbonMenuItem>& )> requirementsFunc = {} );
+    struct SearchParams
+    {
+        int* captionCount = nullptr;
+        std::vector<SearchResultWeight>* weights = nullptr;
+        RequirementsFunction requirementsFunc = {};
+    };
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, const SearchParams& params = {} );
 
     /// returns item tab index in schema.tabsOrder or -1 if no tab found (e.g. scene fast access panel or header access panel)
     MRVIEWER_API static int findItemTab( const std::shared_ptr<RibbonMenuItem>& item );

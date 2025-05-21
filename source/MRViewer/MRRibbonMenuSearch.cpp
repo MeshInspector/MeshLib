@@ -202,7 +202,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             }
             ImGui::SetCursorPosX( tabBtnWidth + tabBtnPadding );
             bool activated = false;
-            dbParams.isActivated = &activated;
+            dbParams.isPressed = &activated;
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( activated )
                 pushRecentItem( foundItem.item->item );
@@ -395,7 +395,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
 
 void RibbonMenuSearch::updateSearchResult_()
 {
-    searchResult_ = RibbonSchemaHolder::search( searchLine_, &captionCount_, &searchResultWeight_, requirementsFunc_ );
+    searchResult_ = RibbonSchemaHolder::search( searchLine_, { &captionCount_, &searchResultWeight_, requirementsFunc_ } );
     hightlightedSearchItem_ = 0;
 }
 

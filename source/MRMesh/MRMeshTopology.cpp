@@ -1201,6 +1201,14 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
 
     assert( from.updateValids_ );
 
+    // maps: to index -> from index
+    if ( map.tgt2srcEdges )
+        map.tgt2srcEdges->resizeReserve( undirectedEdgeSize(), from.undirectedEdgeSize() );
+    if ( map.tgt2srcVerts )
+        map.tgt2srcVerts->resizeReserve( vertSize(), from.numValidVerts() );
+    if ( map.tgt2srcFaces )
+        map.tgt2srcFaces->resizeReserve( faceSize(), from.numValidFaces() );
+
     // (f/e/v)maps: from index -> to index;
     // use hash map only if requested by the user, otherwise dense map
 
@@ -1213,13 +1221,15 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
         if ( from.isLoneEdge( i ) )
             continue;
         setAt( emap, i, edges_.endId() );
+        if ( map.tgt2srcEdges )
+            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ i } );
         edges_.push_back( from.edges_[ EdgeId( i ) ] );
         edges_.push_back( from.edges_[ EdgeId( i ).sym() ] );
     }
 
     auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createMap();
     const auto vSize = from.vertSize();
-    vmap.resizeReserve( vSize, vSize );
+    vmap.resizeReserve( vSize, from.numValidVerts() );
     for ( VertId i{ 0 }; i < vSize; ++i )
     {
         auto efrom = from.edgePerVertex_[i];
@@ -1227,6 +1237,8 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
             continue;
         auto nv = addVertId();
         setAt( vmap, i, nv );
+        if ( map.tgt2srcVerts )
+            map.tgt2srcVerts->pushBack( nv, i );
         edgePerVertex_[nv] = mapEdge( emap, efrom );
         if ( updateValids_ )
         {
@@ -1237,7 +1249,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
 
     auto fmap = map.src2tgtFaces ? std::move( *map.src2tgtFaces ) : FaceMapOrHashMap::createMap();
     const auto fSize = from.faceSize();
-    fmap.resizeReserve( fSize, fSize );
+    fmap.resizeReserve( fSize, from.numValidFaces() );
     FaceId firstNewFace( (int)edgePerFace_.size() );
 
     if ( rearrangeTriangles )
@@ -1266,12 +1278,22 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
 
         std::sort( begin( invMap ), end( invMap ), isFromFaceLess );
         for ( auto i : invMap )
-            setAt( fmap, i, addFaceId() );
+        {
+            auto nf = addFaceId();
+            setAt( fmap, i, nf );
+            if ( map.tgt2srcFaces )
+                map.tgt2srcFaces->pushBack( nf, i );
+        }
     }
     else
     {
         for ( auto i : from.validFaces_ )
-            setAt( fmap, i, addFaceId() );
+        {
+            auto nf = addFaceId();
+            setAt( fmap, i, nf );
+            if ( map.tgt2srcFaces )
+                map.tgt2srcFaces->pushBack( nf, i );
+        }
     }
 
     for ( FaceId i{ 0 }; i < fSize; ++i )
@@ -1298,6 +1320,18 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
             from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, false );
         }
     } );
+
+#ifndef NDEBUG
+    if ( map.tgt2srcEdges )
+        if ( auto m = map.tgt2srcEdges->getMap() )
+            assert( m->size() == undirectedEdgeSize() );
+    if ( map.tgt2srcVerts )
+        if ( auto m = map.tgt2srcVerts->getMap() )
+            assert( m->size() == vertSize() );
+    if ( map.tgt2srcFaces )
+        if ( auto m = map.tgt2srcFaces->getMap() )
+            assert( m->size() == faceSize() );
+#endif
 
     if ( map.src2tgtFaces )
         *map.src2tgtFaces = std::move( fmap );

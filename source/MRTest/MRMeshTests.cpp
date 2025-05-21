@@ -188,9 +188,9 @@ TEST(MRMesh, AddMesh)
     EXPECT_EQ( faceMap.getMap()->size(), 12 );
     EXPECT_EQ( vertMap.getMap()->size(), 8 );
     EXPECT_EQ( edgeMap.getMap()->size(), 18 );
-//    EXPECT_EQ( faceHashMap.getHashMap()->size(), nf );
-//    EXPECT_EQ( vertHashMap.getHashMap()->size(), nv );
-//    EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
+    EXPECT_EQ( faceHashMap.getHashMap()->size(), nf );
+    EXPECT_EQ( vertHashMap.getHashMap()->size(), nv );
+    EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
 
     faceMap.clear();
     vertMap.clear();
@@ -212,9 +212,9 @@ TEST(MRMesh, AddMesh)
     EXPECT_EQ( 3 * nf, tgt.topology.faceSize() );
     EXPECT_EQ( 3 * nv, tgt.topology.vertSize() );
     EXPECT_EQ( 3 * ne, tgt.topology.undirectedEdgeSize() );
-//    EXPECT_EQ( faceMap.getMap()->size(), 3 * nf );
-//    EXPECT_EQ( vertMap.getMap()->size(), 3 * nv );
-//    EXPECT_EQ( edgeMap.getMap()->size(), 3 * ne );
+    EXPECT_EQ( faceMap.getMap()->size(), 3 * nf );
+    EXPECT_EQ( vertMap.getMap()->size(), 3 * nv );
+    EXPECT_EQ( edgeMap.getMap()->size(), 3 * ne );
     EXPECT_EQ( faceHashMap.getHashMap()->size(), nf );
     EXPECT_EQ( vertHashMap.getHashMap()->size(), nv );
     EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );

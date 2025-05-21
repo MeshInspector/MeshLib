@@ -16,9 +16,6 @@
 namespace MR
 {
 
-const int cToolbarMaxItemCount = 14;
-
-
 void Toolbar::openCustomize()
 {
     openCustomizeFlag_ = true;
@@ -230,9 +227,10 @@ void Toolbar::drawCustomizeModal_()
     ImVec2 itemSpacing = ImVec2( 12 * scaling_, 0 );
     const ImVec2 smallItemSize = { cQuickAccessBarHeight * scaling_ - 2.0f * childWindowPadding.y, cQuickAccessBarHeight * scaling_ - 2.0f * childWindowPadding.y };
 
+    const int virtualMaxItemCount = std::max( maxItemCount_, 14 );
     const float itemsWindowWidth = childWindowPadding.x * 2
-        + smallItemSize.x * cToolbarMaxItemCount
-        + itemSpacing.x * ( cToolbarMaxItemCount - 1 );
+        + smallItemSize.x * virtualMaxItemCount
+        + itemSpacing.x * ( virtualMaxItemCount - 1 );
 
     ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 530 * scaling_ );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
@@ -265,7 +263,7 @@ void Toolbar::drawCustomizeModal_()
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * scaling_ ) );
-    ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), cToolbarMaxItemCount );
+    ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), maxItemCount_ );
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
@@ -364,7 +362,7 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SameLine( 0, childWindowPadding.x + 3 * scaling_ );
     }
 
-    for ( int i = int( itemsListCustomize_.size() ); i < cToolbarMaxItemCount; ++i )
+    for ( int i = int( itemsListCustomize_.size() ); i < maxItemCount_; ++i )
     {
         auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
         ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
@@ -386,7 +384,8 @@ void Toolbar::drawCustomizeModal_()
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
-    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( 130 * scaling_, -1 ) );
+    float tabsListWidth = std::max( 130 * scaling_, ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
+    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ) );
     drawCustomizeTabsList_();
     ImGui::EndChild();
 
@@ -524,7 +523,7 @@ void Toolbar::drawCustomizeItemsList_()
     auto& tabsMap = schema.tabsMap;
     auto& groupsMap = schema.groupsMap;
 
-    bool canAdd = int( itemsListCustomize_.size() ) < cToolbarMaxItemCount;
+    bool canAdd = int( itemsListCustomize_.size() ) < maxItemCount_;
 
     if ( customizeTabNum_ >= tabsOrder.size() || customizeTabNum_ < 0 )
         return;

@@ -32,9 +32,13 @@ MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology&
 MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
 const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
+/// returns true if contour is closed
+MRMESH_API bool isClosed( const ContinuousContour& contour );
+
 /// Detects contours that fully lay inside one triangle
+/// if `ignoreOpen` then do not mark non-closed contours as lone, even if they really are
 /// returns they indices in contours
-MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours );
+MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ignoreOpen = false );
 
 /// Removes contours with zero area (do not remove if contour is handle on topology)
 /// edgesTopology - topology on which contours are represented with edges
@@ -44,6 +48,7 @@ MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology
     OneMeshContours& faceContours, OneMeshContours& edgeContours );
 
 /// Removes contours that fully lay inside one triangle from the contours
-MRMESH_API void removeLoneContours( ContinuousContours& contours );
+/// if `ignoreOpen` then do not consider non-closed contours as lone, even if they really are
+MRMESH_API void removeLoneContours( ContinuousContours& contours, bool ignoreOpen = false );
 
 }

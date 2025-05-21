@@ -440,12 +440,13 @@ public:
     /// appends mesh topology (from) in addition to the current topology: creates new edges, faces, verts;
     /// \param rearrangeTriangles if true then the order of triangles is selected according to the order of their vertices,
     /// please call rotateTriangles() first
-    /// \param outFmap,outVmap,outEmap (optionally) returns mappings: from.id -> this.id
+    MRMESH_API void addPart( const MeshTopology & from, const PartMapping & map = {}, bool rearrangeTriangles = false );
     MRMESH_API void addPart( const MeshTopology & from,
-        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, ///< returns mappings: from.id -> this.id
+        bool rearrangeTriangles = false );
 
     /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map );
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
 
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding

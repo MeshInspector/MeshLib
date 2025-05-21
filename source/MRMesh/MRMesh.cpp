@@ -448,6 +448,11 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
 
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
+    pack( Src2TgtMaps( outFmap, outVmap, outEmap ), rearrangeTriangles );
+}
+
+void Mesh::pack( const PartMapping & map, bool rearrangeTriangles )
+{
     MR_TIMER;
 
     if ( rearrangeTriangles )
@@ -457,7 +462,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     packed.topology.vertReserve( topology.numValidVerts() );
     packed.topology.faceReserve( topology.numValidFaces() );
     packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
-    packed.addMesh( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
+    packed.addMesh( *this, map, rearrangeTriangles );
     *this = std::move( packed );
 }
 

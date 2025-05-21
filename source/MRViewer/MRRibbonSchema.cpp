@@ -266,7 +266,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 else if ( a.second.captionWeight > b.second.captionWeight )
                     return false;
                 else
-                    return a.second.captionOrderWeight < b.second.captionOrderWeight;
+                    return a.second.captionOrderWeight <= b.second.captionOrderWeight;
             }
             else
                 return true;
@@ -282,7 +282,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 else if ( a.second.tooltipWeight > b.second.tooltipWeight )
                     return false;
                 else
-                    return a.second.tooltipOrderWeight < b.second.tooltipOrderWeight;
+                    return a.second.tooltipOrderWeight <= b.second.tooltipOrderWeight;
             }
         }
     } );

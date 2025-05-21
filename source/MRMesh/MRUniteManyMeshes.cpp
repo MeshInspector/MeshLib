@@ -255,10 +255,10 @@ Expected<Mesh> uniteManyMeshes(
                         continue;
                     if ( included )
                     {
-                        assert( nestedMeshes.count() == 0 );
+                        assert( nestedMeshes.none() );
                         break;
                     }
-                    if ( nestedMeshes.count() != 0 )
+                    if ( nestedMeshes.any() )
                         std::erase_if( group, [&] ( int groupIndex )
                     {
                         return nestedMeshes.test( groupIndex );

@@ -1557,7 +1557,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
     VertBitSet extendedVerts;
     for ( const auto& component : components )
     {
-        if ( ( component & innerVerts ).count() != 0 )
+        if ( component.intersects( innerVerts ) )
             extendedVerts |= component;
     }
 

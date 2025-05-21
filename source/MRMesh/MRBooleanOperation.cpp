@@ -194,7 +194,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
         bPartFbs = preparePart( meshBCut, bComponentsMap, {}, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     taskGroup.wait();
 
-    if ( aPartFbs.count() != 0 )
+    if ( aPartFbs.any() )
     {
         FaceMap* fMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2newFaces : nullptr;
         WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newEdges : nullptr;
@@ -204,7 +204,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
                              {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
     }
 
-    if ( bPartFbs.count() != 0 )
+    if ( bPartFbs.any() )
     {
         FaceMap* fMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2newFaces : nullptr;
         WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newEdges : nullptr;

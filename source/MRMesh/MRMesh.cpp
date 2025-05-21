@@ -365,18 +365,7 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-
-    if ( auto * vec = map.src2tgtVerts->getMap() )
-    {
-        for ( auto fromVert = 0_v; fromVert < vec->size(); ++fromVert )
-            if ( auto thisVert = (*vec)[fromVert] )
-                points[thisVert] = from.points[fromVert];
-    }
-    else
-    {
-        for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
-            points[thisVert] = from.points[fromVert];
-    }
+    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
@@ -420,18 +409,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-
-    if ( auto * vec = map.src2tgtVerts->getMap() )
-    {
-        for ( auto fromVert = 0_v; fromVert < vec->size(); ++fromVert )
-            if ( auto thisVert = (*vec)[fromVert] )
-                points[thisVert] = from.points[fromVert];
-    }
-    else
-    {
-        for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
-            points[thisVert] = from.points[fromVert];
-    }
+    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,

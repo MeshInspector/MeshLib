@@ -736,8 +736,9 @@ void TransformControls::init( std::shared_ptr<Object> parent )
 
         translateDottedLines_[i]->setPolyline( transDottedPolyline );
 
-        translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) ) );
+        MR::Mesh doubleEndArrow = makeArrow( getCenter(), translationPoints[0], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width );
+        doubleEndArrow.addMesh( makeArrow( getCenter(), translationPoints[1], width, params_.coneRadiusFactor * width, params_.coneSizeFactor * width ) );
+        translateControls_[i]->setMesh( std::make_shared<Mesh>( std::move( doubleEndArrow ) ) );
 
         auto xf = AffineXf3f::translation( getCenter() ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );

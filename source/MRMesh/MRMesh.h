@@ -419,9 +419,10 @@ struct [[nodiscard]] Mesh
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
 
-    /// tightly packs all arrays eliminating lone edges and invalid faces, vertices and points,
-    /// optionally returns mappings: old.id -> new.id
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    /// tightly packs all arrays eliminating lone edges and invalid faces, vertices and points
+    MRMESH_API void pack( const PartMapping & map = {}, bool rearrangeTriangles = false );
+    MRMESH_API void pack( /// optionally returns mappings: old.id -> new.id
+        FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces, vertices and points,
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping

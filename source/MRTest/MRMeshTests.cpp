@@ -3,6 +3,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRGTest.h>
+#include <MRMesh/MRBitSetParallelFor.h>
 
 namespace MR
 {
@@ -63,6 +64,33 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( mesh.topology.edgePerVertex().size(), 0 );
     EXPECT_EQ( mesh.topology.edgePerFace().size(), 0 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId() );
+}
+
+TEST(MRMesh, Pack2)
+{
+    auto mesh = makeCube();
+    mesh.topology.deleteFace( 2_f );
+    mesh.topology.deleteFace( 5_f );
+    mesh.invalidateCaches();
+    EXPECT_EQ( mesh.topology.faceSize(), 12 );
+    EXPECT_EQ( mesh.topology.vertSize(), 8 );
+    EXPECT_EQ( mesh.topology.undirectedEdgeSize(), 18 );
+
+    auto fs = mesh.topology.getValidFaces();
+
+    FaceMap packedToOrgFace;
+    mesh.pack( Tgt2SrcMaps( &packedToOrgFace, nullptr, nullptr ) );
+    EXPECT_EQ( mesh.topology.faceSize(), 10 );
+    EXPECT_EQ( mesh.topology.vertSize(), 8 );
+    EXPECT_EQ( mesh.topology.undirectedEdgeSize(), 17 );
+
+    FaceBitSet fsAfterPack( mesh.topology.numValidFaces(), false );
+    BitSetParallelForAll( fsAfterPack, [&]( FaceId f )
+    {
+        if ( fs.test( packedToOrgFace[f] ) )
+            fsAfterPack.set( f );
+    });
+    EXPECT_EQ( fsAfterPack, mesh.topology.getValidFaces() );
 }
 
 TEST(MRMesh, AddPartByMask) 

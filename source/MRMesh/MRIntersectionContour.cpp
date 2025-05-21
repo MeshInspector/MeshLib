@@ -352,13 +352,13 @@ bool isClosed( const ContinuousContour& contour )
         contour.front().tri == contour.back().tri;
 }
 
-std::vector<int> detectLoneContours( const ContinuousContours& contours )
+std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ignoreOpen )
 {
     std::vector<int> res;
     for ( int i = 0; i < contours.size(); ++i )
     {
         auto& contour = contours[i];
-        if ( contour.empty() )
+        if ( contour.empty() || ( ignoreOpen && !isClosed( contour ) ) )
             continue;
         bool first = contour[0].isEdgeATriB;
         bool isLone = true;
@@ -388,9 +388,9 @@ void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshCo
     }
 }
 
-void removeLoneContours( ContinuousContours& contours )
+void removeLoneContours( ContinuousContours& contours, bool ignoreOpen )
 {
-    auto loneContours = detectLoneContours( contours );
+    auto loneContours = detectLoneContours( contours, ignoreOpen );
     for ( int i = int( loneContours.size() ) - 1; i >= 0; --i )
     {
         contours.erase( contours.begin() + loneContours[i] );

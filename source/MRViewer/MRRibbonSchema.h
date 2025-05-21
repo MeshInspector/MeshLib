@@ -100,7 +100,7 @@ public:
         std::vector<SearchResultWeight>* weights = nullptr;
         RequirementsFunction requirementsFunc = {};
     };
-    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, const SearchParams& params = {} );
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, const SearchParams& params );
 
     /// returns item tab index in schema.tabsOrder or -1 if no tab found (e.g. scene fast access panel or header access panel)
     MRVIEWER_API static int findItemTab( const std::shared_ptr<RibbonMenuItem>& item );

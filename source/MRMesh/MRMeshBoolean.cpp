@@ -19,6 +19,9 @@
 #include "MRCube.h"
 #include "MRMeshBuilder.h"
 #include "MRParallelFor.h"
+#include "MRBox.h"
+#include "MRContoursStitch.h"
+#include "MREdgePaths.h"
 
 namespace
 {
@@ -145,6 +148,174 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     return booleanImpl( std::move( meshA ), std::move( meshB ), operation, params, {} );
+}
+
+namespace detail
+{
+struct JoinedSelfLoops
+{
+    int first{ 0 };
+    int second{ 0 };
+    int secondRot{ 0 };
+};
+std::vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
+{
+    assert( contours.size() % 2 == 0 );
+    std::vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
+    BitSet visitedConts( contours.size(), true );
+    int i = 0;
+    while ( visitedConts.any() )
+    {
+        size_t first{ ~size_t( 0 ) };
+        for ( auto next : visitedConts )
+        {
+            if ( first == ~size_t( 0 ) )
+            {
+                first = next;
+                visitedConts.reset( first );
+                continue;
+            }
+            auto fInter = contours[first][0];
+            int rot = 0;
+            for ( const auto& nInter : contours[next] )
+            {
+                ++rot;
+                if ( fInter.isEdgeATriB == nInter.isEdgeATriB )
+                    continue;
+                if ( fInter.tri != nInter.tri )
+                    continue;
+                if ( fInter.edge != nInter.edge.sym() )
+                    continue;
+                visitedConts.reset( next );
+                holePairs[i++] = { int( first ),int( next ),rot - 1 };
+
+                break;
+            }
+        }
+    }
+    return holePairs;
+}
+}
+
+Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
+{
+    auto box = Box3d( inMesh.computeBoundingBox() );
+    CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
+    std::vector<EdgeTri> intersections;
+    ContinuousContours contours;
+
+    Mesh mesh = inMesh;
+
+    std::vector<int> prevLoneContoursIds;
+    int iters = 0;
+    const int cMaxFixLoneIterations = 10;
+    for ( ;; ++iters )
+    {
+        // find intersections
+        intersections = findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt );
+        // order intersections
+        contours = orderSelfIntersectionContours( mesh.topology, intersections );
+
+        // remove non-closed, TODO: we could probably process them differently
+        for ( int i = int( contours.size() ) - 1; i >= 0; --i )
+        {
+            if ( !isClosed( contours[i] ) )
+                contours.erase( contours.begin() + i );
+        }
+
+        // find lone
+        auto loneContoursIds = detectLoneContours( contours );
+
+        if ( loneContoursIds.empty() )
+            break;
+
+        if ( !loneContoursIds.empty() && ( loneContoursIds == prevLoneContoursIds || iters == cMaxFixLoneIterations ) )
+        {
+            // in some rare cases there are lone contours with zero area that cannot be resolved
+            // they lead to infinite loop, so just try to remove them
+            removeLoneContours( contours );
+            break;
+        }
+        prevLoneContoursIds = loneContoursIds;
+
+        auto loneHolePairs = detail::findSelfContoursMapping( contours );
+        assert( loneContoursIds.size() % 2 == 0 );
+        ContinuousContours fLone( loneContoursIds.size() / 2 ), joinedELone( loneContoursIds.size() / 2 );
+        BitSet visitedLone( loneContoursIds.size(), true );
+        for ( int i = 0; i < fLone.size(); ++i )
+        {
+            int loneIndex = -1;
+            int otherLoneIndex = -1;
+            for ( auto l : visitedLone )
+            {
+                if ( loneIndex == -1 )
+                {
+                    loneIndex = loneContoursIds[l];
+                    visitedLone.reset( l );
+                }
+                else
+                {
+                    for ( auto [f, s, _] : loneHolePairs )
+                    {
+                        if ( f == loneIndex )
+                        {
+                            otherLoneIndex = s;
+                            break;
+                        } 
+                        else if ( s == loneIndex )
+                        {
+                            otherLoneIndex = f;
+                            break;
+                        }
+                    }
+                }
+                if ( otherLoneIndex != -1 )
+                {
+                    auto loIt = std::find( loneContoursIds.begin(), loneContoursIds.end(), otherLoneIndex );
+                    assert( loIt != loneContoursIds.end() );
+                    visitedLone.reset( size_t( std::distance( loneContoursIds.begin(), loIt ) ) );
+                    break;
+                }
+            }
+            
+            visitedLone.reset( otherLoneIndex );
+            if ( contours[loneIndex].front().isEdgeATriB )
+                std::swap( loneIndex, otherLoneIndex );
+            fLone[i] = contours[loneIndex];
+            joinedELone[i] = contours[otherLoneIndex];
+        }
+        auto loneFInts = getOneMeshSelfIntersectionContours( mesh, fLone, converters );
+        auto joinedLoneEInts = getOneMeshSelfIntersectionContours( mesh, joinedELone, converters );
+
+        removeLoneDegeneratedContours( mesh.topology, loneFInts, joinedLoneEInts );
+        subdivideLoneContours( mesh, loneFInts );
+    }
+    intersections = {};
+
+    auto meshCpy = mesh; // for now lets do copy each time, TODO: do copy only if needed
+    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
+    auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
+    auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get(),.forceFillMode = CutMeshParameters::ForceFill::All } );
+    if ( cutRes.fbsWithContourIntersections.any() )
+    {
+        spdlog::warn( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() );
+    }
+
+    auto holePairs = detail::findSelfContoursMapping( contours );
+    
+    for ( auto [f, s, r] : holePairs )
+    {
+        const auto& leftLoopF = cutRes.resultCut[f];
+        auto rightLoopF = cutAlongEdgeLoop( mesh, leftLoopF );
+        auto& leftLoopS = cutRes.resultCut[s];
+        std::rotate( leftLoopS.begin(), leftLoopS.begin() + r, leftLoopS.end() );
+        reverse( leftLoopS );
+        auto rightLoopS = cutAlongEdgeLoop( mesh, leftLoopS );
+        stitchContours( mesh.topology, leftLoopF, rightLoopS );
+        stitchContours( mesh.topology, leftLoopS, rightLoopF );
+    }
+
+    return mesh;
 }
 
 Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A /*= nullptr */ )

@@ -20,7 +20,7 @@ void PartMapping::clear()
         tgt2srcEdges->clear();
 }
 
-HashToVectorMappingConverter::HashToVectorMappingConverter( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+Src2TgtMaps::Src2TgtMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
     : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
 {
     if ( outFmap )
@@ -40,7 +40,7 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( FaceMap * outFmap, V
     }
 }
 
-HashToVectorMappingConverter::~HashToVectorMappingConverter()
+Src2TgtMaps::~Src2TgtMaps()
 {
     if ( outFmap_ )
         *outFmap_ = std::move( *src2tgtFaces_.getMap() );

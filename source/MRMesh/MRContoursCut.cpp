@@ -70,14 +70,6 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
-bool isClosed( const ContinuousContour& contour )
-{
-    return contour.size() > 1 &&
-        contour.front().isEdgeATriB == contour.back().isEdgeATriB &&
-        contour.front().edge.undirected() == contour.back().edge.undirected() &&
-        contour.front().tri == contour.back().tri;
-}
-
 enum class TrianglesSortRes
 {
     Undetermined, // triangles positions cannot be determined

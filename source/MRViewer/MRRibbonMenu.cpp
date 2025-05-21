@@ -170,6 +170,10 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     std::shared_ptr<RibbonSceneObjectsListDrawer> ribbonObjectsSceneListDrawer = std::make_shared<RibbonSceneObjectsListDrawer>();
     ribbonObjectsSceneListDrawer->initRibbonMenu( this );
     sceneObjectsList_ = std::dynamic_pointer_cast< SceneObjectsListDrawer >( ribbonObjectsSceneListDrawer );
+    searcher_.setRequirementsFunc( [this] ( const std::shared_ptr<RibbonMenuItem>& item )->std::string
+    {
+        return getRequirements_( item );
+    } );
 }
 
 void RibbonMenu::shutdown()

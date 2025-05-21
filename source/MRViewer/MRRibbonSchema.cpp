@@ -101,7 +101,7 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
 }
 
 std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, int* captionCount /*= nullptr*/,
-    std::vector<SearchResultWeight>* weights /*= nullptr*/ )
+    std::vector<SearchResultWeight>* weights /*= nullptr*/, std::function<std::string( const std::shared_ptr<RibbonMenuItem>& )> requirementsFunc /*= {}*/ )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
     
@@ -302,32 +302,41 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         }
     }
 
-    // sort by available - unavailable tools
-    const auto& selectedObjs = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-    std::sort( rawResult.begin(), rawResult.end(), [&selectedObjs] ( const auto& a, const auto& b )
-    {
-        if ( !a.first.item->item->isAvailable( selectedObjs ).empty() &&
-            b.first.item->item->isAvailable( selectedObjs ).empty() )
-            return false;
-        else
-            return true;
-    } );
-
     std::vector<SearchResult> res( rawResult.size() );
     if ( weights )
         *weights = std::vector<SearchResultWeight>( rawResult.size() );
-    if ( captionCount )
-        *captionCount = -1;
+    int count = 0;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
             continue;
         res[i] = rawResult[i].first;
-        if ( captionCount && rawResult[i].second.captionWeight > maxWeight &&
+        if ( rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
-            *captionCount = i;
+            count = i;
         if ( weights )
             ( *weights )[i] = rawResult[i].second;
+    }
+    if ( captionCount )
+        *captionCount = count;
+
+    // sort by available - unavailable tools
+    if ( requirementsFunc )
+    {
+        std::sort( res.begin(), res.begin() + count, [requirementsFunc] ( const auto& a, const auto& b )
+        {
+            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
+                return false;
+            else
+                return true;
+        } );
+        std::sort( res.begin() + count, res.end(), [requirementsFunc] ( const auto& a, const auto& b )
+        {
+            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
+                return false;
+            else
+                return true;
+        } );
     }
 
     return res;

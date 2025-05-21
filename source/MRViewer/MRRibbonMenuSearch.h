@@ -44,6 +44,10 @@ public:
     // activate search from outside (i.e. shortcut)
     MRVIEWER_API void activate();
 
+    /// set function to get a requirements line for some tool
+    void setRequirementsFunc( const std::function<std::string( const std::shared_ptr<RibbonMenuItem>& )>& requirementsFunc )
+    { requirementsFunc_ = requirementsFunc; }
+
     // this signal is emitted when search bar is focused
     Signal<void()> onFocusSignal;
     // this signal is emitted when tool is activated within search
@@ -74,6 +78,7 @@ private:
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;
     bool setInputFocus_ = false;
+    std::function<std::string( const std::shared_ptr<RibbonMenuItem>& )> requirementsFunc_;
 #ifndef NDEBUG
     bool showResultWeight_ = false;
 #endif

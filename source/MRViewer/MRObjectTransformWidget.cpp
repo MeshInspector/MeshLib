@@ -955,19 +955,16 @@ ControlBit TransformControls::hover_( bool pickThrough )
     if ( !obj )
     {
         dropCurrentObj();
-        return ControlBit::None;
     }
     auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj );
     if ( !meshObj )
     {
         dropCurrentObj();
-        return ControlBit::None;
     }
-    bool isControl = meshObj->parent() == translateControls_[0]->parent();
+    bool isControl = meshObj != nullptr && meshObj->parent() == translateControls_[0]->parent();
     if ( !isControl )
     {
         dropCurrentObj();
-        return ControlBit::None;
     }
 
     // here we picked one of controls for sure

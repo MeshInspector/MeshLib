@@ -196,7 +196,9 @@ VertScalars calculateShellWeightsFromRegions(
 
     // precalculate the weights
     VertScalars weights( mesh.topology.getValidVerts().find_last() + 1, 0 );
-    BitSetParallelFor( allVerts, [&weights, &pointWeight] ( VertId v )
+    VertBitSet allVertsExtended = allVerts;
+    dilateRegion( mesh, allVertsExtended, interpolationDist );
+    BitSetParallelFor( allVertsExtended, [&weights, &pointWeight] ( VertId v )
     {
         weights[v] = pointWeight( v );
     } );

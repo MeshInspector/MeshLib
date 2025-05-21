@@ -1218,7 +1218,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     }
 
     auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createMap();
-    const auto vSize = from.lastValidVert() + 1; // not from.vertSize() because some users expect valid last element in this map
+    const auto vSize = from.vertSize();
     vmap.resizeReserve( vSize, vSize );
     for ( VertId i{ 0 }; i < vSize; ++i )
     {
@@ -1236,7 +1236,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
     }
 
     auto fmap = map.src2tgtFaces ? std::move( *map.src2tgtFaces ) : FaceMapOrHashMap::createMap();
-    const auto fSize = from.lastValidFace() + 1; // not from.faceSize() because some users expect valid last element in this map
+    const auto fSize = from.faceSize();
     fmap.resizeReserve( fSize, fSize );
     FaceId firstNewFace( (int)edgePerFace_.size() );
 

@@ -111,6 +111,8 @@ public:
     Expected<Mesh> run( const T& meshOrCloud, const WeightedPointsShellParametersMetric& params );
     Expected<Mesh> run( const Mesh& mesh, const WeightedPointsShellParametersRegions& params );
 
+    virtual ~WeightedShellStrategy() = default;
+
 protected:
     virtual FunctionVolume getDistanceField( const PointCloud& cloud, const WeightedPointsToDistanceVolumeParams& params ) const;
     virtual FunctionVolume getDistanceField( const Mesh& mesh, const WeightedPointsToDistanceVolumeParams& params ) const;
@@ -118,8 +120,8 @@ protected:
     virtual WeightedPointsToDistanceVolumeParams getDistanceFieldParams() const;
     virtual MarchingCubesParams getMarchingCubesParams() const;
 
-    Box3f bbox_;
-    WeightedPointsShellParametersMetric params_;
+    MRVOXELS_API Box3f bbox_;
+    MRVOXELS_API WeightedPointsShellParametersMetric params_;
 };
 
 } //namespace MR

@@ -112,6 +112,49 @@ VertScalars calculateShellWeightsFromRegions(
     return weights;
 }
 
+FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud& cloud, const WeightedPointsToDistanceVolumeParams& params )
+{
+    return FunctionVolume
+    {
+        .data = [params, &tree = cloud.getAABBTree()] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
+            assert( std::isfinite( pd.dist ) );
+            if ( pd.dist >= params.dist.maxBidirDist )
+                return cQuietNan;
+            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDist )
+                return cQuietNan;
+            return pd.dist;
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
+    };
+}
+
+FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh& mesh, const WeightedPointsToDistanceVolumeParams& params )
+{
+    return FunctionVolume
+    {
+        .data = [params, &mesh] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
+            const auto bdist = pd.bidirDist();
+            assert( std::isfinite( bdist ) );
+            if ( bdist >= params.dist.maxBidirDist )
+                return cQuietNan;
+            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDist )
+                return cQuietNan;
+            return pd.dist();
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
+    };
+}
+
 
 template <typename T>
 Expected<Mesh> WeightedShellStrategy::run( const T& meshOrCloud, const MR::WeightedPointsShellParametersMetric& params )
@@ -161,45 +204,12 @@ MarchingCubesParams WeightedShellStrategy::getMarchingCubesParams() const
 
 FunctionVolume WeightedShellStrategy::getDistanceField( const Mesh& mesh, const WeightedPointsToDistanceVolumeParams& params ) const
 {
-    return FunctionVolume
-    {
-        .data = [params, &mesh] ( const Vector3i& pos ) -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            const auto bdist = pd.bidirDist();
-            assert( std::isfinite( bdist ) );
-            if ( bdist >= params.dist.maxBidirDist )
-                return cQuietNan;
-            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDist )
-                return cQuietNan;
-            return pd.dist();
-        },
-        .dims = params.vol.dimensions,
-        .voxelSize = params.vol.voxelSize
-    };
+    return weightedMeshToDistanceFunctionVolume( mesh, params );
 }
 
 FunctionVolume WeightedShellStrategy::getDistanceField( const MR::PointCloud& cloud, const MR::WeightedPointsToDistanceVolumeParams& params ) const
 {
-    return FunctionVolume
-    {
-        .data = [params, &tree = cloud.getAABBTree()] ( const Vector3i& pos ) -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
-            assert( std::isfinite( pd.dist ) );
-            if ( pd.dist >= params.dist.maxBidirDist )
-                return cQuietNan;
-            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDist )
-                return cQuietNan;
-            return pd.dist;
-        },
-        .dims = params.vol.dimensions,
-        .voxelSize = params.vol.voxelSize
-    };
+    return weightedPointsToDistanceFunctionVolume( cloud, params );
 }
 
 Expected<Mesh> WeightedShellStrategy::run( const MR::Mesh& mesh, const MR::WeightedPointsShellParametersRegions& params )

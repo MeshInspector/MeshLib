@@ -23,7 +23,10 @@ struct PointAndDistance
 
 struct MeshPointAndDistance
 {
-    /// a point on mesh in barycentric representation
+    /// point location
+    Vector3f loc;
+
+    /// the corresponding point on mesh in barycentric representation
     MeshTriPoint mtp;
 
     /// euclidean distance from input location to mtp
@@ -31,9 +34,6 @@ struct MeshPointAndDistance
 
     /// point's weight
     float w = 0;
-
-    /// input location is locally outside of the surface
-    bool outside = true;
 
     /// either
     /// 1) bidirectional distances are computed, or

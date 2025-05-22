@@ -300,25 +300,36 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     auto holePairs = detail::findSelfContoursMapping( contours );
     auto meshCpy = mesh; // for now lets do copy each time, TODO: do copy only if needed
-    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
 
     // update non-closed
     ParallelFor( contours, [&] ( size_t cId )
     {
-        if ( isClosed( contours[cId] ) )
+        auto& cc = contours[cId];
+        if ( isClosed( cc ) )
             return;
 
-        auto& cont = intContours[cId];
-        if ( cont.intersections.capacity() < cont.intersections.size() + 2 )
-            cont.intersections.reserve( cont.intersections.size() + 2 );
-        auto svId = mesh.topology.dest( mesh.topology.prev( contours[cId].front().edge ) );
-        auto fvId = mesh.topology.dest( mesh.topology.next( contours[cId].back().edge ) );
+        if ( cc.capacity() < cc.size() + 2 )
+            cc.reserve( cc.size() + 2 );
+        auto& ic = intContours[cId];
+        if ( ic.intersections.capacity() < ic.intersections.size() + 2 )
+            ic.intersections.reserve( ic.intersections.size() + 2 );
 
-        cont.intersections.insert( cont.intersections.begin(), OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] } );
-        cont.intersections.insert( cont.intersections.end(), OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] } );
+        auto prev = mesh.topology.prev( cc.front().edge );
+        auto next = mesh.topology.next( cc.back().edge );
+        auto svId = mesh.topology.dest( prev );
+        auto fvId = mesh.topology.dest( next );
+
+        auto prevVET = VariableEdgeTri{ {prev,cc.front().tri},cc.front().isEdgeATriB };
+        auto nextVET = VariableEdgeTri{ {next,cc.back().tri},cc.back().isEdgeATriB };
+
+        cc.insert( cc.begin(), prevVET );
+        cc.insert( cc.end(), nextVET );
+        ic.intersections.insert( ic.intersections.begin(), OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] } );
+        ic.intersections.insert( ic.intersections.end(), OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] } );
     } );
 
+    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
     auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );

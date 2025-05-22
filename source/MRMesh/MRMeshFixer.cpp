@@ -678,13 +678,14 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 
 void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
 {
+    auto planarAngleCos = std::cos( std::abs( PI_F - params.creaseAngle ) );
+    FaceBitSet fixFacesBuffer( mesh.topology.getValidFaces().size() );
     for ( int iter = 0; iter < params.maxIters; ++iter )
     {
         auto creases = mesh.findCreaseEdges( params.creaseAngle );
         if ( creases.none() )
             return;
 
-        FaceBitSet fixFacesBuffer( mesh.topology.getValidFaces().size() );
         for ( auto ue : creases )
         {
             if ( mesh.topology.isLoneEdge( EdgeId( ue ) ) )
@@ -708,7 +709,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                     if ( mesh.triangleAspectRatio( f ) > params.criticalTriAspectRatio || mesh.triangleAspectRatio( nextF ) > params.criticalTriAspectRatio )
                         continue;
                     auto digAngCos = mesh.dihedralAngleCos( e.undirected() );
-                    if ( digAngCos < params.planarCritCos )
+                    if ( digAngCos < planarAngleCos )
                         return; // stop propagation on sharp angle
                 }
             };

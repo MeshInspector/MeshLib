@@ -88,6 +88,21 @@ MRMESH_API void addTriangles( MeshTopology & res, std::vector<VertId> & vertTrip
 MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
     const BuildSettings & settings = {}, ProgressCallback progressCb = {} );
 
+struct UniteCloseParams
+{
+    ///< vertices located closer to each other than \param closeDist will be united
+    float closeDist = 0.0f;
+
+    ///< if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
+    bool uniteOnlyBd = true;
+
+    ///< if true, only vertices from this region can be affected
+    VertBitSet* region = nullptr;
+
+    ///< is the mapping of vertices: before -> after
+    VertMap* optionalVertOldToNew = nullptr;
+};
+
 /// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;
 /// then the mesh is rebuilt from the remaining triangles
 /// \param optionalVertOldToNew is the mapping of vertices: before -> after
@@ -95,6 +110,11 @@ MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const V
 /// \return the number of vertices united, 0 means no change in the mesh
 MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd = true,
     VertMap * optionalVertOldToNew = nullptr );
+
+/// the function finds groups of mesh vertices located closer to each other than \param params.closeDist, and unites such vertices in one;
+/// then the mesh is rebuilt from the remaining triangles
+/// \return the number of vertices united, 0 means no change in the mesh
+MRMESH_API int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params = {} );
 
 } //namespace MeshBuilder
 

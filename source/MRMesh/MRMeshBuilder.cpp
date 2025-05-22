@@ -844,14 +844,27 @@ Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
 
 int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )
 {
-    MR_TIMER;
-    VertBitSet bdVerts;
-    if ( uniteOnlyBd )
-        bdVerts = mesh.topology.findBdVerts();
+    return uniteCloseVertices( mesh, { .closeDist = closeDist,.uniteOnlyBd = uniteOnlyBd,.optionalVertOldToNew = optionalVertOldToNew } );
+}
 
-    const VertMap vertOldToNew = uniteOnlyBd ?
-        *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :
-        *findSmallestCloseVertices( mesh, closeDist );
+int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
+{
+    MR_TIMER;
+    bool useRegion = params.uniteOnlyBd || params.region;
+    VertBitSet vertRegion;
+    if ( params.uniteOnlyBd )
+        vertRegion = mesh.topology.findBdVerts();
+    if ( params.region )
+    {
+        if ( params.uniteOnlyBd )
+            vertRegion &= *params.region;
+        else
+            vertRegion = *params.region;
+    }
+
+    const VertMap vertOldToNew = useRegion ?
+        *findSmallestCloseVertices( mesh.points, params.closeDist, &vertRegion ) :
+        *findSmallestCloseVertices( mesh, params.closeDist );
     int numChanged = 0;
     for ( auto v = 0_v; v < vertOldToNew.size(); ++v )
         if ( v != vertOldToNew[v] )
@@ -876,8 +889,8 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     }
     addTriangles( mesh.topology, t, { .region = &region } );
     mesh.invalidateCaches();
-    if ( optionalVertOldToNew )
-        *optionalVertOldToNew = std::move( vertOldToNew );
+    if ( params.optionalVertOldToNew )
+        *params.optionalVertOldToNew = std::move( vertOldToNew );
 
     return numChanged;
 }

@@ -10,6 +10,7 @@
 #include "MRMesh/MRString.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
+#include "MRSceneCache.h"
 
 namespace MR
 {
@@ -99,8 +100,7 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
     return true;
 }
 
-std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, int* captionCount /*= nullptr*/,
-    std::vector<SearchResultWeight>* weights /*= nullptr*/ )
+std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, const SearchParams& params )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
     
@@ -266,7 +266,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 else if ( a.second.captionWeight > b.second.captionWeight )
                     return false;
                 else
-                    return a.second.captionOrderWeight < b.second.captionOrderWeight;
+                    return a.second.captionOrderWeight <= b.second.captionOrderWeight;
             }
             else
                 return true;
@@ -282,7 +282,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 else if ( a.second.tooltipWeight > b.second.tooltipWeight )
                     return false;
                 else
-                    return a.second.tooltipOrderWeight < b.second.tooltipOrderWeight;
+                    return a.second.tooltipOrderWeight <= b.second.tooltipOrderWeight;
             }
         }
     } );
@@ -302,20 +302,40 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     }
 
     std::vector<SearchResult> res( rawResult.size() );
-    if ( weights )
-        *weights = std::vector<SearchResultWeight>( rawResult.size() );
-    if ( captionCount )
-        *captionCount = -1;
+    if ( params.weights )
+        *params.weights = std::vector<SearchResultWeight>( rawResult.size() );
+    int count = 0;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
             continue;
         res[i] = rawResult[i].first;
-        if ( captionCount && rawResult[i].second.captionWeight > maxWeight &&
+        if ( rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
-            *captionCount = i;
-        if ( weights )
-            ( *weights )[i] = rawResult[i].second;
+            count = i;
+        if ( params.weights )
+            ( *params.weights )[i] = rawResult[i].second;
+    }
+    if ( params.captionCount )
+        *params.captionCount = count;
+
+    // sort by available - unavailable tools
+    if ( params.requirementsFunc )
+    {
+        std::sort( res.begin(), res.begin() + count, [requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
+        {
+            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
+                return false;
+            else
+                return true;
+        } );
+        std::sort( res.begin() + count, res.end(), [requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
+        {
+            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
+                return false;
+            else
+                return true;
+        } );
     }
 
     return res;

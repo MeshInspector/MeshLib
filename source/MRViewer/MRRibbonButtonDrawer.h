@@ -34,6 +34,8 @@ struct DrawButtonParams
     bool forceHovered = false;
     // if true treat this item as pressed
     bool forcePressed = false;
+    // set true if item pressed
+    bool* isPressed = nullptr;
 };
 
 struct CustomButtonParameters

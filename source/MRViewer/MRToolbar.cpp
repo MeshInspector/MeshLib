@@ -403,7 +403,7 @@ void Toolbar::drawCustomizeModal_()
     {
         searchResult_.clear();
         searchResult_.resize( RibbonSchemaHolder::schema().tabsMap.size() );
-        auto searchResRaw_ = RibbonSchemaHolder::search( searchString_ );
+        auto searchResRaw_ = RibbonSchemaHolder::search( searchString_, {} );
         for ( const auto& sr : searchResRaw_ )
         {
             if ( sr.tabIndex < 0 )

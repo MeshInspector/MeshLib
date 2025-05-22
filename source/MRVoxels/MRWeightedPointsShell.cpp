@@ -112,23 +112,6 @@ VertScalars calculateShellWeightsFromRegions(
     return weights;
 }
 
-WeightedPointsShellParametersMetric regionParams2metricParams( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
-{
-    spdlog::info( "interpolation: {}", params.interpolationDist );
-    DistanceFromWeightedPointsParams distParams;
-    distParams.maxWeight = 0.f;
-    for ( const auto& reg : params.regions )
-        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
-    distParams.pointWeight = [weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist )] ( VertId v )
-    {
-        return weights[v];
-    };
-    WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), std::move( distParams ) };
-    resParams.dist.bidirectionalMode = params.bidirectionalMode;
-    return resParams;
-}
-
-
 
 template <typename T>
 Expected<Mesh> WeightedShellStrategy::run( const T& meshOrCloud, const MR::WeightedPointsShellParametersMetric& params )
@@ -221,7 +204,19 @@ FunctionVolume WeightedShellStrategy::getDistanceField( const MR::PointCloud& cl
 
 Expected<Mesh> WeightedShellStrategy::run( const MR::Mesh& mesh, const MR::WeightedPointsShellParametersRegions& params )
 {
-    return run( mesh, regionParams2metricParams( mesh, params ) );
+    DistanceFromWeightedPointsParams distParams;
+    distParams.maxWeight = 0.f;
+    for ( const auto& reg : params.regions )
+        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
+    const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
+    distParams.pointWeight = [&weights] ( VertId v )
+    {
+        return weights[v];
+    };
+    WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), std::move( distParams ) };
+    resParams.dist.bidirectionalMode = params.bidirectionalMode;
+
+    return run( mesh, resParams );
 }
 
 

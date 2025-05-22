@@ -24,6 +24,6 @@ params.offset = 0.2
 params.dist.maxWeight = max(scalars.vec) # should always have maximum between weights provided
 
 # ===offset
-res = mrmeshpy.weightedMeshShell(mesh, scalars, params)
+res = mrmeshpy.WeightedShell.meshShell(mesh, scalars, params)
 
 mrmeshpy.saveMesh(res, "offset_weighted.ctm")

@@ -391,6 +391,9 @@ TrianglesSortRes sortPropagateContour(
         FaceId fl = lContour[lOtherRef].tri;
         FaceId fr = rContour[rOtherRef].tri;
 
+        if ( fl == fr )
+            return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
+
         return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
     };
     bool lPassedFullRing = false;

@@ -13,20 +13,35 @@
 namespace MR
 {
 
-Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
-    bool fixDegenerations, float maxError, bool mergeMode, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
+struct UniteReducerBaseParams
+{
+    bool fixDegeneracies = false;
+    float maxError = 1e-5f;
+    bool mergeMode = false;
+    bool forceCut = false;
+};
+
+struct UnitePairOfMehsesParams
+{
+    UniteReducerBaseParams commonParams;
+    const Vector3f* shift{ nullptr };
+    BooleanResultMapper* mapper{ nullptr };
+};
+
+Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b, const UnitePairOfMehsesParams& unitePairParams )
 {
     if ( a.points.empty() )
         return std::move( b );
     else if ( b.points.empty() )
         return std::move( a );
 
-    AffineXf3f xf = AffineXf3f::translation( shift ? *shift : Vector3f() );
+    AffineXf3f xf = AffineXf3f::translation( unitePairParams.shift ? *unitePairParams.shift : Vector3f() );
     BooleanResultMapper mapper_;
     BooleanParameters params;
-    params.rigidB2A = shift ? &xf : nullptr;
-    params.mapper = fixDegenerations || mapper ? &mapper_ : nullptr;
-    params.mergeAllNonIntersectingComponents = mergeMode;
+    params.rigidB2A = unitePairParams.shift ? &xf : nullptr;
+    params.mapper = unitePairParams.commonParams.fixDegeneracies || unitePairParams.mapper ? &mapper_ : nullptr;
+    params.mergeAllNonIntersectingComponents = unitePairParams.commonParams.mergeMode;
+    params.forceCut = unitePairParams.commonParams.forceCut;
     auto res = MR::boolean(
         std::move( a ),
         std::move( b ),
@@ -36,11 +51,11 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
     if ( !res.valid() )
         return unexpected( res.errorString );
 
-    if ( fixDegenerations )
+    if ( unitePairParams.commonParams.fixDegeneracies )
     {
         auto newFaces = mapper_.newFaces();
         auto e = fixMeshDegeneracies( res.mesh, {
-            .maxDeviation = maxError,
+            .maxDeviation = unitePairParams.commonParams.maxError,
             .region = &newFaces,
             .mode = FixMeshDegeneraciesParams::Mode::Decimate
         } );
@@ -48,34 +63,32 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b,
             return unexpected( std::move( e.error() ) );
     }
 
-    if ( mapper != nullptr )
-        *mapper = std::move( mapper_ );
+    if ( unitePairParams.mapper != nullptr )
+        *unitePairParams.mapper = std::move( mapper_ );
 
     return res.mesh;
 }
 
+struct UniteReducerParams
+{
+    UniteReducerBaseParams commonParams;
+    bool mergeOnFail = false;
+    bool collectNewFaces = false;
+    const std::vector<Vector3f>* shifts{ nullptr };
+};
+
 class BooleanReduce
 {
 public:
-    BooleanReduce( std::vector<Mesh>& mehses, const std::vector<Vector3f>& shifts, float maxError, bool fixDegenerations, bool collectNewFaces, bool mergeMode, bool mergeOnFail ) :
-        maxError_{ maxError },
-        fixDegenerations_{ fixDegenerations },
-        mergedMeshes_{ mehses },
-        shifts_{ shifts },
-        collectNewFaces_{ collectNewFaces },
-        mergeMode_{ mergeMode },
-        mergeOnFail_{ mergeOnFail }
+    BooleanReduce( std::vector<Mesh>& mehses, const UniteReducerParams& params ) :
+        params_{ params },
+        mergedMeshes_{ mehses }
     {}
 
     BooleanReduce( BooleanReduce& x, tbb::split ) :
         error{ x.error },
-        maxError_{ x.maxError_ },
-        fixDegenerations_{ x.fixDegenerations_ },
-        mergedMeshes_{ x.mergedMeshes_ },
-        shifts_{ x.shifts_ },
-        collectNewFaces_{ x.collectNewFaces_ },
-        mergeMode_{ x.mergeMode_ },
-        mergeOnFail_{ x.mergeOnFail_ }
+        params_{ x.params_ },
+        mergedMeshes_{ x.mergedMeshes_ }
     {
     }
 
@@ -91,29 +104,21 @@ public:
         Vector3f shift = y.resShift - resShift;
         BooleanResultMapper mapper;
         Expected<Mesh> res;
-        if ( mergeMode_ )
+        UnitePairOfMehsesParams upParams;
+        upParams.commonParams = params_.commonParams;
+        upParams.mapper = params_.collectNewFaces ? &mapper : nullptr;
+        upParams.shift = params_.shifts ? &shift : nullptr;
+        if ( params_.commonParams.mergeMode )
         {
-            res = unitePairOfMeshes(
-                Mesh( resultMesh ),
-                Mesh( y.resultMesh ),
-                fixDegenerations_, maxError_,
-                mergeMode_,
-                shifts_.empty() ? nullptr : &shift,
-                collectNewFaces_ ? &mapper : nullptr );
+            res = unitePairOfMeshes( Mesh( resultMesh ), Mesh( y.resultMesh ), upParams );
         }
         else
         {
-            res = unitePairOfMeshes(
-                std::move( resultMesh ),
-                std::move( y.resultMesh ),
-                fixDegenerations_, maxError_,
-                mergeMode_,
-                shifts_.empty() ? nullptr : &shift,
-                collectNewFaces_ ? &mapper : nullptr );
+            res = unitePairOfMeshes( std::move( resultMesh ), std::move( y.resultMesh ), upParams );
         }
         if ( !res.has_value() )
         {
-            if ( !mergeOnFail_ )
+            if ( !params_.mergeOnFail )
             {
                 error = std::move( res.error() );
                 return;
@@ -121,8 +126,8 @@ public:
             else
             {
                 FaceMap fMap;
-                resultMesh.addMesh( y.resultMesh, collectNewFaces_ ? &fMap : nullptr );
-                if ( collectNewFaces_ )
+                resultMesh.addMesh( y.resultMesh, params_.collectNewFaces ? &fMap : nullptr );
+                if ( params_.collectNewFaces )
                 {
                     newFaces.resize( fMap.size() );
                     for ( auto f : y.newFaces )
@@ -137,7 +142,7 @@ public:
             }
         }
         resultMesh = std::move( res.value() );
-        if ( collectNewFaces_ )
+        if ( params_.collectNewFaces )
         {
             // store faces created by the latest union operation and map faces created by previous ones
             newFaces = mapper.newFaces()
@@ -150,8 +155,8 @@ public:
     {
         assert( r.size() == 1 );
         assert( resultMesh.points.empty() );
-        if ( !shifts_.empty() )
-            resShift = shifts_[r.begin()];
+        if ( params_.shifts )
+            resShift = ( *params_.shifts )[r.begin()];
         resultMesh = std::move( mergedMeshes_[r.begin()] );
         newFaces.resize( resultMesh.topology.faceSize() );
     }
@@ -161,13 +166,9 @@ public:
     Vector3f resShift;
     FaceBitSet newFaces;
 private:
-    float maxError_{ 0.0f };
-    bool fixDegenerations_{ false };
+    UniteReducerParams params_;
+
     std::vector<Mesh>& mergedMeshes_;
-    const std::vector<Vector3f>& shifts_;
-    bool collectNewFaces_{ false };
-    bool mergeMode_{ false };
-    bool mergeOnFail_{ false };
 };
 
 Expected<Mesh> uniteManyMeshes(
@@ -325,7 +326,15 @@ Expected<Mesh> uniteManyMeshes(
     }
 
     // parallel reduce unite merged meshes
-    BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations, params.newFaces != nullptr, mergeNestedComponents, params.mergeOnFail );
+    UniteReducerParams urParams;
+    urParams.commonParams.fixDegeneracies = params.fixDegenerations;
+    urParams.commonParams.forceCut = params.forceCut;
+    urParams.commonParams.maxError = params.maxAllowedError;
+    urParams.commonParams.mergeMode = mergeNestedComponents;
+    urParams.collectNewFaces = params.newFaces != nullptr;
+    urParams.mergeOnFail = params.mergeOnFail;
+    urParams.shifts = params.useRandomShifts ? &randomShifts : nullptr;
+    BooleanReduce reducer( mergedMeshes, urParams );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
         return unexpected( "Error while uniting meshes: " + reducer.error );

@@ -77,17 +77,28 @@ struct BooleanParameters
 {
     /// Transform from mesh `B` space to mesh `A` space
     const AffineXf3f* rigidB2A = nullptr;
+    
     /// Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology
     BooleanResultMapper* mapper = nullptr;
+    
     /// Optional precut output of meshA, if present - does not perform boolean and just return them
     BooleanPreCutResult* outPreCutA = nullptr;
+    
     /// Optional precut output of meshB, if present - does not perform boolean and just return them
     BooleanPreCutResult* outPreCutB = nullptr;
+    
     /// Optional output cut edges of booleaned meshes 
     std::vector<EdgeLoop>* outCutEdges = nullptr;
+    
     /// By default produce valid operation on disconnected components
     /// if set merge all non-intersecting components
     bool mergeAllNonIntersectingComponents = false;
+    
+    /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
+    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// \warning not recommended in most cases
+    bool forceCut = false;
+    
     ProgressCallback cb = {};
 };
 

@@ -6,6 +6,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MR2to3.h"
 
 namespace MR
 {
@@ -146,10 +147,12 @@ bool DirectionWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     mousePressed_ = true;
+    // Get picked point and corresponding arrow axis point
     Vector3f worldStartPoint = directionObj_->worldXf()( pof.point );
     Vector3f projectedStartPoint = Line3f( getBase(), getDirection() ).project( worldStartPoint );
-    startDirRotation_ = Matrix3f::rotation( worldStartPoint - getBase(), projectedStartPoint - getBase() );
-    viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint ).z;
+    // Set offset so that worldStartPoint corresponds to projectedStartPoint
+    draggingViewportStartPoint_ = viewer->viewport().projectToViewportSpace( worldStartPoint );
+    draggingViewportStartPointOffset_ = viewer->viewport().projectToViewportSpace( projectedStartPoint ) - draggingViewportStartPoint_;
 
     return true;
 }
@@ -165,9 +168,12 @@ bool DirectionWidget::onMouseMove_( int x, int y )
         return assert( false ), false;
 
     auto viewer = Viewer::instance();
-    const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
-    const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    const Vector3f newDir = startDirRotation_ * ( worldEndPoint - getBase() );
+    const Vector3f viewportCurrentPoint = viewer->screenToViewport(
+        Vector3f( float( x ), float( y ), draggingViewportStartPoint_.z ), // Z is preserved by screenToViewport
+        viewer->viewport().id );
+    const Vector3f worldAxisPoint = viewer->viewport().unprojectFromViewportSpace(
+        viewportCurrentPoint + draggingViewportStartPointOffset_ );
+    const Vector3f newDir = worldAxisPoint - getBase();
     updateDirection( newDir );
     if ( onDirectionChanged_ )
         onDirectionChanged_( newDir, needToSaveHistory_ );

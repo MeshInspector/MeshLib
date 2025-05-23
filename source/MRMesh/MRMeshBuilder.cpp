@@ -899,7 +899,7 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
                 mesh.points[dup] = mesh.points[org];
                 if ( params.optionalVertOldToNew )
                 {
-                    if ( vertOldToNew.size() >= org )
+                    if ( org >= vertOldToNew.size() )
                         vertOldToNew.autoResizeSet( org, dup );
                     else
                     {

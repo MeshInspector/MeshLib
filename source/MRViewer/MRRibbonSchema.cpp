@@ -203,9 +203,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         for ( int i = 0; i < list.size(); ++i )
         {
             auto item = schema.items.find( list[i] );
-            if ( item == schema.items.end() )
-                continue;
-            if ( !item->second.item )
+            if ( item == schema.items.end() || !item->second.item )
                 continue;
             checkItem( item->second, t );
             if ( item->second.item->type() == RibbonItemType::ButtonWithDrop )
@@ -217,7 +215,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                     if ( std::dynamic_pointer_cast< LambdaRibbonItem >( dropRibItem ) )
                         continue;
                     auto dropItem = schema.items.find( dropRibItem->name() );
-                    if ( dropItem == schema.items.end() )
+                    if ( dropItem == schema.items.end() || !dropItem->second.item )
                         continue;
                     checkItem( dropItem->second, t );
                 }
@@ -308,7 +306,10 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
+        {
+            assert( false );
             continue;
+        }
         res[i] = rawResult[i].first;
         if ( rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )

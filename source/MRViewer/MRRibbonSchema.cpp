@@ -299,20 +299,24 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         }
     }
 
-    std::vector<SearchResult> res( rawResult.size() );
+    std::vector<SearchResult> res;
+    res.reserve( rawResult.size() );
     if ( params.weights )
-        *params.weights = std::vector<SearchResultWeight>( rawResult.size() );
+    {
+        params.weights->clear();
+        params.weights->reserve( rawResult.size() );
+    }
     int count = 0;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
             continue;
-        res[i] = rawResult[i].first;
+        res.push_back( rawResult[i].first );
         if ( rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
             count = i;
         if ( params.weights )
-            ( *params.weights )[i] = rawResult[i].second;
+            params.weights->push_back( rawResult[i].second );
     }
     if ( params.captionCount )
         *params.captionCount = count;

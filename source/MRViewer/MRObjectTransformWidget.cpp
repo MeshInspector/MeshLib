@@ -305,7 +305,6 @@ bool ObjectTransformWidget::onMouseUp_( Viewer::MouseButton button, int )
     if ( !controlsRoot_ )
         return false;
 
-    setTransformMode( defaultAvailableControls_ );
     stopModify_();
 
     return true;

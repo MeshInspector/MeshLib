@@ -708,7 +708,7 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 }
 
 // for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups )
+size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
     MR_TIMER;
     if ( t.empty() )
@@ -717,7 +717,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     std::vector<IncidentVert> incidentItemsVector;
     preprocessTriangles( t, region, incidentItemsVector );
 
-    auto lastUsedVertId = incidentItemsVector.back().srcVert;
+    auto lastUsedVertId = lastValidVert.valid() ? lastValidVert : incidentItemsVector.back().srcVert;
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
@@ -890,10 +890,11 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
     if ( params.duplicateNonManifold )
     {
         std::vector<MeshBuilder::VertDuplication> localDups;
-        duplicateNonManifoldVertices( t, &region, &localDups );
+        duplicateNonManifoldVertices( t, &region, &localDups, mesh.topology.lastValidVert() );
         if ( !localDups.empty() )
         {
             mesh.points.resize( localDups.back().dupVert + 1 );
+            mesh.topology.vertResize( mesh.points.size() );
             for ( auto [org, dup] : localDups )
                 mesh.points[dup] = mesh.points[org];
             if ( params.optionalDuplications )

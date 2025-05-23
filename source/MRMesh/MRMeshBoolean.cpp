@@ -22,6 +22,7 @@
 #include "MRBox.h"
 #include "MRContoursStitch.h"
 #include "MREdgePaths.h"
+#include "MRRingIterator.h"
 
 namespace
 {
@@ -303,30 +304,46 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
 
     // update non-closed
-    ParallelFor( contours, [&] ( size_t cId )
+    ParallelFor( holePairs, [&] ( size_t hpId )
     {
-        auto& cc = contours[cId];
-        if ( isClosed( cc ) )
+        auto [f, s, r] = holePairs[hpId];
+        auto& cf = contours[f];
+        if ( isClosed( cf ) )
             return;
 
-        if ( cc.capacity() < cc.size() + 2 )
-            cc.reserve( cc.size() + 2 );
-        auto& ic = intContours[cId];
-        if ( ic.intersections.capacity() < ic.intersections.size() + 2 )
-            ic.intersections.reserve( ic.intersections.size() + 2 );
+        if ( cf.capacity() < 2 * cf.size() + 3 )
+            cf.reserve( 2 * cf.size() + 3 );
+        auto& icf = intContours[f].intersections;
+        if ( icf.capacity() < 2 * icf.size() + 3 )
+            icf.reserve( 2 * icf.size() + 3 );
 
-        auto prev = mesh.topology.prev( cc.front().edge );
-        auto next = mesh.topology.next( cc.back().edge );
+
+
+        auto prev = mesh.topology.prev( cf.front().edge );
+        auto next = mesh.topology.next( cf.back().edge );
         auto svId = mesh.topology.dest( prev );
         auto fvId = mesh.topology.dest( next );
 
-        auto prevVET = VariableEdgeTri{ {prev,cc.front().tri},cc.front().isEdgeATriB };
-        auto nextVET = VariableEdgeTri{ {next,cc.back().tri},cc.back().isEdgeATriB };
+        auto prevVET = VariableEdgeTri{ {prev,cf.front().tri},cf.front().isEdgeATriB };
+        auto nextVET = VariableEdgeTri{ {next,cf.back().tri},cf.back().isEdgeATriB };
 
-        cc.insert( cc.begin(), prevVET );
-        cc.insert( cc.end(), nextVET );
-        ic.intersections.insert( ic.intersections.begin(), OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] } );
-        ic.intersections.insert( ic.intersections.end(), OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] } );
+        auto& cs = contours[s];
+        cf.insert( cf.begin(), prevVET );
+        cf.insert( cf.end(), nextVET );
+        cf.insert( cf.end(), std::make_move_iterator( cs.begin() ), std::make_move_iterator( cs.end() ) );
+        cf.insert( cf.end(), prevVET );
+        cs.clear();
+
+        auto prevOMI = OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] };
+        auto nextOMI = OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] };
+
+        auto& ics = intContours[s].intersections;        
+        icf.insert( icf.begin(), prevOMI );
+        icf.insert( icf.end(), nextOMI );
+        icf.insert( icf.end(), std::make_move_iterator( ics.begin() ), std::make_move_iterator( ics.end() ) );
+        icf.insert( icf.end(), prevOMI );
+        ics.clear();
+        intContours[f].closed = true;
     } );
 
     auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshCpy, contours, converters.toInt,nullptr, meshCpy.topology.vertSize(), false } );
@@ -336,7 +353,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     for ( auto [f, s, r] : holePairs )
     {
-        if ( isClosed( contours[f] ) )
+        if ( !contours[s].empty() ) // isClosed( contours[f] )
         {
             const auto& leftLoopF = cutRes.resultCut[f];
             auto rightLoopF = cutAlongEdgeLoop( mesh, leftLoopF );
@@ -349,20 +366,24 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         }
         else
         {
-            auto leftContF = cutRes.resultCut[f]; // intentional copy
-            auto& leftContS = cutRes.resultCut[s];
-            assert( mesh.topology.dest( leftContF.back() ) == mesh.topology.org( leftContS.front() ) );
-            assert( mesh.topology.dest( leftContS.back() ) == mesh.topology.org( leftContF.front() ) );
-            leftContF.insert( leftContF.end(), leftContS.begin(), leftContS.end() );
-            auto rightContF = cutAlongEdgeLoop( mesh, leftContF );
-            leftContF.resize( leftContF.size() / 2 );
-            reverse( leftContS );
-            EdgePath rightContS;
-            rightContS.insert( rightContS.begin(), rightContF.begin() + rightContF.size() / 2, rightContF.end() );
-            rightContF.resize( rightContF.size() / 2 );
-            reverse( rightContF );
-            stitchContours( mesh.topology, leftContF, leftContS );
-            stitchContours( mesh.topology, rightContF, rightContS );
+            if ( !isEdgeLoop( mesh.topology, cutRes.resultCut[f] ) )
+                continue; // skip for now for simplicity, TODO: how could this be?
+            auto leftFirstLoops = splitOnSimpleLoops( mesh.topology, { std::move( cutRes.resultCut[f] ) } );
+            if ( leftFirstLoops.size() != 1 )
+                continue; // skip for now for simplicity, TODO: support this case
+            auto& leftFirstLoop = leftFirstLoops[0];
+
+            auto rightFirstLoop = cutAlongEdgeLoop( mesh, leftFirstLoop );
+            EdgePath leftSecondPart( leftFirstLoop.begin() + leftFirstLoop.size() / 2, leftFirstLoop.end() );
+            leftFirstLoop.resize( leftSecondPart.size() );
+            reverse( leftSecondPart );
+            
+            EdgePath rightSecondPart( rightFirstLoop.begin() + rightFirstLoop.size() / 2, rightFirstLoop.end() );
+            rightFirstLoop.resize( rightSecondPart.size() );
+            reverse( rightSecondPart );
+
+            stitchContours( mesh.topology, leftFirstLoop, leftSecondPart );
+            stitchContours( mesh.topology, rightSecondPart, rightFirstLoop );
         }
     }
 

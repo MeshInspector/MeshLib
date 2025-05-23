@@ -366,9 +366,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         }
         else
         {
+            if ( !isEdgeLoop( mesh.topology, cutRes.resultCut[f] ) )
+                continue; // skip for now for simplicity, TODO: how could this be?
             auto leftFirstLoops = splitOnSimpleLoops( mesh.topology, { std::move( cutRes.resultCut[f] ) } );
             if ( leftFirstLoops.size() != 1 )
-                return unexpected( "Self-Boolean has too complicated contours" ); // fail for now for simplicity, TODO: support this case
+                continue; // skip for now for simplicity, TODO: support this case
             auto& leftFirstLoop = leftFirstLoops[0];
 
             auto rightFirstLoop = cutAlongEdgeLoop( mesh, leftFirstLoop );

@@ -99,8 +99,14 @@ struct UniteCloseParams
     ///< if true, only vertices from this region can be affected
     VertBitSet* region = nullptr;
 
+    ///< if true - try to duplicates non-manifold vertices instead of removing faces
+    bool duplicateNonManifold = false;
+
     ///< is the mapping of vertices: before -> after
     VertMap* optionalVertOldToNew = nullptr;
+
+    ///< this can be used to map attributes to duplicated vertices
+    std::vector<MeshBuilder::VertDuplication>* optionalDuplications = nullptr;
 };
 
 /// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;

@@ -354,6 +354,9 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
+            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
+            // keeping it here for better understanding whats going on here, also might be useful for debugging two objects boolean failures
+
             //assert(
             //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
             //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||

@@ -895,20 +895,9 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
         {
             mesh.points.resize( localDups.back().dupVert + 1 );
             for ( auto [org, dup] : localDups )
-            {
                 mesh.points[dup] = mesh.points[org];
-                if ( params.optionalVertOldToNew )
-                {
-                    if ( org >= vertOldToNew.size() )
-                        vertOldToNew.autoResizeSet( org, dup );
-                    else
-                    {
-                        if ( auto oldOrg = vertOldToNew[org] )
-                            org = oldOrg;
-                        vertOldToNew[org] = dup;
-                    }
-                }
-            }
+            if ( params.optionalDuplications )
+                *params.optionalDuplications = std::move( localDups );
         }
     }
     addTriangles( mesh.topology, t, { .region = &region } );

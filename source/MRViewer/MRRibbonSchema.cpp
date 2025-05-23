@@ -215,7 +215,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                     if ( std::dynamic_pointer_cast< LambdaRibbonItem >( dropRibItem ) )
                         continue;
                     auto dropItem = schema.items.find( dropRibItem->name() );
-                    if ( dropItem == schema.items.end() || !item->second.item )
+                    if ( dropItem == schema.items.end() || !dropItem->second.item )
                         continue;
                     checkItem( dropItem->second, t );
                 }
@@ -299,24 +299,23 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         }
     }
 
-    std::vector<SearchResult> res;
-    res.reserve( rawResult.size() );
+    std::vector<SearchResult> res( rawResult.size() );
     if ( params.weights )
-    {
-        params.weights->clear();
-        params.weights->reserve( rawResult.size() );
-    }
+        *params.weights = std::vector<SearchResultWeight>( rawResult.size() );
     int count = 0;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
+        {
+            assert( false );
             continue;
-        res.push_back( rawResult[i].first );
+        }
+        res[i] = rawResult[i].first;
         if ( rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
             count = i;
         if ( params.weights )
-            params.weights->push_back( rawResult[i].second );
+            ( *params.weights )[i] = rawResult[i].second;
     }
     if ( params.captionCount )
         *params.captionCount = count;

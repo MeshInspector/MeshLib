@@ -667,6 +667,7 @@ struct PathOverIncidentVert {
 // fill and sort incidentVertVector by central vertex
 void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
 {
+    MR_TIMER;
     incidentVertVector.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
@@ -681,7 +682,7 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             incidentVertVector.emplace_back( f, vs[i] );
     }
 
-    std::sort( incidentVertVector.begin(), incidentVertVector.end(),
+    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end(),
         [] ( const IncidentVert& lhv, const IncidentVert& rhv ) -> bool
     {
         return lhv.srcVert < rhv.srcVert;

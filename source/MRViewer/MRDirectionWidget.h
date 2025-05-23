@@ -57,11 +57,14 @@ public:
 private:
     std::shared_ptr<ObjectMesh> directionObj_;
 
-    bool mousePressed_ = false;
     // if blocked cannot be moved with mouse
     bool blockedMouse_{ false };
-    Vector3f worldStartPoint_;
-    float viewportStartPointZ_{ 0.0f };
+    bool mousePressed_ = false;
+    // When dragging an arrow, the initial picked point (in viewport space)
+    Vector3f draggingViewportStartPoint_;
+    // When dragging an arrow, the initial point on the arrow axis corresponding to draggingViewportStartPoint_
+    Vector3f draggingViewportStartPointOffset_;
+
     OnDirectionChangedCallback onDirectionChanged_;
     Color color_ = Color::red();
     bool needToSaveHistory_ = true;

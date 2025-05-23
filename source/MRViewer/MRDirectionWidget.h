@@ -60,7 +60,7 @@ private:
     bool mousePressed_ = false;
     // if blocked cannot be moved with mouse
     bool blockedMouse_{ false };
-    Vector3f worldStartPoint_;
+    Matrix3f startDirRotation_;
     float viewportStartPointZ_{ 0.0f };
     OnDirectionChangedCallback onDirectionChanged_;
     Color color_ = Color::red();

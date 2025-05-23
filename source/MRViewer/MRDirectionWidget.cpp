@@ -2,6 +2,7 @@
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRLine.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
@@ -14,7 +15,7 @@ void DirectionWidget::create( Object* parent )
     reset();
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, Vector3f::plusZ(), 0.02f, 0.04f, 0.08f));
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, Vector3f::plusZ(), 0.02f, 0.04f, 0.08f ) );
     directionObj_ = std::make_shared<ObjectMesh>();
     directionObj_->setMesh( mesh );
     directionObj_->setAncillary( true );
@@ -145,8 +146,11 @@ bool DirectionWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     mousePressed_ = true;
-    worldStartPoint_ = directionObj_->worldXf()( pof.point );
-    viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
+    Vector3f worldStartPoint = directionObj_->worldXf()( pof.point );
+    Vector3f projectedStartPoint = Line3f( getBase(), getDirection() ).project( worldStartPoint );
+    startDirRotation_ = Matrix3f::rotation( worldStartPoint - getBase(), projectedStartPoint - getBase() );
+    viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint ).z;
+
     return true;
 }
 
@@ -163,7 +167,7 @@ bool DirectionWidget::onMouseMove_( int x, int y )
     auto viewer = Viewer::instance();
     const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    const auto newDir = worldEndPoint - getBase();
+    const Vector3f newDir = startDirRotation_ * ( worldEndPoint - getBase() );
     updateDirection( newDir );
     if ( onDirectionChanged_ )
         onDirectionChanged_( newDir, needToSaveHistory_ );

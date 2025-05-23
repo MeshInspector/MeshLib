@@ -354,17 +354,24 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
-            assert(
-                ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+            //assert(
+            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
 
             // determined condition, intersections leave face in different edges (not returned)
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-            else
+            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Right : TrianglesSortRes::Left; // terminal
+            else
+            {
+                // TODO: support this case
+                // we can be here only if doing self-boolean of non-closed contour passing through vertex
+                tryThis = false; // for now just terminate, for simplicity
+                return TrianglesSortRes::Undetermined;
+            }
         }
 
         // undetermined condition, but not terminal (intersections leave face in same edge (not returned))

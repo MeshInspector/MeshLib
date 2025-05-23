@@ -15,7 +15,7 @@ for i in range(verts_num):
 
 # ===params
 
-params = mrmeshpy.WeightedPointsShellParametersMetric()
+params = mrmeshpy.WeightedShell.ParametersMetric()
 # Algorithm is voxel based, voxel size affects performance and form of result mesh
 params.voxelSize = mrmeshpy.suggestVoxelSize(mesh, 10000)
 # common basic offset applied for all point
@@ -24,6 +24,6 @@ params.offset = 0.2
 params.dist.maxWeight = max(scalars.vec) # should always have maximum between weights provided
 
 # ===offset
-res = mrmeshpy.weightedMeshShell(mesh, scalars, params)
+res = mrmeshpy.WeightedShell.meshShell(mesh, scalars, params)
 
 mrmeshpy.saveMesh(res, "offset_weighted.ctm")

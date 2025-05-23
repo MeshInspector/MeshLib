@@ -862,7 +862,7 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
             vertRegion = *params.region;
     }
 
-    const VertMap vertOldToNew = useRegion ?
+    VertMap vertOldToNew = useRegion ?
         *findSmallestCloseVertices( mesh.points, params.closeDist, &vertRegion ) :
         *findSmallestCloseVertices( mesh, params.closeDist );
     int numChanged = 0;
@@ -885,6 +885,30 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
             mesh.topology.deleteFace( f );
             t[f] = newt;
             region.set( f );
+        }
+    }
+    if ( params.duplicateNonManifold )
+    {
+        std::vector<MeshBuilder::VertDuplication> localDups;
+        duplicateNonManifoldVertices( t, &region, &localDups );
+        if ( !localDups.empty() )
+        {
+            mesh.points.resize( localDups.back().dupVert + 1 );
+            for ( auto [org, dup] : localDups )
+            {
+                mesh.points[dup] = mesh.points[org];
+                if ( params.optionalVertOldToNew )
+                {
+                    if ( vertOldToNew.size() >= org )
+                        vertOldToNew.autoResizeSet( org, dup );
+                    else
+                    {
+                        if ( auto oldOrg = vertOldToNew[org] )
+                            org = oldOrg;
+                        vertOldToNew[org] = dup;
+                    }
+                }
+            }
         }
     }
     addTriangles( mesh.topology, t, { .region = &region } );

@@ -99,6 +99,9 @@ struct UniteCloseParams
     ///< if true, only vertices from this region can be affected
     VertBitSet* region = nullptr;
 
+    ///< if true - try to duplicates non-manifold vertices instead of removing faces
+    bool duplicateNonManifold = true;
+
     ///< is the mapping of vertices: before -> after
     VertMap* optionalVertOldToNew = nullptr;
 };

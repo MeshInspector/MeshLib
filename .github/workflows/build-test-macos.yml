@@ -28,6 +28,9 @@ jobs:
   macos-build-test:
     timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash -ieo pipefail {0}
     strategy:
       fail-fast: false
       matrix:
@@ -60,7 +63,6 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4

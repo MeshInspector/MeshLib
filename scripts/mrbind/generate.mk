@@ -125,11 +125,7 @@ endif
 
 # ---- MacOS-only vars: [
 ifneq ($(IS_MACOS),)
-HOMEBREW_DIR := /opt/homebrew
-ifeq ($(wildcard $(HOMEBREW_DIR)),)
-# Apparently x86 Macs don't use `/opt/homebrew`, but rather `/usr/local`.
-HOMEBREW_DIR := /usr/local
-endif
+HOMEBREW_DIR := $(shell brew --prefix)
 $(info Using homebrew at: $(HOMEBREW_DIR))
 endif
 

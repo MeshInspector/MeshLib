@@ -50,6 +50,8 @@ jobs:
     timeout-minutes: 10
     needs: [ start-unity-instance ]
     runs-on: [ self-hosted, windows, x64, unity, meshinspector ]
+    env:
+      MESHLIB_NUPKG_NAME: MeshLib.1.0.0.3643.nupkg
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -63,14 +65,14 @@ jobs:
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\$env:MESHLIB_NUPKG_NAME" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
       
       - name: Move nuget package to repo folder
         # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
@@ -78,7 +80,7 @@ jobs:
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
           if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
+            Move-Item $pkg.FullName "C:/work/nuget_repo/$env:MESHLIB_NUPKG_NAME"
           } else {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1

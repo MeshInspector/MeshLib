@@ -115,7 +115,6 @@ jobs:
         env:
           PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
         run: |
-          which make
           make --version
           make -f scripts/mrbind/generate.mk \
             -B --trace \

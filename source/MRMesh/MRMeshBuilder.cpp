@@ -895,7 +895,7 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
         duplicateNonManifoldVertices( t, &region, &localDups, lastValidVert );
         if ( !localDups.empty() )
         {
-            mesh.points.resize( localDups.back().dupVert + 1 );
+            mesh.points.resizeNoInit( localDups.back().dupVert + 1 );
             mesh.topology.vertResize( mesh.points.size() );
             for ( auto [org, dup] : localDups )
                 mesh.points[dup] = mesh.points[org];

@@ -68,17 +68,22 @@ private:
 /// @param deepFiltering - filter actions into combined actions
 MRVIEWER_API void FilterHistoryByCondition( HistoryStackFilter filteringCondition, bool deepFiltering = true );
 
-// This class store history actions that are appended to global history stack all together as CombinedHistoryAction in destructor (if scoped stack is not empty)
+/// The purpose of this class is to combine all actions appended to global history store in one big action to undo/redo them all at once.
 class ScopeHistory
 {
 public:
+    /// creates new CombinedHistoryAction, and setups global history store to append all new actions there during this object lifetime
     MRVIEWER_API ScopeHistory( const std::string& name );
+
+    /// created before CombinedHistoryAction if not empty is appended (with all sub-actions) in the global history store
     MRVIEWER_API ~ScopeHistory();
 
+    /// returns the action being populated
+    const std::shared_ptr<CombinedHistoryAction>& combinedAction() const { return combinedAction_; }
+
 private:
-    std::string name_;
     std::shared_ptr<HistoryStore> store_;
-    HistoryActionsVector scope_;
+    std::shared_ptr<CombinedHistoryAction> combinedAction_;
     HistoryActionsVector* parentScopePtr_{ nullptr };
 };
 

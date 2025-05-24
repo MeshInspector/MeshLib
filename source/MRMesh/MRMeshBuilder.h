@@ -43,6 +43,7 @@ struct VertDuplication
 };
 
 // resolve non-manifold vertices by creating duplicate vertices in the triangulation (which is modified)
+// `lastValidVert` is needed if `region` or `t` does not contain full mesh, then first duplicated vertex will have `lastValidVert+1` index
 // return number of duplicated vertices
 MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
     std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {} );

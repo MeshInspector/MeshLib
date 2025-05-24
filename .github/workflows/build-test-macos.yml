@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
-        shell: zsh {0}
+        shell: zsh -l {0}
     strategy:
       fail-fast: false
       matrix:

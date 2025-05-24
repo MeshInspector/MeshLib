@@ -58,7 +58,7 @@ jobs:
           - arch: arm64
             config: Release
             os: arm
-            runner: macos-arm-build # self-hosted
+            runner: macos-arm-build-latest # self-hosted
             brewpath: /opt/homebrew
     permissions:
       id-token: write # This is required for requesting the JWT

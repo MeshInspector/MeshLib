@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
-        shell: bash -ieo pipefail {0}
+        shell: bash -leo pipefail {0}
     strategy:
       fail-fast: false
       matrix:

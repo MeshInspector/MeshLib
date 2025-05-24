@@ -229,6 +229,7 @@
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
+    <ClInclude Include="MRResizeNoInit.h" />
     <ClInclude Include="MRRigidScaleXf3.h" />
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
-#include <vector>
 
 namespace MR
 {
@@ -45,16 +44,7 @@ public:
     void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec_.resize( newSize, t ); }
 
     // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
-    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> )
-    {
-        // allocate enough memory
-        reserve( targetSize );
-        // resize without memory access
-        while ( size() < targetSize )
-            emplace_back( noInit );
-        // in case initial size was larger
-        resize( targetSize );
-    }
+    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec_, targetSize ); }
 
     [[nodiscard]] std::size_t capacity() const { return vec_.capacity(); }
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
@@ -126,10 +116,13 @@ public:
     [[nodiscard]]       reference front()       { return vec_.front(); }
     [[nodiscard]] const_reference  back() const { return vec_.back(); }
     [[nodiscard]]       reference  back()       { return vec_.back(); }
+
     /// returns the identifier of the first element
     [[nodiscard]] I beginId() const { return I( size_t(0) ); }
+
     /// returns the identifier of the back() element
     [[nodiscard]] I backId() const { assert( !vec_.empty() ); return I( vec_.size() - 1 ); }
+
     /// returns backId() + 1
     [[nodiscard]] I endId() const { return I( vec_.size() ); }
 

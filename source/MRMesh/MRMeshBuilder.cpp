@@ -709,7 +709,7 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 }
 
 // for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups )
+size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
     MR_TIMER;
     if ( t.empty() )
@@ -718,11 +718,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     std::vector<IncidentVert> incidentItemsVector;
     preprocessTriangles( t, region, incidentItemsVector );
 
-    auto lastUsedVertId = incidentItemsVector.back().srcVert;
+    if ( !lastValidVert )
+        lastValidVert = incidentItemsVector.back().srcVert;
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
-    VertBitSet visitedVertices(lastUsedVertId);
+    VertBitSet visitedVertices( incidentItemsVector.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
@@ -767,7 +768,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     {
                         if ( foundChains )
                         {
-                            incidentItems.duplicateVertex( path, lastUsedVertId, dups );
+                            incidentItems.duplicateVertex( path, lastValidVert, dups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
@@ -787,7 +788,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        incidentItems.duplicateVertex( closedPath, lastUsedVertId, dups );
+                        incidentItems.duplicateVertex( closedPath, lastValidVert, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;
@@ -873,6 +874,7 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
     if ( numChanged <= 0 )
         return numChanged;
 
+    auto lastValidVert = mesh.topology.lastValidVert(); // need to take it before removing faces
     Triangulation t( mesh.topology.faceSize() );
     FaceBitSet region( mesh.topology.faceSize() );
     for ( auto f : mesh.topology.getValidFaces() )
@@ -891,10 +893,11 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
     if ( params.duplicateNonManifold )
     {
         std::vector<MeshBuilder::VertDuplication> localDups;
-        duplicateNonManifoldVertices( t, &region, &localDups );
+        duplicateNonManifoldVertices( t, &region, &localDups, lastValidVert );
         if ( !localDups.empty() )
         {
-            mesh.points.resize( localDups.back().dupVert + 1 );
+            mesh.points.resizeNoInit( localDups.back().dupVert + 1 );
+            mesh.topology.vertResize( mesh.points.size() );
             for ( auto [org, dup] : localDups )
                 mesh.points[dup] = mesh.points[org];
             if ( params.optionalDuplications )

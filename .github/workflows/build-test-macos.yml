@@ -28,9 +28,6 @@ jobs:
   macos-build-test:
     timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
-    defaults:
-      run:
-        shell: zsh -l {0}
     strategy:
       fail-fast: false
       matrix:
@@ -49,17 +46,14 @@ jobs:
             os: x64
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-13 # github hosted
-            brewpath: /usr/local
           - arch: arm64
             config: Debug
             os: github-arm
             runner: macos-latest  # github hosted
-            brewpath: /opt/homebrew
           - arch: arm64
             config: Release
             os: arm
             runner: macos-arm-build-latest # self-hosted
-            brewpath: /opt/homebrew
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -68,6 +62,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: Setup Homebrew prefix
+        id: brew
+        run: |
+          PREFIX=$(brew --prefix)
+          echo "BREW_PREFIX=$PREFIX" >> $GITHUB_ENV
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -96,6 +96,7 @@ jobs:
 
       - name: Setup python requirements
         run: |
+          which python3
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3
           python3 -m pip install -r ./requirements/python.txt
           python3 -m pip install pytest
@@ -112,8 +113,9 @@ jobs:
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind }}
         env:
-          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
+          PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
         run: |
+          which make
           make --version
           make -f scripts/mrbind/generate.mk \
             -B --trace \

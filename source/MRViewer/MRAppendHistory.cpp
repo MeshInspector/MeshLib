@@ -16,8 +16,7 @@ void FilterHistoryByCondition( HistoryStackFilter condition, bool deepFiltering 
     store->filterStack( condition, deepFiltering );
 }
 
-ScopeHistory::ScopeHistory( const std::string& name ) :
-    name_{ name }
+ScopeHistory::ScopeHistory( const std::string& name )
 {
     auto viewer = Viewer::instance();
     if ( !viewer )
@@ -26,7 +25,8 @@ ScopeHistory::ScopeHistory( const std::string& name ) :
     if ( !store_ )
         return;
     parentScopePtr_ = store_->getScopeBlockPtr();
-    store_->setScopeBlockPtr( &scope_ );
+    combinedAction_ = std::make_shared<CombinedHistoryAction>( name, HistoryActionsVector{} );
+    store_->setScopeBlockPtr( &combinedAction_->getStack() );
 }
 
 ScopeHistory::~ScopeHistory()
@@ -35,8 +35,8 @@ ScopeHistory::~ScopeHistory()
         return;
     store_->setScopeBlockPtr( parentScopePtr_ );
     parentScopePtr_ = nullptr;
-    if ( !scope_.empty() )
-        AppendHistory<CombinedHistoryAction>( name_, std::move( scope_ ) );
+    if ( combinedAction_ && !combinedAction_->getStack().empty() )
+        store_->appendAction( std::move( combinedAction_ ) );
 }
 
-}
+} //namespace MR

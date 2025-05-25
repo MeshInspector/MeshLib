@@ -106,7 +106,7 @@ private:
 
     void clear_();
 
-    void applyCurrentXf_( bool history );
+    void applyCurrentXf_();
     void resetXfs_();
 
     void setVisualizeVectors_( std::vector<Vector3f> worldPoints );
@@ -131,6 +131,10 @@ private:
     bool historyEnabled_{ true };
 
     std::vector<ImVec2> visualizeVectors_;
+
+    // monitors external transform change of objects during mouse moving
+    std::vector<boost::signals2::scoped_connection> connections_;
+    bool changingXfFromMouseMove_{ false }; // true only during setXf called from onMouseMove_
 };
 
 }

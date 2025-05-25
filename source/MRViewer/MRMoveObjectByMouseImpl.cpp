@@ -137,8 +137,16 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     scale_ = 1.f;
     currentXf_ = {};
     initialXfs_.clear();
+    connections_.clear();
     for ( std::shared_ptr<Object>& obj : objects_ )
+    {
         initialXfs_.push_back( obj->worldXf() );
+        connections_.emplace_back( obj->worldXfChangedSignal.connect( [this]
+        {
+            if ( !changingXfFromMouseMove_ )
+                transformMode_ = TransformMode::None; // stop mouse dragging if the transformation was changed from outside (e.g. undo)
+        } ) );
+    }
 
     if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
@@ -248,14 +256,17 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
                      -xf.b[i] + cMaxTranslationMultiplier * minSizeDim );
     }
 
-    applyCurrentXf_( false );
+    applyCurrentXf_();
 
     return true;
 }
 
 bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 {
-    if ( transformMode_ == TransformMode::None || button != currentButton_ )
+    if ( button != currentButton_ )
+        return false;
+    connections_.clear();
+    if ( transformMode_ == TransformMode::None )
         return false;
 
     if ( screenStartPoint_ != cNoPoint )
@@ -265,7 +276,6 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
     }
 
     resetXfs_();
-    applyCurrentXf_( true );
     clear_();
 
     return true;
@@ -383,16 +393,18 @@ void MoveObjectByMouseImpl::clear_()
     currentButton_ = MouseButton::NoButton;
 }
 
-void MoveObjectByMouseImpl::applyCurrentXf_( bool history )
+void MoveObjectByMouseImpl::applyCurrentXf_()
 {
-    std::unique_ptr<ScopeHistory> scope = history ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
+    std::unique_ptr<ScopeHistory> scope = historyEnabled_ ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
     auto itXf = initialXfs_.begin();
+    changingXfFromMouseMove_ = true;
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
-        if ( history && historyEnabled_ )
-            AppendHistory<ChangeXfAction>( "xf", obj );
+        if ( historyEnabled_ )
+            AppendHistory<ChangeXfAction>( obj->name(), obj );
         obj->setWorldXf( currentXf_ * *itXf++ );
     }
+    changingXfFromMouseMove_ = false;
 }
 
 void MoveObjectByMouseImpl::resetXfs_()

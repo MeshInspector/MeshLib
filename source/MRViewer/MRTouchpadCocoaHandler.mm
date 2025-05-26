@@ -192,7 +192,12 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
 
     auto deltaX = [event scrollingDeltaX];
     auto deltaY = [event scrollingDeltaY];
-    if ( [event subtype] == NSEventSubtypeMouseEvent )
+    if (
+        [event subtype] == NSEventSubtypeMouseEvent ||
+        // We know exactly one Mac machine where scroll events arrive with this subtype.
+        // This subtype also has value 0, so this looks suspiciously like a MacOS bug.
+        [event subtype] == NSEventSubtypeApplicationActivated
+    )
     {
         if ( deltaX == 0.0 && deltaY == 0.0 )
         {

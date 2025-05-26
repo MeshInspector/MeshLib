@@ -285,15 +285,39 @@ void Palette::setUniformLabels_()
 
     if ( parameters_.ranges.size() == 2 )
     {
-        int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
+        float valueMax = parameters_.ranges.back();
+        float valueMin = parameters_.ranges[0];
+        const int sz = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
+        const float realValueStep = ( valueMax - valueMin ) / sz;
+        int indexMin = 0;
+        int indexMax = sz;
+        int visibleDiscretization = parameters_.discretization;
+        if ( parameters_.legendLimits.valid() )
+        {
+            if ( parameters_.legendLimits.max < valueMax )
+            {
+                const float uMax = getRelativePos( parameters_.legendLimits.max );
+                indexMax = int( std::ceil( uMax * sz ) );
+                valueMax = indexMax * realValueStep + parameters_.ranges[0];
+            }
+            if ( parameters_.legendLimits.min > valueMin )
+            {
+                const float uMin = getRelativePos( parameters_.legendLimits.min );
+                indexMin = int( std::floor( uMin * sz ) );
+                valueMin = indexMin * realValueStep + parameters_.ranges[0];
+            }
+            visibleDiscretization = indexMax - indexMin;
+        }
+
+        int num = texture_.filter == FilterType::Linear ? 5 : visibleDiscretization + 1;
+
         if ( maxLabelCount_ && maxLabelCount_ < num )
             num = maxLabelCount_;
-
         labels_.resize( num );
 
         for ( int i = 0; i < num; ++i )
         {
-            labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( valueMax - valueMin ) + valueMin );
             labels_[i].value = 1 - float( i ) / ( num - 1 );
         }
     }
@@ -441,18 +465,39 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     const std::vector<Color>& colors = texture_.pixels;
     const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
+
+    float limitedSize = parameters_.ranges.back() - parameters_.ranges[0];
+    float uMax = 1.f;
+    float uMin = 0.f;
+    if ( parameters_.legendLimits.valid() )
+    {
+        if ( parameters_.legendLimits.max < parameters_.ranges.back() )
+        {
+            uMax = getRelativePos( parameters_.legendLimits.max );
+            limitedSize -= parameters_.ranges.back() - parameters_.legendLimits.max;
+        }
+        if ( parameters_.legendLimits.min > parameters_.ranges[0] )
+        {
+            uMin = getRelativePos( parameters_.legendLimits.min );
+            limitedSize -= parameters_.legendLimits.min - parameters_.ranges[0];
+        }
+    }
+    const int indexMin = int( std::floor( ( 1.f - uMax ) * sz ) );
+    const int indexMax = int( std::ceil( ( 1.f - uMin ) * sz ) );
+
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / sz;
+        auto yStep = actualSize.y / ( indexMax - indexMin );
+        const float legendLimitShift = indexMin * yStep;
         if ( onlyTopHalf )
             yStep *= 2;
-        for ( int i = 0; i < sz; i++ )
+        for ( int i = indexMin; i < indexMax; i++ )
         {
             drawList->AddRectFilled(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y + i * yStep },
+                actualPose.y - legendLimitShift + i * yStep },
                 { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y + ( i + 1 ) * yStep },
+                actualPose.y - legendLimitShift + ( i + 1 ) * yStep },
                 colors[sz - 1 - i].getUInt32() );
         }
     }
@@ -462,7 +507,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         auto yStep = actualSize.y / ( sz - 1 );
         if ( onlyTopHalf )
             yStep *= 2;
-        for ( int i = 0; i + 1 < sz; i++ )
+        for ( int i = indexMin; i + 1 < indexMax; i++ )
         {
             const auto color1 = colors[sz - 1 - i].getUInt32();
             const auto color2 = colors[sz - 2 - i].getUInt32();
@@ -703,6 +748,13 @@ int Palette::getMaxLabelCount()
 void Palette::setMaxLabelCount( int val )
 {
     maxLabelCount_ = val;
+}
+
+void Palette::setLegendLimits( float min, float max )
+{
+    parameters_.legendLimits.min = min;
+    parameters_.legendLimits.max = max;
+    resetLabels();
 }
 
 Palette::Label::Label( float val, std::string text_ )

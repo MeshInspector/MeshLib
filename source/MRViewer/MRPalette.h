@@ -6,6 +6,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRExpected.h"
 #include "MRViewer/MRImGui.h"
+#include "MRMesh/MRBox.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -125,6 +126,7 @@ public:
     {
         std::vector<float> ranges = { 0.f, 1.f }; // range limits for palette
         std::vector<Color> baseColors; // palette base colors (need for calculate real colors according discretization)
+        Box<float> legendLimits; // if valid - limit legend range
         int discretization = 7; // number of different colors for discrete palette
     };
 
@@ -145,6 +147,9 @@ public:
     MRVIEWER_API int getMaxLabelCount();
     // sets maximal label count
     MRVIEWER_API void setMaxLabelCount( int val );
+
+    /// set legend limits. if min > max - limits are disabled
+    MRVIEWER_API void setLegendLimits( float min, float max );
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );

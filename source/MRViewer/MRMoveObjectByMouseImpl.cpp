@@ -134,7 +134,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
         connections_.emplace_back( obj->worldXfChangedSignal.connect( [this]
         {
             if ( !changingXfFromMouseMove_ )
-                transformMode_ = TransformMode::None; // stop mouse dragging if the transformation was changed from outside (e.g. undo)
+                clear_(); // stop mouse dragging if the transformation was changed from outside (e.g. undo)
         } ) );
     }
 
@@ -242,13 +242,10 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 {
     if ( button != currentButton_ )
         return false;
-    connections_.clear();
-    if ( transformMode_ == TransformMode::None )
-        return false;
 
-    clear_();
-
-    return true;
+    bool res = transformMode_ != TransformMode::None;
+    cancel();
+    return res;
 }
 
 bool MoveObjectByMouseImpl::isMoving() const
@@ -258,6 +255,7 @@ bool MoveObjectByMouseImpl::isMoving() const
 
 void MoveObjectByMouseImpl::cancel()
 {
+    connections_.clear();
     if ( transformMode_ == TransformMode::None )
         return;
     clear_();
@@ -365,16 +363,18 @@ void MoveObjectByMouseImpl::clear_()
 
 void MoveObjectByMouseImpl::applyCurrentXf_()
 {
-    std::unique_ptr<ScopeHistory> scope = historyEnabled_ ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
+    const bool appendHistory = historyEnabled_ && !xfChanged_;
+    std::unique_ptr<ScopeHistory> scope = appendHistory ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
     auto itXf = initialXfs_.begin();
     changingXfFromMouseMove_ = true;
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
-        if ( historyEnabled_ )
+        if ( appendHistory )
             AppendHistory<ChangeXfAction>( obj->name(), obj );
         obj->setWorldXf( currentXf_ * *itXf++ );
     }
     changingXfFromMouseMove_ = false;
+    xfChanged_ = true;
 }
 
 void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoints )

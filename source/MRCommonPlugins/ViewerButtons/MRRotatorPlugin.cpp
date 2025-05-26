@@ -5,6 +5,8 @@
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRLine3.h"
+#include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRObjectsAccess.h"
 
 namespace MR
 {
@@ -23,6 +25,7 @@ private:
     void preDraw_() override;
 
     float rotationSpeed_ = 5 * PI_F / 180;
+    bool rotateCamera_ = true;
 };
 
 RotatorPlugin::RotatorPlugin() :
@@ -39,6 +42,9 @@ void RotatorPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::SetNextItemWidth( 90.0f * menuScaling );
     UI::drag<AngleUnit>( "Speed", rotationSpeed_, 0.01f, -2 * PI_F, 2 * PI_F );
     UI::setTooltipIfHovered( "The speed of camera rotation in degrees per second. The sign of this value specifies the direction of rotation.", menuScaling );
+
+    UI::checkbox( "Rotate Camera", &rotateCamera_ ); 
+    UI::setTooltipIfHovered( "If selected then camera is rotated around scene's center. Otherwise selected objects are rotated, each around its center.", menuScaling );
 
     ImGui::EndCustomStatePlugin();
 }
@@ -60,9 +66,23 @@ void RotatorPlugin::preDraw_()
     if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
         sceneCenter = sceneBox.center();
 
-    viewport.cameraRotateAround(
-        Line3f{ sceneCenter, viewport.getUpDirection() },
-        ImGui::GetIO().DeltaTime * rotationSpeed_ );
+    const auto deltaAngle = ImGui::GetIO().DeltaTime * rotationSpeed_;
+
+    if ( rotateCamera_ )
+    {
+        viewport.cameraRotateAround( Line3f{ sceneCenter, viewport.getUpDirection() }, -deltaAngle );
+    }
+    else
+    {
+        const auto rotMat = Matrix3f::rotation( viewport.getUpDirection(), deltaAngle );
+        for ( const auto & obj : getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        {
+            const auto wXf = obj->worldXf();
+            const auto wCenter = obj->getWorldTreeBox().center();
+            obj->setWorldXf( AffineXf3f::xfAround( rotMat, wCenter ) * wXf );
+        }
+    }
+
     incrementForceRedrawFrames();
 }
 

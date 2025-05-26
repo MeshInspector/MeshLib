@@ -114,7 +114,8 @@ private:
     std::vector<AffineXf3f> initialXfs_;
 
     TransformMode transformMode_ = TransformMode::None;
-    Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
+    Vector2i screenStartPoint_; // onMouseDown() writes here the position of mouse when mouse dragging was started
+    bool xfChanged_ = false; // it becomes true when onMouseMove changes transform of objects for the first time and optionally appends history actions
     MouseButton currentButton_ = MouseButton::NoButton;
 
     // Data used to calculate transform

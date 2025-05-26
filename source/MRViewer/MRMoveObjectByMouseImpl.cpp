@@ -20,17 +20,6 @@
 namespace MR
 {
 
-namespace
-{
-// translation multiplier that limits its maximum value depending on object size
-// the constant duplicates value defined in ImGuiMenu implementation
-constexpr float cMaxTranslationMultiplier = 0xC00;
-
-// special value for screenStartPoint_
-constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
-
-} // anonymous namespace
-
 void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
 {
     if ( deadZonePixelRadius_ > 0.0f )
@@ -109,7 +98,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     }
 
     currentButton_ = button;
-    screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
+    screenStartPoint_ = viewer.mouseController().getMousePos();
 
     auto viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
     viewportStartPointZ_ = viewportStartPoint.z;
@@ -138,6 +127,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     currentXf_ = {};
     initialXfs_.clear();
     connections_.clear();
+    xfChanged_ = false;
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
         initialXfs_.push_back( obj->worldXf() );
@@ -176,11 +166,10 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport();
 
-    if ( screenStartPoint_ != cNoPoint &&
+    if ( !xfChanged_ &&
          ( screenStartPoint_ - viewer.mouseController().getMousePos() ).lengthSq() <
              minDistance() * minDistance() )
-        return true;
-    screenStartPoint_ = cNoPoint;
+        return true; // mouse has moved less than threshold to change objects' transformation
 
     auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
     auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
@@ -257,12 +246,6 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
     if ( transformMode_ == TransformMode::None )
         return false;
 
-    if ( screenStartPoint_ != cNoPoint )
-    {
-        clear_();
-        return false;
-    }
-
     clear_();
 
     return true;
@@ -270,7 +253,7 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 
 bool MoveObjectByMouseImpl::isMoving() const
 {
-    return transformMode_ != TransformMode::None && screenStartPoint_ == cNoPoint;
+    return transformMode_ != TransformMode::None && xfChanged_;
 }
 
 void MoveObjectByMouseImpl::cancel()
@@ -372,6 +355,7 @@ Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>
 
 void MoveObjectByMouseImpl::clear_()
 {
+    xfChanged_ = false;
     transformMode_ = TransformMode::None;
     objects_.clear();
     initialXfs_.clear();

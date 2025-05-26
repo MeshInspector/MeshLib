@@ -1,9 +1,10 @@
 #pragma once
+#include "MRViewerFwd.h"
+#include "MRMouse.h"
+#include "MRImGui.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRAffineXf3.h"
-#include "MRViewer/MRViewerFwd.h"
-#include "MRViewer/MRMouse.h"
-#include "MRViewer/MRImGui.h"
+#include "MRMesh/MRSignal.h"
 
 namespace MR
 {

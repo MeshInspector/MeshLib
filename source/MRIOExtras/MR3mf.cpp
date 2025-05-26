@@ -531,7 +531,7 @@ Expected<void> Node::load()
             return unexpected( res.error() );
         break;
     case NodeType::Object:
-        if ( auto res = loadObject_( node, subprogress( loader->documentProgressCallback, loader->objectsLoaded_, loader->objectCount_ ) ); !res )
+        if ( auto res = loadObject_( node, subprogress( loader->documentProgressCallback, loader->objectsLoaded_++, loader->objectCount_ ) ); !res )
             return unexpected( res.error() );
         break;
     case NodeType::Build:

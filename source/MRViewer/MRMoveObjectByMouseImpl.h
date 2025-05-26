@@ -42,7 +42,7 @@ public:
     /// Return false if not active, or object picked but `minDistance` has not yet reached
     MRVIEWER_API bool isMoving() const;
 
-    /// Reset transformation and stop moving the object(s). Does nothing if not moving anything
+    /// Stop moving the object(s). Does nothing if not moving anything
     /// Calling `onMouseUp` is not necessary after this
     /// Should be called when closing plugin etc.
     MRVIEWER_API void cancel();
@@ -107,7 +107,6 @@ private:
     void clear_();
 
     void applyCurrentXf_();
-    void resetXfs_();
 
     void setVisualizeVectors_( std::vector<Vector3f> worldPoints );
 

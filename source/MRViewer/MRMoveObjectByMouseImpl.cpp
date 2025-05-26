@@ -17,6 +17,9 @@
 #include "MRMesh/MR2to3.h"
 #include "MRPch/MRSpdlog.h"
 
+namespace MR
+{
+
 namespace
 {
 // translation multiplier that limits its maximum value depending on object size
@@ -26,10 +29,7 @@ constexpr float cMaxTranslationMultiplier = 0xC00;
 // special value for screenStartPoint_
 constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
 
-}
-
-namespace MR
-{
+} // anonymous namespace
 
 void MoveObjectByMouseImpl::onDrawDialog( float menuScaling ) const
 {
@@ -242,18 +242,6 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
         currentXf_ = AffineXf3f::translation( worldEndPoint - worldStartPoint_ );
-
-        // Clamp movement
-        Box3f worldBox = getBbox_( objects_ );
-        float minSizeDim = worldBox.valid() ? worldBox.size().length() : 0;
-        if ( minSizeDim == 0 )
-            minSizeDim = 1.f;
-        for ( const AffineXf3f &xf : initialXfs_ )
-            for ( auto i = 0; i < 3; i++ )
-                // ( currentXf_ * initialXf_ ).b[i] must be in -/+ cMaxTranslationMultiplier * minSizeDim
-                currentXf_.b[i] = std::clamp( currentXf_.b[i],
-                     -xf.b[i] - cMaxTranslationMultiplier * minSizeDim,
-                     -xf.b[i] + cMaxTranslationMultiplier * minSizeDim );
     }
 
     applyCurrentXf_();
@@ -275,7 +263,6 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
         return false;
     }
 
-    resetXfs_();
     clear_();
 
     return true;
@@ -290,7 +277,6 @@ void MoveObjectByMouseImpl::cancel()
 {
     if ( transformMode_ == TransformMode::None )
         return;
-    resetXfs_();
     clear_();
 }
 
@@ -405,13 +391,6 @@ void MoveObjectByMouseImpl::applyCurrentXf_()
         obj->setWorldXf( currentXf_ * *itXf++ );
     }
     changingXfFromMouseMove_ = false;
-}
-
-void MoveObjectByMouseImpl::resetXfs_()
-{
-    auto itXf = initialXfs_.begin();
-    for ( std::shared_ptr<Object>& f : objects_ )
-        f->setWorldXf( *itXf++ );
 }
 
 void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoints )

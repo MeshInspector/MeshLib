@@ -253,13 +253,17 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     } ),
         rawResult.end() );
 
-    std::sort( rawResult.begin(), rawResult.end(), [maxWeight] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [maxWeight, requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
     {
         if ( a.second.captionWeight <= maxWeight )
         {
             if ( b.second.captionWeight <= maxWeight )
             {
-                if ( a.second.captionWeight < b.second.captionWeight )
+                if ( requirementsFunc( a.first.item->item ).empty() && !requirementsFunc( b.first.item->item ).empty() )
+                    return true;
+                else if ( !requirementsFunc( a.first.item->item ).empty() && requirementsFunc( b.first.item->item ).empty() )
+                    return false;
+                else if ( a.second.captionWeight < b.second.captionWeight )
                     return true;
                 else if ( a.second.captionWeight > b.second.captionWeight )
                     return false;
@@ -275,7 +279,11 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 return false;
             else
             {
-                if ( a.second.tooltipWeight < b.second.tooltipWeight )
+                if ( requirementsFunc( a.first.item->item ).empty() && !requirementsFunc( b.first.item->item ).empty() )
+                    return true;
+                else if ( !requirementsFunc( a.first.item->item ).empty() && requirementsFunc( b.first.item->item ).empty() )
+                    return false;
+                else if ( a.second.tooltipWeight < b.second.tooltipWeight )
                     return true;
                 else if ( a.second.tooltipWeight > b.second.tooltipWeight )
                     return false;

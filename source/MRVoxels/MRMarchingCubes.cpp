@@ -464,16 +464,16 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
     constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
     if constexpr ( binary )
     {
-        const int fillFirstZ = partFirstZ;
+        int fillFirstZ = partFirstZ;
         if ( fillFirstZ )
             ++fillFirstZ; // skip already filled layer
         ParallelFor( fillFirstZ, fillFirstZ + part.dims.z, [&]( size_t z )
         {
             const auto layerSize = indexer_.sizeXY();
             BitSet layerLowerIso( layerSize );
-            const auto firstLayerId = ( z - partFirstZ ) * layerSize;
+            const auto firstLayerId = VoxelId( ( z - partFirstZ ) * layerSize );
             for ( size_t i = 0; i < layerSize; ++i )
-                layerLowerIso.set( i, !part.test( firstLayerId + i ) );
+                layerLowerIso.set( i, !part.data.test( firstLayerId + i ) );
             if ( layerLowerIso.any() )
                 lowerIso_[z] = std::move( layerLowerIso );
         } );

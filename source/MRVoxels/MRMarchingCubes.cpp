@@ -697,9 +697,8 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Position
 
                     auto nextCoords = coords;
                     nextCoords[n] += part.voxelSize[n];
-                    const float value = lower ? 0.0f : 1.0f;
-                    const float nextValue = nextLower ? 0.0f : 1.0f;
-                    Vector3f pos = positioner( coords, nextCoords, value, nextValue, params_.iso );
+                    Vector3f pos = lower ? positioner( coords, nextCoords, 0.f, 1.f, params_.iso )
+                                         : positioner( coords, nextCoords, 1.f, 0.f, params_.iso );
                     set[n] = block.nextVid();
                     block.coords.push_back( pos );
                     atLeastOneOk = true;

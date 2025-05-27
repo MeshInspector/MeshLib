@@ -197,9 +197,9 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
     if (
         [event subtype] == NSEventSubtypeMouseEvent ||
         // We know exactly one Mac machine where mouse scroll events arrive with this subtype. Some sort of a bug?
-        // We also have to filter by `phase == 0` here, because otherwise this incorrectly catches the "move two fingers in any direciton" event from the touchpad (!!),
+        // We also have to filter by `phase == NSEventPhaseNone` here, because otherwise this incorrectly catches the "move two fingers in any direciton" event from the touchpad (!!),
         //   which is instead supposed to rotate the camera, not act as a scroll.
-        ([event subtype] == NSEventSubtypeApplicationActivated && phase == 0)
+        ([event subtype] == NSEventSubtypeApplicationActivated && phase == NSEventPhaseNone)
     )
     {
         if ( deltaX == 0.0 && deltaY == 0.0 )

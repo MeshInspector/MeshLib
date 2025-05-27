@@ -73,6 +73,10 @@ MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, 
 MRVOXELS_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 
+// makes Mesh from SimpleBinaryVolume with given settings using Marching Cubes algorithm
+MRVOXELS_API Expected<Mesh> marchingCubes( const SimpleBinaryVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleBinaryVolume& volume, const MarchingCubesParams& params = {} );
+
 /// converts volume split on parts by planes z=const into mesh,
 /// last z-layer of previous part must be repeated as first z-layer of next part
 /// usage:

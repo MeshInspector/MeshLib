@@ -665,9 +665,8 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Position
     const auto layerSize = indexer_.sizeXY();
     const auto partFirstId = layerSize * blockInfo.partFirstZ;
     const VolumeIndexer partIndexer( part.dims );
-    const VoxelsVolumeAccessor<SimpleBinaryVolume> acc( part );
     /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
-    const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
+    const Vector3f zeroPoint = params_.origin + mult( Vector3f::diagonal( 0.5f ) + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
 
     VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, blockInfo.layerBegin - blockInfo.partFirstZ ) );
     for ( ; loc.pos.z + blockInfo.partFirstZ < blockInfo.layerEnd; ++loc.pos.z )
@@ -1048,6 +1047,22 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 }
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
+{
+    MR_TIMER;
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
+}
+
+Expected<TriMesh> marchingCubesAsTriMesh( const SimpleBinaryVolume& volume, const MarchingCubesParams& params /*= {} */ )
+{
+    return VolumeMesher::run( volume, params );
+}
+
+Expected<Mesh> marchingCubes( const SimpleBinaryVolume& volume, const MarchingCubesParams& params )
 {
     MR_TIMER;
     auto p = params;

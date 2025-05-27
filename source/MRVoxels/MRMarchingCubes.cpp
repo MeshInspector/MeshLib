@@ -796,8 +796,7 @@ Expected<TriMesh> VolumeMesher::finalize()
 
                     bool voxelValid = true;
                     voxelConfiguration = 0;
-                    bool vx[8] = {};
-                    const bool neiLowerIso[8] =
+                    bool vx[8] =
                     {
                         layerLowerIso[0]->test( posXY ),
                         layerLowerIso[0]->test( posXY + 1 ),
@@ -811,7 +810,7 @@ Expected<TriMesh> VolumeMesher::finalize()
                     [[maybe_unused]] bool atLeastOneNan = false;
                     for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
                     {
-                        bool voxelValueLowerIso = neiLowerIso[i]; //faster alternative of getBit( layerLowerIso, nloc );
+                        bool voxelValueLowerIso = vx[i]; //faster alternative of getBit( layerLowerIso, nloc );
                         if ( hasInvalidVoxels )
                         {
                             VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
@@ -857,12 +856,10 @@ Expected<TriMesh> VolumeMesher::finalize()
                             }
                             if ( !atLeastOneNan && neighIndex > 0 )
                                 atLeastOneNan = true;
+                            vx[i] = voxelValueLowerIso;
                         }
-
-                        if ( !voxelValueLowerIso )
-                            continue;
-                        voxelConfiguration |= cMapNeighbors[i];
-                        vx[i] = true;
+                        if ( voxelValueLowerIso )
+                            voxelConfiguration |= cMapNeighbors[i];
                     }
                     if ( !voxelValid || voxelConfiguration == 0x00 || voxelConfiguration == 0xff )
                         continue;

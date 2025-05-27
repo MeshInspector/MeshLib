@@ -724,18 +724,19 @@ Expected<TriMesh> VolumeMesher::finalize()
     if ( params_.cb && !params_.cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
+    const size_t dimsX = indexer_.dims().x;
     const size_t cVoxelNeighborsIndexAdd[8] =
     {
         0,
         1,
-        size_t( indexer_.dims().x ),
-        size_t( indexer_.dims().x ) + 1,
+        dimsX,
+        dimsX + 1,
         indexer_.sizeXY(),
         indexer_.sizeXY() + 1,
-        indexer_.sizeXY() + size_t( indexer_.dims().x ),
-        indexer_.sizeXY() + size_t( indexer_.dims().x ) + 1
+        indexer_.sizeXY() + dimsX,
+        indexer_.sizeXY() + dimsX + 1
     };
-    const size_t cDimStep[3] = { 1, size_t( indexer_.dims().x ), indexer_.sizeXY() };
+    const size_t cDimStep[3] = { 1, dimsX, indexer_.sizeXY() };
 
     const bool hasInvalidVoxels =
         std::any_of( invalids_.begin(), invalids_.end(), []( const BitSet & bs ) { return !bs.empty(); } ); // bit set is not empty only if at least one bit is set
@@ -786,7 +787,8 @@ Expected<TriMesh> VolumeMesher::finalize()
             {
                 loc.pos.x = 0;
                 loc.id = indexer_.toVoxelId( loc.pos );
-                for ( ; loc.pos.x + 1 < indexer_.dims().x; ++loc.pos.x, ++loc.id )
+                auto posXY = dimsX * loc.pos.y;
+                for ( ; loc.pos.x + 1 < dimsX; ++loc.pos.x, ++loc.id, ++posXY )
                 {
                     assert( indexer_.toVoxelId( loc.pos ) == loc.id );
                     if ( params_.cb && !keepGoing.load( std::memory_order_relaxed ) )
@@ -794,14 +796,25 @@ Expected<TriMesh> VolumeMesher::finalize()
 
                     bool voxelValid = true;
                     voxelConfiguration = 0;
-                    std::array<bool, 8> vx{};
+                    bool vx[8] = {};
+                    const bool neiLowerIso[8] =
+                    {
+                        layerLowerIso[0]->test( posXY ),
+                        layerLowerIso[0]->test( posXY + 1 ),
+                        layerLowerIso[0]->test( posXY + dimsX ),
+                        layerLowerIso[0]->test( posXY + dimsX + 1 ),
+                        layerLowerIso[1]->test( posXY ),
+                        layerLowerIso[1]->test( posXY + 1 ),
+                        layerLowerIso[1]->test( posXY + dimsX ),
+                        layerLowerIso[1]->test( posXY + dimsX + 1 )
+                    };
                     [[maybe_unused]] bool atLeastOneNan = false;
                     for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
                     {
-                        VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
-                        bool voxelValueLowerIso = getBit( layerLowerIso, nloc );
+                        bool voxelValueLowerIso = neiLowerIso[i]; //faster alternative of getBit( layerLowerIso, nloc );
                         if ( hasInvalidVoxels )
                         {
+                            VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
                             bool invalidVoxelValue = getBit( layerInvalids, nloc );
                             // find non nan neighbor
                             constexpr std::array<uint8_t, 7> cNeighborsOrder{

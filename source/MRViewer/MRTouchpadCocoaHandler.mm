@@ -192,11 +192,14 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
 
     auto deltaX = [event scrollingDeltaX];
     auto deltaY = [event scrollingDeltaY];
+    NSEventPhase phase = [event phase];
+
     if (
         [event subtype] == NSEventSubtypeMouseEvent ||
-        // We know exactly one Mac machine where scroll events arrive with this subtype.
-        // This subtype also has value 0, so this looks suspiciously like a MacOS bug.
-        [event subtype] == NSEventSubtypeApplicationActivated
+        // We know exactly one Mac machine where mouse scroll events arrive with this subtype. Some sort of a bug?
+        // We also have to filter by `phase == 0` here, because otherwise this incorrectly catches the "move two fingers in any direciton" event from the touchpad (!!),
+        //   which is instead supposed to rotate the camera, not act as a scroll.
+        ([event subtype] == NSEventSubtypeApplicationActivated && phase == 0)
     )
     {
         if ( deltaX == 0.0 && deltaY == 0.0 )
@@ -214,7 +217,7 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
     {
         std::optional<GestureState> state = std::nullopt;
         bool kinetic = false;
-        if ( ( state = convert( [event phase] ) ) )
+        if ( ( state = convert( phase ) ) )
             kinetic = false;
         else if ( ( state = convert( [event momentumPhase] ) ) )
             kinetic = true;

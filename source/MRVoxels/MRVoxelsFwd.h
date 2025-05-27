@@ -40,6 +40,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS VoxelsVolu
     ( FunctionVolumeU8, VoxelsVolume<VoxelValueGetter<uint8_t>> )
     ( SimpleVolume, VoxelsVolume<std::vector<float>> )
     ( SimpleVolumeU16, VoxelsVolume<std::vector<uint16_t>> )
+    ( SimpleBinaryVolume, VoxelsVolume<VoxelBitSet> )
 )
 
 namespace VoxelsLoad

@@ -21,6 +21,12 @@ struct VoxelTraits<std::vector<T>>
     using ValueType = T;
 };
 
+template <>
+struct VoxelTraits<VoxelBitSet>
+{
+    using ValueType = bool;
+};
+
 template <typename T>
 struct VoxelTraits<VoxelValueGetter<T>>
 {

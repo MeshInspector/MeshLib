@@ -366,8 +366,8 @@ private:
 
     template<typename V, typename Positioner>
     void addPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
-    template<typename V, typename Positioner>
-    void addBinaryPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
+    template<typename Positioner>
+    void addBinaryPartBlock_( const SimpleBinaryVolume& volume, Positioner&& positioner, const BlockInfo& blockInfo );
 
 private:
     VolumeIndexer indexer_;
@@ -538,7 +538,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 blockInfo.myProgress = [&]( float ) { return keepGoing.load( std::memory_order_relaxed ); };
         }
 
-        if ( binary )
+        if constexpr ( binary )
             addBinaryPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
         else
             addPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
@@ -656,8 +656,8 @@ void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const 
     }
 }
 
-template<typename V, typename Positioner>
-void VolumeMesher::addBinaryPartBlock_( const V& part, Positioner&& positioner, const BlockInfo& blockInfo )
+template<typename Positioner>
+void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Positioner&& positioner, const BlockInfo& blockInfo )
 {
     MR_TIMER;
 
@@ -665,7 +665,7 @@ void VolumeMesher::addBinaryPartBlock_( const V& part, Positioner&& positioner, 
     const auto layerSize = indexer_.sizeXY();
     const auto partFirstId = layerSize * blockInfo.partFirstZ;
     const VolumeIndexer partIndexer( part.dims );
-    const VoxelsVolumeAccessor<V> acc( part );
+    const VoxelsVolumeAccessor<SimpleBinaryVolume> acc( part );
     /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
     const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
 

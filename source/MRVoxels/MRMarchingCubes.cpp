@@ -350,7 +350,7 @@ public: // custom interface
 
 private:
     template<typename V, typename Positioner>
-    Expected<void> addPart_( const V& volume, Positioner&& positioner );
+    Expected<void> addPart_( const V& volume, Positioner&& positioner, bool binary );
 
     struct BlockInfo
     {
@@ -366,6 +366,8 @@ private:
 
     template<typename V, typename Positioner>
     void addPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
+    template<typename V, typename Positioner>
+    void addBinaryPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
 
 private:
     VolumeIndexer indexer_;
@@ -439,14 +441,17 @@ Expected<void> VolumeMesher::addPart( const V& part )
         return ( 1.0f - ratio ) * pos0 + ratio * pos1;
     };
 
+    constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
+    //...
+
     if ( params_.positioner )
-        return addPart_( part, params_.positioner );
+        return addPart_( part, params_.positioner, binary );
     else
-        return addPart_( part, defaultPositioner );
+        return addPart_( part, defaultPositioner, binary );
 }
 
 template<typename V, typename Positioner>
-Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
+Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, bool binary )
 {
     MR_TIMER;
 
@@ -518,7 +523,10 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 blockInfo.myProgress = [&]( float ) { return keepGoing.load( std::memory_order_relaxed ); };
         }
 
-        addPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
+        if ( binary )
+            addBinaryPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
+        else
+            addPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
     } );
 
     if ( currentSubprogress && !keepGoing )
@@ -627,6 +635,68 @@ void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const 
             invalids_[loc.pos.z + blockInfo.partFirstZ] = std::move( layerInvalids );
         if ( layerLowerIso.any() )
             lowerIso_[loc.pos.z + blockInfo.partFirstZ] = std::move( layerLowerIso );
+        blockInfo.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+        if ( !reportProgress( blockInfo.myProgress, 1.f ) ) // 1. is ignored anyway
+            return;
+    }
+}
+
+template<typename V, typename Positioner>
+void VolumeMesher::addBinaryPartBlock_( const V& part, Positioner&& positioner, const BlockInfo& blockInfo )
+{
+    MR_TIMER;
+
+    auto & block = sepStorage_.getBlock( blockInfo.blockIndex );
+    const auto layerSize = indexer_.sizeXY();
+    const auto partFirstId = layerSize * blockInfo.partFirstZ;
+    const VolumeIndexer partIndexer( part.dims );
+    const VoxelsVolumeAccessor<V> acc( part );
+    /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
+    const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
+
+    VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, blockInfo.layerBegin - blockInfo.partFirstZ ) );
+    for ( ; loc.pos.z + blockInfo.partFirstZ < blockInfo.layerEnd; ++loc.pos.z )
+    {
+        const auto& layerLowerIso = lowerIso_[loc.pos.z + blockInfo.partFirstZ];
+        size_t inLayerPos = 0;
+        for ( loc.pos.y = 0; loc.pos.y < part.dims.y; ++loc.pos.y )
+        {
+            for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
+            {
+                assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
+                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                    return;
+
+                SeparationPointSet set;
+                bool atLeastOneOk = false;
+                const bool lower = layerLowerIso.test( inLayerPos );
+                const auto coords = zeroPoint + mult( part.voxelSize, Vector3f( loc.pos ) );
+
+                for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+                {
+                    auto nextLoc = partIndexer.getNeighbor( loc, cPlusOutEdges[n] );
+                    if ( !nextLoc )
+                        continue;
+                    const bool nextLower = lowerIso_[nextLoc.pos.z].test( size_t(nextLoc.pos.y) * part.dims.x + nextLoc.pos.x );
+                    if ( lower == nextLower )
+                        continue;
+
+                    auto nextCoords = coords;
+                    nextCoords[n] += part.voxelSize[n];
+                    const float value = lower ? 0.0f : 1.0f;
+                    const float nextValue = nextLower ? 0.0f : 1.0f;
+                    Vector3f pos = positioner( coords, nextCoords, value, nextValue, params_.iso );
+                    set[n] = block.nextVid();
+                    block.coords.push_back( pos );
+                    atLeastOneOk = true;
+                }
+
+                if ( !atLeastOneOk )
+                    continue;
+
+                block.smap.insert( { loc.id + partFirstId, set } );
+            }
+        }
         blockInfo.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
         if ( !reportProgress( blockInfo.myProgress, 1.f ) ) // 1. is ignored anyway
             return;

@@ -352,6 +352,21 @@ private:
     template<typename V, typename Positioner>
     Expected<void> addPart_( const V& volume, Positioner&& positioner );
 
+    struct BlockInfo
+    {
+        int partFirstZ = 0;
+        std::atomic<int>& numProcessedLayers;
+
+        int blockIndex = 0;
+        int layerBegin = 0;
+        int layerEnd = 0;
+        ProgressCallback myProgress;
+        std::atomic<bool>* keepGoing = nullptr;
+    };
+
+    template<typename V, typename Positioner>
+    void addPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
+
 private:
     VolumeIndexer indexer_;
     const MarchingCubesParams params_;
@@ -443,18 +458,6 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
     if ( partFirstZ + part.dims.z > indexer_.dims().z )
         return unexpected( "a part exceeds whole volume in Z dimension" );
     const int layerCount = indexer_.dims().z;
-    const auto layerSize = indexer_.sizeXY();
-    const auto partFirstId = layerSize * partFirstZ;
-    const VolumeIndexer partIndexer( part.dims );
-
-    auto cachingMode = params_.cachingMode;
-    if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
-    {
-        if constexpr ( VoxelsVolumeAccessor<V>::cacheEffective )
-            cachingMode = MarchingCubesParams::CachingMode::Normal;
-        else
-            cachingMode = MarchingCubesParams::CachingMode::None;
-    }
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
@@ -485,18 +488,24 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 
     ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
     {
-        const int layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
-        if ( layerBegin >= layerCount )
+        BlockInfo blockInfo
+        {
+            .partFirstZ = partFirstZ,
+            .numProcessedLayers = cacheLineStorage.numProcessedLayers,
+            .blockIndex = blockIndex
+        };
+        blockInfo.layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
+        if ( blockInfo.layerBegin >= layerCount )
             return;
-        const int layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
+        blockInfo.layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
 
-        ProgressCallback myProgress;
         if ( currentSubprogress )
         {
+            blockInfo.keepGoing = &keepGoing;
             if ( std::this_thread::get_id() == callingThreadId )
             {
                 // from dedicated thread only: actually report progress proportional to the number of processed layers
-                myProgress = [&]( float ) // input value is ignored
+                blockInfo.myProgress = [&]( float ) // input value is ignored
                 {
                     auto l = cacheLineStorage.numProcessedLayers.load( std::memory_order_relaxed );
                     bool res = currentSubprogress( float( l ) / layerCount );
@@ -506,104 +515,122 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
                 };
             }
             else // from other threads just check that the operation was not canceled
-                myProgress = [&]( float ) { return keepGoing.load( std::memory_order_relaxed ); };
+                blockInfo.myProgress = [&]( float ) { return keepGoing.load( std::memory_order_relaxed ); };
         }
 
-        auto & block = sepStorage_.getBlock( blockIndex );
-
-        const VoxelsVolumeAccessor<V> acc( part );
-        /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
-        const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)partFirstZ ), part.voxelSize );
-
-        std::optional<VoxelsVolumeCachingAccessor<V>> cache;
-        if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
-        {
-            using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
-            cache.emplace( acc, partIndexer, Parameters {
-                .preloadedLayerCount = 2,
-            } );
-            if ( !cache->preloadLayer( layerBegin - partFirstZ, myProgress ) )
-                return;
-        }
-
-        VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, layerBegin - partFirstZ ) );
-        for ( ; loc.pos.z + partFirstZ < layerEnd; ++loc.pos.z )
-        {
-            if ( cache && loc.pos.z != cache->currentLayer() )
-            {
-                if ( !cache->preloadNextLayer( myProgress ) )
-                    return;
-                assert( loc.pos.z == cache->currentLayer() );
-            }
-            BitSet layerInvalids( layerSize );
-            BitSet layerLowerIso( layerSize );
-            size_t inLayerPos = 0;
-            for ( loc.pos.y = 0; loc.pos.y < part.dims.y; ++loc.pos.y )
-            {
-                for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
-                {
-                    assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                    if ( currentSubprogress && !keepGoing.load( std::memory_order_relaxed ) )
-                        return;
-
-                    SeparationPointSet set;
-                    bool atLeastOneOk = false;
-                    const float value = cache ? cache->get( loc ) : acc.get( loc );
-                    const bool lower = value < params_.iso;
-                    const bool notLower = value >= params_.iso;
-                    if ( !lower && !notLower ) // both not-lower and not-same-or-higher can be true only if value is not-a-number (NaN)
-                        layerInvalids.set( inLayerPos );
-                    else
-                    {
-                        const auto coords = zeroPoint + mult( part.voxelSize, Vector3f( loc.pos ) );
-                        layerLowerIso.set( inLayerPos, lower );
-
-                        for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
-                        {
-                            auto nextLoc = partIndexer.getNeighbor( loc, cPlusOutEdges[n] );
-                            if ( !nextLoc )
-                                continue;
-                            const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
-                            if ( lower )
-                            {
-                                if ( !( nextValue >= params_.iso ) )
-                                    continue; // nextValue is lower than params_.iso (same as value) or nextValue is NaN
-                            }
-                            else
-                            {
-                                if ( !( nextValue < params_.iso ) )
-                                    continue; // nextValue is same or higher than params_.iso (same as value) or nextValue is NaN
-                            }
-
-                            auto nextCoords = coords;
-                            nextCoords[n] += part.voxelSize[n];
-                            Vector3f pos = positioner( coords, nextCoords, value, nextValue, params_.iso );
-                            set[n] = block.nextVid();
-                            block.coords.push_back( pos );
-                            atLeastOneOk = true;
-                        }
-                    }
-
-                    if ( !atLeastOneOk )
-                        continue;
-
-                    block.smap.insert( { loc.id + partFirstId, set } );
-                }
-            }
-            if ( layerInvalids.any() )
-                invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
-            if ( layerLowerIso.any() )
-                lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
-            cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
-            if ( !reportProgress( myProgress, 1.f ) ) // 1. is ignored anyway
-                return;
-        }
+        addPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
     } );
 
     if ( currentSubprogress && !keepGoing )
         return unexpectedOperationCanceled();
 
     return {};
+}
+
+template<typename V, typename Positioner>
+void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const BlockInfo& blockInfo )
+{
+    MR_TIMER;
+    auto cachingMode = params_.cachingMode;
+    if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
+    {
+        if constexpr ( VoxelsVolumeAccessor<V>::cacheEffective )
+            cachingMode = MarchingCubesParams::CachingMode::Normal;
+        else
+            cachingMode = MarchingCubesParams::CachingMode::None;
+    }
+
+    auto & block = sepStorage_.getBlock( blockInfo.blockIndex );
+    const auto layerSize = indexer_.sizeXY();
+    const auto partFirstId = layerSize * blockInfo.partFirstZ;
+    const VolumeIndexer partIndexer( part.dims );
+    const VoxelsVolumeAccessor<V> acc( part );
+    /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
+    const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
+
+    std::optional<VoxelsVolumeCachingAccessor<V>> cache;
+    if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
+    {
+        using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
+        cache.emplace( acc, partIndexer, Parameters {
+            .preloadedLayerCount = 2,
+        } );
+        if ( !cache->preloadLayer( blockInfo.layerBegin - blockInfo.partFirstZ, blockInfo.myProgress ) )
+            return;
+    }
+
+    VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, blockInfo.layerBegin - blockInfo.partFirstZ ) );
+    for ( ; loc.pos.z + blockInfo.partFirstZ < blockInfo.layerEnd; ++loc.pos.z )
+    {
+        if ( cache && loc.pos.z != cache->currentLayer() )
+        {
+            if ( !cache->preloadNextLayer( blockInfo.myProgress ) )
+                return;
+            assert( loc.pos.z == cache->currentLayer() );
+        }
+        BitSet layerInvalids( layerSize );
+        BitSet layerLowerIso( layerSize );
+        size_t inLayerPos = 0;
+        for ( loc.pos.y = 0; loc.pos.y < part.dims.y; ++loc.pos.y )
+        {
+            for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
+            {
+                assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
+                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                    return;
+
+                SeparationPointSet set;
+                bool atLeastOneOk = false;
+                const float value = cache ? cache->get( loc ) : acc.get( loc );
+                const bool lower = value < params_.iso;
+                const bool notLower = value >= params_.iso;
+                if ( !lower && !notLower ) // both not-lower and not-same-or-higher can be true only if value is not-a-number (NaN)
+                    layerInvalids.set( inLayerPos );
+                else
+                {
+                    const auto coords = zeroPoint + mult( part.voxelSize, Vector3f( loc.pos ) );
+                    layerLowerIso.set( inLayerPos, lower );
+
+                    for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+                    {
+                        auto nextLoc = partIndexer.getNeighbor( loc, cPlusOutEdges[n] );
+                        if ( !nextLoc )
+                            continue;
+                        const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
+                        if ( lower )
+                        {
+                            if ( !( nextValue >= params_.iso ) )
+                                continue; // nextValue is lower than params_.iso (same as value) or nextValue is NaN
+                        }
+                        else
+                        {
+                            if ( !( nextValue < params_.iso ) )
+                                continue; // nextValue is same or higher than params_.iso (same as value) or nextValue is NaN
+                        }
+
+                        auto nextCoords = coords;
+                        nextCoords[n] += part.voxelSize[n];
+                        Vector3f pos = positioner( coords, nextCoords, value, nextValue, params_.iso );
+                        set[n] = block.nextVid();
+                        block.coords.push_back( pos );
+                        atLeastOneOk = true;
+                    }
+                }
+
+                if ( !atLeastOneOk )
+                    continue;
+
+                block.smap.insert( { loc.id + partFirstId, set } );
+            }
+        }
+        if ( layerInvalids.any() )
+            invalids_[loc.pos.z + blockInfo.partFirstZ] = std::move( layerInvalids );
+        if ( layerLowerIso.any() )
+            lowerIso_[loc.pos.z + blockInfo.partFirstZ] = std::move( layerLowerIso );
+        blockInfo.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+        if ( !reportProgress( blockInfo.myProgress, 1.f ) ) // 1. is ignored anyway
+            return;
+    }
 }
 
 Expected<TriMesh> VolumeMesher::finalize()

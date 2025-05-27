@@ -350,7 +350,7 @@ public: // custom interface
 
 private:
     template<typename V, typename Positioner>
-    Expected<void> addPart_( const V& volume, Positioner&& positioner, bool binary );
+    Expected<void> addPart_( const V& volume, Positioner&& positioner );
 
     struct BlockInfo
     {
@@ -441,32 +441,14 @@ Expected<void> VolumeMesher::addPart( const V& part )
         return ( 1.0f - ratio ) * pos0 + ratio * pos1;
     };
 
-    constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
-    if constexpr ( binary )
-    {
-        const int firstZ = nextZ_;
-        if ( firstZ )
-            ++firstZ; // skip already filled layer
-        ParallelFor( firstZ, std::min( lowerIso_.size(), firstZ + part.dims.z ), [&]( size_t z )
-        {
-            const auto layerSize = indexer_.sizeXY();
-            BitSet layerLowerIso( layerSize );
-            const auto firstLayerId = ( z - nextZ_ ) * layerSize;
-            for ( size_t i = 0; i < layerSize; ++i )
-                layerLowerIso.set( i, !part.test( firstLayerId + i ) );
-            if ( layerLowerIso.any() )
-                lowerIso_[z] = std::move( layerLowerIso );
-        } );
-    }
-
     if ( params_.positioner )
-        return addPart_( part, params_.positioner, binary );
+        return addPart_( part, params_.positioner );
     else
-        return addPart_( part, defaultPositioner, binary );
+        return addPart_( part, defaultPositioner );
 }
 
 template<typename V, typename Positioner>
-Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, bool binary )
+Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 {
     MR_TIMER;
 
@@ -478,6 +460,24 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, b
     if ( partFirstZ + part.dims.z > indexer_.dims().z )
         return unexpected( "a part exceeds whole volume in Z dimension" );
     const int layerCount = indexer_.dims().z;
+
+    constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
+    if constexpr ( binary )
+    {
+        const int fillFirstZ = partFirstZ;
+        if ( fillFirstZ )
+            ++fillFirstZ; // skip already filled layer
+        ParallelFor( fillFirstZ, fillFirstZ + part.dims.z, [&]( size_t z )
+        {
+            const auto layerSize = indexer_.sizeXY();
+            BitSet layerLowerIso( layerSize );
+            const auto firstLayerId = ( z - partFirstZ ) * layerSize;
+            for ( size_t i = 0; i < layerSize; ++i )
+                layerLowerIso.set( i, !part.test( firstLayerId + i ) );
+            if ( layerLowerIso.any() )
+                lowerIso_[z] = std::move( layerLowerIso );
+        } );
+    }
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };

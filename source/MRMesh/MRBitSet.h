@@ -102,6 +102,7 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() / 8; }
+    [[nodiscard]] friend size_t heapBytes( const BitSet & bs ) { return bs.capacity() / 8; }
 
     /// returns the identifier of the back() element
     [[nodiscard]] IndexType backId() const { assert( !empty() ); return IndexType{ size() - 1 }; }
@@ -213,13 +214,6 @@ public:
     [[nodiscard]] static IndexType beginId() { return IndexType{ size_t( 0 ) }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 };
-
-
-/// returns the amount of memory given BitSet occupies on heap
-[[nodiscard]] inline size_t heapBytes( const BitSet& bs )
-{
-    return bs.heapBytes();
-}
 
 /// compare that two bit sets have the same set bits (they can be equal even if sizes are distinct but last bits are off)
 [[nodiscard]] MRMESH_API bool operator == ( const BitSet & a, const BitSet & b );

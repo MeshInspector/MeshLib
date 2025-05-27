@@ -1059,6 +1059,8 @@ Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesP
 
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleBinaryVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
+    if ( params.iso <= 0 || params.iso >= 1 )
+        return TriMesh{};
     return VolumeMesher::run( volume, params );
 }
 

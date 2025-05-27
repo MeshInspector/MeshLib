@@ -125,7 +125,9 @@ endif
 
 # ---- MacOS-only vars: [
 ifneq ($(IS_MACOS),)
-HOMEBREW_DIR := $(shell brew --prefix)
+# System-wide Brew installations use different paths on x86 Macs and Arm Macs: `/usr/local` and `/opt/homebrew` respectively.
+# And per-user installations use yet another path, `~/.homebrew`.
+HOMEBREW_DIR := $(call safe_shell,brew --prefix)
 $(info Using homebrew at: $(HOMEBREW_DIR))
 endif
 

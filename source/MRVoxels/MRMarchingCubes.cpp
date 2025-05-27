@@ -349,9 +349,6 @@ public: // custom interface
     int nextZ() const { return nextZ_; }
 
 private:
-    template<typename V, typename Positioner>
-    Expected<void> addPart_( const V& volume, Positioner&& positioner );
-
     struct BlockInfo
     {
         int partFirstZ = 0;
@@ -364,10 +361,9 @@ private:
         std::atomic<bool>* keepGoing = nullptr;
     };
 
-    template<typename V, typename Positioner>
-    void addPartBlock_( const V& volume, Positioner&& positioner, const BlockInfo& blockInfo );
-    template<typename Positioner>
-    void addBinaryPartBlock_( const SimpleBinaryVolume& volume, Positioner&& positioner, const BlockInfo& blockInfo );
+    template<typename V>
+    void addPartBlock_( const V& volume, const BlockInfo& blockInfo );
+    void addBinaryPartBlock_( const SimpleBinaryVolume& volume, const BlockInfo& blockInfo );
 
 private:
     VolumeIndexer indexer_;
@@ -432,23 +428,6 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
 
 template<typename V>
 Expected<void> VolumeMesher::addPart( const V& part )
-{
-    constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-    {
-        assert( v0 != v1 );
-        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
-        assert( ratio >= 0 && ratio <= 1 );
-        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-    };
-
-    if ( params_.positioner )
-        return addPart_( part, params_.positioner );
-    else
-        return addPart_( part, defaultPositioner );
-}
-
-template<typename V, typename Positioner>
-Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 {
     MR_TIMER;
 
@@ -539,9 +518,9 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
         }
 
         if constexpr ( binary )
-            addBinaryPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
+            addBinaryPartBlock_( part, blockInfo );
         else
-            addPartBlock_( part, std::forward<Positioner>( positioner ), blockInfo );
+            addPartBlock_( part, blockInfo );
     } );
 
     if ( currentSubprogress && !keepGoing )
@@ -550,8 +529,8 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
     return {};
 }
 
-template<typename V, typename Positioner>
-void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const BlockInfo& blockInfo )
+template<typename V>
+void VolumeMesher::addPartBlock_( const V& part, const BlockInfo& blockInfo )
 {
     MR_TIMER;
     auto cachingMode = params_.cachingMode;
@@ -570,6 +549,16 @@ void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const 
     const VoxelsVolumeAccessor<V> acc( part );
     /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
     const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
+
+    auto positioner = [this]( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+    {
+        if ( params_.positioner )
+            return params_.positioner( pos0, pos1, v0, v1, iso );
+        assert( v0 != v1 );
+        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+        assert( ratio >= 0 && ratio <= 1 );
+        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+    };
 
     std::optional<VoxelsVolumeCachingAccessor<V>> cache;
     if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
@@ -656,8 +645,7 @@ void VolumeMesher::addPartBlock_( const V& part, Positioner&& positioner, const 
     }
 }
 
-template<typename Positioner>
-void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Positioner&& positioner, const BlockInfo& blockInfo )
+void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, const BlockInfo& blockInfo )
 {
     MR_TIMER;
 
@@ -667,6 +655,13 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Position
     const VolumeIndexer partIndexer( part.dims );
     /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
     const Vector3f zeroPoint = params_.origin + mult( Vector3f::diagonal( 0.5f ) + Vector3f( 0, 0, (float)blockInfo.partFirstZ ), part.voxelSize );
+
+    auto positioner = [this]( const Vector3f& pos0, const Vector3f& pos1, float iso )
+    {
+        if ( params_.positioner )
+            return params_.positioner( pos0, pos1, 0.f, 1.f, iso );
+        return ( 1.0f - iso ) * pos0 + iso * pos1;
+    };
 
     VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, blockInfo.layerBegin - blockInfo.partFirstZ ) );
     for ( ; loc.pos.z + blockInfo.partFirstZ < blockInfo.layerEnd; ++loc.pos.z )
@@ -697,8 +692,8 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, Position
 
                     auto nextCoords = coords;
                     nextCoords[n] += part.voxelSize[n];
-                    Vector3f pos = lower ? positioner( coords, nextCoords, 0.f, 1.f, params_.iso )
-                                         : positioner( coords, nextCoords, 1.f, 0.f, params_.iso );
+                    Vector3f pos = lower ? positioner( coords, nextCoords, params_.iso )
+                                         : positioner( nextCoords, coords, params_.iso );
                     set[n] = block.nextVid();
                     block.coords.push_back( pos );
                     atLeastOneOk = true;

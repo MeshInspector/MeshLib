@@ -84,13 +84,6 @@ template<typename ...Ts>
     return cap + kWidth + cap * sizeof( typename phmap::flat_hash_map<Ts...>::slot_type );
 }
 
-/// returns the amount of memory given object occupies on heap
-template<typename T>
-[[nodiscard]] inline size_t heapBytes( const T& obj ) MR_REQUIRES_IF_SUPPORTED( requires{ obj.heapBytes(); } )
-{
-    return obj.heapBytes();
-}
-
 /// \}
 
 } // namespace MR

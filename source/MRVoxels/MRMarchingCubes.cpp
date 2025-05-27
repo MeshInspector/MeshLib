@@ -442,7 +442,22 @@ Expected<void> VolumeMesher::addPart( const V& part )
     };
 
     constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
-    //...
+    if constexpr ( binary )
+    {
+        const int firstZ = nextZ_;
+        if ( firstZ )
+            ++firstZ; // skip already filled layer
+        ParallelFor( firstZ, std::min( lowerIso_.size(), firstZ + part.dims.z ), [&]( size_t z )
+        {
+            const auto layerSize = indexer_.sizeXY();
+            BitSet layerLowerIso( layerSize );
+            const auto firstLayerId = ( z - nextZ_ ) * layerSize;
+            for ( size_t i = 0; i < layerSize; ++i )
+                layerLowerIso.set( i, !part.test( firstLayerId + i ) );
+            if ( layerLowerIso.any() )
+                lowerIso_[z] = std::move( layerLowerIso );
+        } );
+    }
 
     if ( params_.positioner )
         return addPart_( part, params_.positioner, binary );

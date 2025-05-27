@@ -273,13 +273,13 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
 
         // 3 sort priority
         // if both have the correct caption weight, then compare by caption, otherwise compare by tooltip
-        const auto& AW = aCaptionWeightCorrect ? a.second.captionWeight : a.second.tooltipWeight;
-        const auto& BW = aCaptionWeightCorrect ? b.second.captionWeight : b.second.tooltipWeight;
+        const auto& aWeight = aCaptionWeightCorrect ? a.second.captionWeight : a.second.tooltipWeight;
+        const auto& bWeight = aCaptionWeightCorrect ? b.second.captionWeight : b.second.tooltipWeight;
         // 4 sort priority
         // if both have the same weight, then compare by order weight
-        const auto& AOW = aCaptionWeightCorrect ? a.second.captionOrderWeight : a.second.tooltipOrderWeight;
-        const auto& BOW = aCaptionWeightCorrect ? b.second.captionOrderWeight : b.second.tooltipOrderWeight;
-        return std::tuple( AW, AOW ) < std::tuple( BW, BOW );
+        const auto& aOrderWeight = aCaptionWeightCorrect ? a.second.captionOrderWeight : a.second.tooltipOrderWeight;
+        const auto& bOrderWeight = aCaptionWeightCorrect ? b.second.captionOrderWeight : b.second.tooltipOrderWeight;
+        return std::tuple( aWeight, aOrderWeight ) < std::tuple( bWeight, bOrderWeight );
     } );
 
     // filter results with error threshold as 3x minimum caption error 

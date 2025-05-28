@@ -51,6 +51,9 @@ public:
 
     MRVIEWER_API void setScaling( float scale ) { scaling_ = scale; }
 
+    void setMaxItemCount( int maxItemCount ) { maxItemCount_ = maxItemCount; }
+    int getMaxItemCount() const { return maxItemCount_; }
+
 private:
     /// draw toolbar customize modal
     void drawCustomizeModal_();
@@ -77,6 +80,8 @@ private:
     int customizeTabNum_ = 0; // number active tab
     std::string searchString_;
     std::vector<std::vector<std::string>> searchResult_;
+
+    int maxItemCount_ = 14;
 };
 
 }

@@ -349,23 +349,23 @@ VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * regi
 void Mesh::addMesh( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
+    addMesh( from, Src2TgtMaps( outFmap, outVmap, outEmap ), rearrangeTriangles );
+}
+
+void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles )
+{
     MR_TIMER;
 
-    VertMap vmap;
-    topology.addPart( from.topology, outFmap, &vmap, outEmap, rearrangeTriangles );
-    if ( !vmap.empty() && vmap.back() >= points.size() )
-        points.resize( vmap.back() + 1 );
-
-    for ( VertId fromv{0}; fromv < vmap.size(); ++fromv )
-    {
-        VertId v = vmap[fromv];
-        if ( v.valid() )
-            points[v] = from.points[fromv];
-    }
-
-    if ( outVmap )
-        *outVmap = std::move( vmap );
     invalidateCaches();
+
+    auto localVmap = VertMapOrHashMap::createMap();
+    if ( !map.src2tgtVerts )
+        map.src2tgtVerts = &localVmap;
+    topology.addPart( from.topology, map, rearrangeTriangles );
+    VertId lastPointId = topology.lastValidVert();
+    if ( points.size() < lastPointId + 1 )
+        points.resize( lastPointId + 1 );
+    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
@@ -400,6 +400,8 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
 {
     MR_TIMER;
 
+    invalidateCaches();
+
     auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
@@ -407,20 +409,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool f
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-
-    if ( auto * vec = map.src2tgtVerts->getMap() )
-    {
-        for ( auto fromVert = 0_v; fromVert < vec->size(); ++fromVert )
-            if ( auto thisVert = (*vec)[fromVert] )
-                points[thisVert] = from.points[fromVert];
-    }
-    else
-    {
-        for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts->getHashMap() )
-            points[thisVert] = from.points[fromVert];
-    }
-
-    invalidateCaches();
+    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,
@@ -459,6 +448,11 @@ Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const P
 
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
+    pack( Src2TgtMaps( outFmap, outVmap, outEmap ), rearrangeTriangles );
+}
+
+void Mesh::pack( const PartMapping & map, bool rearrangeTriangles )
+{
     MR_TIMER;
 
     if ( rearrangeTriangles )
@@ -468,7 +462,7 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     packed.topology.vertReserve( topology.numValidVerts() );
     packed.topology.faceReserve( topology.numValidFaces() );
     packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
-    packed.addMesh( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
+    packed.addMesh( *this, map, rearrangeTriangles );
     *this = std::move( packed );
 }
 

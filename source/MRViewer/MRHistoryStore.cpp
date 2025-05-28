@@ -129,15 +129,20 @@ std::vector<std::string> HistoryStore::getNActions( unsigned n, HistoryAction::T
     return res;
 }
 
-std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
+std::shared_ptr<HistoryAction> HistoryStore::getLastAction( HistoryAction::Type type ) const
 {
-    std::string res;
     std::shared_ptr<HistoryAction> action;
     if ( type == HistoryAction::Type::Undo && firstRedoIndex_ >= 1 && firstRedoIndex_ < stack_.size() + 1 )
         action = stack_[firstRedoIndex_ - 1];
     else if ( type == HistoryAction::Type::Redo && firstRedoIndex_ < stack_.size() )
         action = stack_[firstRedoIndex_];
-    if ( action )
+    return action;
+}
+
+std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
+{
+    std::string res;
+    if ( auto action = getLastAction( type ) )
         res = action->name();
     return res;
 }

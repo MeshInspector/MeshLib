@@ -107,7 +107,7 @@ TEST( MRMesh, weightedMeshShell )
     for ( auto& pt : cube.points )
         pt = rot * pt;
 
-    auto offCube = weightedMeshShell( cube, WeightedPointsShellParametersRegions{ { 0.08f, 0.04f, 3.f }, {}, 0.f, false } );
+    auto offCube = WeightedShell::meshShell( cube, WeightedShell::ParametersRegions{ { 0.08f, 0.04f, 3.f }, {}, 0.f, false } );
     ASSERT_TRUE( offCube );
     EXPECT_EQ( MeshComponents::getNumComponents( *offCube ), 1 );
     EXPECT_EQ( offCube->topology.findNumHoles(), 0 );

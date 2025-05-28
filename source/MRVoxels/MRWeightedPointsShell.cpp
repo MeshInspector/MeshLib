@@ -12,107 +12,19 @@
 
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MREdgePaths.h"
 
-namespace MR
+namespace MR::WeightedShell
 {
 
-FunctionVolume weightedPointsToDistanceFunctionVolume( const PointCloud & cloud, const WeightedPointsToDistanceVolumeParams& params )
+namespace
 {
-    MR_TIMER;
 
-    return FunctionVolume
-    {
-        .data = [params, &tree = cloud.getAABBTree()] ( const Vector3i& pos ) -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
-            assert( std::isfinite( pd.dist ) );
-            if ( pd.dist >= params.dist.maxBidirDist )
-                return cQuietNan;
-            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDist )
-                return cQuietNan;
-            return pd.dist;
-        },
-        .dims = params.vol.dimensions,
-        .voxelSize = params.vol.voxelSize
-    };
-}
-
-FunctionVolume weightedMeshToDistanceFunctionVolume( const Mesh & mesh, const WeightedPointsToDistanceVolumeParams& params )
+DistanceVolumeCreationParams getDistanceFieldParams( const Box3f& bbox, const ParametersMetric& params )
 {
-    MR_TIMER;
-
-    return FunctionVolume
-    {
-        .data = [params, &mesh] ( const Vector3i& pos ) -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
-            const auto bdist = pd.bidirDist();
-            assert( std::isfinite( bdist ) );
-            if ( bdist >= params.dist.maxBidirDist )
-                return cQuietNan;
-            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDist )
-                return cQuietNan;
-            return pd.dist();
-        },
-        .dims = params.vol.dimensions,
-        .voxelSize = params.vol.voxelSize
-    };
-}
-
-Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const WeightedPointsShellParametersMetric& params )
-{
-    MR_TIMER;
-
-    const auto box = cloud.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
+    const auto box = bbox.expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
-
-    WeightedPointsToDistanceVolumeParams wp2vparams
-    {
-        .vol =
-        {
-            .origin = origin,
-            .voxelSize = Vector3f::diagonal( params.voxelSize ),
-            .dimensions = dimensions,
-        },
-        .dist =
-        {
-            params.dist,
-            params.offset - 1.001f * params.voxelSize, //minDistance
-            params.offset + 1.001f * params.voxelSize  //maxDistance
-        }
-    };
-
-    MarchingCubesParams vmParams
-    {
-        .origin = origin,
-        .cb = params.progress,
-        .iso = params.offset,
-        .lessInside = true
-    };
-
-    return marchingCubes( weightedPointsToDistanceFunctionVolume( cloud, wp2vparams ), vmParams );
-}
-
-Expected<Mesh> weightedPointsShell( const PointCloud & cloud, const VertScalars& pointWeights,
-                                    const WeightedPointsShellParametersMetric& params0 )
-{
-    auto params = params0;
-    params.dist.pointWeight = [&pointWeights]( VertId v ){ return pointWeights[v]; };
-    return weightedPointsShell( cloud, params );
-}
-
-Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellParametersMetric& params )
-{
-    MR_TIMER;
-
-    const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
-    const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
-
-    WeightedPointsToDistanceVolumeParams wp2vparams
+    return DistanceVolumeCreationParams
     {
         .vol =
         {
@@ -127,32 +39,58 @@ Expected<Mesh> weightedMeshShell( const Mesh & mesh, const WeightedPointsShellPa
             params.offset + params.numLayers * params.voxelSize  //maxDistance
         }
     };
+}
 
-    MarchingCubesParams vmParams
+MarchingCubesParams getMarchingCubesParams( const Box3f& bbox, const ParametersMetric& params )
+{
+    const auto box = bbox.expanded( Vector3f::diagonal( params.offset + params.dist.maxWeight ) );
+    return MarchingCubesParams
     {
-        .origin = origin,
+        .origin = calcOriginAndDimensions( box, params.voxelSize ).origin,
         .cb = params.progress,
         .iso = params.offset,
         .lessInside = true
     };
-
-    return marchingCubes( weightedMeshToDistanceFunctionVolume( mesh, wp2vparams ), vmParams );
 }
 
-Expected<Mesh> weightedMeshShell( const Mesh & mesh, const VertScalars& vertWeights, const WeightedPointsShellParametersMetric& params0 )
+template <typename T, typename F>
+Expected<Mesh> runShell( const T& meshOrCloud, const ParametersMetric& params, const F& buildDistanceField )
 {
-    auto params = params0;
-    params.dist.pointWeight = [&vertWeights]( VertId v ){ return vertWeights[v]; };
-    return weightedMeshShell( mesh, params );
+    auto bbox = meshOrCloud.getBoundingBox();
+    auto dfParams = getDistanceFieldParams( bbox, params );
+    auto mcParams = getMarchingCubesParams( bbox, params );
+    auto df = buildDistanceField( meshOrCloud, dfParams );
+    return marchingCubes( df, mcParams );
 }
+
+template <typename F>
+Expected<Mesh> runShell( const Mesh& mesh, const ParametersRegions& params, const F& buildDistanceField )
+{
+    if ( params.regions.empty() )
+        spdlog::warn( "WeightedShell::meshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
+
+    DistanceFromWeightedPointsParams distParams;
+    distParams.maxWeight = 0.f;
+    for ( const auto& reg : params.regions )
+        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
+    const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
+    distParams.pointWeight = [&weights] ( VertId v )
+    {
+        return weights[v];
+    };
+    ParametersMetric resParams{ static_cast< const ParametersBase& >( params ), std::move( distParams ) };
+    resParams.dist.bidirectionalMode = params.bidirectionalMode;
+
+    return runShell( mesh, resParams, buildDistanceField );
+}
+
+}
+
 
 VertScalars calculateShellWeightsFromRegions(
-    const Mesh& mesh, const std::vector<WeightedPointsShellParametersRegions::Region>& regions, float interpolationDist )
+    const Mesh& mesh, const std::vector<ParametersRegions::Region>& regions, float interpolationDist )
 {
     MR_TIMER;
-
-    if ( regions.empty() )
-        spdlog::warn( "weightedMeshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
 
     VertBitSet allVerts;
     for ( const auto& reg : regions )
@@ -196,7 +134,9 @@ VertScalars calculateShellWeightsFromRegions(
 
     // precalculate the weights
     VertScalars weights( mesh.topology.getValidVerts().find_last() + 1, 0 );
-    BitSetParallelFor( allVerts, [&weights, &pointWeight] ( VertId v )
+    VertBitSet allVertsExtended = allVerts;
+    dilateRegion( mesh, allVertsExtended, interpolationDist );
+    BitSetParallelFor( allVertsExtended, [&weights, &pointWeight] ( VertId v )
     {
         weights[v] = pointWeight( v );
     } );
@@ -204,25 +144,82 @@ VertScalars calculateShellWeightsFromRegions(
     return weights;
 }
 
-Expected<Mesh> weightedMeshShell( const Mesh& mesh, const WeightedPointsShellParametersRegions& params )
+FunctionVolume pointsToDistanceVolume( const PointCloud& cloud, const DistanceVolumeCreationParams& params )
 {
-    MR_TIMER;
-
-    auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
-
-    DistanceFromWeightedPointsParams distParams;
-    distParams.maxWeight = 0.f;
-    for ( const auto& reg : params.regions )
-        distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
-    distParams.pointWeight = [&weights] ( VertId v )
+    return FunctionVolume
     {
-        return weights[v];
+        .data = [params, &tree = cloud.getAABBTree()] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto pd = findClosestWeightedPoint( voxelCenter, tree, params.dist );
+            assert( std::isfinite( pd.dist ) );
+            if ( pd.dist >= params.dist.maxBidirDist )
+                return cQuietNan;
+            if ( params.dist.bidirectionalMode && pd.dist < params.dist.minBidirDist )
+                return cQuietNan;
+            return pd.dist;
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
     };
+}
 
-    WeightedPointsShellParametersMetric resParams{ static_cast< const WeightedPointsShellParametersBase& >( params ), distParams };
-    resParams.dist.bidirectionalMode = params.bidirectionalMode;
+FunctionVolume meshToDistanceVolume( const Mesh& mesh, const DistanceVolumeCreationParams& params )
+{
+    return FunctionVolume
+    {
+        .data = [params, &mesh] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto pd = findClosestWeightedMeshPoint( voxelCenter, mesh, params.dist );
+            const auto bdist = pd.bidirDist();
+            assert( std::isfinite( bdist ) );
+            if ( bdist >= params.dist.maxBidirDist )
+                return cQuietNan;
+            if ( params.dist.bidirectionalMode && bdist < params.dist.minBidirDist )
+                return cQuietNan;
+            return pd.dist();
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
+    };
+}
 
-    return weightedMeshShell( mesh, resParams );
+
+Expected<Mesh> pointsShell( const PointCloud& cloud, const ParametersMetric& params )
+{
+    return runShell( cloud, params, pointsToDistanceVolume );
+}
+
+Expected<Mesh> pointsShell( const PointCloud& cloud, const VertScalars& pointWeights, const ParametersMetric& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&pointWeights]( VertId v ){ return pointWeights[v]; };
+    return runShell( cloud, params, pointsToDistanceVolume );
+}
+
+Expected<Mesh> meshShell( const Mesh& mesh, const ParametersMetric& params )
+{
+    return runShell( mesh, params, meshToDistanceVolume );
+}
+
+Expected<Mesh> meshShell( const Mesh& mesh, const VertScalars& vertWeights, const ParametersMetric& params0 )
+{
+    auto params = params0;
+    params.dist.pointWeight = [&vertWeights]( VertId v ){ return vertWeights[v]; };
+    return runShell( mesh, params, meshToDistanceVolume );
+}
+
+Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params )
+{
+    return runShell( mesh, params, meshToDistanceVolume );
+}
+
+Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params, meshToDistanceVolumeT volumeBuilder )
+{
+    return runShell( mesh, params, volumeBuilder );
 }
 
 

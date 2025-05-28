@@ -681,9 +681,6 @@
     <ClInclude Include="MRProgressReadWrite.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRChangeVoxelsAction.h">
-      <Filter>Source Files\History</Filter>
-    </ClInclude>
     <ClInclude Include="MRMatrix3Decompose.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -692,9 +689,6 @@
     </ClInclude>
     <ClInclude Include="MRVertexAttributeGradient.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="MRChangeVoxelSelectionAction.h">
-      <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePointCloudNormalsAction.h">
       <Filter>Source Files\History</Filter>
@@ -1323,6 +1317,9 @@
     </ClInclude>
     <ClInclude Include="MRGeomDataKeeper.h">
       <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRResizeNoInit.h">
+      <Filter>Source Files\Basic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

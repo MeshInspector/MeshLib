@@ -94,14 +94,14 @@ MRVOXELS_API Expected<LoadedObjects> makeObjectVoxelsFromDicomFolder( const std:
 namespace VoxelsSave
 {
 
-/// Save voxels objet to a single 3d DICOM file
+/// Save voxels object to a single 3d DICOM file
 MRVOXELS_API Expected<void> toDicom( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
 /// Saves object to a single 3d DICOM file. \p sourceScale specifies the true scale of the voxel data
 /// which will be saved with "slope" and "intercept" parameters of the output dicom.
 template <typename T>
-MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
+MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<Vector<T,VoxelId>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale = {}, const ProgressCallback& cb = {} );
 
-extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<std::vector<std::uint16_t>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
+extern template MRVOXELS_API Expected<void> toDicom( const VoxelsVolume<Vector<std::uint16_t, VoxelId>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb );
 
 } // namespace VoxelsSave
 

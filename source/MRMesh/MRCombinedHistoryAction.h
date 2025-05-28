@@ -21,6 +21,7 @@ public:
 
     MRMESH_API virtual void action( HistoryAction::Type type ) override;
 
+          HistoryActionsVector& getStack()       { return actions_; }
     const HistoryActionsVector& getStack() const { return actions_; }
 
     /// Remove some actions according to condition inside combined actions.

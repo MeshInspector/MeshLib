@@ -201,7 +201,11 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 ImGui::SetCursorPosY( storePos.y );
             }
             ImGui::SetCursorPosX( tabBtnWidth + tabBtnPadding );
+            bool activated = false;
+            dbParams.isPressed = &activated;
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
+            if ( activated )
+                pushRecentItem( foundItem.item->item );
             if ( foundItem.item->item->isActive() != pluginActive )
             {
                 onToolActivateSignal( foundItem.item->item );
@@ -391,7 +395,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
 
 void RibbonMenuSearch::updateSearchResult_()
 {
-    searchResult_ = RibbonSchemaHolder::search( searchLine_, &captionCount_, &searchResultWeight_ );
+    searchResult_ = RibbonSchemaHolder::search( searchLine_, { &captionCount_, &searchResultWeight_, requirementsFunc_ } );
     hightlightedSearchItem_ = 0;
 }
 

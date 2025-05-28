@@ -214,6 +214,13 @@ public:
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 };
 
+
+/// returns the amount of memory given BitSet occupies on heap
+[[nodiscard]] inline size_t heapBytes( const BitSet& bs )
+{
+    return bs.heapBytes();
+}
+
 /// compare that two bit sets have the same set bits (they can be equal even if sizes are distinct but last bits are off)
 [[nodiscard]] MRMESH_API bool operator == ( const BitSet & a, const BitSet & b );
 template <typename T>

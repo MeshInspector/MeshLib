@@ -50,4 +50,34 @@ Src2TgtMaps::~Src2TgtMaps()
         *outEmap_ = std::move( *src2tgtEdges_.getMap() );
 }
 
+Tgt2SrcMaps::Tgt2SrcMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+    : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
+{
+    if ( outFmap )
+    {
+        tgt2srcFaces_.setMap( std::move( *outFmap_ ) );
+        map_.tgt2srcFaces = &tgt2srcFaces_;
+    }
+    if ( outVmap )
+    {
+        tgt2srcVerts_.setMap( std::move( *outVmap_ ) );
+        map_.tgt2srcVerts = &tgt2srcVerts_;
+    }
+    if ( outEmap )
+    {
+        tgt2srcEdges_.setMap( std::move( *outEmap_ ) );
+        map_.tgt2srcEdges = &tgt2srcEdges_;
+    }
+}
+
+Tgt2SrcMaps::~Tgt2SrcMaps()
+{
+    if ( outFmap_ )
+        *outFmap_ = std::move( *tgt2srcFaces_.getMap() );
+    if ( outVmap_ )
+        *outVmap_ = std::move( *tgt2srcVerts_.getMap() );
+    if ( outEmap_ )
+        *outEmap_ = std::move( *tgt2srcEdges_.getMap() );
+}
+
 } //namespace MR

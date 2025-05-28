@@ -354,17 +354,27 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
-            assert(
-                ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
-                ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+            // following assert is valid for common two objects boolean case, while for self-boolean it might be violated
+            // keeping it for better understanding whats going on here, also might be useful for debugging two objects boolean failures
+
+            //assert(
+            //    ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+            //    ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
 
             // determined condition, intersections leave face in different edges (not returned)
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-            else
+            else if ( otherER == tp.next( lastCommonEdgeRef ).undirected() || otherER == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Right : TrianglesSortRes::Left; // terminal
+            else
+            {
+                // TODO: support this case
+                // we can be here only if doing self-boolean of non-closed contour passing through vertex
+                tryThis = false; // for now just terminate, for simplicity
+                return TrianglesSortRes::Undetermined;
+            }
         }
 
         // undetermined condition, but not terminal (intersections leave face in same edge (not returned))
@@ -380,6 +390,9 @@ TrianglesSortRes sortPropagateContour(
 
         FaceId fl = lContour[lOtherRef].tri;
         FaceId fr = rContour[rOtherRef].tri;
+
+        if ( fl == fr )
+            return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
 
         return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
     };
@@ -397,9 +410,9 @@ TrianglesSortRes sortPropagateContour(
         if ( res != TrianglesSortRes::Undetermined )
             return res;
 
-        if ( !lPassedFullRing && lNext == il.intersectionId )
+        if ( !lPassedFullRing && ( lNext == il.intersectionId || lPrev == il.intersectionId ) )
             lPassedFullRing = true;
-        if ( !rPassedFullRing && rNext == ir.intersectionId )
+        if ( !rPassedFullRing && ( rNext == ir.intersectionId || rPrev == ir.intersectionId ) )
             rPassedFullRing = true;
 
         if ( lPassedFullRing && rPassedFullRing )

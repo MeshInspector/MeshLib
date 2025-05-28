@@ -667,6 +667,7 @@ struct PathOverIncidentVert {
 // fill and sort incidentVertVector by central vertex
 void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
 {
+    MR_TIMER;
     incidentVertVector.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
@@ -681,7 +682,7 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             incidentVertVector.emplace_back( f, vs[i] );
     }
 
-    std::sort( incidentVertVector.begin(), incidentVertVector.end(),
+    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end(),
         [] ( const IncidentVert& lhv, const IncidentVert& rhv ) -> bool
     {
         return lhv.srcVert < rhv.srcVert;
@@ -708,7 +709,7 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 }
 
 // for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups )
+size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
     MR_TIMER;
     if ( t.empty() )
@@ -717,11 +718,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     std::vector<IncidentVert> incidentItemsVector;
     preprocessTriangles( t, region, incidentItemsVector );
 
-    auto lastUsedVertId = incidentItemsVector.back().srcVert;
+    if ( !lastValidVert )
+        lastValidVert = incidentItemsVector.back().srcVert;
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
-    VertBitSet visitedVertices(lastUsedVertId);
+    VertBitSet visitedVertices( incidentItemsVector.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
@@ -766,7 +768,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     {
                         if ( foundChains )
                         {
-                            incidentItems.duplicateVertex( path, lastUsedVertId, dups );
+                            incidentItems.duplicateVertex( path, lastValidVert, dups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
@@ -786,7 +788,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        incidentItems.duplicateVertex( closedPath, lastUsedVertId, dups );
+                        incidentItems.duplicateVertex( closedPath, lastValidVert, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;
@@ -844,14 +846,27 @@ Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
 
 int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )
 {
-    MR_TIMER;
-    VertBitSet bdVerts;
-    if ( uniteOnlyBd )
-        bdVerts = mesh.topology.findBdVerts();
+    return uniteCloseVertices( mesh, { .closeDist = closeDist,.uniteOnlyBd = uniteOnlyBd,.optionalVertOldToNew = optionalVertOldToNew } );
+}
 
-    const VertMap vertOldToNew = uniteOnlyBd ?
-        *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :
-        *findSmallestCloseVertices( mesh, closeDist );
+int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
+{
+    MR_TIMER;
+    bool useRegion = params.uniteOnlyBd || params.region;
+    VertBitSet vertRegion;
+    if ( params.uniteOnlyBd )
+        vertRegion = mesh.topology.findBdVerts();
+    if ( params.region )
+    {
+        if ( params.uniteOnlyBd )
+            vertRegion &= *params.region;
+        else
+            vertRegion = *params.region;
+    }
+
+    VertMap vertOldToNew = useRegion ?
+        *findSmallestCloseVertices( mesh.points, params.closeDist, &vertRegion ) :
+        *findSmallestCloseVertices( mesh, params.closeDist );
     int numChanged = 0;
     for ( auto v = 0_v; v < vertOldToNew.size(); ++v )
         if ( v != vertOldToNew[v] )
@@ -859,6 +874,7 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     if ( numChanged <= 0 )
         return numChanged;
 
+    auto lastValidVert = mesh.topology.lastValidVert(); // need to take it before removing faces
     Triangulation t( mesh.topology.faceSize() );
     FaceBitSet region( mesh.topology.faceSize() );
     for ( auto f : mesh.topology.getValidFaces() )
@@ -874,10 +890,24 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
             region.set( f );
         }
     }
+    if ( params.duplicateNonManifold )
+    {
+        std::vector<MeshBuilder::VertDuplication> localDups;
+        duplicateNonManifoldVertices( t, &region, &localDups, lastValidVert );
+        if ( !localDups.empty() )
+        {
+            mesh.points.resizeNoInit( localDups.back().dupVert + 1 );
+            mesh.topology.vertResize( mesh.points.size() );
+            for ( auto [org, dup] : localDups )
+                mesh.points[dup] = mesh.points[org];
+            if ( params.optionalDuplications )
+                *params.optionalDuplications = std::move( localDups );
+        }
+    }
     addTriangles( mesh.topology, t, { .region = &region } );
     mesh.invalidateCaches();
-    if ( optionalVertOldToNew )
-        *optionalVertOldToNew = std::move( vertOldToNew );
+    if ( params.optionalVertOldToNew )
+        *params.optionalVertOldToNew = std::move( vertOldToNew );
 
     return numChanged;
 }

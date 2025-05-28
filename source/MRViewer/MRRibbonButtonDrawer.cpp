@@ -371,7 +371,11 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     ImGui::EndGroup();
 
     if ( pressed )
+    {
         onPressAction_( item.item, requirements );
+        if ( params.isPressed )
+            *params.isPressed = true;
+    }
 
     if ( ImGui::IsItemHovered() )
         drawTooltip_( item, requirements );

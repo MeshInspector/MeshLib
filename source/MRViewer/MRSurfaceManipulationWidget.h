@@ -95,6 +95,8 @@ public:
     void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
     /// get state of an editable region restriction 
     bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
+    MRVIEWER_API void setOnPatchedCallback( std::function<void( std::shared_ptr<MR::ObjectMesh> )> callback );
+    MRVIEWER_API void resetOnPatchedCallback();
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -186,6 +188,7 @@ private:
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     bool ignoreOcclusion_ = false;
     bool editOnlyCodirectedSurface_ = true;
+    std::function<void( std::shared_ptr<MR::ObjectMesh> )> meshPatchedCallback_;
 };
 
 }

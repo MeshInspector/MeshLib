@@ -351,6 +351,16 @@ void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, con
     findSpaceDistancesAndVerts( mesh, start, settings_.radius, distances, region, editOnlyCodirectedSurface_, untouchable );
 }
 
+void SurfaceManipulationWidget::setOnPatchedCallback( std::function<void( std::shared_ptr<MR::ObjectMesh> )> callback )
+{
+    meshPatchedCallback_ = callback;
+}
+
+void SurfaceManipulationWidget::resetOnPatchedCallback()
+{
+    meshPatchedCallback_ = nullptr;
+}
+
 bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
 {
     if ( button != MouseButton::Left || !mousePressed_ )
@@ -454,6 +464,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, setNew, std::move( newMesh ) ) );
             if ( meshAttribs )
                 emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
+
+            if ( meshPatchedCallback_ )
+                meshPatchedCallback_( obj_ );
 
             reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
             sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();

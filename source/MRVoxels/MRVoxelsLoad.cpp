@@ -554,7 +554,7 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
         else if ( params.scalarType == ScalarType::UInt64 )
             max = std::numeric_limits<uint64_t>::max();
         auto converter = getTypeConverter( params.scalarType, max - min, min );
-        for ( size_t i = 0; i < outVolume.data.size(); ++i )
+        for ( auto i = 0_vox; i < outVolume.data.endId(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );
             outVolume.data[i] = value;
@@ -564,7 +564,7 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     }
     else
     {
-        auto minmaxIt = std::minmax_element( outVolume.data.begin(), outVolume.data.end() );
+        auto minmaxIt = std::minmax_element( begin( outVolume.data ), end( outVolume.data ) );
         outVolume.min = *minmaxIt.first;
         outVolume.max = *minmaxIt.second;
     }

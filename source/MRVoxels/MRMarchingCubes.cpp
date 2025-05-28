@@ -588,7 +588,7 @@ void VolumeMesher::addPartBlock_( const V& part, const BlockInfo& blockInfo )
             for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
             {
                 assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                if ( blockInfo.keepGoing && !blockInfo.keepGoing->load( std::memory_order_relaxed ) )
                     return;
 
                 SeparationPointSet set;
@@ -666,40 +666,40 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, const Bl
     VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, blockInfo.layerBegin - blockInfo.partFirstZ ) );
     for ( ; loc.pos.z + blockInfo.partFirstZ < blockInfo.layerEnd; ++loc.pos.z )
     {
-        const auto& layerLowerIso = lowerIso_[loc.pos.z + blockInfo.partFirstZ];
+        const auto layerZ = loc.pos.z + blockInfo.partFirstZ;
+        const auto& layerLowerIso = lowerIso_[layerZ];
+        const auto* nextLayerLowerIso = layerZ + 1 < lowerIso_.size() ? &lowerIso_[layerZ + 1] : nullptr;
         size_t inLayerPos = 0;
         for ( loc.pos.y = 0; loc.pos.y < part.dims.y; ++loc.pos.y )
         {
             for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
             {
                 assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                if ( blockInfo.keepGoing && !blockInfo.keepGoing->load( std::memory_order_relaxed ) )
                     return;
 
                 SeparationPointSet set;
-                bool atLeastOneOk = false;
+                const auto size0 = block.coords.size();
                 const bool lower = layerLowerIso.test( inLayerPos );
                 const auto coords = zeroPoint + mult( part.voxelSize, Vector3f( loc.pos ) );
 
-                for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+                auto addPoint = [&]( int n )
                 {
-                    auto nextLoc = partIndexer.getNeighbor( loc, cPlusOutEdges[n] );
-                    if ( !nextLoc )
-                        continue;
-                    const bool nextLower = lowerIso_[nextLoc.pos.z].test( size_t(nextLoc.pos.y) * part.dims.x + nextLoc.pos.x );
-                    if ( lower == nextLower )
-                        continue;
-
                     auto nextCoords = coords;
                     nextCoords[n] += part.voxelSize[n];
                     Vector3f pos = lower ? positioner( coords, nextCoords, params_.iso )
                                          : positioner( nextCoords, coords, params_.iso );
                     set[n] = block.nextVid();
                     block.coords.push_back( pos );
-                    atLeastOneOk = true;
-                }
+                };
 
-                if ( !atLeastOneOk )
+                if ( loc.pos.x + 1 < part.dims.x && lower != layerLowerIso.test( inLayerPos + 1 ) )
+                    addPoint( 0 );
+                if ( loc.pos.y + 1 < part.dims.y && lower != layerLowerIso.test( inLayerPos + part.dims.x ) )
+                    addPoint( 1 );
+                if ( nextLayerLowerIso && lower != nextLayerLowerIso->test( inLayerPos ) )
+                    addPoint( 2 );
+                if ( size0 == block.coords.size() )
                     continue;
 
                 block.smap.insert( { loc.id + partFirstId, set } );

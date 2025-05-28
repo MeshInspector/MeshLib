@@ -948,7 +948,7 @@ Expected<void> toDicom( const VdbVolume& vdbVolume, const std::filesystem::path&
 }
 
 template <typename T>
-Expected<void> toDicom( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb )
+Expected<void> toDicom( const VoxelsVolume<Vector<T,VoxelId>>& volume, const std::filesystem::path& path, const std::optional<MinMaxf>& sourceScale, const ProgressCallback& cb )
 {
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();

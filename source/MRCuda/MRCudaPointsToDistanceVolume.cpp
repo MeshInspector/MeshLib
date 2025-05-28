@@ -133,7 +133,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
             pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, chunk.size, chunk.offset );
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-            CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data.vec_ ) );
 
             return {};
         },

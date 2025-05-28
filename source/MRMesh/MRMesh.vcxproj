@@ -73,11 +73,9 @@
     <ClInclude Include="MRBuffer.h" />
     <ClInclude Include="MRChangePointCloudNormalsAction.h" />
     <ClInclude Include="MRChangeObjectFields.h" />
-    <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeLabelAction.h" />
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRChangePolylineAction.h" />
-    <ClInclude Include="MRChangeVoxelSelectionAction.h" />
     <ClInclude Include="MRCloseVertices.h" />
     <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />

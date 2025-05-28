@@ -52,7 +52,7 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
         auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
-        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, params.dist, params.vol.cb ); !d )
+        if ( auto d = params.fwn->calcFromGridWithDistances( res.data.vec_, res.dims, basis, params.dist, params.vol.cb ); !d )
         {
             return unexpected( std::move( d.error() ) );
         }
@@ -112,9 +112,9 @@ Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, cons
 
     const auto voxelSize = std::max( { params.voxelSize.x, params.voxelSize.y, params.voxelSize.z } );
 
-    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
     {
-        const auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
+        const auto coord = Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f );
         auto voxelCenter = params.origin + mult( params.voxelSize, coord );
 
         // minimum of given offset distance parameter and the distance to not-region part of mesh

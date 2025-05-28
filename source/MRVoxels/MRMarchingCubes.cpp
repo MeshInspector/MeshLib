@@ -588,7 +588,7 @@ void VolumeMesher::addPartBlock_( const V& part, const BlockInfo& blockInfo )
             for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
             {
                 assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                if ( blockInfo.keepGoing && !blockInfo.keepGoing->load( std::memory_order_relaxed ) )
                     return;
 
                 SeparationPointSet set;
@@ -675,7 +675,7 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, const Bl
             for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
             {
                 assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
-                if ( blockInfo.keepGoing && blockInfo.keepGoing->load( std::memory_order_relaxed ) )
+                if ( blockInfo.keepGoing && !blockInfo.keepGoing->load( std::memory_order_relaxed ) )
                     return;
 
                 SeparationPointSet set;

@@ -89,7 +89,7 @@ FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
 // Those are needed directly for mrmeshpy:
 FORCE_REGISTER_TYPE( std::monostate );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<std::shared_ptr<MR::OpenVdbFloatGrid>>>> );
-FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<std::vector<float, std::allocator<float>>>>> );
+FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<Vector<float, MR::VoxelId>>>> );
 FORCE_REGISTER_PARAM_TYPE( double * );
 // ---
 

@@ -52,10 +52,10 @@ private:
 
 /// VoxelsVolumeAccessor specialization for simple volumes
 template <typename T>
-class VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
+class VoxelsVolumeAccessor<VoxelsVolume<Vector<T,VoxelId>>>
 {
 public:
-    using VolumeType = VoxelsVolume<std::vector<T>>;
+    using VolumeType = VoxelsVolume<Vector<T,VoxelId>>;
     using ValueType = typename VolumeType::ValueType;
     static constexpr bool cacheEffective = false; ///< caching results of this accessor does not make any sense since it returns values from a simple container
 
@@ -78,17 +78,17 @@ public:
     Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
 
 private:
-    const std::vector<T>& data_;
+    const Vector<T,VoxelId>& data_;
     VolumeIndexer indexer_;
 };
 
 /// VoxelsVolumeAccessor specialization for simple volumes with min/max
 template <typename T>
-class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>> : public VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
+class VoxelsVolumeAccessor<VoxelsVolumeMinMax<Vector<T,VoxelId>>> : public VoxelsVolumeAccessor<VoxelsVolume<Vector<T,VoxelId>>>
 {
-    using Base = VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>;
+    using Base = VoxelsVolumeAccessor<VoxelsVolume<Vector<T,VoxelId>>>;
 public:
-    using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
+    using VolumeType = VoxelsVolumeMinMax<Vector<T,VoxelId>>;
     using ValueType = typename VolumeType::ValueType;
     using Base::cacheEffective;
     using Base::Base;

@@ -283,75 +283,45 @@ void Palette::setUniformLabels_()
     useCustomLabels_ = false;
     labels_.clear();
 
+    const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray;
+    if ( legendLimitIndexes_.min < 0 || legendLimitIndexes_.max > colorCount )
+        return;
+
+    const int labelCount = legendLimitIndexes_.max - legendLimitIndexes_.min + 1;
+    labels_.resize( labelCount );
     if ( parameters_.ranges.size() == 2 )
     {
-        float valueMax = parameters_.ranges.back();
-        float valueMin = parameters_.ranges[0];
-        const int sz = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
-        const float realValueStep = ( valueMax - valueMin ) / sz;
-        int indexMin = 0;
-        int indexMax = sz;
-        int visibleDiscretization = parameters_.discretization;
-        if ( parameters_.legendLimits.valid() )
+        for ( int i = 0; i < labelCount; ++i )
         {
-            if ( parameters_.legendLimits.max < valueMax )
-            {
-                const float uMax = getRelativePos( parameters_.legendLimits.max );
-                indexMax = int( std::ceil( uMax * sz ) );
-                valueMax = indexMax * realValueStep + parameters_.ranges[0];
-            }
-            if ( parameters_.legendLimits.min > valueMin )
-            {
-                const float uMin = getRelativePos( parameters_.legendLimits.min );
-                indexMin = int( std::floor( uMin * sz ) );
-                valueMin = indexMin * realValueStep + parameters_.ranges[0];
-            }
-            visibleDiscretization = indexMax - indexMin;
+            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[i].value = 1 - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
         }
-
-        int num = texture_.filter == FilterType::Linear ? 5 : visibleDiscretization + 1;
-
-        if ( maxLabelCount_ && maxLabelCount_ < num )
-            num = maxLabelCount_;
-        labels_.resize( num );
-
-        for ( int i = 0; i < num; ++i )
+    }
+    else if ( parameters_.ranges.size() == 4 )
+    {
+        int i = 0;
+        const int colorCountHalf = colorCount / 2;
+        for ( ; i < colorCountHalf + 1 - legendLimitIndexes_.min; ++i )
         {
-            labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( valueMax - valueMin ) + valueMin );
-            labels_[i].value = 1 - float( i ) / ( num - 1 );
+            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[i].value = 1.f - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+        }
+        for ( ; i < legendLimitIndexes_.max + 1; ++i )
+        {
+            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min - 1 - colorCountHalf ) / colorCountHalf *
+                ( parameters_.ranges.back() - parameters_.ranges[2] ) + parameters_.ranges[2] );
+            labels_[i].value = 1.f - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
         }
     }
     else
     {
-        int num = texture_.filter == FilterType::Linear ? 3 : parameters_.discretization + 1;
-        if ( maxLabelCount_ && maxLabelCount_ / 2 < num )
-            num = maxLabelCount_ / 2;
-
-        labels_.resize( num * 2 );
-
-        if ( texture_.filter == FilterType::Linear )
-        {
-            for ( int i = 0; i < num; ++i )
-            {
-                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-                labels_[i].value = 1 - float( i ) / ( num - 1 ) * 0.5f;
-                labels_[i + num].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
-                labels_[i + num].value = 0.5f - float( i ) / ( num - 1 ) * 0.5f;
-            }
-            labels_[num - 1].value += 0.02f;
-            labels_[num].value -= 0.02f;
-        }
-        else
-        {
-            for ( int i = 0; i < num; ++i )
-            {
-                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-                labels_[i].value = 1.f - float( i ) / ( num * 2 - 1 );
-                labels_[num + i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
-                labels_[num + i].value = 1.f - float( i + num ) / ( num * 2 - 1 );
-            }
-        }
+        labels_.resize( 2 );
+        labels_[0].text = getStringValue( float( legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels_[0].value = 1.f;
+        labels_[1].text = getStringValue( float( legendLimitIndexes_.max ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels_[1].value = 0.f;
     }
+    
 
     sortLabels_();
     showLabels_ = true;
@@ -713,6 +683,59 @@ void Palette::sortLabels_()
     } );
 }
 
+void Palette::updateLegendLimitIndexes_()
+{
+    const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
+    if ( !parameters_.legendLimits.valid() || parameters_.legendLimits.diagonal() == 0.f )
+    {
+        legendLimitIndexes_ = Box1i( 0, colorCount );
+        return;
+    }
+
+    if ( parameters_.ranges.size() == 2 )
+    {
+        const float range = parameters_.ranges.back() - parameters_.ranges[0];
+        if ( range <= 0.f )
+        {
+            legendLimitIndexes_ = Box<int>( 0, colorCount );
+            return;
+        }
+
+        const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
+        const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
+        legendLimitIndexes_ = Box<int>( indexMin, indexMax ).intersection( Box1i( 0, colorCount ) );
+    }
+    else if ( parameters_.ranges.size() == 4 )
+    {
+        const float rangeNeg = parameters_.ranges[1] - parameters_.ranges[0];
+        const float rangeCenter = parameters_.ranges[2] - parameters_.ranges[1];
+        const float rangePos = parameters_.ranges[3] - parameters_.ranges[2];
+
+        if ( parameters_.legendLimits.min < parameters_.ranges[1] && rangeNeg <= 0.f )
+            legendLimitIndexes_.min = 0;
+        else if ( ( parameters_.legendLimits.min >= parameters_.ranges[1] && parameters_.legendLimits.min < parameters_.ranges[2] ) && rangeCenter <= 0.f )
+            legendLimitIndexes_.min = colorCount / 2;
+        else if ( parameters_.legendLimits.min >= parameters_.ranges[2] && rangePos <= 0.f )
+            legendLimitIndexes_.min = colorCount / 2 + 1;
+        else
+            legendLimitIndexes_.min = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
+
+        if ( parameters_.legendLimits.max < parameters_.ranges[1] && rangeNeg <= 0.f )
+            legendLimitIndexes_.max = colorCount / 2;
+        else if ( ( parameters_.legendLimits.max >= parameters_.ranges[1] && parameters_.legendLimits.max < parameters_.ranges[2] ) && rangeCenter <= 0.f )
+            legendLimitIndexes_.max = colorCount / 2 + 1;
+        else if ( parameters_.legendLimits.max >= parameters_.ranges[2] && rangePos <= 0.f )
+            legendLimitIndexes_.max = colorCount;
+        else
+            legendLimitIndexes_.max = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
+
+        legendLimitIndexes_ = legendLimitIndexes_.intersect( Box1i( 0, colorCount ) );
+    }
+    else
+        legendLimitIndexes_ = Box1i( 0, colorCount );
+
+}
+
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )
 {
     auto palette = ( Palette* )data->UserData;
@@ -750,10 +773,14 @@ void Palette::setMaxLabelCount( int val )
     maxLabelCount_ = val;
 }
 
-void Palette::setLegendLimits( float min, float max )
+void Palette::setLegendLimits( const Box<float>& limits )
 {
-    parameters_.legendLimits.min = min;
-    parameters_.legendLimits.max = max;
+    if ( ( limits.valid() && ( limits.min > parameters_.ranges.back() || limits.max < parameters_.ranges[0] || limits.diagonal() == 0.f ) ) ||
+        limits == parameters_.legendLimits )
+        return;
+
+    parameters_.legendLimits = limits;
+    updateLegendLimitIndexes_();
     resetLabels();
 }
 

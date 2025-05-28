@@ -149,7 +149,7 @@ public:
     MRVIEWER_API void setMaxLabelCount( int val );
 
     /// set legend limits. if min > max - limits are disabled
-    MRVIEWER_API void setLegendLimits( float min, float max );
+    MRVIEWER_API void setLegendLimits( const Box<float>& limits );
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
@@ -167,6 +167,9 @@ private:
     void updateCustomLabels_();
 
     void sortLabels_();
+
+    void updateLegendLimitIndexes_();
+
 
     std::vector<Label> customLabels_;
     std::vector<Label> labels_;
@@ -187,6 +190,8 @@ private:
     int maxLabelCount_ = 0;
 
     float prevMaxLabelWidth_ = 0.0f;
+
+    Box<int> legendLimitIndexes_ = Box<int>( 0, 7 );
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

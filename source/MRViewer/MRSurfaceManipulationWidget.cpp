@@ -32,6 +32,7 @@
 #include "MRSceneCache.h"
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRPointsProject.h"
+#include <MRMesh/MRGeomDataKeeper.h>
 
 namespace MR
 {
@@ -451,9 +452,15 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             FaceBitSet newFaces = getInnerFaces( newMesh->topology, newVerts );
             auto meshAttribs = projectMeshAttributes( *obj_, MeshPart( *newMesh, &newFaces ) );
 
+            if ( auto geomDataKeeper = std::dynamic_pointer_cast< GeomDataKeeper >( obj_ ) )
+                geomDataKeeper->beforeGeometryChange();
+
             AppendHistory( std::make_shared<PartialChangeMeshAction>( "mesh", obj_, setNew, std::move( newMesh ) ) );
             if ( meshAttribs )
                 emplaceMeshAttributes( obj_, std::move( *meshAttribs ) );
+
+            if ( auto geomDataKeeper = std::dynamic_pointer_cast< GeomDataKeeper >( obj_ ) )
+                geomDataKeeper->onGeometryChanged();
 
             reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
             sameValidVerticesAsInOriginMesh_ = originalMesh_->topology.getValidVerts() == obj_->mesh()->topology.getValidVerts();

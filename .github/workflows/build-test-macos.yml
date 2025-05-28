@@ -53,7 +53,7 @@ jobs:
           - arch: arm64
             config: Release
             os: arm
-            runner: macos-arm-build-latest # self-hosted
+            runner: macos-arm-build # self-hosted, any macos version
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

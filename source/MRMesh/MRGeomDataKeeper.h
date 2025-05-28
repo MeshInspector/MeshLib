@@ -1,7 +1,5 @@
 #pragma once
 
-#include "MRObjectMesh.h"
-
 namespace MR
 {
 class MRMESH_CLASS GeomDataKeeper

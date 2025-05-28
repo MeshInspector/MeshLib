@@ -143,7 +143,7 @@ TEST( MRMesh, volumeToMeshByParts )
     {
         ParallelFor( 0, zLayersInPart, [&]( int l )
         {
-            size_t i = l * size_t( dimensions.x ) * dimensions.y;
+            VoxelId i( l * size_t( dimensions.x ) * dimensions.y );
             for ( auto y = 0; y < dimensions.y; ++y )
             {
                 for ( auto x = 0; x < dimensions.x; ++x, ++i )

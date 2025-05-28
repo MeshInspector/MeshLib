@@ -165,7 +165,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
             {
                 for ( int i = 0; i < 3; ++i )
                 {
-                    for ( size_t v = 0; v < toothMask.data.size(); ++v )
+                    for ( auto v = 0_vox; v < toothMask.data.endId(); ++v )
                     {
                         if ( toothMask.data[v] == 0 )
                             r.volume[i].data[v] = invalidValue;
@@ -196,8 +196,8 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
         auto& r = res[i];
         r.voxelSize = mask_.voxelSize;
         r.dims = mask_.dims;
-        r.data.resize( mask_.data.size() );
-        std::fill( r.data.begin(), r.data.end(), invalidValue );
+        r.data.clear();
+        r.data.resize( mask_.data.size(), invalidValue );
 
         const VolumeIndexer maskInd( r.dims );
         for ( size_t j = 0; j < teeth.size(); ++j )

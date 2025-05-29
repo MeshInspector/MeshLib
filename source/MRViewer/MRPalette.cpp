@@ -495,20 +495,26 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     if ( texture_.filter == FilterType::Linear )
     {
-        auto yStep = actualSize.y / ( sz - 1 );
-        if ( onlyTopHalf )
-            yStep *= 2;
-        for ( int i = 0; i + 1 < sz; i++ )
+        if ( parameters_.ranges.size() == 2 )
         {
-            const auto color1 = colors[sz - 1 - i].getUInt32();
-            const auto color2 = colors[sz - 2 - i].getUInt32();
-            drawList->AddRectFilledMultiColor(
-                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y + i * yStep },
-                { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y + ( i + 1 ) * yStep },
-                color1, color1, color2, color2 );
+            drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
         }
+        else
+        {
+            if ( legendLabelsDrawUp_ && legendLabelsDrawDown_ )
+            {
+                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[2], parameters_.ranges[3] }, { legendRanges_[2], legendRanges_[3] }, maxTextSize );
+                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
+            }
+            else if ( legendLabelsDrawUp_ )
+                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[2], parameters_.ranges[3] }, { legendRanges_[1], legendRanges_[2] }, maxTextSize );
+            else if ( legendLabelsDrawDown_ )
+                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
+            else
+                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[3] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
+        }
+
+
     }
 
     ImGui::End();
@@ -772,6 +778,9 @@ void Palette::updateLegendRanges_()
 {
     legendRanges_.clear();
 
+    legendLabelsDrawDown_ = false;
+    legendLabelsDrawUp_ = false;
+
     if ( !parameters_.legendLimits.valid() || parameters_.legendLimits.min == parameters_.legendLimits.max ||
         parameters_.legendLimits.min >= parameters_.ranges.back() || parameters_.legendLimits.max <= parameters_.ranges[0] )
     {
@@ -800,6 +809,36 @@ void Palette::updateLegendRanges_()
         legendRanges_.push_back( parameters_.ranges.back() );
     else
         legendRanges_.push_back( parameters_.legendLimits.max );
+}
+
+void Palette::drawPartColorMap_( const Vector2f& pos, const Vector2f& size, const Box1f& realRange, const Box1f& rangePart, float maxTextSize )
+{
+    const std::vector<Color>& colors = texture_.pixels;
+    const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
+
+    if ( rangePart.diagonal() == 0.f || realRange.diagonal() == 0.f )
+        return;
+
+    const float scaleFactor = realRange.diagonal() / rangePart.diagonal();
+    const float yShift = realRange.max > rangePart.max ? ( realRange.max - rangePart.max ) / realRange.diagonal() * size.y * scaleFactor : 0.f;
+
+    auto yStep = size.y / ( sz - 1 ) * scaleFactor;
+
+    const auto& style = ImGui::GetStyle();
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->PushClipRect( pos, pos + size );
+    for ( int i = 0; i + 1 < sz; i++ )
+    {
+        const auto color1 = colors[sz - 1 - i].getUInt32();
+        const auto color2 = colors[sz - 2 - i].getUInt32();
+        drawList->AddRectFilledMultiColor(
+            { pos.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
+            pos.y - yShift + i * yStep },
+            { pos.x - style.WindowPadding.x + size.x ,
+            pos.y - yShift + ( i + 1 ) * yStep },
+            color1, color1, color2, color2 );
+    }
+    drawList->PopClipRect();
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )

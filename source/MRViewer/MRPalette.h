@@ -171,7 +171,7 @@ private:
     void updateLegendLimits_( const Box1f& limits );
     void updateLegendLimitIndexes_();
     void updateLegendRanges_();
-
+    void drawPartColorMap_( const Vector2f& pos, const Vector2f& size, const Box1f& realRange, const Box1f& rangePart, float maxTextSize );
 
     std::vector<Label> customLabels_;
     std::vector<Label> labels_;

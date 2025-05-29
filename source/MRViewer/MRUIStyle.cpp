@@ -1828,7 +1828,7 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
 
 const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
 {
-    constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
+    static constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
     {
         std::pair<const char*, ImU32> { "\xef\x81\xaa", 0xff4444e2 },
         std::pair<const char*, ImU32> { "\xef\x81\xb1", 0xff0092ff },

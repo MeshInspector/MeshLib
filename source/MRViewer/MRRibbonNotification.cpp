@@ -19,14 +19,6 @@ namespace
 {
 constexpr int cNotificationNumberLimit = 10;
 
-constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
-{
-    std::pair<const char*, ImU32> { "\xef\x81\xaa", 0xff4444e2 },
-    std::pair<const char*, ImU32> { "\xef\x81\xb1", 0xff0092ff },
-    std::pair<const char*, ImU32> { "\xef\x83\xb3", 0xffff831b },
-    std::pair<const char*, ImU32> { "\xef\x8b\xb2", 0xff0092ff }
-};
-
 }
 
 namespace MR
@@ -121,8 +113,8 @@ void RibbonNotifier::drawHistoryButton_( float scaling, const Box2i& limitFrameb
 
     auto fontSize = ImGui::GetFontSize();
     ImGui::SetCursorPos( 0.5f * ( windowSzie - ImVec2( fontSize, fontSize ) ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notificationsHistory_.front().notification.type )].second );
-    ImGui::Text( "%s", notificationParams[int( notificationsHistory_.front().notification.type )].first );
+    ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( notificationsHistory_.front().notification.type ).second );
+    ImGui::Text( "%s", UI::notificationChar( notificationsHistory_.front().notification.type ).first );
     ImGui::PopStyleColor();
 
     if ( iconsFont )
@@ -329,7 +321,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     cirlcePos.x += radius;
     cirlcePos.y += bigFontSize * 0.5f + radius;
     cirlcePos.y += window->Scroll.y;
-    drawList->AddCircleFilled( cirlcePos, 3.0f * scaling, notificationParams[int( notification.type )].second );
+    drawList->AddCircleFilled( cirlcePos, 3.0f * scaling, UI::notificationChar( notification.type ).second );
 
     const bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
 
@@ -343,7 +335,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
         ImGui::SetCursorPosX( contentShift.x );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
         if ( changeHeaderColor )
-            ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+            ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( notification.type ).second );
 
         const auto backupWorkRect = window->WorkRect.Max;
         if ( hasCloseBtn || hasCounter )
@@ -399,7 +391,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
             drawList->PushClipRect( parentWindow->InnerClipRect.Min, parentWindow->InnerClipRect.Max );
         else
             drawList->PushClipRectFullScreen();
-        const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
+        const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : UI::notificationChar( notification.type ).second;
         drawList->AddRect( windRect.Min, windRect.Max, color, 4.0f * scaling, 0, 2.0f * scaling );
         drawList->PopClipRect();
     }
@@ -460,7 +452,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
             drawList->PushClipRectFullScreen();
         drawList->AddCircleFilled( counterCenter, counterRadius, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
         if ( changeHeaderColor )
-            ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+            ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( notification.type ).second );
         drawList->AddCircle( counterCenter, counterRadius, ImGui::GetColorU32( ImGuiCol_Text ), 0, scaling );
         drawList->AddText( counterCenter - textSize * 0.5f, ImGui::GetColorU32( ImGuiCol_Text ), countText.c_str() );
         if ( changeHeaderColor )

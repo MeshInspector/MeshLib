@@ -1826,6 +1826,18 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
     }
 }
 
+const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
+{
+    constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
+    {
+        std::pair<const char*, ImU32> { "\xef\x81\xaa", 0xff4444e2 },
+        std::pair<const char*, ImU32> { "\xef\x81\xb1", 0xff0092ff },
+        std::pair<const char*, ImU32> { "\xef\x83\xb3", 0xffff831b },
+        std::pair<const char*, ImU32> { "\xef\x8b\xb2", 0xff0092ff }
+    };
+    return notificationParams[int( type )];
+}
+
 void transparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
@@ -1848,6 +1860,45 @@ void transparentTextWrapped( const char* fmt, ... )
     ImGui::TextWrappedV( fmt, args );
     va_end( args );
     ImGui::PopStyleColor();
+}
+
+void notificationFrame( NotificationType type, const std::string& str, float scaling )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+    if ( !drawList )
+        return;
+
+    auto width = ImGui::GetContentRegionAvail().x;
+    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
+    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x );
+
+    auto pos = ImGui::GetCursorPos();
+    auto sPos = ImGui::GetCursorScreenPos();
+    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ), bgColor.getUInt32(),
+        scaling * StyleConsts::Notification::cTextFrameRounding );
+    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding );
+    transparentTextWrapped( "%s", str.c_str() );
+    
+    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 0.7f;
+        ImGui::PushFont( iconsFont );
+    }
+
+    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y, StyleConsts::Notification::cTextFramePadding.y ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
+    ImGui::Text( "%s", UI::notificationChar( type ).first );
+    ImGui::PopStyleColor();
+
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 1.0f;
+        ImGui::PopFont();
+    }
+
+    ImGui::SetCursorPos( pos );
+    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ) );
 }
 
 void setTooltipIfHovered( const std::string& text, float scaling )

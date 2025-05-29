@@ -497,7 +497,7 @@ bool buttonIconEx(
         }
         else
         {
-            auto freeYSpace = buttonSize.y - iconSize.y - vecDetail.size() * cFontSize;
+            auto freeYSpace = std::max( 0.0f, buttonSize.y - iconSize.y - vecDetail.size() * cFontSize );
             textYPadding = std::clamp( freeYSpace - 2 * style.FramePadding.y - 1, 0.0f, freeYSpace / 3.0f );
             iconYPadding = textYPadding > style.FramePadding.y ? textYPadding : style.FramePadding.y;
         }

@@ -15,7 +15,7 @@ namespace MR
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
+    auto vhp = dot( Vector3hp{ a }, Vector3hp{ cross( Vector3ll{ b }, Vector3ll{ c } ) } );
     if ( vhp ) return vhp > 0;
 
     auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );

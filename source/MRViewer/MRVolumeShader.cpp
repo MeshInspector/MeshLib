@@ -294,7 +294,7 @@ std::string getVolumePickerFragmentShader()
   uniform vec4 clippingPlane;        // (in from base) clipping plane
 
   uniform uint uniGeomId;
-  out highp vec4 outColor;
+  out highp uvec4 outColor;
 
   float getVal( in float value )
   {
@@ -445,8 +445,10 @@ std::string getVolumePickerFragmentShader()
     float depth = projCoord.z / projCoord.w * 0.5 + 0.5;
     gl_FragDepth = depth;
 
-    // find VoxelId by world pos
-    outColor = vec4( uintBitsToFloat(0u),uintBitsToFloat(uniGeomId),0.0,uintBitsToFloat(uint(depth * 4294967295.0)));
+    outColor.r = uint(0); // find VoxelId by world pos
+    outColor.g = uniGeomId;
+
+    outColor.a = uint(depth * 4294967295.0);
   }
 )";
 }

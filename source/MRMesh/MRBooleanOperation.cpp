@@ -171,6 +171,7 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
 Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, 
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
+    MR_TIMER;
     Mesh aPart, bPart;
     FaceBitSet aPartFbs, bPartFbs;
     std::pair<Face2RegionMap,int> aComponentsMap, bComponentsMap;

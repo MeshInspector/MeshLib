@@ -81,6 +81,7 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
 OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours,
     const AffineXf3f* rigidB2A = nullptr )
 {
+    MR_TIMER;
     AffineXf3f inverseXf;
     if ( rigidB2A )
         inverseXf = rigidB2A->inverse();
@@ -520,6 +521,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             {
                 if ( bSubdivided || !intParams.originalMeshB )
                 {
+                    Timer t( "meshBCopyBuffer" );
                     meshBCopyBuffer = meshB;
                     if ( !intParams.originalMeshB )
                         intParams.originalMeshB = &meshBCopyBuffer;
@@ -540,6 +542,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         {
             if ( aSubdivided || !intParams.originalMeshA )
             {
+                Timer t( "meshACopyBuffer" );
                 meshACopyBuffer = meshA;
                 if ( !intParams.originalMeshA )
                     intParams.originalMeshA = &meshACopyBuffer;
@@ -576,6 +579,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     {
         taskGroup.run( [&] ()
         {
+            Timer t( "CutMeshA" );
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes
             CutMeshParameters cmParams;
@@ -610,6 +614,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     }
     if ( needCutMeshB && !params.outPreCutB )
     {
+        Timer t( "CutMeshB" );
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
         // cut meshes
         CutMeshParameters cmParams;

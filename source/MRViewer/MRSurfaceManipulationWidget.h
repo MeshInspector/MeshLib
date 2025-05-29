@@ -21,7 +21,7 @@ class MRVIEWER_CLASS SurfaceManipulationWidget :
 {
 public:
     MRVIEWER_API SurfaceManipulationWidget();
-    MRVIEWER_API ~SurfaceManipulationWidget();
+    MRVIEWER_API virtual ~SurfaceManipulationWidget();
 
     /// widget work modes
     enum class WorkMode
@@ -95,7 +95,7 @@ public:
     void setEditOnlyCodirectedSurface( bool edit ) { editOnlyCodirectedSurface_ = edit; }
     /// get state of an editable region restriction 
     bool isEditOnlyCodirectedSurface() const { return editOnlyCodirectedSurface_; }
-private:
+protected:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
     /// stop modifying mesh surface, generate history action
@@ -104,6 +104,10 @@ private:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
+
+    /// called to change mesh with history record
+    /// newFaces seems to be useful
+    MRVIEWER_API virtual void appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& newFaces );
 
     void reallocData_( size_t size );
     void clearData_();

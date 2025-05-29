@@ -4,6 +4,14 @@
 #include "MRBox.h"
 #include "MRGTest.h"
 
+#if __has_include(<__msvc_int128.hpp>)
+  #include <__msvc_int128.hpp>
+  // this type is much faster than boost::multiprecision::checked_int128_t but lacks conversion in double and sqrt-function
+  using int128_t = std::_Signed128;
+#else
+  using int128_t = __int128_t;
+#endif
+
 namespace
 {
 // INT_MAX in double for mapping in int range
@@ -15,7 +23,8 @@ namespace MR
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    auto vhp = dot( Vector3hp{ a }, Vector3hp{ cross( Vector3ll{ b }, Vector3ll{ c } ) } );
+    using V = Vector3<int128_t>;
+    auto vhp = dot( V{ a }, V{ cross( Vector3ll{ b }, Vector3ll{ c } ) } );
     if ( vhp ) return vhp > 0;
 
     auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );

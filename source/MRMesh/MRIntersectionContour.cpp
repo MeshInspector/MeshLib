@@ -354,6 +354,7 @@ bool isClosed( const ContinuousContour& contour )
 
 std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ignoreOpen )
 {
+    MR_TIMER;
     std::vector<int> res;
     for ( int i = 0; i < contours.size(); ++i )
     {
@@ -378,6 +379,7 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ig
 
 void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshContours& faceContours, OneMeshContours& edgeContours )
 {
+    MR_TIMER;
     for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
     {
         if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
@@ -390,6 +392,7 @@ void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshCo
 
 void removeLoneContours( ContinuousContours& contours, bool ignoreOpen )
 {
+    MR_TIMER;
     auto loneContours = detectLoneContours( contours, ignoreOpen );
     for ( int i = int( loneContours.size() ) - 1; i >= 0; --i )
     {

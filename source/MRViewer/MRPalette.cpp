@@ -58,11 +58,13 @@ void Palette::setBaseColors( const std::vector<Color>& colors )
 void Palette::setRangeMinMax( float min, float max )
 {
     setRangeLimits_( { min, max } );
+    resetLabels();
 }
 
 void Palette::setRangeMinMaxNegPos( float minNeg, float maxNeg, float minPos, float maxPos )
 {
     setRangeLimits_( { minNeg, maxNeg, minPos, maxPos } );
+    resetLabels();
 }
 
 void Palette::setRangeLimits_( const std::vector<float>& ranges )
@@ -87,8 +89,10 @@ void Palette::setRangeLimits_( const std::vector<float>& ranges )
 
     const bool needUpdateColors = ranges.size() != parameters_.ranges.size();
     parameters_.ranges = ranges;
+
     if ( needUpdateColors )
         updateDiscretizatedColors_();
+    updateLegendLimits_( parameters_.legendLimits );
     resetLabels();
 }
 
@@ -287,33 +291,10 @@ void Palette::setUniformLabels_()
     if ( legendLimitIndexes_.min < 0 || legendLimitIndexes_.max > colorCount )
         return;
 
-    const int labelCount = legendLimitIndexes_.max - legendLimitIndexes_.min + 1;
+    const int limitDelta = legendLimitIndexes_.max - legendLimitIndexes_.min;
+    const int labelCount = limitDelta ? limitDelta + 1 : 2;
     labels_.resize( labelCount );
-    if ( parameters_.ranges.size() == 2 )
-    {
-        for ( int i = 0; i < labelCount; ++i )
-        {
-            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
-            labels_[i].value = 1 - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
-        }
-    }
-    else if ( parameters_.ranges.size() == 4 )
-    {
-        int i = 0;
-        const int colorCountHalf = colorCount / 2;
-        for ( ; i < colorCountHalf + 1 - legendLimitIndexes_.min; ++i )
-        {
-            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-            labels_[i].value = 1.f - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
-        }
-        for ( ; i < legendLimitIndexes_.max + 1; ++i )
-        {
-            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min - 1 - colorCountHalf ) / colorCountHalf *
-                ( parameters_.ranges.back() - parameters_.ranges[2] ) + parameters_.ranges[2] );
-            labels_[i].value = 1.f - float( i ) / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
-        }
-    }
-    else
+    if ( !limitDelta || ( parameters_.ranges.size() != 2 && parameters_.ranges.size() != 4 ) )
     {
         labels_.resize( 2 );
         labels_[0].text = getStringValue( float( legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
@@ -321,7 +302,30 @@ void Palette::setUniformLabels_()
         labels_[1].text = getStringValue( float( legendLimitIndexes_.max ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
         labels_[1].value = 0.f;
     }
-    
+    else if ( parameters_.ranges.size() == 2 )
+    {
+        for ( int i = 0; i < labelCount; ++i )
+        {
+            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[i].value = 1 - float( i ) / limitDelta;
+        }
+    }
+    else if ( parameters_.ranges.size() == 4 )
+    {
+        int labelIndex = 0;
+        const int colorCountHalf = colorCount / 2;
+        for ( int i = legendLimitIndexes_.min; i < colorCountHalf + 1; ++i, ++labelIndex )
+        {
+            labels_[labelIndex].text = getStringValue( float( i ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
+        }
+        for ( int i = std::max( legendLimitIndexes_.min, colorCountHalf + 1 ); i < legendLimitIndexes_.max + 1; ++i, ++labelIndex )
+        {
+            labels_[labelIndex].text = getStringValue( float( i - colorCountHalf - 1 ) / colorCountHalf *
+                ( parameters_.ranges.back() - parameters_.ranges[2] ) + parameters_.ranges[2] );
+            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
+        }
+    }
 
     sortLabels_();
     showLabels_ = true;
@@ -335,6 +339,8 @@ void Palette::setDiscretizationNumber( int discretization )
 
     parameters_.discretization = discretization;
     updateDiscretizatedColors_();
+    updateLegendLimitIndexes_();
+    resetLabels();
 }
 
 void Palette::setFilterType( FilterType type )
@@ -452,16 +458,16 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             limitedSize -= parameters_.legendLimits.min - parameters_.ranges[0];
         }
     }
-    const int indexMin = int( std::floor( ( 1.f - uMax ) * sz ) );
-    const int indexMax = int( std::ceil( ( 1.f - uMin ) * sz ) );
 
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / ( indexMax - indexMin );
-        const float legendLimitShift = indexMin * yStep;
+        auto yStep = actualSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+        const int indexBegin = int( sz ) - legendLimitIndexes_.max;
+        const int indexEnd = int( sz ) - legendLimitIndexes_.min;
+        const float legendLimitShift = indexBegin * yStep;
         if ( onlyTopHalf )
             yStep *= 2;
-        for ( int i = indexMin; i < indexMax; i++ )
+        for ( int i = indexBegin; i < indexEnd; i++ )
         {
             drawList->AddRectFilled(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
@@ -477,7 +483,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         auto yStep = actualSize.y / ( sz - 1 );
         if ( onlyTopHalf )
             yStep *= 2;
-        for ( int i = indexMin; i + 1 < indexMax; i++ )
+        for ( int i = 0; i + 1 < sz; i++ )
         {
             const auto color1 = colors[sz - 1 - i].getUInt32();
             const auto color2 = colors[sz - 2 - i].getUInt32();
@@ -683,10 +689,20 @@ void Palette::sortLabels_()
     } );
 }
 
+void Palette::updateLegendLimits_( const Box1f& limits )
+{
+    if ( limits.min == limits.max || limits.min >= parameters_.ranges.back() || limits.max <= parameters_.ranges[0] )
+        parameters_.legendLimits = {};
+    else
+        parameters_.legendLimits = limits;
+
+    updateLegendLimitIndexes_();
+}
+
 void Palette::updateLegendLimitIndexes_()
 {
     const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
-    if ( !parameters_.legendLimits.valid() || parameters_.legendLimits.diagonal() == 0.f )
+    if ( !parameters_.legendLimits.valid() )
     {
         legendLimitIndexes_ = Box1i( 0, colorCount );
         return;
@@ -775,12 +791,10 @@ void Palette::setMaxLabelCount( int val )
 
 void Palette::setLegendLimits( const Box<float>& limits )
 {
-    if ( ( limits.valid() && ( limits.min > parameters_.ranges.back() || limits.max < parameters_.ranges[0] || limits.diagonal() == 0.f ) ) ||
-        limits == parameters_.legendLimits )
+    if ( limits == parameters_.legendLimits )
         return;
 
-    parameters_.legendLimits = limits;
-    updateLegendLimitIndexes_();
+    updateLegendLimits_( limits );
     resetLabels();
 }
 

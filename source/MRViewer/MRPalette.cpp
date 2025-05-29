@@ -457,23 +457,6 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const std::vector<Color>& colors = texture_.pixels;
     const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
 
-    float limitedSize = parameters_.ranges.back() - parameters_.ranges[0];
-    float uMax = 1.f;
-    float uMin = 0.f;
-    if ( parameters_.legendLimits.valid() )
-    {
-        if ( parameters_.legendLimits.max < parameters_.ranges.back() )
-        {
-            uMax = getRelativePos( parameters_.legendLimits.max );
-            limitedSize -= parameters_.ranges.back() - parameters_.legendLimits.max;
-        }
-        if ( parameters_.legendLimits.min > parameters_.ranges[0] )
-        {
-            uMin = getRelativePos( parameters_.legendLimits.min );
-            limitedSize -= parameters_.legendLimits.min - parameters_.ranges[0];
-        }
-    }
-
     if ( texture_.filter == FilterType::Discrete )
     {
         auto yStep = actualSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );

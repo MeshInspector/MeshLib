@@ -688,68 +688,22 @@ void Palette::updateLegendLimits_( const Box1f& limits )
         parameters_.legendLimits = limits;
 
     if ( parameters_.legendLimits.valid() )
-    {
-        relativeLimits_.min = std::clamp( getRelativePos( parameters_.legendLimits.min ), 0.f, 1.f );
-        relativeLimits_.max = std::clamp( getRelativePos( parameters_.legendLimits.max ), 0.f, 1.f );
-    }
+        relativeLimits_ = Box1f( getRelativePos( parameters_.legendLimits.min ), getRelativePos( parameters_.legendLimits.max ) ).intersection( { 0.f, 1.f } );
     else
         relativeLimits_ = { 0.f, 1.f };
 
     updateLegendLimitIndexes_();
-    //updateLegendRanges_();
 }
 
 void Palette::updateLegendLimitIndexes_()
 {
     const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
-    if ( !parameters_.legendLimits.valid() )
-    {
-        legendLimitIndexes_ = Box1i( 0, colorCount );
-        return;
-    }
-
-    if ( parameters_.ranges.size() == 2 )
-    {
-        const float range = parameters_.ranges.back() - parameters_.ranges[0];
-        if ( range <= 0.f )
-        {
-            legendLimitIndexes_ = Box1i( 0, colorCount );
-            return;
-        }
-
-        const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
-        const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
-        legendLimitIndexes_ = Box1i( indexMin, indexMax ).intersection( Box1i( 0, colorCount ) );
-    }
-    else if ( parameters_.ranges.size() == 4 )
-    {
-        const float rangeNeg = parameters_.ranges[1] - parameters_.ranges[0];
-        const float rangeCenter = parameters_.ranges[2] - parameters_.ranges[1];
-        const float rangePos = parameters_.ranges[3] - parameters_.ranges[2];
-
-        if ( parameters_.legendLimits.min < parameters_.ranges[1] && rangeNeg <= 0.f )
-            legendLimitIndexes_.min = 0;
-        else if ( ( parameters_.legendLimits.min >= parameters_.ranges[1] && parameters_.legendLimits.min < parameters_.ranges[2] ) && rangeCenter <= 0.f )
-            legendLimitIndexes_.min = colorCount / 2;
-        else if ( parameters_.legendLimits.min >= parameters_.ranges[2] && rangePos <= 0.f )
-            legendLimitIndexes_.min = colorCount / 2 + 1;
-        else
-            legendLimitIndexes_.min = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
-
-        if ( parameters_.legendLimits.max < parameters_.ranges[1] && rangeNeg <= 0.f )
-            legendLimitIndexes_.max = colorCount / 2;
-        else if ( ( parameters_.legendLimits.max >= parameters_.ranges[1] && parameters_.legendLimits.max < parameters_.ranges[2] ) && rangeCenter <= 0.f )
-            legendLimitIndexes_.max = colorCount / 2 + 1;
-        else if ( parameters_.legendLimits.max >= parameters_.ranges[2] && rangePos <= 0.f )
-            legendLimitIndexes_.max = colorCount;
-        else
-            legendLimitIndexes_.max = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
-
-        legendLimitIndexes_ = legendLimitIndexes_.intersect( Box1i( 0, colorCount ) );
-    }
+    const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
+    const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
+    if ( parameters_.legendLimits.valid() )
+        legendLimitIndexes_ = Box1i( indexMin, indexMax ).intersection( { 0, colorCount } );
     else
-        legendLimitIndexes_ = Box1i( 0, colorCount );
-
+        legendLimitIndexes_ = { 0, colorCount };
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )

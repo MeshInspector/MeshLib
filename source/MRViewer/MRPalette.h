@@ -170,6 +170,7 @@ private:
 
     void updateLegendLimits_( const Box1f& limits );
     void updateLegendLimitIndexes_();
+    void updateLegendRanges_();
 
 
     std::vector<Label> customLabels_;
@@ -193,6 +194,9 @@ private:
     float prevMaxLabelWidth_ = 0.0f;
 
     Box1i legendLimitIndexes_ = Box1i( 0, 7 );
+    std::vector<float> legendRanges_ = { 0.f, 1.f };
+    bool legendLabelsDrawUp_ = true;
+    bool legendLabelsDrawDown_ = true;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

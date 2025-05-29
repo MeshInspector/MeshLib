@@ -248,34 +248,49 @@ void Palette::setZeroCentredLabels_()
         value = std::ceil( value );
         value *= step;
 
+        const float widthHiden = 0.02f;
         // push intermediate values
         while ( value < max )
         {
-            const float pos = 1.f - getRelativePos( value );
-            if ( pos >= posMin && pos <= posMax )
+            const float pos = posMax - ( value - min ) / ( max - min ) * ( posMax - posMin );
+            if ( pos >= posMin + widthHiden && pos <= posMax - widthHiden )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
         }
     };
 
-    if ( parameters_.ranges.size() == 2 )
+    if ( legendRanges_.size() == 2 )
     {
-        labels_.push_back( Label( 1.f, getStringValue( parameters_.ranges[0] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges.back() ) ) );
+        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
+        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[1] ) ) );
 
-        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.02f, 0.98f );
+        fillLabels( legendRanges_[0], legendRanges_[1], 0.f, 1.f );
     }
-    else
+    else if ( legendRanges_.size() == 3 )
     {
         //positions are shifted +/- 0.02f for avoiding overlapping
-        labels_.push_back( Label( 1.f, getStringValue( parameters_.ranges[0] ) ) );
-        labels_.push_back( Label( 0.52f, getStringValue( parameters_.ranges[1] ) ) );
-        labels_.push_back( Label( 0.48f, getStringValue( parameters_.ranges[2] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges[3] ) ) );
+        const float centerLabelPos = legendLabelsDrawDown_ ? 0.96f : 0.04f;
+
+        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
+        labels_.push_back( Label( centerLabelPos, getStringValue( legendRanges_[1] ) ) );
+        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[2] ) ) );
+
+        if ( legendLabelsDrawDown_ )
+            fillLabels( legendRanges_[0], legendRanges_[1], 0.f, 0.96f );
+        else
+            fillLabels( legendRanges_[1], legendRanges_[2], 0.04f, 1.f );
+    }
+    else if ( legendRanges_.size() == 4 )
+    {
+        //positions are shifted +/- 0.02f for avoiding overlapping
+        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
+        labels_.push_back( Label( 0.52f, getStringValue( legendRanges_[1] ) ) );
+        labels_.push_back( Label( 0.48f, getStringValue( legendRanges_[2] ) ) );
+        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[3] ) ) );
 
         //positions are shifted for avoiding overlapping
-        fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.02f, 0.46f );
-        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.54f, 0.98f );
+        fillLabels( legendRanges_[2], legendRanges_[3], 0.f, 0.48f );
+        fillLabels( legendRanges_[0], legendRanges_[1], 0.52f, 1.f );
     }
 
     sortLabels_();
@@ -697,6 +712,7 @@ void Palette::updateLegendLimits_( const Box1f& limits )
         parameters_.legendLimits = limits;
 
     updateLegendLimitIndexes_();
+    updateLegendRanges_();
 }
 
 void Palette::updateLegendLimitIndexes_()
@@ -750,6 +766,40 @@ void Palette::updateLegendLimitIndexes_()
     else
         legendLimitIndexes_ = Box1i( 0, colorCount );
 
+}
+
+void Palette::updateLegendRanges_()
+{
+    legendRanges_.clear();
+
+    if ( !parameters_.legendLimits.valid() || parameters_.legendLimits.min == parameters_.legendLimits.max ||
+        parameters_.legendLimits.min >= parameters_.ranges.back() || parameters_.legendLimits.max <= parameters_.ranges[0] )
+    {
+        legendRanges_ = parameters_.ranges;
+        legendLabelsDrawDown_ = true;
+        legendLabelsDrawUp_ = true;
+        return;
+    }
+
+    if ( parameters_.legendLimits.contains( parameters_.ranges[0] ) )
+        legendRanges_.push_back( parameters_.ranges[0] );
+    else
+        legendRanges_.push_back( parameters_.legendLimits.min );
+
+    if ( parameters_.ranges.size() == 4 )
+    {
+        legendLabelsDrawDown_ = parameters_.legendLimits.contains( parameters_.ranges[1] );
+        if ( legendLabelsDrawDown_ )
+            legendRanges_.push_back( parameters_.ranges[1] );
+        legendLabelsDrawUp_ = parameters_.legendLimits.contains( parameters_.ranges[2] );
+        if ( legendLabelsDrawUp_ )
+            legendRanges_.push_back( parameters_.ranges[2] );
+    }
+
+    if ( parameters_.legendLimits.contains( parameters_.ranges.back() ) )
+        legendRanges_.push_back( parameters_.ranges.back() );
+    else
+        legendRanges_.push_back( parameters_.legendLimits.max );
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )

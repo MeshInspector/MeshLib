@@ -328,7 +328,7 @@ jobs:
             brewpath: /usr/local
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-arm-build
+            instance: [ self-hosted, macos-12, arm64, build ]
             brewpath: /opt/homebrew
     steps:
       - name: Checkout
@@ -525,7 +525,7 @@ jobs:
             instance: macos-13
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-arm-build
+            instance: [ self-hosted, macos-12, arm64, build ]
           - py-version: "3.8"
             py-cmd: "python3.8"
           - py-version: "3.9"

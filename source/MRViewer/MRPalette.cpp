@@ -209,7 +209,7 @@ void Palette::setZeroCentredLabels_()
     useCustomLabels_ = false;
     labels_.clear();
 
-    auto findStep = []( float min, float max )
+    auto findStep = [] (float min, float max)
     {
         const float range = max - min;
 
@@ -241,56 +241,47 @@ void Palette::setZeroCentredLabels_()
         return step;
     };
 
-    auto fillLabels = [&]( float min, float max, float posMin, float posMax )
+    auto relativePos2LimitedRelativePos = [this] ( float relativePos )
     {
-        const float step = findStep( min, max );
+        return ( relativePos - relativeLimits_.min ) / relativeLimits_.diagonal();
+    };
+
+    auto fillLabels = [&, scale = relativeLimits_.diagonal()] ( float min, float max, float posMin, float posMax )
+    {
+        const float step = findStep( min, max ) * relativeLimits_.diagonal();
         float value = min / step;
         value = std::ceil( value );
         value *= step;
 
-        const float widthHiden = 0.02f;
+        const float hidenZone = 0.02f;
         // push intermediate values
         while ( value < max )
         {
-            const float pos = posMax - ( value - min ) / ( max - min ) * ( posMax - posMin );
-            if ( pos >= posMin + widthHiden && pos <= posMax - widthHiden )
+            const float pos = 1.f - relativePos2LimitedRelativePos( getRelativePos( value ) );
+            if ( pos >= posMin + hidenZone && pos <= posMax - hidenZone )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
         }
     };
 
-    if ( legendRanges_.size() == 2 )
+    if ( parameters_.ranges.size() == 2 )
     {
-        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[1] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.f ), getStringValue(parameters_.ranges[0])));
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 1.f ), getStringValue( parameters_.ranges.back() ) ) );
 
-        fillLabels( legendRanges_[0], legendRanges_[1], 0.f, 1.f );
+        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.f, 1.f );
     }
-    else if ( legendRanges_.size() == 3 )
+    else
     {
         //positions are shifted +/- 0.02f for avoiding overlapping
-        const float centerLabelPos = legendLabelsDrawDown_ ? 0.96f : 0.04f;
-
-        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
-        labels_.push_back( Label( centerLabelPos, getStringValue( legendRanges_[1] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[2] ) ) );
-
-        if ( legendLabelsDrawDown_ )
-            fillLabels( legendRanges_[0], legendRanges_[1], 0.f, 0.96f );
-        else
-            fillLabels( legendRanges_[1], legendRanges_[2], 0.04f, 1.f );
-    }
-    else if ( legendRanges_.size() == 4 )
-    {
-        //positions are shifted +/- 0.02f for avoiding overlapping
-        labels_.push_back( Label( 1.f, getStringValue( legendRanges_[0] ) ) );
-        labels_.push_back( Label( 0.52f, getStringValue( legendRanges_[1] ) ) );
-        labels_.push_back( Label( 0.48f, getStringValue( legendRanges_[2] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( legendRanges_[3] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.f ), getStringValue( parameters_.ranges[0] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.5f ) + 0.02f, getStringValue( parameters_.ranges[1] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.5f ) - 0.02f, getStringValue( parameters_.ranges[2] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 1.f ), getStringValue( parameters_.ranges[3] ) ) );
 
         //positions are shifted for avoiding overlapping
-        fillLabels( legendRanges_[2], legendRanges_[3], 0.f, 0.48f );
-        fillLabels( legendRanges_[0], legendRanges_[1], 0.52f, 1.f );
+        fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.f, 1.f - relativePos2LimitedRelativePos( 0.5f ) - 0.02f );
+        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 1.f - relativePos2LimitedRelativePos( 0.5f ) + 0.02f, 1.f );
     }
 
     sortLabels_();
@@ -478,26 +469,22 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     if ( texture_.filter == FilterType::Linear )
     {
-        if ( parameters_.ranges.size() == 2 )
+        const float scale = 1.f / relativeLimits_.diagonal();
+        const float startPos = actualPose.y - actualSize.y * ( 1.f - relativeLimits_.max ) * scale;
+        auto yStep = actualSize.y / ( sz - 1 ) * scale;
+        if ( onlyTopHalf )
+            yStep *= 2;
+        for ( int i = 0; i + 1 < sz; i++ )
         {
-            drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
+            const auto color1 = colors[sz - 1 - i].getUInt32();
+            const auto color2 = colors[sz - 2 - i].getUInt32();
+            drawList->AddRectFilledMultiColor(
+                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
+                startPos + i * yStep },
+                { actualPose.x - style.WindowPadding.x + actualSize.x ,
+                startPos + ( i + 1 ) * yStep },
+                color1, color1, color2, color2 );
         }
-        else
-        {
-            if ( legendLabelsDrawUp_ && legendLabelsDrawDown_ )
-            {
-                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[2], parameters_.ranges[3] }, { legendRanges_[2], legendRanges_[3] }, maxTextSize );
-                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
-            }
-            else if ( legendLabelsDrawUp_ )
-                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[2], parameters_.ranges[3] }, { legendRanges_[1], legendRanges_[2] }, maxTextSize );
-            else if ( legendLabelsDrawDown_ )
-                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[1] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
-            else
-                drawPartColorMap_( actualPose, actualSize, { parameters_.ranges[0], parameters_.ranges[3] }, { legendRanges_[0], legendRanges_[1] }, maxTextSize );
-        }
-
-
     }
 
     ImGui::End();
@@ -700,8 +687,16 @@ void Palette::updateLegendLimits_( const Box1f& limits )
     else
         parameters_.legendLimits = limits;
 
+    if ( parameters_.legendLimits.valid() )
+    {
+        relativeLimits_.min = std::clamp( getRelativePos( parameters_.legendLimits.min ), 0.f, 1.f );
+        relativeLimits_.max = std::clamp( getRelativePos( parameters_.legendLimits.max ), 0.f, 1.f );
+    }
+    else
+        relativeLimits_ = { 0.f, 1.f };
+
     updateLegendLimitIndexes_();
-    updateLegendRanges_();
+    //updateLegendRanges_();
 }
 
 void Palette::updateLegendLimitIndexes_()
@@ -718,13 +713,13 @@ void Palette::updateLegendLimitIndexes_()
         const float range = parameters_.ranges.back() - parameters_.ranges[0];
         if ( range <= 0.f )
         {
-            legendLimitIndexes_ = Box<int>( 0, colorCount );
+            legendLimitIndexes_ = Box1i( 0, colorCount );
             return;
         }
 
         const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
         const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
-        legendLimitIndexes_ = Box<int>( indexMin, indexMax ).intersection( Box1i( 0, colorCount ) );
+        legendLimitIndexes_ = Box1i( indexMin, indexMax ).intersection( Box1i( 0, colorCount ) );
     }
     else if ( parameters_.ranges.size() == 4 )
     {
@@ -755,73 +750,6 @@ void Palette::updateLegendLimitIndexes_()
     else
         legendLimitIndexes_ = Box1i( 0, colorCount );
 
-}
-
-void Palette::updateLegendRanges_()
-{
-    legendRanges_.clear();
-
-    legendLabelsDrawDown_ = false;
-    legendLabelsDrawUp_ = false;
-
-    if ( !parameters_.legendLimits.valid() || parameters_.legendLimits.min == parameters_.legendLimits.max ||
-        parameters_.legendLimits.min >= parameters_.ranges.back() || parameters_.legendLimits.max <= parameters_.ranges[0] )
-    {
-        legendRanges_ = parameters_.ranges;
-        legendLabelsDrawDown_ = true;
-        legendLabelsDrawUp_ = true;
-        return;
-    }
-
-    if ( parameters_.legendLimits.contains( parameters_.ranges[0] ) )
-        legendRanges_.push_back( parameters_.ranges[0] );
-    else
-        legendRanges_.push_back( parameters_.legendLimits.min );
-
-    if ( parameters_.ranges.size() == 4 )
-    {
-        legendLabelsDrawDown_ = parameters_.legendLimits.contains( parameters_.ranges[1] );
-        if ( legendLabelsDrawDown_ )
-            legendRanges_.push_back( parameters_.ranges[1] );
-        legendLabelsDrawUp_ = parameters_.legendLimits.contains( parameters_.ranges[2] );
-        if ( legendLabelsDrawUp_ )
-            legendRanges_.push_back( parameters_.ranges[2] );
-    }
-
-    if ( parameters_.legendLimits.contains( parameters_.ranges.back() ) )
-        legendRanges_.push_back( parameters_.ranges.back() );
-    else
-        legendRanges_.push_back( parameters_.legendLimits.max );
-}
-
-void Palette::drawPartColorMap_( const Vector2f& pos, const Vector2f& size, const Box1f& realRange, const Box1f& rangePart, float maxTextSize )
-{
-    const std::vector<Color>& colors = texture_.pixels;
-    const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
-
-    if ( rangePart.diagonal() == 0.f || realRange.diagonal() == 0.f )
-        return;
-
-    const float scaleFactor = realRange.diagonal() / rangePart.diagonal();
-    const float yShift = realRange.max > rangePart.max ? ( realRange.max - rangePart.max ) / realRange.diagonal() * size.y * scaleFactor : 0.f;
-
-    auto yStep = size.y / ( sz - 1 ) * scaleFactor;
-
-    const auto& style = ImGui::GetStyle();
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    drawList->PushClipRect( pos, pos + size );
-    for ( int i = 0; i + 1 < sz; i++ )
-    {
-        const auto color1 = colors[sz - 1 - i].getUInt32();
-        const auto color2 = colors[sz - 2 - i].getUInt32();
-        drawList->AddRectFilledMultiColor(
-            { pos.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-            pos.y - yShift + i * yStep },
-            { pos.x - style.WindowPadding.x + size.x ,
-            pos.y - yShift + ( i + 1 ) * yStep },
-            color1, color1, color2, color2 );
-    }
-    drawList->PopClipRect();
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )
@@ -861,7 +789,7 @@ void Palette::setMaxLabelCount( int val )
     maxLabelCount_ = val;
 }
 
-void Palette::setLegendLimits( const Box<float>& limits )
+void Palette::setLegendLimits( const Box1f& limits )
 {
     if ( limits == parameters_.legendLimits )
         return;

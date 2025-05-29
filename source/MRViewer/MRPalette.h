@@ -126,7 +126,7 @@ public:
     {
         std::vector<float> ranges = { 0.f, 1.f }; // range limits for palette
         std::vector<Color> baseColors; // palette base colors (need for calculate real colors according discretization)
-        Box<float> legendLimits; // if valid - limit legend range
+        Box1f legendLimits; // if valid - limit legend range
         int discretization = 7; // number of different colors for discrete palette
     };
 
@@ -170,8 +170,6 @@ private:
 
     void updateLegendLimits_( const Box1f& limits );
     void updateLegendLimitIndexes_();
-    void updateLegendRanges_();
-    void drawPartColorMap_( const Vector2f& pos, const Vector2f& size, const Box1f& realRange, const Box1f& rangePart, float maxTextSize );
 
     std::vector<Label> customLabels_;
     std::vector<Label> labels_;
@@ -194,9 +192,7 @@ private:
     float prevMaxLabelWidth_ = 0.0f;
 
     Box1i legendLimitIndexes_ = Box1i( 0, 7 );
-    std::vector<float> legendRanges_ = { 0.f, 1.f };
-    bool legendLabelsDrawUp_ = true;
-    bool legendLabelsDrawDown_ = true;
+    Box1f relativeLimits_ = { 0.f, 1.f };
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

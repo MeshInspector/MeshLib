@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRFinally.h"
 #include "MRPch/MRFmt.h"
+#include "MRNotificationType.h"
 #include "exports.h"
 #include "MRUnits.h"
 #include "MRVectorTraits.h"
@@ -380,10 +381,15 @@ template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
 
+/// returns icons font character for given notification type, and its color
+MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );
+
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
+/// similar to ImGui::TextWrapped but also have styled background and notification type indicator
+MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str, float scaling );
 
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );

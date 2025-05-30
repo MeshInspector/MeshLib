@@ -125,11 +125,9 @@ endif
 
 # ---- MacOS-only vars: [
 ifneq ($(IS_MACOS),)
-HOMEBREW_DIR := /opt/homebrew
-ifeq ($(wildcard $(HOMEBREW_DIR)),)
-# Apparently x86 Macs don't use `/opt/homebrew`, but rather `/usr/local`.
-HOMEBREW_DIR := /usr/local
-endif
+# System-wide Brew installations use different paths on x86 Macs and Arm Macs: `/usr/local` and `/opt/homebrew` respectively.
+# And per-user installations use yet another path, `~/.homebrew`.
+HOMEBREW_DIR := $(call safe_shell,brew --prefix)
 $(info Using homebrew at: $(HOMEBREW_DIR))
 endif
 

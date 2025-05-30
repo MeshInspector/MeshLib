@@ -19,15 +19,19 @@ struct UniteManyMeshesParams
 {
     /// Apply random shift to each mesh, to prevent degenerations on coincident surfaces
     bool useRandomShifts{ false };
+    
     /// Try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces
     /// useful on meshes with many coincident surfaces 
     /// (useRandomShifts used for same issue)
     bool fixDegenerations{ false };
+    
     /// Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
     /// not used if both flags (useRandomShifts,fixDegenerations) are false
     float maxAllowedError{ 1e-5f };
+    
     /// Seed that is used for random shifts
     unsigned int randomShiftsSeed{ 0 };
+    
     /// If set, the bitset will store new faces created by boolean operations
     FaceBitSet* newFaces{ nullptr };
 
@@ -37,6 +41,11 @@ struct UniteManyMeshesParams
 
     /// If set - merges meshes instead of booleaning it if boolean operation fails
     bool mergeOnFail{ false };
+
+    /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
+    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// \warning not recommended in most cases
+    bool forceCut = false;
 
     ProgressCallback progressCb;
 };

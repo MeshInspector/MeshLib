@@ -4,6 +4,14 @@
 #include "MRBox.h"
 #include "MRGTest.h"
 
+#if __has_include(<__msvc_int128.hpp>)
+  #include <__msvc_int128.hpp>
+  // this type is much faster than boost::multiprecision::checked_int128_t but lacks conversion in double and sqrt-function
+  using int128_t = std::_Signed128;
+#else
+  using int128_t = __int128_t;
+#endif
+
 namespace
 {
 // INT_MAX in double for mapping in int range
@@ -13,9 +21,11 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 namespace MR
 {
 
+using Vector3hpFast = Vector3<int128_t>;
+
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    auto vhp = mixed( Vector3hp{ a }, Vector3hp{ b }, Vector3hp{ c } );
+    auto vhp = dot( Vector3hpFast{ a }, Vector3hpFast{ cross( Vector3ll{ b }, Vector3ll{ c } ) } );
     if ( vhp ) return vhp > 0;
 
     auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );
@@ -198,6 +208,24 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
     return Vector3i( Vector3d( abdS * Vector3hp{ ci } + abcS * Vector3hp{ di } ) / double( abcS + abdS ) );
 }
 
+/// https://stackoverflow.com/a/18067292/7325599
+template <class T>
+T divRoundClosest( T n, T d )
+{
+    return ((n < 0) == (d < 0)) ? ((n + d/2)/d) : ((n - d/2)/d);
+}
+
+template <class T>
+Vector3<T> divRoundClosest( const Vector3<T>& n, T d )
+{
+    return
+    {
+        divRoundClosest( n.x, d ),
+        divRoundClosest( n.y, d ),
+        divRoundClosest( n.z, d )
+    };
+}
+
 Vector3f findTriangleSegmentIntersectionPrecise( 
     const Vector3f& a, const Vector3f& b, const Vector3f& c, 
     const Vector3f& d, const Vector3f& e, 
@@ -208,32 +236,32 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     auto ci = converters.toInt( c );
     auto di = converters.toInt( d );
     auto ei = converters.toInt( e );
-    auto abcd = mixed( Vector3hp{ ai - di }, Vector3hp{ bi - di }, Vector3hp{ ci - di } );
+    auto abcd = dot( Vector3hpFast{ ai - di }, Vector3hpFast{ cross( Vector3ll{ bi - di }, Vector3ll{ ci - di } ) } );
     if ( abcd < 0 )
         abcd = -abcd;
-    auto abce = mixed( Vector3hp{ ai - ei }, Vector3hp{ bi - ei }, Vector3hp{ ci - ei } );
+    auto abce = dot( Vector3hpFast{ ai - ei }, Vector3hpFast{ cross( Vector3ll{ bi - ei }, Vector3ll{ ci - ei } ) } );
     if ( abce < 0 )
         abce = -abce;
     auto sum = abcd + abce;
     if ( sum != 0 )
-        return converters.toFloat( Vector3i{ Vector3d( abcd * Vector3hp{ ei } + abce * Vector3hp{ di } ) / double( sum ) } );
+        return converters.toFloat( Vector3i{ divRoundClosest( abcd * Vector3hpFast{ ei } + abce * Vector3hpFast{ di }, sum ) } );
     // rare case when `sum == 0` 
     // suggest finding middle point of edge segment laying inside triangle
-    Vector3hp sumVec;
+    Vector3ll sumVec;
     int numSum = 0;
     if ( auto iABDE = findTwoSegmentsIntersection( ai, bi, di, ei ) )
     {
-        sumVec += Vector3hp{ *iABDE };
+        sumVec += Vector3ll{ *iABDE };
         ++numSum;
     }
     if ( auto iBCDE = findTwoSegmentsIntersection( bi, ci, di, ei ) )
     {
-        sumVec += Vector3hp{ *iBCDE };
+        sumVec += Vector3ll{ *iBCDE };
         ++numSum;
     }
     if ( auto iCADE = findTwoSegmentsIntersection( ci, ai, di, ei ) )
     {
-        sumVec += Vector3hp{ *iCADE };
+        sumVec += Vector3ll{ *iCADE };
         ++numSum;
     }
     if ( numSum > 0 )

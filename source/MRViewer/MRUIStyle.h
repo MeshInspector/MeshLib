@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRFinally.h"
 #include "MRPch/MRFmt.h"
+#include "MRNotificationType.h"
 #include "exports.h"
 #include "MRUnits.h"
 #include "MRVectorTraits.h"
@@ -62,7 +63,7 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
     ImGuiButtonFlags flags = ImGuiButtonFlags_None;
     // flag for buttonEx, which can be disabled
     bool active = true;
-    // button without a gradient, always ative, configurable by an external style
+    // button without a gradient, always active, configurable by an external style
     bool flatBackgroundColor = false;
     // if false - text is to the right
     bool textUnderImage = true;
@@ -93,6 +94,9 @@ struct PlotAxis
     // the format of the text for labels
     VarUnitToStringParams labelFormatParams;
 };
+
+/// returns true if button is pressed in this frame, preserve its further processing in viewer keyboard events system if taken here
+MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 
 /// draw gradient button, which can be disabled (active = false)
 MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
@@ -132,24 +136,26 @@ inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const
     params.flatBackgroundColor = true;
     return buttonIconEx(name, iconSize, text, buttonSize, params );
 }
-// button with a gradient, always ative
+// button with a gradient, always active
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
     return buttonIconEx( name, iconSize, text, buttonSize );
 }
-// button without a gradient, always ative, configurable by an external style
+// button without a gradient, always active, configurable by an external style
 inline bool buttonIconFlatBG( 
     const std::string& name, 
     const Vector2f& iconSize, 
     const std::string& text, 
     const ImVec2& buttonSize,
+    bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None )
 {
     ButtonIconCustomizationParams params;
     params.flatBackgroundColor = true;
     params.forceImguiTextColor = true;
+    params.textUnderImage = textUnderIcon;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
-    return buttonIconEx( name, iconSize, text, buttonSize, params );
+    return buttonIconEx( name, iconSize, text, buttonSize, params ) || checkKey( key );
 }
 /// draw button with icon same logic as radioButton
 /// the colors of the internal style are used
@@ -160,8 +166,12 @@ MRVIEWER_API bool buttonUniqueIcon(
     const ImVec2& buttonSize, 
     int* value, 
     int ownValue,
+    bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None );
 
+
+/// draws checkbox-like toggle (enabled/disabled states)(O=)/(=O)
+MRVIEWER_API bool toggle( const char* label, bool* value );
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );
 /// If `valueOverride` is specified, then the checkbox is disabled and that value is displayed instead of `value`.
@@ -371,10 +381,15 @@ template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
 
+/// returns icons font character for given notification type, and its color
+MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );
+
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
+/// similar to ImGui::TextWrapped but also have styled background and notification type indicator
+MRVIEWER_API void notificationFrame( NotificationType type, const std::string& str, float scaling );
 
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );

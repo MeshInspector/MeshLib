@@ -17,17 +17,6 @@
 #include "MRMesh/MR2to3.h"
 #include "MRPch/MRSpdlog.h"
 
-namespace
-{
-// translation multiplier that limits its maximum value depending on object size
-// the constant duplicates value defined in ImGuiMenu implementation
-constexpr float cMaxTranslationMultiplier = 0xC00;
-
-// special value for screenStartPoint_
-constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
-
-}
-
 namespace MR
 {
 
@@ -109,7 +98,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     }
 
     currentButton_ = button;
-    screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
+    screenStartPoint_ = viewer.mouseController().getMousePos();
 
     auto viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
     viewportStartPointZ_ = viewportStartPoint.z;
@@ -137,8 +126,17 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     scale_ = 1.f;
     currentXf_ = {};
     initialXfs_.clear();
+    connections_.clear();
+    xfChanged_ = false;
     for ( std::shared_ptr<Object>& obj : objects_ )
+    {
         initialXfs_.push_back( obj->worldXf() );
+        connections_.emplace_back( obj->worldXfChangedSignal.connect( [this]
+        {
+            if ( !changingXfFromMouseMove_ )
+                clear_(); // stop mouse dragging if the transformation was changed from outside (e.g. undo)
+        } ) );
+    }
 
     if ( transformMode_ == TransformMode::Rotation || transformMode_ == TransformMode::UniformScale || transformMode_ == TransformMode::NonUniformScale )
     {
@@ -168,11 +166,10 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport();
 
-    if ( screenStartPoint_ != cNoPoint &&
+    if ( !xfChanged_ &&
          ( screenStartPoint_ - viewer.mouseController().getMousePos() ).lengthSq() <
              minDistance() * minDistance() )
-        return true;
-    screenStartPoint_ = cNoPoint;
+        return true; // mouse has moved less than threshold to change objects' transformation
 
     auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
     auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
@@ -234,53 +231,33 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
         currentXf_ = AffineXf3f::translation( worldEndPoint - worldStartPoint_ );
-
-        // Clamp movement
-        Box3f worldBox = getBbox_( objects_ );
-        float minSizeDim = worldBox.valid() ? worldBox.size().length() : 0;
-        if ( minSizeDim == 0 )
-            minSizeDim = 1.f;
-        for ( const AffineXf3f &xf : initialXfs_ )
-            for ( auto i = 0; i < 3; i++ )
-                // ( currentXf_ * initialXf_ ).b[i] must be in -/+ cMaxTranslationMultiplier * minSizeDim
-                currentXf_.b[i] = std::clamp( currentXf_.b[i],
-                     -xf.b[i] - cMaxTranslationMultiplier * minSizeDim,
-                     -xf.b[i] + cMaxTranslationMultiplier * minSizeDim );
     }
 
-    applyCurrentXf_( false );
+    applyCurrentXf_();
 
     return true;
 }
 
 bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 {
-    if ( transformMode_ == TransformMode::None || button != currentButton_ )
+    if ( button != currentButton_ )
         return false;
 
-    if ( screenStartPoint_ != cNoPoint )
-    {
-        clear_();
-        return false;
-    }
-
-    resetXfs_();
-    applyCurrentXf_( true );
-    clear_();
-
-    return true;
+    bool res = transformMode_ != TransformMode::None;
+    cancel();
+    return res;
 }
 
 bool MoveObjectByMouseImpl::isMoving() const
 {
-    return transformMode_ != TransformMode::None && screenStartPoint_ == cNoPoint;
+    return transformMode_ != TransformMode::None && xfChanged_;
 }
 
 void MoveObjectByMouseImpl::cancel()
 {
+    connections_.clear();
     if ( transformMode_ == TransformMode::None )
         return;
-    resetXfs_();
     clear_();
 }
 
@@ -376,6 +353,7 @@ Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>
 
 void MoveObjectByMouseImpl::clear_()
 {
+    xfChanged_ = false;
     transformMode_ = TransformMode::None;
     objects_.clear();
     initialXfs_.clear();
@@ -383,23 +361,20 @@ void MoveObjectByMouseImpl::clear_()
     currentButton_ = MouseButton::NoButton;
 }
 
-void MoveObjectByMouseImpl::applyCurrentXf_( bool history )
+void MoveObjectByMouseImpl::applyCurrentXf_()
 {
-    std::unique_ptr<ScopeHistory> scope = history ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
+    const bool appendHistory = historyEnabled_ && !xfChanged_;
+    std::unique_ptr<ScopeHistory> scope = appendHistory ? std::make_unique<ScopeHistory>( "Move Object" ) : nullptr;
     auto itXf = initialXfs_.begin();
+    changingXfFromMouseMove_ = true;
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
-        if ( history && historyEnabled_ )
-            AppendHistory<ChangeXfAction>( "xf", obj );
+        if ( appendHistory )
+            AppendHistory<ChangeXfAction>( obj->name(), obj );
         obj->setWorldXf( currentXf_ * *itXf++ );
     }
-}
-
-void MoveObjectByMouseImpl::resetXfs_()
-{
-    auto itXf = initialXfs_.begin();
-    for ( std::shared_ptr<Object>& f : objects_ )
-        f->setWorldXf( *itXf++ );
+    changingXfFromMouseMove_ = false;
+    xfChanged_ = true;
 }
 
 void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoints )

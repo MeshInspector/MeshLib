@@ -6,8 +6,8 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRHeapBytes.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRVector.h"
 #include <limits>
-#include <vector>
 
 namespace MR
 {
@@ -16,9 +16,15 @@ template <typename T>
 struct VoxelTraits;
 
 template <typename T>
-struct VoxelTraits<std::vector<T>>
+struct VoxelTraits<Vector<T, VoxelId>>
 {
     using ValueType = T;
+};
+
+template <>
+struct VoxelTraits<VoxelBitSet>
+{
+    using ValueType = bool;
 };
 
 template <typename T>

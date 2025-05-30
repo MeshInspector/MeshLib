@@ -203,9 +203,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         for ( int i = 0; i < list.size(); ++i )
         {
             auto item = schema.items.find( list[i] );
-            if ( item == schema.items.end() )
-                continue;
-            if ( !item->second.item )
+            if ( item == schema.items.end() || !item->second.item )
                 continue;
             checkItem( item->second, t );
             if ( item->second.item->type() == RibbonItemType::ButtonWithDrop )
@@ -217,7 +215,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                     if ( std::dynamic_pointer_cast< LambdaRibbonItem >( dropRibItem ) )
                         continue;
                     auto dropItem = schema.items.find( dropRibItem->name() );
-                    if ( dropItem == schema.items.end() )
+                    if ( dropItem == schema.items.end() || !dropItem->second.item )
                         continue;
                     checkItem( dropItem->second, t );
                 }
@@ -255,36 +253,33 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     } ),
         rawResult.end() );
 
-    std::sort( rawResult.begin(), rawResult.end(), [maxWeight] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [maxWeight, requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
     {
-        if ( a.second.captionWeight <= maxWeight )
-        {
-            if ( b.second.captionWeight <= maxWeight )
-            {
-                if ( a.second.captionWeight < b.second.captionWeight )
-                    return true;
-                else if ( a.second.captionWeight > b.second.captionWeight )
-                    return false;
-                else
-                    return a.second.captionOrderWeight <= b.second.captionOrderWeight;
-            }
-            else
-                return true;
-        }
-        else
-        {
-            if ( b.second.captionWeight <= maxWeight )
-                return false;
-            else
-            {
-                if ( a.second.tooltipWeight < b.second.tooltipWeight )
-                    return true;
-                else if ( a.second.tooltipWeight > b.second.tooltipWeight )
-                    return false;
-                else
-                    return a.second.tooltipOrderWeight <= b.second.tooltipOrderWeight;
-            }
-        }
+        const bool aCaptionWeightCorrect = a.second.captionWeight <= maxWeight;
+        const bool bCaptionWeightCorrect = b.second.captionWeight <= maxWeight;
+
+        // 1 sort priority
+        // the corresponding caption takes precedence over the corresponding tooltip
+        if ( aCaptionWeightCorrect != bCaptionWeightCorrect )
+            return aCaptionWeightCorrect;
+
+        const bool aAvailable = requirementsFunc( a.first.item->item ).empty();
+        const bool bAvailable = requirementsFunc( b.first.item->item ).empty();
+
+        // 2 sort priority
+        // available tool takes precedence over unavailable
+        if ( aAvailable != bAvailable )
+            return aAvailable;
+
+        // 3 sort priority
+        // if both have the correct caption weight, then compare by caption, otherwise compare by tooltip
+        const auto& aWeight = aCaptionWeightCorrect ? a.second.captionWeight : a.second.tooltipWeight;
+        const auto& bWeight = aCaptionWeightCorrect ? b.second.captionWeight : b.second.tooltipWeight;
+        // 4 sort priority
+        // if both have the same weight, then compare by order weight
+        const auto& aOrderWeight = aCaptionWeightCorrect ? a.second.captionOrderWeight : a.second.tooltipOrderWeight;
+        const auto& bOrderWeight = aCaptionWeightCorrect ? b.second.captionOrderWeight : b.second.tooltipOrderWeight;
+        return std::tuple( aWeight, aOrderWeight ) < std::tuple( bWeight, bOrderWeight );
     } );
 
     // filter results with error threshold as 3x minimum caption error 
@@ -304,38 +299,21 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     std::vector<SearchResult> res( rawResult.size() );
     if ( params.weights )
         *params.weights = std::vector<SearchResultWeight>( rawResult.size() );
-    int count = 0;
+    if ( params.captionCount )
+        *params.captionCount = -1;
     for ( int i = 0; i < rawResult.size(); ++i )
     {
         if ( !rawResult[i].first.item )
+        {
+            assert( false );
             continue;
+        }
         res[i] = rawResult[i].first;
-        if ( rawResult[i].second.captionWeight > maxWeight &&
+        if ( params.captionCount && rawResult[i].second.captionWeight > maxWeight &&
             ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
-            count = i;
+            *params.captionCount = i;
         if ( params.weights )
             ( *params.weights )[i] = rawResult[i].second;
-    }
-    if ( params.captionCount )
-        *params.captionCount = count;
-
-    // sort by available - unavailable tools
-    if ( params.requirementsFunc )
-    {
-        std::sort( res.begin(), res.begin() + count, [requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
-        {
-            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
-                return false;
-            else
-                return true;
-        } );
-        std::sort( res.begin() + count, res.end(), [requirementsFunc = params.requirementsFunc] ( const auto& a, const auto& b )
-        {
-            if ( !requirementsFunc( a.item->item ).empty() && requirementsFunc( b.item->item ).empty() )
-                return false;
-            else
-                return true;
-        } );
     }
 
     return res;

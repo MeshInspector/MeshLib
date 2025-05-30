@@ -260,7 +260,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
-    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
 
     StyleParamHolder sh;
@@ -497,7 +497,7 @@ bool buttonIconEx(
         }
         else
         {
-            auto freeYSpace = buttonSize.y - iconSize.y - vecDetail.size() * cFontSize;
+            auto freeYSpace = std::max( 0.0f, buttonSize.y - iconSize.y - vecDetail.size() * cFontSize );
             textYPadding = std::clamp( freeYSpace - 2 * style.FramePadding.y - 1, 0.0f, freeYSpace / 3.0f );
             iconYPadding = textYPadding > style.FramePadding.y ? textYPadding : style.FramePadding.y;
         }
@@ -566,6 +566,7 @@ bool buttonUniqueIcon(
     const ImVec2& buttonSize, 
     int* value, 
     int ownValue,
+    bool textUnderIcon /*= true*/,
     ImGuiKey key /*= ImGuiKey_None*/ )
 {
     StyleParamHolder sh;
@@ -577,13 +578,74 @@ bool buttonUniqueIcon(
     else
     {
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
-        sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+        sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle ) );
     }
-    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize, key ) || checkKey( key );
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize, textUnderIcon, key ) || checkKey( key );
     if ( res )
         value[0] = ownValue;
 
     return res;
+}
+
+bool toggle( const char* label, bool* value )
+{
+    // mostly copy-pasted from ImGui::Checkbox
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiWindow* window = g.CurrentWindow;
+    if ( !window || window->SkipItems || !value )
+        return false;
+    const ImGuiStyle& style = ImGui::GetStyle();
+
+    const auto menu = ImGuiMenu::instance();
+    const float scaling = menu ? menu->menu_scaling() : 1.f;
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
+    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
+
+
+    const ImGuiID id = window->GetID( label );
+    const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
+
+    const float height = ImGui::GetFrameHeight();
+    const float width = 1.8f * height;
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImRect total_bb( pos, ImVec2( pos.x + width + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
+    ImGui::ItemSize( total_bb, style.FramePadding.y );
+    if ( !ImGui::ItemAdd( total_bb, id ) )
+    {
+        IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | ( *v ? ImGuiItemStatusFlags_Checked : 0 ) );
+        return false;
+    }
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior( total_bb, id, &hovered, &held );
+    if ( pressed )
+    {
+        *value = !( *value );
+        ImGui::MarkItemEdited( id );
+    }
+    const ImRect check_bb( pos, ImVec2( pos.x + width, pos.y + height ) );
+
+    // draw toggle instead of checkbox
+    Color bgColor;
+    if ( hovered )
+        bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActiveHovered );
+    else
+        bgColor = ColorTheme::getRibbonColor( *value ? ColorTheme::RibbonColorsType::DialogTabActive : ColorTheme::RibbonColorsType::Borders );
+    Color toggleColor = *value ? Color::white() : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+
+    auto drawList = window->DrawList;
+    const float radius = height * 0.5f;
+    drawList->AddRectFilled( check_bb.Min, check_bb.Max, bgColor.getUInt32(), radius );
+    drawList->AddCircleFilled( pos + ImVec2( *value ? width - radius : radius, radius ), radius - 2 * scaling, toggleColor.getUInt32() );
+
+    ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );
+    if ( g.LogEnabled )
+        ImGui::LogRenderedText( &label_pos, *value ? "[x]" : "[ ]" );
+    if ( label_size.x > 0.0f )
+        ImGui::RenderText( label_pos, label );
+
+    IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | ( *v ? ImGuiItemStatusFlags_Checked : 0 ) );
+    return pressed;
 }
 
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
@@ -599,7 +661,8 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
     if ( !texture )
         return ImGui::Checkbox( label, value );
 
-    sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
+    if ( *value )
+        sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
     sh.addColor( ImGuiCol_CheckMark, Color::white() );
     sh.addVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
     sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
@@ -1763,6 +1826,18 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
     }
 }
 
+const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
+{
+    static constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
+    {
+        std::pair<const char*, ImU32> { "\xef\x81\xaa", 0xff4444e2 },
+        std::pair<const char*, ImU32> { "\xef\x81\xb1", 0xff0092ff },
+        std::pair<const char*, ImU32> { "\xef\x83\xb3", 0xffff831b },
+        std::pair<const char*, ImU32> { "\xef\x8b\xb2", 0xff0092ff }
+    };
+    return notificationParams[int( type )];
+}
+
 void transparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
@@ -1785,6 +1860,45 @@ void transparentTextWrapped( const char* fmt, ... )
     ImGui::TextWrappedV( fmt, args );
     va_end( args );
     ImGui::PopStyleColor();
+}
+
+void notificationFrame( NotificationType type, const std::string& str, float scaling )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+    if ( !drawList )
+        return;
+
+    auto width = ImGui::GetContentRegionAvail().x;
+    Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
+    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x );
+
+    auto pos = ImGui::GetCursorPos();
+    auto sPos = ImGui::GetCursorScreenPos();
+    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ), bgColor.getUInt32(),
+        scaling * StyleConsts::Notification::cTextFrameRounding );
+    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding );
+    transparentTextWrapped( "%s", str.c_str() );
+    
+    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 0.7f;
+        ImGui::PushFont( iconsFont );
+    }
+
+    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y, StyleConsts::Notification::cTextFramePadding.y ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
+    ImGui::Text( "%s", UI::notificationChar( type ).first );
+    ImGui::PopStyleColor();
+
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 1.0f;
+        ImGui::PopFont();
+    }
+
+    ImGui::SetCursorPos( pos );
+    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ) );
 }
 
 void setTooltipIfHovered( const std::string& text, float scaling )

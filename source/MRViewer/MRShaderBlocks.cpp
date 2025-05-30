@@ -19,7 +19,7 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
   in float primitiveIdf0;
   in float primitiveIdf1;
 
-  out highp vec4 color;
+  out highp uvec4 color;
 )";
 
     const std::string primId =
@@ -30,7 +30,11 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
 )";
 
     const std::string tail = R"(
-    color = vec4( uintBitsToFloat(primitiveId),uintBitsToFloat(uniGeomId),0.0,uintBitsToFloat(uint(gl_FragCoord.z * 4294967295.0)));
+    color.r = primitiveId;
+
+    color.g = uniGeomId;
+
+    color.a = uint(gl_FragCoord.z * 4294967295.0);
 )";
 
     return

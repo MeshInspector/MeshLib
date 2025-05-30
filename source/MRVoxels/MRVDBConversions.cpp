@@ -377,13 +377,13 @@ VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, Progr
 // if VoxelsVolume values type is integral, performs mapping from the sourceScale to
 // nonnegative range of target type
 template<typename T, bool Norm>
-Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
+Expected<VoxelsVolumeMinMax<Vector<T,VoxelId>>> vdbVolumeToSimpleVolumeImpl(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> maybeSourceScale = {}, ProgressCallback cb = {} )
 {
     MR_TIMER;
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
-    VoxelsVolumeMinMax<std::vector<T>> res;
+    VoxelsVolumeMinMax<Vector<T,VoxelId>> res;
 
     res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
     Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
@@ -416,16 +416,13 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     res.data.resize( indexer.size() );
 
     if ( !vdbVolume.data )
-    {
-        std::fill( res.data.begin(), res.data.end(), T{} );
         return res;
-    }
 
     tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
-    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
     {
         auto& accessor = accessorPerThread.local();
-        auto coord = indexer.toPos( VoxelId( i ) );
+        auto coord = indexer.toPos( i );
         float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
         if constexpr ( isFloat && !Norm )
             res.data[i] = T( value );

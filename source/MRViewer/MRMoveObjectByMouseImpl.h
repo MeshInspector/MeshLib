@@ -1,9 +1,10 @@
 #pragma once
+#include "MRViewerFwd.h"
+#include "MRMouse.h"
+#include "MRImGui.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRAffineXf3.h"
-#include "MRViewer/MRViewerFwd.h"
-#include "MRViewer/MRMouse.h"
-#include "MRViewer/MRImGui.h"
+#include "MRMesh/MRSignal.h"
 
 namespace MR
 {
@@ -42,7 +43,7 @@ public:
     /// Return false if not active, or object picked but `minDistance` has not yet reached
     MRVIEWER_API bool isMoving() const;
 
-    /// Reset transformation and stop moving the object(s). Does nothing if not moving anything
+    /// Stop moving the object(s). Does nothing if not moving anything
     /// Calling `onMouseUp` is not necessary after this
     /// Should be called when closing plugin etc.
     MRVIEWER_API void cancel();
@@ -106,8 +107,7 @@ private:
 
     void clear_();
 
-    void applyCurrentXf_( bool history );
-    void resetXfs_();
+    void applyCurrentXf_();
 
     void setVisualizeVectors_( std::vector<Vector3f> worldPoints );
 
@@ -115,7 +115,8 @@ private:
     std::vector<AffineXf3f> initialXfs_;
 
     TransformMode transformMode_ = TransformMode::None;
-    Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
+    Vector2i screenStartPoint_; // onMouseDown() writes here the position of mouse when mouse dragging was started
+    bool xfChanged_ = false; // it becomes true when onMouseMove changes transform of objects for the first time and optionally appends history actions
     MouseButton currentButton_ = MouseButton::NoButton;
 
     // Data used to calculate transform
@@ -131,6 +132,10 @@ private:
     bool historyEnabled_{ true };
 
     std::vector<ImVec2> visualizeVectors_;
+
+    // monitors external transform change of objects during mouse moving
+    std::vector<boost::signals2::scoped_connection> connections_;
+    bool changingXfFromMouseMove_{ false }; // true only during setXf called from onMouseMove_
 };
 
 }

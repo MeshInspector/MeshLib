@@ -105,6 +105,8 @@ constexpr float cNotificationWindowPaddingX = 10.f;
 constexpr float cNotificationWindowPaddingY = 10.f;
 constexpr float cWindowsPosY = 95.f;
 constexpr float cHistoryButtonSizeY = 28.0f;
+constexpr Vector2f cTextFramePadding{ 30, 8 };
+constexpr float cTextFrameRounding = 8.0f;
 } // Notification
 
 } // MRStyle

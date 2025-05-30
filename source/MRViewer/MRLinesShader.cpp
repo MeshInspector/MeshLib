@@ -2,6 +2,12 @@
 #include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
+#ifndef __EMSCRIPTEN__
+#define MR_GLSL_VERSION_LINE_330 R"(#version 330)"
+#else
+#define MR_GLSL_VERSION_LINE_330 MR_GLSL_VERSION_LINE
+#endif
+
 namespace
 {
 std::string getLinesVertexShaderBaseArgumentsBlock( bool points )
@@ -41,7 +47,7 @@ std::string getLinesVertexShaderWidthArgumentsBlock()
 
 std::string getLinesShaderHeaderBlock()
 {
-    return MR_GLSL_VERSION_LINE R"(
+    return MR_GLSL_VERSION_LINE_330 R"(
             precision highp float;
             precision highp int;
 )";

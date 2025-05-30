@@ -301,11 +301,11 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
             for ( int y = minVoxel.y; y <= maxVoxel.y; ++y )
                 for ( int x = minVoxel.x; x <= maxVoxel.x; ++x )
                 {
-                    volumePart_.data[x - minVoxel.x + ( y - minVoxel.y ) * newDimX + ( z - minVoxel.z ) * newDimXY] =
+                    volumePart_.data[VoxelId( x - minVoxel.x + ( y - minVoxel.y ) * newDimX + ( z - minVoxel.z ) * newDimXY )] =
                         accessor.getValue( {x,y,z} );
                 }
 
-        auto minmaxIt = std::minmax_element( volumePart_.data.begin(), volumePart_.data.end() );
+        auto minmaxIt = std::minmax_element( begin( volumePart_.data ), end( volumePart_.data ) );
         volumePart_.min = *minmaxIt.first;
         volumePart_.max = *minmaxIt.second;
 
@@ -454,7 +454,7 @@ Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std
 
     std::vector<Mesh> res;
     auto t = simpleMask; // temporary volume for segmentation
-    std::fill( t.data.begin(), t.data.end(), 0.f );
+    std::fill( begin( t.data ), end( t.data ), 0.f );
     for ( size_t i = 0; i < seeds.size(); ++i )
     {
         reportProgress( cb, (float)i / seeds.size() );
@@ -466,9 +466,9 @@ Expected<std::vector<Mesh>> convertToInstances( const VdbVolume& mask, const std
         if ( !maybeSegm )
             return unexpected( maybeSegm.error() );
 
-        std::fill( t.data.begin(), t.data.end(), 0.f );
+        std::fill( begin( t.data ), end( t.data ), 0.f );
         for ( auto j : *maybeSegm )
-            t.data[static_cast<size_t>( j )] = 1.f;
+            t.data[j] = 1.f;
 
         auto grid = simpleVolumeToDenseGrid( t );
         auto mesh = gridToMesh( std::move( grid ), GridToMeshSettings{

@@ -11,7 +11,7 @@
 #endif
 
 #ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 330)"
+#define MR_GLSL_VERSION_LINE R"(#version 150)"
 #else
 #define MR_GLSL_VERSION_LINE R"(#version 300 es)"
 #endif

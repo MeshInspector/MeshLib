@@ -148,7 +148,7 @@ public:
     MRVIEWER_API void setMaxLabelCount( int val );
 
     /// set legend limits. if min > max - limits are disabled
-    MRVIEWER_API void setLegendLimits( const MinMax& limits );
+    MRVIEWER_API void setLegendLimits( const MinMaxf& limits );
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );

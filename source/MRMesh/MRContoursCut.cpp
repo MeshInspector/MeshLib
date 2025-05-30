@@ -529,9 +529,9 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         const auto& curInContour = contours[j];
         curA.closed = curB.closed = isClosed( curInContour );
         if ( outA )
-            curA.intersections.reserve( curInContour.size() );
+            curA.intersections.resize( curInContour.size() );
         if ( outB )
-            curB.intersections.reserve( curInContour.size() );
+            curB.intersections.resize( curInContour.size() );
 
         ParallelFor( curInContour, [&]( size_t i )
         {
@@ -564,11 +564,11 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
                 getCoord( e, inIntersection.isEdgeATriB ), converters );
 
             if ( outA )
-                curA.intersections.push_back( pntA );
+                curA.intersections[i] = pntA;
             if ( outB )
             {
                 pntB.coordinate = rigidB2A ? inverseXf( pntA.coordinate ) : pntA.coordinate;
-                curB.intersections.push_back( pntB );
+                curB.intersections[i] = pntB;
             }
         } );
         if ( outA )

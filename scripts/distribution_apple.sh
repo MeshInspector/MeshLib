@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euxo pipefail
+
 if [ -d "./Library" ];
   then rm -rf "./Library";
 fi

@@ -345,6 +345,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
 template <typename T> using MinMax = Box<T>;
 using MinMaxf = MinMax<float>;
 using MinMaxd = MinMax<double>;
+using MinMaxi = MinMax<int>;
 
 template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;

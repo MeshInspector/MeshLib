@@ -521,50 +521,48 @@ OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& m
     const auto& mainMesh = getMeshAIntersections ? meshA : meshB;
     const auto& otherMesh = getMeshAIntersections ? meshB : meshA;
     res.resize( contours.size() );
-    for ( int j = 0; j < contours.size(); ++j )
+    ParallelFor( contours, [&]( size_t j )
     {
-        auto& curOutContour = res[j].intersections;
+        OneMeshContour cur;
+        auto& curOutContour = cur.intersections;
         const auto& curInContour = contours[j];
-        res[j].closed = isClosed( curInContour );
         curOutContour.resize( curInContour.size() );
 
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, curInContour.size() ),
-            [&]( const tbb::blocked_range<size_t>& range )
+        ParallelFor( curOutContour, [&]( size_t i )
         {
             Vector3f a, b, c, d, e;
-            for ( size_t i = range.begin(); i < range.end(); ++i )
+            const auto& inIntersection = curInContour[i];
+            auto& outIntersection = curOutContour[i];
+
+            bool edgeMain = getMeshAIntersections == inIntersection.isEdgeATriB;
+            if ( edgeMain )
             {
-                const auto& inIntersection = curInContour[i];
-                auto& outIntersection = curOutContour[i];
-
-                bool edgeMain = getMeshAIntersections == inIntersection.isEdgeATriB;
-                if ( edgeMain )
-                {
-                    outIntersection.primitiveId = inIntersection.edge;
-                    otherMesh.getTriPoints( inIntersection.tri, a, b, c );
-                    d = mainMesh.orgPnt( inIntersection.edge );
-                    e = mainMesh.destPnt( inIntersection.edge );
-                }
-                else
-                {
-                    outIntersection.primitiveId = inIntersection.tri;
-                    mainMesh.getTriPoints( inIntersection.tri, a, b, c );
-                    d = otherMesh.orgPnt( inIntersection.edge );
-                    e = otherMesh.destPnt( inIntersection.edge );
-                }
-                // always calculate in mesh A space
-                outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
-                    getCoord( a, !inIntersection.isEdgeATriB ),
-                    getCoord( b, !inIntersection.isEdgeATriB ),
-                    getCoord( c, !inIntersection.isEdgeATriB ),
-                    getCoord( d, inIntersection.isEdgeATriB ),
-                    getCoord( e, inIntersection.isEdgeATriB ), converters );
-
-                if ( !getMeshAIntersections && rigidB2A )
-                    outIntersection.coordinate = inverseXf( outIntersection.coordinate );
+                outIntersection.primitiveId = inIntersection.edge;
+                otherMesh.getTriPoints( inIntersection.tri, a, b, c );
+                d = mainMesh.orgPnt( inIntersection.edge );
+                e = mainMesh.destPnt( inIntersection.edge );
             }
+            else
+            {
+                outIntersection.primitiveId = inIntersection.tri;
+                mainMesh.getTriPoints( inIntersection.tri, a, b, c );
+                d = otherMesh.orgPnt( inIntersection.edge );
+                e = otherMesh.destPnt( inIntersection.edge );
+            }
+            // always calculate in mesh A space
+            outIntersection.coordinate = findTriangleSegmentIntersectionPrecise(
+                getCoord( a, !inIntersection.isEdgeATriB ),
+                getCoord( b, !inIntersection.isEdgeATriB ),
+                getCoord( c, !inIntersection.isEdgeATriB ),
+                getCoord( d, inIntersection.isEdgeATriB ),
+                getCoord( e, inIntersection.isEdgeATriB ), converters );
+
+            if ( !getMeshAIntersections && rigidB2A )
+                outIntersection.coordinate = inverseXf( outIntersection.coordinate );
         } );
-    }
+        cur.closed = isClosed( curInContour );
+        res[j] = std::move( cur );
+    } );
     return res;
 }
 

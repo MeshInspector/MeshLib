@@ -78,33 +78,6 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
-OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours,
-    const AffineXf3f* rigidB2A = nullptr )
-{
-    MR_TIMER;
-    AffineXf3f inverseXf;
-    if ( rigidB2A )
-        inverseXf = rigidB2A->inverse();
-    OneMeshContours bMeshContours = aContours;
-    for ( int j = 0; j < bMeshContours.size(); ++j )
-    {
-        const auto& inCont = contours[j];
-        auto& outCont = bMeshContours[j].intersections;
-        assert( inCont.size() == outCont.size() );
-        ParallelFor( inCont, [&] ( size_t i )
-        {
-            const auto& inInter = inCont[i];
-            auto& outInter = outCont[i];
-            outInter.primitiveId = inInter.isEdgeATriB ?
-                std::variant<FaceId, EdgeId, VertId>( inInter.tri ) :
-                std::variant<FaceId, EdgeId, VertId>( inInter.edge );
-            if ( rigidB2A )
-                outInter.coordinate = inverseXf( outCont[i].coordinate );
-        } );
-    }
-    return bMeshContours;
-}
-
 }
 
 namespace MR
@@ -474,16 +447,16 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         if ( !loneA.empty() && needCutMeshA )
         {
             aSubdivided = true;
-            auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, params.rigidB2A );
-            auto loneIntsAonB = getOneMeshIntersectionContours( meshA, meshB, loneA, false, converters, params.rigidB2A );
+            OneMeshContours loneIntsA, loneIntsAonB;
+            getOneMeshIntersectionContours( meshA, meshB, loneA, &loneIntsA, &loneIntsAonB, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
             subdivideLoneContours( meshA, loneIntsA, &new2orgSubdivideMapA );
         }
         if ( !loneB.empty() && needCutMeshB )
         {
             bSubdivided = true;
-            auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, params.rigidB2A );
-            auto loneIntsBonA = getOneMeshIntersectionContours( meshA, meshB, loneB, true, converters, params.rigidB2A );
+            OneMeshContours loneIntsB, loneIntsBonA;
+            getOneMeshIntersectionContours( meshA, meshB, loneB, &loneIntsBonA, &loneIntsB, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
             subdivideLoneContours( meshB, loneIntsB, &new2orgSubdivideMapB );
         }
@@ -557,15 +530,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     }
     taskGroup.wait();
 
-    if ( needCutMeshA )
-        meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, converters, params.rigidB2A );
-    if ( needCutMeshB )
-    {
-        if ( needCutMeshA )
-            meshBContours = getOtherMeshContoursByHint( meshAContours, contours, params.rigidB2A );
-        else
-            meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters, params.rigidB2A );
-    }
+    if ( needCutMeshA || needCutMeshB )
+        getOneMeshIntersectionContours( meshA, meshB, contours,
+            needCutMeshA ? &meshAContours : nullptr,
+            needCutMeshB ? &meshBContours : nullptr,
+            converters, params.rigidB2A );
 
     if ( mainCb && !mainCb( 0.33f ) )
         return { .errorString = stringOperationCanceled() };

@@ -1,12 +1,11 @@
 #pragma once
-
 #include "MRViewerFwd.h"
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRExpected.h"
 #include "MRViewer/MRImGui.h"
-#include "MRMesh/MRBox.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -126,7 +125,7 @@ public:
     {
         std::vector<float> ranges = { 0.f, 1.f }; // range limits for palette
         std::vector<Color> baseColors; // palette base colors (need for calculate real colors according discretization)
-        Box1f legendLimits; // if valid - limit legend range
+        MinMaxf legendLimits; // if valid - limit legend range
         int discretization = 7; // number of different colors for discrete palette
     };
 
@@ -149,7 +148,7 @@ public:
     MRVIEWER_API void setMaxLabelCount( int val );
 
     /// set legend limits. if min > max - limits are disabled
-    MRVIEWER_API void setLegendLimits( const Box1f& limits );
+    MRVIEWER_API void setLegendLimits( const MinMax& limits );
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
@@ -168,7 +167,7 @@ private:
 
     void sortLabels_();
 
-    void updateLegendLimits_( const Box1f& limits );
+    void updateLegendLimits_( const MinMaxf& limits );
     void updateLegendLimitIndexes_();
 
     std::vector<Label> customLabels_;
@@ -191,8 +190,8 @@ private:
 
     float prevMaxLabelWidth_ = 0.0f;
 
-    Box1i legendLimitIndexes_ = Box1i( 0, 7 );
-    Box1f relativeLimits_ = { 0.f, 1.f };
+    MinMaxi legendLimitIndexes_ = { 0, 7 };
+    MinMaxf relativeLimits_ = { 0.f, 1.f };
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

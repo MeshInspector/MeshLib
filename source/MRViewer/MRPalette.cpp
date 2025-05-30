@@ -9,6 +9,7 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -680,7 +681,7 @@ void Palette::sortLabels_()
     } );
 }
 
-void Palette::updateLegendLimits_( const Box1f& limits )
+void Palette::updateLegendLimits_( const MinMaxf& limits )
 {
     if ( limits.min == limits.max || limits.min >= parameters_.ranges.back() || limits.max <= parameters_.ranges[0] )
         parameters_.legendLimits = {};
@@ -688,7 +689,7 @@ void Palette::updateLegendLimits_( const Box1f& limits )
         parameters_.legendLimits = limits;
 
     if ( parameters_.legendLimits.valid() )
-        relativeLimits_ = Box1f( getRelativePos( parameters_.legendLimits.min ), getRelativePos( parameters_.legendLimits.max ) ).intersection( { 0.f, 1.f } );
+        relativeLimits_ = MinMaxf( getRelativePos( parameters_.legendLimits.min ), getRelativePos( parameters_.legendLimits.max ) ).intersection( { 0.f, 1.f } );
     else
         relativeLimits_ = { 0.f, 1.f };
 
@@ -701,7 +702,7 @@ void Palette::updateLegendLimitIndexes_()
     const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
     const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
     if ( parameters_.legendLimits.valid() )
-        legendLimitIndexes_ = Box1i( indexMin, indexMax ).intersection( { 0, colorCount } );
+        legendLimitIndexes_ = MinMaxi( indexMin, indexMax ).intersection( { 0, colorCount } );
     else
         legendLimitIndexes_ = { 0, colorCount };
 }
@@ -743,7 +744,7 @@ void Palette::setMaxLabelCount( int val )
     maxLabelCount_ = val;
 }
 
-void Palette::setLegendLimits( const Box1f& limits )
+void Palette::setLegendLimits( const MinMaxf& limits )
 {
     if ( limits == parameters_.legendLimits )
         return;

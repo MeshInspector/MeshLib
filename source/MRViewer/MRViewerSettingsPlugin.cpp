@@ -272,6 +272,14 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     drawThemeSelector_( menuScaling );
 
+    ImGui::SetNextItemWidth( 200.0f * menuScaling );
+    UI::drag<RatioUnit>( "UI Scale", tempUserScaling_, 0.01f, 0.5f, 4.0f );
+    if ( ImGui::IsItemDeactivatedAfterEdit() )
+    {
+        viewer->getMenuPlugin()->setUserScaling( tempUserScaling_ );
+        tempUserScaling_ = viewer->getMenuPlugin()->getUserScaling();
+    }
+
     bool savedDialogsBackUp = viewer->getMenuPlugin()->isSavedDialogPositionsEnabled();
     bool savedDialogsVal = savedDialogsBackUp;
     UI::checkbox( "Save Tool Window Positions", &savedDialogsVal );
@@ -1284,6 +1292,7 @@ void ViewerSettingsPlugin::updateDialog_()
     orderedTab_ = TabType::Count;
     updateThemes();
 
+    tempUserScaling_ = viewer->getMenuPlugin()->getUserScaling();
     spaceMouseParams_ = viewer->getSpaceMouseParameters();
     touchpadParameters_ = viewer->getTouchpadParameters();
 #if defined(_WIN32) || defined(__APPLE__)

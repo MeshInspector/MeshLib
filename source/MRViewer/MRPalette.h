@@ -6,6 +6,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRExpected.h"
 #include "MRViewer/MRImGui.h"
+#include "MRMesh/MRBox.h"
 #include <algorithm>
 #include <filesystem>
 

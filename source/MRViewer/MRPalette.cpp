@@ -9,7 +9,6 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 

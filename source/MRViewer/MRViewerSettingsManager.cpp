@@ -29,6 +29,7 @@ const std::string cFlatShadingParamKey = "flatShading"; // Legacy
 const std::string cShadingModeParamKey = "defaultMeshShading";
 const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
 const std::string cGLPickRadiusParamKey = "glPickRadius";
+const std::string cUserUIScaleKey = "userUIScale";
 const std::string cColorThemeParamKey = "colorTheme";
 const std::string cSceneControlParamKey = "sceneControls";
 const std::string cTopPanelPinnedKey = "topPanelPinned";
@@ -156,7 +157,10 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     }
 
     if ( auto menu = viewer.getMenuPlugin() )
+    {
         menu->enableSavedDialogPositions( Defaults::saveDialogPositions );
+        menu->setUserScaling( 1.0f );
+    }
 
     if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
     {
@@ -222,7 +226,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
 
     if ( auto menu = viewer.getMenuPlugin() )
+    {
         menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, Defaults::saveDialogPositions ) ) );
+        menu->setUserScaling( cfg.getJsonValue( cUserUIScaleKey, 1.0f ).asFloat() );
+    }
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
@@ -531,7 +538,10 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
 
     if ( auto menu = viewer.getMenuPlugin() )
+    {
         saveInt( cEnableSavedDialogPositions, menu->isSavedDialogPositionsEnabled() );
+        cfg.setJsonValue( cUserUIScaleKey, menu->getUserScaling() );
+    }
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )

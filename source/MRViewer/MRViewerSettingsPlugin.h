@@ -100,6 +100,7 @@ private:
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };
     bool gpuOverridesMSAA_{ false };
+    float tempUserScaling_{ 1.0f };
 
     Vector4f backgroundColor_;
 

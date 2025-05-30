@@ -273,7 +273,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     drawThemeSelector_( menuScaling );
 
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
-    UI::drag<RatioUnit>( "UI Additional Scale", tempUserScaling_, 0.01f, 0.5f, 4.0f );
+    UI::drag<RatioUnit>( "UI Scale", tempUserScaling_, 0.01f, 0.5f, 4.0f );
     if ( ImGui::IsItemDeactivatedAfterEdit() )
     {
         viewer->getMenuPlugin()->setUserScaling( tempUserScaling_ );

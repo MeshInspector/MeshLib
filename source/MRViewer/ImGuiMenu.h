@@ -211,9 +211,9 @@ public:
 
   MRVIEWER_API float menu_scaling() const;
 
-  // returns additional UI scaling modifier specified by user
+  // returns UI scaling modifier specified by user
   float getUserScaling() const { return userScaling_; }
-  // sets additional UI scaling modifier specified by user
+  // sets UI scaling modifier specified by user
   MRVIEWER_API void setUserScaling( float scaling );
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;

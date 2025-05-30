@@ -45,5 +45,10 @@ MROneMeshContours* mrGetOneMeshIntersectionContours( const MRMesh* meshA_, const
         .toInt = *auto_cast( converters_->toInt ),
         .toFloat = *auto_cast( converters_->toFloat ),
     };
-    RETURN_NEW( getOneMeshIntersectionContours( meshA, meshB, contours, getMeshAIntersections, converters, rigidB2A ) );
+    OneMeshContours res;
+    getOneMeshIntersectionContours( meshA, meshB, contours,
+        getMeshAIntersections ? &res : nullptr,
+        getMeshAIntersections ? nullptr : &res,
+        converters, rigidB2A );
+    RETURN_NEW( res );
 }

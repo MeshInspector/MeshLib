@@ -1871,6 +1871,7 @@ edges should be already cut */
 void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemovedFacesInfo& removedFaces, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
 
+    MR_TIMER;
     auto fixOrphan = [&]( EdgeId e, FaceId oldF )
     {
         if ( mesh.topology.left( e ).valid() ||
@@ -2119,6 +2120,7 @@ void cutEdgesIntoPieces( Mesh& mesh,
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 {
+    MR_TIMER;
     new2OldMap.resize( topology.lastValidFace() + 1 );
     for ( auto f : topology.getValidFaces() )
         new2OldMap[f] = f;
@@ -2129,6 +2131,7 @@ void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult& preRes,
                                const FullRemovedFacesInfo& oldFaces )
 {
+    MR_TIMER;
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
     EdgeBitSet visited( topology.edgeSize() );
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
@@ -2160,7 +2163,7 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params )
 {
     MR_TIMER;
-    MR_WRITER( mesh );
+    mesh.invalidateCaches();
     CutMeshResult res;
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
@@ -2169,6 +2172,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     if ( params.new2oldEdgesMap )
     {
+        Timer t( "new2oldEdgesMap" );
         for ( int i = 0; i < preRes.paths.size(); ++i )
         {
             for ( int j = 0; j < preRes.paths[i].size(); ++j )
@@ -2186,6 +2190,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         return res;
 
     // find one edge for every hole to fill
+    Timer t( "find edge per hole" );
     HashSet<EdgeId> allHoleEdges;
     struct HoleDesc
     {
@@ -2221,8 +2226,9 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
                 addHoleDesc( path[edgeId].sym(), oldf );
         }
     }
+
     // prepare in parallel the plan to fill every contour
-    Timer t( "get TriangulateContourPlans" );
+    t.restart( "get TriangulateContourPlans" );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, holeRepresentativeEdges.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
     {

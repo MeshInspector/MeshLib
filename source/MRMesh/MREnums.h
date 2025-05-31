@@ -66,4 +66,15 @@ enum class UseAABBTree : char
     YesIfAlreadyConstructed, // AABB-tree of the mesh will be used if it was previously constructed and available, and will not be used otherwise
 };
 
+/// the algorithm to compute approximately geodesic path
+enum class GeodesicPathApprox : char
+{
+    /// compute edge-only path by building it from start and end simultaneously
+    DijkstraBiDir,
+    /// compute edge-only path using A*-search algorithm
+    DijkstraAStar,
+    /// use Fast Marching algorithm
+    FastMarching
+};
+
 } //namespace MR

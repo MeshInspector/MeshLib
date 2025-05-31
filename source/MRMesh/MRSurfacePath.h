@@ -2,6 +2,7 @@
 
 #include "MRExpected.h"
 #include "MRMeshTriPoint.h"
+#include "MREnums.h"
 #include <vector>
 #include <string>
 
@@ -35,17 +36,6 @@ MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart &
     const MeshTriPoint & start, const MeshTriPoint & end, 
     int maxGeodesicIters = 5, ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
     const VertBitSet* vertRegion = nullptr, VertScalars * outSurfaceDistances = nullptr );
-
-/// the algorithm to compute approximately geodesic path
-enum class GeodesicPathApprox : char
-{
-    /// compute edge-only path by building it from start and end simultaneously
-    DijkstraBiDir,
-    /// compute edge-only path using A*-search algorithm
-    DijkstraAStar,
-    /// use Fast Marching algorithm
-    FastMarching
-};
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// It is the same as calling computeGeodesicPathApprox() then reducePath()

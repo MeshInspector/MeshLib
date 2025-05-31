@@ -1,7 +1,5 @@
 #pragma once
 
-#include "MRVector3.h"
-#include "MRId.h"
 #include "MRBitSet.h"
 #include "MRAffineXf3.h"
 #include "MROneMeshContours.h"

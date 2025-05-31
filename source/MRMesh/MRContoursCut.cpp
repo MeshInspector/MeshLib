@@ -463,157 +463,6 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
     };
 }
 
-} //anonymous namespace
-
-Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings )
-{
-    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints,
-        [isoValue] ( int )
-    {
-        return isoValue;
-    }, searchSettings );
-}
-
-Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
-    const std::function<float( int )>& offsetAtPoint, SearchPathSettings searchSettings )
-{
-    if ( !offsetAtPoint )
-    {
-        assert( false );
-        return {};
-    }
-    MinMaxf mmOffset;
-    for ( int i = 0; i < meshTriPoints.size(); ++i )
-        mmOffset.include( std::abs( offsetAtPoint( i ) ) );
-
-    std::vector<int> pivotIndices; // only used if offset is variable
-    auto initCutContourRes = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings, mmOffset.min == mmOffset.max ? nullptr : &pivotIndices );
-    if ( !initCutContourRes.has_value() )
-        return unexpected( initCutContourRes.error() );
-
-    OneMeshContours initCutContoursVec = OneMeshContours{ std::move( *initCutContourRes ) };
-
-    if ( mmOffset.min == 0.0f && mmOffset.max == 0.0f )
-        return initCutContoursVec;
-
-    Mesh meshAfterCut = mesh;
-    NewEdgesMap nEM;
-    // .forceFillMode = CutMeshParameters::ForceFill::All
-    // because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
-
-    const auto& initCutContours = initCutContoursVec[0];
-
-    // setup start vertices
-    VertBitSet startVertices( meshAfterCut.topology.lastValidVert() + 1 );
-    HashMap<VertId, float> startVerticesValues; // only used if offset is variable
-    std::vector<float> sumLength; // only used if offset is variable
-    struct InterInfo
-    {
-        float length{ 0.0f };
-        int startPivot{ -1 };
-        int endPivot{ -1 };
-    };
-    std::vector<InterInfo> singleSegmentInfo; // only used if offset is variable
-    if ( !pivotIndices.empty() ) // if offset is variable
-    {
-        sumLength.resize( pivotIndices.size(), 0.0f );
-        singleSegmentInfo.resize( initCutContours.intersections.size() );
-        int startPivot = 0;
-        int endPivot = 0;
-        while ( pivotIndices[startPivot] == -1 )
-            startPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
-        while ( pivotIndices[endPivot] == -1 )
-            endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
-        bool lastSegment = false;
-        for ( int i = 0; i < initCutContours.intersections.size(); ++i )
-        {
-            if ( !lastSegment && pivotIndices[endPivot] <= i )
-            {
-                startPivot = endPivot;
-                endPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
-                while ( pivotIndices[endPivot] == -1 )
-                    endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
-                if ( endPivot < startPivot )
-                    lastSegment = true;
-            }
-            float length = 0.0f;
-            if ( pivotIndices[startPivot] != i )
-            {
-                int prevI = ( i - 1 + int( singleSegmentInfo.size() ) ) % int( singleSegmentInfo.size() );
-                length = ( initCutContours.intersections[i].coordinate - initCutContours.intersections[prevI].coordinate ).length();
-            }
-            singleSegmentInfo[i].length += length;
-            singleSegmentInfo[i].startPivot = startPivot;
-            singleSegmentInfo[i].endPivot = endPivot;
-            sumLength[startPivot] += length;
-        }
-    }
-    VertId currentId = mesh.topology.lastValidVert() + 1;
-    for ( int i = 0; i < initCutContours.intersections.size(); ++i )
-    {
-        const auto inter = initCutContours.intersections[i];
-        VertId interVertId;
-        if ( inter.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
-            interVertId = std::get<VertId>( inter.primitiveId );
-        else
-            interVertId = currentId++;
-        startVertices.set( interVertId );
-        if ( !pivotIndices.empty() ) // if offset is variable
-        {
-            auto curSumLength = sumLength[singleSegmentInfo[i].startPivot];
-            float ratio = curSumLength > 0.0f ? singleSegmentInfo[i].length / curSumLength : 0.5f;
-            float offsetValue = ( 1.0f - ratio ) * offsetAtPoint( singleSegmentInfo[i].startPivot ) + ratio * offsetAtPoint( singleSegmentInfo[i].endPivot );
-            startVerticesValues[interVertId] = mmOffset.max - offsetValue;
-        }
-    }
-
-    // calculate isolines
-    VertScalars distances;
-    if ( pivotIndices.empty() ) // if offset is static
-        distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
-    else
-        distances = computeSurfaceDistances( meshAfterCut, startVerticesValues, FLT_MAX );
-    auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
-
-    OneMeshContours res;
-    res.resize( isoLines.size() );
-    for ( int i = 0; i < isoLines.size(); ++i )
-    {
-        const auto& isoLineI = isoLines[i];
-        auto& resI = res[i];
-        resI.closed = true;
-        resI.intersections.resize( isoLineI.size() );
-        ParallelFor( resI.intersections, [&] ( size_t j )
-        {
-            const auto& mep = isoLineI[j];
-            auto& inter = resI.intersections[j];
-
-            inter.coordinate = meshAfterCut.edgePoint( mep );
-
-            auto newUE = mep.e.undirected();
-            if ( newUE < mesh.topology.undirectedEdgeSize() )
-                inter.primitiveId = mep.e;
-            else
-            {
-                if ( nEM.splitEdges.test( newUE ) )
-                {
-                    auto oldE = EdgeId( nEM.map[newUE] );
-                    if ( mep.e.odd() )
-                        oldE = oldE.sym();
-                    inter.primitiveId = oldE;
-                }
-                else
-                {
-                    inter.primitiveId = FaceId( nEM.map[newUE] );
-                }
-            }
-        } );
-        resI.intersections.back() = resI.intersections.front();
-    }
-    return res;
-}
-
 // sets left face of given edge invalid and saves info about its old left ring
 void invalidateFace( MeshTopology& topology, FullRemovedFacesInfo& removedFaceInfo, int contId, int interId, EdgeId leftEdge, size_t oldEdgesSize )
 {
@@ -1195,6 +1044,157 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
         }
     }
     return badFacesBS;
+}
+
+} //anonymous namespace
+
+Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings )
+{
+    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints,
+        [isoValue] ( int )
+    {
+        return isoValue;
+    }, searchSettings );
+}
+
+Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+    const std::function<float( int )>& offsetAtPoint, SearchPathSettings searchSettings )
+{
+    if ( !offsetAtPoint )
+    {
+        assert( false );
+        return {};
+    }
+    MinMaxf mmOffset;
+    for ( int i = 0; i < meshTriPoints.size(); ++i )
+        mmOffset.include( std::abs( offsetAtPoint( i ) ) );
+
+    std::vector<int> pivotIndices; // only used if offset is variable
+    auto initCutContourRes = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings, mmOffset.min == mmOffset.max ? nullptr : &pivotIndices );
+    if ( !initCutContourRes.has_value() )
+        return unexpected( initCutContourRes.error() );
+
+    OneMeshContours initCutContoursVec = OneMeshContours{ std::move( *initCutContourRes ) };
+
+    if ( mmOffset.min == 0.0f && mmOffset.max == 0.0f )
+        return initCutContoursVec;
+
+    Mesh meshAfterCut = mesh;
+    NewEdgesMap nEM;
+    // .forceFillMode = CutMeshParameters::ForceFill::All
+    // because we don't really care about intermediate mesh quality
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
+
+    const auto& initCutContours = initCutContoursVec[0];
+
+    // setup start vertices
+    VertBitSet startVertices( meshAfterCut.topology.lastValidVert() + 1 );
+    HashMap<VertId, float> startVerticesValues; // only used if offset is variable
+    std::vector<float> sumLength; // only used if offset is variable
+    struct InterInfo
+    {
+        float length{ 0.0f };
+        int startPivot{ -1 };
+        int endPivot{ -1 };
+    };
+    std::vector<InterInfo> singleSegmentInfo; // only used if offset is variable
+    if ( !pivotIndices.empty() ) // if offset is variable
+    {
+        sumLength.resize( pivotIndices.size(), 0.0f );
+        singleSegmentInfo.resize( initCutContours.intersections.size() );
+        int startPivot = 0;
+        int endPivot = 0;
+        while ( pivotIndices[startPivot] == -1 )
+            startPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
+        while ( pivotIndices[endPivot] == -1 )
+            endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
+        bool lastSegment = false;
+        for ( int i = 0; i < initCutContours.intersections.size(); ++i )
+        {
+            if ( !lastSegment && pivotIndices[endPivot] <= i )
+            {
+                startPivot = endPivot;
+                endPivot = ( startPivot + 1 ) % int( pivotIndices.size() );
+                while ( pivotIndices[endPivot] == -1 )
+                    endPivot = ( endPivot + 1 ) % int( pivotIndices.size() );
+                if ( endPivot < startPivot )
+                    lastSegment = true;
+            }
+            float length = 0.0f;
+            if ( pivotIndices[startPivot] != i )
+            {
+                int prevI = ( i - 1 + int( singleSegmentInfo.size() ) ) % int( singleSegmentInfo.size() );
+                length = ( initCutContours.intersections[i].coordinate - initCutContours.intersections[prevI].coordinate ).length();
+            }
+            singleSegmentInfo[i].length += length;
+            singleSegmentInfo[i].startPivot = startPivot;
+            singleSegmentInfo[i].endPivot = endPivot;
+            sumLength[startPivot] += length;
+        }
+    }
+    VertId currentId = mesh.topology.lastValidVert() + 1;
+    for ( int i = 0; i < initCutContours.intersections.size(); ++i )
+    {
+        const auto inter = initCutContours.intersections[i];
+        VertId interVertId;
+        if ( inter.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
+            interVertId = std::get<VertId>( inter.primitiveId );
+        else
+            interVertId = currentId++;
+        startVertices.set( interVertId );
+        if ( !pivotIndices.empty() ) // if offset is variable
+        {
+            auto curSumLength = sumLength[singleSegmentInfo[i].startPivot];
+            float ratio = curSumLength > 0.0f ? singleSegmentInfo[i].length / curSumLength : 0.5f;
+            float offsetValue = ( 1.0f - ratio ) * offsetAtPoint( singleSegmentInfo[i].startPivot ) + ratio * offsetAtPoint( singleSegmentInfo[i].endPivot );
+            startVerticesValues[interVertId] = mmOffset.max - offsetValue;
+        }
+    }
+
+    // calculate isolines
+    VertScalars distances;
+    if ( pivotIndices.empty() ) // if offset is static
+        distances = computeSurfaceDistances( meshAfterCut, startVertices, FLT_MAX );
+    else
+        distances = computeSurfaceDistances( meshAfterCut, startVerticesValues, FLT_MAX );
+    auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
+
+    OneMeshContours res;
+    res.resize( isoLines.size() );
+    for ( int i = 0; i < isoLines.size(); ++i )
+    {
+        const auto& isoLineI = isoLines[i];
+        auto& resI = res[i];
+        resI.closed = true;
+        resI.intersections.resize( isoLineI.size() );
+        ParallelFor( resI.intersections, [&] ( size_t j )
+        {
+            const auto& mep = isoLineI[j];
+            auto& inter = resI.intersections[j];
+
+            inter.coordinate = meshAfterCut.edgePoint( mep );
+
+            auto newUE = mep.e.undirected();
+            if ( newUE < mesh.topology.undirectedEdgeSize() )
+                inter.primitiveId = mep.e;
+            else
+            {
+                if ( nEM.splitEdges.test( newUE ) )
+                {
+                    auto oldE = EdgeId( nEM.map[newUE] );
+                    if ( mep.e.odd() )
+                        oldE = oldE.sym();
+                    inter.primitiveId = oldE;
+                }
+                else
+                {
+                    inter.primitiveId = FaceId( nEM.map[newUE] );
+                }
+            }
+        } );
+        resI.intersections.back() = resI.intersections.front();
+    }
+    return res;
 }
 
 CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params )

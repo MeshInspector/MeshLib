@@ -10,6 +10,449 @@
 namespace MR
 {
 
+namespace
+{
+
+enum class CenterInterType
+{
+    Common, // result of centerInter should be inserted as is
+    VertsAreSame, // three points (prev center next) are the same vertex (only one of them should be inserted)
+    SameEdgesClosePos // three points have close positions so only one (inside face intersection) is inserted, not to break float based sorting
+};
+
+// `centralIntersection` function extension for cases when one of (or both) `prev` `next` is (are) in face
+// `centralIntersection` - function to get information about mesh tri point intersection between two surfaces paths and process it correctly
+std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh, const OneMeshIntersection& prev, const MeshTriPoint& curr, const OneMeshIntersection& next )
+{
+    auto optMeshEdgePoint = curr.onEdge( mesh.topology );
+    if ( !optMeshEdgePoint ) // curr on face
+    {
+#ifndef NDEBUG
+        if ( prev.primitiveId.index() == OneMeshIntersection::Face )
+        {
+            assert( std::get<FaceId>( prev.primitiveId ) == mesh.topology.left( curr.e ) );
+        }
+        if ( next.primitiveId.index() == OneMeshIntersection::Face )
+        {
+            assert( std::get<FaceId>( next.primitiveId ) == mesh.topology.left( curr.e ) );
+        }
+#endif
+        return OneMeshIntersection{ mesh.topology.left( curr.e ),mesh.triPoint( curr ) };
+    }
+    else
+    {
+        auto v = curr.inVertex( mesh.topology );
+        if ( v ) // curr in vertex
+        {
+            if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
+            {
+                auto pV = std::get<VertId>( prev.primitiveId );
+                if ( pV == v )
+                    return {};
+            }
+            if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
+            {
+                auto nV = std::get<VertId>( next.primitiveId );
+                if ( nV == v )
+                    return {};
+            }
+            return OneMeshIntersection{ v,mesh.points[v] };
+        }
+
+        auto e = optMeshEdgePoint.e;
+
+        // only need that prev and next are on different sides of curr
+        if ( prev.primitiveId.index() == OneMeshIntersection::Face )
+        {
+            auto pFId = std::get<FaceId>( prev.primitiveId );
+            if ( mesh.topology.right( e ) != pFId )
+            {
+                e = e.sym(); // orient correct to be consistent with path
+                assert( mesh.topology.right( e ) == pFId );
+            }
+
+            if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
+            {
+                auto nVId = std::get<VertId>( next.primitiveId );
+                if ( mesh.topology.dest( mesh.topology.next( e ) ) != nVId )
+                {
+#ifndef NDEBUG
+                    VertId pV[3];
+                    mesh.topology.getTriVerts( pFId, pV );
+                    assert( nVId == pV[0] || nVId == pV[1] || nVId == pV[2] );
+#endif
+                    return {};
+                }
+                else
+                {
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
+                }
+            }
+            else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
+            {
+                auto nEUId = std::get<EdgeId>( next.primitiveId ).undirected();
+                if ( mesh.topology.next( e ).undirected() != nEUId &&
+                     mesh.topology.prev( e.sym() ).undirected() != nEUId )
+                {
+                    assert( nEUId == e.undirected() || nEUId == mesh.topology.prev( e ).undirected() || nEUId == mesh.topology.next( e.sym() ).undirected() );
+                    return {};
+                }
+                else
+                {
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
+                }
+            }
+            else // if face
+            {
+                auto nFId = std::get<FaceId>( next.primitiveId );
+                if ( pFId == nFId )
+                {
+                    return {};
+                }
+                else
+                {
+                    assert( nFId == mesh.topology.left( e ) );
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
+                }
+            }
+        }
+        else // if next == face and prev is not face, symetric
+        {
+            auto nFId = std::get<FaceId>( next.primitiveId );
+            if ( mesh.topology.left( e ) != nFId )
+            {
+                e = e.sym();
+                assert( mesh.topology.left( e ) == nFId );
+            }
+
+            if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
+            {
+                auto pVId = std::get<VertId>( prev.primitiveId );
+                if ( mesh.topology.dest( mesh.topology.prev( e ) ) != pVId )
+                {
+#ifndef NDEBUG
+                    VertId nV[3];
+                    mesh.topology.getTriVerts( nFId, nV );
+                    assert( pVId == nV[0] || pVId == nV[1] || pVId == nV[2] );
+#endif
+                    return {};
+                }
+                else
+                {
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
+                }
+
+            }
+            else // if edge
+            {
+                auto pEUId = std::get<EdgeId>( prev.primitiveId ).undirected();
+                if ( mesh.topology.prev( e ).undirected() != pEUId &&
+                     mesh.topology.next(e.sym() ).undirected() != pEUId )
+                {
+                    assert( pEUId == e.undirected() || pEUId == mesh.topology.next( e ).undirected() || pEUId == mesh.topology.prev( e.sym() ).undirected() );
+                    return {};
+                }
+                else
+                {
+                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
+                }
+            }
+        }
+    }
+}
+
+// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
+FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+{
+    auto mtpEdgeRep = mtp.onEdge( topology );
+    if ( !mtpEdgeRep )
+        return topology.left( mtp.e );
+
+    if ( topology.dest( eid ) == vid )
+        eid = eid.sym();
+
+    auto mtpVertRep = mtp.inVertex( topology );
+    if ( mtpVertRep.valid() )
+    {
+        if ( topology.dest( topology.next( eid ) ) == mtpVertRep )
+            return topology.left( eid );
+        else if ( topology.dest( topology.prev( eid ) ) == mtpVertRep )
+            return topology.right( eid );
+    }
+    else
+    {
+        auto mtpEUndir = mtpEdgeRep.e.undirected();
+        if ( topology.next( eid ).undirected() == mtpEUndir )
+            return topology.left( eid );
+        else if ( topology.prev( eid ).undirected() == mtpEUndir )
+            return topology.right( eid );
+
+        eid = eid.sym();
+        if ( topology.next( eid ).undirected() == mtpEUndir )
+            return topology.left( eid );
+        else if ( topology.prev( eid ).undirected() == mtpEUndir )
+            return topology.right( eid );
+    }
+    return topology.left( mtp.e );
+}
+
+// function to get information about mesh tri point intersection between two surfaces paths
+// and process it correctly
+std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const OneMeshIntersection& prev, const MeshTriPoint& curr, const OneMeshIntersection& next,
+                                                float closeEdgeEps,
+                                                CenterInterType& type )
+{
+    MR_TIMER;
+    type = CenterInterType::Common;
+    if ( prev.primitiveId.index() == OneMeshIntersection::Face || next.primitiveId.index() == OneMeshIntersection::Face )
+        return centralIntersectionForFaces( mesh, prev, curr, next );
+
+    const auto& topology = mesh.topology;
+    if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
+    {
+        auto pVId = std::get<VertId>( prev.primitiveId );
+        if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
+        {
+            auto nVId = std::get<VertId>( next.primitiveId );
+            if ( nVId == pVId )
+            {
+                type = CenterInterType::VertsAreSame;
+                return {};
+            }
+            for ( auto e : orgRing( topology, pVId ) )
+            {
+                if ( topology.dest( e ) == nVId )
+                    return {};
+            }
+        }
+        else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
+        {
+            auto nEId = std::get<EdgeId>( next.primitiveId );
+            if ( topology.dest( topology.prev( nEId ) ) == pVId ) // correct orientation
+                return {};
+            if ( topology.dest( topology.next( nEId ) ) == pVId ) // incorrect orientation
+                return {};
+            if ( topology.dest( nEId ) == pVId || topology.org( nEId ) == pVId )
+                return OneMeshIntersection{findSharedFace(topology,pVId,nEId,curr),mesh.triPoint( curr )};
+        }
+        else
+        {
+            assert( false );
+        }
+
+        auto edgeOp = curr.onEdge( topology );
+        assert( edgeOp );
+        auto vid = curr.inVertex( topology );
+        if ( vid.valid() )
+            return OneMeshIntersection{vid,mesh.points[vid]};
+        if ( topology.dest( topology.prev( edgeOp.e ) ) == pVId )
+            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
+        else
+            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
+    }
+    else if ( prev.primitiveId.index() == OneMeshIntersection::Edge )
+    {
+        auto pEId = std::get<EdgeId>( prev.primitiveId );
+        if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
+        {
+            auto nVId = std::get<VertId>( next.primitiveId );
+            if ( topology.dest( topology.next( pEId ) ) == nVId )
+                return {};
+            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
+            {
+                assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
+                return OneMeshIntersection{ findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr ) };
+            }
+        }
+        else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
+        {
+            auto nEId = std::get<EdgeId>( next.primitiveId );
+            if ( nEId.undirected() == pEId.undirected() )
+            {
+                FaceId currF = findSharedFace( mesh.topology, mesh.topology.dest( nEId ), nEId, curr );
+                assert( currF );
+                auto coordDif = ( next.coordinate - prev.coordinate ).length();
+                if ( coordDif < closeEdgeEps )
+                {
+                    type = CenterInterType::SameEdgesClosePos;
+                    if ( currF == topology.left( nEId ) )
+                        currF = topology.right( nEId );
+                    else if ( currF == topology.right( nEId ) )
+                        currF = topology.left( nEId );
+                }
+                return OneMeshIntersection{currF,mesh.triPoint( curr )};
+            }
+
+            // consistent orientation:
+            // topology.next( pEId ) == nEId || topology.prev( pEId.sym() ) == nEId.sym()
+            //
+            // not consistent orientation:
+            // it means that one of `prev` or `next` are form original MeshTriPoints vector - orientation should be fixed when this MeshTriPoint will be `curr` in this function
+            // all mesh tri points will be curr in this function once so, output orientation should be correct
+            if ( topology.next( pEId ).undirected() == nEId.undirected() ||
+                 topology.prev( pEId.sym() ).undirected() == nEId.sym().undirected() )
+            {
+                // orientation is consistent or `next` orientation can be wrong
+                auto edgeOp = curr.onEdge( topology );
+                if ( edgeOp )
+                    return {};
+                return OneMeshIntersection{topology.left( curr.e ),mesh.triPoint( curr )};
+            }
+            else if ( topology.prev( pEId ).undirected() == nEId.undirected() ||
+                      topology.next( pEId.sym() ).undirected() == nEId.sym().undirected() )
+            {
+                // `prev` orientation is wrong (rare case, only seen with first intersection only)
+                auto edgeOp = curr.onEdge( topology );
+                if ( edgeOp )
+                    return {};
+                return OneMeshIntersection{ topology.left( curr.e ),mesh.triPoint( curr ) };
+            }
+            // else statement means that `prev` and `next` do not share face
+            // only correct `curr` position is on the edge that share one face with `prev` and other face with `next`
+        }
+        else
+        {
+            assert( false );
+        }
+
+        auto edgeOp = curr.onEdge( topology );
+        assert( edgeOp );
+        auto vid = curr.inVertex( topology );
+        if ( vid.valid() )
+            return OneMeshIntersection{vid,mesh.points[vid]};
+        if ( topology.prev( edgeOp.e ) == pEId || topology.next( edgeOp.e.sym() ) == pEId.sym() )
+            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
+        else
+            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
+    }
+    else
+    {
+        assert( false );
+    }
+    return {};
+}
+
+OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTriPoint& mtp )
+{
+    OneMeshIntersection res;
+    res.coordinate = mesh.triPoint( mtp );
+    auto e = mtp.onEdge( mesh.topology );
+    if ( e )
+    {
+        auto v = mtp.inVertex( mesh.topology );
+        if ( v )
+            res.primitiveId = v;
+        else
+            res.primitiveId = e.e;
+    }
+    else
+        res.primitiveId = mesh.topology.left( mtp.e );
+    return res;
+}
+
+// this function orient intersected edges to start from left part of path and end on right, also remove duplicates
+SurfacePath formatSurfacePath( const MeshTopology& topology, const  SurfacePath& path )
+{
+    MR_TIMER;
+    SurfacePath res;
+    res.reserve( path.size() );
+    VertId prevVId, vId, nextVId;
+    UndirectedEdgeId prevUEId,uEId;
+    // this cycle leaves only unique intersections removing duplicates
+    for ( int i = 0; i < path.size(); ++i )
+    {
+        vId = path[i].inVertex( topology );
+        if ( vId.valid() && vId == prevVId )
+            continue;
+
+        if ( !vId.valid() && i != 0 && i != int( path.size() ) - 1 && topology.isBdEdge(path[i].e) )
+            continue;
+
+        uEId = path[i].e.undirected();
+        if ( !vId.valid() && prevUEId == uEId )
+            continue;
+
+        if ( vId.valid() )
+        {
+            while ( !res.empty() && !res.back().inVertex() )
+            {
+                EdgeId dirE = res.back().e;
+                if ( topology.org( dirE ) == vId || topology.dest( dirE ) == vId )
+                    res.pop_back();
+                else
+                    break;
+            }
+        }
+        else if ( !vId.valid() && prevVId.valid() )
+        {
+            EdgeId dirE( uEId );
+            if ( topology.org( dirE ) == prevVId || topology.dest( dirE ) == prevVId )
+            {
+                continue;
+            }
+        }
+
+        res.push_back( path[i] );
+        prevVId = vId;
+        prevUEId = vId.valid() ? UndirectedEdgeId{} : uEId;
+    }
+
+    if ( res.size() < 2 )
+        return res;
+
+    int i = 0;
+    for ( i = 0; i < res.size(); ++i )
+        if ( !res[i].inVertex() )
+            break;
+
+    if ( i == 0 )
+    {
+        auto& firstInter = res[i];
+        const auto& nextInter = res[i + 1];
+        nextVId = nextInter.inVertex( topology );
+        if ( !nextVId.valid() )
+        {
+            auto nextUndirected = nextInter.e.undirected();
+            if ( nextUndirected != topology.next( firstInter.e ).undirected() &&
+                 nextUndirected != topology.prev( firstInter.e.sym() ).undirected() )
+                firstInter = firstInter.sym();
+        }
+        else
+        {
+            if ( topology.dest( topology.next( firstInter.e ) ) != nextVId &&
+                 topology.dest( topology.prev( firstInter.e.sym() ) ) != nextVId )
+                firstInter = firstInter.sym();
+        }
+        ++i;
+    }
+    for ( ; i < res.size(); ++i )
+    {
+        const auto& prevInter = res[i - 1];
+        auto& inter = res[i];
+        if ( inter.inVertex() )
+            continue;
+
+        prevVId = prevInter.inVertex( topology );
+        if ( prevVId.valid() )
+        {
+            if ( topology.dest( topology.prev( inter.e ) ) != prevVId &&
+                 topology.dest( topology.next( inter.e.sym() ) ) != prevVId )
+                inter = inter.sym();
+        }
+        else
+        {
+            auto prevUndirected = prevInter.e.undirected();
+            if ( prevUndirected != topology.prev( inter.e ).undirected() &&
+                 prevUndirected != topology.next( inter.e.sym() ).undirected() )
+                inter = inter.sym();
+        }
+    }
+
+    return res;
+}
+
+} //anonymous namespace
+
 void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
@@ -181,343 +624,6 @@ Contours3f extractMeshContours( const OneMeshContours& meshContours )
         for ( int j = 0; j < resI.size(); ++j )
             resI[j] = imputI[j].coordinate;
     }
-    return res;
-}
-
-// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
-FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
-{
-    auto mtpEdgeRep = mtp.onEdge( topology );
-    if ( !mtpEdgeRep )
-        return topology.left( mtp.e );
-
-    if ( topology.dest( eid ) == vid )
-        eid = eid.sym();
-
-    auto mtpVertRep = mtp.inVertex( topology );
-    if ( mtpVertRep.valid() )
-    {
-        if ( topology.dest( topology.next( eid ) ) == mtpVertRep )
-            return topology.left( eid );
-        else if ( topology.dest( topology.prev( eid ) ) == mtpVertRep )
-            return topology.right( eid );
-    }
-    else
-    {
-        auto mtpEUndir = mtpEdgeRep.e.undirected();
-        if ( topology.next( eid ).undirected() == mtpEUndir )
-            return topology.left( eid );
-        else if ( topology.prev( eid ).undirected() == mtpEUndir )
-            return topology.right( eid );
-
-        eid = eid.sym();
-        if ( topology.next( eid ).undirected() == mtpEUndir )
-            return topology.left( eid );
-        else if ( topology.prev( eid ).undirected() == mtpEUndir )
-            return topology.right( eid );
-    }
-    return topology.left( mtp.e );
-}
-
-enum class CenterInterType
-{
-    Common, // result of centerInter should be inserted as is
-    VertsAreSame, // three points (prev center next) are the same vertex (only one of them should be inserted)
-    SameEdgesClosePos // three points have close positions so only one (inside face intersection) is inserted, not to break float based sorting
-};
-
-// `centralIntersection` function extension for cases when one of (or both) `prev` `next` is (are) in face
-// `centralIntersection` - function to get information about mesh tri point intersection between two surfaces paths and process it correctly
-std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh, const OneMeshIntersection& prev, const MeshTriPoint& curr, const OneMeshIntersection& next )
-{
-    auto optMeshEdgePoint = curr.onEdge( mesh.topology );
-    if ( !optMeshEdgePoint ) // curr on face
-    {
-#ifndef NDEBUG
-        if ( prev.primitiveId.index() == OneMeshIntersection::Face )
-        {
-            assert( std::get<FaceId>( prev.primitiveId ) == mesh.topology.left( curr.e ) );
-        }
-        if ( next.primitiveId.index() == OneMeshIntersection::Face )
-        {
-            assert( std::get<FaceId>( next.primitiveId ) == mesh.topology.left( curr.e ) );
-        }
-#endif
-        return OneMeshIntersection{ mesh.topology.left( curr.e ),mesh.triPoint( curr ) };
-    }
-    else
-    {
-        auto v = curr.inVertex( mesh.topology );
-        if ( v ) // curr in vertex
-        {
-            if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
-            {
-                auto pV = std::get<VertId>( prev.primitiveId );
-                if ( pV == v )
-                    return {};
-            }
-            if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
-            {
-                auto nV = std::get<VertId>( next.primitiveId );
-                if ( nV == v )
-                    return {};
-            }
-            return OneMeshIntersection{ v,mesh.points[v] };
-        }
-
-        auto e = optMeshEdgePoint.e;
-
-        // only need that prev and next are on different sides of curr
-        if ( prev.primitiveId.index() == OneMeshIntersection::Face )
-        {
-            auto pFId = std::get<FaceId>( prev.primitiveId );
-            if ( mesh.topology.right( e ) != pFId )
-            {
-                e = e.sym(); // orient correct to be consistent with path
-                assert( mesh.topology.right( e ) == pFId );
-            }
-
-            if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
-            {
-                auto nVId = std::get<VertId>( next.primitiveId );
-                if ( mesh.topology.dest( mesh.topology.next( e ) ) != nVId )
-                {
-#ifndef NDEBUG
-                    VertId pV[3];
-                    mesh.topology.getTriVerts( pFId, pV );
-                    assert( nVId == pV[0] || nVId == pV[1] || nVId == pV[2] );
-#endif
-                    return {};
-                }
-                else
-                {
-                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
-                }
-            }
-            else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
-            {
-                auto nEUId = std::get<EdgeId>( next.primitiveId ).undirected();
-                if ( mesh.topology.next( e ).undirected() != nEUId &&
-                     mesh.topology.prev( e.sym() ).undirected() != nEUId )
-                {
-                    assert( nEUId == e.undirected() || nEUId == mesh.topology.prev( e ).undirected() || nEUId == mesh.topology.next( e.sym() ).undirected() );
-                    return {};
-                }
-                else
-                {
-                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
-                }
-            }
-            else // if face
-            {
-                auto nFId = std::get<FaceId>( next.primitiveId );
-                if ( pFId == nFId )
-                {
-                    return {};
-                }
-                else
-                {
-                    assert( nFId == mesh.topology.left( e ) );
-                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
-                }
-            }
-        }
-        else // if next == face and prev is not face, symetric
-        {
-            auto nFId = std::get<FaceId>( next.primitiveId );
-            if ( mesh.topology.left( e ) != nFId )
-            {
-                e = e.sym();
-                assert( mesh.topology.left( e ) == nFId );
-            }
-
-            if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
-            {
-                auto pVId = std::get<VertId>( prev.primitiveId );
-                if ( mesh.topology.dest( mesh.topology.prev( e ) ) != pVId )
-                {
-#ifndef NDEBUG
-                    VertId nV[3];
-                    mesh.topology.getTriVerts( nFId, nV );
-                    assert( pVId == nV[0] || pVId == nV[1] || pVId == nV[2] );
-#endif
-                    return {};
-                }
-                else
-                {
-                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
-                }
-
-            }
-            else // if edge
-            {
-                auto pEUId = std::get<EdgeId>( prev.primitiveId ).undirected();
-                if ( mesh.topology.prev( e ).undirected() != pEUId &&
-                     mesh.topology.next(e.sym() ).undirected() != pEUId )
-                {
-                    assert( pEUId == e.undirected() || pEUId == mesh.topology.next( e ).undirected() || pEUId == mesh.topology.prev( e.sym() ).undirected() );
-                    return {};
-                }
-                else
-                {
-                    return OneMeshIntersection{ e,mesh.edgePoint( optMeshEdgePoint ) };
-                }
-            }
-        }
-    }
-}
-
-// function to get information about mesh tri point intersection between two surfaces paths
-// and process it correctly
-std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const OneMeshIntersection& prev, const MeshTriPoint& curr, const OneMeshIntersection& next,
-                                                float closeEdgeEps,
-                                                CenterInterType& type )
-{
-    MR_TIMER;
-    type = CenterInterType::Common;
-    if ( prev.primitiveId.index() == OneMeshIntersection::Face || next.primitiveId.index() == OneMeshIntersection::Face )
-        return centralIntersectionForFaces( mesh, prev, curr, next );
-
-    const auto& topology = mesh.topology;
-    if ( prev.primitiveId.index() == OneMeshIntersection::Vertex )
-    {
-        auto pVId = std::get<VertId>( prev.primitiveId );
-        if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
-        {
-            auto nVId = std::get<VertId>( next.primitiveId );
-            if ( nVId == pVId )
-            {
-                type = CenterInterType::VertsAreSame;
-                return {};
-            }
-            for ( auto e : orgRing( topology, pVId ) )
-            {
-                if ( topology.dest( e ) == nVId )
-                    return {};
-            }
-        }
-        else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
-        {
-            auto nEId = std::get<EdgeId>( next.primitiveId );
-            if ( topology.dest( topology.prev( nEId ) ) == pVId ) // correct orientation
-                return {};
-            if ( topology.dest( topology.next( nEId ) ) == pVId ) // incorrect orientation
-                return {};
-            if ( topology.dest( nEId ) == pVId || topology.org( nEId ) == pVId )
-                return OneMeshIntersection{findSharedFace(topology,pVId,nEId,curr),mesh.triPoint( curr )};
-        }
-        else
-        {
-            assert( false );
-        }
-
-        auto edgeOp = curr.onEdge( topology );
-        assert( edgeOp );
-        auto vid = curr.inVertex( topology );
-        if ( vid.valid() )
-            return OneMeshIntersection{vid,mesh.points[vid]};
-        if ( topology.dest( topology.prev( edgeOp.e ) ) == pVId )
-            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
-        else
-            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
-    }
-    else if ( prev.primitiveId.index() == OneMeshIntersection::Edge )
-    {
-        auto pEId = std::get<EdgeId>( prev.primitiveId );
-        if ( next.primitiveId.index() == OneMeshIntersection::Vertex )
-        {
-            auto nVId = std::get<VertId>( next.primitiveId );
-            if ( topology.dest( topology.next( pEId ) ) == nVId )
-                return {};
-            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
-            {
-                assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
-                return OneMeshIntersection{ findSharedFace( topology,nVId,pEId,curr ),mesh.triPoint( curr ) };
-            }
-        }
-        else if ( next.primitiveId.index() == OneMeshIntersection::Edge )
-        {
-            auto nEId = std::get<EdgeId>( next.primitiveId );
-            if ( nEId.undirected() == pEId.undirected() )
-            {
-                FaceId currF = findSharedFace( mesh.topology, mesh.topology.dest( nEId ), nEId, curr );
-                assert( currF );
-                auto coordDif = ( next.coordinate - prev.coordinate ).length();
-                if ( coordDif < closeEdgeEps )
-                {
-                    type = CenterInterType::SameEdgesClosePos;
-                    if ( currF == topology.left( nEId ) )
-                        currF = topology.right( nEId );
-                    else if ( currF == topology.right( nEId ) )
-                        currF = topology.left( nEId );
-                }
-                return OneMeshIntersection{currF,mesh.triPoint( curr )};
-            }
-
-            // consistent orientation:
-            // topology.next( pEId ) == nEId || topology.prev( pEId.sym() ) == nEId.sym()
-            //
-            // not consistent orientation:
-            // it means that one of `prev` or `next` are form original MeshTriPoints vector - orientation should be fixed when this MeshTriPoint will be `curr` in this function
-            // all mesh tri points will be curr in this function once so, output orientation should be correct
-            if ( topology.next( pEId ).undirected() == nEId.undirected() ||
-                 topology.prev( pEId.sym() ).undirected() == nEId.sym().undirected() )
-            {
-                // orientation is consistent or `next` orientation can be wrong
-                auto edgeOp = curr.onEdge( topology );
-                if ( edgeOp )
-                    return {};
-                return OneMeshIntersection{topology.left( curr.e ),mesh.triPoint( curr )};
-            }
-            else if ( topology.prev( pEId ).undirected() == nEId.undirected() ||
-                      topology.next( pEId.sym() ).undirected() == nEId.sym().undirected() )
-            {
-                // `prev` orientation is wrong (rare case, only seen with first intersection only)
-                auto edgeOp = curr.onEdge( topology );
-                if ( edgeOp )
-                    return {};
-                return OneMeshIntersection{ topology.left( curr.e ),mesh.triPoint( curr ) };
-            }
-            // else statement means that `prev` and `next` do not share face
-            // only correct `curr` position is on the edge that share one face with `prev` and other face with `next`
-        }
-        else
-        {
-            assert( false );
-        }
-
-        auto edgeOp = curr.onEdge( topology );
-        assert( edgeOp );
-        auto vid = curr.inVertex( topology );
-        if ( vid.valid() )
-            return OneMeshIntersection{vid,mesh.points[vid]};
-        if ( topology.prev( edgeOp.e ) == pEId || topology.next( edgeOp.e.sym() ) == pEId.sym() )
-            return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
-        else
-            return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};
-    }
-    else
-    {
-        assert( false );
-    }
-    return {};
-}
-
-OneMeshIntersection intersectionFromMeshTriPoint( const Mesh& mesh, const MeshTriPoint& mtp )
-{
-    OneMeshIntersection res;
-    res.coordinate = mesh.triPoint( mtp );
-    auto e = mtp.onEdge( mesh.topology );
-    if ( e )
-    {
-        auto v = mtp.inVertex( mesh.topology );
-        if ( v )
-            res.primitiveId = v;
-        else
-            res.primitiveId = e.e;
-    }
-    else
-        res.primitiveId = mesh.topology.left( mtp.e );
     return res;
 }
 
@@ -823,107 +929,6 @@ OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, co
     if ( res.intersections.front().primitiveId == res.intersections.back().primitiveId &&
          res.intersections.front().coordinate == res.intersections.back().coordinate )
         res.closed = true;
-
-    return res;
-}
-
-// this function orient intersected edges to start from left part of path and end on right, also remove duplicates
-SurfacePath formatSurfacePath( const MeshTopology& topology, const  SurfacePath& path )
-{
-    MR_TIMER;
-    SurfacePath res;
-    res.reserve( path.size() );
-    VertId prevVId, vId, nextVId;
-    UndirectedEdgeId prevUEId,uEId;
-    // this cycle leaves only unique intersections removing duplicates
-    for ( int i = 0; i < path.size(); ++i )
-    {
-        vId = path[i].inVertex( topology );
-        if ( vId.valid() && vId == prevVId )
-            continue;
-
-        if ( !vId.valid() && i != 0 && i != int( path.size() ) - 1 && topology.isBdEdge(path[i].e) )
-            continue;
-
-        uEId = path[i].e.undirected();
-        if ( !vId.valid() && prevUEId == uEId )
-            continue;
-
-        if ( vId.valid() )
-        {
-            while ( !res.empty() && !res.back().inVertex() )
-            {
-                EdgeId dirE = res.back().e;
-                if ( topology.org( dirE ) == vId || topology.dest( dirE ) == vId )
-                    res.pop_back();
-                else
-                    break;
-            }
-        }
-        else if ( !vId.valid() && prevVId.valid() )
-        {
-            EdgeId dirE( uEId );
-            if ( topology.org( dirE ) == prevVId || topology.dest( dirE ) == prevVId )
-            {
-                continue;
-            }
-        }
-
-        res.push_back( path[i] );
-        prevVId = vId;
-        prevUEId = vId.valid() ? UndirectedEdgeId{} : uEId;
-    }
-
-    if ( res.size() < 2 )
-        return res;
-
-    int i = 0;
-    for ( i = 0; i < res.size(); ++i )
-        if ( !res[i].inVertex() )
-            break;
-
-    if ( i == 0 )
-    {
-        auto& firstInter = res[i];
-        const auto& nextInter = res[i + 1];
-        nextVId = nextInter.inVertex( topology );
-        if ( !nextVId.valid() )
-        {
-            auto nextUndirected = nextInter.e.undirected();
-            if ( nextUndirected != topology.next( firstInter.e ).undirected() &&
-                 nextUndirected != topology.prev( firstInter.e.sym() ).undirected() )
-                firstInter = firstInter.sym();
-        }
-        else
-        {
-            if ( topology.dest( topology.next( firstInter.e ) ) != nextVId &&
-                 topology.dest( topology.prev( firstInter.e.sym() ) ) != nextVId )
-                firstInter = firstInter.sym();
-        }
-        ++i;
-    }
-    for ( ; i < res.size(); ++i )
-    {
-        const auto& prevInter = res[i - 1];
-        auto& inter = res[i];
-        if ( inter.inVertex() )
-            continue;
-
-        prevVId = prevInter.inVertex( topology );
-        if ( prevVId.valid() )
-        {
-            if ( topology.dest( topology.prev( inter.e ) ) != prevVId &&
-                 topology.dest( topology.next( inter.e.sym() ) ) != prevVId )
-                inter = inter.sym();
-        }
-        else
-        {
-            auto prevUndirected = prevInter.e.undirected();
-            if ( prevUndirected != topology.prev( inter.e ).undirected() &&
-                 prevUndirected != topology.next( inter.e.sym() ).undirected() )
-                inter = inter.sym();
-        }
-    }
 
     return res;
 }

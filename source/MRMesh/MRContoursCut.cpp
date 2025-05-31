@@ -7,8 +7,6 @@
 #include "MRRingIterator.h"
 #include "MRMeshFillHole.h"
 #include "MRTimer.h"
-#include "MRPrecisePredicates3.h"
-#include "MRSurfacePath.h"
 #include "MRMeshBuilder.h"
 #include "MRBox.h"
 #include "MRFillContour.h"

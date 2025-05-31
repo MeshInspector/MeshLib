@@ -6,6 +6,7 @@
 #include "MRRingIterator.h"
 #include "MRBox.h"
 #include "MRSurfacePath.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

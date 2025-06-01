@@ -58,11 +58,13 @@ void Palette::setBaseColors( const std::vector<Color>& colors )
 void Palette::setRangeMinMax( float min, float max )
 {
     setRangeLimits_( { min, max } );
+    resetLabels();
 }
 
 void Palette::setRangeMinMaxNegPos( float minNeg, float maxNeg, float minPos, float maxPos )
 {
     setRangeLimits_( { minNeg, maxNeg, minPos, maxPos } );
+    resetLabels();
 }
 
 void Palette::setRangeLimits_( const std::vector<float>& ranges )
@@ -87,8 +89,10 @@ void Palette::setRangeLimits_( const std::vector<float>& ranges )
 
     const bool needUpdateColors = ranges.size() != parameters_.ranges.size();
     parameters_.ranges = ranges;
+
     if ( needUpdateColors )
         updateDiscretizatedColors_();
+    updateLegendLimits_( parameters_.legendLimits );
     resetLabels();
 }
 
@@ -205,7 +209,7 @@ void Palette::setZeroCentredLabels_()
     useCustomLabels_ = false;
     labels_.clear();
 
-    auto findStep = []( float min, float max )
+    auto findStep = [] (float min, float max)
     {
         const float range = max - min;
 
@@ -237,18 +241,24 @@ void Palette::setZeroCentredLabels_()
         return step;
     };
 
-    auto fillLabels = [&]( float min, float max, float posMin, float posMax )
+    auto relativePos2LimitedRelativePos = [this] ( float relativePos )
     {
-        const float step = findStep( min, max );
+        return ( relativePos - relativeLimits_.min ) / relativeLimits_.diagonal();
+    };
+
+    auto fillLabels = [&] ( float min, float max, float posMin, float posMax )
+    {
+        const float step = findStep( min, max ) * relativeLimits_.diagonal();
         float value = min / step;
         value = std::ceil( value );
         value *= step;
 
+        const float hidenZone = 0.02f;
         // push intermediate values
         while ( value < max )
         {
-            const float pos = 1.f - getRelativePos( value );
-            if ( pos >= posMin && pos <= posMax )
+            const float pos = 1.f - relativePos2LimitedRelativePos( getRelativePos( value ) );
+            if ( pos >= posMin + hidenZone && pos <= posMax - hidenZone )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
         }
@@ -256,22 +266,22 @@ void Palette::setZeroCentredLabels_()
 
     if ( parameters_.ranges.size() == 2 )
     {
-        labels_.push_back( Label( 1.f, getStringValue( parameters_.ranges[0] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges.back() ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.f ), getStringValue(parameters_.ranges[0])));
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 1.f ), getStringValue( parameters_.ranges.back() ) ) );
 
-        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.02f, 0.98f );
+        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.f, 1.f );
     }
     else
     {
         //positions are shifted +/- 0.02f for avoiding overlapping
-        labels_.push_back( Label( 1.f, getStringValue( parameters_.ranges[0] ) ) );
-        labels_.push_back( Label( 0.52f, getStringValue( parameters_.ranges[1] ) ) );
-        labels_.push_back( Label( 0.48f, getStringValue( parameters_.ranges[2] ) ) );
-        labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges[3] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.f ), getStringValue( parameters_.ranges[0] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.5f ) + 0.02f, getStringValue( parameters_.ranges[1] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 0.5f ) - 0.02f, getStringValue( parameters_.ranges[2] ) ) );
+        labels_.push_back( Label( 1.f - relativePos2LimitedRelativePos( 1.f ), getStringValue( parameters_.ranges[3] ) ) );
 
         //positions are shifted for avoiding overlapping
-        fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.02f, 0.46f );
-        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.54f, 0.98f );
+        fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.f, 1.f - relativePos2LimitedRelativePos( 0.5f ) - 0.02f );
+        fillLabels( parameters_.ranges[0], parameters_.ranges[1], 1.f - relativePos2LimitedRelativePos( 0.5f ) + 0.02f, 1.f );
     }
 
     sortLabels_();
@@ -283,49 +293,43 @@ void Palette::setUniformLabels_()
     useCustomLabels_ = false;
     labels_.clear();
 
-    if ( parameters_.ranges.size() == 2 )
+    const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray;
+    if ( legendLimitIndexes_.min < 0 || legendLimitIndexes_.max > colorCount )
+        return;
+
+    const int limitDelta = legendLimitIndexes_.max - legendLimitIndexes_.min;
+    const int labelCount = limitDelta ? limitDelta + 1 : 2;
+    labels_.resize( labelCount );
+    if ( !limitDelta || ( parameters_.ranges.size() != 2 && parameters_.ranges.size() != 4 ) )
     {
-        int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
-        if ( maxLabelCount_ && maxLabelCount_ < num )
-            num = maxLabelCount_;
-
-        labels_.resize( num );
-
-        for ( int i = 0; i < num; ++i )
+        labels_.resize( 2 );
+        labels_[0].text = getStringValue( float( legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels_[0].value = 1.f;
+        labels_[1].text = getStringValue( float( legendLimitIndexes_.max ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels_[1].value = 0.f;
+    }
+    else if ( parameters_.ranges.size() == 2 )
+    {
+        for ( int i = 0; i < labelCount; ++i )
         {
-            labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
-            labels_[i].value = 1 - float( i ) / ( num - 1 );
+            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[i].value = 1 - float( i ) / limitDelta;
         }
     }
-    else
+    else if ( parameters_.ranges.size() == 4 )
     {
-        int num = texture_.filter == FilterType::Linear ? 3 : parameters_.discretization + 1;
-        if ( maxLabelCount_ && maxLabelCount_ / 2 < num )
-            num = maxLabelCount_ / 2;
-
-        labels_.resize( num * 2 );
-
-        if ( texture_.filter == FilterType::Linear )
+        int labelIndex = 0;
+        const int colorCountHalf = colorCount / 2;
+        for ( int i = legendLimitIndexes_.min; i < colorCountHalf + 1; ++i, ++labelIndex )
         {
-            for ( int i = 0; i < num; ++i )
-            {
-                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-                labels_[i].value = 1 - float( i ) / ( num - 1 ) * 0.5f;
-                labels_[i + num].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
-                labels_[i + num].value = 0.5f - float( i ) / ( num - 1 ) * 0.5f;
-            }
-            labels_[num - 1].value += 0.02f;
-            labels_[num].value -= 0.02f;
+            labels_[labelIndex].text = getStringValue( float( i ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
         }
-        else
+        for ( int i = std::max( legendLimitIndexes_.min, colorCountHalf + 1 ); i < legendLimitIndexes_.max + 1; ++i, ++labelIndex )
         {
-            for ( int i = 0; i < num; ++i )
-            {
-                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-                labels_[i].value = 1.f - float( i ) / ( num * 2 - 1 );
-                labels_[num + i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
-                labels_[num + i].value = 1.f - float( i + num ) / ( num * 2 - 1 );
-            }
+            labels_[labelIndex].text = getStringValue( float( i - colorCountHalf - 1 ) / colorCountHalf *
+                ( parameters_.ranges.back() - parameters_.ranges[2] ) + parameters_.ranges[2] );
+            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
         }
     }
 
@@ -341,6 +345,8 @@ void Palette::setDiscretizationNumber( int discretization )
 
     parameters_.discretization = discretization;
     updateDiscretizatedColors_();
+    updateLegendLimitIndexes_();
+    resetLabels();
 }
 
 void Palette::setFilterType( FilterType type )
@@ -441,25 +447,31 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     const std::vector<Color>& colors = texture_.pixels;
     const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
+
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / sz;
+        auto yStep = actualSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+        const int indexBegin = int( sz ) - legendLimitIndexes_.max;
+        const int indexEnd = int( sz ) - legendLimitIndexes_.min;
+        const float legendLimitShift = indexBegin * yStep;
         if ( onlyTopHalf )
             yStep *= 2;
-        for ( int i = 0; i < sz; i++ )
+        for ( int i = indexBegin; i < indexEnd; i++ )
         {
             drawList->AddRectFilled(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y + i * yStep },
+                actualPose.y - legendLimitShift + i * yStep },
                 { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y + ( i + 1 ) * yStep },
+                actualPose.y - legendLimitShift + ( i + 1 ) * yStep },
                 colors[sz - 1 - i].getUInt32() );
         }
     }
 
     if ( texture_.filter == FilterType::Linear )
     {
-        auto yStep = actualSize.y / ( sz - 1 );
+        const float scale = 1.f / relativeLimits_.diagonal();
+        const float startPos = actualPose.y - actualSize.y * ( 1.f - relativeLimits_.max ) * scale;
+        auto yStep = actualSize.y / ( sz - 1 ) * scale;
         if ( onlyTopHalf )
             yStep *= 2;
         for ( int i = 0; i + 1 < sz; i++ )
@@ -468,9 +480,9 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             const auto color2 = colors[sz - 2 - i].getUInt32();
             drawList->AddRectFilledMultiColor(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y + i * yStep },
+                startPos + i * yStep },
                 { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y + ( i + 1 ) * yStep },
+                startPos + ( i + 1 ) * yStep },
                 color1, color1, color2, color2 );
         }
     }
@@ -668,6 +680,32 @@ void Palette::sortLabels_()
     } );
 }
 
+void Palette::updateLegendLimits_( const MinMaxf& limits )
+{
+    if ( limits.min == limits.max || limits.min >= parameters_.ranges.back() || limits.max <= parameters_.ranges[0] )
+        parameters_.legendLimits = {};
+    else
+        parameters_.legendLimits = limits;
+
+    if ( parameters_.legendLimits.valid() )
+        relativeLimits_ = MinMaxf( getRelativePos( parameters_.legendLimits.min ), getRelativePos( parameters_.legendLimits.max ) ).intersection( { 0.f, 1.f } );
+    else
+        relativeLimits_ = { 0.f, 1.f };
+
+    updateLegendLimitIndexes_();
+}
+
+void Palette::updateLegendLimitIndexes_()
+{
+    const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray
+    const int indexMin = int( std::floor( getRelativePos( parameters_.legendLimits.min ) * colorCount ) );
+    const int indexMax = int( std::ceil( getRelativePos( parameters_.legendLimits.max ) * colorCount ) );
+    if ( parameters_.legendLimits.valid() )
+        legendLimitIndexes_ = MinMaxi( indexMin, indexMax ).intersection( { 0, colorCount } );
+    else
+        legendLimitIndexes_ = { 0, colorCount };
+}
+
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )
 {
     auto palette = ( Palette* )data->UserData;
@@ -703,6 +741,15 @@ int Palette::getMaxLabelCount()
 void Palette::setMaxLabelCount( int val )
 {
     maxLabelCount_ = val;
+}
+
+void Palette::setLegendLimits( const MinMaxf& limits )
+{
+    if ( limits == parameters_.legendLimits )
+        return;
+
+    updateLegendLimits_( limits );
+    resetLabels();
 }
 
 Palette::Label::Label( float val, std::string text_ )

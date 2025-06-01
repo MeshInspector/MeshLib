@@ -18,6 +18,7 @@
 #include "MRPolyline.h"
 #include "MRMapEdge.h"
 #include "MRSurfacePath.h"
+#include "MRExtractIsolines.h"
 
 namespace MR
 {

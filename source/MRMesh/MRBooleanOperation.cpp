@@ -103,10 +103,14 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     if ( !prepareLeft( origin, cutPaths, leftPart ) )
         return false;
 
-    WholeEdgeMap map;
-    FaceMap* fMapPtr = maps ? &maps->cut2newFaces : nullptr;
-    WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &map;
-    VertMap* vMapPtr = maps ? &maps->old2newVerts : nullptr;
+    // use dense-maps inside addMeshPart instead of default hash-maps for better performance
+    FaceMap fmap;
+    WholeEdgeMap emap;
+    VertMap vmap;
+
+    FaceMap* fMapPtr = maps ? &maps->cut2newFaces : &fmap;
+    WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &emap;
+    VertMap* vMapPtr = maps ? &maps->old2newVerts : &vmap;
 
     auto compsMap = MeshComponents::getAllComponentsMap( origin );
     leftPart = preparePart( origin, compsMap, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
@@ -128,25 +132,24 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
                            const std::vector<EdgePath>& pathsB,
                            const AffineXf3f* rigidB2A, BooleanResultMapper* mapper )
 {
+    MR_TIMER;
+
     if ( rigidB2A )
         partB.transform( *rigidB2A );
 
+    // use dense-maps inside addMesh(Part) instead of default hash-maps for better performance
     FaceMap fMapNew;
     WholeEdgeMap eMapNew;
     VertMap vMapNew;
 
-    FaceMap* fMapNewPtr = mapper ? &fMapNew : nullptr;
-    WholeEdgeMap* eMapNewPtr = mapper ? &eMapNew : nullptr;
-    VertMap* vMapNewPtr = mapper ? &vMapNew : nullptr;
-
     if ( pathsA.empty() )
-        partA.addMesh( partB, fMapNewPtr, vMapNewPtr, eMapNewPtr );
+        partA.addMesh( partB, &fMapNew, &vMapNew, &eMapNew );
     else
     {
         if ( !pathsHaveLeftHole )
-            partA.addMeshPart( partB, false, pathsA, pathsB, Src2TgtMaps( fMapNewPtr, vMapNewPtr, eMapNewPtr ) );
+            partA.addMeshPart( partB, false, pathsA, pathsB, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
         else
-            partB.addMeshPart( partA, false, pathsB, pathsA, Src2TgtMaps( fMapNewPtr, vMapNewPtr, eMapNewPtr ) );
+            partB.addMeshPart( partA, false, pathsB, pathsA, Src2TgtMaps( &fMapNew, &vMapNew, &eMapNew ) );
     }
 
     if ( mapper )

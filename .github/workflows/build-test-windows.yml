@@ -221,7 +221,7 @@ jobs:
 
       - name: Build .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
+        run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
       - name: Build .NET examples
         if:   ${{ env.BUILD_C_SHARP == 'true' }}

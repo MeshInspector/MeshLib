@@ -154,6 +154,7 @@
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MRObjectMeshData.h" />
     <ClInclude Include="MROffsetContours.h" />
+    <ClInclude Include="MROneMeshContours.h" />
     <ClInclude Include="MROutlierPoints.h" />
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
@@ -426,6 +427,7 @@
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
     <ClCompile Include="MRObjectMeshData.cpp" />
+    <ClCompile Include="MROneMeshContours.cpp" />
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

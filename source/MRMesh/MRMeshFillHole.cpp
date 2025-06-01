@@ -497,30 +497,11 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
 }
 
 // returns new edge connecting org(a) and org(b),
-// if left or right of new edge is triangular region then makes new faceids
-static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces, FaceId f = {} )
+inline EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b )
 {
-    auto newFace = [&]()
-    {
-        if ( f )
-        {
-            auto res = f;
-            f = {};
-            return res;
-        }
-        auto res = topology.addFaceId();
-        if ( outNewFaces )
-            outNewFaces->autoResizeSet( res );
-        return res;
-    };
-
     EdgeId newEdge = topology.makeEdge();
     topology.splice( a, newEdge );
     topology.splice( b, newEdge.sym() );
-    if ( topology.isLeftTri( newEdge ) )
-        topology.setLeft( newEdge, newFace() );
-    if ( topology.isLeftTri( newEdge.sym() ) )
-        topology.setLeft( newEdge.sym(), newFace() );
     return newEdge;
 }
 
@@ -557,12 +538,36 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
                 return EdgeId( code );
             return EdgeId( plan.items[ -(code+1) ].edgeCode1 );
         };
+        // make new edges
         for ( int i = 0; i < plan.items.size(); ++i )
         {
             EdgeId a = getEdge( plan.items[i].edgeCode1 );
             EdgeId b = getEdge( plan.items[i].edgeCode2 );
-            EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces, i + 1 == plan.items.size() ? f0 : FaceId{} );
+            EdgeId c = makeNewEdge( mesh.topology, a, b );
             plan.items[i].edgeCode1 = (int)c;
+        }
+        // restore old face
+        if ( f0 )
+        {
+            auto e = EdgeId( plan.items[0].edgeCode1 );
+            assert( !mesh.topology.left( e ) );
+            assert( mesh.topology.isLeftTri( e ) );
+            mesh.topology.setLeft( e, f0 );
+        }
+        // introduce new faces
+        for ( int i = 0; i < plan.items.size(); ++i )
+        {
+            auto e = EdgeId( plan.items[i].edgeCode1 );
+            for ( int j = 0; j < 2; ++j, e = e.sym() )
+            {
+                if ( mesh.topology.left( e ) )
+                    continue;
+                assert( mesh.topology.isLeftTri( e ) );
+                auto f = mesh.topology.addFaceId();
+                if ( outNewFaces )
+                    outNewFaces->autoResizeSet( f );
+                mesh.topology.setLeft( e, f );
+            }
         }
     }
     [[maybe_unused]] const auto fsz = mesh.topology.faceSize();

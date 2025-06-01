@@ -1318,6 +1318,9 @@
     <ClInclude Include="MRResizeNoInit.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MROneMeshContours.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2151,6 +2154,9 @@
     </ClCompile>
     <ClCompile Include="MRChrono.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MROneMeshContours.cpp">
+      <Filter>Source Files\Contours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

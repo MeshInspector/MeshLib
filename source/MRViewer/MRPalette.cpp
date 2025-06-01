@@ -246,7 +246,7 @@ void Palette::setZeroCentredLabels_()
         return ( relativePos - relativeLimits_.min ) / relativeLimits_.diagonal();
     };
 
-    auto fillLabels = [&, scale = relativeLimits_.diagonal()] ( float min, float max, float posMin, float posMax )
+    auto fillLabels = [&] ( float min, float max, float posMin, float posMax )
     {
         const float step = findStep( min, max ) * relativeLimits_.diagonal();
         float value = min / step;

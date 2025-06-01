@@ -723,17 +723,18 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
 
 void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
-    assert( oldFace.valid() );
     const auto fsz0 = mesh.topology.faceSize();
     const auto uesz0 = mesh.topology.undirectedEdgeSize();
     executeHoleFillPlan( mesh, e, plan );
     if ( new2OldMap )
     {
+        assert( oldFace.valid() );
         const auto fsz = mesh.topology.faceSize();
         new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
     if ( new2OldEdgeMap )
     {
+        assert( oldFace.valid() );
         for ( int ue = int( uesz0 ); ue < int( mesh.topology.undirectedEdgeSize() ); ++ue )
             new2OldEdgeMap->map[UndirectedEdgeId( ue )] = oldFace;
     }
@@ -1226,23 +1227,21 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // find one edge for every hole to fill
     Timer t( "find edge per hole" );
-    HashSet<EdgeId> allHoleEdges;
-    struct HoleDesc
-    {
-        EdgeId e;
-        FaceId oldf;
-        HoleFillPlan plan;
-    };
-    std::vector<HoleDesc> holeRepresentativeEdges;
+    EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
+    std::vector<EdgeId> holeRepresentativeEdges;
+    std::vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
+    const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
     auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
     {
-        if ( allHoleEdges.count( e ) )
+        if ( allHoleEdges.test( e ) )
             return;
-        holeRepresentativeEdges.push_back( { e, oldf } );
+        holeRepresentativeEdges.push_back( e );
+        if ( needOldFaces )
+            oldFaces.push_back( oldf );
         for ( auto ei : leftRing( mesh.topology, e ) )
         {
-            [[maybe_unused]] auto it = allHoleEdges.insert( ei );
-            assert( it.second );
+            [[maybe_unused]] auto v = allHoleEdges.test_set( ei );
+            assert( !v );
         }
     };
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
@@ -1264,29 +1263,27 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // prepare in parallel the plan to fill every contour
     t.restart( "get TriangulateContourPlans" );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, holeRepresentativeEdges.size() ),
-        [&]( const tbb::blocked_range<size_t>& range )
+    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
+    ParallelFor( holeRepresentativeEdges, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto & hd = holeRepresentativeEdges[i];
-            hd.plan = getPlanarHoleFillPlan( mesh, hd.e );
-        }
+        fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
     } );
+
     // fill contours
 
     t.restart( "run TriangulateContourPlans" );
     int numTris = 0;
-    for ( const auto & hd : holeRepresentativeEdges )
-        numTris += hd.plan.numTris;
+    for ( const auto & plan : fillPlans )
+        numTris += plan.numTris;
     const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
 
     mesh.topology.faceReserve( expectedTotalTris );
     if ( params.new2OldMap )
         params.new2OldMap->reserve( expectedTotalTris );
 
-    for ( auto & hd : holeRepresentativeEdges )
-        executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap, params.new2oldEdgesMap );
+    for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
+        executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i], 
+            needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )

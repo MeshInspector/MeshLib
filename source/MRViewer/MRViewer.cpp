@@ -1255,6 +1255,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
+                objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
@@ -1274,6 +1275,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( children, result.errorSummary, result.warningSummary );
+                objectsLoadedSignal( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1290,6 +1292,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         {
             if ( options.loadedCallback )
                 options.loadedCallback( {}, result.errorSummary, result.warningSummary );
+            objectsLoadedSignal( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );

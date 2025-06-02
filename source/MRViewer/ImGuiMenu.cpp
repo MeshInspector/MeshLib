@@ -762,12 +762,24 @@ float ImGuiMenu::hidpi_scaling()
 float ImGuiMenu::menu_scaling() const
 {
 #ifdef __EMSCRIPTEN__
-    return float( emscripten_get_device_pixel_ratio() );
+    return float( emscripten_get_device_pixel_ratio() ) * userScaling_;
 #elif defined __APPLE__
-    return pixel_ratio_;
+    return pixel_ratio_ * userScaling_;
 #else
-    return hidpi_scaling_ / pixel_ratio_;
+    return hidpi_scaling_ / pixel_ratio_ * userScaling_;
 #endif
+}
+
+void ImGuiMenu::setUserScaling( float scaling )
+{
+    scaling = std::clamp( scaling, 0.5f, 4.0f );
+    if ( scaling == userScaling_ )
+        return;
+    userScaling_ = scaling;
+    CommandLoop::appendCommand( [&] ()
+    {
+        postRescale_( 1.0f, 1.0f ); // actual values does not matter
+    } );
 }
 
 ImGuiContext* ImGuiMenu::getCurrentContext() const

@@ -69,6 +69,9 @@ protected:
   // May be different from the hipdi scaling!
   float pixel_ratio_;
 
+  // user defined additional scaling modifier
+  float userScaling_ = 1.0f;
+
   // ImGui Context
   ImGuiContext * context_ = nullptr;
   // last focused plugin window
@@ -207,6 +210,11 @@ public:
   MRVIEWER_API float hidpi_scaling();
 
   MRVIEWER_API float menu_scaling() const;
+
+  // returns UI scaling modifier specified by user
+  float getUserScaling() const { return userScaling_; }
+  // sets UI scaling modifier specified by user
+  MRVIEWER_API void setUserScaling( float scaling );
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 

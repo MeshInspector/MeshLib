@@ -162,12 +162,16 @@ struct HoleFillPlan
 /// several getHoleFillPlan can work in parallel
 MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
 
+/// prepares the plans how to triangulate the faces or holes, each given by a boundary edge (with filling target to the left),
+/// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getHoleFillPlan(), but it can inefficient when some holes are very complex
 MRMESH_API std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
 
 /// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
 /// several getPlanarHoleFillPlan can work in parallel
 MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
 
+/// prepares the plans how to triangulate the planar faces or holes, each given by a boundary edge (with filling target to the left),
+/// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getPlanarHoleFillPlan(), but it can inefficient when some holes are very complex
 MRMESH_API std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
 /// quickly triangulates the face or hole to the left of (e) given the plan (quickly compared to fillHole function)

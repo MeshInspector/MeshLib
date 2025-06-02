@@ -574,6 +574,8 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
+/// this class allows you to prepare fill plans for several holes with no new memory allocations on
+/// second and subsequent calls
 class HoleFillPlanner
 {
 public:
@@ -791,7 +793,7 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false;
+        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
         fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
     } );
     return fillPlans;
@@ -809,7 +811,7 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false;
+        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
         fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
     } );
     return fillPlans;

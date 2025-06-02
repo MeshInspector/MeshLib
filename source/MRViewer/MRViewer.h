@@ -74,7 +74,7 @@ struct FileLoadOptions
     /// true here will replace existing scene even if more than one file is open
     bool forceReplaceScene = false;
 
-    /// if this callback is set - it is called once when all obects are added to scene
+    /// if this callback is set - it is called once when all objects are added to scene
     /// top level objects only are present here
     FilesLoadedCallback loadedCallback;
 };
@@ -540,10 +540,12 @@ public:
     RenderSignal postDrawPreViewportSignal; // signal is called after scene draw but after before viewport.postDraw()
     RenderSignal postDrawSignal; // signal is called after scene draw
     // Scene events
+    using ObjectsLoadedSignal = boost::signals2::signal<void( const std::vector<std::shared_ptr<Object>>& objs, const std::string& errors, const std::string& warnings )>;
     using DragDropSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
     using PostResizeSignal = boost::signals2::signal<void( int x, int y )>;
     using PostRescaleSignal = boost::signals2::signal<void( float xscale, float yscale )>;
     using InterruptCloseSignal = boost::signals2::signal<bool(), SignalStopHandler>;
+    ObjectsLoadedSignal objectsLoadedSignal; // signal is called when objects are loaded by Viewer::loadFiles  function
     DragDropSignal dragDropSignal; // signal is called on drag and drop file
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale

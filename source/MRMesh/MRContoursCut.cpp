@@ -1260,17 +1260,12 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
                 addHoleDesc( path[edgeId].sym(), oldf );
         }
     }
+    t.finish();
 
     // prepare in parallel the plan to fill every contour
-    t.restart( "get TriangulateContourPlans" );
-    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
-    ParallelFor( holeRepresentativeEdges, [&]( size_t i )
-    {
-        fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
-    } );
+    auto fillPlans = getPlanarHoleFillPlans( mesh, holeRepresentativeEdges );
 
     // fill contours
-
     t.restart( "run TriangulateContourPlans" );
     int numTris = 0;
     for ( const auto & plan : fillPlans )

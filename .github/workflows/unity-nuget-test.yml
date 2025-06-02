@@ -63,7 +63,7 @@ jobs:
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3468.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3643.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
@@ -73,7 +73,7 @@ jobs:
           gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
       
       - name: Move nuget package to repo folder
-        # We use the constant fake version 1.0.0.3468 to simplify test workflow for Install package step
+        # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1

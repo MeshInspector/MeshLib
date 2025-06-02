@@ -211,8 +211,9 @@ private:
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
 /// several getHoleFillPlan can work in parallel
-inline HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} )
-{ return HoleFillPlanner{}.run( mesh, e, params ); }
+MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+
+MRMESH_API std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
 
 /// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
 /// several getPlanarHoleFillPlan can work in parallel

@@ -707,6 +707,23 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
     return res;
 }
 
+HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params )
+{
+    return HoleFillPlanner{}.run( mesh, e, params );
+}
+
+std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params )
+{
+    MR_TIMER;
+    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
+    tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
+    ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
+    {
+        fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
+    } );
+    return fillPlans;
+}
+
 HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
 {
     return HoleFillPlanner{}.runPlanar( mesh, e );
@@ -716,9 +733,10 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
 {
     MR_TIMER;
     std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
-    ParallelFor( holeRepresentativeEdges, [&]( size_t i )
+    tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
+    ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
+        fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
     } );
     return fillPlans;
 }

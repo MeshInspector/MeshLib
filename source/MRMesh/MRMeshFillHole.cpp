@@ -625,8 +625,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         a = mesh.topology.prev( a.sym() );
     }
 
-    newEdgesMap_.clear();
-    newEdgesMap_.resize( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, { -1,-1,0.0,0 } ) );
+    // do not decrease the size not to deallocate nested vectors
+    if ( newEdgesMap_.size() < loopEdgesCounter )
+        newEdgesMap_.resize( loopEdgesCounter );
+    for ( unsigned i = 0; i < loopEdgesCounter; ++i )
+    {
+        newEdgesMap_[i].clear();
+        newEdgesMap_[i].resize( loopEdgesCounter, { -1,-1,0.0,0 } );
+    }
 
     FillHoleMetric metrics = params.metric;
     if ( !metrics.edgeMetric && !metrics.triangleMetric )
@@ -649,7 +655,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             current = { int( i ),int( cIndex ), DBL_MAX,0 };
             if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
                 sameEdgeExists( mesh.topology, aCur, cCur ) )
-                continue;;
+                continue;
             getOptimalSteps( optimalStepsCache_, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
             getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache_, current ); // find better among steps
         }

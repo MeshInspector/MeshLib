@@ -100,26 +100,20 @@ Mesh Mesh::fromFaceSoup(
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
 
-    struct FaceFill
-    {
-        HoleFillPlan plan;
-        EdgeId e; // fill left of it
-    };
-    std::vector<FaceFill> faceFills;
+    std::vector<EdgeId> holeRepresentativeEdges;
     for ( auto f : res.topology.getValidFaces() )
     {
         auto e = res.topology.edgeWithLeft( f );
         if ( !res.topology.isLeftTri( e ) )
-            faceFills.push_back( { {}, e } );
+            holeRepresentativeEdges.push_back( e );
     }
 
-    ParallelFor( faceFills, [&]( size_t i )
-    {
-        faceFills[i].plan = getPlanarHoleFillPlan( res, faceFills[i].e );
-    }, subprogress( cb, 0.8f, 0.9f ) );
+    reportProgress( cb, 0.8f );
+    auto fillPlans = getPlanarHoleFillPlans( res, holeRepresentativeEdges );
+    reportProgress( cb, 0.9f );
 
-    for ( auto & x : faceFills )
-        executeHoleFillPlan( res, x.e, x.plan );
+    for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
+        executeHoleFillPlan( res, holeRepresentativeEdges[i], fillPlans[i] );
 
     reportProgress( cb, 1.0f );
 

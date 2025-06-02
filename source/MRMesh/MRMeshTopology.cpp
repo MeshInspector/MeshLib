@@ -1803,7 +1803,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         }
     }
 
-    UndirectedEdgeBitSet fromEdges = from.findNotLoneUndirectedEdges() - existingEdges;
+    UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
+    fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
     for ( ; fbegin != fend; ++fbegin )
@@ -1926,14 +1927,10 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     }
 
     // second pass: translate edge records
-    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
-        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&]( UndirectedEdgeId ue )
     {
-        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-        {
-            EdgeId e{ ue };
-            from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
-        }
+        EdgeId e{ ue };
+        from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
     } );
 
     // update near stitch edges

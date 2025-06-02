@@ -583,7 +583,7 @@ public:
 private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
-    tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    std::vector<unsigned> optimalStepsCache_;
     MapPatch savedMapPatch_, cachedMapPatch_;
     std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
 };
@@ -637,11 +637,11 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     //fill all table not queue
     constexpr unsigned stepStart = 2;
     const unsigned stepEnd = loopEdgesCounter - 2;
+    optimalStepsCache_.resize( params.maxPolygonSubdivisions );
     for ( auto steps = stepStart; steps <= stepEnd; ++steps )
     {
-        ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalStepsCache )
+        for ( unsigned i = 0; i < loopEdgesCounter; ++i )
         {
-            optimalStepsCache.resize( params.maxPolygonSubdivisions );
             const auto cIndex = ( i + steps ) % loopEdgesCounter;
             EdgeId aCur = edgeMap_[i];
             EdgeId cCur = edgeMap_[cIndex];
@@ -649,10 +649,10 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             current = { int( i ),int( cIndex ), DBL_MAX,0 };
             if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
                 sameEdgeExists( mesh.topology, aCur, cCur ) )
-                return;
-            getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
-            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache, current ); // find better among steps
-        });
+                continue;;
+            getOptimalSteps( optimalStepsCache_, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
+            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache_, current ); // find better among steps
+        }
     }
     // find minimum triangulation
     savedMapPatch_.clear();
@@ -770,10 +770,7 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        tbb::this_task_arena::isolate( [&]
-        {
-            fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
-        } );
+        fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
     } );
     return fillPlans;
 }
@@ -790,10 +787,7 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        tbb::this_task_arena::isolate( [&]
-        {
-            fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
-        } );
+        fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
     } );
     return fillPlans;
 }

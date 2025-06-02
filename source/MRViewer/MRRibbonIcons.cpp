@@ -20,9 +20,7 @@ void RibbonIcons::load()
     instance.load_( IconType::RibbonItemIcon );
     instance.load_( IconType::ObjectTypeIcon );
     instance.load_( IconType::IndependentIcons );
-#ifdef _WIN32
     instance.load_( IconType::Logos );
-#endif // _WIN32
 }
 
 void RibbonIcons::free()

@@ -3,7 +3,6 @@
 #include "MRMeshFwd.h"
 #include "MRMeshMetrics.h"
 #include "MRId.h"
-#include <MRPch/MRTBB.h>
 #include <functional>
 #include <memory>
 
@@ -157,56 +156,6 @@ struct HoleFillPlan
 {
     std::vector<FillHoleItem> items;
     int numTris = 0; // the number of triangles in the filling
-};
-
-// This is structure for representing edge between two vertices on hole
-// a,b - indices of edges
-// prevA - index of best found triangle (it continue to edges [a,prevA] and [prevA,a]) (in case of fillHole)
-// prevA, prevB - index of best found prev edge (prevA - index of vert on 'a' loop, prevB index of vert on 'b' loop) (in case of stithHoles)
-// weight is sum of prev weight and metric value of this new edge
-struct WeightedConn
-{
-    WeightedConn() = default;
-    WeightedConn( int _a, int _b, double _weight, int _prevB = -1 ) :
-        a{ _a }, b{ _b }, weight{ _weight }, prevB{ _prevB }{}
-
-    int a{-1};
-    int b{-1};
-    double weight{DBL_MAX};
-
-    int prevA{ -1 };
-    int prevB{ -1 };
-
-    bool hasPrev()const
-    {
-        return prevA != -1 && prevB != -1;
-    }
-    friend bool operator<( const WeightedConn& left, const WeightedConn& right )
-    {
-        return left.weight > right.weight;
-    }
-};
-
-struct MapPatchElement
-{
-    int a{ -1 };
-    int b{ -1 };
-    int newPrevA{ -1 };
-};
-using MapPatch = std::vector<MapPatchElement>;
-
-class HoleFillPlanner
-{
-public:
-    MRMESH_API HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
-    MRMESH_API HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
-
-private:
-    std::vector<EdgeId> edgeMap_;
-    std::vector<std::vector<WeightedConn>> newEdgesMap_;
-    tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
-    MapPatch savedMapPatch_, cachedMapPatch_;
-    std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
 };
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),

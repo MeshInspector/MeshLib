@@ -19,6 +19,35 @@
 namespace MR
 {
 
+// This is structure for representing edge between two vertices on hole
+// a,b - indices of edges
+// prevA - index of best found triangle (it continue to edges [a,prevA] and [prevA,a]) (in case of fillHole)
+// prevA, prevB - index of best found prev edge (prevA - index of vert on 'a' loop, prevB index of vert on 'b' loop) (in case of stithHoles)
+// weight is sum of prev weight and metric value of this new edge
+struct WeightedConn
+{
+    WeightedConn() = default;
+    WeightedConn( int _a, int _b, double _weight, int _prevB = -1 ) :
+        a{ _a }, b{ _b }, weight{ _weight }, prevB{ _prevB }{}
+
+    int a{-1};
+    int b{-1};
+    double weight{DBL_MAX};
+
+    int prevA{ -1 };
+    int prevB{ -1 };
+
+    bool hasPrev()const
+    {
+        return prevA != -1 && prevB != -1;
+    }
+};
+
+bool operator<( const WeightedConn& left, const WeightedConn& right )
+{
+    return left.weight > right.weight;
+}
+
 typedef std::vector<std::vector<WeightedConn>> NewEdgesMap;
 
 bool sameEdgeExists( const MeshTopology& topology, EdgeId e1Org, EdgeId e2Org )
@@ -140,6 +169,14 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         }
     }
 }
+
+struct MapPatchElement
+{
+    int a{ -1 };
+    int b{ -1 };
+    int newPrevA{ -1 };
+};
+using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
@@ -536,6 +573,20 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
+
+class HoleFillPlanner
+{
+public:
+    HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
+
+private:
+    std::vector<EdgeId> edgeMap_;
+    std::vector<std::vector<WeightedConn>> newEdgesMap_;
+    tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    MapPatch savedMapPatch_, cachedMapPatch_;
+    std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
+};
 
 // Sub cubic complexity
 HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )

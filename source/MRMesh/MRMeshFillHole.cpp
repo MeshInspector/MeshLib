@@ -10,7 +10,7 @@
 #include "MRHash.h"
 #include "MRMarkedContour.h"
 #include "MRGTest.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include <parallel_hashmap/phmap.h>
 #include <queue>
@@ -140,14 +140,6 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         }
     }
 }
-
-struct MapPatchElement
-{
-    int a{ -1 };
-    int b{ -1 };
-    int newPrevA{ -1 };
-};
-using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
@@ -596,27 +588,24 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     const unsigned stepEnd = loopEdgesCounter - 2;
     for ( auto steps = stepStart; steps <= stepEnd; ++steps )
     {
-        tbb::parallel_for( tbb::blocked_range<unsigned>( 0, loopEdgesCounter, 15 ), [&]( const tbb::blocked_range<unsigned>& range )
+        ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalStepsCache )
         {
-            std::vector<unsigned> optimalStepsCache;
             optimalStepsCache.resize( params.maxPolygonSubdivisions );
-            for ( unsigned i = range.begin(); i < range.end(); ++i )
-            {
-                const auto cIndex = ( i + steps ) % loopEdgesCounter;
-                EdgeId aCur = edgeMap_[i];
-                EdgeId cCur = edgeMap_[cIndex];
-                WeightedConn& current = newEdgesMap_[i][cIndex];
-                current = { int( i ),int( cIndex ), DBL_MAX,0 };
-                if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
-                    sameEdgeExists( mesh.topology, aCur, cCur ) )
-                    continue;
-                getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
-                getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache, current ); // find better among steps
-            }
+            const auto cIndex = ( i + steps ) % loopEdgesCounter;
+            EdgeId aCur = edgeMap_[i];
+            EdgeId cCur = edgeMap_[cIndex];
+            WeightedConn& current = newEdgesMap_[i][cIndex];
+            current = { int( i ),int( cIndex ), DBL_MAX,0 };
+            if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
+                sameEdgeExists( mesh.topology, aCur, cCur ) )
+                return;
+            getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
+            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache, current ); // find better among steps
         });
     }
     // find minimum triangulation
-    MapPatch savedMapPatch, cachedMapPatch;
+    savedMapPatch_.clear();
+    cachedMapPatch_.clear();
     WeightedConn finConn{-1,-1,DBL_MAX};
     for ( unsigned i = 0; i < loopEdgesCounter; ++i )
     {
@@ -644,9 +633,9 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch_ ) ) )
         {
-            savedMapPatch = cachedMapPatch;
+            savedMapPatch_ = cachedMapPatch_;
             finConn = newEdgesMap_[cIndex][i];
             finConn.weight = weight;
         }
@@ -668,20 +657,20 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         return res;
     }
 
-    if ( params.multipleEdgesResolveMode == FillHoleParams::MultipleEdgesResolveMode::Strong && !savedMapPatch.empty() )
-        for ( const auto& [patchA, patchB, patchPrevA] : savedMapPatch )
+    if ( params.multipleEdgesResolveMode == FillHoleParams::MultipleEdgesResolveMode::Strong && !savedMapPatch_.empty() )
+        for ( const auto& [patchA, patchB, patchPrevA] : savedMapPatch_ )
             newEdgesMap_[patchA][patchB].prevA = patchPrevA;
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );
     fictiveLastConn.prevA = finConn.b;
-    std::queue<std::pair<WeightedConn, int>> newEdgesQueue;
-    newEdgesQueue.push( {fictiveLastConn,(int)edgeMap_[fictiveLastConn.b]} );
+    assert( newEdgesQueue_.empty() );
+    newEdgesQueue_.push( {fictiveLastConn,(int)edgeMap_[fictiveLastConn.b]} );
     std::pair<WeightedConn, int> curConn;
-    while ( !newEdgesQueue.empty() )
+    while ( !newEdgesQueue_.empty() )
     {
-        curConn = std::move( newEdgesQueue.front() );
-        newEdgesQueue.pop();
+        curConn = std::move( newEdgesQueue_.front() );
+        newEdgesQueue_.pop();
 
         auto distA = ( curConn.first.a - curConn.first.prevA + loopEdgesCounter ) % loopEdgesCounter;
         auto distB = ( curConn.first.b - curConn.first.prevA + loopEdgesCounter ) % loopEdgesCounter;
@@ -690,14 +679,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         {
             auto newEdgeCode = -int( res.items.size() + 1 );
             res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
-            newEdgesQueue.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
+            newEdgesQueue_.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
             auto newEdgeCode = -int( res.items.size() + 1 );
             res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
-            newEdgesQueue.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
+            newEdgesQueue_.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }
 
         ++res.numTris;
@@ -705,17 +694,22 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     return res;
 }
 
-HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
+HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
 {
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
     params.stopBeforeBadTriangulation = &stopOnBad;
 
-    auto res = getHoleFillPlan( mesh, e, params );
+    auto res = run( mesh, e, params );
     if ( stopOnBad ) // triangulation cannot be good if we fall in this `if`, so let it create degenerated faces
-        res = getHoleFillPlan( mesh, e, { getMinAreaMetric( mesh ) } );
+        res = run( mesh, e, { getMinAreaMetric( mesh ) } );
     return res;
+}
+
+HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
+{
+    return HoleFillPlanner{}.runPlanar( mesh, e );
 }
 
 bool isHoleBd( const MeshTopology & topology, const EdgeLoop & loop )

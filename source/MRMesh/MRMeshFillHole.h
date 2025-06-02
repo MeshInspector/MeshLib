@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRMeshMetrics.h"
 #include "MRId.h"
+#include <MRPch/MRTBB.h>
 #include <functional>
 #include <memory>
 
@@ -180,21 +181,32 @@ struct WeightedConn
     {
         return prevA != -1 && prevB != -1;
     }
+    friend bool operator<( const WeightedConn& left, const WeightedConn& right )
+    {
+        return left.weight > right.weight;
+    }
 };
 
-bool operator<( const WeightedConn& left, const WeightedConn& right )
+struct MapPatchElement
 {
-    return left.weight > right.weight;
-}
+    int a{ -1 };
+    int b{ -1 };
+    int newPrevA{ -1 };
+};
+using MapPatch = std::vector<MapPatchElement>;
 
 class HoleFillPlanner
 {
 public:
     MRMESH_API HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+    MRMESH_API HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
 
 private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
+    tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    MapPatch savedMapPatch_, cachedMapPatch_;
+    std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
 };
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),

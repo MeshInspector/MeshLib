@@ -712,6 +712,17 @@ HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
     return HoleFillPlanner{}.runPlanar( mesh, e );
 }
 
+std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+{
+    MR_TIMER;
+    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
+    ParallelFor( holeRepresentativeEdges, [&]( size_t i )
+    {
+        fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i] );
+    } );
+    return fillPlans;
+}
+
 bool isHoleBd( const MeshTopology & topology, const EdgeLoop & loop )
 {
     if ( loop.empty() )

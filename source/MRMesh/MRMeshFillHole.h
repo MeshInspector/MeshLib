@@ -218,6 +218,8 @@ inline HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleP
 /// several getPlanarHoleFillPlan can work in parallel
 MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
 
+MRMESH_API std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+
 /// quickly triangulates the face or hole to the left of (e) given the plan (quickly compared to fillHole function)
 MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );
 

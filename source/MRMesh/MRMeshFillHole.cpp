@@ -19,35 +19,6 @@
 namespace MR
 {
 
-// This is structure for representing edge between two vertices on hole
-// a,b - indices of edges
-// prevA - index of best found triangle (it continue to edges [a,prevA] and [prevA,a]) (in case of fillHole)
-// prevA, prevB - index of best found prev edge (prevA - index of vert on 'a' loop, prevB index of vert on 'b' loop) (in case of stithHoles)
-// weight is sum of prev weight and metric value of this new edge
-struct WeightedConn
-{
-    WeightedConn() = default;
-    WeightedConn( int _a, int _b, double _weight, int _prevB = -1 ) :
-        a{ _a }, b{ _b }, weight{ _weight }, prevB{ _prevB }{}
-
-    int a{-1};
-    int b{-1};
-    double weight{DBL_MAX};
-
-    int prevA{ -1 };
-    int prevB{ -1 };
-
-    bool hasPrev()const
-    {
-        return prevA != -1 && prevB != -1;
-    }
-};
-
-bool operator<( const WeightedConn& left, const WeightedConn& right )
-{
-    return left.weight > right.weight;
-}
-
 typedef std::vector<std::vector<WeightedConn>> NewEdgesMap;
 
 bool sameEdgeExists( const MeshTopology& topology, EdgeId e1Org, EdgeId e2Org )
@@ -575,7 +546,7 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
 }
 
 // Sub cubic complexity
-HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
+HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
     HoleFillPlan res;
     if ( params.stopBeforeBadTriangulation )
@@ -602,15 +573,17 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     }
 
     // Fill EdgeMaps
-    std::vector<EdgeId> edgeMap( loopEdgesCounter );
+    edgeMap_.clear();
+    edgeMap_.reserve( loopEdgesCounter );
     a = a0;
     for ( unsigned i = 0; i < loopEdgesCounter; ++i )
     {
-        edgeMap[i] = a;
+        edgeMap_.push_back( a );
         a = mesh.topology.prev( a.sym() );
     }
 
-    NewEdgesMap newEdgesMap( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, { -1,-1,0.0,0 } ) );
+    newEdgesMap_.clear();
+    newEdgesMap_.resize( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, { -1,-1,0.0,0 } ) );
 
     FillHoleMetric metrics = params.metric;
     if ( !metrics.edgeMetric && !metrics.triangleMetric )
@@ -630,15 +603,15 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
             for ( unsigned i = range.begin(); i < range.end(); ++i )
             {
                 const auto cIndex = ( i + steps ) % loopEdgesCounter;
-                EdgeId aCur = edgeMap[i];
-                EdgeId cCur = edgeMap[cIndex];
-                WeightedConn& current = newEdgesMap[i][cIndex];
+                EdgeId aCur = edgeMap_[i];
+                EdgeId cCur = edgeMap_[cIndex];
+                WeightedConn& current = newEdgesMap_[i][cIndex];
                 current = { int( i ),int( cIndex ), DBL_MAX,0 };
                 if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
                     sameEdgeExists( mesh.topology, aCur, cCur ) )
                     continue;
                 getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
-                getTriangulationWeights( mesh.topology, newEdgesMap, edgeMap, metrics, optimalStepsCache, current ); // find better among steps
+                getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalStepsCache, current ); // find better among steps
             }
         });
     }
@@ -648,33 +621,33 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     for ( unsigned i = 0; i < loopEdgesCounter; ++i )
     {
         const auto cIndex = ( i + stepStart ) % loopEdgesCounter;
-        double weight = metrics.combineMetric( newEdgesMap[i][cIndex].weight, newEdgesMap[cIndex][i].weight );
+        double weight = metrics.combineMetric( newEdgesMap_[i][cIndex].weight, newEdgesMap_[cIndex][i].weight );
         if ( metrics.edgeMetric )
         {
             VertId leftVert;
-            if ( newEdgesMap[i][cIndex].hasPrev() )
-                leftVert = mesh.topology.org( edgeMap[newEdgesMap[i][cIndex].prevA] );
-            else if ( mesh.topology.right( edgeMap[i] ) )
-                leftVert = mesh.topology.dest( mesh.topology.prev( edgeMap[i] ) );
+            if ( newEdgesMap_[i][cIndex].hasPrev() )
+                leftVert = mesh.topology.org( edgeMap_[newEdgesMap_[i][cIndex].prevA] );
+            else if ( mesh.topology.right( edgeMap_[i] ) )
+                leftVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[i] ) );
 
             VertId rightVert;
-            if ( newEdgesMap[cIndex][i].hasPrev() )
-                rightVert = mesh.topology.org( edgeMap[newEdgesMap[cIndex][i].prevA] );
-            else if ( mesh.topology.right( edgeMap[cIndex] ) )
-                rightVert = mesh.topology.dest( mesh.topology.prev( edgeMap[cIndex] ) );
+            if ( newEdgesMap_[cIndex][i].hasPrev() )
+                rightVert = mesh.topology.org( edgeMap_[newEdgesMap_[cIndex][i].prevA] );
+            else if ( mesh.topology.right( edgeMap_[cIndex] ) )
+                rightVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[cIndex] ) );
 
             if ( leftVert && rightVert )
             {
-                auto lastEdgeMetric = metrics.edgeMetric( mesh.topology.org( edgeMap[i] ), mesh.topology.org( edgeMap[cIndex] ), leftVert, rightVert );
+                auto lastEdgeMetric = metrics.edgeMetric( mesh.topology.org( edgeMap_[i] ), mesh.topology.org( edgeMap_[cIndex] ), leftVert, rightVert );
                 weight = metrics.combineMetric( weight, lastEdgeMetric );
             }
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch ) ) )
         {
             savedMapPatch = cachedMapPatch;
-            finConn = newEdgesMap[cIndex][i];
+            finConn = newEdgesMap_[cIndex][i];
             finConn.weight = weight;
         }
     }
@@ -697,13 +670,13 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
 
     if ( params.multipleEdgesResolveMode == FillHoleParams::MultipleEdgesResolveMode::Strong && !savedMapPatch.empty() )
         for ( const auto& [patchA, patchB, patchPrevA] : savedMapPatch )
-            newEdgesMap[patchA][patchB].prevA = patchPrevA;
+            newEdgesMap_[patchA][patchB].prevA = patchPrevA;
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );
     fictiveLastConn.prevA = finConn.b;
     std::queue<std::pair<WeightedConn, int>> newEdgesQueue;
-    newEdgesQueue.push( {fictiveLastConn,(int)edgeMap[fictiveLastConn.b]} );
+    newEdgesQueue.push( {fictiveLastConn,(int)edgeMap_[fictiveLastConn.b]} );
     std::pair<WeightedConn, int> curConn;
     while ( !newEdgesQueue.empty() )
     {
@@ -716,15 +689,15 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
             auto newEdgeCode = -int( res.items.size() + 1 );
-            res.items.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
-            newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdgeCode} );
+            res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
+            newEdgesQueue.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
             auto newEdgeCode = -int( res.items.size() + 1 );
-            res.items.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
-            newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdgeCode} );
+            res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
+            newEdgesQueue.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }
 
         ++res.numTris;

@@ -397,7 +397,7 @@ struct [[nodiscard]] Mesh
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-        const PartMapping & map = {} );
+        PartMapping map = {} );
     [[deprecated]] void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
         { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }

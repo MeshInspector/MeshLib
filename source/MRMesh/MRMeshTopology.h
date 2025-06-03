@@ -446,23 +446,20 @@ public:
         bool rearrangeTriangles = false );
 
     /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map = {} );
+    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} )
+        { addPartByMask( from, &fromFaces, map ); }
 
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
-
-    /// addPartByMask call this general implementation
-    template<typename I>
-    MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
-        const std::vector<EdgePath> & thisContours = {},
-        const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} );
-
+    void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
+        const PartMapping & map = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map ); }
 
     /// for each triangle selects edgeWithLeft with minimal origin vertex
     MRMESH_API void rotateTriangles();

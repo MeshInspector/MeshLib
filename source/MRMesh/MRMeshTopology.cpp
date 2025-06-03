@@ -1788,10 +1788,50 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
+    auto copyEdge = [&]( UndirectedEdgeId fromUe )
+    {
+        assert( !getAt( emap, fromUe ) );
+        setAt( emap, fromUe, edges_.endId() );
+        if ( map.tgt2srcEdges )
+            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ fromUe } );
+        edges_.push_back( from.edges_[EdgeId{ fromUe }] );
+        edges_.push_back( from.edges_[EdgeId{ fromUe }.sym()] );
+    };
+
+    auto copyVert = [&]( VertId fromV, EdgeId fromEdgeFromV )
+    {
+        auto nv = addVertId();
+        assert( !getAt( vmap, fromV ) );
+        setAt( vmap, fromV, nv );
+        if ( map.tgt2srcVerts )
+            map.tgt2srcVerts->pushBack( nv, fromV );
+        edgePerVertex_[nv] = mapEdge( emap, fromEdgeFromV ); // emap must be filled already
+        if ( updateValids_ )
+        {
+            validVerts_.set( nv );
+            ++numValidVerts_;
+        }
+    };
+
+    auto copyFace = [&]( FaceId fromF, EdgeId fromEdgeWithLeftF )
+    {
+        auto nf = addFaceId();
+        if ( map.tgt2srcFaces )
+            map.tgt2srcFaces ->pushBack( nf, fromF );
+        setAt( fmap, fromF, nf );
+        edgePerFace_[nf] = mapEdge( emap, flipOrientation ? fromEdgeWithLeftF.sym() : fromEdgeWithLeftF );
+        if ( updateValids_ )
+        {
+            validFaces_.set( nf );
+            ++numValidFaces_;
+        }
+    };
+
     UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
     fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
+    VertId firstNewVert = edgePerVertex_.endId();
     for ( auto f : fromFaces )
     {
         auto efrom = from.edgePerFace_[f];
@@ -1799,42 +1839,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         {
             const UndirectedEdgeId ue = e.undirected();
             if ( fromEdges.test_set( ue, false ) )
-            {
-                assert( !getAt( emap, ue ) );
-                setAt( emap, ue, edges_.endId() );
-                if ( map.tgt2srcEdges )
-                    map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ ue } );
-                edges_.push_back( from.edges_[EdgeId{ ue }] );
-                edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-            }
+                copyEdge( ue );
             if ( auto v = from.org( e ); v.valid() )
             {
                 if ( fromVerts.test_set( v, false ) )
-                {
-                    auto nv = addVertId();
-                    assert( !getAt( vmap, v ) );
-                    setAt( vmap, v, nv );
-                    if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts->pushBack( nv, v );
-                    edgePerVertex_[nv] = mapEdge( emap, e );
-                    if ( updateValids_ )
-                    {
-                        validVerts_.set( nv );
-                        ++numValidVerts_;
-                    }
-                }
+                    copyVert( v, e );
             }
         }
-        auto nf = addFaceId();
-        if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->pushBack( nf, f );
-        setAt( fmap, f, nf );
-        edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
-        if ( updateValids_ )
-        {
-            validFaces_.set( nf );
-            ++numValidFaces_;
-        }
+        copyFace( f, efrom );
     }
 
     // in case of open contours, some nearby edges have to be updated

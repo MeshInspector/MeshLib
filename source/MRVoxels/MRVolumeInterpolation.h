@@ -24,25 +24,19 @@ public:
     /// the volume should not modified while it is accessed by this class
     explicit VoxelsVolumeInterpolatedAccessor( const VolumeType& volume, const Accessor& accessor )
         : volume_( volume ), accessor_( accessor )
-    {
-        if constexpr ( std::is_same_v<VolumeType, VdbVolume> )
-        {
-            openvdb::Coord coord = volume.data->evalActiveVoxelBoundingBox().min();
-            minCoord_ = { coord.x(), coord.y(), coord.z() };
-        }
-    }
+    {}
 
     /// delete copying constructor to avoid accidentally creating non-thread-safe accessors
     VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& ) = delete;
     /// a copying-like constructor with explicitly provided accessor
     explicit VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& other, const Accessor& accessor )
-        : volume_( other.volume_ ), accessor_( accessor ), minCoord_( other.minCoord_ )
+        : volume_( other.volume_ ), accessor_( accessor )
     {}
 
     /// get value at specified coordinates
     ValueType get( const Vector3f& pos ) const
     {
-        IndexAndPos index = getIndexAndPos(pos - accessor_.shift());
+        IndexAndPos index = getIndexAndPos( pos - mult( accessor_.shift(), volume_.voxelSize ) );
         ValueType value{};
         float cx[2] = { 1.0f - index.pos.x, index.pos.x };
         float cy[2] = { 1.0f - index.pos.y, index.pos.y };
@@ -64,7 +58,6 @@ public:
 private:
     const VolumeType& volume_;
     const Accessor& accessor_;
-    Vector3i minCoord_{};
 
     struct IndexAndPos
     {
@@ -87,8 +80,6 @@ private:
         res.pos.x -= pos.x;
         res.pos.y -= pos.y;
         res.pos.z -= pos.z;
-        if constexpr ( std::is_same_v<VolumeType, VdbVolume> )
-            res.index -= minCoord_;
         return res;
     }
 };

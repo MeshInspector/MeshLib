@@ -35,7 +35,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     {
         const auto & box = tree.nodes()[n].box;
         float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
-        return SubTask( n, distSq );
+        return SubTask { n, distSq };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );

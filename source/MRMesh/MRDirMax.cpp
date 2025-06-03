@@ -42,7 +42,7 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     auto getSubTask = [&]( NodeId n )
     {
-        return SubTask( n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) );
+        return SubTask { n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );

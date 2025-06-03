@@ -88,7 +88,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     auto getSubTask = [&]( NodeId n )
     {
         float distSq = tree.nodes()[n].box.getDistanceSq( tbox );
-        return SubTask( n, distSq );
+        return SubTask { n, distSq };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );

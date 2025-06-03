@@ -42,13 +42,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         bNodesPtr = &bNodes;
     }
 
-
     struct SubTask
     {
-        NodeId a, b;
+        NoInitNodeId a, b;
         float distSq;
-        SubTask() : a( noInit ), b( noInit ) {}
-        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 128; // to avoid allocations

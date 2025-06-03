@@ -28,10 +28,8 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float distSq;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -216,10 +214,8 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float dist;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float d ) : n( n ), dist( d ) {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

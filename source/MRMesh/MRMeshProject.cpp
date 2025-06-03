@@ -19,10 +19,8 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float distSq;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

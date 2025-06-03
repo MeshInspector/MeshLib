@@ -73,10 +73,8 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float distSq;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

@@ -23,10 +23,8 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float furthestBoxProj;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
     const auto maxCorner = Box<V>::getMaxBoxCorner( dir );

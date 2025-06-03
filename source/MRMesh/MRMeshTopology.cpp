@@ -1721,7 +1721,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
 
-    const auto & fromFaces = getFaceIds( fromFaces0 );
+    const auto & fromFaces = from.getFaceIds( fromFaces0 );
     const auto fcount = fromFaces.count();
 
     // maps: from index -> to index;

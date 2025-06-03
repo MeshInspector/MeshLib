@@ -1788,53 +1788,79 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
-    fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
-    // first pass: fill maps
-    EdgeId firstNewEdge = edges_.endId();
-    for ( auto f : fromFaces )
+    auto copyEdge = [&]( UndirectedEdgeId fromUe )
     {
-        auto efrom = from.edgePerFace_[f];
-        for ( auto e : leftRing( from, efrom ) )
+        assert( !getAt( emap, fromUe ) );
+        setAt( emap, fromUe, edges_.endId() );
+        if ( map.tgt2srcEdges )
+            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ fromUe } );
+        edges_.push_back( from.edges_[EdgeId{ fromUe }] );
+        edges_.push_back( from.edges_[EdgeId{ fromUe }.sym()] );
+    };
+
+    auto copyVert = [&]( VertId fromV, EdgeId fromEdgeFromV )
+    {
+        auto nv = addVertId();
+        assert( !getAt( vmap, fromV ) );
+        setAt( vmap, fromV, nv );
+        if ( map.tgt2srcVerts )
+            map.tgt2srcVerts->pushBack( nv, fromV );
+        edgePerVertex_[nv] = mapEdge( emap, fromEdgeFromV ); // emap must be filled already
+        if ( updateValids_ )
         {
-            const UndirectedEdgeId ue = e.undirected();
-            if ( fromEdges.test_set( ue, false ) )
-            {
-                assert( !getAt( emap, ue ) );
-                setAt( emap, ue, edges_.endId() );
-                if ( map.tgt2srcEdges )
-                    map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ ue } );
-                edges_.push_back( from.edges_[EdgeId{ ue }] );
-                edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-            }
-            if ( auto v = from.org( e ); v.valid() )
-            {
-                if ( fromVerts.test_set( v, false ) )
-                {
-                    auto nv = addVertId();
-                    assert( !getAt( vmap, v ) );
-                    setAt( vmap, v, nv );
-                    if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts->pushBack( nv, v );
-                    edgePerVertex_[nv] = mapEdge( emap, e );
-                    if ( updateValids_ )
-                    {
-                        validVerts_.set( nv );
-                        ++numValidVerts_;
-                    }
-                }
-            }
+            validVerts_.set( nv );
+            ++numValidVerts_;
         }
+    };
+
+    auto copyFace = [&]( FaceId fromF, EdgeId fromEdgeWithLeftF )
+    {
         auto nf = addFaceId();
         if ( map.tgt2srcFaces )
-            map.tgt2srcFaces ->pushBack( nf, f );
-        setAt( fmap, f, nf );
-        edgePerFace_[nf] = mapEdge( emap, flipOrientation ? efrom.sym() : efrom );
+            map.tgt2srcFaces ->pushBack( nf, fromF );
+        setAt( fmap, fromF, nf );
+        edgePerFace_[nf] = mapEdge( emap, flipOrientation ? fromEdgeWithLeftF.sym() : fromEdgeWithLeftF );
         if ( updateValids_ )
         {
             validFaces_.set( nf );
             ++numValidFaces_;
         }
+    };
+
+    // first pass: fill maps
+    EdgeId firstNewEdge = edges_.endId();
+    if ( fromFaces0 )
+    {
+        UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
+        fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
+        for ( auto f : fromFaces )
+        {
+            auto efrom = from.edgePerFace_[f];
+            for ( auto e : leftRing( from, efrom ) )
+            {
+                const UndirectedEdgeId ue = e.undirected();
+                if ( fromEdges.test_set( ue, false ) )
+                    copyEdge( ue );
+                if ( auto v = from.org( e ); v.valid() )
+                {
+                    if ( fromVerts.test_set( v, false ) )
+                        copyVert( v, e );
+                }
+            }
+            copyFace( f, efrom );
+        }
+    }
+    else
+    {
+        // whole (from) mesh is copied
+        for ( auto ue : from.findNotLoneUndirectedEdges() - existingEdges )
+            copyEdge( ue );
+
+        for ( auto v : fromVerts )
+            copyVert( v, from.edgePerVertex_[v] );
+
+        for ( auto f : from.getValidFaces() )
+            copyFace( f, from.edgePerFace_[f] );
     }
 
     // in case of open contours, some nearby edges have to be updated

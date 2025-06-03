@@ -61,8 +61,6 @@ class NoInitId : public Id<T>
 public:
     NoInitId() : Id<T>( noInit ) {}
     NoInitId( Id<T> id ) : Id<T>( id ) {}
-
-    operator Id<T>() const { return *this; }
 };
 
 template <>

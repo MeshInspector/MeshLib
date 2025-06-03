@@ -139,6 +139,24 @@ void init()
     data.filter = FilterType::Linear;
     textureGbSec->update( data );
 
+    auto& textureGbGray = getTexture( TextureType::GradientBtnGray );
+    if ( !textureGbGray )
+        textureGbGray = std::make_unique<ImGuiImage>();
+    auto grayStartColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonClicked );
+    auto grayEndColor = grayStartColor - Color( 13, 13, 11, 0 );
+    data.resolution = Vector2i( 4, 2 );
+    data.pixels = {
+        grayStartColor,
+        grayStartColor + Color( 15, 15, 15, 0 ),
+        grayStartColor - Color( 10, 10, 10, 0 ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart ),
+        grayEndColor,
+        grayEndColor + Color( 15, 15, 15, 0 ),
+        grayEndColor - Color( 10, 10, 10, 0 ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableEnd ),
+    };
+    data.filter = FilterType::Linear;
+    textureGbGray->update( data );
 
     auto& textureR = getTexture( TextureType::RainbowRect );
     if ( !textureR )

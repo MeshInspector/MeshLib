@@ -26,6 +26,7 @@ enum class TextureType
     Gradient,
     GradientBtn,
     GradientBtnSecond,
+    GradientBtnGray,
     RainbowRect,
     Count
 };

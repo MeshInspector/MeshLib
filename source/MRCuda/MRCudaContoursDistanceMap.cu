@@ -1,6 +1,7 @@
 #include "MRCudaContoursDistanceMap.cuh"
 #include "MRCudaBasic.h"
 #include "MRCudaFloat.cuh"
+#include "MRCudaInplaceStack.cuh"
 
 #include <float.h>
 
@@ -69,17 +70,12 @@ __global__ void kernel(
         float distSq;
     };
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < resDistSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( int n )
@@ -89,9 +85,10 @@ __global__ void kernel(
 
     addSubTask( getSubTask( 0 ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = nodes[s.n];
         if ( s.distSq >= resDistSq )
             continue;

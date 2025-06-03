@@ -418,6 +418,7 @@
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />
     <ClInclude Include="MRTbbThreadMutex.h" />
+    <ClInclude Include="MRInplaceStack.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />

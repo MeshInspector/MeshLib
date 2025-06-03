@@ -10,7 +10,10 @@
 #include "MRMatrix2.h"
 #include "MRMinMaxArg.h"
 #include "MRTimer.h"
+#include "MRInplaceStack.h"
+
 #include "MRPch/MRTBB.h"
+
 #include <algorithm>
 #include <cfloat>
 
@@ -28,35 +31,28 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float distSq;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
     };
-
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < res.distSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( NodeId n )
     {
-        return SubTask{ n, distSqToBox( transformed( tree.nodes()[n].box, xf ) ) };
+        return SubTask { n, distSqToBox( transformed( tree.nodes()[n].box, xf ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[s.n];
         if ( s.distSq >= res.distSq )
             continue;
@@ -216,37 +212,30 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float dist;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float d ) : n( n ), dist( d ) {}
     };
-
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.dist < res.dist )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( NodeId n )
     {
         const auto & box = tree.nodes()[n].box;
         float dist = std::sqrt( xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt ) ) - maxOffset;
-        return SubTask( n, dist );
+        return SubTask { n, dist };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[s.n];
         if ( s.dist >= res.dist )
             continue;
@@ -349,23 +338,22 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
         return;
 
     const auto radiusSq = sqr( radius );
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto addSubTask = [&] ( NodeId n )
     {
         const auto & box = tree.nodes()[n].box;
         float distSq = xf ? transformed( box, *xf ).getDistanceSq( center ) : box.getDistanceSq( center );
         if ( distSq <= radiusSq )
-            subtasks[stackSize++] = n;
+            subtasks.push( n );
     };
 
     addSubTask( tree.rootNodeId() );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto n = subtasks[--stackSize];
+        const auto n = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[n];
 
         if ( node.leaf() )

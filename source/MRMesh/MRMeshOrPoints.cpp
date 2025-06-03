@@ -9,6 +9,7 @@
 #include "MRObjectPoints.h"
 #include "MRBestFit.h"
 #include "MRAABBTreeObjects.h"
+#include "MRInplaceStack.h"
 
 namespace MR
 {
@@ -171,9 +172,7 @@ void projectOnAll(
     if ( tree.nodes().empty() )
         return;
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto addSubTask = [&] ( NodeId n )
     {
@@ -182,17 +181,15 @@ void projectOnAll(
             return;
         float distSq = box.getDistanceSq( pt );
         if ( distSq < upDistLimitSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
+            subtasks.push( n );
     };
 
     addSubTask( tree.rootNodeId() );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto n = subtasks[--stackSize];
+        const auto n = subtasks.top();
+        subtasks.pop();
         const auto node = tree[n];
 
         if ( node.leaf() )

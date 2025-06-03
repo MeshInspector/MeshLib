@@ -54,6 +54,15 @@ private:
     int id_;
 };
 
+// Variant of Id<T> with omitted initialization by default. Useful for containers.
+template <typename T>
+class NoInitId : public Id<T>
+{
+public:
+    NoInitId() : Id<T>( noInit ) {}
+    NoInitId( Id<T> id ) : Id<T>( id ) {}
+};
+
 template <>
 class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
 {

@@ -118,6 +118,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( GraphEdgeId,      Id<GraphEdgeTag>      )
 )
 
+MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), NoInitId,
+    ( NoInitNodeId, NoInitId<NodeTag> )
+)
+
 template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
 struct PackMapping;
 

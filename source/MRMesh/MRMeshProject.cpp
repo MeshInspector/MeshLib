@@ -3,6 +3,7 @@
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
+#include "MRInplaceStack.h"
 #include "MRTimer.h"
 #include "MRMatrix3Decompose.h"
 
@@ -19,37 +20,30 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float distSq;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
     };
-
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&]( const SubTask & s )
     {
         if ( s.distSq < res.distSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&]( NodeId n )
     {
         const auto & box = tree.nodes()[n].box;
         float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
-        return SubTask( n, distSq );
+        return SubTask { n, distSq };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto & node = tree[s.n];
         if ( s.distSq >= res.distSq )
             continue;
@@ -138,9 +132,7 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     if ( tree.nodes().empty() )
         return;
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
     {
@@ -149,15 +141,15 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
 
     auto addSubTask = [&]( NodeId n )
     {
-        assert( stackSize < MaxStackSize );
-        subtasks[stackSize++] = n;
+        subtasks.push( n );
     };
 
     addSubTask( tree.rootNodeId() );
 
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto n = subtasks[--stackSize];
+        const auto n = subtasks.top();
+        subtasks.pop();
         const auto & node = tree[n];
         if ( !( boxDistSq( n ) < ball.radiusSq ) )
             continue;

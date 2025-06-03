@@ -385,17 +385,6 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
 }
 
-template MRMESH_API void Mesh::addPartBy( const Mesh & from,
-    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
-    const std::vector<EdgePath> & thisContours,
-    const std::vector<EdgePath> & fromContours,
-    PartMapping map );
-template MRMESH_API void Mesh::addPartBy( const Mesh & from,
-    FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
-    const std::vector<EdgePath> & thisContours,
-    const std::vector<EdgePath> & fromContours,
-    PartMapping map );
-
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
 {
     MR_TIMER;

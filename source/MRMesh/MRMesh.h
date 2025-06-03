@@ -402,13 +402,6 @@ struct [[nodiscard]] Mesh
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {}, const PartMapping & map = {} )
         { addMeshPart( { from, &fromFaces }, flipOrientation, thisContours, fromContours, map ); }
 
-    /// addPartByFaceMap call this general implementation
-    template<typename I>
-    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
-        const std::vector<EdgePath> & thisContours = {},
-        const std::vector<EdgePath> & fromContours = {},
-        PartMapping map = {} );
-
     /// creates new mesh from given triangles of this mesh
     MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
 

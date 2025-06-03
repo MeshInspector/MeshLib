@@ -1831,7 +1831,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
-    VertId firstNewVert = edgePerVertex_.endId();
     for ( auto f : fromFaces )
     {
         auto efrom = from.edgePerFace_[f];

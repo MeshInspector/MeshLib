@@ -1827,25 +1827,40 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     };
 
-    UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
-    fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
-    for ( auto f : fromFaces )
+    if ( fromFaces0 )
     {
-        auto efrom = from.edgePerFace_[f];
-        for ( auto e : leftRing( from, efrom ) )
+        UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
+        fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
+        for ( auto f : fromFaces )
         {
-            const UndirectedEdgeId ue = e.undirected();
-            if ( fromEdges.test_set( ue, false ) )
-                copyEdge( ue );
-            if ( auto v = from.org( e ); v.valid() )
+            auto efrom = from.edgePerFace_[f];
+            for ( auto e : leftRing( from, efrom ) )
             {
-                if ( fromVerts.test_set( v, false ) )
-                    copyVert( v, e );
+                const UndirectedEdgeId ue = e.undirected();
+                if ( fromEdges.test_set( ue, false ) )
+                    copyEdge( ue );
+                if ( auto v = from.org( e ); v.valid() )
+                {
+                    if ( fromVerts.test_set( v, false ) )
+                        copyVert( v, e );
+                }
             }
+            copyFace( f, efrom );
         }
-        copyFace( f, efrom );
+    }
+    else
+    {
+        // whole (from) mesh is copied
+        for ( auto ue : from.findNotLoneUndirectedEdges() - existingEdges )
+            copyEdge( ue );
+
+        for ( auto v : fromVerts )
+            copyVert( v, from.edgePerVertex_[v] );
+
+        for ( auto f : from.getValidFaces() )
+            copyFace( f, from.edgePerFace_[f] );
     }
 
     // in case of open contours, some nearby edges have to be updated

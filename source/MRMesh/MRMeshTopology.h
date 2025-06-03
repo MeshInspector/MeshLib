@@ -456,12 +456,7 @@ public:
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {} );
 
-    /// fromFaces contains mapping from this-topology (considering it is empty) to from-topology
-    MRMESH_API void addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation = false,
-        const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {} );
-
-    /// both addPartByMask and addPartByFaceMap call this general implementation
+    /// addPartByMask call this general implementation
     template<typename I>
     MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {},

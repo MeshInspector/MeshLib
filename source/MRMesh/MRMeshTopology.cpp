@@ -1721,14 +1721,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
-void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
-    const std::vector<EdgePath> & thisContours, const std::vector<EdgePath> & fromContours,
-    const PartMapping & map )
-{
-    MR_TIMER;
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
-}
-
 template<typename I>
 void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,

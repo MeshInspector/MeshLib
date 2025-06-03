@@ -377,15 +377,6 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     addPartBy( from.mesh, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
-void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
-    const std::vector<EdgePath> & thisContours,
-    const std::vector<EdgePath> & fromContours,
-    const PartMapping & map )
-{
-    MR_TIMER;
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
-}
-
 template<typename I>
 void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,

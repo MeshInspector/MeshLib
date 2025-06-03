@@ -1758,6 +1758,9 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
 #endif
     };
+    VertBitSet copiedVerts;
+    if ( fromFaces0 )
+        copiedVerts.resize( fromVerts.size() );
 
     UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
     for ( int i = 0; i < szContours; ++i )
@@ -1798,14 +1801,13 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         edges_.push_back( from.edges_[EdgeId{ fromUe }.sym()] );
     };
 
-    auto copyVert = [&]( VertId fromV, EdgeId fromEdgeFromV )
+    auto copyVert = [&]( VertId fromV )
     {
         auto nv = addVertId();
         assert( !getAt( vmap, fromV ) );
         setAt( vmap, fromV, nv );
         if ( map.tgt2srcVerts )
             map.tgt2srcVerts->pushBack( nv, fromV );
-        edgePerVertex_[nv] = mapEdge( emap, fromEdgeFromV ); // emap must be filled already
         if ( updateValids_ )
         {
             validVerts_.set( nv );
@@ -1813,13 +1815,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     };
 
-    auto copyFace = [&]( FaceId fromF, EdgeId fromEdgeWithLeftF )
+    auto copyFace = [&]( FaceId fromF )
     {
         auto nf = addFaceId();
         if ( map.tgt2srcFaces )
             map.tgt2srcFaces ->pushBack( nf, fromF );
         setAt( fmap, fromF, nf );
-        edgePerFace_[nf] = mapEdge( emap, flipOrientation ? fromEdgeWithLeftF.sym() : fromEdgeWithLeftF );
         if ( updateValids_ )
         {
             validFaces_.set( nf );
@@ -1828,7 +1829,9 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     // first pass: fill maps
-    EdgeId firstNewEdge = edges_.endId();
+    const EdgeId firstNewEdge = edges_.endId();
+    const VertId firstNewVert = edgePerVertex_.endId();
+    const FaceId firstNewFace = edgePerFace_.endId();
     if ( fromFaces0 )
     {
         UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
@@ -1844,10 +1847,13 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 if ( auto v = from.org( e ); v.valid() )
                 {
                     if ( fromVerts.test_set( v, false ) )
-                        copyVert( v, e );
+                    {
+                        copyVert( v );
+                        copiedVerts.set( v );
+                    }
                 }
             }
-            copyFace( f, efrom );
+            copyFace( f );
         }
     }
     else
@@ -1857,10 +1863,10 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             copyEdge( ue );
 
         for ( auto v : fromVerts )
-            copyVert( v, from.edgePerVertex_[v] );
+            copyVert( v );
 
         for ( auto f : from.getValidFaces() )
-            copyFace( f, from.edgePerFace_[f] );
+            copyFace( f );
     }
 
     // in case of open contours, some nearby edges have to be updated
@@ -1941,6 +1947,17 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     {
         EdgeId e{ ue };
         from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
+    } );
+
+    BitSetParallelFor( fromFaces0 ? copiedVerts : fromVerts, [&]( VertId v )
+    {
+        edgePerVertex_[getAt( vmap, v )] = mapEdge( emap, from.edgePerVertex_[v] );
+    } );
+
+    BitSetParallelFor( fromFaces, [&]( FaceId f )
+    {
+        const auto e = from.edgePerFace_[f];
+        edgePerFace_[getAt( fmap, f )] = mapEdge( emap, flipOrientation ? e.sym() : e );
     } );
 
     // update near stitch edges

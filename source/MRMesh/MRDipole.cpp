@@ -1,5 +1,6 @@
 #include "MRDipole.h"
 #include "MRAABBTree.h"
+#include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
@@ -101,20 +102,14 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
     }
 
     const float betaSq = sqr( beta );
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    struct SubTask
-    {
-        NodeId n;
-        SubTask() : n( noInit ) {}
-    };
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
-    subtasks[stackSize++].n = tree.rootNodeId();
+    InplaceStack<NoInitNodeId, 32> subtasks;
+    subtasks.push( AABBTree::rootNodeId() );
 
     float res = 0;
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto i = subtasks[--stackSize].n;
+        NodeId i = subtasks.top();
+        subtasks.pop();
         const auto & node = tree[i];
         const auto & d = dipoles[i];
         if ( d.addIfGoodApprox( q, betaSq, res ) )
@@ -122,8 +117,8 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         if ( !node.leaf() )
         {
             // recurse deeper
-            subtasks[stackSize++].n = node.r; // to look later
-            subtasks[stackSize++].n = node.l; // to look first
+            subtasks.push( node.r ); // to look later
+            subtasks.push( node.l ); // to look first
             continue;
         }
         if ( node.leafId() != skipFace )

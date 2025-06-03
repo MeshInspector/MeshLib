@@ -1,5 +1,6 @@
 #include "MRMeshDistance.h"
 #include "MRAABBTree.h"
+#include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRLine3.h"
@@ -76,18 +77,12 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
         NoInitNodeId n;
         float distSq;
     };
-
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&]( const SubTask & s )
     {
         if ( s.distSq < rangeSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&]( NodeId n )
@@ -98,9 +93,10 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto & node = tree[s.n];
 
         if ( node.leaf() )

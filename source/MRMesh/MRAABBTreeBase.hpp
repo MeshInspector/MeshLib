@@ -2,6 +2,7 @@
 
 #include "MRAABBTreeBase.h"
 #include "MRBitSetParallelFor.h"
+#include "MRInplaceStack.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -43,24 +44,20 @@ auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
     MR_TIMER;
     LeafBitSet res;
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
     auto addSubTask = [&]( NodeId n )
     {
         if ( nodes_[n].leaf() )
             res.autoResizeSet( nodes_[n].leafId() );
         else
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
+            subtasks.push( n );
     };
     addSubTask( subtreeRoot );
 
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        NodeId n = subtasks[--stackSize];
+        NodeId n = subtasks.top();
+        subtasks.pop();
         addSubTask( nodes_[n].r );
         addSubTask( nodes_[n].l );
     }

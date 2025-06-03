@@ -1,4 +1,5 @@
 #include "MRCudaPointsToDistanceVolume.cuh"
+#include "MRCudaInplaceStack.cuh"
 
 namespace MR
 {
@@ -42,23 +43,22 @@ namespace Cuda
         const float radius = 3 * params.sigma;
         const float radiusSq = radius * radius;
 
-        constexpr int MaxStackSize = 32; // to avoid allocations
-        int subtasks[MaxStackSize];
-        int stackSize = 0;
-        subtasks[stackSize++] = 0;
+        InplaceStack<int, 32> subtasks;
+        subtasks.push( 0 );
 
         auto addSubTask = [&] ( int n )
         {
             float distSq = lengthSq( nodes[n].box.getBoxClosestPointTo( voxelCenter ) - voxelCenter );
             if ( distSq <= radiusSq )
-                subtasks[stackSize++] = n;
+                subtasks.push( n );
         };
 
         addSubTask( 0 );
         const auto inv2SgSq = -0.5f / ( params.sigma * params.sigma );
-        while ( stackSize > 0 )
+        while ( !subtasks.empty() )
         {
-            const auto n = subtasks[--stackSize];
+            const auto n = subtasks.top();
+            subtasks.pop();
             const auto& node = nodes[n];
 
             if ( node.leaf() )

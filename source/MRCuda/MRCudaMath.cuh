@@ -3,6 +3,7 @@
 #include "exports.h"
 #include "MRCuda.cuh"
 #include "MRCudaFloat.cuh"
+#include "MRCudaInplaceStack.cuh"
 
 #include <cfloat>
 #include <cstdint>
@@ -272,16 +273,11 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
         float rayStart;
     };
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( int n, float rayStart )
     {
-        assert( stackSize < MaxStackSize );
-        subtasks[stackSize].n = n;
-        subtasks[stackSize].rayStart = rayStart;
-        ++stackSize;
+        subtasks.push( { n, rayStart } );
     };
 
     addSubTask( 0, rayStart );
@@ -290,15 +286,10 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
     float baryA = 0;
     float baryB = 0;
 
-    while ( stackSize > 0 && ( closestIntersect || faceId < 0 ) )
+    while ( !subtasks.empty() && ( closestIntersect || faceId < 0 ) )
     {
-        if ( stackSize >= MaxStackSize ) // max depth exceeded
-        {
-            assert( false );
-            break;
-        }
-
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
 
         if ( s.rayStart < rayEnd )
         {

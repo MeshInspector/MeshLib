@@ -1,4 +1,5 @@
 #include "MRCudaFastWindingNumber.cuh"
+#include "MRCudaInplaceStack.cuh"
 
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRDistanceToMeshOptions.h"
@@ -32,14 +33,14 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     float beta, int skipFace = -1 )
 {
     const float betaSq = beta * beta;
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    int subtasks[MaxStackSize];
-    int stackSize = 0;
-    subtasks[stackSize++] = 0;
 
-    while ( stackSize > 0 )
+    InplaceStack<int, 32> subtasks;
+    subtasks.push( 0 );
+
+    while ( !subtasks.empty() )
     {
-        const auto i = subtasks[--stackSize];
+        const auto i = subtasks.top();
+        subtasks.pop();
         const auto& node = nodes[i];
         const auto& d = dipoles[i];
         if ( d.addIfGoodApprox( q, betaSq, res ) )
@@ -47,8 +48,8 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
         if ( !node.leaf() )
         {
             // recurse deeper
-            subtasks[stackSize++] = node.r; // to look later
-            subtasks[stackSize++] = node.l; // to look first
+            subtasks.push( node.r ); // to look later
+            subtasks.push( node.l ); // to look first
             continue;
         }
         if ( node.leafId() != skipFace )
@@ -72,17 +73,12 @@ __device__ float calcDistanceSq( const float3& pt,
         float distSq;
     };
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < resSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( int n )
@@ -94,9 +90,10 @@ __device__ float calcDistanceSq( const float3& pt,
 
     addSubTask( getSubTask( 0 ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = nodes[s.n];
         if ( s.distSq >= resSq )
             continue;

@@ -2,6 +2,7 @@
 #include "MRPointCloud.h"
 #include "MRMesh.h"
 #include "MRAABBTreePoints.h"
+#include "MRInplaceStack.h"
 
 namespace MR
 {
@@ -32,22 +33,21 @@ void findPointsInBox( const AABBTreePoints& tree, const Box3f& box,
 
     const auto& orderedPoints = tree.orderedPoints();
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto addSubTask = [&]( NodeId n )
     {
         const auto & nodeBox = tree.nodes()[n].box;
         if ( xf ? transformed( nodeBox, *xf ).intersects( box ) : nodeBox.intersects( box ) )
-            subtasks[stackSize++] = n;
+            subtasks.push( n );
     };
 
     addSubTask( tree.rootNodeId() );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto n = subtasks[--stackSize];
+        const auto n = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[n];
 
         if ( node.leaf() )

@@ -4,6 +4,7 @@
 #include "MRFewSmallest.h"
 #include "MRBuffer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRInplaceStack.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -45,17 +46,12 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTre
     if ( tree.nodes().empty() )
         return res;
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < res.distSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( NodeId n )
@@ -67,9 +63,10 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTre
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[s.n];
         if ( s.distSq >= res.distSq )
             continue;
@@ -129,9 +126,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
     if ( tree.nodes().empty() )
         return;
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto topDistSq = [&]
     {
@@ -141,10 +136,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < topDistSq() )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( NodeId n )
@@ -156,9 +148,10 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[s.n];
         if ( s.distSq >= topDistSq() )
             continue;

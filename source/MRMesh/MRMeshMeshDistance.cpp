@@ -1,5 +1,6 @@
 #include "MRMeshMeshDistance.h"
 #include "MRAABBTree.h"
+#include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRTimer.h"
@@ -47,18 +48,12 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         NoInitNodeId a, b;
         float distSq;
     };
-
-    constexpr int MaxStackSize = 128; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 128> subtasks;
 
     auto addSubTask = [&]( const SubTask& s )
     {
         if ( s.distSq < res.distSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&]( NodeId a, NodeId b )
@@ -69,9 +64,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         if ( aNodesPtr && !aNodes.test( s.a ) )
             continue;
         if ( bNodesPtr && !bNodes.test( s.b ) )

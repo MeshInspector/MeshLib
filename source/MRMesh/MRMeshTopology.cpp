@@ -1758,9 +1758,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
 #endif
     };
-    VertBitSet copiedVerts;
-    if ( fromFaces0 )
-        copiedVerts.resize( fromVerts.size() );
 
     UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
     for ( int i = 0; i < szContours; ++i )
@@ -1790,6 +1787,11 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             existingEdges.autoResizeSet( e.undirected() );
         }
     }
+    // now fromVerts contain all valid vertices of (from) except for passed by given contours
+
+    VertBitSet copiedVerts; // will be filled with copied vertices of (from)
+    if ( fromFaces0 )       // in case of (!fromFaces0) all current fromVerts will be copied
+        copiedVerts.resize( fromVerts.size() );
 
     auto copyEdge = [&]( UndirectedEdgeId fromUe )
     {

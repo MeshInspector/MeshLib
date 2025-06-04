@@ -11,10 +11,7 @@
 #include "MRParallelFor.h"
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
-#include "MRParallelFor.h"
 #include "MRIOParsing.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include <atomic>
 #include <initializer_list>
 
@@ -1199,6 +1196,38 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
 {
     MR_TIMER;
 
+    if ( !rearrangeTriangles )
+    {
+        // addPartByMask is better optimized, but does not support triangles' rearrangement
+
+        // historically addPartByMask uses hash-maps by default, and addPart uses dense maps by default;
+        // keep this behavior
+        auto map1 = map;
+
+        FaceMapOrHashMap fmap;
+        if ( !map1.src2tgtFaces )
+        {
+            fmap = FaceMapOrHashMap::createMap();
+            map1.src2tgtFaces = &fmap;
+        }
+
+        WholeEdgeMapOrHashMap emap;
+        if ( !map1.src2tgtEdges )
+        {
+            emap = WholeEdgeMapOrHashMap::createMap();
+            map1.src2tgtEdges = &emap;
+        }
+
+        VertMapOrHashMap vmap;
+        if ( !map1.src2tgtVerts )
+        {
+            vmap = VertMapOrHashMap::createMap();
+            map1.src2tgtVerts = &vmap;
+        }
+
+        return addPartByMask( from, nullptr, map1 );
+    }
+
     assert( from.updateValids_ );
 
     // maps: to index -> from index
@@ -1276,7 +1305,7 @@ void MeshTopology::addPart( const MeshTopology & from, const PartMapping & map, 
             return false;
         };
 
-        std::sort( begin( invMap ), end( invMap ), isFromFaceLess );
+        tbb::parallel_sort( begin( invMap ), end( invMap ), isFromFaceLess );
         for ( auto i : invMap )
         {
             auto nf = addFaceId();
@@ -2471,30 +2500,6 @@ bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
 
 void loadMeshDll()
 {
-}
-
-TEST( MRMesh, splitEdge )
-{
-    MeshTopology topology;
-    EdgeId a = topology.makeEdge();
-    EdgeId b = topology.makeEdge();
-    EdgeId c = topology.makeEdge();
-    EdgeId d = topology.makeEdge();
-    topology.splice( b, a.sym() );
-    topology.splice( c, b.sym() );
-    topology.splice( d, c.sym() );
-    topology.splice( a, d.sym() );
-    EXPECT_TRUE( topology.isLeftQuad( a ) );
-    EXPECT_TRUE( topology.isLeftQuad( a.sym() ) );
-    topology.setLeft( a, topology.addFaceId() );
-    EdgeId a0 = topology.splitEdge( a );
-    EXPECT_TRUE( topology.isLeftTri( a0 ) );
-    EXPECT_TRUE( topology.isLeftQuad( a ) );
-    EXPECT_EQ( topology.getLeftDegree( a.sym() ), 5 );
-    EdgeId a1 = topology.splitEdge( a.sym() );
-    EXPECT_TRUE( topology.isLeftTri( a1.sym() ) );
-    EXPECT_TRUE( topology.isLeftQuad( a ) );
-    EXPECT_EQ( topology.getLeftDegree( a.sym() ), 6 );
 }
 
 } //namespace MR

@@ -2,6 +2,7 @@
 #include "MRPointCloud.h"
 #include "MRMesh.h"
 #include "MRAABBTreePoints.h"
+#include "MRInplaceStack.h"
 
 namespace MR
 {
@@ -53,9 +54,7 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
 
     const auto& orderedPoints = tree.orderedPoints();
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the transformed box with interior
     {
@@ -65,15 +64,15 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
 
     auto addSubTask = [&]( NodeId n )
     {
-        assert( stackSize < MaxStackSize );
-        subtasks[stackSize++] = n;
+        subtasks.push( n );
     };
 
     addSubTask( tree.rootNodeId() );
 
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto n = subtasks[--stackSize];
+        const auto n = subtasks.top();
+        subtasks.pop();
         const auto& node = tree[n];
         if ( !( boxDistSq( n ) <= ball.radiusSq ) )
             continue;

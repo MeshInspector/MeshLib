@@ -1,4 +1,5 @@
 #include "MRCudaPointsToMeshProjector.cuh"
+#include "MRCudaInplaceStack.cuh"
 
 namespace MR { namespace Cuda {
 
@@ -26,17 +27,12 @@ __global__ void kernel( const float3* points,
         float distSq;
     };
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
 
     auto addSubTask = [&] ( const SubTask& s )
     {
         if ( s.distSq < res.distSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&] ( int n )
@@ -48,9 +44,10 @@ __global__ void kernel( const float3* points,
 
     addSubTask( getSubTask( 0 ) );
     
-    while ( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto& node = nodes[s.n];
         if ( s.distSq >= res.distSq )
             continue;

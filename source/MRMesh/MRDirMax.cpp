@@ -4,8 +4,10 @@
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
 #include "MRMesh.h"
+#include "MRInplaceStack.h"
 #include "MRPolyline.h"
 #include "MRPointCloud.h"
+
 #include <cfloat>
 
 namespace MR
@@ -23,38 +25,32 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     struct SubTask
     {
-        NodeId n;
+        NoInitNodeId n;
         float furthestBoxProj;
-        SubTask() : n( noInit ) {}
-        SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
     const auto maxCorner = Box<V>::getMaxBoxCorner( dir );
 
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
-    int stackSize = 0;
+    InplaceStack<SubTask, 32> subtasks;
     float furthestProj = -FLT_MAX;
 
     auto addSubTask = [&]( const SubTask & s )
     {
         if ( s.furthestBoxProj > furthestProj )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
+            subtasks.push( s );
     };
 
     auto getSubTask = [&]( NodeId n )
     {
-        return SubTask( n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) );
+        return SubTask { n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
 
-    while( stackSize > 0 )
+    while ( !subtasks.empty() )
     {
-        const auto s = subtasks[--stackSize];
+        const auto s = subtasks.top();
+        subtasks.pop();
         const auto & node = tree[s.n];
         if ( s.furthestBoxProj < furthestProj )
             continue;

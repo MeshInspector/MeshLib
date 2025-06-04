@@ -1759,7 +1759,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
 #endif
     };
 
-    UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
+    UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
     for ( int i = 0; i < szContours; ++i )
     {
         const auto & thisContour = thisContours[i];
@@ -1784,17 +1784,19 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             setVmap( from.dest( e ), dest( e1 ) );
             assert( !getAt( emap, e.undirected() ) );
             setAt( emap, e.undirected(), e.even() ? e1 : e1.sym() );
-            existingEdges.autoResizeSet( e.undirected() );
+            fromMappedEdges.set( e.undirected() );
         }
     }
+
+    const EdgeId firstNewEdge = edges_.endId();
+    EdgeId nextNewEdge = firstNewEdge;
     auto copyEdge = [&]( UndirectedEdgeId fromUe )
     {
         assert( !getAt( emap, fromUe ) );
-        setAt( emap, fromUe, edges_.endId() );
+        setAt( emap, fromUe, nextNewEdge );
         if ( map.tgt2srcEdges )
-            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ undirectedEdgeSize() }, EdgeId{ fromUe } );
-        edges_.push_back( from.edges_[EdgeId{ fromUe }] );
-        edges_.push_back( from.edges_[EdgeId{ fromUe }.sym()] );
+            map.tgt2srcEdges->pushBack( UndirectedEdgeId{ nextNewEdge }, EdgeId{ fromUe } );
+        nextNewEdge += 2;
     };
 
     const VertId firstNewVert = edgePerVertex_.endId();
@@ -1819,20 +1821,19 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     // fill all maps
-    const EdgeId firstNewEdge = edges_.endId();
     VertBitSet fromCopiedVerts; // except for moved vertices
+    UndirectedEdgeBitSet fromCopiedEdges; // except for moved edges
     if ( fromFaces0 )
     {
         fromCopiedVerts = fromMappedVerts;
-        UndirectedEdgeBitSet fromEdges( from.undirectedEdgeSize(), true );
-        fromEdges -= existingEdges; // fromEdges will have true bits for lone edges, but it is not important below
+        fromCopiedEdges = fromMappedEdges;
         for ( auto f : fromFaces )
         {
             auto efrom = from.edgePerFace_[f];
             for ( auto e : leftRing( from, efrom ) )
             {
                 const UndirectedEdgeId ue = e.undirected();
-                if ( fromEdges.test_set( ue, false ) )
+                if ( !fromCopiedEdges.test_set( ue ) )
                     copyEdge( ue );
                 if ( auto v = from.org( e ); v.valid() )
                 {
@@ -1843,11 +1844,14 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             copyFace( f );
         }
         fromCopiedVerts -= fromMappedVerts;
+        fromCopiedEdges -= fromMappedEdges;
     }
     else
     {
         // whole (from) mesh is copied
-        for ( auto ue : from.findNotLoneUndirectedEdges() - existingEdges )
+
+        fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
+        for ( auto ue : fromCopiedEdges )
             copyEdge( ue );
 
         fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
@@ -1878,7 +1882,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 if ( getAt( fmap, cf ) || eNx == e.sym() )
                     break;
             }
-            if ( !existingEdges.test( eNx.undirected() ) )
+            if ( !fromMappedEdges.test( eNx.undirected() ) )
             {
                 auto e1Nx = prev( e1.sym() );
                 prevNextEdges.emplace_back( e1Nx, mapEdge( emap, eNx ) );
@@ -1892,7 +1896,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 if ( getAt( fmap, cf ) || ePr == e )
                     break;
             }
-            if ( !existingEdges.test( ePr.undirected() ) )
+            if ( !fromMappedEdges.test( ePr.undirected() ) )
             {
                 auto e1Pr = next( e1 );
                 prevNextEdges.emplace_back( mapEdge( emap, ePr ), e1Pr );
@@ -1913,7 +1917,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             auto e1 = thisContour[j];
 
             {
-                assert ( existingEdges.test( e.undirected() ) );
+                assert ( fromMappedEdges.test( e.undirected() ) );
                 assert( !left( e1 ) );
                 HalfEdgeRecord & toHe = edges_[e1];
                 const HalfEdgeRecord & fromHe = from.edges_[e];
@@ -1932,10 +1936,17 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     }
 
     // translate edge records
-    ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&]( UndirectedEdgeId ue )
+    edges_.resizeNoInit( nextNewEdge );
+    BitSetParallelFor( fromCopiedEdges, [&]( UndirectedEdgeId fromUe )
     {
-        EdgeId e{ ue };
-        from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
+        auto e0 = from.edges_[EdgeId{ fromUe }];
+        auto e1 = from.edges_[EdgeId{ fromUe }.sym()];
+        from.translate_( e0, e1, fmap, vmap, emap, flipOrientation );
+
+        const UndirectedEdgeId nue = getAt( emap, fromUe );
+        const EdgeId ne{ nue };
+        edges_[ne] = e0;
+        edges_[ne.sym()] = e1;
     } );
 
     // translate vertex records

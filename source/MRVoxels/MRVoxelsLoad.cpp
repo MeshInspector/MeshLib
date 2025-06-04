@@ -142,6 +142,15 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path, const ProgressCa
     return fromRaw( filepathToOpen, *expParams, cb );
 }
 
+Expected<MR::FloatGrid> gridFromRaw( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+{
+    auto filepathToOpen = path;
+    auto expParams = findRawParameters( filepathToOpen );
+    if ( !expParams )
+        return unexpected( std::move( expParams.error() ) );
+    return gridFromRaw( filepathToOpen, *expParams, cb );
+}
+
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     MR_TIMER;
@@ -150,78 +159,94 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 
     std::vector<VdbVolume> res;
 
-    openvdb::GridPtrVecPtr grids;
-    {
-        // in order to load on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
-        // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
-        std::ifstream file( path, std::ios::binary );
-        if ( !file )
-            return unexpected( "cannot open file for reading: " + utf8string( path ) );
+    auto gridsRes = gridsFromVdb( path, cb );
+    if ( !gridsRes.has_value() )
+        return unexpected( std::move( gridsRes.error() ) );
 
-        openvdb::initialize();
-        openvdb::io::Stream stream( file, false );
-        grids = stream.getGrids();
-    }
-    if ( grids )
-    {
-        auto& gridsRef = *grids;
-        if ( grids->size() == 0 )
-            return unexpected( std::string( "Nothing to load" ) );
 
-        bool anyLoaded = false;
-        int size = int( gridsRef.size() );
-        int i = 0;
-        ProgressCallback scaledCb;
-        if ( cb )
-            scaledCb = [cb, &i, size] ( float v ) { return cb( ( i + v ) / size ); };
-        for ( i = 0; i < size; ++i )
+    bool anyLoaded = false;
+    int size = int( gridsRes->size() );
+    int i = 0;
+    ProgressCallback scaledCb;
+    if ( cb )
+        scaledCb = [cb, &i, size] ( float v ) { return cb( ( i + v ) / size ); };
+
+    for ( i = 0; i < size; ++i )
+    {
+        VdbVolume vdbVolume;
+        vdbVolume.data = ( *gridsRes )[i];
+
+        if ( !vdbVolume.data )
+            continue;
+
+        const auto dims = vdbVolume.data->evalActiveVoxelDim();
+        const auto voxelSize = vdbVolume.data->voxelSize();
+        for ( int j = 0; j < 3; ++j )
         {
-            if ( !gridsRef[i] )
-                continue;
-
-            std::shared_ptr<openvdb::FloatGrid> floatGridPtr = std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] );
-            if ( !floatGridPtr )
-                return unexpected( "Wrong grid type");
-
-            OpenVdbFloatGrid ovfg( std::move( *floatGridPtr ) );
-            VdbVolume vdbVolume;
-            vdbVolume.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
-
-            if ( !vdbVolume.data )
-                continue;
-
-            const auto dims = vdbVolume.data->evalActiveVoxelDim();
-            const auto voxelSize = vdbVolume.data->voxelSize();
-            for ( int j = 0; j < 3; ++j )
-            {
-                vdbVolume.dims[j] = dims[j];
-                vdbVolume.voxelSize[j] = float( voxelSize[j] );
-            }
-            evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
-
-            if ( scaledCb && !scaledCb( 0.1f ) )
-                return unexpected( getCancelMessage( path ) );
-
-            openvdb::math::Transform::Ptr transformPtr = std::make_shared<openvdb::math::Transform>();
-            vdbVolume.data->setTransform( transformPtr );
-
-            translateToZero( *vdbVolume.data );
-
-            if ( cb && !cb( (1.f + i ) / size ) )
-                return unexpected( getCancelMessage( path ) );
-
-            res.emplace_back( std::move( vdbVolume ) );
-
-            anyLoaded = true;
+            vdbVolume.dims[j] = dims[j];
+            vdbVolume.voxelSize[j] = float( voxelSize[j] );
         }
-        if ( !anyLoaded )
-            return unexpected( std::string( "No loaded grids" ) );
+        evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
+
+        if ( scaledCb && !scaledCb( 0.1f ) )
+            return unexpected( getCancelMessage( path ) );
+
+        openvdb::math::Transform::Ptr transformPtr = std::make_shared<openvdb::math::Transform>();
+        vdbVolume.data->setTransform( transformPtr );
+
+        translateToZero( *vdbVolume.data );
+
+        if ( cb && !cb( ( 1.f + i ) / size ) )
+            return unexpected( getCancelMessage( path ) );
+
+        res.emplace_back( std::move( vdbVolume ) );
+
+        anyLoaded = true;
     }
-    else
-        return unexpected( std::string( "Nothing to read" ) );
+    if ( !anyLoaded )
+        return unexpected( std::string( "No loaded grids" ) );
 
     if ( cb )
         cb( 1.f );
+
+    return res;
+}
+
+Expected<std::vector<MR::FloatGrid>> gridsFromVdb( const std::filesystem::path& file, const ProgressCallback& cb /*= {} */ )
+{
+    // in order to load on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
+    // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+    return addFileNameInError( gridsFromVdb( in, cb ), file );
+}
+
+Expected<std::vector<MR::FloatGrid>> gridsFromVdb( std::istream& in, const ProgressCallback& /*cb*/ /*= {} */ )
+{
+    std::vector<MR::FloatGrid> res;
+    openvdb::GridPtrVecPtr grids;
+    {
+        openvdb::initialize();
+        openvdb::io::Stream stream( in, false );
+        grids = stream.getGrids();
+    }
+
+    if ( !grids )
+        return unexpected( std::string( "Nothing to read" ) );
+    if ( grids->size() == 0 )
+        return unexpected( std::string( "Nothing to load" ) );
+
+    res.resize( grids->size() );
+    for ( int i = 0; i < res.size(); ++i )
+    {
+        std::shared_ptr<openvdb::FloatGrid> floatGridPtr = std::dynamic_pointer_cast< openvdb::FloatGrid >( ( *grids )[i] );
+        if ( !floatGridPtr )
+            return unexpected( "Wrong grid type" );
+
+        OpenVdbFloatGrid ovfg( std::move( *floatGridPtr ) );
+        res[i] = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
+    }
 
     return res;
 }
@@ -244,6 +269,27 @@ Expected<std::vector<VdbVolume>> vecFromGav(  const std::filesystem::path& path,
 }
 
 MR_FORMAT_REGISTRY_IMPL( VoxelsLoader )
+
+Expected<std::vector<MR::FloatGrid>> gridsFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+{
+    auto ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+    if ( ext == ".raw" )
+    {
+        auto rawRes = gridFromRaw( path, cb );
+        if ( !rawRes.has_value() )
+            return unexpected( std::move( rawRes.error() ) );
+        std::vector<MR::FloatGrid> res;
+        res.push_back( std::move( *rawRes ) );
+        return res;
+    }
+    else if ( ext == ".vdb" )
+    {
+        return gridsFromVdb( path, cb );
+    }
+    return unexpectedUnsupportedFileExtension();
+}
 
 Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
@@ -437,17 +483,16 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 }
 #endif // MRVOXELS_NO_TIFF
 
-Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
-    const ProgressCallback& cb )
+Expected<MR::FloatGrid> gridFromRaw( const std::filesystem::path& file, const RawParameters& params, const ProgressCallback& cb /*= {} */ )
 {
     MR_TIMER;
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-    return addFileNameInError( fromRaw( in, params, cb ), file );
+    return addFileNameInError( gridFromRaw( in, params, cb ), file );
 }
 
-Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+Expected<SimpleVolumeMinMax> simpleFromRaw( std::istream& in, const RawParameters& params, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
@@ -459,42 +504,42 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     int unitSize = 0;
     switch ( params.scalarType )
     {
-        case ScalarType::UInt8:
-            unitSize = 1;
-            break;
-        case ScalarType::Int8:
-            unitSize = 1;
-            break;
-        case ScalarType::UInt16:
-            unitSize = 2;
-            break;
-        case ScalarType::Int16:
-            unitSize = 2;
-            break;
-        case ScalarType::UInt32:
-            unitSize = 4;
-            break;
-        case ScalarType::Int32:
-            unitSize = 4;
-            break;
-        case ScalarType::Float32:
-            unitSize = 4;
+    case ScalarType::UInt8:
+        unitSize = 1;
         break;
-        case ScalarType::UInt64:
-            unitSize = 8;
-            break;
-        case ScalarType::Int64:
-            unitSize = 8;
-            break;
-        case ScalarType::Float64:
-            unitSize = 8;
-            break;
-        case ScalarType::Float32_4:
-            unitSize = 16;
-            break;
-        default:
-            assert( false );
-            return unexpected( "Wrong scalar type parameter value" );
+    case ScalarType::Int8:
+        unitSize = 1;
+        break;
+    case ScalarType::UInt16:
+        unitSize = 2;
+        break;
+    case ScalarType::Int16:
+        unitSize = 2;
+        break;
+    case ScalarType::UInt32:
+        unitSize = 4;
+        break;
+    case ScalarType::Int32:
+        unitSize = 4;
+        break;
+    case ScalarType::Float32:
+        unitSize = 4;
+        break;
+    case ScalarType::UInt64:
+        unitSize = 8;
+        break;
+    case ScalarType::Int64:
+        unitSize = 8;
+        break;
+    case ScalarType::Float64:
+        unitSize = 8;
+        break;
+    case ScalarType::Float32_4:
+        unitSize = 16;
+        break;
+    default:
+        assert( false );
+        return unexpected( "Wrong scalar type parameter value" );
     }
 
     SimpleVolumeMinMax outVolume;
@@ -568,18 +613,50 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
         outVolume.min = *minmaxIt.first;
         outVolume.max = *minmaxIt.second;
     }
+    return outVolume;
+}
 
-    VdbVolume res;
-    res.data = simpleVolumeToDenseGrid( outVolume );
+Expected<FloatGrid> gridFromRaw( std::istream& in, const RawParameters& params, const ProgressCallback& cb /*= {} */ )
+{
+    auto simpleVolumeRes = simpleFromRaw( in, params, cb );
+    if ( !simpleVolumeRes.has_value() )
+        return unexpected( std::move( simpleVolumeRes.error() ) );
+    FloatGrid res;
+    res = simpleVolumeToDenseGrid( *simpleVolumeRes );
     if ( params.gridLevelSet )
     {
-        openvdb::tools::changeBackground( res.data->tree(), outVolume.max );
+        openvdb::tools::changeBackground( res->tree(), simpleVolumeRes->max );
+        res->setGridClass( openvdb::GRID_LEVEL_SET );
+    }
+    return res;
+}
+
+Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
+    const ProgressCallback& cb )
+{
+    MR_TIMER;
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+    return addFileNameInError( fromRaw( in, params, cb ), file );
+}
+
+Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+{
+    auto simpleVolumeRes = simpleFromRaw( in, params, cb );
+    if ( !simpleVolumeRes.has_value() )
+        return unexpected( std::move( simpleVolumeRes.error() ) );
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( *simpleVolumeRes );
+    if ( params.gridLevelSet )
+    {
+        openvdb::tools::changeBackground( res.data->tree(), simpleVolumeRes->max );
         res.data->setGridClass( openvdb::GRID_LEVEL_SET );
     }
-    res.dims = outVolume.dims;
-    res.voxelSize = outVolume.voxelSize;
-    res.min = outVolume.min;
-    res.max = outVolume.max;
+    res.dims = simpleVolumeRes->dims;
+    res.voxelSize = simpleVolumeRes->voxelSize;
+    res.min = simpleVolumeRes->min;
+    res.max = simpleVolumeRes->max;
     return res;
 }
 

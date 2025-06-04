@@ -21,8 +21,11 @@ MRVOXELS_API Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std
                                        ProgressCallback callback = {} );
 MRVOXELS_API Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::filesystem::path& file,
                                        ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> gridToRawAutoname( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file,
+    ProgressCallback callback = {} );
 
 /// Save voxels in raw format with each value as 32-bit float in given binary stream
+MRVOXELS_API Expected<void> gridToRawFloat( const FloatGrid& grid, const Vector3i& dims, std::ostream& out, ProgressCallback callback = {} );
 MRVOXELS_API Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 MRVOXELS_API Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback = {} );
 
@@ -35,10 +38,16 @@ MRVOXELS_API Expected<void> toGav( const SimpleVolume& simpleVolume, const std::
 MRVOXELS_API Expected<void> toGav( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback = {} );
 
 /// Save voxels file in OpenVDB format
+MRVOXELS_API Expected<void> gridToVdb( const FloatGrid& grid, const std::filesystem::path& file,
+                               ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> gridToVdb( const FloatGrid& grid, std::ostream& out,
+                               ProgressCallback callback = {} );
 MRVOXELS_API Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );
 
 /// Saves voxels in a file, detecting the format from file extension
+MRVOXELS_API Expected<void> gridToAnySupportedFormat( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file,
+                                              ProgressCallback callback = {} );
 MRVOXELS_API Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                               ProgressCallback callback = {} );
 

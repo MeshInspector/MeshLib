@@ -89,7 +89,7 @@ Expected<Mesh> runShell( const Mesh& mesh, const ParametersRegions& params, cons
         float maxWeightChange = distParams.maxWeight - ( regionsCoverMesh ? params.regions[0].weight : 0 );
         for ( const auto& reg : params.regions )
             maxWeightChange = std::max( maxWeightChange, distParams.maxWeight - reg.weight );
-        distParams.maxWeightGrad = 1.1f * ( maxWeightChange / params.interpolationDist ); // add extra 10% for floating-point errors in interpolation
+        distParams.maxWeightGrad = 1.01f * ( maxWeightChange / params.interpolationDist ); // add extra 10% for floating-point errors in interpolation
     }
 
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );

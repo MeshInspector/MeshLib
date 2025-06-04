@@ -1797,18 +1797,15 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         edges_.push_back( from.edges_[EdgeId{ fromUe }.sym()] );
     };
 
+    const VertId firstNewVert = edgePerVertex_.endId();
+    VertId nextNewVert = firstNewVert;
     auto copyVert = [&]( VertId fromV )
     {
-        auto nv = addVertId();
+        auto nv = nextNewVert++;
         assert( !getAt( vmap, fromV ) );
         setAt( vmap, fromV, nv );
         if ( map.tgt2srcVerts )
             map.tgt2srcVerts->pushBack( nv, fromV );
-        if ( updateValids_ )
-        {
-            validVerts_.set( nv );
-            ++numValidVerts_;
-        }
     };
 
     auto copyFace = [&]( FaceId fromF )
@@ -1826,7 +1823,6 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
 
     // first pass: fill maps
     const EdgeId firstNewEdge = edges_.endId();
-    const VertId firstNewVert = edgePerVertex_.endId();
     const FaceId firstNewFace = edgePerFace_.endId();
     VertBitSet fromCopiedVerts; // except for moved vertices
     if ( fromFaces0 )
@@ -1939,18 +1935,26 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         }
     }
 
-    // second pass: translate edge records
+    // translate edge records
     ParallelFor( firstNewEdge.undirected(), edges_.endId().undirected(), [&]( UndirectedEdgeId ue )
     {
         EdgeId e{ ue };
         from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
     } );
 
+    // translate vertex records
+    if ( updateValids_ )
+    {
+        validVerts_.autoResizeSet( firstNewVert, nextNewVert - firstNewVert, true );
+        numValidVerts_ += nextNewVert - firstNewVert;
+    }
+    edgePerVertex_.resizeNoInit( nextNewVert );
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
         edgePerVertex_[getAt( vmap, v )] = mapEdge( emap, from.edgePerVertex_[v] );
     } );
 
+    // translate face records
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
         const auto e = from.edgePerFace_[f];

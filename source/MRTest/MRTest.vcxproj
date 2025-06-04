@@ -24,6 +24,7 @@
     <ClCompile Include="MRMeshIntersectTests.cpp" />
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRMeshTopologyTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />

@@ -78,7 +78,7 @@ jobs:
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
           if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
+            Move-Item $pkg.FullName "C:/work/nuget_repo/"
           } else {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1

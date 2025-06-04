@@ -1849,17 +1849,25 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     else
     {
         // whole (from) mesh is copied
+        tbb::task_group taskGroup;
+        taskGroup.run( [&] ()
+        {
+            fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
+            for ( auto v : fromCopiedVerts )
+                copyVert( v );
+        } );
+
+        taskGroup.run( [&] ()
+        {
+            for ( auto f : from.getValidFaces() )
+                copyFace( f );
+        } );
 
         fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
         for ( auto ue : fromCopiedEdges )
             copyEdge( ue );
 
-        fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
-        for ( auto v : fromCopiedVerts )
-            copyVert( v );
-
-        for ( auto f : from.getValidFaces() )
-            copyFace( f );
+        taskGroup.wait();
     }
 
     // in case of open contours, some nearby edges have to be updated

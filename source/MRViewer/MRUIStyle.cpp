@@ -1888,13 +1888,13 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
 
     auto width = ImGui::GetContentRegionAvail().x;
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
-    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x );
+    auto textSize = ImGui::CalcTextSize( str.c_str(), nullptr, false, width - StyleConsts::Notification::cTextFramePadding.x * scaling );
 
     auto pos = ImGui::GetCursorPos();
     auto sPos = ImGui::GetCursorScreenPos();
-    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ), bgColor.getUInt32(),
+    drawList->AddRectFilled( sPos, sPos + ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * scaling ), bgColor.getUInt32(),
         scaling * StyleConsts::Notification::cTextFrameRounding );
-    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding );
+    ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * scaling );
     transparentTextWrapped( "%s", str.c_str() );
     
     auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -1904,7 +1904,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
         ImGui::PushFont( iconsFont );
     }
 
-    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y, StyleConsts::Notification::cTextFramePadding.y ) );
+    ImGui::SetCursorPos( pos + ImVec2( StyleConsts::Notification::cTextFramePadding.y * scaling, StyleConsts::Notification::cTextFramePadding.y * scaling ) );
     ImGui::PushStyleColor( ImGuiCol_Text, UI::notificationChar( type ).second );
     ImGui::Text( "%s", UI::notificationChar( type ).first );
     ImGui::PopStyleColor();
@@ -1916,7 +1916,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
     }
 
     ImGui::SetCursorPos( pos );
-    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y ) );
+    ImGui::Dummy( ImVec2( width, textSize.y + 2 * StyleConsts::Notification::cTextFramePadding.y * scaling ) );
 }
 
 void setTooltipIfHovered( const std::string& text, float scaling )

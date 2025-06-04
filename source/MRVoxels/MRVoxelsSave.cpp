@@ -303,7 +303,7 @@ Expected<void> gridToAnySupportedFormat( const FloatGrid& grid, const Vector3i& 
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    // ext == ".???"
+
     if ( ext == ".raw" )
         return gridToRawAutoname( grid, dims, file, callback );
     else if ( ext == ".vdb" )

@@ -27,28 +27,28 @@ private:
     MRVIEWER_API static SceneCache& instance_();
     SceneCache() = default;
 
-    struct BasicVectorHolder
+    struct MRVIEWER_CLASS BasicVectorHolder
     {
         BasicVectorHolder() = default;
         BasicVectorHolder( const BasicVectorHolder& ) = default;
         BasicVectorHolder( BasicVectorHolder&& ) = default;
         virtual ~BasicVectorHolder() = default;
     };
-    template <typename ObjectType>
-    struct VectorHolder : BasicVectorHolder
+    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    struct MRVIEWER_CLASS VectorHolder : BasicVectorHolder
     {
         ObjectList<ObjectType> value;
     };
-    std::unordered_map<std::string, std::shared_ptr<BasicVectorHolder>> cachedData_;
+    std::unordered_map<std::type_index, std::shared_ptr<BasicVectorHolder>> cachedData_;
 };
 
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
 const SceneCache::ObjectList<ObjectType>& SceneCache::getAllObjects()
 {
-    using ResultType = VectorHolder<ObjectType>;
-    const auto typeName = std::to_string( std::is_const_v<ObjectType> ) + ObjectType::TypeName() + std::to_string( int( SelectivityType ) );
+    using ResultType = VectorHolder<ObjectType, SelectivityType>;
+    const auto typeIndex = std::type_index( typeid( ResultType ) );
     auto& cachedData = instance_().cachedData_;
-    auto& cachedVec = cachedData[typeName];
+    auto& cachedVec = cachedData[typeIndex];
     if ( !cachedVec )
     {
         auto dataList = std::make_shared<ResultType>();

@@ -8,7 +8,7 @@ namespace MR
 /// \ingroup DataModelGroup
 /// \{
 
-enum class ObjectSelectivityType
+enum class MRMESH_CLASS ObjectSelectivityType
 {
     Selectable,
     Selected,

@@ -1808,22 +1808,18 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             map.tgt2srcVerts->pushBack( nv, fromV );
     };
 
+    const FaceId firstNewFace = edgePerFace_.endId();
+    FaceId nextNewFace = firstNewFace;
     auto copyFace = [&]( FaceId fromF )
     {
-        auto nf = addFaceId();
+        auto nf = nextNewFace++;
         if ( map.tgt2srcFaces )
             map.tgt2srcFaces ->pushBack( nf, fromF );
         setAt( fmap, fromF, nf );
-        if ( updateValids_ )
-        {
-            validFaces_.set( nf );
-            ++numValidFaces_;
-        }
     };
 
-    // first pass: fill maps
+    // fill all maps
     const EdgeId firstNewEdge = edges_.endId();
-    const FaceId firstNewFace = edgePerFace_.endId();
     VertBitSet fromCopiedVerts; // except for moved vertices
     if ( fromFaces0 )
     {
@@ -1955,6 +1951,12 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     } );
 
     // translate face records
+    if ( updateValids_ )
+    {
+        validFaces_.autoResizeSet( firstNewFace, nextNewFace - firstNewFace, true );
+        numValidFaces_ += nextNewFace - firstNewFace;
+    }
+    edgePerFace_.resizeNoInit( nextNewFace );
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
         const auto e = from.edgePerFace_[f];

@@ -4,6 +4,7 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
 #include "MRUIStyle.h"
+#include "MRViewer.h"
 
 namespace MR
 {
@@ -19,6 +20,7 @@ bool ModalDialog::beginPopup( float menuScaling )
     const auto windowWidth = settings_.windowWidth > 0.f ? settings_.windowWidth : cModalWindowWidth * menuScaling;
     const ImVec2 windowSize { windowWidth, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::SetNextWindowPos( Vector2f( getViewerInstance().framebufferSize ) * 0.5f, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
 
     setStyle_( menuScaling );
 
@@ -69,19 +71,23 @@ bool ModalDialog::beginPopup( float menuScaling )
         }
     }
 
+    if ( auto* dontShowAgain = settings_.dontShowAgain )
+    {
+        constexpr const auto* cDontShowAgainText = "Do not show this message again";
+        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText ).x;
+        ImGui::SetCursorPosX( ( windowWidth - checkboxWidth ) * 0.5f );
+        auto color = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+        color.w = 0.5f;
+        ImGui::PushStyleColor( ImGuiCol_Text, color );
+        UI::checkbox( cDontShowAgainText, dontShowAgain );
+        ImGui::PopStyleColor();
+    }
+
     return true;
 }
 
 void ModalDialog::endPopup( float )
 {
-    if ( auto* dontShowAgain = settings_.dontShowAgain )
-    {
-        constexpr const auto* cDontShowAgainText = "Don't show the dialog again";
-        const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText ).x;
-        ImGui::SetCursorPosX( ( windowWidth() - checkboxWidth ) * 0.5f );
-        UI::checkbox( cDontShowAgainText, dontShowAgain );
-    }
-
     if ( settings_.closeOnClickOutside )
     {
         const auto clicked = ImGui::IsMouseClicked( ImGuiMouseButton_Left );

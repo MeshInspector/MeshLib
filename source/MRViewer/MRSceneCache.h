@@ -34,28 +34,31 @@ private:
         BasicVectorHolder( BasicVectorHolder&& ) = default;
         virtual ~BasicVectorHolder() = default;
     };
-    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    template <typename ObjectType>
     struct VectorHolder : BasicVectorHolder
     {
         ObjectList<ObjectType> value;
     };
-    std::unordered_map<std::type_index, std::shared_ptr<BasicVectorHolder>> cachedData_;
+    std::unordered_map<std::string, std::shared_ptr<BasicVectorHolder>> cachedData_;
 };
 
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
 const SceneCache::ObjectList<ObjectType>& SceneCache::getAllObjects()
 {
-    using ResultType = VectorHolder<ObjectType, SelectivityType>;
-    const auto typeIndex = std::type_index( typeid( ResultType ) );
+    using ResultType = VectorHolder<ObjectType>;
+    const auto typeName = std::to_string( std::is_const_v<ObjectType> ) + ObjectType::TypeName() + std::to_string( int( SelectivityType ) );
     auto& cachedData = instance_().cachedData_;
-    if ( !cachedData.contains( typeIndex ) || !cachedData[typeIndex] )
+    auto& cachedVec = cachedData[typeName];
+    if ( !cachedVec )
     {
-        ResultType newData;
-        newData.value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
-        std::shared_ptr<ResultType> newDataPtr = std::make_shared<ResultType>( std::move( newData ) );
-        cachedData[typeIndex] = std::dynamic_pointer_cast<BasicVectorHolder>( newDataPtr );
+        auto dataList = std::make_shared<ResultType>();
+        dataList->value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
+        cachedVec = dataList;
     }
-    return std::dynamic_pointer_cast< ResultType >( cachedData[typeIndex] )->value;
+    assert( cachedVec );
+    auto resPtr = dynamic_pointer_cast< ResultType >( cachedVec );
+    assert( resPtr );
+    return resPtr->value;
 }
 
 }

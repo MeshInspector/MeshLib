@@ -76,18 +76,21 @@ Expected<Mesh> runShell( const Mesh& mesh, const ParametersRegions& params, cons
         distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
 
 
-    VertBitSet regionsUnion;
-    for ( const auto& reg : params.regions )
-        regionsUnion |= reg.verts;
-    const bool regionsCoverMesh = mesh.topology.getValidVerts().is_subset_of( regionsUnion );
+    if ( params.interpolationDist > 0 )
+    {
+        VertBitSet regionsUnion;
+        for ( const auto& reg : params.regions )
+            regionsUnion |= reg.verts;
+        const bool regionsCoverMesh = mesh.topology.getValidVerts() == regionsUnion;
 
-    // Maximum gradient magnitude = max weight difference divided by the interpolation distance (provided to improve performance)
-    // If regions do not cover all mesh, then we need to consider weight=0 for the verts that are not covered.
-    //      Otherwise, we consider the maximum difference between different regions.
-    float maxWeightChange = distParams.maxWeight - ( regionsCoverMesh ? params.regions[0].weight : 0 );
-    for ( const auto& reg : params.regions )
-        maxWeightChange = std::max( maxWeightChange, distParams.maxWeight - reg.weight );
-    distParams.maxWeightGrad = 1.1f * ( maxWeightChange / params.interpolationDist ); // add extra 10% for floating-point errors in interpolation
+        // Maximum gradient magnitude = max weight difference divided by the interpolation distance (provided to improve performance)
+        // If regions do not cover all mesh, then we need to consider weight=0 for the verts that are not covered.
+        //      Otherwise, we consider the maximum difference between different regions.
+        float maxWeightChange = distParams.maxWeight - ( regionsCoverMesh ? params.regions[0].weight : 0 );
+        for ( const auto& reg : params.regions )
+            maxWeightChange = std::max( maxWeightChange, distParams.maxWeight - reg.weight );
+        distParams.maxWeightGrad = 1.1f * ( maxWeightChange / params.interpolationDist ); // add extra 10% for floating-point errors in interpolation
+    }
 
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
     distParams.pointWeight = [&weights] ( VertId v )

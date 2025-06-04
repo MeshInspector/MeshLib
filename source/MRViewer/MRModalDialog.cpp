@@ -77,7 +77,7 @@ bool ModalDialog::beginPopup( float menuScaling )
         const auto checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( cDontShowAgainText ).x;
         ImGui::SetCursorPosX( ( windowWidth - checkboxWidth ) * 0.5f );
         auto color = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        color.w = 0.7f;
+        color.w = 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, color );
         UI::checkbox( cDontShowAgainText, dontShowAgain );
         ImGui::PopStyleColor();

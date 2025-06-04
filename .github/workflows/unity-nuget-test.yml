@@ -70,7 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --skip-existing
       
       - name: Move nuget package to repo folder
         # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step

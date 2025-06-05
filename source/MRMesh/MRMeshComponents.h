@@ -24,7 +24,7 @@ enum FaceIncidence
 /// returns one connected component containing given face, 
 /// not effective to call more than once, if several components are needed use getAllComponents
 [[nodiscard]] MRMESH_API FaceBitSet getComponent( const MeshPart& meshPart, FaceId id,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// returns one connected component containing given vertex, 
 /// not effective to call more than once, if several components are needed use getAllComponentsVerts
@@ -39,15 +39,15 @@ enum FaceIncidence
 
 /// returns the largest by surface area component or empty set if its area is smaller than \param minArea
 [[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {}, float minArea = 0,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, float minArea = 0,
     int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
 
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// returns the union of connected components, each having at least given area
-[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgePredicate & isCompBd );
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgeBitSet * isCompBd );
 
 /// given prepared union-find structure returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
@@ -63,7 +63,7 @@ struct ExpandToComponentsParams
     FaceIncidence incidence = FaceIncidence::PerEdge;
 
     /// optional predicate of boundaries between components
-    UndirectedEdgePredicate isCompBd;
+    const UndirectedEdgeBitSet * isCompBd = nullptr;
 
     /// optional output number of components
     int* optOutNumComponents = nullptr;
@@ -86,7 +86,7 @@ struct LargeByAreaComponentsSettings
     float minArea = 0;
 
     /// optional predicate of boundaries between components
-    UndirectedEdgePredicate isCompBd;
+    const UndirectedEdgeBitSet * isCompBd = nullptr;
 };
 
 /// returns requested number of largest by area connected components in descending by area order
@@ -103,19 +103,19 @@ struct LargeByAreaComponentsSettings
 
 /// returns the number of connected components in mesh part
 [[nodiscard]] MRMESH_API size_t getNumComponents( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets all connected components of mesh part
 /// \note be careful, if mesh is large enough and has many components, the memory overflow will occur
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate& isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets all connected components of mesh part
 /// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size
 /// \param maxComponentCount should be more then 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
 [[nodiscard]] MRMESH_API std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate& isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets all connected components from components map ( FaceId => RegionId )
 /// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size (this similarly changes componentsMap)
@@ -128,7 +128,7 @@ struct LargeByAreaComponentsSettings
 /// 1. the mapping: FaceId -> Component ID in [0, 1, 2, ...)
 /// 2. the total number of components
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// computes the area of each region given via the map
 [[nodiscard]] MRMESH_API Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
@@ -155,9 +155,6 @@ struct LargeByAreaComponentsSettings
 /// subdivides given edges on connected components
 [[nodiscard]] MRMESH_API std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& edges );
 
-/// gets all connected components where difference between the highest and the lowest point is less than \param zTolerance
-[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance );
-
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection );
@@ -166,11 +163,11 @@ struct LargeByAreaComponentsSettings
 MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to skip uniting components over it
 /// it is guaranteed that isCompBd is invoked in a thread-safe manner (that left and right face are always processed by one thread)
-[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd = {} );
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );

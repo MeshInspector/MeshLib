@@ -16,6 +16,7 @@ MR_VECTOR_LIKE_IMPL( Face2RegionMap, RegionId )
 
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_VECTOR_LIKE( MRFace2RegionMap, RegionId )
 
 namespace
@@ -31,45 +32,29 @@ MeshPart cast( MRMeshPart mp )
 
 } // namespace
 
-MRFaceBitSet* mrMeshComponentsGetComponent( const MRMeshPart* mp, MRFaceId id, MRFaceIncidence incidence, bool( *isCompBd_ )( MRUndirectedEdgeId ) )
+MRFaceBitSet* mrMeshComponentsGetComponent( const MRMeshPart* mp, MRFaceId id, MRFaceIncidence incidence, const MRUndirectedEdgeBitSet* isCompBd_ )
 {
-    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
-        return isCompBd_( MRUndirectedEdgeId { e.get() } );
-    };
-    FaceBitSet result;
-    if ( isCompBd_ )
-        result = MeshComponents::getComponent( cast( *mp ), FaceId(id.id), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd );
-    else
-        result = MeshComponents::getComponent( cast( *mp ), FaceId( id.id ), ( MeshComponents::FaceIncidence( incidence ) ), nullptr );
+    ARG_PTR( isCompBd );
+
+    FaceBitSet result = MeshComponents::getComponent( cast( *mp ), FaceId(id.id), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd );
 
     return mrFaceBitSetCopy( ( const MRFaceBitSet* )&result );
 }
 
-MRFaceBitSet* mrMeshComponentsGetLargestComponent( const MRMeshPart* mp, MRFaceIncidence incidence, bool( *isCompBd_ )( MRUndirectedEdgeId ), float minArea, int* numSmallerComponents )
+MRFaceBitSet* mrMeshComponentsGetLargestComponent( const MRMeshPart* mp, MRFaceIncidence incidence, const MRUndirectedEdgeBitSet* isCompBd_, float minArea, int* numSmallerComponents )
 {
-    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
-        return isCompBd_( MRUndirectedEdgeId { e.get() } );
-    };
-    FaceBitSet result;
-    if ( isCompBd_ )
-        result = MeshComponents::getLargestComponent( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd, minArea, numSmallerComponents );
-    else
-        result = MeshComponents::getLargestComponent( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ), nullptr, minArea, numSmallerComponents );
+    ARG_PTR( isCompBd );
+
+    FaceBitSet result = MeshComponents::getLargestComponent( cast( *mp ), ( MeshComponents::FaceIncidence( incidence ) ), isCompBd, minArea, numSmallerComponents );
 
     return mrFaceBitSetCopy( ( const MRFaceBitSet* )&result );
 }
 
-MRFaceBitSet* mrMeshComponentsGetLargeByAreaComponents( const MRMeshPart* mp, float minArea, bool( *isCompBd_ )( MRUndirectedEdgeId ) )
+MRFaceBitSet* mrMeshComponentsGetLargeByAreaComponents( const MRMeshPart* mp, float minArea, const MRUndirectedEdgeBitSet* isCompBd_ )
 {
-    auto isCompBd = [isCompBd_] ( UndirectedEdgeId e )  {
-        return isCompBd_( MRUndirectedEdgeId { e.get() } );
-    };
+    ARG_PTR( isCompBd );
     
-    FaceBitSet result;
-    if ( isCompBd_ )
-        result = MeshComponents::getLargeByAreaComponents( cast( *mp ), minArea, isCompBd );
-    else
-        result = MeshComponents::getLargeByAreaComponents( cast( *mp ), minArea, nullptr );
+    FaceBitSet result = MeshComponents::getLargeByAreaComponents( cast( *mp ), minArea, isCompBd );
 
     return mrFaceBitSetCopy( (const MRFaceBitSet* ) & result);
 }

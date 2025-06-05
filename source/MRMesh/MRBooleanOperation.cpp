@@ -32,8 +32,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         for ( const auto& path : cutPaths )
             for ( auto e : path )
                 cutEdges.set( e );
-        compMap = MeshComponents::getAllComponentsMap( origin, MeshComponents::PerEdge,
-            [&cutEdges]( UndirectedEdgeId ue ) { return cutEdges.test( ue ); } );
+        compMap = MeshComponents::getAllComponentsMap( origin, MeshComponents::PerEdge, &cutEdges );
     }
     const auto& [regionsMap, numRegions] = compMap;
     RegionBitSet leftRegions( numRegions );  // regions to the left of cutPaths

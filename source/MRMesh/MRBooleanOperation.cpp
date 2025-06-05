@@ -15,14 +15,15 @@ namespace MR
 namespace
 {
 
-// Finds need mesh part based on components relative positions (inside/outside)
-// leftPart - left part of cut contours
-FaceBitSet findMeshPart( const Mesh& origin,
-    const FaceBitSet& leftPart, const Mesh& otherMesh, bool needInsideComps,
-    bool originIsA, const AffineXf3f* rigidB2A, 
+// Finds needed mesh part based on components relative positions (inside/outside)
+// returns std::nullopt if given cuts do not divide origin mesh on god components (e.g. cuts have self-interections)
+std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
+    const std::vector<EdgePath>& cutPaths, const Mesh& otherMesh, bool needInsideComps,
+    bool originIsA, const AffineXf3f* rigidB2A,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
-    const auto& [regionsMap, numRegions] = MeshComponents::getAllComponentsMap( origin );
+    std::pair<Face2RegionMap, int> compMap = MeshComponents::getAllComponentsMap( origin );
+    const auto& [regionsMap, numRegions] = compMap;
     RegionBitSet intersectingRegions( numRegions );
     RegionBitSet visitedRegions( numRegions );
     RegionBitSet neededRegions( numRegions );
@@ -31,6 +32,24 @@ FaceBitSet findMeshPart( const Mesh& origin,
     FaceBitSet connectedComp( origin.topology.lastValidFace() + 1 );
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
+
+    FaceBitSet leftPart;
+    if ( !cutPaths.empty() )
+    {
+        leftPart = fillContourLeft( origin.topology, cutPaths );
+
+        for ( const auto& path : cutPaths )
+        {
+            if ( path.empty() )
+                continue;
+            const auto& e0 = path[0];
+            FaceId left = origin.topology.left( e0 );
+            FaceId right = origin.topology.right( e0 );
+
+            if ( leftPart.test( left ) && leftPart.test( right ) )
+                return std::nullopt;
+        }
+    }
 
     // mark components of intersecting parts
     for ( auto f : leftPart )
@@ -73,24 +92,15 @@ FaceBitSet findMeshPart( const Mesh& origin,
     return res;
 }
 
-bool prepareLeft( const Mesh& origin, const std::vector<EdgePath>& cutPaths, FaceBitSet& leftPart )
+// Finds needed mesh part based on components relative positions (inside/outside)
+FaceBitSet findMeshPart( const Mesh& origin,
+    const Mesh& otherMesh, bool needInsideComps,
+    bool originIsA, const AffineXf3f* rigidB2A,
+    bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
-    const auto& fullBS = origin.topology.getValidFaces();
-    leftPart = fillContourLeft( origin.topology, cutPaths );
-
-    for ( const auto& path : cutPaths )
-    {
-        if ( path.empty() )
-            continue;
-        const auto& e0 = path[0];
-        FaceId left = origin.topology.left( e0 );
-        FaceId right = origin.topology.right( e0 );
-
-        if ( fullBS.test( left ) && fullBS.test( right ) && leftPart.test( left ) && leftPart.test( right ) )
-            return false;
-    }
-
-    return true;
+    auto res = findMeshPart( origin, {}, otherMesh, needInsideComps, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+    assert( res.has_value() );
+    return std::move( *res );
 }
 
 // cutPaths - cut edges of origin mesh, it is modified to new indexes after preparing mesh part
@@ -102,9 +112,6 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
-    FaceBitSet leftPart;
-    if ( !prepareLeft( origin, cutPaths, leftPart ) )
-        return false;
 
     // use dense-maps inside addMeshPart instead of default hash-maps for better performance
     FaceMap fmap;
@@ -115,9 +122,11 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &emap;
     VertMap* vMapPtr = maps ? &maps->old2newVerts : &vmap;
 
-    leftPart = findMeshPart( origin, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+    auto maybeLeftPart = findMeshPart( origin, cutPaths, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+    if ( !maybeLeftPart )
+        return false;
 
-    outMesh.addMeshPart( { origin, &leftPart }, needFlip, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
+    outMesh.addMeshPart( { origin, &*maybeLeftPart }, needFlip, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
 
     for ( auto& path : cutPaths )
         for ( auto& e : path )
@@ -183,16 +192,16 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     taskGroup.run( [&] ()
     {
         if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
-            aPartFbs = findMeshPart( meshACut, {}, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+            aPartFbs = findMeshPart( meshACut, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
         else if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
-            aPartFbs = findMeshPart( meshACut, {}, meshBCut, true, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+            aPartFbs = findMeshPart( meshACut, meshBCut, true, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     } );
 
     FaceBitSet bPartFbs;
     if ( operation == BooleanOperation::OutsideB || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceBA )
-        bPartFbs = findMeshPart( meshBCut, {}, meshACut, false, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        bPartFbs = findMeshPart( meshBCut, meshACut, false, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     else if ( operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB )
-        bPartFbs = findMeshPart( meshBCut, {}, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        bPartFbs = findMeshPart( meshBCut, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     taskGroup.wait();
 
     Mesh aPart;

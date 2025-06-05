@@ -155,9 +155,6 @@ struct LargeByAreaComponentsSettings
 /// subdivides given edges on connected components
 [[nodiscard]] MRMESH_API std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& edges );
 
-/// gets all connected components where difference between the highest and the lowest point is less than \param zTolerance
-[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance );
-
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const MeshTopology& topology, const VertBitSet & selection );

@@ -49,6 +49,19 @@ Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, Progr
     );
 }
 
+Expected<void> gridToRawFloat( const FloatGrid& grid, const Vector3i& dims, std::ostream& out, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+    auto vdbVolume = floatGridToVdbVolume( grid );
+    vdbVolume.dims = dims;
+    return vdbVolumeToSimpleVolume( vdbVolume, {}, subprogress( callback, 0.0f, 0.2f ) ).and_then(
+        [&out, sp = subprogress( callback, 0.2f, 1.0f )] ( auto&& sv )
+    {
+        return toRawFloat( sv, out, sp );
+    }
+    );
+}
+
 namespace
 {
 
@@ -157,6 +170,18 @@ Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::files
     );
 }
 
+Expected<void> gridToRawAutoname( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    return openRawAutonameStream( dims, Vector3f::diagonal( 1.0f ), grid->getGridClass() == openvdb::GRID_LEVEL_SET, file ).and_then(
+        [&] ( NamedOutFileStream&& s )
+    {
+        return addFileNameInError( gridToRawFloat( grid, dims, s.out, callback ), s.file );
+    }
+    );
+}
+
 Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
@@ -221,31 +246,42 @@ Expected<void> toGav( const SimpleVolume& simpleVolume, std::ostream & out, Prog
     );
 }
 
-Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
+Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback callback )
 {
     MR_TIMER;
-    openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
-    gridPtr->setTree( vdbVolume.data->treePtr() );
-    gridPtr->setGridClass( vdbVolume.data->getGridClass() );
+    FloatGrid newGrid = std::make_shared<OpenVdbFloatGrid>();
+    newGrid->setTree( vdbVolume.data->treePtr() );
+    newGrid->setGridClass( vdbVolume.data->getGridClass() );
     openvdb::math::Transform::Ptr transform = std::make_shared<openvdb::math::Transform>();
     transform->preScale( { vdbVolume.voxelSize.x, vdbVolume.voxelSize.y, vdbVolume.voxelSize.z } );
-    gridPtr->setTransform( transform );
+    newGrid->setTransform( transform );
 
     // in order to save on Windows a file with Unicode symbols in the name, we need to open ofstream by ourselves,
     // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
-    std::ofstream file( filename, std::ios::binary );
-    if ( !file )
-        return unexpected( "cannot open file for writing: " + utf8string( filename ) );
-
-    openvdb::io::Stream stream( file );
-    stream.write( openvdb::GridCPtrVec{ gridPtr } );
-    if ( !file )
-        return unexpected( "error writing in file: " + utf8string( filename ) );
-
-    return {};
+    return gridToVdb( newGrid, filename, callback );
 }
 
 MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
+
+
+Expected<void> gridToVdb( const FloatGrid& grid, const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return addFileNameInError( gridToVdb( grid, out, callback ), file );
+}
+
+Expected<void> gridToVdb( const FloatGrid& vdbVolume, std::ostream& out, ProgressCallback /*callback*/ /*= {} */ )
+{
+    openvdb::io::Stream stream( out );
+    stream.write( openvdb::GridCPtrVec{ vdbVolume } );
+    if ( !out )
+        return unexpected( "error writing in stream" );
+    return {};
+}
 
 Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                    ProgressCallback callback /*= {} */ )
@@ -260,6 +296,20 @@ Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::file
         return unexpectedUnsupportedFileExtension();
 
     return saver( vdbVolume, file, callback );
+}
+
+Expected<void> gridToAnySupportedFormat( const FloatGrid& grid, const Vector3i& dims, const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    auto ext = utf8string( file.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    if ( ext == ".raw" )
+        return gridToRawAutoname( grid, dims, file, callback );
+    else if ( ext == ".vdb" )
+        return gridToVdb( grid, file, callback );
+
+    return unexpectedUnsupportedFileExtension();
 }
 
 template <VoxelsSaver voxelsSaver>

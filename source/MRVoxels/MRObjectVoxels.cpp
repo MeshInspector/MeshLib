@@ -625,7 +625,7 @@ Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::
     return std::async( getAsyncLaunchType(),
         [this, filename = std::filesystem::path( path ) += serializeFormat_ ? serializeFormat_ : defaultSerializeVoxelsFormat()] ()
     {
-        return MR::VoxelsSave::toAnySupportedFormat( vdbVolume_, filename );
+        return MR::VoxelsSave::gridToAnySupportedFormat( vdbVolume_.data, vdbVolume_.dims, filename );
     } );
 }
 
@@ -673,7 +673,7 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
         if ( modelPath.empty() )
             return unexpected( "No voxels file found: " + utf8string( path ) );
     }
-    auto res = VoxelsLoad::fromAnySupportedFormat( modelPath, progressCb );
+    auto res = VoxelsLoad::gridsFromAnySupportedFormat( modelPath, progressCb );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
@@ -681,7 +681,7 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
         return unexpected( "No voxels found in file: " + utf8string( modelPath ) );
     assert( res->size() == 1 );
 
-    construct( (*res).front() );
+    construct( ( *res ).front(), vdbVolume_.voxelSize );
     if ( !vdbVolume_.data )
         return unexpected( "No grid loaded" );
 

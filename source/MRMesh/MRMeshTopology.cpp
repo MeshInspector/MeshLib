@@ -1995,7 +1995,13 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     edgePerVertex_.resizeNoInit( nextNewVert );
     BitSetParallelFor( fromCopiedVerts, [&]( VertId v )
     {
-        edgePerVertex_[getAt( vmap, v )] = mapEdge( emap, from.edgePerVertex_[v] );
+        for ( auto fromE : orgRing( from, v ) )
+            if ( auto e = mapEdge( emap, fromE ) )
+            {
+                edgePerVertex_[getAt( vmap, v )] = e;
+                return;
+            }
+        assert( !"at least one edge of vertex must be copied" );
     } );
 
     // translate face records
@@ -2007,8 +2013,13 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     edgePerFace_.resizeNoInit( nextNewFace );
     BitSetParallelFor( fromFaces, [&]( FaceId f )
     {
-        const auto e = from.edgePerFace_[f];
-        edgePerFace_[getAt( fmap, f )] = mapEdge( emap, flipOrientation ? e.sym() : e );
+        for ( auto fromE : leftRing( from, f ) )
+            if ( auto e = mapEdge( emap, fromE ) )
+            {
+                edgePerFace_[getAt( fmap, f )] = flipOrientation ? e.sym() : e;
+                return;
+            }
+        assert( !"at least one edge of face must be copied" );
     } );
 
     // update near stitch edges

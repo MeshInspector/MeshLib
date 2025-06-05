@@ -16,15 +16,28 @@ namespace
 {
 
 // Finds needed mesh part based on components relative positions (inside/outside)
-// returns std::nullopt if given cuts do not divide origin mesh on god components (e.g. cuts have self-interections)
+// returns std::nullopt if given cuts do not divide origin mesh on good components (e.g. cuts have self-interections)
 std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     const std::vector<EdgePath>& cutPaths, const Mesh& otherMesh, bool needInsideComps,
     bool originIsA, const AffineXf3f* rigidB2A,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
-    std::pair<Face2RegionMap, int> compMap = MeshComponents::getAllComponentsMap( origin );
+    MR_TIMER;
+    std::pair<Face2RegionMap, int> compMap;
+    if ( cutPaths.empty() )
+        compMap = MeshComponents::getAllComponentsMap( origin );
+    else
+    {
+        UndirectedEdgeBitSet cutEdges( origin.topology.undirectedEdgeSize() );
+        for ( const auto& path : cutPaths )
+            for ( auto e : path )
+                cutEdges.set( e );
+        compMap = MeshComponents::getAllComponentsMap( origin, MeshComponents::PerEdge,
+            [&cutEdges]( UndirectedEdgeId ue ) { return cutEdges.test( ue ); } );
+    }
     const auto& [regionsMap, numRegions] = compMap;
-    RegionBitSet intersectingRegions( numRegions );
+    RegionBitSet leftRegions( numRegions );  // regions to the left of cutPaths
+    RegionBitSet rightRegions( numRegions ); // regions to the right of cutPaths
     RegionBitSet visitedRegions( numRegions );
     RegionBitSet neededRegions( numRegions );
 
@@ -33,29 +46,20 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
 
-    FaceBitSet leftPart;
     if ( !cutPaths.empty() )
     {
-        leftPart = fillContourLeft( origin.topology, cutPaths );
-
+        // find regions to the left of cutPaths
         for ( const auto& path : cutPaths )
-        {
-            if ( path.empty() )
-                continue;
-            const auto& e0 = path[0];
-            FaceId left = origin.topology.left( e0 );
-            FaceId right = origin.topology.right( e0 );
+            for ( auto e : path )
+            {
+                if ( auto l = origin.topology.left( e ) )
+                    leftRegions.set( regionsMap[l] );
+                if ( auto r = origin.topology.right( e ) )
+                    rightRegions.set( regionsMap[r] );
+            }
 
-            if ( leftPart.test( left ) && leftPart.test( right ) )
-                return std::nullopt;
-        }
-
-        // mark components of intersecting parts
-        for ( auto f : leftPart )
-        {
-            if ( intersectingRegions.test_set( regionsMap[f] ) )
-                continue;
-        }
+        if ( leftRegions.intersects( rightRegions ) )
+            return std::nullopt;
     }
 
     // find correct part
@@ -63,9 +67,19 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     {
         auto rId = regionsMap[f];
 
-        if ( !intersectingRegions.test( rId ) )
+        if ( leftRegions.test( rId ) )
         {
-            // disconnected region
+            if ( !needRightPart )
+                res.set( f );
+        }
+        else if ( rightRegions.test( rId ) )
+        {
+            if ( needRightPart )
+                res.set( f );
+        }
+        else
+        {
+            // a connected component without any cut
             bool needSetRes = false;
             if ( !visitedRegions.test_set( rId ) )
             {
@@ -80,16 +94,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             if ( needSetRes )
                 res.set( f );
         }
-        else if ( needRightPart )
-        {
-            // connected region
-            connectedComp.set( f );
-        }
     }
-    if ( needRightPart )
-        res |= ( connectedComp - leftPart );
-    else
-        res |= leftPart;
     return res;
 }
 

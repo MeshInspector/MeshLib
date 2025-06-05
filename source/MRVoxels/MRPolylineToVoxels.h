@@ -5,6 +5,7 @@
 #include "MRVDBConversions.h"
 #include "MRDistanceVolumeParams.h"
 #include "MRMesh/MRDistanceToMeshOptions.h"
+#include "MRMesh/MRAffineXf3.h"
 
 namespace MR
 {
@@ -14,14 +15,15 @@ struct PolylineToDistanceVolumeParams
     Vector3f voxelSize = Vector3f::diagonal( 1.f );
     /// offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
     float offsetCount = 3;
-    ProgressCallback cb = {};
+    AffineXf3f worldXf; // line initial transform
+    AffineXf3f* outXf{ nullptr }; // optional output: xf to original mesh (respecting worldXf)
+    ProgressCallback cb;
 };
 
 /// convert polyline to voxels distance field
 MRVOXELS_API Expected<FloatGrid> polylineToDistanceField( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params );
 
 /// convert polyline to VDB volume
-/// \param offsetCount - the number of voxels around polyline to calculate distance in (should be positive)
 MRVOXELS_API Expected<VdbVolume> polylineToVdbVolume( const Polyline3& polyline, const PolylineToDistanceVolumeParams& params );
 
 /// Settings to conversion polyline to volume

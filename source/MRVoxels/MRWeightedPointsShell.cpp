@@ -66,6 +66,7 @@ Expected<Mesh> runShell( const T& meshOrCloud, const ParametersMetric& params, c
 template <typename F>
 Expected<Mesh> runShell( const Mesh& mesh, const ParametersRegions& params, const F& buildDistanceField )
 {
+    MR_TIMER;
     if ( params.regions.empty() )
         spdlog::warn( "WeightedShell::meshShell called without regions. Consider using MR::offsetMesh which is more efficient for constant offset." );
 
@@ -73,6 +74,24 @@ Expected<Mesh> runShell( const Mesh& mesh, const ParametersRegions& params, cons
     distParams.maxWeight = 0.f;
     for ( const auto& reg : params.regions )
         distParams.maxWeight = std::max( distParams.maxWeight, reg.weight );
+
+
+    if ( params.interpolationDist > 0 )
+    {
+        VertBitSet regionsUnion;
+        for ( const auto& reg : params.regions )
+            regionsUnion |= reg.verts;
+        const bool regionsCoverMesh = mesh.topology.getValidVerts() == regionsUnion;
+
+        // Maximum gradient magnitude = max weight difference divided by the interpolation distance (provided to improve performance)
+        // If regions do not cover all mesh, then we need to consider weight=0 for the verts that are not covered.
+        //      Otherwise, we consider the maximum difference between different regions.
+        float maxWeightChange = distParams.maxWeight - ( regionsCoverMesh ? params.regions[0].weight : 0 );
+        for ( const auto& reg : params.regions )
+            maxWeightChange = std::max( maxWeightChange, distParams.maxWeight - reg.weight );
+        distParams.maxWeightGrad = 1.01f * ( maxWeightChange / params.interpolationDist ); // add extra 10% for floating-point errors in interpolation
+    }
+
     const auto weights = calculateShellWeightsFromRegions( mesh, params.regions, params.interpolationDist );
     distParams.pointWeight = [&weights] ( VertId v )
     {

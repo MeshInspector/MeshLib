@@ -12,9 +12,12 @@
 namespace MR
 {
 
+namespace
+{
+
 // Finds need mesh part based on components relative positions (inside/outside)
 // leftPart - left part of cut contours
-FaceBitSet preparePart( const Mesh& origin, const std::pair<Face2RegionMap, int>& compMapSize,
+FaceBitSet findMeshPart( const Mesh& origin, const std::pair<Face2RegionMap, int>& compMapSize,
     const FaceBitSet& leftPart, const Mesh& otherMesh, bool needInsideComps,
     bool originIsA, const AffineXf3f* rigidB2A, 
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
@@ -113,7 +116,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     VertMap* vMapPtr = maps ? &maps->old2newVerts : &vmap;
 
     auto compsMap = MeshComponents::getAllComponentsMap( origin );
-    leftPart = preparePart( origin, compsMap, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+    leftPart = findMeshPart( origin, compsMap, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonIntersectingComponents, intParams );
 
     outMesh.addMeshPart( { origin, &leftPart }, needFlip, {}, {}, Src2TgtMaps( fMapPtr, vMapPtr, eMapPtr ) );
 
@@ -187,15 +190,15 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     taskGroup.run( [&] ()
     {
         if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
-            aPartFbs = preparePart( meshACut, aComponentsMap, {}, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+            aPartFbs = findMeshPart( meshACut, aComponentsMap, {}, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
         else if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
-            aPartFbs = preparePart( meshACut, aComponentsMap, {}, meshBCut, true, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+            aPartFbs = findMeshPart( meshACut, aComponentsMap, {}, meshBCut, true, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     } );
 
     if ( operation == BooleanOperation::OutsideB || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceBA )
-        bPartFbs = preparePart( meshBCut, bComponentsMap, {}, meshACut, false, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        bPartFbs = findMeshPart( meshBCut, bComponentsMap, {}, meshACut, false, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     else if ( operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB )
-        bPartFbs = preparePart( meshBCut, bComponentsMap, {}, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        bPartFbs = findMeshPart( meshBCut, bComponentsMap, {}, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
     taskGroup.wait();
 
     if ( aPartFbs.any() )
@@ -222,6 +225,8 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
 
     return aPart;
 }
+
+} // anonymous namespace
 
 Expected<MR::Mesh> doBooleanOperation(
     Mesh&& meshACut, Mesh&& meshBCut,

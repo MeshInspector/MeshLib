@@ -16,7 +16,7 @@ namespace
 {
 
 // Finds needed mesh part based on components relative positions (inside/outside)
-// returns std::nullopt if given cuts do not divide origin mesh on good components (e.g. cuts have self-interections)
+// returns std::nullopt if given cuts do not divide origin mesh on good components (e.g. cuts have self-interections or components are not consistently oriented)
 std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     const std::vector<EdgePath>& cutPaths, const Mesh& otherMesh, bool needInsideComps,
     bool originIsA, const AffineXf3f* rigidB2A,

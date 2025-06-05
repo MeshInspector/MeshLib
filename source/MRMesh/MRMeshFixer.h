@@ -138,7 +138,7 @@ struct FindDisorientationParams
     } mode{ RayMode::Shallowest };
 
     /// if set - copy mesh, and fills holes for better quality in case of ray going out through hole
-    bool virtualFillHoles{ true };
+    bool virtualFillHoles{ false };
 
     ProgressCallback cb;
 };

@@ -27,7 +27,7 @@ private:
     MRVIEWER_API static SceneCache& instance_();
     SceneCache() = default;
 
-    struct BasicVectorHolder
+    struct MRVIEWER_CLASS BasicVectorHolder
     {
         BasicVectorHolder() = default;
         BasicVectorHolder( const BasicVectorHolder& ) = default;
@@ -35,7 +35,7 @@ private:
         virtual ~BasicVectorHolder() = default;
     };
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
-    struct VectorHolder : BasicVectorHolder
+    struct MRVIEWER_CLASS VectorHolder : BasicVectorHolder
     {
         ObjectList<ObjectType> value;
     };
@@ -48,14 +48,17 @@ const SceneCache::ObjectList<ObjectType>& SceneCache::getAllObjects()
     using ResultType = VectorHolder<ObjectType, SelectivityType>;
     const auto typeIndex = std::type_index( typeid( ResultType ) );
     auto& cachedData = instance_().cachedData_;
-    if ( !cachedData.contains( typeIndex ) || !cachedData[typeIndex] )
+    auto& cachedVec = cachedData[typeIndex];
+    if ( !cachedVec )
     {
-        ResultType newData;
-        newData.value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
-        std::shared_ptr<ResultType> newDataPtr = std::make_shared<ResultType>( std::move( newData ) );
-        cachedData[typeIndex] = std::dynamic_pointer_cast<BasicVectorHolder>( newDataPtr );
+        auto dataList = std::make_shared<ResultType>();
+        dataList->value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
+        cachedVec = dataList;
     }
-    return std::dynamic_pointer_cast< ResultType >( cachedData[typeIndex] )->value;
+    assert( cachedVec );
+    auto resPtr = dynamic_pointer_cast< ResultType >( cachedVec );
+    assert( resPtr );
+    return resPtr->value;
 }
 
 }

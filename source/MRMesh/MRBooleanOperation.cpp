@@ -49,14 +49,15 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             if ( leftPart.test( left ) && leftPart.test( right ) )
                 return std::nullopt;
         }
+
+        // mark components of intersecting parts
+        for ( auto f : leftPart )
+        {
+            if ( intersectingRegions.test_set( regionsMap[f] ) )
+                continue;
+        }
     }
 
-    // mark components of intersecting parts
-    for ( auto f : leftPart )
-    {
-        if ( intersectingRegions.test_set( regionsMap[f] ) )
-            continue;
-    }
     // find correct part
     for ( auto f : origin.topology.getValidFaces() )
     {

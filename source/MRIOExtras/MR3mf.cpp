@@ -288,6 +288,7 @@ Expected<void> ThreeMFLoader::loadDocument_( LoadedXml& doc, ProgressCallback ca
         return {};
 
     objectCount_ = 0;
+    objectsLoaded_ = 0;
     documentProgressCallback = callback;
 
     auto resourcesNode = xmlNode->FirstChildElement( "resources" );

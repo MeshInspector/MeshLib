@@ -8,10 +8,12 @@
 #include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 
+namespace MR
+{
+
 namespace
 {
 
-using namespace MR;
 // returns 4 * (contour area)^2
 float calcLoneContourAreaSq( const OneMeshContour& contour )
 {
@@ -38,11 +40,6 @@ bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour&
     auto fillRes = fillContourLeft( topology, boundary.front() );
     return !fillRes.test( topology.right( boundary.front().front() ) );
 }
-
-}
-
-namespace MR
-{
 
 struct LinkedVET
 {
@@ -110,6 +107,7 @@ struct AccumulativeSet
 
 LinkedVETSet createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
 {
+    MR_TIMER;
     LinkedVETSet set;
     set.reserve( ( edgesAtrisB.size() + edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesAtrisB.size(); ++i )
@@ -200,6 +198,7 @@ struct ContourInfo
 
 std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
+    MR_TIMER;
     auto aSize = accumulativeSet.nListA.size();
     BitSet queuedRecords( aSize + accumulativeSet.nListB.size(), true );
     std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
@@ -244,7 +243,7 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
     return contInfos;
 }
 
-ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativeSet, const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
 {
     MR_TIMER;
     auto contInfos = calcContoursInfo( accumulativeSet );
@@ -271,12 +270,14 @@ ContinuousContours orderIntersectionContours( const AccumulativeSet& accumulativ
     return res;
 }
 
+} //anonymous namespace
+
 ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections )
 {
     MR_TIMER;
     AccumulativeSet accumulativeSet{ topology,topology, createSet( intersections,intersections ) };
     parallelPrepareLinkedLists( intersections, intersections, accumulativeSet );
-    return orderIntersectionContours( accumulativeSet, intersections, intersections );
+    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections, intersections );
 }
 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
@@ -284,12 +285,13 @@ ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, con
     MR_TIMER;
     AccumulativeSet accumulativeSet{ topologyA,topologyB, createSet( intersections.edgesAtrisB,intersections.edgesBtrisA ) };
     parallelPrepareLinkedLists( intersections.edgesAtrisB, intersections.edgesBtrisA, accumulativeSet );
-    return orderIntersectionContours( accumulativeSet, intersections.edgesAtrisB, intersections.edgesBtrisA );
+    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections.edgesAtrisB, intersections.edgesBtrisA );
 }
 
 Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A /*= nullptr */ )
 {
+    MR_TIMER;
     std::function<Vector3f( const Vector3f& coord, bool meshA )> getCoord;
 
     if ( !rigidB2A )

@@ -53,24 +53,27 @@ struct NeighborLinks
 
 using NeighborLinksList = std::vector<NeighborLinks>;
 
-struct VariableEdgeTriHash
+struct EdgeTriHash
 {
-    size_t operator()( const VariableEdgeTri& vet ) const
+    size_t operator()( const EdgeTri& vet ) const
     {
-        return ( ( 17 * vet.edge.undirected() + 23 * vet.tri ) << 1 ) + size_t( vet.isEdgeATriB );
+        return 17 * size_t( vet.edge.undirected() ) + 23 * size_t( vet.tri );
     }
 };
 
-using VariableEdgeTri2IndexMap = HashMap<VariableEdgeTri, int, VariableEdgeTriHash>;
+using EdgeTri2IndexMap = HashMap<EdgeTri, int, EdgeTriHash>;
 
-using VariableEdgeTri2Index = std::pair<const VariableEdgeTri, int>;
+using VariableEdgeTri2Index = std::pair<VariableEdgeTri, int>;
 
 struct AccumulativeSet
 {
+    AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
+        const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA );
+
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    VariableEdgeTri2IndexMap hmap;
+    EdgeTri2IndexMap edgeAtriBhmap, edgeBtriAhmap;
     NeighborLinksList nListA; // flat list of neighbors filled in parallel
     NeighborLinksList nListB; // flat list of neighbors filled in parallel
 
@@ -83,32 +86,30 @@ struct AccumulativeSet
     {
         return topologyByEdge( !edgesATriB );
     }
-
-    bool empty() const
-    {
-        return hmap.empty();
-    }
 };
 
-VariableEdgeTri2IndexMap createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
+    const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+    : topologyA( topologyA ), topologyB( topologyB )
 {
     MR_TIMER;
-    VariableEdgeTri2IndexMap hmap;
-    hmap.reserve( ( edgesAtrisB.size() + edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
+
+    edgeAtriBhmap.reserve( edgesAtrisB.size() * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesAtrisB.size(); ++i )
-        hmap[ { edgesAtrisB[i], true } ] = i;
+        edgeAtriBhmap[edgesAtrisB[i]] = i;
+
+    edgeBtriAhmap.reserve( edgesBtrisA.size() * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesBtrisA.size(); ++i )
-        hmap[ { edgesBtrisA[i], false } ] = i;
-    return hmap;
+        edgeBtriAhmap[ edgesBtrisA[i] ] = i;
 }
 
-std::optional<VariableEdgeTri2Index> find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
+const int* findIndex( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
 {
-    auto& itemSet = accumulativeSet.hmap;
+    auto& itemSet = item.isEdgeATriB ? accumulativeSet.edgeAtriBhmap : accumulativeSet.edgeBtriAhmap;
     auto it = itemSet.find( item );
     if ( it == itemSet.end() )
         return {};
-    return *it;
+    return &it->second;
 }
 
 VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
@@ -145,8 +146,8 @@ std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet,
         {
             if ( !v.edge.valid() )
                 continue;
-            if ( auto found = find( accumulativeSet, v ) )
-                return found;
+            if ( auto pIndex = findIndex( accumulativeSet, v ) )
+                return VariableEdgeTri2Index{ v, *pIndex };
         }
     }
     return {};
@@ -260,7 +261,7 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
 ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{ topology,topology, createSet( intersections,intersections ) };
+    AccumulativeSet accumulativeSet{ topology, topology, intersections,intersections };
     parallelPrepareLinkedLists( intersections, intersections, accumulativeSet );
     return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections, intersections );
 }
@@ -268,7 +269,7 @@ ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{ topologyA,topologyB, createSet( intersections.edgesAtrisB,intersections.edgesBtrisA ) };
+    AccumulativeSet accumulativeSet{ topologyA, topologyB, intersections.edgesAtrisB,intersections.edgesBtrisA };
     parallelPrepareLinkedLists( intersections.edgesAtrisB, intersections.edgesBtrisA, accumulativeSet );
     return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections.edgesAtrisB, intersections.edgesBtrisA );
 }

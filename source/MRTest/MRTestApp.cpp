@@ -84,14 +84,14 @@ int main( int argc, char** argv )
         // Load mrmeshpy. We do it here instead of linking against it for two reasons:
         // 1. To allow not building the Python modules.
         // 2. To allow building them separately, after this executable.
-        #if _WIN32
+        #ifdef _WIN32
         auto lib = LoadLibraryA( "mrmeshpy.pyd" );
         if ( !lib )
         {
             spdlog::error( "Unable to load the Python module mrmeshpy.pyd error: {}", GetLastError() );
             std::exit(1);
         }
-        #else //!Windows
+        #else // if not on Windows:
         auto mrmeshpyPath = MR::SystemPath::getExecutablePath().value().parent_path() / "meshlib/mrmeshpy.so";
         auto lib = dlopen( mrmeshpyPath.c_str(), RTLD_NOW | RTLD_GLOBAL );
         if ( !lib )
@@ -103,6 +103,12 @@ int main( int argc, char** argv )
 
         //Test python mrmeshpy
         {
+            #ifdef __APPLE__
+            // Fix the module path.
+            // We need this because our default behavior is to handle bundles (back out from `<AppName>.app/Contents/MacOS`, etc).
+            MR::SystemPath::overrideDirectory(MR::SystemPath::Directory::PythonModules, MR::SystemPath::getExecutableDirectory().value());
+            #endif
+
             auto str = "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"

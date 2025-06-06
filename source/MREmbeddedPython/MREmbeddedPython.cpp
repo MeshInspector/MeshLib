@@ -122,11 +122,8 @@ bool EmbeddedPython::init_()
     pybind11::non_limited_api::EnsureSharedLibraryIsLoaded(
         true,
         "meshlib",
-        SystemPath::getExecutableDirectory().value() /
-    #ifdef __APPLE__
-        ".." / "Frameworks" /
-    #endif
-        "meshlib",
+        // This is normally equivalent to `SystemPath::getExecutableDirectory().value() / "meshlib"`, except on Macs, where they are somewhere else.
+        SystemPath::getPythonModulesDirectory() / "meshlib",
         {}
     );
 

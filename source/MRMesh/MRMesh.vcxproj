@@ -419,6 +419,7 @@
     <ClInclude Include="MRChunkIterator.h" />
     <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRInplaceStack.h" />
+    <ClInclude Include="MROffsetVerts.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />
@@ -700,6 +701,7 @@
     <ClCompile Include="MRWasmHelpers.cpp" />
     <ClCompile Include="MRChunkIterator.cpp" />
     <ClCompile Include="MRTbbThreadMutex.cpp" />
+    <ClCompile Include="MROffsetVerts.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

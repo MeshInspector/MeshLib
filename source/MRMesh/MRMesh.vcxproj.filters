@@ -807,6 +807,9 @@
     <ClInclude Include="MRRegionBoundary.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MROffsetVerts.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
     <ClInclude Include="MRRingIterator.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -1747,6 +1750,9 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVertexAttributeGradient.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MROffsetVerts.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRUniteManyMeshes.cpp">

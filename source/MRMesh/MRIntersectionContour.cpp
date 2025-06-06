@@ -60,14 +60,16 @@ struct VariableEdgeTriHash
     }
 };
 
-using VariableEdgeTri2Index = HashMap<VariableEdgeTri, int, VariableEdgeTriHash>;
+using VariableEdgeTri2IndexMap = HashMap<VariableEdgeTri, int, VariableEdgeTriHash>;
+
+using VariableEdgeTri2Index = std::pair<const VariableEdgeTri, int>;
 
 struct AccumulativeSet
 {
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    VariableEdgeTri2Index hmap;
+    VariableEdgeTri2IndexMap hmap;
     NeighborLinksList nListA; // flat list of neighbors filled in parallel
     NeighborLinksList nListB; // flat list of neighbors filled in parallel
 
@@ -87,10 +89,10 @@ struct AccumulativeSet
     }
 };
 
-VariableEdgeTri2Index createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+VariableEdgeTri2IndexMap createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
 {
     MR_TIMER;
-    VariableEdgeTri2Index hmap;
+    VariableEdgeTri2IndexMap hmap;
     hmap.reserve( ( edgesAtrisB.size() + edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesAtrisB.size(); ++i )
         hmap[ { edgesAtrisB[i], true } ] = i;
@@ -99,7 +101,7 @@ VariableEdgeTri2Index createSet( const std::vector<EdgeTri>& edgesAtrisB, const 
     return hmap;
 }
 
-const VariableEdgeTri2Index::value_type* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
+const VariableEdgeTri2Index* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
 {
     auto& itemSet = accumulativeSet.hmap;
     auto it = itemSet.find( item );
@@ -116,7 +118,7 @@ VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
     return res;
 }
 
-const VariableEdgeTri2Index::value_type* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
+const VariableEdgeTri2Index* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
 {
     auto currB2Aedge = curr.isEdgeATriB ? curr.edge : curr.edge.sym();
     const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB );

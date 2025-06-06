@@ -23,75 +23,74 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
-    std::pair<Face2RegionMap, int> compMap;
+    UnionFind<FaceId> unionFind;
     if ( cutPaths.empty() )
-        compMap = MeshComponents::getAllComponentsMap( origin );
+        unionFind = MeshComponents::getUnionFindStructureFaces( origin );
     else
     {
         UndirectedEdgeBitSet cutEdges( origin.topology.undirectedEdgeSize() );
         for ( const auto& path : cutPaths )
             for ( auto e : path )
                 cutEdges.set( e );
-        compMap = MeshComponents::getAllComponentsMap( origin, MeshComponents::PerEdge, &cutEdges );
+        unionFind = MeshComponents::getUnionFindStructureFaces( origin, MeshComponents::PerEdge, &cutEdges );
     }
-    const auto& [regionsMap, numRegions] = compMap;
-    RegionBitSet leftRegions( numRegions );  // regions to the left of cutPaths
-    RegionBitSet rightRegions( numRegions ); // regions to the right of cutPaths
-    RegionBitSet visitedRegions( numRegions );
-    RegionBitSet neededRegions( numRegions );
 
     FaceBitSet res( origin.topology.lastValidFace() + 1 );
     FaceBitSet connectedComp( origin.topology.lastValidFace() + 1 );
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
 
+    FaceId leftRoot;  // root of the components to the left of cutPaths
+    FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
     {
-        // find regions to the left of cutPaths
+        // unite regions separately to the left and to the right of cutPaths
         for ( const auto& path : cutPaths )
             for ( auto e : path )
             {
                 if ( auto l = origin.topology.left( e ) )
-                    leftRegions.set( regionsMap[l] );
+                    leftRoot = leftRoot ? unionFind.unite( leftRoot, l ).first : unionFind.find( l );
                 if ( auto r = origin.topology.right( e ) )
-                    rightRegions.set( regionsMap[r] );
+                    rightRoot = rightRoot ? unionFind.unite( rightRoot, r ).first : unionFind.find( r );
             }
 
-        if ( leftRegions.intersects( rightRegions ) )
+        // if last unite merged left and right, we need to update roots
+        if ( leftRoot )
+            leftRoot = unionFind.find( leftRoot );
+        if ( rightRoot )
+            rightRoot = unionFind.find( rightRoot );
+
+        if ( leftRoot && leftRoot == rightRoot )
             return std::nullopt;
     }
 
     // find correct part
+    auto includeRoot = needRightPart ? rightRoot : leftRoot;
+    auto excludeRoot = needRightPart ? leftRoot : rightRoot;
     for ( auto f : origin.topology.getValidFaces() )
     {
-        auto rId = regionsMap[f];
-
-        if ( leftRegions.test( rId ) )
+        if ( includeRoot && unionFind.united( includeRoot, f ) )
         {
-            if ( !needRightPart )
-                res.set( f );
+            res.set( f );
         }
-        else if ( rightRegions.test( rId ) )
+        else if ( excludeRoot && unionFind.united( excludeRoot, f ) )
         {
-            if ( needRightPart )
-                res.set( f );
+            //nothing
         }
         else
         {
             // a connected component without any cut
-            bool needSetRes = false;
-            if ( !visitedRegions.test_set( rId ) )
+            const Mesh* otherPtr = originIsA ? intParams.originalMeshB : intParams.originalMeshA;
+            if ( mergeAllNonIntersectingComponents ||
+                isNonIntersectingInside( origin, f, otherPtr ? *otherPtr : otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
             {
-                // need to check this component
-                const Mesh* otherPtr = originIsA ? intParams.originalMeshB : intParams.originalMeshA;
-                needSetRes = mergeAllNonIntersectingComponents ||
-                    isNonIntersectingInside( origin, f, otherPtr ? *otherPtr : otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps;
-                neededRegions.set( rId, needSetRes );
-            }
-            else // we already checked this region, so only need to know if it is required for result
-                needSetRes = neededRegions.test( rId );
-            if ( needSetRes )
+                includeRoot = includeRoot ? unionFind.unite( includeRoot, f ).first : unionFind.find( f );
                 res.set( f );
+            }
+            else
+            {
+                excludeRoot = excludeRoot ? unionFind.unite( excludeRoot, f ).first : unionFind.find( f );
+            }
         }
     }
     return res;

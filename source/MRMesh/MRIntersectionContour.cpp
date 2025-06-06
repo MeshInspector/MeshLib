@@ -41,17 +41,6 @@ bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour&
     return !fillRes.test( topology.right( boundary.front().front() ) );
 }
 
-struct LinkedVET
-{
-    VariableEdgeTri vet;
-    int index = -1; // index in initial array (needed to be able to find connections in parallel)
-};
-
-inline bool operator==( const LinkedVET& a, const LinkedVET& b )
-{
-    return a.vet == b.vet;
-}
-
 // store data about connected intersections
 // indexed flat: if edgeAtriB then index = index in edgeAtriB vector
 //                  otherwise      index - (edgeAtriB vector).size() = index in edgeBtriA vector
@@ -63,22 +52,22 @@ struct NeighborLinks
 
 using NeighborLinksList = std::vector<NeighborLinks>;
 
-struct LinkedVETHash
+struct VariableEdgeTriHash
 {
-    size_t operator()( const LinkedVET& lvet ) const
+    size_t operator()( const VariableEdgeTri& vet ) const
     {
-        return ( ( 17 * lvet.vet.edge.undirected() + 23 * lvet.vet.tri ) << 1 ) + size_t( lvet.vet.isEdgeATriB );
+        return ( ( 17 * vet.edge.undirected() + 23 * vet.tri ) << 1 ) + size_t( vet.isEdgeATriB );
     }
 };
 
-using LinkedVETSet = HashSet<LinkedVET, LinkedVETHash>;
+using VariableEdgeTri2Index = HashMap<VariableEdgeTri, int, VariableEdgeTriHash>;
 
 struct AccumulativeSet
 {
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    LinkedVETSet hset;
+    VariableEdgeTri2Index hmap;
     NeighborLinksList nListA; // flat list of neighbors filled in parallel
     NeighborLinksList nListB; // flat list of neighbors filled in parallel
 
@@ -94,33 +83,26 @@ struct AccumulativeSet
 
     bool empty() const
     {
-        return hset.empty();
-    }
-
-    VariableEdgeTri getFirst() const
-    {
-        if ( !hset.empty() )
-            return hset.begin()->vet;
-        return {};
+        return hmap.empty();
     }
 };
 
-LinkedVETSet createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+VariableEdgeTri2Index createSet( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
 {
     MR_TIMER;
-    LinkedVETSet set;
-    set.reserve( ( edgesAtrisB.size() + edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
+    VariableEdgeTri2Index hmap;
+    hmap.reserve( ( edgesAtrisB.size() + edgesBtrisA.size() ) * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesAtrisB.size(); ++i )
-        set.insert( { .vet = { edgesAtrisB[i],true },.index = i } );
+        hmap[ { edgesAtrisB[i], true } ] = i;
     for ( int i = 0; i < edgesBtrisA.size(); ++i )
-        set.insert( { .vet = { edgesBtrisA[i],false },.index = i } );
-    return set;
+        hmap[ { edgesBtrisA[i], false } ] = i;
+    return hmap;
 }
 
-const LinkedVET* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
+const VariableEdgeTri2Index::value_type* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
 {
-    auto& itemSet = accumulativeSet.hset;
-    auto it = itemSet.find( { item,-1 } );
+    auto& itemSet = accumulativeSet.hmap;
+    auto it = itemSet.find( item );
     if ( it == itemSet.end() )
         return nullptr;
     return &( *it );
@@ -134,7 +116,7 @@ VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
     return res;
 }
 
-const LinkedVET* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
+const VariableEdgeTri2Index::value_type* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
 {
     auto currB2Aedge = curr.isEdgeATriB ? curr.edge : curr.edge.sym();
     const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB );
@@ -184,8 +166,8 @@ void parallelPrepareLinkedLists( const std::vector<EdgeTri>& edgesAtrisB, const 
         if ( !next )
             return;
         auto& currItem = eAtB ? accumulativeSet.nListA[aInd] : accumulativeSet.nListB[bInd];
-        auto& nextItem = next->vet.isEdgeATriB ? accumulativeSet.nListA[next->index] : accumulativeSet.nListB[next->index];
-        currItem.next = int( next->vet.isEdgeATriB ? next->index : next->index + aSize );
+        auto& nextItem = next->first.isEdgeATriB ? accumulativeSet.nListA[next->second] : accumulativeSet.nListB[next->second];
+        currItem.next = int( next->first.isEdgeATriB ? next->second : next->second + aSize );
         nextItem.prev = int( i );
     } );
 }

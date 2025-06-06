@@ -7,13 +7,15 @@
 namespace MR
 {
 
-void offsetVerts( Mesh& mesh, const VertMetric& offset, ProgressCallback cb )
+ bool offsetVerts( Mesh& mesh, const VertMetric& offset, ProgressCallback cb )
 {
     MR_TIMER;
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&offset, &mesh] ( VertId v )
+    auto res = BitSetParallelFor( mesh.topology.getValidVerts(), [&offset, &mesh] ( VertId v )
     {
         mesh.points[v] += mesh.pseudonormal( v ) * offset( v );
     }, cb );
+    mesh.invalidateCaches();
+    return res;
 }
 
 }

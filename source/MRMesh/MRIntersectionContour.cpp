@@ -94,13 +94,18 @@ AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopol
 {
     MR_TIMER;
 
-    edgeAtriBhmap.reserve( edgesAtrisB.size() * 2 ); // 2 here is for mental peace
-    for ( int i = 0; i < edgesAtrisB.size(); ++i )
-        edgeAtriBhmap[edgesAtrisB[i]] = i;
+    tbb::task_group taskGroup;
+    taskGroup.run( [&] ()
+    {
+        edgeAtriBhmap.reserve( edgesAtrisB.size() * 2 ); // 2 here is for mental peace
+        for ( int i = 0; i < edgesAtrisB.size(); ++i )
+            edgeAtriBhmap[edgesAtrisB[i]] = i;
+    } );
 
     edgeBtriAhmap.reserve( edgesBtrisA.size() * 2 ); // 2 here is for mental peace
     for ( int i = 0; i < edgesBtrisA.size(); ++i )
         edgeBtriAhmap[ edgesBtrisA[i] ] = i;
+    taskGroup.wait();
 }
 
 const int* findIndex( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )

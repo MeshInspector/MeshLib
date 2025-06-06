@@ -7,6 +7,7 @@
 #include "MRAffineXf3.h"
 #include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
+#include <optional>
 
 namespace MR
 {
@@ -101,13 +102,13 @@ VariableEdgeTri2IndexMap createSet( const std::vector<EdgeTri>& edgesAtrisB, con
     return hmap;
 }
 
-const VariableEdgeTri2Index* find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
+std::optional<VariableEdgeTri2Index> find( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
 {
     auto& itemSet = accumulativeSet.hmap;
     auto it = itemSet.find( item );
     if ( it == itemSet.end() )
-        return nullptr;
-    return &( *it );
+        return {};
+    return *it;
 }
 
 VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
@@ -118,7 +119,7 @@ VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
     return res;
 }
 
-const VariableEdgeTri2Index* findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
+std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
 {
     auto currB2Aedge = curr.isEdgeATriB ? curr.edge : curr.edge.sym();
     const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB );
@@ -148,7 +149,7 @@ const VariableEdgeTri2Index* findNext( AccumulativeSet& accumulativeSet, const V
                 return found;
         }
     }
-    return nullptr;
+    return {};
 }
 
 void parallelPrepareLinkedLists( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA, AccumulativeSet& accumulativeSet )

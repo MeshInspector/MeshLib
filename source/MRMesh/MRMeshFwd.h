@@ -138,20 +138,23 @@ using EdgeLoops = std::vector<EdgeLoop>;
 
 class MRMESH_CLASS BitSet;
 
-MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), TaggedBitSet,
-    ( FaceBitSet,           TaggedBitSet<FaceTag>           )
-    ( VertBitSet,           TaggedBitSet<VertTag>           )
-    ( EdgeBitSet,           TaggedBitSet<EdgeTag>           )
-    ( UndirectedEdgeBitSet, TaggedBitSet<UndirectedEdgeTag> )
-    ( PixelBitSet,          TaggedBitSet<PixelTag>          )
-    ( VoxelBitSet,          TaggedBitSet<VoxelTag>          )
-    ( RegionBitSet,         TaggedBitSet<RegionTag>         )
-    ( NodeBitSet,           TaggedBitSet<NodeTag>           )
-    ( ObjBitSet,            TaggedBitSet<ObjTag>            )
-    ( TextureBitSet,        TaggedBitSet<TextureTag>        )
-    ( GraphVertBitSet,      TaggedBitSet<GraphVertTag>      )
-    ( GraphEdgeBitSet,      TaggedBitSet<GraphEdgeTag>      )
+MR_CANONICAL_TYPEDEFS( (template <typename I> class MRMESH_CLASS), TypedBitSet,
+    ( FaceBitSet,           TypedBitSet<FaceId>           )
+    ( VertBitSet,           TypedBitSet<VertId>           )
+    ( EdgeBitSet,           TypedBitSet<EdgeId>           )
+    ( UndirectedEdgeBitSet, TypedBitSet<UndirectedEdgeId> )
+    ( PixelBitSet,          TypedBitSet<PixelId>          )
+    ( VoxelBitSet,          TypedBitSet<VoxelId>          )
+    ( RegionBitSet,         TypedBitSet<RegionId>         )
+    ( NodeBitSet,           TypedBitSet<NodeId>           )
+    ( ObjBitSet,            TypedBitSet<ObjId>            )
+    ( TextureBitSet,        TypedBitSet<TextureId>        )
+    ( GraphVertBitSet,      TypedBitSet<GraphVertId>      )
+    ( GraphEdgeBitSet,      TypedBitSet<GraphEdgeId>      )
 )
+
+template<typename T>
+using TaggedBitSet = TypedBitSet<Id<T>>;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), SetBitIteratorT,
     ( SetBitIterator,               SetBitIteratorT<BitSet>               )

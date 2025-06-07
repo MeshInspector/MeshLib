@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include <MRPch/MRBindingMacros.h>
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
@@ -14,7 +13,7 @@ template <typename T>
 class Id
 {
 public:
-    using ValueType MR_BIND_IGNORE = int; //the type used for internal representation of Id
+    using ValueType = int; //the type used for internal representation of Id
 
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
@@ -26,12 +25,12 @@ public:
     //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
     //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
     template <typename U, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
-    explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
+    explicit constexpr Id( U i ) noexcept : id_( int( i ) ) { }
 
-    constexpr operator ValueType() const { return id_; }
+    constexpr operator int() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }
     explicit constexpr operator bool() const { return id_ >= 0; }
-    constexpr ValueType & get() noexcept { return id_; }
+    constexpr int & get() noexcept { return id_; }
 
     constexpr bool operator == (Id b) const { return id_ == b.id_; }
     constexpr bool operator != (Id b) const { return id_ != b.id_; }
@@ -50,11 +49,11 @@ public:
     constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
     constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
-    constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( int a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( int a ) { id_ += a; return * this; }
 
 private:
-    ValueType id_;
+    int id_;
 };
 
 // Variant of Id<T> with omitted initialization by default. Useful for containers.
@@ -70,18 +69,18 @@ template <>
 class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
 {
 public:
-    using ValueType MR_BIND_IGNORE = int; //the type used for internal representation of Id
+    using ValueType = int; //the type used for internal representation of Id
 
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
-    constexpr Id( UndirectedEdgeId u ) noexcept : id_( (ValueType)u << 1 ) { assert( u.valid() ); }
-    explicit constexpr Id( ValueType i ) noexcept : id_( i ) { }
+    constexpr Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
+    explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( unsigned int i ) noexcept : id_( i ) { }
-    explicit constexpr Id( size_t i ) noexcept : id_( ValueType( i ) ) { }
-    constexpr operator ValueType() const { return id_; }
+    explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
+    constexpr operator int() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }
     explicit constexpr operator bool() const { return id_ >= 0; }
-    constexpr ValueType & get() noexcept { return id_; }
+    constexpr int & get() noexcept { return id_; }
 
     // returns identifier of the edge with same ends but opposite orientation
     constexpr Id sym() const { assert( valid() ); return Id(id_ ^ 1); }
@@ -109,27 +108,27 @@ public:
     constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
     constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
-    constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( int a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( int a ) { id_ += a; return * this; }
 
 private:
-    ValueType id_;
+    int id_;
 };
 
 template <>
 class Id<VoxelTag>
 {
 public:
-    using ValueType MR_BIND_IGNORE = size_t; //the type used for internal representation of Id
+    using ValueType = size_t; //the type used for internal representation of Id
 
-    constexpr Id() noexcept : id_( ~ValueType( 0 ) ) { }
+    constexpr Id() noexcept : id_( ~size_t( 0 ) ) { }
     explicit Id( NoInit ) noexcept { }
-    explicit constexpr Id( ValueType i ) noexcept : id_( i ) { }
+    explicit constexpr Id( size_t i ) noexcept : id_( i ) { }
     explicit constexpr Id( int ) noexcept = delete;
-    constexpr operator ValueType() const { return id_; }
-    constexpr bool valid() const { return id_ != ~ValueType( 0 ); }
-    explicit constexpr operator bool() const { return id_ != ~ValueType( 0 ); }
-    constexpr ValueType& get() noexcept { return id_; }
+    constexpr operator size_t() const { return id_; }
+    constexpr bool valid() const { return id_ != ~size_t( 0 ); }
+    explicit constexpr operator bool() const { return id_ != ~size_t( 0 ); }
+    constexpr size_t& get() noexcept { return id_; }
 
     constexpr bool operator == (Id b) const { return id_ == b.id_; }
     constexpr bool operator != (Id b) const { return id_ != b.id_; }
@@ -148,11 +147,11 @@ public:
     constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
     constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
-    constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( size_t a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( size_t a ) { id_ += a; return * this; }
 
 private:
-    ValueType id_;
+    size_t id_;
 };
 
 template <typename T>

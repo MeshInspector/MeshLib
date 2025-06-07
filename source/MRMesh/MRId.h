@@ -13,7 +13,7 @@ template <typename T>
 class Id
 {
 public:
-    using ValueType = int; //the type used for internal representation of Id
+    MR_BIND_IGNORE using ValueType = int; //the type used for internal representation of Id
 
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
@@ -69,7 +69,7 @@ template <>
 class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
 {
 public:
-    using ValueType = int; //the type used for internal representation of Id
+    MR_BIND_IGNORE using ValueType = int; //the type used for internal representation of Id
 
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
@@ -119,7 +119,7 @@ template <>
 class Id<VoxelTag>
 {
 public:
-    using ValueType = size_t; //the type used for internal representation of Id
+    MR_BIND_IGNORE using ValueType = size_t; //the type used for internal representation of Id
 
     constexpr Id() noexcept : id_( ~ValueType( 0 ) ) { }
     explicit Id( NoInit ) noexcept { }

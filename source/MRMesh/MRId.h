@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include <MRPch/MRBindingMacros.h>
 #include <cassert>
 #include <cstddef>
 #include <type_traits>

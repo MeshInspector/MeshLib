@@ -73,9 +73,12 @@ struct AccumulativeSet
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    EdgeTri2IndexMap edgeAtriBhmap, edgeBtriAhmap;
-    NeighborLinksList nListA; // flat list of neighbors filled in parallel
-    NeighborLinksList nListB; // flat list of neighbors filled in parallel
+    // consider first edgeAtriB and then edgeBtriA in one flat vector
+    int aSize = 0; // the number of edgeAtriB elements located first in nList
+    NeighborLinksList nList; // flat indices of prev/next elements in the contour
+
+    EdgeTri2IndexMap edgeAtriBhmap; // map to flat index in [0, aSize)
+    EdgeTri2IndexMap edgeBtriAhmap; // map to flat index in [aSize, nList.size())
 
     const MeshTopology& topologyByEdge( bool edgesATriB )
     {
@@ -102,9 +105,10 @@ AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopol
             edgeAtriBhmap[edgesAtrisB[i]] = i;
     } );
 
+    aSize = (int)edgesAtrisB.size();
     edgeBtriAhmap.reserve( edgesBtrisA.size() );
     for ( int i = 0; i < edgesBtrisA.size(); ++i )
-        edgeBtriAhmap[ edgesBtrisA[i] ] = i;
+        edgeBtriAhmap[ edgesBtrisA[i] ] = aSize + i;
     taskGroup.wait();
 }
 
@@ -161,23 +165,20 @@ std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet,
 void parallelPrepareLinkedLists( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA, AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
-    auto aSize = edgesAtrisB.size();
-    accumulativeSet.nListA.resize( aSize );
-    accumulativeSet.nListB.resize( edgesBtrisA.size() );
-    ParallelFor( size_t( 0 ), aSize + accumulativeSet.nListB.size(), [&] ( size_t i )
+    const auto aSize = (int)edgesAtrisB.size();
+    const auto bSize = (int)edgesBtrisA.size();
+    accumulativeSet.nList.resize( aSize + bSize );
+    ParallelFor( 0, aSize + bSize, [&] ( int i )
     {
         bool eAtB = i < aSize;
-        int aInd = int( i );
-        int bInd = int( i - aSize );
-
-        VariableEdgeTri curr = { eAtB ? edgesAtrisB[aInd] : edgesBtrisA[bInd] ,  eAtB };
+        VariableEdgeTri curr = { eAtB ? edgesAtrisB[i] : edgesBtrisA[i - aSize], eAtB };
         auto next = findNext( accumulativeSet, curr );
         if ( !next )
             return;
-        auto& currItem = eAtB ? accumulativeSet.nListA[aInd] : accumulativeSet.nListB[bInd];
-        auto& nextItem = next->first.isEdgeATriB ? accumulativeSet.nListA[next->second] : accumulativeSet.nListB[next->second];
-        currItem.next = int( next->first.isEdgeATriB ? next->second : next->second + aSize );
-        nextItem.prev = int( i );
+        auto& currItem = accumulativeSet.nList[i];
+        auto& nextItem = accumulativeSet.nList[next->second];
+        currItem.next = next->second;
+        nextItem.prev = i;
     } );
 }
 
@@ -190,8 +191,7 @@ struct ContourInfo
 std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
-    auto aSize = accumulativeSet.nListA.size();
-    BitSet queuedRecords( aSize + accumulativeSet.nListB.size(), true );
+    BitSet queuedRecords( accumulativeSet.nList.size(), true );
     std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
     while ( queuedRecords.any() )
     {
@@ -204,7 +204,7 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
         {
             queuedRecords.reset( nextIndex );
 
-            auto next = nextIndex < aSize ? accumulativeSet.nListA[nextIndex].next : accumulativeSet.nListB[nextIndex - aSize].next;
+            auto next = accumulativeSet.nList[nextIndex].next;
             if ( next == -1 )
             {
                 closed = false;
@@ -220,9 +220,7 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
         {
             for ( ;; )
             {
-                const auto& prev = currInfo.startIndex < aSize ?
-                    accumulativeSet.nListA[currInfo.startIndex].prev :
-                    accumulativeSet.nListB[currInfo.startIndex - aSize].prev;
+                const auto prev = accumulativeSet.nList[currInfo.startIndex].prev;
                 if ( prev == -1 )
                     break;
                 ++currInfo.size;
@@ -245,7 +243,7 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
         res[i].resize( contInfos[i].size );
     }
 
-    auto aSize = accumulativeSet.nListA.size();
+    auto aSize = accumulativeSet.aSize;
     ParallelFor( res, [&] ( size_t i )
     {
         auto& resI = res[i];
@@ -254,7 +252,7 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
         {
             auto curr = index < aSize ? edgesAtrisB[index] : edgesBtrisA[index - aSize];
             resI[j] = orientBtoA( { curr ,index < aSize } );
-            index = index < aSize ? accumulativeSet.nListA[index].next : accumulativeSet.nListB[index - aSize].next;
+            index = accumulativeSet.nList[index].next;
         }
     } );
 

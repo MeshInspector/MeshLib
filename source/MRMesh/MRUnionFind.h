@@ -7,25 +7,35 @@ namespace MR
 {
 
 /** 
- * \brief Simple union find data structure
- * \tparam I is an id type, e.g. FaceId
+ * \brief Union-find data structure for representing disjoin sets of elements with few very quick operations:
+ * 1) union of two sets in one,
+ * 2) checking whether two elements pertain to the same set,
+ * 3) finding representative element (root) of each set by any set's element
+ * \tparam I is the identifier of a set's element, e.g. FaceId
  * \ingroup BasicGroup
  */
 template <typename I>
 class UnionFind
 {
 public:
-    UnionFind() = default;
-    explicit UnionFind( size_t size ) { reset( size ); }
-    auto size() const { return roots_.size(); }
+    /// the type that can hold the number of elements of the maximal set (e.g. int for FaceId and size_t for VoxelId)
+    using SizeType = typename I::ValueType;
 
-    /// reset roots to represent each element as disjoint set of rank 0
+    UnionFind() = default;
+
+    /// creates union-find with given number of elements, each element is the only one in its disjoint set
+    explicit UnionFind( size_t size ) { reset( size ); }
+
+    /// returns the number of elements in union-find
+    auto size() const { return parents_.size(); }
+
+    /// resets union-find to represent given number of elements, each element is the only one in its disjoint set
     void reset( size_t size )
     {
-        roots_.clear();
-        roots_.reserve( size );
+        parents_.clear();
+        parents_.reserve( size );
         for ( I i{ size_t( 0 ) }; i < size; ++i )
-            roots_.push_back( i );
+            parents_.push_back( i );
         sizes_.clear();
         sizes_.resize( size, 1 );
     }
@@ -41,19 +51,19 @@ public:
         /// select root by size for best performance
         if ( sizes_[firstRoot] < sizes_[secondRoot] )
         {
-            roots_[firstRoot] = secondRoot;
+            parents_[firstRoot] = secondRoot;
             sizes_[secondRoot] += sizes_[firstRoot];
             return { secondRoot, true };
         }
         else
         {
-            roots_[secondRoot] = firstRoot;
+            parents_[secondRoot] = firstRoot;
             sizes_[firstRoot] += sizes_[secondRoot];
             return { firstRoot, true };
         }
     }
 
-    /// returns true if given two elements are from one component
+    /// returns true if given two elements are from one set
     bool united( I first, I second )
     {
         auto firstRoot = updateRoot_( first );
@@ -73,28 +83,29 @@ public:
         return updateRootInRange_( a, findRootNoUpdate_( a ), begin, end );
     }
 
-    /// sets the root as the parent of each element, then returns the vector
+    /// sets the root of corresponding set as the parent of each element, then returns the vector
     const Vector<I, I> & roots()
     {
-        for ( I i{ size_t( 0 ) }; i < roots_.size(); ++i )
+        for ( I i{ size_t( 0 ) }; i < parents_.size(); ++i )
             updateRoot_( i, findRootNoUpdate_( i ) );
-        return roots_;
+        return parents_;
     }
 
-    /// gets the parents of all elements as in
-    const Vector<I, I> & parents() const { return roots_; }
+    /// gets the parents of all elements as is
+    const Vector<I, I> & parents() const { return parents_; }
 
-    /// returns the size of component containing given element
-    size_t sizeOfComp( I a ) { return sizes_[ find( a ) ]; }
+    /// returns the number of elements in the set containing given element
+    SizeType sizeOfComp( I a ) { return sizes_[ find( a ) ]; }
 
 private:
     /// finds the root of the set containing given element without optimizing data structure updates
     I findRootNoUpdate_( I a ) const
     {
-        I r = roots_[a];
-        for ( I e = a; e != r; r = roots_[e = r] ) {}
+        I r = parents_[a];
+        for ( I e = a; e != r; r = parents_[e = r] ) {}
         return r;
     }
+
     /// sets new root \param r for the element \param a and all its ancestors, returns new root \param r
     I updateRoot_( I a, const I r )
     {
@@ -102,13 +113,15 @@ private:
         while ( a != r ) 
         { 
             I b = r;
-            std::swap( roots_[a], b );
+            std::swap( parents_[a], b );
             a = b;
         }
         return r;
     }
-    // find the root of given element, and set it as parent for it and other parents
+
+    /// find the root of given element, and set it as parent for it and other parents
     I updateRoot_( I a ) { return updateRoot_( a, findRootNoUpdate_( a ) ); }
+
     /// sets new root \param r for the element \param a and all its ancestors if they are in the range [begin, end)
     I updateRootInRange_( I a, const I r, I begin, I end )
     {
@@ -119,18 +132,20 @@ private:
             if ( a >= begin && a < end )
             {
                 I b = r;
-                std::swap( roots_[a], b );
+                std::swap( parents_[a], b );
                 a = b;
             }
             else
-                a = roots_[a];
+                a = parents_[a];
         }
         return r;
     }
-    /// roots for each element
-    Vector<I, I> roots_;
-    /// sizes of each set
-    Vector<size_t, I> sizes_;
+
+    /// parent element of each element
+    Vector<I, I> parents_;
+
+    /// size of each set, contain valid values only for sets' roots
+    Vector<SizeType, I> sizes_;
 };
 
-}
+} //namespace MR

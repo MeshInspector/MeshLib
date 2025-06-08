@@ -121,7 +121,7 @@ const int* findIndex( const AccumulativeSet& accumulativeSet, const VariableEdge
     return &it->second;
 }
 
-VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
+inline VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
 {
     VariableEdgeTri res = curr;
     if ( !curr.isEdgeATriB )
@@ -235,25 +235,24 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
 ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
 {
     MR_TIMER;
-    auto contInfos = calcContoursInfo( accumulativeSet );
+    const auto contInfos = calcContoursInfo( accumulativeSet );
 
     ContinuousContours res( contInfos.size() );
-    for ( int i = 0; i < res.size(); ++i )
-    {
-        res[i].resize( contInfos[i].size );
-    }
-
     auto aSize = accumulativeSet.aSize;
     ParallelFor( res, [&] ( size_t i )
     {
-        auto& resI = res[i];
+        const auto sz = contInfos[i].size;
+        ContinuousContour resI;
+        resI.reserve( sz );
         size_t index = contInfos[i].startIndex;
-        for ( int j = 0; j < resI.size(); ++j )
+        for ( int j = 0; j < sz; ++j )
         {
-            auto curr = index < aSize ? edgesAtrisB[index] : edgesBtrisA[index - aSize];
-            resI[j] = orientBtoA( { curr ,index < aSize } );
+            const bool isEdgeATriB = index < aSize;
+            auto curr = isEdgeATriB ? edgesAtrisB[index] : edgesBtrisA[index - aSize];
+            resI.push_back( orientBtoA( { curr, isEdgeATriB } ) );
             index = accumulativeSet.nList[index].next;
         }
+        res[i] = std::move( resI );
     } );
 
     return res;

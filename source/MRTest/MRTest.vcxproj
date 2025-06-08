@@ -21,6 +21,7 @@
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
+    <ClCompile Include="MRMeshComponentsTests.cpp" />
     <ClCompile Include="MRMeshIntersectTests.cpp" />
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />

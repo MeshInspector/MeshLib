@@ -59,7 +59,7 @@ Expected<MR::VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStruct
     int counter = 0;
     const auto regionCount = region.count();
     const float counterMax = float( regionCount );
-    const int counterDivider = int( regionCount ) / 100;
+    const int counterDivider = std::max( 1, int( regionCount ) / 100 );
     HashMap<VertId, int> root2size;
     for ( auto v : region )
     {
@@ -99,7 +99,7 @@ Expected<std::vector<VertBitSet>> getLargeComponents( const PointCloud& pointClo
     subPc = subprogress( pc, 0.9f, 0.95f );
     int counter = 0;
     const float counterMax = float( validPoints.count() );
-    const int counterDivider = int( validPoints.count() ) / 100;
+    const int counterDivider = std::max( 1, int( validPoints.count() ) / 100 );
     HashMap<VertId, int> root2size;
     for ( auto v : validPoints )
     {
@@ -223,7 +223,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
 
     int counterProcessedVerts = 0;
     const float counterMax = float( lastPassVerts->count() );
-    const int counterDivider = int( lastPassVerts->count() ) / 100;
+    const int counterDivider = std::max( 1, int( lastPassVerts->count() ) / 100 );
     for ( auto v0 : *lastPassVerts )
     {
         findPointsInBall( pointCloud.getAABBTree(), { pointCloud.points[v0], maxDistSq },

@@ -193,11 +193,11 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
     MR_TIMER;
     BitSet queuedRecords( accumulativeSet.nList.size(), true );
     std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
-    while ( queuedRecords.any() )
+    for ( auto s : queuedRecords )
     {
         auto& currInfo = contInfos.emplace_back();
 
-        currInfo.startIndex = queuedRecords.find_first();
+        currInfo.startIndex = s;
         ++currInfo.size;
         bool closed = true;
         for ( auto nextIndex = currInfo.startIndex;; )

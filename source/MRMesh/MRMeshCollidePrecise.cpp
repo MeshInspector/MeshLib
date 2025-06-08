@@ -22,11 +22,17 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
+    Timer t( "init" );
+
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
     std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
-    for( int i = 0; i < 16; ++i ) // 16 -> will produce at most 2^16 subtasks
+    // tested on two Spheres each with 3366 vertices:
+    // 16 -> init=0.886 (13%), main=5.948, total=6.834
+    // 14 -> init=0.429 ( 7%), main=5.990, total=6.419
+    // 12 -> init=0.226 ( 3%), main=6.445, total=6.671
+    for( int i = 0; i < 14; ++i ) // 14 -> will produce at most 2^14 subtasks
     {
         int numSplits = 0;
         while( !subtasks.empty() )
@@ -157,6 +163,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                 res.edgesBtrisA.emplace_back( e, aTri );
         }
     };
+
+    t.restart( "main" );
 
     std::atomic<bool> anyIntersectionAtm{ false };
     // checks subtasks in parallel

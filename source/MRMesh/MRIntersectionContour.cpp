@@ -8,6 +8,8 @@
 #include "MRParallelFor.h"
 #include <parallel_hashmap/phmap.h>
 #include <optional>
+#include "MRBitSetParallelFor.h"
+#include "MRUnionFind.h"
 
 namespace MR
 {
@@ -191,44 +193,79 @@ struct ContourInfo
 std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
-    BitSet queuedRecords( accumulativeSet.nList.size(), true );
+
+    // use VertId, since no untyped UnionFind yet
+    VertBitSet seqPass( accumulativeSet.nList.size() ); // must be passed again sequentially
+    VertBitSet noPrev( accumulativeSet.nList.size() );  // starts of open contours
+    UnionFind<VertId> unionFind( accumulativeSet.nList.size() );
+
+    // parallel unite by prev-field
+    BitSetParallelForAllRanged( seqPass, [&] ( VertId i, const auto & range )
+    {
+        auto prev = accumulativeSet.nList[i].prev;
+        if ( prev == -1 )
+        {
+            noPrev.set( i );
+            return;
+        }
+        if ( prev < range.beg || prev >= range.end )
+        {
+            // unsafe to unite in parallel
+            seqPass.set( i );
+            return;
+        }
+        unionFind.unite( i, VertId( prev ) );
+    } );
+
+    // unite sequentially that was unsafe to do in parallel
+    for ( VertId i : seqPass )
+    {
+        auto prev = accumulativeSet.nList[i].prev;
+        assert( prev >= 0 );
+        unionFind.unite( i, VertId( prev ) );
+    }
+
+    // find one representative for each contour
+    auto roots = unionFind.findRootsBitSet();
+
+    // for open contours, use the representative without valid prev
+    for ( auto f : noPrev )
+    {
+        auto r = unionFind.find( f );
+        assert( roots.test( r ) );
+        if ( r == f )
+            continue;
+        assert( !roots.test( f ) );
+        roots.set( f, true );
+        roots.set( r, false );
+    }
+
     std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
-    while ( queuedRecords.any() )
+    contInfos.reserve( roots.count() );
+    for ( auto r : roots )
     {
         auto& currInfo = contInfos.emplace_back();
-
-        currInfo.startIndex = queuedRecords.find_first();
-        ++currInfo.size;
-        bool closed = true;
-        for ( auto nextIndex = currInfo.startIndex;; )
-        {
-            queuedRecords.reset( nextIndex );
-
-            auto next = accumulativeSet.nList[nextIndex].next;
-            if ( next == -1 )
-            {
-                closed = false;
-                break;
-            }
-            ++currInfo.size;
-            nextIndex = next;
-            if ( nextIndex == currInfo.startIndex )
-                break;
-        }
-
-        if ( !closed )
-        {
-            for ( ;; )
-            {
-                const auto prev = accumulativeSet.nList[currInfo.startIndex].prev;
-                if ( prev == -1 )
-                    break;
-                ++currInfo.size;
-                currInfo.startIndex = prev;
-                queuedRecords.reset( currInfo.startIndex );
-            }
-        }
+        currInfo.startIndex = r;
     }
+
+    // find size of each contour in parallel
+    ParallelFor( contInfos, [&]( size_t i )
+    {
+        auto& currInfo = contInfos[i];
+        const auto f = currInfo.startIndex;
+        auto pos = f;
+        size_t sz = 1;
+        for (;;)
+        {
+            pos = accumulativeSet.nList[pos].next;
+            if ( pos == -1 )
+                break;
+            ++sz;
+            if ( pos == f )
+                break;
+        }
+        currInfo.size = sz;
+    } );
     return contInfos;
 }
 

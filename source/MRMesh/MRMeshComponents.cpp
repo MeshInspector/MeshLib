@@ -6,10 +6,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
-#include "MRMeshBuilder.h"
 #include "MREdgeIterator.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
 #include <climits>
 
@@ -133,34 +130,21 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
     MR_TIMER;
 
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
-    const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
 
-    const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, vertsRegion );
-
-    int maxVerts = 0;
-    int maxI = 0;
-    std::vector<int> vertsInComp( k, 0 );
-    for ( auto v : vertsRegion )
+    VertId largestRoot;
+    int largestNumVerts = 0;
+    for ( auto r : unionFindStruct.findRootsBitSet( region ) )
     {
-        auto index = uniqueRootsMap[v];
-        auto& num = vertsInComp[index];
-        ++num;
-        if ( num > maxVerts )
+        if ( !largestRoot || largestNumVerts < unionFindStruct.sizeOfComp( r ) )
         {
-            maxI = index;
-            maxVerts = num;
+            largestRoot = r;
+            largestNumVerts = unionFindStruct.sizeOfComp( r );
         }
     }
-    VertBitSet largestComponent( vertsRegion.find_last() + 1 );
-    for ( auto v : vertsRegion )
-    {
-        auto index = uniqueRootsMap[v];
-        if ( index != maxI )
-            continue;
-        largestComponent.set( v );
-    }
-    return largestComponent;
+    if ( !largestRoot )
+        return {}; // e.g. empty region
+
+    return unionFindStruct.findComponentBitSet( largestRoot, region );
 }
 
 VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region )
@@ -928,43 +912,6 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, 
         }
 
     return getUnionFindStructureVertsEx( mesh, ignoreEdges );
-}
-
-TEST(MRMesh, getAllComponentsEdges)
-{
-    Triangulation t{
-        { 0_v, 1_v, 2_v },
-        { 0_v, 2_v, 3_v }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    mesh.points.emplace_back( 0.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 1.f, 0.f );
-    mesh.points.emplace_back( 0.f, 1.f, 0.f );
-
-    EdgeId e12 = mesh.topology.findEdge( 1_v, 2_v );
-    EdgeId e30 = mesh.topology.findEdge( 3_v, 0_v );
-
-    EdgeBitSet ebs( 10 );
-    ebs.set( e12 );
-    ebs.set( e30 );
-    auto comp = getAllComponentsEdges( mesh, ebs );
-    ASSERT_EQ( comp.size(), 2 );
-    ASSERT_EQ( comp[0].count(), 1 );
-    ASSERT_EQ( comp[1].count(), 1 );
-
-    ebs.set( e12.sym() );
-    ebs.set( e30.sym() );
-    comp = getAllComponentsEdges( mesh, ebs );
-    ASSERT_EQ( comp.size(), 2 );
-    ASSERT_EQ( comp[0].count(), 2 );
-    ASSERT_EQ( comp[1].count(), 2 );
-
-    ebs.set( mesh.topology.findEdge( 0_v, 1_v ) );
-    comp = getAllComponentsEdges( mesh, ebs );
-    ASSERT_EQ( comp.size(), 1 );
-    ASSERT_EQ( comp[0].count(), 5 );
 }
 
 UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots )

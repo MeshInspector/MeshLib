@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRVector.h"
+#include "MRBitSetParallelFor.h"
+#include "MRTimer.h"
 #include <utility>
 
 namespace MR
@@ -32,6 +34,7 @@ public:
     /// resets union-find to represent given number of elements, each element is the only one in its disjoint set
     void reset( size_t size )
     {
+        MR_TIMER;
         parents_.clear();
         parents_.reserve( size );
         for ( I i{ size_t( 0 ) }; i < size; ++i )
@@ -97,6 +100,14 @@ public:
     /// returns the number of elements in the set containing given element
     SizeType sizeOfComp( I a ) { return sizes_[ find( a ) ]; }
 
+    /// constructs in parallel the bitset with 1-bits corresponding to root elements;
+    /// if region is provided then only its elements will be checked
+    TypedBitSet<I> findRootsBitSet( const TypedBitSet<I> * region = nullptr ) const;
+
+    /// constructs in parallel the bitset with 1-bits corresponding to the elements from same set as (a);
+    /// if region is provided then only its elements will be checked
+    TypedBitSet<I> findComponentBitSet( I a, const TypedBitSet<I> * region = nullptr );
+
 private:
     /// finds the root of the set containing given element without optimizing data structure updates
     I findRootNoUpdate_( I a ) const
@@ -147,5 +158,36 @@ private:
     /// size of each set, contain valid values only for sets' roots
     Vector<SizeType, I> sizes_;
 };
+
+template <typename I>
+TypedBitSet<I> UnionFind<I>::findRootsBitSet( const TypedBitSet<I> * region ) const
+{
+    MR_TIMER;
+    TypedBitSet<I> res( parents_.size() );
+    BitSetParallelForAll( res, [&]( I i )
+    {
+        if ( region && !region->test( i ) )
+            return;
+        if ( parents_[i] == i )
+            res.set( i );
+    } );
+    return res;
+}
+
+template <typename I>
+TypedBitSet<I> UnionFind<I>::findComponentBitSet( I a, const TypedBitSet<I> * region )
+{
+    MR_TIMER;
+    TypedBitSet<I> res( parents_.size() );
+    a = find( a );
+    BitSetParallelForAllRanged( res, [&]( I i, const auto & range )
+    {
+        if ( region && !region->test( i ) )
+            return;
+        if ( a == findUpdateRange( i, range.beg, range.end ) )
+            res.set( i );
+    } );
+    return res;
+}
 
 } //namespace MR

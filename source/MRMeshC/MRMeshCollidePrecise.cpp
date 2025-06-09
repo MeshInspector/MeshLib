@@ -14,7 +14,6 @@ REGISTER_AUTO_CAST( EdgeTri )
 REGISTER_AUTO_CAST( VarEdgeTri )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
-REGISTER_AUTO_CAST( PreciseCollisionResult )
 REGISTER_VECTOR_LIKE( MRVectorEdgeTri, EdgeTri )
 REGISTER_VECTOR_LIKE( MRVectorVarEdgeTri, VarEdgeTri )
 
@@ -46,13 +45,21 @@ MR_VECTOR_IMPL( EdgeTri )
 MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
 {
     ARG( conv ); ARG_PTR( rigidB2A );
-    RETURN_NEW( findCollidingEdgeTrisPrecise(
+    findCollidingEdgeTrisPrecise(
         cast( *a ),
         cast( *b ),
         conv,
         rigidB2A,
         anyIntersection
-    ) );
+    );
+/*    RETURN_NEW(  );*/
+    return nullptr;
+}
+
+void mrVectorVarEdgeTriFree( MRVectorVarEdgeTri* vector_ )
+{
+    ARG_PTR( vector );
+    delete vector;
 }
 
 MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshPart* b, const MRAffineXf3f* rigidB2A_ )
@@ -63,16 +70,4 @@ MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshP
         .toInt = auto_cast( new_from( std::move( result.toInt ) ) ),
         .toFloat = auto_cast( new_from( std::move( result.toFloat ) ) ),
     };
-}
-
-MRVectorVarEdgeTri mrPreciseCollisionResultIntersections( const MRPreciseCollisionResult* result_ )
-{
-    ARG( result );
-    RETURN_VECTOR( result.intersections );
-}
-
-void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result_ )
-{
-    ARG_PTR( result );
-    delete result;
 }

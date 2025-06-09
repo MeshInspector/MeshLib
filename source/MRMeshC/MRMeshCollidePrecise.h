@@ -33,13 +33,8 @@ typedef struct MRVarEdgeTri
 
 MR_VECTOR_DECL( VarEdgeTri )
 
-typedef struct MRPreciseCollisionResult MRPreciseCollisionResult;
-
 /// each edge is directed to have its origin inside and its destination outside of the other mesh
-MRMESHC_API MRVectorVarEdgeTri mrPreciseCollisionResultIntersections( const MRPreciseCollisionResult* result );
-
-/// deallocates the PreciseCollisionResult object
-MRMESHC_API void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result );
+typedef MRVectorVarEdgeTri MRPreciseCollisionResult;
 
 /**
  * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh
@@ -50,6 +45,8 @@ MRMESHC_API MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMe
                                                                       const MRConvertToIntVector* conv,
                                                                       const MRAffineXf3f* rigidB2A,
                                                                       bool anyIntersection );
+
+MRMESHC_API void mrVectorVarEdgeTriFree( MRVectorVarEdgeTri* vector );
 
 /**
  * \brief creates simple converters from Vector3f to Vector3i and back in mesh parts area range

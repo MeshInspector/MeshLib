@@ -32,10 +32,9 @@ void testMeshCollidePrecise( void )
     MRMeshPart meshBPart = { meshB, NULL };
     MRCoordinateConverters conv = mrGetVectorConverters( &meshAPart, &meshBPart, NULL );
 
-    MRPreciseCollisionResult* intersections = mrFindCollidingEdgeTrisPrecise( &meshAPart, &meshBPart, conv.toInt, NULL, false );
-    const MRVectorVarEdgeTri is = mrPreciseCollisionResultIntersections( intersections );
+    MRVectorVarEdgeTri* intersections = mrFindCollidingEdgeTrisPrecise( &meshAPart, &meshBPart, conv.toInt, NULL, false );
     // FIXME: the results are platform-dependent
-    TEST_ASSERT( is.size != 0 )
+    TEST_ASSERT( intersections->size != 0 )
 
     const MRMeshTopology* meshATop = mrMeshTopology( meshA );
     const MRMeshTopology* meshBTop = mrMeshTopology( meshB );
@@ -62,7 +61,7 @@ void testMeshCollidePrecise( void )
 
     mrContinuousContoursFree( contours );
 
-    mrPreciseCollisionResultFree( intersections );
+    mrVectorVarEdgeTriFree( intersections );
 
     mrConvertToFloatVectorFree( conv.toFloat );
     mrConvertToIntVectorFree( conv.toInt );

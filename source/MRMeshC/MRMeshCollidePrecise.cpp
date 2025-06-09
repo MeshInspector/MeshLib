@@ -11,10 +11,14 @@ REGISTER_AUTO_CAST( AffineXf3f )
 REGISTER_AUTO_CAST( ConvertToFloatVector )
 REGISTER_AUTO_CAST( ConvertToIntVector )
 REGISTER_AUTO_CAST( EdgeTri )
+REGISTER_AUTO_CAST( VarEdgeTri )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( PreciseCollisionResult )
 REGISTER_VECTOR_LIKE( MRVectorEdgeTri, EdgeTri )
+REGISTER_VECTOR_LIKE( MRVectorVarEdgeTri, VarEdgeTri )
+
+static_assert( sizeof( MRVarEdgeTri ) == sizeof( VarEdgeTri ) );
 
 namespace
 {
@@ -61,16 +65,10 @@ MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshP
     };
 }
 
-MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result_ )
+MRVectorVarEdgeTri mrPreciseCollisionResultIntersections( const MRPreciseCollisionResult* result_ )
 {
     ARG( result );
-    RETURN_VECTOR( result.edgesAtrisB );
-}
-
-MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result_ )
-{
-    ARG( result );
-    RETURN_VECTOR( result.edgesBtrisA );
+    RETURN_VECTOR( result.intersections );
 }
 
 void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result_ )

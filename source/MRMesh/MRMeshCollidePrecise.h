@@ -56,11 +56,8 @@ struct VarEdgeTri
 };
 static_assert( sizeof( VarEdgeTri ) == 8 );
 
-struct PreciseCollisionResult
-{
-    /// each edge is directed to have its origin inside and its destination outside of the other mesh
-    std::vector<VarEdgeTri> intersections;
-};
+/// each edge is directed to have its origin inside and its destination outside of the other mesh
+using PreciseCollisionResult = std::vector<VarEdgeTri>;
 
 /**
  * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh

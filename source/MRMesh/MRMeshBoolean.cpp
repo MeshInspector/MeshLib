@@ -657,7 +657,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
 
     const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
-    result.intersectionPoints.reserve( intersections.intersections.size() );
+    result.intersectionPoints.reserve( intersections.size() );
 
     FaceBitSet collFacesA, collFacesB;
     VertBitSet destVertsA, destVertsB, orgVertsA, orgVertsB;
@@ -667,7 +667,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
     orgVertsB.resize( meshB.topology.lastValidVert() + 1 );
     destVertsA.resize( meshA.topology.lastValidVert() + 1 );
     destVertsB.resize( meshB.topology.lastValidVert() + 1 );
-    for ( const auto& et : intersections.intersections )
+    for ( const auto& et : intersections )
     {
         if ( et.isEdgeATriB() )
         {

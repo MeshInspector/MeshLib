@@ -286,9 +286,9 @@ ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{ topologyA, topologyB, intersections.intersections };
-    parallelPrepareLinkedLists( intersections.intersections, accumulativeSet );
-    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections.intersections );
+    AccumulativeSet accumulativeSet{ topologyA, topologyB, intersections };
+    parallelPrepareLinkedLists( intersections, accumulativeSet );
+    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections );
 }
 
 Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours,

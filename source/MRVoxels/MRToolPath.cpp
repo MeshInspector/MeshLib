@@ -279,14 +279,14 @@ Expected<ExtractIsolinesResult> extractAllIsolines( const Mesh& mesh, const Extr
     
     size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
     if ( numIsolines == 0 )
-        return unexpected( "Can not extract ISO-lines. Mesh less then section step." );
+        return unexpected( "Cannot extract ISO-lines. Mesh less then section step." );
 
     const auto& topology = res.meshAfterCut.topology;
     auto firstIsolines = extractIsolines( topology, distances, params.sectionStep );
     const size_t groupCount = firstIsolines.size();
 
     if ( groupCount == 0 )
-        return unexpected( "Can not extract first ISO-line." );
+        return unexpected( "Cannot extract first ISO-line." );
     
     std::vector<std::list<SurfacePath>::iterator> groupStarts;
     groupStarts.reserve( groupCount );

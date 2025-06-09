@@ -19,15 +19,16 @@ MRMESHC_API bool mrEdgeTriEq( const MREdgeTri* a, const MREdgeTri* b );
 
 MR_VECTOR_DECL( EdgeTri )
 
+typedef struct MRFlaggedTri
+{
+    unsigned int isEdgeATriB : 1;
+    unsigned int face : 31;
+} MRFlaggedTri;
+
 typedef struct MRVarEdgeTri
 {
     MREdgeId edge;
-    typedef struct FlaggedTri
-    {
-        unsigned int isEdgeATriB : 1;
-        unsigned int face : 31;
-    } FlaggedTri;
-    FlaggedTri flaggedTri;
+    MRFlaggedTri flaggedTri;
 } MRVarEdgeTri;
 
 MR_VECTOR_DECL( VarEdgeTri )

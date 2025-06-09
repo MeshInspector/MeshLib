@@ -33,13 +33,9 @@ void testMeshCollidePrecise( void )
     MRCoordinateConverters conv = mrGetVectorConverters( &meshAPart, &meshBPart, NULL );
 
     MRPreciseCollisionResult* intersections = mrFindCollidingEdgeTrisPrecise( &meshAPart, &meshBPart, conv.toInt, NULL, false );
-    const MRVectorEdgeTri edgesAtrisB = mrPreciseCollisionResultEdgesAtrisB( intersections );
-    const MRVectorEdgeTri edgesBtrisA = mrPreciseCollisionResultEdgesBtrisA( intersections );
+    const MRVectorVarEdgeTri is = mrPreciseCollisionResultIntersections( intersections );
     // FIXME: the results are platform-dependent
-    //TEST_ASSERT( edgesAtrisB.size == 80 )
-    //TEST_ASSERT( edgesBtrisA.size == 72 )
-    TEST_ASSERT( edgesAtrisB.size != 0 )
-    TEST_ASSERT( edgesBtrisA.size != 0 )
+    TEST_ASSERT( is.size != 0 )
 
     const MRMeshTopology* meshATop = mrMeshTopology( meshA );
     const MRMeshTopology* meshBTop = mrMeshTopology( meshB );

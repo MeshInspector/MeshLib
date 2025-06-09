@@ -31,6 +31,7 @@ class ViewerTitle;
 
 class SpaceMouseHandler;
 
+class CornerControllerObject;
 // This struct contains rules for viewer launch
 struct LaunchParams
 {
@@ -485,7 +486,7 @@ public:
     std::vector<std::string> commandArgs;
 
     std::shared_ptr<ObjectMesh> basisAxes;
-    std::shared_ptr<ObjectMesh> basisViewController;
+    std::unique_ptr<CornerControllerObject> basisViewController;
     std::shared_ptr<ObjectMesh> globalBasisAxes;
     std::shared_ptr<ObjectMesh> rotationSphere;
     // Stores clipping plane mesh

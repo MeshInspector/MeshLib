@@ -2107,65 +2107,8 @@ void Viewer::initBasisAxesObject_()
 
 void Viewer::initBasisViewControllerObject_()
 {
-    std::shared_ptr<Mesh> arrowMeshCCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.1f ), true ) );
-    std::shared_ptr<Mesh> arrowMeshCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.0f ), false ) );
-    auto arrowCCW = std::make_shared<ObjectMesh>();
-    auto arrowCW = std::make_shared<ObjectMesh>();
-    arrowCCW->setMesh( arrowMeshCCW );
-    arrowCCW->setName( "CCW" );
-    arrowCW->setMesh( arrowMeshCW );
-    arrowCW->setName( "CW" );
-
-    std::shared_ptr<Mesh> basisControllerMesh = std::make_shared<Mesh>( makeCornerControllerMesh( 0.8f ) );
-    basisViewController = std::make_shared<ObjectMesh>();
-    basisViewController->setMesh( basisControllerMesh );
-    basisViewController->setName( "Corner View Controller" );
-    basisViewController->setTextures( loadCornerControllerTextures() );
-    basisViewController->setUVCoords( makeCornerControllerUVCoords() );
-    if ( !basisViewController->getTextures().empty() )
-    {
-        basisViewController->setTexturePerFace( getCornerControllerTexureMap() );
-        basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-    }
-    basisViewController->setFlatShading( true );
-    arrowCCW->setFlatShading( true );
-    arrowCW->setFlatShading( true );
-    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
-    arrowCCW->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
-    arrowCW->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
-    basisViewController->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
-    arrowCCW->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
-    arrowCW->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
-    basisViewController->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
-    arrowCCW->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
-    arrowCW->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
-    basisViewController->setEdgeWidth( 0.2f );
-    arrowCCW->setEdgeWidth( 0.3f );
-    arrowCW->setEdgeWidth( 0.3f );
-
-    basisViewController->addChild( arrowCCW );
-    basisViewController->addChild( arrowCW );
-
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
-    {
-        if ( !basisViewController )
-            return;
-
-        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
-        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
-        basisViewController->setFrontColor( colorBg, true );
-        basisViewController->setFrontColor( colorBg, false );
-        basisViewController->setBordersColor( colorBorder );
-        for ( auto child : basisViewController->children() )
-        {
-            if ( auto visObj = child->asType<ObjectMesh>() )
-            {
-                visObj->setFrontColor( colorBg, true );
-                visObj->setFrontColor( colorBg, false );
-                visObj->setBordersColor( colorBorder );
-            }
-        }
-    } ) );
+    basisViewController = std::make_unique<CornerControllerObject>();
+    basisViewController->initDefault();
 }
 
 void Viewer::initClippingPlaneObject_()

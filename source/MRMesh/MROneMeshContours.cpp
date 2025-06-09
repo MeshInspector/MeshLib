@@ -528,29 +528,29 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
             const auto& inIntersection = curInContour[i];
             OneMeshIntersection pntA, pntB;
 
-            if ( inIntersection.isEdgeATriB )
+            if ( inIntersection.isEdgeATriB() )
             {
                 pntA.primitiveId = inIntersection.edge;
-                pntB.primitiveId = inIntersection.tri;
-                meshB.getTriPoints( inIntersection.tri, a, b, c );
+                pntB.primitiveId = inIntersection.tri();
+                meshB.getTriPoints( inIntersection.tri(), a, b, c );
                 d = meshA.orgPnt( inIntersection.edge );
                 e = meshA.destPnt( inIntersection.edge );
             }
             else
             {
                 pntB.primitiveId = inIntersection.edge;
-                pntA.primitiveId = inIntersection.tri;
-                meshA.getTriPoints( inIntersection.tri, a, b, c );
+                pntA.primitiveId = inIntersection.tri();
+                meshA.getTriPoints( inIntersection.tri(), a, b, c );
                 d = meshB.orgPnt( inIntersection.edge );
                 e = meshB.destPnt( inIntersection.edge );
             }
             // always calculate in mesh A space
             pntA.coordinate = findTriangleSegmentIntersectionPrecise(
-                getCoord( a, !inIntersection.isEdgeATriB ),
-                getCoord( b, !inIntersection.isEdgeATriB ),
-                getCoord( c, !inIntersection.isEdgeATriB ),
-                getCoord( d, inIntersection.isEdgeATriB ),
-                getCoord( e, inIntersection.isEdgeATriB ), converters );
+                getCoord( a, !inIntersection.isEdgeATriB() ),
+                getCoord( b, !inIntersection.isEdgeATriB() ),
+                getCoord( c, !inIntersection.isEdgeATriB() ),
+                getCoord( d, inIntersection.isEdgeATriB() ),
+                getCoord( e, inIntersection.isEdgeATriB() ), converters );
 
             if ( outA )
                 curA.intersections[i] = pntA;
@@ -590,11 +590,11 @@ OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const Cont
             {
                 const auto& inIntersection = curInContour[i];
                 auto& outIntersection = curOutContour[i];
-                if ( !rigidB2A == inIntersection.isEdgeATriB )
+                if ( !rigidB2A == inIntersection.isEdgeATriB() )
                     outIntersection.primitiveId = inIntersection.edge;
                 else
-                    outIntersection.primitiveId = inIntersection.tri;
-                mesh.getTriPoints( inIntersection.tri, a, b, c );
+                    outIntersection.primitiveId = inIntersection.tri();
+                mesh.getTriPoints( inIntersection.tri(), a, b, c );
                 d = mesh.orgPnt( inIntersection.edge );
                 e = mesh.destPnt( inIntersection.edge );
 

@@ -45,15 +45,13 @@ MR_VECTOR_IMPL( EdgeTri )
 MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
 {
     ARG( conv ); ARG_PTR( rigidB2A );
-    findCollidingEdgeTrisPrecise(
+    RETURN_NEW( findCollidingEdgeTrisPrecise(
         cast( *a ),
         cast( *b ),
         conv,
         rigidB2A,
         anyIntersection
-    );
-/*    RETURN_NEW(  );*/
-    return nullptr;
+    ) );
 }
 
 void mrVectorVarEdgeTriFree( MRVectorVarEdgeTri* vector_ )

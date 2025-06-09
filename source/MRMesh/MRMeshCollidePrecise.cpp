@@ -121,18 +121,18 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         };
         if ( auto e = aEdgeCheck( 0, 1 ) )
         {
-            res.edgesAtrisB.emplace_back( e, bTri );
+            res.intersections.emplace_back( true, e, bTri );
         }
         aEdge = a.mesh.topology.prev( aEdge.sym() );
         if ( auto e = aEdgeCheck( 1, 2 ) )
         {
-            res.edgesAtrisB.emplace_back( e, bTri );
+            res.intersections.emplace_back( true, e, bTri );
         }
         aEdge = a.mesh.topology.prev( aEdge.sym() );
         if ( numA < 2 )
         {
             if ( auto e = aEdgeCheck( 2, 0 ) )
-                res.edgesAtrisB.emplace_back( e, bTri );
+                res.intersections.emplace_back( true, e, bTri );
         }
 
         // check edges from B
@@ -149,18 +149,18 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         };
         if ( auto e = bEdgeCheck( 0, 1 ) )
         {
-            res.edgesBtrisA.emplace_back( e, aTri );
+            res.intersections.emplace_back( false, e, aTri );
         }
         bEdge = b.mesh.topology.prev( bEdge.sym() );
         if ( auto e = bEdgeCheck( 1, 2 ) )
         {
-            res.edgesBtrisA.emplace_back( e, aTri );
+            res.intersections.emplace_back( false, e, aTri );
         }
         bEdge = b.mesh.topology.prev( bEdge.sym() );
         if ( numB < 2 )
         {
             if ( auto e = bEdgeCheck( 2, 0 ) )
-                res.edgesBtrisA.emplace_back( e, aTri );
+                res.intersections.emplace_back( false, e, aTri );
         }
     };
 
@@ -201,7 +201,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     if ( b.region && !b.region->test( bFace ) )
                         continue;
                     checkTwoTris( aFace, bFace, myRes );
-                    if ( anyIntersection && ( !myRes.edgesAtrisB.empty() || !myRes.edgesBtrisA.empty() ) )
+                    if ( anyIntersection && !myRes.intersections.empty() )
                     {
                         anyIntersectionAtm.store( true, std::memory_order_relaxed );
                         break;
@@ -228,19 +228,12 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     } );
 
     // unite results from sub-trees into final vectors
-    size_t colsAB = 0, colsBA = 0;
+    size_t cols = 0;
     for ( const auto & s : subtaskRes )
-    {
-        colsAB += s.edgesAtrisB.size();
-        colsBA += s.edgesBtrisA.size();
-    }
-    res.edgesAtrisB.reserve( colsAB );
-    res.edgesBtrisA.reserve( colsBA );
+        cols += s.intersections.size();
+    res.intersections.reserve( cols );
     for ( const auto & s : subtaskRes )
-    {
-        res.edgesAtrisB.insert( res.edgesAtrisB.end(), s.edgesAtrisB.begin(), s.edgesAtrisB.end() );
-        res.edgesBtrisA.insert( res.edgesBtrisA.end(), s.edgesBtrisA.begin(), s.edgesBtrisA.end() );
-    }
+        res.intersections.insert( res.intersections.end(), s.intersections.begin(), s.intersections.end() );
 
     return res;
 }

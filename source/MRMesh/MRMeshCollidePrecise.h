@@ -26,11 +26,37 @@ inline bool operator==( const EdgeTri& a, const EdgeTri& b )
     return a.edge.undirected() == b.edge.undirected() && a.tri == b.tri;
 }
 
+/// if isEdgeATriB() == true,  then stores edge from mesh A and triangle from mesh B
+/// if isEdgeATriB() == false, then stores edge from mesh B and triangle from mesh A
+struct VarEdgeTri
+{
+    EdgeId edge;
+    struct FlaggedTri
+    {
+        unsigned int isEdgeATriB : 1 = 0;
+        unsigned int face : 31 = 0;
+    } flaggedTri;
+
+    FaceId tri() const { return FaceId( flaggedTri.face ); }
+    bool isEdgeATriB() const { return bool( flaggedTri.isEdgeATriB ); }
+
+    VarEdgeTri() = default;
+    VarEdgeTri( bool isEdgeATriB, EdgeId e, FaceId t )
+    {
+        assert( t.valid() );
+        edge = e;
+        flaggedTri.isEdgeATriB = isEdgeATriB;
+        flaggedTri.face = t;
+    }
+
+    bool operator==( const VarEdgeTri& ) const = default;
+};
+static_assert( sizeof( VarEdgeTri ) == 8 );
+
 struct PreciseCollisionResult
 {
     /// each edge is directed to have its origin inside and its destination outside of the other mesh
-    std::vector<EdgeTri> edgesAtrisB;
-    std::vector<EdgeTri> edgesBtrisA;
+    std::vector<VarEdgeTri> intersections;
 };
 
 /**

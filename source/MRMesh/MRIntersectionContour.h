@@ -8,13 +8,7 @@ namespace MR
 struct OneMeshContour;
 using OneMeshContours = std::vector<OneMeshContour>;
 
-struct VariableEdgeTri : EdgeTri
-{
-    bool isEdgeATriB{false};
-    bool operator==( const VariableEdgeTri& ) const = default;
-};
-
-using ContinuousContour = std::vector<VariableEdgeTri>;
+using ContinuousContour = std::vector<VarEdgeTri>;
 using ContinuousContours = std::vector<ContinuousContour>;
 
 /// Combines individual intersections into ordered contours with the properties:

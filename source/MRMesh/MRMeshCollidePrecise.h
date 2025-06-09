@@ -35,10 +35,12 @@ struct VarEdgeTri
     {
         unsigned int isEdgeATriB : 1 = 0;
         unsigned int face : 31 = 0;
+        bool operator==( const FlaggedTri& ) const = default;
     } flaggedTri;
 
     FaceId tri() const { return FaceId( flaggedTri.face ); }
     bool isEdgeATriB() const { return bool( flaggedTri.isEdgeATriB ); }
+    EdgeTri edgeTri() const { return EdgeTri( edge, tri() ); }
 
     VarEdgeTri() = default;
     VarEdgeTri( bool isEdgeATriB, EdgeId e, FaceId t )
@@ -48,6 +50,7 @@ struct VarEdgeTri
         flaggedTri.isEdgeATriB = isEdgeATriB;
         flaggedTri.face = t;
     }
+    VarEdgeTri( bool isEdgeATriB, const EdgeTri& et ) : VarEdgeTri( isEdgeATriB, et.edge, et.tri ) {}
 
     bool operator==( const VarEdgeTri& ) const = default;
 };

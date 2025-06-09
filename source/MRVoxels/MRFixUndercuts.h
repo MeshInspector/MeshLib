@@ -50,7 +50,7 @@ struct FindParams
     float wallAngle = 0.0f;
 };
 
-/// Fix undercuts function paramters
+/// Fix undercuts function parameters
 struct FixParams
 {
     /// parameters of what is considered as undercut
@@ -64,6 +64,9 @@ struct FixParams
 
     /// if set - only this region will be fixed (but still all mesh will be rebuild)
     const FaceBitSet* region = nullptr;
+
+    /// if true applies one iterations of gaussian filtering for voxels, useful if thin walls expected
+    bool smooth = false;
 
     ProgressCallback cb;
 };

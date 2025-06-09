@@ -46,8 +46,6 @@ MRMESHC_API MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMe
                                                                       const MRAffineXf3f* rigidB2A,
                                                                       bool anyIntersection );
 
-MRMESHC_API void mrVectorVarEdgeTriFree( MRVectorVarEdgeTri* vector );
-
 /**
  * \brief creates simple converters from Vector3f to Vector3i and back in mesh parts area range
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation

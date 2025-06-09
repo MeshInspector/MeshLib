@@ -41,6 +41,7 @@ bool mrEdgeTriEq( const MREdgeTri* a_, const MREdgeTri* b_ )
 }
 
 MR_VECTOR_IMPL( EdgeTri )
+MR_VECTOR_IMPL( VarEdgeTri )
 
 MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
 {
@@ -52,12 +53,6 @@ MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, c
         rigidB2A,
         anyIntersection
     ) );
-}
-
-void mrVectorVarEdgeTriFree( MRVectorVarEdgeTri* vector_ )
-{
-    ARG_PTR( vector );
-    delete vector;
 }
 
 MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshPart* b, const MRAffineXf3f* rigidB2A_ )

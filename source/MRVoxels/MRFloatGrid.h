@@ -26,6 +26,10 @@ MRVOXELS_API FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelSc
 /// returns cropped grid
 MRVOXELS_API FloatGrid cropped( const FloatGrid& grid, const Box3i& box, ProgressCallback cb = {} );
 
+/// returns grid with gaussian filter applied
+MRVOXELS_API void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb = {} );
+MRVOXELS_API FloatGrid gaussianFiltered( const FloatGrid& grid, int width, int iters, ProgressCallback cb = {} );
+
 /// returns the value at given voxel
 [[nodiscard]] MRVOXELS_API float getValue( const FloatGrid & grid, const Vector3i & p );
 

@@ -223,7 +223,7 @@ struct ExtractIsolinesParams
     ProgressCallback cb;
 };
 
-ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsolinesParams& params )
+Expected<ExtractIsolinesResult> extractAllIsolines( const Mesh& mesh, const ExtractIsolinesParams& params )
 {
     ExtractIsolinesResult res;
     MR::VertScalars distances;
@@ -279,11 +279,14 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
     
     size_t numIsolines = size_t( ( max - min ) / params.sectionStep );
     if ( numIsolines == 0 )
-        return res;
+        return unexpected( "Cannot extract ISO-lines. Mesh less then section step." );
 
     const auto& topology = res.meshAfterCut.topology;
     auto firstIsolines = extractIsolines( topology, distances, params.sectionStep );
     const size_t groupCount = firstIsolines.size();
+
+    if ( groupCount == 0 )
+        return unexpected( "Cannot extract first ISO-line." );
     
     std::vector<std::list<SurfacePath>::iterator> groupStarts;
     groupStarts.reserve( groupCount );
@@ -909,7 +912,7 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
     const auto undercutContour = undercutPolyline.contours().front();
 
     // if there are multiple independent zones selected we need to process them separately
-    const auto processZone = [&] ( const std::vector<SurfacePath>& startSurfacePaths, Vector3f lastPoint, ProgressCallback cb ) -> bool
+    const auto processZone = [&] ( const std::vector<SurfacePath>& startSurfacePaths, Vector3f lastPoint, ProgressCallback cb ) -> std::string
     {
         ExtractIsolinesParams extractionParams
         {
@@ -921,7 +924,11 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
             .cb = subprogress( cb, 0.0f, 0.4f )
         };
         //compute isolines based on the start point or the bounding contour
-        auto extract = extractAllIsolines( res.modifiedMesh, extractionParams );
+        auto extractRes = extractAllIsolines( res.modifiedMesh, extractionParams );
+        if ( !extractRes.has_value() )
+            return extractRes.error();
+
+        auto& extract = *extractRes;
         res.modifiedMesh = extract.meshAfterCut;
         
         if ( !extract.old2NewMap.empty() )
@@ -939,8 +946,8 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
         }
 
         const auto& mesh = res.modifiedMesh;
-        if ( extract.sortedIsolines.empty() )
-            return reportProgress( cb, 0.4f );
+        if ( extract.sortedIsolines.empty() && !reportProgress( cb, 0.4f ) )
+            return stringOperationCanceled();
 
         //go to the start point through safe height
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
@@ -1019,7 +1026,7 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
         };
 
         if ( !reportProgress( cb, 0.5f ) )
-            return false;
+            return stringOperationCanceled();
 
         const auto sbp = subprogress( cb, 0.5f, 1.0f );
         
@@ -1028,7 +1035,7 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
         for ( size_t i = 0; isolineIt != extract.sortedIsolines.end(); ++i )
         {
             if ( !reportProgress( sbp, float( i ) / extract.sortedIsolines.size() ) )
-                return false;
+                return stringOperationCanceled();
 
             auto& surfacePath = *isolineIt++;
              
@@ -1151,13 +1158,16 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
             prevEdgePoint = *nextEdgePointIt;
         }   
 
-        return true;
+        return "";
     };
     
     //if selection is not specified then process all the vertices above the undercut
     if ( !mp.region && ( !params.offsetMesh || !params.offsetMesh->region ) )
     {
-        if ( !processZone( { undercutSection }, {}, subprogress( params.cb, 0.25f, 1.0f ) ) || !reportProgress( params.cb, 1.0f ) )
+        auto errorStr = processZone( { undercutSection }, {}, subprogress( params.cb, 0.25f, 1.0f ) );
+        if ( !errorStr.empty() )
+            return unexpected( errorStr );
+        if ( !reportProgress( params.cb, 1.0f ) )
             return unexpectedOperationCanceled();
 
         return res;
@@ -1199,12 +1209,11 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
         }
     }
 
-    if ( !processZone( startSurfacePaths,
+    auto errorStr = processZone( startSurfacePaths,
         res.commands.empty() ? Vector3f{} : Vector3f{ res.commands.back().x, res.commands.back().y, res.commands.back().z },
-        params.cb ) )
-    {
-        return unexpectedOperationCanceled();
-    }
+        params.cb );
+    if ( !errorStr.empty() )
+        return unexpected( errorStr );
 
     return res;
 }

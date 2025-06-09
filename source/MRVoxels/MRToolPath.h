@@ -23,6 +23,7 @@ struct ToolPathParams
     // size of voxel needed to offset mesh
     float voxelSize = {};
     // distance between sections built along Z axis
+    // in Constant Cusp mode sectionStep should be bigger than voxelSize (x1.2 or more is recomended)
     float sectionStep = {};
     // if distance to the next section is smaller than it, transition will be performed along the surface
     // otherwise transition will be through the safe plane

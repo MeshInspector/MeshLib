@@ -41,7 +41,7 @@ typedef MRVectorVarEdgeTri MRPreciseCollisionResult;
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, NULL considered as identity transformation
  * \param anyIntersection if true then the function returns as fast as it finds any intersection
  */
-MRMESHC_API MRPreciseCollisionResult mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b,
+MRMESHC_API MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b,
                                                                       const MRConvertToIntVector* conv,
                                                                       const MRAffineXf3f* rigidB2A,
                                                                       bool anyIntersection );

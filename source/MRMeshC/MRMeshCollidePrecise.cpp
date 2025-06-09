@@ -42,10 +42,10 @@ bool mrEdgeTriEq( const MREdgeTri* a_, const MREdgeTri* b_ )
 
 MR_VECTOR_IMPL( EdgeTri )
 
-MRPreciseCollisionResult mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
+MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
 {
     ARG( conv ); ARG_PTR( rigidB2A );
-    RETURN_VECTOR( findCollidingEdgeTrisPrecise(
+    RETURN_NEW_VECTOR( findCollidingEdgeTrisPrecise(
         cast( *a ),
         cast( *b ),
         conv,

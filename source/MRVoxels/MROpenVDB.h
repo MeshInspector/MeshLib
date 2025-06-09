@@ -94,6 +94,7 @@ namespace OPENVDB_VERSION_NAME
 #include <openvdb/tools/MeshToVolume.h>
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
+#include <openvdb/tools/Filter.h>
 
 MR_SUPPRESS_WARNING_POP
 

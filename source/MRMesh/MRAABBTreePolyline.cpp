@@ -41,7 +41,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
             Box<V> box;
             box.include( polyline.orgPnt( e ) );
             box.include( polyline.destPnt( e ) );
-            boxedLines[i].box = box;
+            boxedLines[i].box = box.insignificantlyExpanded();
         }
     } );
 

@@ -5,6 +5,9 @@
 #include "MRAABBTreePolyline.h"
 #include "MRIntersectionPrecomputes2.h"
 #include "MRRayBoxIntersection2.h"
+#include "MRPrecisePredicates3.h"
+#include "MRPrecisePredicates2.h"
+#include "MR2to3.h"
 
 namespace MR
 {
@@ -98,6 +101,25 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
+    ConvertToIntVector convToInt;
+    ConvertToFloatVector convToFloat;
+    Vector2f dP, eP;
+    std::array<PreciseVertCoords2, 4> pvc;
+    if constexpr ( std::is_same_v<T, double> )
+    {
+        Box3f box3;
+        box3.min = to3dim( tree[tree.rootNodeId()].box.min );
+        box3.max = to3dim( tree[tree.rootNodeId()].box.max );
+        convToInt = getToIntConverter( Box3d( box3 ) );
+        convToFloat = getToFloatConverter( Box3d( box3 ) );
+        dP = Vector2f( line( s ) );
+        eP = Vector2f( line( e ) );
+        pvc[2].pt = to2dim( convToInt( to3dim( dP ) ) );
+        pvc[2].id = VertId( polyline.topology.vertSize() );
+        pvc[3].pt = to2dim( convToInt( to3dim( eP ) ) );
+        pvc[3].id = pvc[2].id + 1;
+    }
+
     while( currentNode >= 0 )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
@@ -112,13 +134,34 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
             if( node.leaf() )
             {
                 EdgeId edge = node.leafId();
-                auto segm = polyline.edgeSegment( edge );
                 T segmPos = 0, rayPos = 0;
-                if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, &segmPos, &rayPos )
-                    && rayPos < rayEnd && rayPos > rayStart )
+                if constexpr ( std::is_same_v<T, double> )
                 {
-                    if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayEnd ) == Processing::Stop )
-                        return;
+                    pvc[0].id = polyline.topology.org( edge );
+                    pvc[0].pt = to2dim( convToInt( to3dim( polyline.points[pvc[0].id] ) ) );
+                    pvc[1].id = polyline.topology.dest( edge );
+                    pvc[1].pt = to2dim( convToInt( to3dim( polyline.points[pvc[1].id] ) ) );
+                    if ( doSegmentSegmentIntersect( pvc ) )
+                    {
+                        auto inter = to2dim( convToFloat( to3dim( findSegmentSegmentIntersectionPrecise( pvc[0].pt, pvc[1].pt, pvc[2].pt, pvc[3].pt ) ) ) );
+                        rayPos = dot( Vector2d( inter ) - line.p, line.d );
+                        if ( rayPos < rayEnd && rayPos > rayStart )
+                        {
+                            segmPos = std::clamp( dot( Vector2d( inter ) - Vector2d( polyline.orgPnt( edge ) ), Vector2d( polyline.edgeVector( edge ) ) ), 0.0, 1.0 );
+                            if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayEnd ) == Processing::Stop )
+                                return;
+                        }
+                    }
+                }
+                else
+                {
+                    auto segm = polyline.edgeSegment( edge );
+                    if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, & segmPos, & rayPos )
+                        && rayPos < rayEnd&& rayPos > rayStart )
+                    {
+                        if ( callback( EdgePoint{ edge, float( segmPos ) }, rayPos, rayEnd ) == Processing::Stop )
+                            return;
+                    }
                 }
             }
             else

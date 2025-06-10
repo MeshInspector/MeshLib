@@ -16,8 +16,7 @@ namespace MR.Test
             var conv = new CoordinateConverters(meshA, meshB);
 
             var intersections = FindCollidingEdgeTrisPrecise(meshA, meshB, conv);
-            Assert.That(intersections.EdgesAtrisB.Count, Is.EqualTo(80));
-            Assert.That(intersections.EdgesBtrisA.Count, Is.EqualTo(72));
+            Assert.That(intersections.List.Count, Is.EqualTo(152));
             var orderedIntersections = IntersectionContour.OrderIntersectionContours(meshA.mesh, meshB.mesh, intersections);
             var contours = orderedIntersections.Contours;
 

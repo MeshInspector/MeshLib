@@ -90,8 +90,11 @@ template <typename V>
     // check whether infinite line y intersect segment x
     const auto xa = cross( y.d, x.a - y.p );
     const auto xb = cross( y.d, x.b - y.p );
-    if ( xa * xb > 0 )
-        return false;
+    
+    // if several line segments are connected in polyline, this ensures that only one of them will be intersected,
+    // even is the line passes exactly through segment's end
+    if ( ( xa <= 0 ) == ( xb <= 0 ) )
+        return false; // both ends of the segment are at the same side of the line
 
     if ( xPos )
     {

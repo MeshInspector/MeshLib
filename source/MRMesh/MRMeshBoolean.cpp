@@ -156,9 +156,9 @@ std::vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& 
                 if ( ctx.is_group_execution_cancelled() )
                     return;
                 ++rot;
-                if ( fInter.isEdgeATriB == nInter.isEdgeATriB )
+                if ( fInter.isEdgeATriB() == nInter.isEdgeATriB() )
                     continue;
-                if ( fInter.tri != nInter.tri )
+                if ( fInter.tri() != nInter.tri() )
                     continue;
                 if ( fInter.edge != nInter.edge.sym() )
                     continue;
@@ -228,7 +228,7 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
         }
 
         visitedLone.reset( otherLoneIndex );
-        if ( contours[loneIndex].front().isEdgeATriB )
+        if ( contours[loneIndex].front().isEdgeATriB() )
             std::swap( loneIndex, otherLoneIndex );
         fLone[i] = contours[loneIndex];
         joinedELone[i] = contours[otherLoneIndex];
@@ -301,8 +301,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         auto svId = mesh.topology.dest( prev );
         auto fvId = mesh.topology.dest( next );
 
-        auto triFVerts = mesh.topology.getTriVerts( cf.front().tri );
-        auto triBVerts = mesh.topology.getTriVerts( cf.back().tri );
+        auto triFVerts = mesh.topology.getTriVerts( cf.front().tri() );
+        auto triBVerts = mesh.topology.getTriVerts( cf.back().tri() );
         if ( !( svId == triFVerts[0] || svId == triFVerts[1] || svId == triFVerts[2] ) ||
             !( fvId == triBVerts[0] || fvId == triBVerts[1] || fvId == triBVerts[2] ) )
         {
@@ -314,8 +314,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
             return;
         }
 
-        auto prevVET = VariableEdgeTri{ {prev,cf.front().tri},cf.front().isEdgeATriB };
-        auto nextVET = VariableEdgeTri{ {next,cf.back().tri},cf.back().isEdgeATriB };
+        auto prevVET = cf.front();
+        auto nextVET = cf.back();
         cf.insert( cf.begin(), prevVET );
         cf.insert( cf.end(), nextVET );
         cf.insert( cf.end(), std::make_move_iterator( cs.begin() ), std::make_move_iterator( cs.end() ) );
@@ -434,7 +434,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         for ( int i = 0; i < loneContoursIds.size(); ++i )
         {
             const auto& contour = contours[loneContoursIds[i]];
-            if ( contour[0].isEdgeATriB )
+            if ( contour[0].isEdgeATriB() )
                 loneB.push_back( contour );
             else
                 loneA.push_back( contour );
@@ -657,7 +657,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
 
     const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
-    result.intersectionPoints.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
+    result.intersectionPoints.reserve( intersections.size() );
 
     FaceBitSet collFacesA, collFacesB;
     VertBitSet destVertsA, destVertsB, orgVertsA, orgVertsB;
@@ -667,21 +667,24 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
     orgVertsB.resize( meshB.topology.lastValidVert() + 1 );
     destVertsA.resize( meshA.topology.lastValidVert() + 1 );
     destVertsB.resize( meshB.topology.lastValidVert() + 1 );
-    for ( const auto& et : intersections.edgesAtrisB )
+    for ( const auto& et : intersections )
     {
-        gatherEdgeInfo( meshA.topology, et.edge, collFacesA, orgVertsA, destVertsA );
-        collFacesB.set( et.tri );
+        if ( et.isEdgeATriB() )
+        {
+            gatherEdgeInfo( meshA.topology, et.edge, collFacesA, orgVertsA, destVertsA );
+            collFacesB.set( et.tri() );
 
-        const auto isect = findEdgeTriIntersectionPoint( meshA, et.edge, meshB, et.tri, converters, rigidB2A, EdgeTriComponent::Tri );
-        result.intersectionPoints.emplace_back( isect );
-    }
-    for ( const auto& et : intersections.edgesBtrisA )
-    {
-        gatherEdgeInfo( meshB.topology, et.edge, collFacesB, orgVertsB, destVertsB );
-        collFacesA.set( et.tri );
+            const auto isect = findEdgeTriIntersectionPoint( meshA, et.edge, meshB, et.tri(), converters, rigidB2A, EdgeTriComponent::Tri );
+            result.intersectionPoints.emplace_back( isect );
+        }
+        else
+        {
+            gatherEdgeInfo( meshB.topology, et.edge, collFacesB, orgVertsB, destVertsB );
+            collFacesA.set( et.tri() );
 
-        const auto isect = findEdgeTriIntersectionPoint( meshB, et.edge, meshA, et.tri, converters, rigidB2A, EdgeTriComponent::Edge );
-        result.intersectionPoints.emplace_back( isect );
+            const auto isect = findEdgeTriIntersectionPoint( meshB, et.edge, meshA, et.tri(), converters, rigidB2A, EdgeTriComponent::Edge );
+            result.intersectionPoints.emplace_back( isect );
+        }
     }
 
     if ( orgVertsA.intersects( destVertsA ) || orgVertsB.intersects( destVertsB ) )

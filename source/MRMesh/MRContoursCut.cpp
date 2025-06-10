@@ -253,7 +253,7 @@ TrianglesSortRes sortPropagateContour(
     const EdgeId el = lContour[il.intersectionId].edge;
     const EdgeId er = rContour[ir.intersectionId].edge;
 
-    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB;
+    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB();
     bool sameContour = il.contourId == ir.contourId;
     int stepRight = el == er ? 1 : -1;
 
@@ -277,7 +277,7 @@ TrianglesSortRes sortPropagateContour(
                 continue;
             if ( nextL == stopInter )
                 return {}; // reached stop intersection in the contour
-            if ( contour[nextL].isEdgeATriB == edgeATriB )
+            if ( contour[nextL].isEdgeATriB() == edgeATriB )
                 return nextL; // return next/prev intersection (on edge)
         }
     };
@@ -334,15 +334,15 @@ TrianglesSortRes sortPropagateContour(
             EdgeSortState state;
             if ( lReturned )
             {
-                fl = lContour[lOtherRef].tri;
-                fr = rContour[startR].tri;
+                fl = lContour[lOtherRef].tri();
+                fr = rContour[startR].tri();
                 state = EdgeSortState::LReverted;
             }
             else
             {
                 assert( rReturned );
-                fl = lContour[startL].tri;
-                fr = rContour[rOtherRef].tri;
+                fl = lContour[startL].tri();
+                fr = rContour[rOtherRef].tri();
                 state = EdgeSortState::RReverted;
             }
             return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, state );
@@ -384,8 +384,8 @@ TrianglesSortRes sortPropagateContour(
         else
             lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
 
-        FaceId fl = lContour[lOtherRef].tri;
-        FaceId fr = rContour[rOtherRef].tri;
+        FaceId fl = lContour[lOtherRef].tri();
+        FaceId fr = rContour[rOtherRef].tri();
 
         if ( fl == fr )
             return TrianglesSortRes::Undetermined; // go next if we came to same intersection 
@@ -439,8 +439,8 @@ std::function<bool( const EdgeIntersectionData&, const EdgeIntersectionData& )> 
         const auto & il = l.interOnEdge;
         const auto & ir = r.interOnEdge;
 
-        FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri;
-        FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri;
+        FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri();
+        FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri();
         EdgeId el = sortData->contours[il.contourId][il.intersectionId].edge;
         EdgeId er = sortData->contours[ir.contourId][ir.intersectionId].edge;
         assert( el.undirected() == baseEdgeOr.undirected() );
@@ -827,8 +827,8 @@ void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const FullRemov
             }
             if ( sortData )
             {
-                FaceId f1 = sortData->contours[edgeData[res[i]].interOnEdge.contourId][edgeData[res[i]].interOnEdge.intersectionId].tri;
-                FaceId f2 = sortData->contours[edgeData[res[i + 1]].interOnEdge.contourId][edgeData[res[i + 1]].interOnEdge.intersectionId].tri;
+                FaceId f1 = sortData->contours[edgeData[res[i]].interOnEdge.contourId][edgeData[res[i]].interOnEdge.intersectionId].tri();
+                FaceId f2 = sortData->contours[edgeData[res[i + 1]].interOnEdge.contourId][edgeData[res[i + 1]].interOnEdge.intersectionId].tri();
 
                 auto sharedEdge = sortData->otherMesh.topology.sharedEdge( f1, f2 );
                 spdlog::info( "  {}", dotProds[res[i + 1]] - dotProds[res[i]] );

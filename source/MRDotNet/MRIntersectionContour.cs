@@ -6,30 +6,15 @@ using static MR.DotNet;
 
 namespace MR
 {
-    using ContinousContour = List<VariableEdgeTri>;
+    using MRContinuousContour = MRVectorVarEdgeTri;
+
+    using ContinousContour = List<VarEdgeTri>;
+    using PreciseCollisionResult = VectorVarEdgeTri;
 
     public partial class DotNet
     {
-        [StructLayout(LayoutKind.Sequential)]
-        public struct VariableEdgeTri
-        {
-            public EdgeId edge = new EdgeId();
-            public FaceId tri = new FaceId();
-            public bool isEdgeATriB = false;
-            public VariableEdgeTri() { }
-        };
-
         public class ContinousContours : IDisposable
         {
-            [StructLayout(LayoutKind.Sequential)]
-            internal struct MRContinuousContour
-            {
-                public IntPtr data = IntPtr.Zero;
-                public ulong size = 0;
-                public IntPtr reserved = IntPtr.Zero;
-                public MRContinuousContour() { }
-            }
-
             [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern MRContinuousContour mrContinuousContoursGet(IntPtr contours, ulong index);
 
@@ -80,16 +65,8 @@ namespace MR
                         for (int i = 0; i < contoursSize; i++)
                         {
                             var mrContour = mrContinuousContoursGet(mrContours_, (ulong)i);
-
-                            var contour = new ContinousContour();
-                            int sizeOfVariableEdgeTri = Marshal.SizeOf(typeof(VariableEdgeTri));
-                            for (int j = 0; j < (int)mrContour.size; j++)
-                            {
-                                var vetPtr = IntPtr.Add(mrContour.data, j * sizeOfVariableEdgeTri);
-                                var vet = Marshal.PtrToStructure<VariableEdgeTri>(vetPtr);
-                                contour.Add(vet);
-                            }
-                            contours_.Add(contour);
+                            var contour = new VectorVarEdgeTri(mrContour);
+                            contours_.Add(new ContinousContour(contour.List));
                         }
                     }
 
@@ -111,7 +88,7 @@ namespace MR
             /// c. each intersected edge has origin inside meshes intersection and destination outside of it
             public static ContinousContours OrderIntersectionContours(Mesh meshA, Mesh meshB, PreciseCollisionResult intersections)
             {
-                var mrContours = mrOrderIntersectionContours(meshA.meshTopology_, meshB.meshTopology_, intersections.nativeResult_);
+                var mrContours = mrOrderIntersectionContours(meshA.meshTopology_, meshB.meshTopology_, intersections.nativeVector_);
                 return new ContinousContours(mrContours);
             }
         }

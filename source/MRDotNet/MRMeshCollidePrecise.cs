@@ -1,51 +1,91 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using static MR.DotNet;
 
 namespace MR
 {
+    using PreciseCollisionResult = VectorVarEdgeTri;
+
     public partial class DotNet
     {
-
         [StructLayout(LayoutKind.Sequential)]
         public struct EdgeTri
         {
             EdgeId edge;
             FaceId tri;
         };
-        public class PreciseCollisionResult : IDisposable
+
+        [StructLayout(LayoutKind.Explicit, Size = 4)]
+        public class FlaggedTri
         {
-            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
-            private static extern bool mrEdgeTriEq(ref EdgeTri a, ref EdgeTri b);
+            [FieldOffset(0)] private byte byte0;
+            [FieldOffset(0)] private UInt32 data32;
 
-            [StructLayout(LayoutKind.Sequential)]
-            internal struct MRVectorEdgeTri
+            public bool isEdgeATriB
             {
-                public IntPtr data = IntPtr.Zero;
-                public ulong size = 0;
-                public IntPtr reserved = IntPtr.Zero;
-                public MRVectorEdgeTri() { }
-            };
+                get { return Convert.ToBoolean(byte0 >> 7); }
+                set { byte0 = (byte)((byte0 & 0x7f) + (value ? 0x80 : 0x00)); }
+            }
 
-            /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
-            private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB(IntPtr result);
-
-            /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
-            private static extern MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA(IntPtr result);
-
-            /// deallocates the PreciseCollisionResult object
-            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
-            private static extern void mrPreciseCollisionResultFree(IntPtr result);
-
-
-
-            internal PreciseCollisionResult(IntPtr nativeResult)
+            public uint face
             {
-                nativeResult_ = nativeResult;
+                get { return data32 & 0x7fffffff; }
+                set { data32 = (data32 & 0x80000000) + value; }
+            }
+
+            FlaggedTri(bool isEdgeATriB_, int face_)
+            {
+                Debug.Assert(face_ >= 0, "face id must be valid");
+                isEdgeATriB = isEdgeATriB_;
+                face = (uint)face_;
+            }
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct VarEdgeTri
+        {
+            EdgeId edge;
+            FlaggedTri flaggedTri;
+
+            public bool isEdgeATriB
+            {
+                get { return flaggedTri.isEdgeATriB; }
+            }
+
+            public uint face
+            {
+                get { return flaggedTri.face; }
+            }
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRVectorVarEdgeTri
+        {
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRVectorVarEdgeTri() { }
+        }
+
+        public class VectorVarEdgeTri : IDisposable
+        {
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern void mrVectorVarEdgeTriFree(IntPtr vector);
+
+            internal VectorVarEdgeTri(IntPtr native)
+            {
+                nativeVector_ = native;
+                vector_ = Marshal.PtrToStructure<MRVectorVarEdgeTri>(native);
+            }
+
+            internal VectorVarEdgeTri(MRVectorVarEdgeTri vector)
+            {
+                vector_ = vector;
+                nativeVector_ = IntPtr.Zero;
             }
 
             private bool disposed = false;
@@ -59,61 +99,48 @@ namespace MR
             {
                 if (!disposed)
                 {
-                    if (nativeResult_ != IntPtr.Zero)
+                    if (nativeVector_ != IntPtr.Zero)
                     {
-                        mrPreciseCollisionResultFree(nativeResult_);
+                        mrVectorVarEdgeTriFree(nativeVector_);
+                        nativeVector_ = IntPtr.Zero;
                     }
 
                     disposed = true;
                 }
             }
-            ~PreciseCollisionResult()
+
+            ~VectorVarEdgeTri()
             {
                 Dispose(false);
             }
 
-            /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            public ReadOnlyCollection<EdgeTri> EdgesAtrisB
+            public ReadOnlyCollection<VarEdgeTri> List
             {
                 get
                 {
-                    if (edgesAtrisB_ is null)
+                    if (list_ is null)
                     {
-                        var mrEdges = mrPreciseCollisionResultEdgesAtrisB(nativeResult_);
-                        int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
-                        edgesAtrisB_ = new List<EdgeTri>((int)mrEdges.size);
-                        for (int i = 0; i < (int)mrEdges.size; ++i)
+                        list_ = new List<VarEdgeTri>((int)vector_.size);
+
+                        var vetSize = Marshal.SizeOf(typeof(VarEdgeTri));
+                        for (int i = 0; i < (int)vector_.size; i++)
                         {
-                            edgesAtrisB_.Add(Marshal.PtrToStructure<EdgeTri>(IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri)));
+                            var vetPtr = IntPtr.Add(vector_.data, i * vetSize);
+                            var vet = Marshal.PtrToStructure<VarEdgeTri>(vetPtr);
+                            list_.Add(vet);
                         }
                     }
-                    return edgesAtrisB_.AsReadOnly();
-                }
-            }
-            /// each edge is directed to have its origin inside and its destination outside of the other mesh
-            public ReadOnlyCollection<EdgeTri> EdgesBtrisA
-            {
-                get
-                {
-                    if (edgesBtrisA_ is null)
-                    {
-                        var mrEdges = mrPreciseCollisionResultEdgesBtrisA(nativeResult_);
-                        int sizeOfEdgeTri = Marshal.SizeOf(typeof(EdgeTri));
-                        edgesBtrisA_ = new List<EdgeTri>((int)mrEdges.size);
-                        for (int i = 0; i < (int)mrEdges.size; ++i)
-                        {
-                            edgesBtrisA_.Add(Marshal.PtrToStructure<EdgeTri>(IntPtr.Add(mrEdges.data, i * sizeOfEdgeTri)));
-                        }
-                    }
-                    return edgesBtrisA_.AsReadOnly();
+
+                    return list_.AsReadOnly();
                 }
             }
 
-            private List<EdgeTri>? edgesAtrisB_;
-            private List<EdgeTri>? edgesBtrisA_;
+            private List<VarEdgeTri>? list_ = null;
 
-            internal IntPtr nativeResult_;
-        };
+            private MRVectorVarEdgeTri vector_;
+            internal IntPtr nativeVector_;
+        }
+
         /**
          * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh
          * \param rigidB2A rigid transformation from B-mesh space to A mesh space, NULL considered as identity transformation

@@ -19,16 +19,22 @@ MRMESHC_API bool mrEdgeTriEq( const MREdgeTri* a, const MREdgeTri* b );
 
 MR_VECTOR_DECL( EdgeTri )
 
-typedef struct MRPreciseCollisionResult MRPreciseCollisionResult;
+typedef struct MRFlaggedTri
+{
+    unsigned int isEdgeATriB : 1;
+    unsigned int face : 31;
+} MRFlaggedTri;
+
+typedef struct MRVarEdgeTri
+{
+    MREdgeId edge;
+    MRFlaggedTri flaggedTri;
+} MRVarEdgeTri;
+
+MR_VECTOR_DECL( VarEdgeTri )
 
 /// each edge is directed to have its origin inside and its destination outside of the other mesh
-MRMESHC_API MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result );
-
-/// each edge is directed to have its origin inside and its destination outside of the other mesh
-MRMESHC_API MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result );
-
-/// deallocates the PreciseCollisionResult object
-MRMESHC_API void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result );
+typedef MRVectorVarEdgeTri MRPreciseCollisionResult;
 
 /**
  * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh

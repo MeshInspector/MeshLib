@@ -29,7 +29,7 @@ TEST( MRMesh, Polyline2RayIntersectFloat )
     Polyline2 pl;
     pl.addFromPoints( cnt.data(), cnt.size() );
 
-    const auto projResA = rayPolylineIntersect( pl, lineA ); //no intersection in floats
+    const auto projResA = rayPolylineIntersect( pl, lineA );
     EXPECT_TRUE( projResA.has_value() );
     EXPECT_NEAR( projResA->distanceAlongLine, 7.5f, 1e-5f );
 

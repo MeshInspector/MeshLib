@@ -42,7 +42,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
             box.include( polyline.orgPnt( e ) );
             box.include( polyline.destPnt( e ) );
             // insignificantlyExpanded - needed to avoid leaks due to float errors
-            // (small intersection of neighbor boxes guarantee that both of them will be considered as candidates of with connection area)
+            // (small intersection of neighbor boxes guarantee that both of them will be considered as candidates of connection area)
             boxedLines[i].box = box.insignificantlyExpanded();
         }
     } );

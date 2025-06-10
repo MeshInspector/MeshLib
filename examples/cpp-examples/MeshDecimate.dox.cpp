@@ -5,10 +5,19 @@
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRMesh/MRBuffer.h>
 
+#include <iostream>
+
 int main()
 {
     // Load mesh
-    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
+    auto meshRes = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
+    if ( !meshRes.has_value() )
+    {
+        std::cerr << meshRes.error() << std::endl;
+        return 1;
+    }
+
+    MR::Mesh& mesh = *meshRes;
     
 //! [0]
     // Repack mesh optimally.
@@ -31,7 +40,11 @@ int main()
 //! [0]
 
     // Save result
-    MR::MeshSave::toAnySupportedFormat( mesh, "decimated_mesh.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "decimated_mesh.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

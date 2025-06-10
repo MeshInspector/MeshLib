@@ -7,10 +7,18 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRRegionBoundary.h>
 
+#include <iostream>
+
 int main()
 {
     // Load mesh
-    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
+    auto loadRes = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
+    if ( !loadRes.has_value() )
+    {
+        std::cerr << loadRes.error() << std::endl;
+        return 1;
+    }
+    MR::Mesh& mesh = *loadRes;
 
     // Select faces to extrude
     MR::FaceBitSet facesToExtrude;
@@ -33,5 +41,9 @@ int main()
     mesh.invalidateCaches();
 
     // Save mesh
-    MR::MeshSave::toAnySupportedFormat( mesh, "extrudedMesh.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "extrudedMesh.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 }

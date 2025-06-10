@@ -32,11 +32,17 @@ namespace MR
             [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             unsafe private static extern MRFaceNormals* mrComputePerVertNormals(IntPtr mesh);
 
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
+            unsafe private static extern void mrVectorVector3fFree(MRFaceNormals* p);
+
             unsafe public static VertNormals ComputePerVertNormals(Mesh mesh)
             {
-                var mrVertNormals = *mrComputePerVertNormals(mesh.mesh_);
+                var p = mrComputePerVertNormals(mesh.mesh_);
 
                 var normals = new VertNormals();
+                if (p == null)
+                    return normals;
+                var mrVertNormals = *p;
                 int sizeOfMRVector3f = Marshal.SizeOf(typeof(Vector3f.MRVector3f));
                 var mrVertNormalsData = mrVertNormals.data;
 
@@ -46,14 +52,18 @@ namespace MR
                     var mrVector3f = Marshal.PtrToStructure<Vector3f.MRVector3f>(IntPtr.Add(mrVertNormalsData, i * sizeOfMRVector3f));
                     normals.Add(new Vector3f(mrVector3f));
                 }
+                mrVectorVector3fFree(p);
                 return normals;
             }
             /// returns a list with face normals in every element for valid mesh faces
             unsafe public static FaceNormals ComputePerFaceNormals(Mesh mesh)
             {
-                var mrFaceNormals = *mrComputePerFaceNormals(mesh.mesh_);
+                var p = mrComputePerFaceNormals(mesh.mesh_);
 
                 var normals = new FaceNormals();
+                if (p == null)
+                    return normals;
+                var mrFaceNormals = *p;
                 int sizeOfMRVector3f = Marshal.SizeOf(typeof(Vector3f.MRVector3f));
                 var mrFaceNormalsData = mrFaceNormals.data;
 
@@ -63,6 +73,7 @@ namespace MR
                     var mrVector3f = Marshal.PtrToStructure<Vector3f.MRVector3f>(IntPtr.Add(mrFaceNormalsData, i * sizeOfMRVector3f));
                     normals.Add(new Vector3f(mrVector3f));
                 }
+                mrVectorVector3fFree(p);
                 return normals;
             }
         }

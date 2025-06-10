@@ -26,7 +26,7 @@ TEST( MRMesh, AABBTreePolyline3 )
     Box3f box;
     for ( auto p : polyline.points )
         box.include( p );
-    EXPECT_EQ( tree[AABBTreePolyline3::rootNodeId()].box, box );
+    EXPECT_EQ( tree[AABBTreePolyline3::rootNodeId()].box, box.insignificantlyExpanded() );
     EXPECT_TRUE( tree[AABBTreePolyline3::rootNodeId()].l.valid() );
     EXPECT_TRUE( tree[AABBTreePolyline3::rootNodeId()].r.valid() );
 

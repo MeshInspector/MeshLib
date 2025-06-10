@@ -15,6 +15,6 @@ int main()
     const int * vertexTriples = reinterpret_cast<const int*>( triangles.data() );
 
     // TODO: export in your format
-    (void)points;
-    (void)vertexTriples;
+    std::ignore = points;
+    std::ignore = vertexTriples;
 }

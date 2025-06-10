@@ -19,7 +19,7 @@ int main()
     MR::Mesh& mesh = *loadRes;
 
     // Add noise to the mesh
-    (void)MR::addNoise( mesh.points, mesh.topology.getValidVerts(), {
+    std::ignore = MR::addNoise( mesh.points, mesh.topology.getValidVerts(), {
         .sigma = mesh.computeBoundingBox().diagonal() * 0.0001f,
     } );
 
@@ -35,7 +35,7 @@ int main()
 
     // Denoise the mesh with sharpening for sharp edges
     // see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-    (void)MR::meshDenoiseViaNormals( mesh );
+    std::ignore = MR::meshDenoiseViaNormals( mesh );
 
     // Save the denoised mesh
     if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "denoised_mesh.stl" ); !saveRes )

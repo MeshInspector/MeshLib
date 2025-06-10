@@ -229,7 +229,10 @@ namespace MR
             /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
             /// vertex ids for invalid triangles are undefined, and shall not be read
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
-            private static extern ref MRTriangulation mrMeshTopologyGetTriangulation(IntPtr top);
+            private static extern unsafe MRTriangulation* mrMeshTopologyGetTriangulation(IntPtr top);
+
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern unsafe void mrTriangulationFree(MRTriangulation* p);
 
             /// returns the number of face records including invalid ones
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -470,13 +473,14 @@ namespace MR
                 }
             }
             /// info about triangles
-            public TriangulationReadOnly Triangulation
+            public unsafe TriangulationReadOnly Triangulation
             {
                 get
                 {
                     if (triangulation_ is null)
                     {
-                        var mrtriangulation = mrMeshTopologyGetTriangulation(meshTopology_);
+                        var p = mrMeshTopologyGetTriangulation(meshTopology_);
+                        var mrtriangulation = *p;
                         triangulation_ = new Triangulation((int)mrtriangulation.size);
                         int sizeOfThreeVertIds = Marshal.SizeOf(typeof(ThreeVertIds));
 
@@ -486,6 +490,7 @@ namespace MR
                             IntPtr currentTriangulationPtr = IntPtr.Add(triangulationPtr, i * sizeOfThreeVertIds);
                             triangulation_.Add(Marshal.PtrToStructure<ThreeVertIds>(currentTriangulationPtr));
                         }
+                        mrTriangulationFree(p);
                     }
                     return triangulation_.AsReadOnly();
                 }

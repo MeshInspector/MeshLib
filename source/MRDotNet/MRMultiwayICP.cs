@@ -59,6 +59,9 @@ namespace MR
             unsafe private static extern MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations(IntPtr mwicp, IntPtr cb);
 
             [DllImport("MRMeshC", CharSet = CharSet.Auto)]
+            unsafe private static extern void mrVectorAffineXf3fFree(MRVectorAffineXf3f* p);
+
+            [DllImport("MRMeshC", CharSet = CharSet.Auto)]
             private static extern bool mrMultiwayICPResamplePoints(IntPtr mwicp, ref MRMultiwayICPSamplingParameters samplingParams);
 
             [DllImport("MRMeshC", CharSet = CharSet.Auto)]
@@ -136,14 +139,18 @@ namespace MR
             unsafe public List<AffineXf3f> CalculateTransformations()
             {
                 int sizeOfXf = Marshal.SizeOf(typeof(MRAffineXf3f));
-                var mrXfs = *mrMultiwayICPCalculateTransformations(icp_, IntPtr.Zero);
                 List<AffineXf3f> xfs = new List<AffineXf3f>();
+                var p = mrMultiwayICPCalculateTransformations(icp_, IntPtr.Zero);
+                if (p == null)
+                    return xfs;
+                var mrXfs = *p;
                 for (int i = 0; i < (int)mrXfs.size; i++)
                 {
                     IntPtr currentXfPtr = IntPtr.Add(mrXfs.data, i * sizeOfXf);
                     var mrXf = Marshal.PtrToStructure<MRAffineXf3f>(currentXfPtr);
                     xfs.Add(new AffineXf3f(mrXf));
                 }
+                mrVectorAffineXf3fFree(p);
                 return xfs;
             }
             /// select pairs with origin samples on all objects

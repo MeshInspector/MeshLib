@@ -123,9 +123,6 @@ namespace MR
             unsafe private static extern MREdgeLoop* mrTrackRightBoundaryLoop(IntPtr topology, EdgeId e0, IntPtr region);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
-            unsafe private static extern void mrEdgePathFree(MREdgeLoop* p);
-
-            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrGetIncidentFacesFromVerts(IntPtr topology, IntPtr region);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -163,9 +160,7 @@ namespace MR
             unsafe public static EdgeLoop TrackRightBoundaryLoop(Mesh mesh, EdgeId e0, FaceBitSet? region = null)
             {
                 var mrLoop = mrTrackRightBoundaryLoop(mesh.meshTopology_, e0, region is null ? (IntPtr)null : region.bs_);
-                var res = new EdgeLoop(mrLoop);
-                mrEdgePathFree(mrLoop);
-                return res;
+                return new EdgeLoop(mrLoop);
             }
             /// returns all region boundary loops;
             /// every loop has region faces on the right, and not-region faces or holes on the left

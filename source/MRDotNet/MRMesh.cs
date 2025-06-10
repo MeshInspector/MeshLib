@@ -237,9 +237,13 @@ namespace MR
             /// returns the number of face records including invalid ones
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern ulong mrMeshTopologyFaceSize(IntPtr top);
+
             /// returns one edge with no valid left face for every boundary in the mesh
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
-            private static extern ref MREdgePath mrMeshTopologyFindHoleRepresentiveEdges(IntPtr top);
+            private static extern unsafe MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges(IntPtr top);
+
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern unsafe void mrEdgePathFree(MREdgePath* p);
 
             /// gets 3 vertices of given triangular face;
             /// the vertices are returned in counter-clockwise order if look from mesh outside
@@ -496,13 +500,14 @@ namespace MR
                 }
             }
             /// edges with no valid left face for every boundary in the mesh
-            public EdgePathReadOnly HoleRepresentiveEdges
+            public unsafe EdgePathReadOnly HoleRepresentiveEdges
             {
                 get
                 {
                     if (holeRepresentiveEdges_ is null)
                     {
-                        var mrEdges = mrMeshTopologyFindHoleRepresentiveEdges(meshTopology_);
+                        var p = mrMeshTopologyFindHoleRepresentiveEdges(meshTopology_);
+                        var mrEdges = *p;
                         holeRepresentiveEdges_ = new EdgePath((int)mrEdges.size);
                         int sizeOfEdgeId = Marshal.SizeOf(typeof(EdgeId));
 
@@ -512,6 +517,7 @@ namespace MR
                             IntPtr currentEdgePtr = IntPtr.Add(edgesPtr, i * sizeOfEdgeId);
                             holeRepresentiveEdges_.Add(Marshal.PtrToStructure<EdgeId>(currentEdgePtr));
                         }
+                        mrEdgePathFree(p);
                     }
 
                     return holeRepresentiveEdges_.AsReadOnly();

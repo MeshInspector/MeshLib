@@ -3,11 +3,17 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 
+#include <iostream>
+
 int main()
 {
     // Load mesh
     auto mesh = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
-    assert( mesh );
+    if ( !mesh.has_value() )
+    {
+        std::cerr << mesh.error() << std::endl;
+        return 1;
+    }
 
 //! [0]
     // Construct deformer on mesh vertices
@@ -35,5 +41,9 @@ int main()
 //! [0]
 
     // Save deformed mesh
-    MR::MeshSave::toAnySupportedFormat( *mesh, "deformed_mesh.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( *mesh, "deformed_mesh.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 }

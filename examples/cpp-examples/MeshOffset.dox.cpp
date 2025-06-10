@@ -31,7 +31,11 @@ int main()
     }
 
     // Save result
-    MR::MeshSave::toAnySupportedFormat( *meshRes, "mesh_offset.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( *meshRes, "mesh_offset.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

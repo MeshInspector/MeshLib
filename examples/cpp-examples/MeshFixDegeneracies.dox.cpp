@@ -15,7 +15,7 @@ int main()
     }
 
     // you can set various parameters for the resolving process; see the documentation for more info
-    MR::fixMeshDegeneracies( *mesh, {
+    std::ignore = MR::fixMeshDegeneracies( *mesh, {
         .maxDeviation = 1e-5f * mesh->computeBoundingBox().diagonal(),
         .tinyEdgeLength = 1e-3f,
     } );

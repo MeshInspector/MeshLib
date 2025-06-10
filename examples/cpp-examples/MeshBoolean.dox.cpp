@@ -25,7 +25,11 @@ int main()
 //! [0]
 
     // save result to STL file
-    MR::MeshSave::toAnySupportedFormat( resultMesh, "out_boolean.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( resultMesh, "out_boolean.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

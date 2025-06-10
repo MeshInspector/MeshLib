@@ -19,15 +19,28 @@ namespace MR
             FaceId tri;
         };
 
-        [StructLayout(LayoutKind.Explicit, Size = 32)]
-        public struct FlaggedTri
+        [StructLayout(LayoutKind.Explicit, Size = 4)]
+        public class FlaggedTri
         {
-            [FieldOffset(0)] public uint isEdgeATriB = 0;
-            [FieldOffset(1)] public uint face = 0;
+            [FieldOffset(0)] private byte byte0;
+            [FieldOffset(0)] private UInt32 data32;
+
+            public bool isEdgeATriB
+            {
+                get { return Convert.ToBoolean(byte0 >> 7); }
+                set { byte0 = (byte)((byte0 & 0x7f) + (value ? 0x80 : 0x00)); }
+            }
+
+            public uint face
+            {
+                get { return data32 & 0x7fffffff; }
+                set { data32 = (data32 & 0x80000000) + value; }
+            }
+
             FlaggedTri(bool isEdgeATriB_, int face_)
             {
                 Debug.Assert(face_ >= 0, "face id must be valid");
-                isEdgeATriB = isEdgeATriB_ ? 1u : 0u;
+                isEdgeATriB = isEdgeATriB_;
                 face = (uint)face_;
             }
         };
@@ -37,6 +50,16 @@ namespace MR
         {
             EdgeId edge;
             FlaggedTri flaggedTri;
+
+            public bool isEdgeATriB
+            {
+                get { return flaggedTri.isEdgeATriB; }
+            }
+
+            public uint face
+            {
+                get { return flaggedTri.face; }
+            }
         };
 
         [StructLayout(LayoutKind.Sequential)]

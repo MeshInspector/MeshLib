@@ -365,6 +365,13 @@ namespace MR.Test
 
             cubeMesh.DeleteFaces(faces);
             Assert.That(cubeMesh.Area(), Is.EqualTo(3.0).Within(0.001));
+
+            var holes = RegionBoundary.FindRightBoundary(cubeMesh);
+            Assert.That(holes.Count, Is.EqualTo(1));
+            Assert.That(holes[0].Count, Is.EqualTo(6));
+
+            var hole0 = RegionBoundary.TrackRightBoundaryLoop(cubeMesh, holes[0][0]);
+            Assert.That(hole0, Is.EqualTo(holes[0]));
         }
 
         [Test]

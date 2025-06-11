@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <None Include="$(ProjectDir)..\.editorconfig" />
     <CopyFileToFolders Include="MRRibbonCommonMenuStructure.items.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>

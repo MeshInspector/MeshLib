@@ -41,6 +41,8 @@ public:
     const Vector2i& getMousePos() const { return currentMousePos_; }
     // returns state of mouse button
     MRVIEWER_API bool isPressed( MouseButton button ) const;
+    // returns true if any mouse btn is down
+    MRVIEWER_API bool isPressedAny() const;
 
     bool isCursorInside() const { return isCursorInside_; }    
 
@@ -73,12 +75,10 @@ public:
 
 private:
     bool preMouseDown_( MouseButton button, int modifier );
-    bool cornerControllerMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
     bool preMouseUp_( MouseButton button, int modifier );
     bool preMouseMove_( int x, int y );
     bool mouseScroll_( float delta );
-    void preDraw_();
 
     bool isCursorInside_{ false };
     void cursorEntrance_( bool entered );
@@ -110,9 +110,6 @@ private:
     MouseModeBackMap backMap_;
 
     bool scrollActive_{ true };
-    RegionId viewControllerHoveredRegion_;
-    bool tryHoverViewController_();
-    bool tryPressViewController_();
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
     std::function<void( float& )> fovModifierCb_;

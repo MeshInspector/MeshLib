@@ -23,6 +23,8 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
     box.include( c );
 
     // micro expand boxes to have better precision in AABB algorithms
+    // insignificantlyExpanded - needed to avoid leaks due to float errors
+    // (small intersection of neighbor boxes guarantee that both of them will be considered as candidates of connection area)
     box = box.insignificantlyExpanded();
     return box;
 }

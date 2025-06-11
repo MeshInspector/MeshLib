@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:4.0.5-arm64
+FROM emscripten/emsdk:4.0.10-arm64
 
 # Update and install req
 # install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing

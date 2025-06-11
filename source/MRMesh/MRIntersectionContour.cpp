@@ -57,28 +57,71 @@ struct EdgeTriHash
 {
     size_t operator()( const EdgeTri& vet ) const
     {
-        return 17 * size_t( vet.edge.undirected() ) + 23 * size_t( vet.tri );
+        return 17 * size_t( vet.edge.undirected() >> 2 ) + 23 * size_t( vet.tri >> 2 );
     }
 };
 
-using EdgeTri2IndexMap = HashMap<EdgeTri, int, EdgeTriHash>;
+using VariableEdgeTri2Index = std::pair<VarEdgeTri, int>;
 
-using VariableEdgeTri2Index = std::pair<VariableEdgeTri, int>;
+class EdgeTri2IndexMap
+{
+public:
+    EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections );
+
+    const int* findIndex( const VarEdgeTri& item ) const;
+
+private:
+    static int bucket_( const VarEdgeTri& x )
+    {
+        return ( x.isEdgeATriB() << 4 ) |
+               ( ( x.edge.undirected() & 3 ) << 2 ) |
+               ( x.tri() & 3 );
+    };
+
+    using HashMapType = HashMap<EdgeTri, int, EdgeTriHash>;
+    constexpr static inline int NumBuckets = 32;
+    HashMapType hmaps_[NumBuckets];
+};
+
+EdgeTri2IndexMap::EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections )
+{
+    MR_TIMER;
+    int counts[NumBuckets] = {};
+
+    for ( const auto & x : intersections )
+        ++counts[bucket_( x )];
+
+    ParallelFor( 0, NumBuckets, [&]( int ib )
+    {
+        HashMapType hmap;
+        hmap.reserve( counts[ib] );
+        for ( int i = 0; i < intersections.size(); ++i )
+            if ( bucket_( intersections[i] ) == ib )
+                hmap[intersections[i].edgeTri()] = i;
+        hmaps_[ib] = std::move( hmap );
+    } );
+}
+
+const int* EdgeTri2IndexMap::findIndex( const VarEdgeTri& item ) const
+{
+    auto& itemSet = hmaps_[bucket_( item )];
+    auto it = itemSet.find( item.edgeTri() );
+    if ( it == itemSet.end() )
+        return {};
+    return &it->second;
+}
 
 struct AccumulativeSet
 {
     AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-        const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA );
+        const std::vector<VarEdgeTri>& intersections );
 
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
 
-    // consider first edgeAtriB and then edgeBtriA in one flat vector
-    int aSize = 0; // the number of edgeAtriB elements located first in nList
     NeighborLinksList nList; // flat indices of prev/next elements in the contour
 
-    EdgeTri2IndexMap edgeAtriBhmap; // map to flat index in [0, aSize)
-    EdgeTri2IndexMap edgeBtriAhmap; // map to flat index in [aSize, nList.size())
+    EdgeTri2IndexMap edgeTri2IndexMap; // map to flat index in nList
 
     const MeshTopology& topologyByEdge( bool edgesATriB )
     {
@@ -92,86 +135,60 @@ struct AccumulativeSet
 };
 
 AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-    const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
-    : topologyA( topologyA ), topologyB( topologyB )
+    const std::vector<VarEdgeTri>& intersections )
+    : topologyA( topologyA ), topologyB( topologyB ), edgeTri2IndexMap( intersections )
 {
-    MR_TIMER;
-
-    tbb::task_group taskGroup;
-    taskGroup.run( [&] ()
-    {
-        edgeAtriBhmap.reserve( edgesAtrisB.size() );
-        for ( int i = 0; i < edgesAtrisB.size(); ++i )
-            edgeAtriBhmap[edgesAtrisB[i]] = i;
-    } );
-
-    aSize = (int)edgesAtrisB.size();
-    edgeBtriAhmap.reserve( edgesBtrisA.size() );
-    for ( int i = 0; i < edgesBtrisA.size(); ++i )
-        edgeBtriAhmap[ edgesBtrisA[i] ] = aSize + i;
-    taskGroup.wait();
 }
 
-const int* findIndex( const AccumulativeSet& accumulativeSet, const VariableEdgeTri& item )
+inline VarEdgeTri orientBtoA( const VarEdgeTri& curr )
 {
-    auto& itemSet = item.isEdgeATriB ? accumulativeSet.edgeAtriBhmap : accumulativeSet.edgeBtriAhmap;
-    auto it = itemSet.find( item );
-    if ( it == itemSet.end() )
-        return {};
-    return &it->second;
-}
-
-inline VariableEdgeTri orientBtoA( const VariableEdgeTri& curr )
-{
-    VariableEdgeTri res = curr;
-    if ( !curr.isEdgeATriB )
+    VarEdgeTri res = curr;
+    if ( !curr.isEdgeATriB() )
         res.edge = res.edge.sym();
     return res;
 }
 
-std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet, const VariableEdgeTri& curr )
+std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet, const VarEdgeTri& curr )
 {
-    auto currB2Aedge = curr.isEdgeATriB ? curr.edge : curr.edge.sym();
-    const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB );
-    const auto& triTopology = accumulativeSet.topologyByTri( curr.isEdgeATriB );
+    auto currB2Aedge = curr.isEdgeATriB() ? curr.edge : curr.edge.sym();
+    const auto& edgeTopology = accumulativeSet.topologyByEdge( curr.isEdgeATriB() );
+    const auto& triTopology = accumulativeSet.topologyByTri( curr.isEdgeATriB() );
     auto leftTri = edgeTopology.left( currB2Aedge );
-    auto leftEdge = triTopology.edgePerFace()[curr.tri];
+    auto leftEdge = triTopology.edgePerFace()[curr.tri()];
 
-    assert( curr.tri );
+    assert( curr.edge );
 
     if ( leftTri.valid() )
     {
-        VariableEdgeTri variants[5] =
+        VarEdgeTri variants[5] =
         {
-            {{edgeTopology.next( currB2Aedge ),curr.tri},curr.isEdgeATriB},
-            {{edgeTopology.prev( currB2Aedge.sym() ) ,curr.tri},curr.isEdgeATriB},
+            { curr.isEdgeATriB(), edgeTopology.next( currB2Aedge ), curr.tri() },
+            { curr.isEdgeATriB(), edgeTopology.prev( currB2Aedge.sym() ), curr.tri() },
 
-            {{leftEdge,leftTri},!curr.isEdgeATriB},
-            {{triTopology.next( leftEdge ),leftTri},!curr.isEdgeATriB},
-            {{triTopology.prev( leftEdge.sym() ),leftTri},!curr.isEdgeATriB}
+            { !curr.isEdgeATriB(), leftEdge, leftTri },
+            { !curr.isEdgeATriB(), triTopology.next( leftEdge ), leftTri },
+            { !curr.isEdgeATriB(), triTopology.prev( leftEdge.sym() ), leftTri }
         };
 
         for ( const auto& v : variants )
         {
             if ( !v.edge.valid() )
                 continue;
-            if ( auto pIndex = findIndex( accumulativeSet, v ) )
+            if ( auto pIndex = accumulativeSet.edgeTri2IndexMap.findIndex( v ) )
                 return VariableEdgeTri2Index{ v, *pIndex };
         }
     }
     return {};
 }
 
-void parallelPrepareLinkedLists( const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA, AccumulativeSet& accumulativeSet )
+void parallelPrepareLinkedLists( const std::vector<VarEdgeTri>& intersections, AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
-    const auto aSize = (int)edgesAtrisB.size();
-    const auto bSize = (int)edgesBtrisA.size();
-    accumulativeSet.nList.resize( aSize + bSize );
-    ParallelFor( 0, aSize + bSize, [&] ( int i )
+    const auto sz = (int)intersections.size();
+    accumulativeSet.nList.resize( sz );
+    ParallelFor( 0, sz, [&] ( int i )
     {
-        bool eAtB = i < aSize;
-        VariableEdgeTri curr = { eAtB ? edgesAtrisB[i] : edgesBtrisA[i - aSize], eAtB };
+        const VarEdgeTri& curr = intersections[i];
         auto next = findNext( accumulativeSet, curr );
         if ( !next )
             return;
@@ -232,13 +249,12 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
     return contInfos;
 }
 
-ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const std::vector<EdgeTri>& edgesAtrisB, const std::vector<EdgeTri>& edgesBtrisA )
+ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const std::vector<VarEdgeTri>& intersections )
 {
     MR_TIMER;
     const auto contInfos = calcContoursInfo( accumulativeSet );
 
     ContinuousContours res( contInfos.size() );
-    auto aSize = accumulativeSet.aSize;
     ParallelFor( res, [&] ( size_t i )
     {
         const auto sz = contInfos[i].size;
@@ -247,9 +263,8 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
         size_t index = contInfos[i].startIndex;
         for ( int j = 0; j < sz; ++j )
         {
-            const bool isEdgeATriB = index < aSize;
-            auto curr = isEdgeATriB ? edgesAtrisB[index] : edgesBtrisA[index - aSize];
-            resI.push_back( orientBtoA( { curr, isEdgeATriB } ) );
+            const auto& curr = intersections[index];
+            resI.push_back( orientBtoA( curr ) );
             index = accumulativeSet.nList[index].next;
         }
         res[i] = std::move( resI );
@@ -263,17 +278,24 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
 ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{ topology, topology, intersections,intersections };
-    parallelPrepareLinkedLists( intersections, intersections, accumulativeSet );
-    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections, intersections );
+    std::vector<VarEdgeTri> vars;
+    vars.reserve( intersections.size() * 2 );
+    for ( const auto & x : intersections )
+    {
+        vars.emplace_back( true, x );
+        vars.emplace_back( false, x );
+    }
+    AccumulativeSet accumulativeSet{ topology, topology, vars };
+    parallelPrepareLinkedLists( vars, accumulativeSet );
+    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, vars );
 }
 
 ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections )
 {
     MR_TIMER;
-    AccumulativeSet accumulativeSet{ topologyA, topologyB, intersections.edgesAtrisB,intersections.edgesBtrisA };
-    parallelPrepareLinkedLists( intersections.edgesAtrisB, intersections.edgesBtrisA, accumulativeSet );
-    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections.edgesAtrisB, intersections.edgesBtrisA );
+    AccumulativeSet accumulativeSet{ topologyA, topologyB, intersections };
+    parallelPrepareLinkedLists( intersections, accumulativeSet );
+    return orderIntersectionContoursUsingAccumulativeSet( accumulativeSet, intersections );
 }
 
 Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours,
@@ -310,25 +332,25 @@ Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, co
         {
             Vector3f a, b, c, d, e;
             const auto& vet = inCont[j];
-            if ( vet.isEdgeATriB )
+            if ( vet.isEdgeATriB() )
             {
-                meshB.getTriPoints( vet.tri, a, b, c );
+                meshB.getTriPoints( vet.tri(), a, b, c );
                 d = meshA.orgPnt( vet.edge );
                 e = meshA.destPnt( vet.edge );
             }
             else
             {
-                meshA.getTriPoints( vet.tri, a, b, c );
+                meshA.getTriPoints( vet.tri(), a, b, c );
                 d = meshB.orgPnt( vet.edge );
                 e = meshB.destPnt( vet.edge );
             }
             // always calculate in mesh A space
             resI[j] = findTriangleSegmentIntersectionPrecise(
-                getCoord( a, !vet.isEdgeATriB ),
-                getCoord( b, !vet.isEdgeATriB ),
-                getCoord( c, !vet.isEdgeATriB ),
-                getCoord( d, vet.isEdgeATriB ),
-                getCoord( e, vet.isEdgeATriB ), converters );
+                getCoord( a, !vet.isEdgeATriB() ),
+                getCoord( b, !vet.isEdgeATriB() ),
+                getCoord( c, !vet.isEdgeATriB() ),
+                getCoord( d, vet.isEdgeATriB() ),
+                getCoord( e, vet.isEdgeATriB() ), converters );
         } );
     }
     return res;
@@ -337,9 +359,7 @@ Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, co
 bool isClosed( const ContinuousContour& contour )
 {
     return contour.size() > 1 &&
-        contour.front().isEdgeATriB == contour.back().isEdgeATriB &&
-        contour.front().edge.undirected() == contour.back().edge.undirected() &&
-        contour.front().tri == contour.back().tri;
+        contour.front() == contour.back();
 }
 
 std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ignoreOpen )
@@ -351,11 +371,11 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ig
         auto& contour = contours[i];
         if ( contour.empty() || ( ignoreOpen && !isClosed( contour ) ) )
             continue;
-        bool first = contour[0].isEdgeATriB;
+        bool first = contour[0].isEdgeATriB();
         bool isLone = true;
         for ( const auto& vet : contour )
         {
-            if ( vet.isEdgeATriB != first )
+            if ( vet.isEdgeATriB() != first )
             {
                 isLone = false;
                 break;

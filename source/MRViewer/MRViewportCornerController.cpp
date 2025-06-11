@@ -1,4 +1,5 @@
 #include "MRViewportCornerController.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRColor.h"
@@ -11,6 +12,8 @@
 #include "MRMesh/MRVector.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
+#include "MRMesh/MR2to3.h"
+#include "MRViewer/MRMouseController.h"
 
 namespace MR
 {
@@ -431,9 +434,12 @@ TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId )
     return textures;
 }
 
-void updateCurrentViewByControllerRegion( RegionId rId )
+void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pickedId )
 {
-    Viewport& vp = getViewerInstance().viewport();
+    if ( !pickedId.rId || !pickedId.vId )
+        return;
+    Viewport& vp = getViewerInstance().viewport( pickedId.vId );
+    auto rId = pickedId.rId;
     switch ( int( rId ) )
     {
     // sides
@@ -532,6 +538,257 @@ void updateCurrentViewByControllerRegion( RegionId rId )
     }
 
     vp.preciseFitDataToScreenBorder( { 0.9f } );
+}
+
+void CornerControllerObject::initDefault()
+{
+    std::shared_ptr<Mesh> arrowMeshCCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.1f ), true ) );
+    std::shared_ptr<Mesh> arrowMeshCW = std::make_shared<Mesh>( makeCornerControllerRotationArrowMesh( 0.4f, Vector2f( 1.1f, 0.0f ), false ) );
+    std::shared_ptr<Mesh> basisControllerMesh = std::make_shared<Mesh>( makeCornerControllerMesh( 0.8f ) );
+
+    auto basisViewControllerHoverable = std::make_shared<ObjectMesh>();
+    auto basisViewControllerNonHoverable = std::make_shared<ObjectMesh>();
+    auto arrowCCW = std::make_shared<ObjectMesh>();
+    auto arrowCW = std::make_shared<ObjectMesh>();
+
+    auto textures = loadCornerControllerTextures();
+
+    auto setupCube = [&] ( std::shared_ptr<ObjectMesh> obj, bool hoverable )
+    {
+        obj->setMesh( basisControllerMesh );
+        obj->setName( hoverable ? "CVC Hoverable" : "CVC Non-Hoverable" );
+        obj->setFlatShading( true );
+        obj->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+        obj->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+        obj->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+
+        obj->setUVCoords( makeCornerControllerUVCoords() );
+        obj->setEdgeWidth( 0.2f );
+
+        if ( hoverable )
+        {
+            obj->setTextures( textures );
+        }
+        else
+        {
+            obj->setTextures( { textures.front() } );
+        }
+
+        if ( !obj->getTextures().empty() )
+        {
+            if ( hoverable )
+                obj->setTexturePerFace( getCornerControllerTexureMap() );
+            obj->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+        }
+    };
+
+    auto setupArrow = [&] ( std::shared_ptr<ObjectMesh> obj, bool cw )
+    {
+        obj->setMesh( cw ? arrowMeshCW : arrowMeshCCW );
+        obj->setName( cw ? "CW" : "CCW" );
+        obj->setFlatShading( true );
+        obj->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+        obj->setVisualizeProperty( true, MeshVisualizePropertyType::PolygonOffsetFromCamera, ViewportMask::all() );
+        obj->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
+        obj->setEdgeWidth( 0.3f );
+    };
+
+    setupCube( basisViewControllerHoverable, true );
+    setupCube( basisViewControllerNonHoverable, false );
+    basisViewControllerHoverable->setVisibilityMask( ViewportMask() );
+    setupArrow( arrowCW, true );
+    setupArrow( arrowCCW, false );
+
+    connections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    {
+        if ( !rootObj_ )
+            return;
+        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
+        for ( auto child : rootObj_->children() )
+        {
+            if ( auto visObj = child->asType<ObjectMesh>() )
+            {
+                visObj->setFrontColor( colorBg, true );
+                visObj->setFrontColor( colorBg, false );
+                visObj->setBordersColor( colorBorder );
+            }
+        }
+    } ) );
+
+    connections_.push_back( getViewerInstance().preDrawSignal.connect( [this] ()
+    {
+        if ( !rootObj_ )
+            return;
+        if ( !getViewerInstance().mouseController().isPressedAny() )
+            hover_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
+    } ) );
+
+    // 5th group: we want cornerControllerMouseDown_ signal be caught before tools but after menu
+    connections_.push_back( getViewerInstance().mouseDownSignal.connect( 5, [this] ( MouseButton btn, int mod )->bool
+    {
+        if ( !rootObj_ )
+            return false;
+        if ( btn == MouseButton::Left && mod == 0 && press_( Vector2f( getViewerInstance().mouseController().getMousePos() ) ) )
+            return true;
+        return false;
+    } ) );
+
+    rootObj_ = std::make_shared<Object>();
+    rootObj_->addChild( basisViewControllerNonHoverable );
+    rootObj_->addChild( arrowCCW );
+    rootObj_->addChild( arrowCW );
+    rootObj_->addChild( basisViewControllerHoverable );
+}
+
+void CornerControllerObject::enable( ViewportMask mask )
+{
+    if ( !rootObj_ )
+        return;
+    rootObj_->setVisibilityMask( mask );
+}
+
+void CornerControllerObject::draw( const Viewport& vp, const AffineXf3f& rotXf, const AffineXf3f& vpInvXf )
+{
+    if ( !rootObj_ || !rootObj_->isVisible( vp.id ) )
+        return;
+    const auto& childern = rootObj_->children();
+    auto arrowsXf = rotXf * vpInvXf;
+    for ( int i = 0; i < childern.size(); ++i )
+    {
+        const auto& xf = i == 0 || i == 3 ? rotXf : arrowsXf;
+        childern[i]->setXf( xf, vp.id );
+        if ( !childern[i]->isVisible( vp.id ) )
+            continue;
+        if ( auto visObj = childern[i]->asType<VisualObject>() )
+            vp.draw( *visObj, xf, vp.getAxesProjectionMatrix(), DepthFunction::Always );
+    }
+    // second pass
+    for ( const auto& child : childern )
+    {
+        if ( !child->isVisible( vp.id ) )
+            continue;
+        if ( auto visObj = child->asType<VisualObject>() )
+            vp.draw( *visObj, visObj->xf( vp.id ), vp.getAxesProjectionMatrix() );
+    }
+}
+
+bool CornerControllerObject::getRedrawFlag( ViewportMask mask ) const
+{
+    if ( !rootObj_ )
+        return false;
+    return rootObj_->getRedrawFlag( mask );
+}
+
+void CornerControllerObject::resetRedrawFlag()
+{
+    if ( !rootObj_ )
+        return;
+    rootObj_->resetRedrawFlag();
+}
+
+CornerControllerObject::PickedIds CornerControllerObject::pick_( const Vector2f& mousePos ) const
+{
+    if ( !rootObj_ )
+        return {};
+
+    auto hId = getViewerInstance().getHoveredViewportId();
+    if ( !hId )
+        return {};
+
+    if ( !rootObj_->isVisible( hId ) )
+        return {};
+
+    const auto& vp = getViewerInstance().viewport( hId );
+    auto screenPos = to2dim( getViewerInstance().viewportToScreen( to3dim( vp.getAxesPosition() ), hId ) );
+
+    if ( distanceSq( mousePos, screenPos ) > sqr( vp.getAxesSize() * 2.0f ) )
+        return {};
+
+    const auto& children = rootObj_->children();
+    auto staticRenderParams = vp.getBaseRenderParams( vp.getAxesProjectionMatrix() );
+    auto [obj, pick] = vp.pickRenderObject( { {
+            static_cast< VisualObject* >( children[0].get() ),
+            static_cast< VisualObject* >( children[1].get() ),
+            static_cast< VisualObject* >( children[2].get() )
+        } }, { .baseRenderParams = &staticRenderParams } );
+    if ( !obj )
+        return {};
+
+    if ( obj == children[0] )
+        return { hId, getCornerControllerRegionByFace( pick.face ) };
+    else if ( obj == children[1] )
+        return { hId, RegionId( int( SideRegions::CCWArrow ) ) };
+    else
+        return { hId, RegionId( int( SideRegions::CWArrow ) ) };
+}
+
+void CornerControllerObject::hover_( const Vector2f& mousePos )
+{
+    auto curPick = pick_( mousePos );
+    if ( curPick == pickedId_ )
+        return;
+
+    getViewerInstance().setSceneDirty();
+
+    if ( pickedId_.rId )
+    {
+        if ( pickedId_.rId >= RegionId( int( SideRegions::CCWArrow ) ) )
+        {
+            const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+            const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart );
+            auto obj = rootObj_->children()[pickedId_.rId - int( SideRegions::CCWArrow ) + 1];
+            if ( auto objMesh = obj->asType<ObjectMesh>() )
+            {
+                objMesh->setFrontColor( colorBg, true, pickedId_.vId );
+                objMesh->setFrontColor( colorBg, false, pickedId_.vId );
+                objMesh->setBordersColor( colorBorder, pickedId_.vId );
+            }
+        }
+        else
+        {
+            rootObj_->children()[0]->setVisible( true, pickedId_.vId ); // enable non-hovarable
+            rootObj_->children()[3]->setVisible( false, pickedId_.vId ); // disable hovarable
+        }
+    }
+    // now all unhovered
+    pickedId_ = curPick;
+    if ( !pickedId_.rId )
+        return;
+
+    if ( pickedId_.rId >= RegionId( int( SideRegions::CCWArrow ) ) )
+    {
+        const Color& colorBg = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnStart );
+        const Color& colorBorder = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActive );
+        auto obj = rootObj_->children()[pickedId_.rId - int( SideRegions::CCWArrow ) + 1];
+        if ( auto objMesh = obj->asType<ObjectMesh>() )
+        {
+            objMesh->setFrontColor( colorBg, true, pickedId_.vId );
+            objMesh->setFrontColor( colorBg, false, pickedId_.vId );
+            objMesh->setBordersColor( colorBorder, pickedId_.vId );
+        }
+    }
+    else
+    {
+        rootObj_->children()[0]->setVisible( false, pickedId_.vId ); // disable non-hovarable
+        auto obj = rootObj_->children()[3];
+        obj->setVisible( true, pickedId_.vId ); // enable hovarable
+        if ( auto objMesh = obj->asType<ObjectMesh>() )
+            objMesh->setTexturePerFace( getCornerControllerHoveredTextureMap( pickedId_.rId ) );
+    }
+}
+
+bool CornerControllerObject::press_( const Vector2f& mousePos )
+{
+    if ( !pickedId_.rId )
+        return false;
+
+    auto curPick = pick_( mousePos );
+    if ( !curPick.rId )
+        return false;
+
+    updateCurrentViewByControllerRegion( curPick );
+    return true;
 }
 
 }

@@ -31,7 +31,7 @@ struct MeshProjectionParameters
     float loDistLimitSq = 0;
 
     /// maximum squared distance from a test point to mesh to be computed precisely,
-    /// if actual distance is larger then upDistLimit will be returned with not-trusted sign
+    /// if actual distance is larger than upDistLimit will be returned with not-trusted sign
     float upDistLimitSq = FLT_MAX;
 
     /// optional reference mesh to world transformation

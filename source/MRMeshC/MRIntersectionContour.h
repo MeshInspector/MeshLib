@@ -1,21 +1,11 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRId.h"
 #include "MRMeshCollidePrecise.h"
-#include "MRVector.h"
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRVariableEdgeTri
-{
-    MREdgeId edge;
-    MRFaceId tri;
-    bool isEdgeATriB;
-}
-MRVariableEdgeTri;
-
-MR_VECTOR_LIKE_DECL( ContinuousContour, VariableEdgeTri )
+typedef MRVectorVarEdgeTri MRContinuousContour;
 
 typedef struct MRContinuousContours MRContinuousContours;
 

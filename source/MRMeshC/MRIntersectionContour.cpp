@@ -9,12 +9,7 @@ using namespace MR;
 
 REGISTER_AUTO_CAST( ContinuousContours )
 REGISTER_AUTO_CAST( MeshTopology )
-REGISTER_AUTO_CAST( PreciseCollisionResult )
-REGISTER_VECTOR( ContinuousContour )
-
-static_assert( sizeof( MRVariableEdgeTri ) == sizeof( VariableEdgeTri ) );
-
-MR_VECTOR_LIKE_IMPL( ContinuousContour, VariableEdgeTri )
+REGISTER_VECTOR_LIKE( MRVectorVarEdgeTri, VarEdgeTri )
 
 MRContinuousContour mrContinuousContoursGet( const MRContinuousContours* contours_, size_t index )
 {

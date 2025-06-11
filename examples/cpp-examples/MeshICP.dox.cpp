@@ -9,8 +9,21 @@
 int main()
 {
     // Load meshes
-    MR::Mesh meshFloating = *MR::MeshLoad::fromAnySupportedFormat( "meshA.stl" );
-    MR::Mesh meshFixed = *MR::MeshLoad::fromAnySupportedFormat( "meshB.stl" );
+    auto meshFloatingRes = MR::MeshLoad::fromAnySupportedFormat( "meshA.stl" );
+    if ( !meshFloatingRes.has_value() )
+    {
+        std::cerr << meshFloatingRes.error() << std::endl;
+        return 1;
+    }
+    MR::Mesh& meshFloating = *meshFloatingRes;
+
+    auto meshFixedRes = MR::MeshLoad::fromAnySupportedFormat( "meshB.stl" );
+    if ( !meshFixedRes.has_value() )
+    {
+        std::cerr << meshFixedRes.error() << std::endl;
+        return 1;
+    }
+    MR::Mesh& meshFixed = *meshFixedRes;
 
 //! [0]
     // Prepare ICP parameters
@@ -38,5 +51,9 @@ int main()
     std::cerr << info << std::endl;
 
     // Save result
-    MR::MeshSave::toAnySupportedFormat( meshFloating, "meshA_icp.stl" );
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( meshFloating, "meshA_icp.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
 }

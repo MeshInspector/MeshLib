@@ -222,13 +222,13 @@ Expected<Mesh> uniteManyMeshes(
                         box.include( meshBoxes[group[i]] );
                         auto intConverter = getToIntConverter( box );
                         auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
-                        if ( !collidingResAB.edgesAtrisB.empty() || !collidingResAB.edgesBtrisA.empty() )
+                        if ( !collidingResAB.empty() )
                         {
                             intersects.store( true, std::memory_order::relaxed );
                             break;
                         }
                         auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
-                        if ( !collidingResBA.edgesAtrisB.empty() || !collidingResBA.edgesBtrisA.empty() )
+                        if ( !collidingResBA.empty() )
                         {
                             intersects.store( true, std::memory_order::relaxed );
                             break;

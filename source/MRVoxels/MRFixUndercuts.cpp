@@ -22,6 +22,7 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRMeshSubdivide.h"
+#include "MRFloatGrid.h"
 
 namespace MR
 {
@@ -141,7 +142,10 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
         regionCpy = *params.region;
     }
 
-    if ( !reportProgress( params.cb, 0.05f ) )
+    auto cb = params.smooth ? subprogress( params.cb, 0.0f, 0.5f ) : params.cb;
+
+
+    if ( !reportProgress( cb, 0.05f ) )
         return unexpectedOperationCanceled();
 
     mesh.transform( rot );
@@ -163,7 +167,7 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
         ss.maxAngleChangeAfterFlip = PI_F / 36.0f;
         ss.maxEdgeSplits = INT_MAX;
         ss.maxDeviationAfterFlip = voxelSize / 3.0f;
-        ss.progressCallback = subprogress( params.cb, 0.05f, 0.25f );
+        ss.progressCallback = subprogress( cb, 0.05f, 0.25f );
         if ( params.region )
         {
             ss.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
@@ -175,7 +179,7 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
             };
         }
         subdivideMesh( mesh, ss );
-        if ( !reportProgress( params.cb, 0.25f ) )
+        if ( !reportProgress( cb, 0.25f ) )
             return unexpectedOperationCanceled();
 
         auto keepGoing = BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
@@ -189,7 +193,7 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
                 mesh.points[v].x = center.x + diff.x / ratio;
                 mesh.points[v].y = center.y + diff.y / ratio;
             }
-        }, subprogress( params.cb, 0.25f, 0.3f ) );
+        }, subprogress( cb, 0.25f, 0.3f ) );
         if ( !keepGoing )
             return unexpectedOperationCanceled();
     }
@@ -205,17 +209,17 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
         regionCpy.resize( mesh.topology.faceSize(), true );
 
         // create mesh and unclosed grid
-        regionGrid = meshToDistanceField( mesh.cloneRegion( regionCpy ), AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( params.cb, 0.3f, 0.4f ) );
-        if ( !reportProgress( params.cb, 0.4f ) )
+        regionGrid = meshToDistanceField( mesh.cloneRegion( regionCpy ), AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( cb, 0.3f, 0.4f ) );
+        if ( !reportProgress( cb, 0.4f ) )
             return unexpectedOperationCanceled();
     }
 
-    auto fullGrid = meshToLevelSet( mesh, AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( params.cb, 0.4f, 0.6f ) );
-    if ( !reportProgress( params.cb, 0.6f ) )
+    auto fullGrid = meshToLevelSet( mesh, AffineXf3f(), Vector3f::diagonal( voxelSize ), 3.0f, subprogress( cb, 0.4f, 0.6f ) );
+    if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
     bool keepGoing = true;
-    auto fsb = subprogress( params.cb, 0.6f, 0.8f );
+    auto fsb = subprogress( cb, 0.6f, 0.8f );
     if ( params.region )
         keepGoing = fixGridFullByPart( fullGrid, regionGrid, zOffset, fsb ); // fix undercuts if fullGrid by active voxels from partGrids
     else
@@ -223,6 +227,13 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
 
     if ( !keepGoing )
         return unexpectedOperationCanceled();
+
+    if ( params.smooth )
+    {
+        gaussianFilter( fullGrid, 1, 1, subprogress( params.cb, 0.5f, 0.8f ) );
+        if ( !reportProgress( params.cb, 0.8f ) )
+            return unexpectedOperationCanceled();
+    }
 
     auto meshRes = gridToMesh( std::move( fullGrid ), GridToMeshSettings{
         .voxelSize = Vector3f::diagonal( voxelSize ),

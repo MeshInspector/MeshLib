@@ -11,8 +11,10 @@ int main()
 
     // all point coordinates
     const std::vector<MR::Vector3f> & points =  mesh.points.vec_;
-    // triangle vertices as tripples of ints (pointing to elements in points vector)
-    const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
+    // triangle vertices as triples of ints (pointing to elements in points vector)
+    const int * vertexTriples = reinterpret_cast<const int*>( triangles.data() );
 
-    return 0;
+    // TODO: export in your format
+    std::ignore = points;
+    std::ignore = vertexTriples;
 }

@@ -228,6 +228,18 @@ public:
         }
         return res;
     }
+    /// increases min and decreases max to their closest representable value
+    Box insignificantlyShrinked() const
+    {
+        assert( valid() );
+        Box res;
+        for ( int i = 0; i < elements; ++i )
+        {
+            VTraits::getElem( i, res.min ) = std::nextafter( VTraits::getElem( i, min ), std::numeric_limits<T>::max() );
+            VTraits::getElem( i, res.max ) = std::nextafter( VTraits::getElem( i, max ), std::numeric_limits<T>::lowest() );
+        }
+        return res;
+    }
 
     bool operator == ( const Box & a ) const
         { return min == a.min && max == a.max;  }

@@ -17,13 +17,14 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
     if ( tree.nodes().size() == 0 )
         return false;
 
-    auto rayBoxIntersect = [] ( const Box2f& box, const Vector2f& rayStart )->bool
+    // we consider plusX ray here
+    auto rayBoxIntersect = [] ( const Box2f& box, const Vector2f& plusXRayStart )->bool
     {
-        if ( box.max.x <= rayStart.x )
+        if ( box.max.x <= plusXRayStart.x )
             return false;
-        if ( box.max.y <= rayStart.y )
+        if ( box.max.y <= plusXRayStart.y )
             return false;
-        if ( box.min.y > rayStart.y )
+        if ( box.min.y > plusXRayStart.y )
             return false;
         return true;
     };
@@ -46,11 +47,16 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
         const auto& node = tree[nodesStack[currentNode--]];
         if ( node.leaf() )
         {
-            auto uEId = node.leafId();
-            if ( node.box.min.x >= point.x )
+            // as far as node box is expanded we need to validate precise box for leaf
+            auto preciseBox = node.box.insignificantlyShrinked();
+            if ( !rayBoxIntersect( preciseBox, point ) )
+                continue;
+
+            if ( preciseBox.min.x >= point.x )
                 ++intersectionCounter;
             else
             {
+                auto uEId = node.leafId();
                 const auto& org = polyline.orgPnt( uEId );
                 const auto& dest = polyline.destPnt( uEId );
 

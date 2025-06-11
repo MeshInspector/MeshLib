@@ -39,6 +39,7 @@ EOF
 
 # Disable stripping in `/etc/makepkg.conf`, to avoid having to install `strip`.
 # We do this temporarily and then restore the old config.
+# Note that in theory you could override `options=(!strip)` in `PKGBUILD`, but it doesn't seem to work for me (still complains about the missing `strip` binary). Hmm.
 
 # First, apply the existing backup if any, to avoid permantly messing up the config.
 # If the backup exists, it means the process didn't complete properly the last time.

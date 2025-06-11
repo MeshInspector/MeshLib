@@ -20,8 +20,8 @@ void testFindSignedDistances( void )
 
     float maxDist = 0.f;
     for ( int i = 0; i < results->size; i++ )
-        if ( maxDist < fabs( results->data[i] ) )
-            maxDist = fabs( results->data[i] );
+        if ( maxDist < fabsf( results->data[i] ) )
+            maxDist = fabsf( results->data[i] );
     TEST_ASSERT_FLOAT_EQUAL_APPROX( maxDist, mrVector3fLength( &shift ), 1e-6f )
 
     mrScalarsFree( results );

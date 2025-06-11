@@ -38,4 +38,24 @@ TEST( MRMesh, Polyline2RayIntersectFloat )
     EXPECT_NEAR( projResB->distanceAlongLine, 0.5f, 1e-5f );
 }
 
+TEST( MRMesh, IsPointInsidePolyline )
+{
+    Vector2f as[9] = {
+        { -1, -1 },
+        { -1, 0 },
+        { -1, 1 },
+        { 0, 1 },
+        { 1, 1 },
+        { 1, 0 },
+        { 1, -1 },
+        { 0, -1 },
+        { -1, -1 }
+    };
+    Polyline2 polyline;
+    polyline.addFromPoints( as, 9, true );
+
+    // it is expected to have only one intersection with 
+    ASSERT_TRUE( isPointInsidePolyline( polyline, Vector2f( 0, 0 ) ) );
+}
+
 } //namespace MR

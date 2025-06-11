@@ -33,6 +33,9 @@ MR_SUPPRESS_WARNING_PUSH
 #if __GNUC__ >= 15
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
+#if __clang_major__ == 20
+#pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
+#endif
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION

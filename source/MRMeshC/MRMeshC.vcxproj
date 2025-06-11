@@ -88,6 +88,7 @@
     <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRVoxelsSave.h" />
+    <ClInclude Include="MRPointsToMeshProjector.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAddNoise.cpp" />
@@ -158,6 +159,7 @@
     <ClCompile Include="MRVector3.cpp" />
     <ClCompile Include="MRVoxelsLoad.cpp" />
     <ClCompile Include="MRVoxelsSave.cpp" />
+    <ClCompile Include="MRPointsToMeshProjector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">

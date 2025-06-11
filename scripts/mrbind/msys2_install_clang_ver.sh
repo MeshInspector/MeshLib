@@ -36,18 +36,9 @@ done
 # Generate the stub for the `cc-libs` package if needed. See `msys2_make_dummy_cc-libs_pkg.sh` for details.
 # [
 if [[ $1 = 18.* || $1 = 19.* ]]; then
-    CCLIBS_STUB_DIR="$(realpath ~/cc-libs_stub_build)"
-    if [[ -f "$CCLIBS_STUB_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst" ]]; then
-        echo "The cc-libs stub package is already built!"
-    else
-        echo "Building the cc-libs stub package..."
-        mkdir -p "$CCLIBS_STUB_DIR"
-        SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
-        pushd "$CCLIBS_STUB_DIR"
-        "$SCRIPT_DIR/msys2_make_dummy_cc-libs_pkg.sh"
-        popd
-    fi
-    PACKAGE_FILES+=" $CCLIBS_STUB_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst"
+    SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
+    "$SCRIPT_DIR/msys2_make_dummy_cc-libs_pkg.sh" "$DOWNLOAD_DIR"
+    PACKAGE_FILES+=" $DOWNLOAD_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst"
 else
     # If you see this message, then this specific workaround is no longer necessary. Please destroy this entire `[...]` code block,
     #   and destroy the `msys2_make_dummy_cc-libs_pkg.sh` script.

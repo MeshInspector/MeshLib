@@ -11,19 +11,31 @@
 
 set -euxo pipefail
 
+if [[ $# != 1 ]]; then
+    echo "Need exactly one parameter, the directory where the resulting package should be saved."
+    exit 1
+fi
+
+TMPDIR="$(mktemp -d)"
+
+pushd "$TMPDIR"
+
 # Generate pkgbuild
-echo "pkgname=mingw-w64-clang-x86_64-cc-libs" >PKGBUILD
-echo "pkgver=1" >>PKGBUILD
-echo "pkgrel=1" >>PKGBUILD
-echo "pkgdesc="Dummy placeholder"" >>PKGBUILD
-echo "arch=('any')" >>PKGBUILD
-echo "url=""" >>PKGBUILD
-echo "license=\"custom\"" >>PKGBUILD
-echo "depends=()" >>PKGBUILD
-echo "source=()" >>PKGBUILD
-echo "build(){" >>PKGBUILD
-echo "    true" >>PKGBUILD
-echo "}" >>PKGBUILD
+cat <<"EOF" >PKGBUILD
+pkgname=mingw-w64-clang-x86_64-cc-libs
+pkgver=1
+pkgrel=1
+pkgdesc="Dummy placeholder"
+arch=('any')
+url=""
+license="custom"
+depends=()
+source=()
+build(){
+    true
+}
+EOF
+
 
 # Disable stripping in `/etc/makepkg.conf`, to avoid having to install `strip`.
 # We do this temporarily and then restore the old config.
@@ -40,5 +52,13 @@ mv /etc/makepkg.conf.new /etc/makepkg.conf
 # Build the package!
 makepkg
 
-# Lastly, roll back the backup.
+# Roll back the `makepkg.conf` backup.
 mv /etc/makepkg.conf.before_dummy_pkg_build /etc/makepkg.conf
+
+popd
+
+# Copy the built package out of the temporary directory.
+cp "$TMPDIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst" "$1"
+
+# Destroy the temporary directory.
+rm -rf "$TMPDIR"

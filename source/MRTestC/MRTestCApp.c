@@ -24,6 +24,7 @@
 #include "MRAffineXf.h"
 #include "SimpleObjects.h"
 #include "MRVector3.h"
+#include "MRPointsToMeshProjector.h"
 
 int main( void )
 {
@@ -131,6 +132,8 @@ int main( void )
     RUN_TEST( testMrVector3iPlusY );
     RUN_TEST( testMrVector3iPlusZ );
 
+    // MRPointsToMeshProjector
+    RUN_TEST( testFindSignedDistances );
 
     printf("Tests finished\n");
 }

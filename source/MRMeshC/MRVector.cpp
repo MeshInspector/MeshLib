@@ -15,3 +15,5 @@ MR_VECTOR_IMPL( Vector3f )
 MR_VECTOR_LIKE_IMPL( FaceMap, FaceId )
 MR_VECTOR_LIKE_IMPL( WholeEdgeMap, EdgeId )
 MR_VECTOR_LIKE_IMPL( VertMap, VertId )
+
+MR_VECTOR_LIKE_IMPL( Scalars, float )

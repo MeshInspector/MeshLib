@@ -28,21 +28,21 @@ namespace TPMSFunctions
 
 float SchwartzP( const Vector3f& p )
 {
-    return cos( p.x ) + cos( p.y ) + cos( p.z );
+    return std::cos( p.x ) + std::cos( p.y ) + std::cos( p.z );
 }
 float DoubleSchwartzP( const Vector3f& p )
 {
-    return cos( p.x )*cos( p.y ) + cos( p.y )*cos( p.z ) + cos( p.x )*cos( p.z ) + 0.35f*(cos( 2*p.x ) + cos( 2*p.y ) + cos( 2*p.z ));
+    return std::cos( p.x )*std::cos( p.y ) + std::cos( p.y )*std::cos( p.z ) + std::cos( p.x )*std::cos( p.z ) + 0.35f*(std::cos( 2*p.x ) + std::cos( 2*p.y ) + std::cos( 2*p.z ));
 }
 
 float Gyroid( const Vector3f& p )
 {
-    return cos( p.x )*sin( p.y ) + cos( p.y )*sin( p.x ) + cos( p.z )*sin( p.x );
+    return std::cos( p.x )*std::sin( p.y ) + std::cos( p.y )*std::sin( p.x ) + std::cos( p.z )*std::sin( p.x );
 }
 float DoubleGyroid( const Vector3f& p )
 {
-    return 2.75f * ( sin(2*p.x)*sin(p.z)*cos(p.y) + sin(2*p.y)*sin(p.x)*cos(p.z) + sin(2*p.z)*sin(p.y)*cos(p.x) )
-           - ( cos(2*p.x)*cos(2*p.y) + cos(2*p.y)*cos(2*p.z) + cos(2*p.z)*cos(2*p.x) );
+    return 2.75f * ( std::sin(2*p.x)*std::sin(p.z)*std::cos(p.y) + std::sin(2*p.y)*std::sin(p.x)*std::cos(p.z) + std::sin(2*p.z)*std::sin(p.y)*std::cos(p.x) )
+           - ( std::cos(2*p.x)*std::cos(2*p.y) + std::cos(2*p.y)*std::cos(2*p.z) + std::cos(2*p.z)*std::cos(2*p.x) );
 }
 
 };

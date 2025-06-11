@@ -738,140 +738,164 @@ Expected<ToolPathResult>  constantZToolPath( const MeshPart& mp, const ToolPathP
         lastPoint = point;
     };
 
+    auto& commands = res.commands;
+    const auto addPointsFromInterval = [&] ( const MeshPart& mp, const ToolPathParams& params, const Contour3f& contour )
+    {
+        const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true, params.millRadius );
+        if ( intervals.empty() )
+            return;
+
+        for ( const auto& interval : intervals )
+        {
+            if ( !mp.region || interval.first != contour.begin() || res.commands.empty() )
+            {
+                if ( res.commands.empty() )
+                    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+
+                transitOverSafeZ( *interval.first, res, params, safeZ, lastZ, lastFeed );
+                commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
+            }
+
+            for ( auto it = interval.first; it < interval.second; ++it )
+            {
+                addPoint( *it );
+            }
+        }
+    };
+
+
     for ( int step = 0; step < steps; ++step )
     {
         if ( !reportProgress( sbp, float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
-        auto& commands = res.commands;
-
-        for ( const auto& section : sections[step] )
+        if ( params.flatTool )
         {
-            if ( section.size() < 2 )
-                continue;
-
             Polyline3 polyline;
-            polyline.addFromSurfacePath( mesh, section );
-            
-            if ( params.flatTool )
+            for ( const auto& section : sections[step] )
             {
-                const auto currentZ = polyline.points.front().z;
-                auto polyline2d = polyline.toPolyline<Vector2f>();
-                const ContourToDistanceMapParams dmParams( params.voxelSize, polyline2d.contours(), params.millRadius + 3.0f * params.voxelSize, true );
-                const ContoursDistanceMapOptions dmOptions{ .signMethod = ContoursDistanceMapOptions::WindingRule, .minDist = params.millRadius - 2 * params.voxelSize, .maxDist = params.millRadius + 2 * params.voxelSize };
-                const auto dm = distanceMapFromContours( polyline2d, dmParams, dmOptions );
-                DistanceMapToWorld dmToWorld( dmParams );
-                auto offsetRes = distanceMapTo2DIsoPolyline( dm, dmToWorld, params.millRadius );
-                polyline2d = offsetRes.first;
-                polyline = polyline2d.toPolyline<Vector3f>();
-                polyline.transform( offsetRes.second * AffineXf3f::translation( { 0, 0, currentZ } ) );
+                if ( section.size() < 2 )
+                    continue;
+                polyline.addFromSurfacePath( mesh, section );
             }
+
+            // make polyline offset
+            const auto currentZ = polyline.points.front().z;
+            auto polyline2d = polyline.toPolyline<Vector2f>();
+            const ContourToDistanceMapParams dmParams( params.voxelSize, polyline2d.contours(), params.millRadius + 3.0f * params.voxelSize, true );
+            const ContoursDistanceMapOptions dmOptions{ .signMethod = ContoursDistanceMapOptions::WindingRule, .minDist = params.millRadius - 2 * params.voxelSize, .maxDist = params.millRadius + 2 * params.voxelSize };
+            const auto dm = distanceMapFromContours( polyline2d, dmParams, dmOptions );
+            DistanceMapToWorld dmToWorld( dmParams );
+            auto offsetRes = distanceMapTo2DIsoPolyline( dm, dmToWorld, params.millRadius );
+            polyline2d = offsetRes.first;
+            polyline = polyline2d.toPolyline<Vector3f>();
+            polyline.transform( offsetRes.second * AffineXf3f::translation( { 0, 0, currentZ } ) );
 
             auto contours = polyline.contours();
-            if ( contours.empty() )
-                continue;
-
-            auto& contour = contours.front();
-            if ( !params.flatTool && contour.size() > section.size() )
-                contour.resize( section.size() );
-
-            if ( params.isolines )
-                params.isolines->push_back( contour );
-
-            if ( mp.region || params.flatTool )
+            for ( auto& contour : contours )
             {
-                const auto intervals = getIntervals( mp, params.offsetMesh, contour.begin(), contour.end(), contour.begin(), contour.end(), true, params.millRadius );
-                if ( intervals.empty() )
+                if ( params.isolines )
+                    params.isolines->push_back( contour );
+
+                addPointsFromInterval( mp, params, contour );
+            }
+        }
+        else
+        {
+            for ( const auto& section : sections[step] )
+            {
+                if ( section.size() < 2 )
                     continue;
 
-                for ( const auto& interval : intervals )
+                Polyline3 polyline;
+                polyline.addFromSurfacePath( mesh, section );
+
+                auto contours = polyline.contours();
+                if ( contours.empty() )
+                    continue;
+
+                auto& contour = contours.front();
+                if ( contour.size() > section.size() )
+                    contour.resize( section.size() );
+
+                if ( params.isolines )
+                    params.isolines->push_back( contour );
+
+                if ( mp.region || params.flatTool )
                 {
-                    if ( !mp.region || interval.first != contour.begin() || res.commands.empty() )
-                    {
-                        if ( res.commands.empty() )
-                            res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-
-                        transitOverSafeZ( *interval.first, res, params, safeZ, lastZ, lastFeed );
-                        commands.push_back( { .x = interval.first->x, .y = interval.first->y, .z = interval.first->z } );
-                    }
-
-                    for ( auto it = interval.first; it < interval.second; ++it )
-                    {
-                        addPoint( *it );
-                    }
+                    addPointsFromInterval( mp, params, contour );
+                    continue;
                 }
 
-                continue;
-            }
+                auto nearestPointIt = section.begin();
+                auto nextEdgePointIt = section.begin();
+                float minDistSq = FLT_MAX;
 
-            auto nearestPointIt = section.begin();
-            auto nextEdgePointIt = section.begin();
-            float minDistSq = FLT_MAX;
-
-            if ( prevEdgePoint.e.valid() )
-            {
-                for ( auto it = section.begin(); it < section.end(); ++it )
+                if ( prevEdgePoint.e.valid() )
                 {
-                    float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
-                    if ( distSq < minDistSq )
+                    for ( auto it = section.begin(); it < section.end(); ++it )
                     {
-                        minDistSq = distSq;
-                        nearestPointIt = it;
+                        float distSq = ( mesh.edgePoint( *it ) - mesh.edgePoint( prevEdgePoint ) ).lengthSq();
+                        if ( distSq < minDistSq )
+                        {
+                            minDistSq = distSq;
+                            nearestPointIt = it;
+                        }
                     }
+
+                    const float sectionStepSq = params.sectionStep * params.sectionStep;
+                    const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
+                    nextEdgePointIt = nearestPointIt;
+                    do
+                    {
+                        std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
+                    } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
                 }
 
-                const float sectionStepSq = params.sectionStep * params.sectionStep;
-                const auto nearestPoint = mesh.edgePoint( *nearestPointIt );
-                nextEdgePointIt = nearestPointIt;
-                do
-                {
-                    std::next( nextEdgePointIt ) != section.end() ? ++nextEdgePointIt : nextEdgePointIt = section.begin();
-                } while ( nextEdgePointIt != nearestPointIt && ( mesh.edgePoint( *nextEdgePointIt ) - nearestPoint ).lengthSq() < sectionStepSq );
-            }
+                const auto pivotIt = contour.begin() + std::distance( section.begin(), nextEdgePointIt );
 
-            const auto pivotIt = contour.begin() + std::distance( section.begin(), nextEdgePointIt );
-
-            if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
-            {
-                transitOverSafeZ( *pivotIt, res, params, safeZ, lastZ, lastFeed );
-            }
-            else
-            {
-                const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt );
-                if ( sp.has_value() && !sp->empty() )
+                if ( !prevEdgePoint.e.valid() || minDistSq > critTransitionLengthSq )
                 {
-                    if ( sp->size() == 1 )
+                    transitOverSafeZ( *pivotIt, res, params, safeZ, lastZ, lastFeed );
+                }
+                else
+                {
+                    const auto sp = computeSurfacePath( mesh, prevEdgePoint, *nextEdgePointIt );
+                    if ( sp.has_value() && !sp->empty() )
                     {
-                        const auto p = mesh.edgePoint( sp->front() );
-                        res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                        if ( sp->size() == 1 )
+                        {
+                            const auto p = mesh.edgePoint( sp->front() );
+                            res.commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                        }
+                        else
+                        {
+                            Polyline3 transit;
+                            transit.addFromSurfacePath( mesh, *sp );
+                            const auto transitContours = transit.contours().front();
+                            for ( const auto& p : transitContours )
+                                commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
+                        }
                     }
-                    else
-                    {
-                        Polyline3 transit;
-                        transit.addFromSurfacePath( mesh, *sp );
-                        const auto transitContours = transit.contours().front();
-                        for ( const auto& p : transitContours )
-                            commands.push_back( { .x = p.x, .y = p.y, .z = p.z } );
-                    }
+
+                    commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
                 }
 
-                commands.push_back( { .x = pivotIt->x, .y = pivotIt->y, .z = pivotIt->z } );
+                auto startIt = pivotIt + 1;
+
+                for ( auto it = startIt; it < contour.end(); ++it )
+                {
+                    addPoint( *it );
+                }
+
+                for ( auto it = contour.begin() + 1; it < pivotIt + 1; ++it )
+                {
+                    addPoint( *it );
+                }
+
+                prevEdgePoint = *nextEdgePointIt;
+                lastZ = pivotIt->z;
             }
-
-            auto startIt = pivotIt + 1;
-
-            for ( auto it = startIt; it < contour.end(); ++it )
-            {
-                addPoint( *it );
-            }
-
-            for ( auto it = contour.begin() + 1; it < pivotIt + 1; ++it )
-            {
-                addPoint( *it );
-            }
-
-            prevEdgePoint = *nextEdgePointIt;
-            lastZ = pivotIt->z;
         }
     }
 

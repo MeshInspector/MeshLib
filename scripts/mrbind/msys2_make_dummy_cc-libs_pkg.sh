@@ -28,7 +28,7 @@ echo "}" >>PKGBUILD
 # Disable stripping in `/etc/makepkg.conf`, to avoid having to install `strip`.
 # We do this temporarily and then restore the old config.
 
-# First, roll apply the existing backup if any, to avoid permantly messing up the config.
+# First, apply the existing backup if any, to avoid permantly messing up the config.
 # If the backup exists, it means the process didn't complete properly the last time.
 [[ -f /etc/makepkg.conf.before_dummy_pkg_build ]] && mv /etc/makepkg.conf.before_dummy_pkg_build /etc/makepkg.conf
 
@@ -40,5 +40,5 @@ mv /etc/makepkg.conf.new /etc/makepkg.conf
 # Build the package!
 makepkg
 
-# Lastly, roll back the backup
+# Lastly, roll back the backup.
 mv /etc/makepkg.conf.before_dummy_pkg_build /etc/makepkg.conf

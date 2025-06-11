@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <None Include="$(ProjectDir)..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPythonScene.cpp" />

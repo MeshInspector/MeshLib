@@ -70,7 +70,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
+          git submodule update --init thirdparty/mrbind
 
       - name: Install thirdparty libs
         run: |
@@ -97,7 +98,7 @@ jobs:
           echo ls -al \$HOME
           ls -al $HOME
           echo
-          
+
           emrun \
             --browser=/usr/bin/firefox \
             --browser-args="--headless" \
@@ -121,7 +122,7 @@ jobs:
           cmake \
             --build cpp-examples-build \
             --parallel $(nproc)
-      
+
       - name: Upload Package
         if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4

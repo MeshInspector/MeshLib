@@ -57,7 +57,7 @@ struct EdgeTriHash
 {
     size_t operator()( const EdgeTri& vet ) const
     {
-        return 17 * size_t( vet.edge.undirected() >> 1 ) + 23 * size_t( vet.tri >> 1 );
+        return 17 * size_t( vet.edge.undirected() >> 2 ) + 23 * size_t( vet.tri >> 2 );
     }
 };
 
@@ -73,13 +73,13 @@ public:
 private:
     static int bucket_( const VarEdgeTri& x )
     {
-        return ( x.isEdgeATriB() << 2 ) |
-               ( ( x.edge.undirected() & 1 ) << 1 ) |
-               ( x.tri() & 1 );
+        return ( x.isEdgeATriB() << 4 ) |
+               ( ( x.edge.undirected() & 3 ) << 2 ) |
+               ( x.tri() & 3 );
     };
 
     using HashMapType = HashMap<EdgeTri, int, EdgeTriHash>;
-    constexpr static inline int NumBuckets = 8;
+    constexpr static inline int NumBuckets = 32;
     HashMapType hmaps_[NumBuckets];
 };
 

@@ -100,8 +100,7 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/parallel-hashmap
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
-          git submodule update --init thirdparty/mrbind
+          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Python setup
         env:

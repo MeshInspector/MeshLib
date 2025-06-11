@@ -42,8 +42,8 @@ if [[ $1 = 18.* || $1 = 19.* ]]; then
     else
         echo "Building the cc-libs stub package..."
         mkdir -p "$CCLIBS_STUB_DIR"
-        pushd "$CCLIBS_STUB_DIR"
         SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
+        pushd "$CCLIBS_STUB_DIR"
         "$SCRIPT_DIR/msys2_make_dummy_cc-libs_pkg.sh"
         popd
     fi

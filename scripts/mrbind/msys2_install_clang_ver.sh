@@ -32,6 +32,30 @@ for x in $PACKAGES; do
     PACKAGE_FILES+=" $DOWNLOAD_DIR/$x-$1-any.pkg.tar.zst"
 done
 
+
+# Generate the stub for the `cc-libs` package if needed. See `msys2_make_dummy_cc-libs_pkg.sh` for details.
+# [
+if [[ $1 = 18.* || $1 = 19.* ]]; then
+    CCLIBS_STUB_DIR="$(realpath ~/cc-libs_stub_build)"
+    if [[ -f "$CCLIBS_STUB_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst" ]]; then
+        echo "The cc-libs stub package is already built!"
+    else
+        echo "Building the cc-libs stub package..."
+        mkdir -p "$CCLIBS_STUB_DIR"
+        pushd "$CCLIBS_STUB_DIR"
+        SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
+        "$SCRIPT_DIR/msys2_make_dummy_cc-libs_pkg.sh"
+        popd
+    fi
+    PACKAGE_FILES+=" $CCLIBS_STUB_DIR/mingw-w64-clang-x86_64-cc-libs-1-1-any.pkg.tar.zst"
+else
+    # If you see this message, then this specific workaround is no longer necessary. Please destroy this entire `[...]` code block,
+    #   and destroy the `msys2_make_dummy_cc-libs_pkg.sh` script.
+    echo "### NOTE: Now when we've updated Clang to 20+, the cc-libs stub workaround is no longer necessary! Please remove it from the `msys2_install_clang_ver.sh` script."
+fi
+# ]
+
+
 # Install packages. This will automatically replace existing packages, if any.
 pacman -U --noconfirm $PACKAGE_FILES
 

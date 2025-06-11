@@ -62,7 +62,7 @@ if __name__ == "__main__":
         if not build_system:
             build_system = "msbuild" if compiler_id.startswith("msvc") else "cmake"
 
-        aws_instance_type = os.environ.get('AWS_INSTANCE_TYPE')
+        aws_instance_type = os.environ.get('AWS_INSTANCE_TYPE', '').lower()
 
         results = {
             'target_os': os.environ.get('TARGET_OS'),
@@ -72,10 +72,8 @@ if __name__ == "__main__":
             'cpu_count': cpu_count,
             'ram_mb': ram_amount,
             'build_system': build_system,
+            'aws_instance_type': aws_instance_type or None,
         }
-        if aws_instance_type:
-            results['aws_instance_type'] = aws_instance_type.lower()
-
         with open(os.environ['STATS_FILE'], 'w') as f:
             json.dump(results, f)
             print(json.dumps(results, indent=2))

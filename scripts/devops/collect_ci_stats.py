@@ -56,6 +56,7 @@ def parse_job(job: dict):
             'runner_cpu_count':  runner_stats['cpu_count'],
             'runner_ram_mb':     runner_stats['ram_mb'],
             'build_system':      runner_stats['build_system'],
+            'aws_instance_type': runner_stats['aws_instance_type'],
         }
     except:
         print("Something went wrong while parsing the job/runner info. Debug info:")

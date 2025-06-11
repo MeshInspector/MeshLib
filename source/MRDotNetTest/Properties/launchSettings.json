@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MRDotNetTest": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

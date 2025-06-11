@@ -57,13 +57,59 @@ struct EdgeTriHash
 {
     size_t operator()( const EdgeTri& vet ) const
     {
-        return 17 * size_t( vet.edge.undirected() ) + 23 * size_t( vet.tri );
+        return 17 * size_t( vet.edge.undirected() >> 1 ) + 23 * size_t( vet.tri >> 1 );
     }
 };
 
-using EdgeTri2IndexMap = HashMap<EdgeTri, int, EdgeTriHash>;
-
 using VariableEdgeTri2Index = std::pair<VarEdgeTri, int>;
+
+class EdgeTri2IndexMap
+{
+public:
+    EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections );
+
+    const int* findIndex( const VarEdgeTri& item ) const;
+
+private:
+    static int bucket_( const VarEdgeTri& x )
+    {
+        return ( x.isEdgeATriB() << 2 ) |
+               ( ( x.edge.undirected() & 1 ) << 1 ) |
+               ( x.tri() & 1 );
+    };
+
+    using HashMapType = HashMap<EdgeTri, int, EdgeTriHash>;
+    constexpr static inline int NumBuckets = 8;
+    HashMapType hmaps_[NumBuckets];
+};
+
+EdgeTri2IndexMap::EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections )
+{
+    MR_TIMER;
+    int counts[NumBuckets] = {};
+
+    for ( const auto & x : intersections )
+        ++counts[bucket_( x )];
+
+    ParallelFor( 0, NumBuckets, [&]( int ib )
+    {
+        HashMapType hmap;
+        hmap.reserve( counts[ib] );
+        for ( int i = 0; i < intersections.size(); ++i )
+            if ( bucket_( intersections[i] ) == ib )
+                hmap[intersections[i].edgeTri()] = i;
+        hmaps_[ib] = std::move( hmap );
+    } );
+}
+
+const int* EdgeTri2IndexMap::findIndex( const VarEdgeTri& item ) const
+{
+    auto& itemSet = hmaps_[bucket_( item )];
+    auto it = itemSet.find( item.edgeTri() );
+    if ( it == itemSet.end() )
+        return {};
+    return &it->second;
+}
 
 struct AccumulativeSet
 {
@@ -75,8 +121,7 @@ struct AccumulativeSet
 
     NeighborLinksList nList; // flat indices of prev/next elements in the contour
 
-    EdgeTri2IndexMap edgeAtriBhmap; // map to flat index in nList
-    EdgeTri2IndexMap edgeBtriAhmap; // map to flat index in nList
+    EdgeTri2IndexMap edgeTri2IndexMap; // map to flat index in nList
 
     const MeshTopology& topologyByEdge( bool edgesATriB )
     {
@@ -91,46 +136,8 @@ struct AccumulativeSet
 
 AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
     const std::vector<VarEdgeTri>& intersections )
-    : topologyA( topologyA ), topologyB( topologyB )
+    : topologyA( topologyA ), topologyB( topologyB ), edgeTri2IndexMap( intersections )
 {
-    MR_TIMER;
-
-    tbb::task_group taskGroup;
-    taskGroup.run( [&] ()
-    {
-        size_t count = 0;
-        for ( const auto & x : intersections )
-            if ( x.isEdgeATriB() )
-                ++count;
-
-        edgeAtriBhmap.reserve( count );
-
-        for ( int i = 0; i < intersections.size(); ++i )
-            if ( intersections[i].isEdgeATriB() )
-                edgeAtriBhmap[intersections[i].edgeTri()] = i;
-    } );
-
-    size_t count = 0;
-    for ( const auto & x : intersections )
-        if ( !x.isEdgeATriB() )
-            ++count;
-
-    edgeBtriAhmap.reserve( count );
-
-    for ( int i = 0; i < intersections.size(); ++i )
-        if ( !intersections[i].isEdgeATriB() )
-            edgeBtriAhmap[intersections[i].edgeTri()] = i;
-
-    taskGroup.wait();
-}
-
-const int* findIndex( const AccumulativeSet& accumulativeSet, const VarEdgeTri& item )
-{
-    auto& itemSet = item.isEdgeATriB() ? accumulativeSet.edgeAtriBhmap : accumulativeSet.edgeBtriAhmap;
-    auto it = itemSet.find( item.edgeTri() );
-    if ( it == itemSet.end() )
-        return {};
-    return &it->second;
 }
 
 inline VarEdgeTri orientBtoA( const VarEdgeTri& curr )
@@ -167,7 +174,7 @@ std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet,
         {
             if ( !v.edge.valid() )
                 continue;
-            if ( auto pIndex = findIndex( accumulativeSet, v ) )
+            if ( auto pIndex = accumulativeSet.edgeTri2IndexMap.findIndex( v ) )
                 return VariableEdgeTri2Index{ v, *pIndex };
         }
     }

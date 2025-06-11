@@ -68,8 +68,10 @@ TPMSFunction getTPMSFunction( TPMSType type )
 
 FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution )
 {
-    const auto voxelSize = div( size, Vector3f::diagonal( resolution * frequency ) );
-    const Vector3i dims( div( size, voxelSize ) );
+    const auto N = frequency * size;            // number of repetitions (for each axis)
+    const auto dimsF = resolution * N;          // float-dimensions: number of voxels per repetition times the number of repetitions
+    const auto voxelSize = div( size, dimsF );  // voxel-size: size divided by the number of voxels
+    const Vector3i dims( std::ceil( dimsF.x ), std::ceil( dimsF.y ), std::ceil( dimsF.z ) );
 
     return {
         .data = [frequency, voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )

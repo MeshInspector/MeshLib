@@ -970,8 +970,8 @@ Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const Constan
         }
 
         const auto& mesh = res.modifiedMesh;
-        if ( extract.sortedIsolines.empty() && !reportProgress( cb, 0.4f ) )
-            return stringOperationCanceled();
+        if ( extract.sortedIsolines.empty() )
+            return reportProgress( cb, 0.4f ) ? "" : stringOperationCanceled();
 
         //go to the start point through safe height
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );

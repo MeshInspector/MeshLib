@@ -338,6 +338,7 @@
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRUnionFind.h" />
+    <ClInclude Include="MRUnionFindParallel.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
     <ClInclude Include="MRUnorientedTriangle.h" />

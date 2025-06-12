@@ -24,7 +24,7 @@ namespace MR
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API Expected<Json::Value> deserializeJsonValue( std::istream& in );
+MRMESH_API Expected<Json::Value> deserializeJsonValue( std::istream& in ); // important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::string& str );
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path );
 

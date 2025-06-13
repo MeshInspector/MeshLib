@@ -76,7 +76,16 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     }
     subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
-    std::vector<PreciseCollisionResult> subtaskRes( subtasks.size() );
+    tbb::enumerable_thread_specific<PreciseCollisionResult> threadData;
+
+    struct SubtaskRes
+    {
+        PreciseCollisionResult * vec = nullptr;
+        int first = 0;
+        int last = 0;
+    };
+
+    std::vector<SubtaskRes> subtaskRes( subtasks.size() );
 
     // we do not check an edge if its right triangle has smaller index and also in the mesh part
     auto checkEdge = [&]( EdgeId e, const MeshPart & mp )
@@ -175,7 +184,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         for ( auto is = range.begin(); is < range.end(); ++is )
         {
             mySubtasks.push_back( subtasks[is] );
-            PreciseCollisionResult myRes;
+            SubtaskRes myRes{ .vec = &threadData.local() };
+            myRes.first = (int)myRes.vec->size();
             while ( !mySubtasks.empty() )
             {
                 if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
@@ -200,8 +210,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     const auto bFace = bNode.leafId();
                     if ( b.region && !b.region->test( bFace ) )
                         continue;
-                    checkTwoTris( aFace, bFace, myRes );
-                    if ( anyIntersection && !myRes.empty() )
+                    checkTwoTris( aFace, bFace, *myRes.vec );
+                    if ( anyIntersection && !myRes.vec->empty() )
                     {
                         anyIntersectionAtm.store( true, std::memory_order_relaxed );
                         break;
@@ -223,6 +233,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     mySubtasks.push_back( { s.aNode, bNode.r } );
                 }
             }
+            myRes.last = (int)myRes.vec->size();
             subtaskRes[is] = std::move( myRes );
         }
     } );
@@ -230,10 +241,10 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     // unite results from sub-trees into final vectors
     size_t cols = 0;
     for ( const auto & s : subtaskRes )
-        cols += s.size();
+        cols += s.last - s.first;
     res.reserve( cols );
     for ( const auto & s : subtaskRes )
-        res.insert( res.end(), s.begin(), s.end() );
+        res.insert( res.end(), s.vec->begin() + s.first, s.vec->begin() + s.last );
 
     return res;
 }

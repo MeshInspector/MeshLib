@@ -237,6 +237,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                 mySubtasks.push_back( { s.aNode, bNode.r } );
             }
         }
+        mySubtasks.clear();
         myRes.last = (int)myRes.vec->size();
         subtaskRes[is] = std::move( myRes );
     } );

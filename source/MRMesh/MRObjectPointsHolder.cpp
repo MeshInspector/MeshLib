@@ -343,6 +343,7 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 {
+    MR_TIMER;
     VisualObject::deserializeFields_( root );
 
     Vector4f resVec;

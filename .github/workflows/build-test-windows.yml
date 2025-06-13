@@ -263,6 +263,7 @@ jobs:
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests
+        timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 

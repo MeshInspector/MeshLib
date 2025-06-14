@@ -23,6 +23,7 @@ std::vector<std::string> getTPMSTypeNames()
     };
 }
 
+using TPMSFunction = float(*)( const Vector3f& );
 namespace TPMSFunctions
 {
 

@@ -19,12 +19,6 @@ enum class TPMSType : int
 };
 MRVOXELS_API std::vector<std::string> getTPMSTypeNames();
 
-using TPMSFunction = float(*)( const Vector3f& );
-
-/// Get TPMS by its type
-MRVOXELS_API TPMSFunction getTPMSFunction( TPMSType type );
-
-
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)
 /// @param type Type of the surface
 /// @param size Size of the cube with the surface

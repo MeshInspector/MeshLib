@@ -22,7 +22,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
-    Timer t( "init" );
+    Timer t( "1 init" );
 
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
@@ -162,7 +162,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         }
     };
 
-    t.restart( "main" );
+    t.restart( "2 process" );
 
     struct ThreadData
     {
@@ -243,6 +243,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     } );
 
     // unite results from sub-trees into final vectors
+    t.restart( "3 unite" );
     size_t cols = 0;
     for ( const auto & s : subtaskRes )
         cols += s.last - s.first;

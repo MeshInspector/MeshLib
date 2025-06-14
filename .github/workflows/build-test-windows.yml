@@ -172,7 +172,7 @@ jobs:
 
       - name: Restore Dependencies
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: codebeltnet/dotnet-restore@1cf30dd0fdddac25bc7dcb559c6d0c310fb0d472 # v2
+        uses: codebeltnet/dotnet-restore@7a827ce5193af33b950d0fedfc0277cab2ff8887 # v2
         with:
           projects: 'source/**/*.csproj'
 

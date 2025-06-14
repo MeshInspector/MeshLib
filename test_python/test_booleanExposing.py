@@ -51,7 +51,7 @@ def test_boolean_exposing():
     assert filteredOldFacesA.count() == 6
 
 
-def test_unite_may_meshes():
+def test_unite_many_meshes():
     size = mrmesh.Vector3f.diagonal(2)
     poses = [
         mrmesh.Vector3f.diagonal(-1),

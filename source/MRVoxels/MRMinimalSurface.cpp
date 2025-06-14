@@ -107,7 +107,7 @@ Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, f
         return unexpected( res.errorString );
 
     res.mesh.topology.flipOrientation();
-    return res.mesh;
+    return std::move( res.mesh );
 }
 
 

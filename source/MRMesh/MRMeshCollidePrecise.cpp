@@ -22,13 +22,32 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
-    Timer t( "1 init" );
+    // parallel prepare of int boxes that will be used for consistency with precise intersections
+    Timer t( "1 precise boxes" );
+    Vector<Box3i, NodeId> aPreciseBoxes;
+    aPreciseBoxes.resizeNoInit( aTree.nodes().size() );
+    ParallelFor( aPreciseBoxes, [&]( NodeId i )
+    {
+        const auto & node = aTree.nodes()[i];
+        aPreciseBoxes[i] = Box3i{ conv( node.box.min ), conv( node.box.max ) };
+    } );
+
+    Vector<Box3i, NodeId> bPreciseBoxes;
+    bPreciseBoxes.resizeNoInit( bTree.nodes().size() );
+    ParallelFor( bPreciseBoxes, [&]( NodeId i )
+    {
+        const auto & node = bTree.nodes()[i];
+        auto transformedBoxb = transformed( node.box, rigidB2A );
+        bPreciseBoxes[i] = Box3i{ conv( transformedBoxb.min ), conv( transformedBoxb.max ) };
+    } );
 
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
+    t.restart( "2 top subtasks" );
+
     std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
-    // tested on two Spheres each with 3366 vertices:
+    // tested on two Spheres each with 3366 vertices (these numbers are outdated after preparation of precise boxes):
     // 16 -> init=0.886 (13%), main=5.948, total=6.834
     // 14 -> init=0.429 ( 7%), main=5.990, total=6.419
     // 12 -> init=0.226 ( 3%), main=6.445, total=6.671
@@ -39,16 +58,14 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         {
             const auto s = subtasks.back();
             subtasks.pop_back();
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
 
-            // check intersection in int boxes for consistency with precise intersections
-            auto transformedBoxb = transformed( bNode.box, rigidB2A );
-            Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
-            Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
+            const Box3i& aBox = aPreciseBoxes[s.aNode];
+            const Box3i& bBox = bPreciseBoxes[s.bNode];
             if ( !aBox.intersects( bBox ) )
                 continue;
 
+            const auto & aNode = aTree[s.aNode];
+            const auto & bNode = bTree[s.bNode];
             if ( aNode.leaf() && bNode.leaf() )
             {
                 leafTasks.push_back( s );
@@ -162,7 +179,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         }
     };
 
-    t.restart( "2 process" );
+    // checks subtasks in parallel
+    t.restart( "3 process" );
 
     struct ThreadData
     {
@@ -182,7 +200,6 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     std::vector<SubtaskRes> subtaskRes( subtasks.size() );
 
     std::atomic<bool> anyIntersectionAtm{ false };
-    // checks subtasks in parallel
     ParallelFor( subtasks, threadData, [&]( size_t is, ThreadData & tls )
     {
         std::vector<NodeNode>& mySubtasks = tls.subtasks;
@@ -196,16 +213,14 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                 break;
             const auto s = mySubtasks.back();
             mySubtasks.pop_back();
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
 
-            // check intersection in int boxes for consistency with precise intersections
-            auto transformedBoxb = transformed( bNode.box, rigidB2A );
-            Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
-            Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
+            const Box3i& aBox = aPreciseBoxes[s.aNode];
+            const Box3i& bBox = bPreciseBoxes[s.bNode];
             if ( !aBox.intersects( bBox ) )
                 continue;
 
+            const auto & aNode = aTree[s.aNode];
+            const auto & bNode = bTree[s.bNode];
             if ( aNode.leaf() && bNode.leaf() )
             {
                 const auto aFace = aNode.leafId();
@@ -242,8 +257,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         subtaskRes[is] = std::move( myRes );
     } );
 
-    // unite results from sub-trees into final vectors
-    t.restart( "3 unite" );
+    // unite results from sub-trees into final vector
+    t.restart( "4 unite" );
     size_t cols = 0;
     for ( const auto & s : subtaskRes )
         cols += s.last - s.first;

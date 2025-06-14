@@ -46,7 +46,7 @@ float DoubleGyroid( const Vector3f& p )
            - ( std::cos(2*p.x)*std::cos(2*p.y) + std::cos(2*p.y)*std::cos(2*p.z) + std::cos(2*p.z)*std::cos(2*p.x) );
 }
 
-};
+}
 
 
 TPMSFunction getTPMSFunction( TPMSType type )
@@ -114,4 +114,4 @@ Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, f
 
 
 
-};
+}

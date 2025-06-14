@@ -34,9 +34,9 @@ MRVOXELS_API TPMSFunction getTPMSFunction( TPMSType type );
 MRVOXELS_API FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution );
 
 /// Constructs TPMS level-set and then convert it to mesh
-MRVOXELS_API Expected<Mesh> buildTPMSSurface( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso );
+MRVOXELS_API Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso );
 
 /// Constructs TPMS-filling for the given @p mesh
-MRVOXELS_API Expected<Mesh> buildTPMSSurface( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso );
+MRVOXELS_API Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso );
 
 };

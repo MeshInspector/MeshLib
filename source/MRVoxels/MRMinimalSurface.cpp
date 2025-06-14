@@ -86,16 +86,16 @@ FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequ
 }
 
 
-Expected<Mesh> buildTPMSSurface( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso )
+Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso )
 {
     return marchingCubes( buildTPMSVolume( type, size, frequency, resolution ), { .iso = iso } );
 }
 
-Expected<Mesh> buildTPMSSurface( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso )
+Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso )
 {
     // first construct a surface by the bounding box of the mesh
     const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    auto sponge = buildTPMSSurface( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso );
+    auto sponge = buildTPMS( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso );
     if ( !sponge )
         return sponge;
 

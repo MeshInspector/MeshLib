@@ -52,6 +52,7 @@
     <ClCompile Include="MRVoxelsApplyTransform.cpp" />
     <ClCompile Include="MRVoxelFilter.cpp" />
     <ClCompile Include="MRWeightedPointsShell.cpp" />
+    <ClCompile Include="MRMinimalSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
@@ -97,6 +98,7 @@
     <ClInclude Include="MRVoxelsVolumeCachingAccessor.h" />
     <ClInclude Include="MRVoxelFilter.h" />
     <ClInclude Include="MRWeightedPointsShell.h" />
+    <ClInclude Include="MRMinimalSurface.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

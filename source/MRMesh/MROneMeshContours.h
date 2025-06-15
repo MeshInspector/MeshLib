@@ -23,7 +23,6 @@ struct SortIntersectionsData
 // Simple point on mesh, represented by primitive id and coordinate in mesh space
 struct OneMeshIntersection
 {
-    enum VariantIndex { Face, Edge, Vertex };
     std::variant<FaceId, EdgeId, VertId> primitiveId;
 
     Vector3f coordinate;

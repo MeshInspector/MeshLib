@@ -30,7 +30,7 @@ bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour&
     FaceBitSet fbs( topology.faceSize() );
     for ( const auto& inter : contour.intersections )
     {
-        assert( inter.primitiveId.index() == OneMeshIntersection::Edge );
+        assert( std::holds_alternative<EdgeId>( inter.primitiveId ) );
         auto eid = std::get<EdgeId>( inter.primitiveId );
         if ( auto l = topology.left( eid ) )
             fbs.set( l );

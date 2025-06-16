@@ -38,6 +38,7 @@
     <ClCompile Include="MRVector3.c" />
     <ClCompile Include="SimpleObjects.c" />
     <ClCompile Include="TestFunctions.c" />
+    <ClCompile Include="MRPointsToMeshProjector.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMeshC\MRMeshC.vcxproj">
@@ -72,6 +73,7 @@
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="SimpleObjects.h" />
+    <ClInclude Include="MRPointsToMeshProjector.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

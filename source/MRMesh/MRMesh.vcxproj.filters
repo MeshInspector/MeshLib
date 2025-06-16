@@ -1324,6 +1324,10 @@
     <ClInclude Include="MROneMeshContours.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
+    <ClInclude Include="MRInplaceStack.h" />
+    <ClInclude Include="MRUnionFindParallel.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

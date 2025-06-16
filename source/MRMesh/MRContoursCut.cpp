@@ -561,7 +561,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             newVertId = {}; newEdgeId = {};
 
             const auto& inter = inContour[intersectionId];
-            bool isVert = inter.primitiveId.index() == OneMeshIntersection::Vertex;
+            bool isVert = std::holds_alternative<VertId>( inter.primitiveId );
             bool isNextVert{false};
             if ( intersectionId + 1 < inContour.size() || !closed )
             {
@@ -577,7 +577,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             if ( intersectionId + 1 < inContour.size() )
             {
                 const auto& nextPrimId = inContour[intersectionId + 1].primitiveId;
-                isNextVert = nextPrimId.index() == OneMeshIntersection::Vertex;
+                isNextVert = std::holds_alternative<VertId>( nextPrimId );
 
                 if ( isVert )
                 {
@@ -598,7 +598,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                     else
                     {
                         newEdgeId = mesh.topology.makeEdge();
-                        if ( nextPrimId.index() == OneMeshIntersection::Edge )
+                        if ( std::holds_alternative<EdgeId>( nextPrimId ) )
                         {
                             auto e = std::get<EdgeId>( nextPrimId );
                             mesh.topology.splice( mesh.topology.next( e.sym() ).sym(), newEdgeId );
@@ -645,13 +645,13 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                 else
                 {
                     const auto& prevInterPrimId = inContour[intersectionId - 1].primitiveId;
-                    if ( prevInterPrimId.index() == OneMeshIntersection::Edge )
+                    if ( std::holds_alternative<EdgeId>( prevInterPrimId ) )
                     {
                         auto e = std::get<EdgeId>( prevInterPrimId );
                         invalidateFace( mesh.topology, res.removedFaces, contourId, intersectionId - 1, mesh.topology.next( e ).sym(), oldEdgesSize );
                         mesh.topology.splice( mesh.topology.next( e ).sym(), path[intersectionId - 1].sym() );
                     }
-                    else if ( prevInterPrimId.index() == OneMeshIntersection::Face )
+                    else if ( std::holds_alternative<FaceId>( prevInterPrimId ) )
                     {
                         auto currVert = newVertId;
                         if ( !currVert )
@@ -684,7 +684,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                 invalidateFace( mesh.topology, res.removedFaces, contourId, intersectionId, newEdgeId, oldEdgesSize );
             }
             // add note to edgeData
-            if ( newVertId.valid() && inter.primitiveId.index() == OneMeshIntersection::Edge )
+            if ( newVertId.valid() && std::holds_alternative<EdgeId>( inter.primitiveId ) )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
                 auto& edgeData = res.edgeData[thisEdge.undirected()];
@@ -700,18 +700,18 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                     iterateFindRemovedFaceInfo( res.removedFaces, contourId, intersectionId, thisEdge );
             }
             // fill removed tris
-            if ( inter.primitiveId.index() == OneMeshIntersection::Face )
+            if ( std::holds_alternative<FaceId>( inter.primitiveId ) )
                 removedFacesInfo[intersectionId].f = std::get<FaceId>( inter.primitiveId );
 
         }
         if ( closed )
         {
-            if ( inContour.back().primitiveId.index() != OneMeshIntersection::Vertex )
+            if ( !std::holds_alternative<VertId>( inContour.back().primitiveId ) )
                 mesh.topology.splice( path.back().sym(), path.front() );
         }
         else
         {
-            if ( inContour.back().primitiveId.index() != OneMeshIntersection::Vertex )
+            if ( !std::holds_alternative<VertId>( inContour.back().primitiveId ) )
             {
                 assert( newVertId.valid() );
                 mesh.topology.setOrg( path.back().sym(), newVertId );
@@ -1136,7 +1136,7 @@ Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const
     {
         const auto inter = initCutContours.intersections[i];
         VertId interVertId;
-        if ( inter.primitiveId.index() == OneMeshIntersection::VariantIndex::Vertex )
+        if ( std::holds_alternative<VertId>( inter.primitiveId ) )
             interVertId = std::get<VertId>( inter.primitiveId );
         else
             interVertId = currentId++;

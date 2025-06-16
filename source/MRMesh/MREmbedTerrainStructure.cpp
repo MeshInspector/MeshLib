@@ -337,7 +337,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
             res.contours[i] = std::move( *contourRes );
             for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
             {
-                if ( res.contours[i].intersections[j].primitiveId.index() == OneMeshIntersection::VariantIndex::Edge )
+                if ( std::holds_alternative<EdgeId>( res.contours[i].intersections[j].primitiveId ) )
                 {
                     lone = false;
                     break;

@@ -117,7 +117,7 @@
     <CopyFileToFolders Include="MRRibbonCommonMenuStructure.ui.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <None Include="$(ProjectDir)..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\icons\X0_5\Add custom theme.png">

@@ -38,9 +38,12 @@ struct VarEdgeTri
         bool operator==( const FlaggedTri& ) const = default;
     } flaggedTri;
 
-    FaceId tri() const { return FaceId( flaggedTri.face ); }
-    bool isEdgeATriB() const { return bool( flaggedTri.isEdgeATriB ); }
-    EdgeTri edgeTri() const { return EdgeTri( edge, tri() ); }
+    [[nodiscard]] FaceId tri() const { return FaceId( flaggedTri.face ); }
+    [[nodiscard]] bool isEdgeATriB() const { return bool( flaggedTri.isEdgeATriB ); }
+    [[nodiscard]] EdgeTri edgeTri() const { return EdgeTri( edge, tri() ); }
+
+    [[nodiscard]] bool valid() const { return edge.valid(); }
+    [[nodiscard]] explicit operator bool() const { return edge.valid(); }
 
     VarEdgeTri() = default;
     VarEdgeTri( bool isEdgeATriB, EdgeId e, FaceId t )
@@ -52,7 +55,7 @@ struct VarEdgeTri
     }
     VarEdgeTri( bool isEdgeATriB, const EdgeTri& et ) : VarEdgeTri( isEdgeATriB, et.edge, et.tri ) {}
 
-    bool operator==( const VarEdgeTri& ) const = default;
+    [[nodiscard]] bool operator==( const VarEdgeTri& ) const = default;
 };
 static_assert( sizeof( VarEdgeTri ) == 8 );
 

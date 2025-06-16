@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRVector.h"
-#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include <utility>
 
@@ -74,11 +73,14 @@ public:
         return firstRoot == secondRoot;
     }
 
+    /// returns true if given element is the root of some set
+    bool isRoot( I a ) const { return parents_[a] == a; }
+
+    /// return parent element of this element, which is equal to given element only for set's root
+    I parent( I a ) const { return parents_[a]; }
+
     /// finds the root of the set containing given element with optimizing data structure updates
-    I find( I a )
-    {
-        return updateRoot_( a, findRootNoUpdate_( a ) );
-    }
+    I find( I a ) { return updateRoot_( a, findRootNoUpdate_( a ) ); }
 
     /// finds the root of the set containing given element with optimizing data structure in the range [begin, end)
     I findUpdateRange( I a, I begin, I end )
@@ -99,14 +101,6 @@ public:
 
     /// returns the number of elements in the set containing given element
     SizeType sizeOfComp( I a ) { return sizes_[ find( a ) ]; }
-
-    /// constructs in parallel the bitset with 1-bits corresponding to root elements;
-    /// if region is provided then only its elements will be checked
-    TypedBitSet<I> findRootsBitSet( const TypedBitSet<I> * region = nullptr ) const;
-
-    /// constructs in parallel the bitset with 1-bits corresponding to the elements from same set as (a);
-    /// if region is provided then only its elements will be checked
-    TypedBitSet<I> findComponentBitSet( I a, const TypedBitSet<I> * region = nullptr );
 
 private:
     /// finds the root of the set containing given element without optimizing data structure updates
@@ -158,36 +152,5 @@ private:
     /// size of each set, contain valid values only for sets' roots
     Vector<SizeType, I> sizes_;
 };
-
-template <typename I>
-TypedBitSet<I> UnionFind<I>::findRootsBitSet( const TypedBitSet<I> * region ) const
-{
-    MR_TIMER;
-    TypedBitSet<I> res( parents_.size() );
-    BitSetParallelForAll( res, [&]( I i )
-    {
-        if ( region && !region->test( i ) )
-            return;
-        if ( parents_[i] == i )
-            res.set( i );
-    } );
-    return res;
-}
-
-template <typename I>
-TypedBitSet<I> UnionFind<I>::findComponentBitSet( I a, const TypedBitSet<I> * region )
-{
-    MR_TIMER;
-    TypedBitSet<I> res( parents_.size() );
-    a = find( a );
-    BitSetParallelForAllRanged( res, [&]( I i, const auto & range )
-    {
-        if ( region && !region->test( i ) )
-            return;
-        if ( a == findUpdateRange( i, range.beg, range.end ) )
-            res.set( i );
-    } );
-    return res;
-}
 
 } //namespace MR

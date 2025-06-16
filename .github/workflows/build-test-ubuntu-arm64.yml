@@ -104,7 +104,7 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Install thirdparty libs
         run: |
@@ -178,6 +178,7 @@ jobs:
         run: ./build/${{ matrix.config }}/bin/MRTestC
 
       - name: Python Sanity Tests
+        timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 

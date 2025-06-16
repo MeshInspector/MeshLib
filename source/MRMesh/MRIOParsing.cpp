@@ -2,6 +2,7 @@
 #include "MRVector3.h"
 #include "MRColor.h"
 #include "MRString.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
 #include <boost/spirit/home/x3.hpp>
@@ -107,6 +108,7 @@ std::streamoff getStreamSize( std::istream& in )
 
 Expected<std::string> readString( std::istream& in )
 {
+    MR_TIMER;
     std::string str;
     if ( auto result = readFromStream( in, str ); !result )
         return unexpected( std::move( result.error() ) );

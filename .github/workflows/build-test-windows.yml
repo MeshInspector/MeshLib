@@ -82,6 +82,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Checkout third-party submodules
+        run: |
+          # Download sub-submodules for certain submodules. We don't recurse above in Checkout to improve build performance. See: https://github.com/actions/checkout/issues/1779
+          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         continue-on-error: true
@@ -263,6 +268,7 @@ jobs:
         run: py -3 scripts\run_c_sharp_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Sanity Tests
+        timeout-minutes: 8
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 

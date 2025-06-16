@@ -22,6 +22,7 @@
 #include "MRMeshSave.h"
 #include "MRObjectMesh.h"
 #include "MRObjectSave.h"
+#include "MRIOParsing.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -32,6 +33,7 @@ namespace MR
 
 Expected<Json::Value> deserializeJsonValue( const std::string& str )
 {
+    Timer t( "deserializeJsonValue( const std::string& )" );
     Json::Value root;
     Json::CharReaderBuilder readerBuilder;
     std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
@@ -47,7 +49,7 @@ Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path )
     if ( path.empty() )
         return unexpected( "Cannot find parameters file" );
 
-    std::ifstream ifs( path );
+    std::ifstream ifs( path, std::ifstream::binary );
     if ( !ifs || ifs.bad() )
         return unexpected( "Cannot open json file " + utf8string( path ) );
 
@@ -56,13 +58,13 @@ Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path )
 
 Expected<Json::Value> deserializeJsonValue( std::istream& in )
 {
-    std::string str( ( std::istreambuf_iterator<char>( in ) ),
-                     std::istreambuf_iterator<char>() );
+    Timer t( "deserializeJsonValue( std::istream& )" );
 
-    if ( !in || in.bad() )
-        return unexpected( "Cannot read json file" );
+    auto maybeStr = readString( in );
+    if ( !maybeStr )
+        return unexpected( "Json " + maybeStr.error() );
 
-    return deserializeJsonValue( str );
+    return deserializeJsonValue( *maybeStr );
 }
 
 void serializeToJson( const Vector2i& vec, Json::Value& root )
@@ -161,6 +163,7 @@ void serializeToJson( const BitSet& bitset, Json::Value& root )
 
 void serializeToJson( const MeshTexture& texture, Json::Value& root )
 {
+    Timer t( "serializeToJson( const MeshTexture& )" );
     switch ( texture.filter )
     {
     case FilterType::Linear:
@@ -453,6 +456,7 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
 
 void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
 {
+    Timer t( "deserializeFromJson( MeshTexture& )" );
     if ( root["FilterType"].isString() )
     {
         auto filterName = root["FilterType"].asString();

@@ -923,7 +923,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <None Include="$(ProjectDir)..\.editorconfig" />
     <None Include="MRMacOSOpenDocumentsHandler.mm">
       <Filter>Viewer</Filter>
     </None>

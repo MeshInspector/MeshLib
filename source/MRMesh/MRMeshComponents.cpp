@@ -7,6 +7,7 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
+#include "MRUnionFindParallel.h"
 #include <parallel_hashmap/phmap.h>
 #include <climits>
 
@@ -133,7 +134,7 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
 
     VertId largestRoot;
     int largestNumVerts = 0;
-    for ( auto r : unionFindStruct.findRootsBitSet( region ) )
+    for ( auto r : findRootsBitSet( unionFindStruct, region ) )
     {
         if ( !largestRoot || largestNumVerts < unionFindStruct.sizeOfComp( r ) )
         {
@@ -144,7 +145,7 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
     if ( !largestRoot )
         return {}; // e.g. empty region
 
-    return unionFindStruct.findComponentBitSet( largestRoot, region );
+    return findComponentBitSet( unionFindStruct, largestRoot, region );
 }
 
 VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region )

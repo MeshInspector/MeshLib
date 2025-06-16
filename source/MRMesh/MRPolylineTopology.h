@@ -73,6 +73,8 @@ public:
 
     /// for all valid vertices this vector contains an edge with the origin there
     [[nodiscard]] const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
+    /// for all edges this vector contains its origin
+    [[nodiscard]] MRMESH_API Vector<VertId, EdgeId> getOrgs() const;
     /// returns valid edge if given vertex is present in the mesh
     [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
     /// returns true if given vertex is present in the mesh

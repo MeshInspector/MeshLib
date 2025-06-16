@@ -1,0 +1,9 @@
+name: Get AWS instance type
+
+outputs:
+  aws_instance_type:
+    description: AWS instance type
+
+runs:
+  using: node20
+  main: index.js

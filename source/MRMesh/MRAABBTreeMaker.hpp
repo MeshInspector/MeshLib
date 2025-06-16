@@ -10,6 +10,9 @@
 namespace MR
 {
 
+namespace
+{
+
 template<typename T>
 struct Subtree
 {
@@ -49,15 +52,25 @@ template<typename T>
 int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf )
 {
     assert( firstLeaf + 1 < lastLeaf );
-    auto boxDiag = box.max - box.min;
-    const int splitDim = int( std::max_element( begin( boxDiag ), end( boxDiag ) ) - begin( boxDiag ) );
 
-    int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
-    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf,
-        [&]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
+    // define total order of BoxedLeaves: no two distinct leaves are equivalent
+    auto less = [sortedDims = findSortedBoxDims( box )]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
+    {
+        // first compare (and split later) by the largest box dimension
+        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
         {
-            return a.box.min[splitDim] + a.box.max[splitDim] < b.box.min[splitDim] + b.box.max[splitDim];
-        } );
+            const int splitDim = sortedDims[i];
+            const auto aDim = a.box.min[splitDim] + a.box.max[splitDim];
+            const auto bDim = b.box.min[splitDim] + b.box.max[splitDim];
+            if ( aDim != bDim )
+                return aDim < bDim;
+        }
+        // if two boxes have equal centers then compare by id to distinguish them
+        return a.leafId < b.leafId;
+    };
+
+    const int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
+    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf, less );
     return midLeaf;
 }
 
@@ -123,6 +136,8 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
         stack.push( ls ); // to process it first
     }
 }
+
+} // anonymous namespace
 
 template<typename T>
 auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec

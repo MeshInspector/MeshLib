@@ -320,6 +320,31 @@ inline auto depth( const Box<V>& box )
     return box.max.z - box.min.z;
 }
 
+/// returns a vector with unique integer values, each representing a dimension of the box;
+/// the dimensions are sorted according to the sizes of the box along each dimension:
+/// the dimension with the smallest size is first, largest size - last.
+/// E.g. findSortedBoxDims( Box3f( {0, 0, 0}, {2, 1, 3} ) ) == Vector3i(1, 0, 2)
+template <typename V>
+inline auto findSortedBoxDims( const Box<V>& box ) -> typename VectorTraits<V>::template ChangeBaseType<int>
+{
+    constexpr auto es = Box<V>::elements;
+    auto boxDiag = box.max - box.min;
+    std::pair<float, int> ps[es];
+    for ( int i = 0; i < es; ++i )
+        ps[i] = { boxDiag[i], i };
+
+    // bubble sort (optimal for small array)
+    for ( int i = 0; i + 1 < es; ++i )
+        for ( int j = i + 1; j < es; ++j )
+            if ( ps[j] < ps[i] )
+                std::swap( ps[i], ps[j] );
+
+    typename VectorTraits<V>::template ChangeBaseType<int> res( noInit );
+    for ( int i = 0; i < es; ++i )
+        res[i] = ps[i].second;
+    return res;
+}
+
 /// get<0> returns min, get<1> returns max
 template<size_t I, typename V>
 constexpr const V& get( const Box<V>& box ) noexcept { return box[int( I )]; }

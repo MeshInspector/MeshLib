@@ -52,6 +52,8 @@ TEST(MRMesh, Box)
     EXPECT_EQ( mm0.corner( 1 ),  2 );
     EXPECT_EQ( mm0.getMinBoxCorner(  1 ), 0 );
     EXPECT_EQ( mm0.getMinBoxCorner( -1 ), 1 );
+
+    EXPECT_EQ( findSortedBoxDims( Box3f( { 0, 0, 0 }, { 2, 1, 3 } ) ), Vector3i( 1, 0, 2 ) );
 }
 
 } //namespace MR

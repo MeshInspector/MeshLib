@@ -28,9 +28,12 @@ MRVOXELS_API std::vector<std::string> getTPMSTypeNames();
 MRVOXELS_API FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution );
 
 /// Constructs TPMS level-set and then convert it to mesh
-MRVOXELS_API Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso );
+MRVOXELS_API Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb = {} );
 
 /// Constructs TPMS-filling for the given @p mesh
-MRVOXELS_API Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso );
+MRVOXELS_API Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb = {} );
+
+/// Returns number of voxels that would be used to perform \ref fillWithTPMS
+MRVOXELS_API size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency, float resolution );
 
 }

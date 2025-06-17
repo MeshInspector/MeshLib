@@ -434,7 +434,6 @@
     <ClCompile Include="MROutlierPoints.cpp" />
     <ClCompile Include="MRParallelProgressReporter.cpp" />
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
-    <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
     <ClCompile Include="MRAABBTreeObjects.cpp" />

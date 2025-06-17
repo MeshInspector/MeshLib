@@ -34,7 +34,7 @@
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
-    <ClCompile Include="MRTbbTests.cpp" />
+    <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />

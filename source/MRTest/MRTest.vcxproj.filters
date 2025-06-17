@@ -97,7 +97,7 @@
     <ClCompile Include="MRMeshComponentsTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRTbbTests.cpp">
+    <ClCompile Include="MRTBBTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -14,6 +14,7 @@ REGISTER_AUTO_CAST( MeshTopology )
 REGISTER_AUTO_CAST( ThreeVertIds )
 REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST( VertId )
+REGISTER_AUTO_CAST( FaceId )
 REGISTER_VECTOR( Triangulation )
 REGISTER_VECTOR( EdgePath )
 
@@ -67,4 +68,10 @@ void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top_, MREdgeId a_, MRV
 {
     ARG( top ); ARG_VAL( a ); ARG( v0 ); ARG( v1 ); ARG( v2 );
     top.getLeftTriVerts( a, v0, v1, v2 );
+}
+
+void mrMeshTopologyGetTriVerts( const MRMeshTopology* top_, MRFaceId f_, MRVertId* v0_, MRVertId* v1_, MRVertId* v2_ )
+{
+    ARG( top ); ARG_VAL( f ); ARG( v0 ); ARG( v1 ); ARG( v2 );
+    top.getTriVerts( f, v0, v1, v2 );
 }

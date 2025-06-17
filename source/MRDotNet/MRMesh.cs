@@ -250,6 +250,11 @@ namespace MR
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrMeshTopologyGetLeftTriVerts(IntPtr top, EdgeId a, ref VertId v0, ref VertId v1, ref VertId v2);
 
+            /// gets 3 vertices of given triangular face;
+            /// the vertices are returned in counter-clockwise order if look from mesh outside
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern void mrMeshTopologyGetTriVerts(IntPtr top, FaceId f, ref VertId v0, ref VertId v1, ref VertId v2);
+
             /// returns the number of hole loops in the mesh;
             /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -322,6 +327,10 @@ namespace MR
             /// computes the closest point on mesh (or its region) to given point
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRMeshProjectionResult mrFindProjection(ref MRVector3f pt, ref MRMeshPart mp, ref MRFindProjectionParameters parameters);
+
+            /// converts face id and 3d point into barycentric representation
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern MRMeshTriPoint mrToTriPoint(IntPtr mesh, FaceId f, MRVector3f point);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrStringData(IntPtr str);
@@ -544,6 +553,39 @@ namespace MR
 
                 return res;
             }
+
+            /// gets 3 vertices of given triangular face;
+            /// the vertices are returned in counter-clockwise order if look from mesh outside
+            public VertId[] GetTriVerts(FaceId faceId)
+            {
+                VertId[] res = new VertId[3];
+                VertId v0 = new VertId();
+                VertId v1 = new VertId();
+                VertId v2 = new VertId();
+
+                FaceId mrFaceId = new FaceId();
+                mrFaceId.Id = faceId.Id;
+
+                mrMeshTopologyGetTriVerts(meshTopology_, mrFaceId, ref v0, ref v1, ref v2);
+                res[0].Id = v0.Id;
+                res[1].Id = v1.Id;
+                res[2].Id = v2.Id;
+
+                return res;
+            }
+
+            public MeshTriPoint ToTriPoint(FaceId f, Vector3f p)
+            {
+                MRVector3f v = new MRVector3f();
+                v.x = p.X; v.y = p.Y; v.z = p.Z;
+                MRMeshTriPoint mr = mrToTriPoint(mesh_, f, v);
+                MeshTriPoint res = new MeshTriPoint();
+                res.e = mr.e;
+                res.bary.a = mr.bary.a;
+                res.bary.b = mr.bary.b;
+                return res;
+            }
+
             /// transforms all points
             public void Transform(AffineXf3f xf)
             {

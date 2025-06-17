@@ -5,6 +5,7 @@
 #include "MRBox.h"
 #include "MRId.h"
 #include "MRMeshTopology.h"
+#include "MRMeshTriPoint.h"
 
 MR_EXTERN_C_BEGIN
 
@@ -111,5 +112,8 @@ MRMESHC_API void mrMeshAddMesh( MRMesh* mesh, const MRMesh* from );
 
 /// computes normal in a vertex using sum of directed areas of neighboring triangles
 MRMESHC_API MRVector3f mrMeshNormalFromVert( const MRMesh* mesh, MRVertId v );
+
+/// converts face id and 3d point into barycentric representation
+MRMESHC_API MRMeshTriPoint mrToTriPoint( const MRMesh* mesh, MRFaceId f, MRVector3f point );
 
 MR_EXTERN_C_END

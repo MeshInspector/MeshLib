@@ -34,6 +34,10 @@ MRMESHC_API MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTop
 /// the vertices are returned in counter-clockwise order if look from mesh outside
 MRMESHC_API void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top, MREdgeId a, MRVertId* v0, MRVertId* v1, MRVertId* v2 );
 
+/// gets 3 vertices of given triangular face;
+/// the vertices are returned in counter-clockwise order if look from mesh outside
+MRMESHC_API void mrMeshTopologyGetTriVerts( const MRMeshTopology* top, MRFaceId f, MRVertId* v0, MRVertId* v1, MRVertId* v2 );
+
 /// returns the number of hole loops in the mesh;
 /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
 MRMESHC_API int mrMeshTopologyFindNumHoles( const MRMeshTopology* top, MREdgeBitSet* holeRepresentativeEdges );

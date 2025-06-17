@@ -27,6 +27,7 @@ MRPointCloud* mrPointCloudFromPoints( const MRVector3f* points_, size_t pointsNu
 
     PointCloud res;
     res.points = { points.begin(), points.end() };
+    res.validPoints.resize( pointsNum, true );
     RETURN_NEW( std::move( res ) );
 }
 

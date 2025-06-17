@@ -47,6 +47,9 @@ struct FillHoleNicelySettings
 
     /// optional colors of vertices; if provided then elements corresponding to new vertices will be added there
     VertColors * colorMap = {};
+
+    /// optional colors of faces; if provided then elements corresponding to new faces will be added there
+    FaceColors * faceColors = {};
 };
 
 /// fills a hole in mesh specified by one of its edge,

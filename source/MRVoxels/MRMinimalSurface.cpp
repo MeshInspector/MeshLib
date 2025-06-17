@@ -47,8 +47,6 @@ float DoubleGyroid( const Vector3f& p )
 }
 
 }
-
-
 TPMSFunction getTPMSFunction( TPMSType type )
 {
     switch ( type )
@@ -67,18 +65,35 @@ TPMSFunction getTPMSFunction( TPMSType type )
     }
 }
 
-FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution )
+
+namespace
+{
+
+struct DimsAndSize
+{
+    Vector3i dims;
+    Vector3f size;
+};
+DimsAndSize getDimsAndSize( const Vector3f& size, float frequency, float resolution )
 {
     const auto N = frequency * size;            // number of repetitions (for each axis)
     const auto dimsF = resolution * N;          // float-dimensions: number of voxels per repetition times the number of repetitions
     const auto voxelSize = div( size, dimsF );  // voxel-size: size divided by the number of voxels
     const Vector3i dims( (int)std::ceil( dimsF.x ), (int)std::ceil( dimsF.y ), (int)std::ceil( dimsF.z ) );
+    return { dims, voxelSize };
+}
 
+}
+
+
+FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution )
+{
+    const auto [dims, voxelSize] = getDimsAndSize( size, frequency, resolution );
     return {
-        .data = [frequency, voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )
+        .data = [frequency, voxelSizeCapture = voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )
         {
             const float w = 2.f * PI_F * frequency;
-            const Vector3f p = w * mult( voxelSize, Vector3f( pv ) + Vector3f::diagonal( 0.5f ) );
+            const Vector3f p = w * mult( voxelSizeCapture, Vector3f( pv ) + Vector3f::diagonal( 0.5f ) );
             return func( p );
         },
         .dims = dims,
@@ -87,23 +102,23 @@ FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequ
 }
 
 
-Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso )
+Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb )
 {
-    return marchingCubes( buildTPMSVolume( type, size, frequency, resolution ), { .iso = iso } );
+    return marchingCubes( buildTPMSVolume( type, size, frequency, resolution ), { .cb = cb, .iso = iso } );
 }
 
-Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso )
+Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb )
 {
     // first construct a surface by the bounding box of the mesh
     const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    auto sponge = buildTPMS( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso );
+    auto sponge = buildTPMS( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
 
     // translation to mesh csys
     const auto xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
 
-    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, &xf );
+    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );
 
@@ -111,7 +126,12 @@ Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, f
     return std::move( res.mesh );
 }
 
-
+size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency, float resolution )
+{
+    const auto extraStep = Vector3f::diagonal( 1.f / frequency );
+    const auto dims = getDimsAndSize( mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution ).dims;
+    return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
+}
 
 
 }

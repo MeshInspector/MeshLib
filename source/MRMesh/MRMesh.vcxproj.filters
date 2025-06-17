@@ -1540,9 +1540,6 @@
     <ClCompile Include="MRDistanceMapLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRAABBTreeMaker.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
     <ClCompile Include="MRDistanceMapParams.cpp">
       <Filter>Source Files\DistanceMap</Filter>
     </ClCompile>

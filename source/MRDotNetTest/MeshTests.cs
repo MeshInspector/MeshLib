@@ -253,6 +253,17 @@ namespace MR.Test
         }
 
         [Test]
+        public void TestToTriPoint()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var triVerts = cubeMesh.GetTriVerts(new FaceId(0));
+            var centerPoint = (cubeMesh.Points[triVerts[1].Id] + cubeMesh.Points[triVerts[2].Id]) * 0.5f;
+            var triPoint = cubeMesh.ToTriPoint(new FaceId(0), centerPoint);
+            Assert.That(triPoint.bary.a,Is.EqualTo( 0.5f));
+            Assert.That(triPoint.bary.b, Is.EqualTo(0.5f));
+        }
+
+        [Test]
         public void TestCalculatingVolume()
         {
             var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));

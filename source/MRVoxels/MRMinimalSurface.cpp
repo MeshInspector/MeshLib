@@ -90,10 +90,10 @@ FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequ
 {
     const auto [dims, voxelSize] = getDimsAndSize( size, frequency, resolution );
     return {
-        .data = [frequency, voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )
+        .data = [frequency, voxelSizeCapture = voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )
         {
             const float w = 2.f * PI_F * frequency;
-            const Vector3f p = w * mult( voxelSize, Vector3f( pv ) + Vector3f::diagonal( 0.5f ) );
+            const Vector3f p = w * mult( voxelSizeCapture, Vector3f( pv ) + Vector3f::diagonal( 0.5f ) );
             return func( p );
         },
         .dims = dims,

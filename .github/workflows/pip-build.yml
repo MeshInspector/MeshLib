@@ -337,6 +337,10 @@ jobs:
           submodules: true
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Checkout third-party submodules
+        run: |
+          git submodule update --init --recursive --depth 1 thirdparty/mrbind
+
       - name: Python setup
         env:
           ENABLE_SUDO: ${{ fromJSON('["1", "0"]')[matrix.platform == 'arm64'] }}

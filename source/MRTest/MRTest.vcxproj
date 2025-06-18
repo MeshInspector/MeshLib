@@ -19,6 +19,7 @@
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFeaturesTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />

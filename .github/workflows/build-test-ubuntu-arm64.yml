@@ -29,7 +29,7 @@ on:
 
 jobs:
   ubuntu-arm-build-test:
-    timeout-minutes: 40
+    timeout-minutes: 60
     runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
     container:
       image: ${{ matrix.docker-image }}

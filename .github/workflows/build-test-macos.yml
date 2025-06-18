@@ -159,6 +159,8 @@ jobs:
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
+        env:
+          ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
         with:
           name: Distributives_macos-${{matrix.os}}
           path: meshlib_${{matrix.os}}.pkg

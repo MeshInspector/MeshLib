@@ -267,6 +267,19 @@ void PolylineTopology::setOrg( EdgeId a, VertId v )
     }
 }
 
+Vector<VertId, EdgeId> PolylineTopology::getOrgs() const
+{
+    MR_TIMER;
+
+    Vector<VertId, EdgeId> results;
+    results.resizeNoInit( edgeSize() );
+    ParallelFor( results, [&] ( EdgeId e )
+    {
+        results[e] = org( e );
+    } );
+    return results;
+}
+
 EdgeId PolylineTopology::findEdge( VertId o, VertId d ) const
 {
     assert( o.valid() && d.valid() );

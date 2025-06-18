@@ -729,6 +729,20 @@ namespace MR
             {
                 return new Mesh(mrMakeCube(ref size.vec_, ref baseCoords.vec_));
             }
+
+            /// creates a cylinder with given parameters
+            public static Mesh MakeCylinder(float radius0, float radius1, float startAngle, float arcSize, float length, int resolution)
+            {
+                MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParameters = mrMakeCylinderAdvancedParametersNew();
+                mrMakeCylinderAdvancedParameters.radius0 = radius0;
+                mrMakeCylinderAdvancedParameters.radius1 = radius1;
+                mrMakeCylinderAdvancedParameters.startAngle = startAngle;
+                mrMakeCylinderAdvancedParameters.arcSize = arcSize;
+                mrMakeCylinderAdvancedParameters.length = length;
+                mrMakeCylinderAdvancedParameters.resolution = resolution;
+                return new Mesh(mrMakeCylinderAdvanced(ref mrMakeCylinderAdvancedParameters));
+            }
+
             /// creates a sphere of given radius and vertex count
             public static Mesh MakeSphere(float radius, int vertexCount)
             {

@@ -43,6 +43,19 @@ namespace MR
 
         #region C_STRUCTS
 
+        // parameters for \ref mrMakeCylinder
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRMakeCylinderAdvancedParameters 
+        {
+            public float radius0 = 1.0f;
+            public float radius1 = 1.0f;
+            public float startAngle = 0.0f;
+            public float arcSize = 1.0f;
+            public float length = 2.0f;
+            public int resolution = 32;
+            public MRMakeCylinderAdvancedParameters() { }
+        }
+
         /// parameters for \ref mrMakeTorus
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRMakeTorusParameters
@@ -212,6 +225,14 @@ namespace MR
         public class Mesh : MeshOrPoints, IDisposable
         {
             #region C_FUNCTIONS
+
+            // initializes a default instance
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew();
+
+            /// creates a mesh representing a cylinder with given parameters
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern IntPtr mrMakeCylinderAdvanced(ref MRMakeCylinderAdvancedParameters parameters);
 
             /// tightly packs all arrays eliminating lone edges and invalid faces and vertices
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -750,6 +771,20 @@ namespace MR
             {
                 return new Mesh(mrMakeCube(ref size.vec_, ref baseCoords.vec_));
             }
+
+            /// creates a cylinder with given parameters
+            public static Mesh MakeCylinder(float radius0, float radius1, float startAngle, float arcSize, float length, int resolution)
+            {
+                MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParameters = mrMakeCylinderAdvancedParametersNew();
+                mrMakeCylinderAdvancedParameters.radius0 = radius0;
+                mrMakeCylinderAdvancedParameters.radius1 = radius1;
+                mrMakeCylinderAdvancedParameters.startAngle = startAngle;
+                mrMakeCylinderAdvancedParameters.arcSize = arcSize;
+                mrMakeCylinderAdvancedParameters.length = length;
+                mrMakeCylinderAdvancedParameters.resolution = resolution;
+                return new Mesh(mrMakeCylinderAdvanced(ref mrMakeCylinderAdvancedParameters));
+            }
+
             /// creates a sphere of given radius and vertex count
             public static Mesh MakeSphere(float radius, int vertexCount)
             {

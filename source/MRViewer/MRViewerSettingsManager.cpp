@@ -66,6 +66,7 @@ const std::string cGlobalBasisScaleKey = "globalBasusScale";
 const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
 const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
+const std::string cSortDroppedFiles = "sortDroppedFiles";
 }
 
 namespace Defaults
@@ -140,8 +141,6 @@ void ViewerSettingsManager::saveBool( const std::string& name, bool value )
 
 void ViewerSettingsManager::resetSettings( Viewer& viewer )
 {
-    auto& cfg = Config::instance();
-
     viewer.resetSettingsFunction( &viewer );
 
     if ( viewer.globalBasisAxes )
@@ -164,7 +163,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
     {
-        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->pinTopPanel( Defaults::topPanelPinned );
         auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsList )
         {
@@ -176,7 +175,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
                 ribbonSceneObjectsList->setCloseContextOnChange( Defaults::closeContextOnChange );
 
         }
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( Defaults::autoClosePlugins );
         ribbonMenu->resetQuickAccessList();
         ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTags::Default;
     }
@@ -224,6 +223,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
+    viewer.setSortDroppedFiles( cfg.getBool( cSortDroppedFiles, viewer.getSortDroppedFiles() ) );
 
     if ( auto menu = viewer.getMenuPlugin() )
     {
@@ -523,6 +523,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     const auto& params = viewport.getParameters();
     auto& cfg = Config::instance();
     cfg.setBool( cOrthogrphicParamKey, params.orthographic );
+    cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     if ( viewer.globalBasisAxes )
     {
         Json::Value globalBasis;

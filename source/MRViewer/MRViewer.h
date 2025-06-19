@@ -596,6 +596,12 @@ public:
     [[nodiscard]] const RecentFilesStore &recentFilesStore() const { return *recentFilesStore_; }
     [[nodiscard]] RecentFilesStore &recentFilesStore() { return *recentFilesStore_; }
 
+    /// returns whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
+    [[nodiscard]] bool getSortDroppedFiles() const { return sortDroppedFiles_; }
+
+    /// sets whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
+    void setSortDroppedFiles( bool value ) { sortDroppedFiles_ = value; }
+
 private:
     Viewer();
     ~Viewer();
@@ -693,6 +699,8 @@ private:
     bool dirtyScene_{ false };
 
     bool hasScaledFramebuffer_{ false };
+
+    bool sortDroppedFiles_{ true };
 
     LaunchParams launchParams_;
 

@@ -81,6 +81,7 @@ void resetSettings( Viewer * viewer )
     viewer->mouseController().setMouseControl( rotKey, MouseMode::Roll );
     spdlog::info( "History memory limit: {}", bytesString( memLimit ) );
     viewer->getGlobalHistoryStore()->setMemoryLimit( memLimit );
+    viewer->setSortDroppedFiles( true );
 }
 
 void ViewerSetup::setupExtendedLibraries() const

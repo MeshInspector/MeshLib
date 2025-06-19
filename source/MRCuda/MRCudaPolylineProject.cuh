@@ -6,6 +6,7 @@
 namespace MR::Cuda
 {
 
+/// CUDA variant of MR::closestPointOnLineSegm( const MR::Vector2f&, const LineSegm2f& )
 __device__ inline float2 closestPointOnLineSegm( const float2& pt, const float2& a, const float2& b )
 {
     const auto ab = b - a;
@@ -19,6 +20,7 @@ __device__ inline float2 closestPointOnLineSegm( const float2& pt, const float2&
     return a * ( 1 - ratio ) + b * ratio;
 }
 
+/// CUDA variant of MR::closestPointOnLineSegm( const MR::Vector3f&, const LineSegm3f& )
 __device__ inline float3 closestPointOnLineSegm( const float3& pt, const float3& a, const float3& b )
 {
     const auto ab = b - a;
@@ -32,16 +34,18 @@ __device__ inline float3 closestPointOnLineSegm( const float3& pt, const float3&
     return a * ( 1 - ratio ) + b * ratio;
 }
 
-struct Polyline2ProjectionResult
+/// CUDA variant of MR::PolylineProjectionResult2
+struct PolylineProjectionResult2
 {
     int line;
     float2 point;
     float distSq;
 };
 
-__device__ inline Polyline2ProjectionResult findProjection( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs, float upDistLimitSq, float loDistLimitSq )
+/// CUDA variant of MR::findProjectionOnPolyline2
+__device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs, float upDistLimitSq, float loDistLimitSq )
 {
-    Polyline2ProjectionResult result
+    PolylineProjectionResult2 result
     {
         .line = -1,
         .distSq = upDistLimitSq,
@@ -87,7 +91,7 @@ __device__ inline Polyline2ProjectionResult findProjection( const float2 point, 
             const auto distSq = lengthSq( proj - point );
             if ( distSq < result.distSq )
             {
-                result = Polyline2ProjectionResult {
+                result = PolylineProjectionResult2 {
                     .line = ue,
                     .point = proj,
                     .distSq = distSq,
@@ -116,8 +120,9 @@ __device__ inline Polyline2ProjectionResult findProjection( const float2 point, 
     return result;
 }
 
+/// CUDA variant of MR::findEdgesInBall
 template <typename Func>
-__device__ void findEdgesInBall( const float3 center, const float radius, const Node3* __restrict__ nodes, const float3* __restrict__ points, const int* __restrict__ orgs, Func callback )
+__device__ void findEdgesInBall( const Node3* __restrict__ nodes, const float3* __restrict__ points, const int* __restrict__ orgs, const float3 center, const float radius, Func callback )
 {
     const auto radiusSq = radius * radius;
 

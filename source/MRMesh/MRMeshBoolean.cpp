@@ -226,8 +226,8 @@ LoneProccessingState subdivideSelfLone( Mesh& mesh, const CoordinateConverters& 
                 break;
             }
         }
-
-        visitedLone.reset( otherLoneIndex );
+        assert( loneIndex != -1 );
+        assert( otherLoneIndex != -1 );
         if ( contours[loneIndex].front().isEdgeATriB() )
             std::swap( loneIndex, otherLoneIndex );
         fLone[i] = contours[loneIndex];

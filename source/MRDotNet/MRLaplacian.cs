@@ -22,9 +22,9 @@ namespace MR
             MREdgeWeightsUnit,
 
             /// <summary>
-            /// edge weight depends on local geometry and uses cotangent values
+            /// vertex mass depends on local geometry and proportional to the area of first-ring triangles
             /// </summary>
-            MREdgeWeightsCotan
+            MRVertexMassNeiArea
         };
 
         public class Laplacian

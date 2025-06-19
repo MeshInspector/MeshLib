@@ -24,18 +24,17 @@ namespace MR.Test
             var ancV0 = mesh.Points[i0.Id];
             var ancV1 = mesh.Points[i1.Id];
 
+            EdgeWeights edgeWeights = EdgeWeights.Unit;
+            VertexMass vertexMass = VertexMass.MREdgeWeightsUnit;
+            LaplacianRememberShape rememberShape = LaplacianRememberShape.No;
+
+            // fix specific vertices
             VertBitSet freeVerts = new VertBitSet();
             freeVerts.Resize(mesh.ValidPoints.Count());
             freeVerts.Set(i0.Id, true);
             freeVerts.Set(i1.Id, true);
 
-            EdgeWeights edgeWeights = EdgeWeights.Unit;
-            VertexMass vertexMass = VertexMass.MREdgeWeightsUnit;
-            LaplacianRememberShape rememberShape = LaplacianRememberShape.No;
-
             laplacian.Init(freeVerts, edgeWeights, vertexMass, rememberShape);
-
-            // fix specific vertices
 
             // apply laplacian
             laplacian.FixVertex(i0, ref ancV0);

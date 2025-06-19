@@ -45,11 +45,9 @@ struct PolylineProjectionResult2
 /// CUDA variant of MR::findProjectionOnPolyline2
 __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs, float upDistLimitSq, float loDistLimitSq )
 {
-    PolylineProjectionResult2 result
-    {
-        .line = -1,
-        .distSq = upDistLimitSq,
-    };
+    PolylineProjectionResult2 result;
+    result.line = -1;
+    result.distSq = upDistLimitSq;
 
     struct SubTask
     {
@@ -91,11 +89,9 @@ __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const flo
             const auto distSq = lengthSq( proj - point );
             if ( distSq < result.distSq )
             {
-                result = PolylineProjectionResult2 {
-                    .line = ue,
-                    .point = proj,
-                    .distSq = distSq,
-                };
+                result.line = ue;
+                result.point = proj;
+                result.distSq = distSq;
                 if ( distSq <= loDistLimitSq )
                     break;
             }

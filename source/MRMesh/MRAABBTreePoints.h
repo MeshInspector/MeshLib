@@ -84,6 +84,13 @@ private:
     friend class SharedThreadSafeOwner<AABBTreePoints>;
 };
 
+// returns the number of nodes in the binary tree with given number of points
+inline int getNumNodesPoints( int numPoints )
+{
+    assert( numPoints > 0 );
+    return 2 * ( ( numPoints + AABBTreePoints::MaxNumPointsInLeaf - 1 ) / AABBTreePoints::MaxNumPointsInLeaf ) - 1;
+}
+
 /// \}
 
 } // namespace MR

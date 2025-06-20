@@ -36,7 +36,7 @@ on:
 
 jobs:
   ubuntu-x64-build-test:
-    timeout-minutes: 40
+    timeout-minutes: 60
     runs-on: [ubuntu-latest]
     container:
       image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}

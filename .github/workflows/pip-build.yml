@@ -192,7 +192,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
@@ -334,7 +334,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup

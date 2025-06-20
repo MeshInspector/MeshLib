@@ -10,21 +10,6 @@ namespace MR
 namespace Cuda
 {
 
-__device__ bool Node2::leaf() const
-{
-    return r < 0;
-}
-
-__device__ int Node2::leafId() const
-{
-    return l;
-}
-
-__device__ float2 Box2::getBoxClosestPointTo( const float2& pt ) const
-{
-    return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ) };
-}
-
 __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, const float2& b )
 {
     const auto ab = b - a;

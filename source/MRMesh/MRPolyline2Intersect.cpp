@@ -3,6 +3,7 @@
 #include "MRVector2.h"
 #include "MRLine.h"
 #include "MRAABBTreePolyline.h"
+#include "MRInplaceStack.h"
 #include "MRIntersectionPrecomputes2.h"
 #include "MRRayBoxIntersection2.h"
 
@@ -11,8 +12,6 @@ namespace MR
 
 bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
 {
-    constexpr int maxTreeDepth = 32;
-
     const auto& tree = polyline.getAABBTree();
     if ( tree.nodes().size() == 0 )
         return false;
@@ -31,20 +30,14 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
     if ( !rayBoxIntersect( tree[tree.rootNodeId()].box, point ) )
         return false;
 
-    NodeId nodesStack[maxTreeDepth];
-    int currentNode = 0;
-    nodesStack[0] = tree.rootNodeId();
+    InplaceStack<NoInitNodeId, 32> nodesStack;
+    nodesStack.push( tree.rootNodeId() );
 
     int intersectionCounter = 0;
-    while ( currentNode >= 0 )
+    while ( !nodesStack.empty() )
     {
-        if ( currentNode >= maxTreeDepth ) // max depth exceeded
-        {
-            assert( false );
-            break;
-        }
-
-        const auto& node = tree[nodesStack[currentNode--]];
+        const auto& node = tree[nodesStack.top()];
+        nodesStack.pop();
         if ( node.leaf() )
         {
             if ( node.box.min.x >= point.x )
@@ -68,9 +61,9 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
         else
         {
             if ( rayBoxIntersect( tree[node.l].box, point ) )
-                nodesStack[++currentNode] = node.l;
+                nodesStack.push( node.l );
             if ( rayBoxIntersect( tree[node.r].box, point ) )
-                nodesStack[++currentNode] = node.r;
+                nodesStack.push( node.r );
         }
     }
     return ( intersectionCounter % 2 ) == 1;

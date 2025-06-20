@@ -4,6 +4,7 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include <MRMesh/MRVisualObject.h>
+#include <MRMesh/MRLineSegm.h>
 #include <MRPch/MRSpdlog.h>
 
 namespace MR
@@ -96,6 +97,7 @@ void Viewport::drawLines( const std::vector<LineSegm3f>& lines, const std::vecto
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
     GLint positionId = GL_EXEC( glGetAttribLocation( shader, "position" ) );
+    static_assert( sizeof( LineSegm3f ) == 6 * sizeof( float ), "wrong size of LineSegm3f" );
     lineBuffer.loadData( GL_ARRAY_BUFFER, lines );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );

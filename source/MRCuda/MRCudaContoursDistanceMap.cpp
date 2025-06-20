@@ -2,6 +2,7 @@
 #include "MRCudaContoursDistanceMap.cuh"
 
 #include "MRCudaBasic.h"
+#include "MRCudaBasic.cuh"
 
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "MRMesh/MRChunkIterator.h"
@@ -14,6 +15,7 @@ Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const 
 {
     const auto& tree = polyline.getAABBTree();
     const auto& nodes = tree.nodes();
+    const auto orgs = polyline.topology.getOrgs();
 
     CUDA_LOGE_RETURN_UNEXPECTED( cudaSetDevice( 0 ) );
 
@@ -22,12 +24,6 @@ Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const 
 
     DynamicArray<Node2> cudaNodes;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
-
-    Vector<int, EdgeId> orgs( polyline.topology.edgeSize() );
-    ParallelFor( orgs, [&]( EdgeId i )
-    {
-        orgs[i] = polyline.topology.org( i );
-    } );
 
     DynamicArray<int> cudaOrgs;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaOrgs.fromVector( orgs.vec_ ) );

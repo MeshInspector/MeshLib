@@ -110,6 +110,8 @@
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.cuh" />
+    <ClInclude Include="MRCudaPolyline2Intersect.cuh" />
+    <ClInclude Include="MRCudaPolylineProject.cuh" />
     <ClInclude Include="MRCudaSolarRadiation.cuh" />
     <ClInclude Include="MRCudaSolarRadiation.h" />
     <ClInclude Include="MRCudaTest.cuh" />

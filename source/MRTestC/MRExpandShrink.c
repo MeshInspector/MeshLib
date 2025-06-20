@@ -18,16 +18,17 @@ void testExpandShrink( void )
     MRFaceId face; face.id = 0;
     MRFaceBitSet* region = mrExpandFaceRegionFromFace( top, face, 3 );
 
-    size_t num = mrBitSetCount( (MRBitSet*)region );
-    TEST_ASSERT( num ==75 );
+    int num = (int)mrBitSetCount( (MRBitSet*)region );
+    TEST_ASSERT_INT_EQUAL( num, 75 );
 
     mrExpandFaceRegion( top, region, 3 );
-    num = mrBitSetCount( ( MRBitSet* )region );
-    TEST_ASSERT( num > 75 ); //platform dependent results
+    num = (int)mrBitSetCount( ( MRBitSet* )region );
+    TEST_ASSERT( num == 274 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 num == 284 ); // with FMA instruction (modern compilers for ARM)
 
     mrShrinkFaceRegion( top, region, 3 );
-    num = mrBitSetCount( ( MRBitSet* )region );
-    TEST_ASSERT( num == 75 );
+    num = (int)mrBitSetCount( ( MRBitSet* )region );
+    TEST_ASSERT_INT_EQUAL( num, 75 );
 
     mrFaceBitSetFree( region );
     mrMeshFree( mesh );

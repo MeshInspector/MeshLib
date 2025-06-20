@@ -12,7 +12,6 @@ namespace MR
 
 static_assert( sizeof( Vector3f ) == 3 * sizeof( float ), "wrong size of Vector3f" );
 static_assert( sizeof( Vector4f ) == 4 * sizeof( float ), "wrong size of Vector4f" );
-static_assert( sizeof( LineSegm3f ) == 6 * sizeof( float ), "wrong size of LineSegm3f" );
 static_assert( sizeof( SegmEndColors ) == 8 * sizeof( float ), "wrong size of SegmEndColors" );
 
 static Box2i roundBox( const Box2f & rectf )

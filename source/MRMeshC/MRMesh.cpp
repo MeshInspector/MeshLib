@@ -25,6 +25,8 @@ REGISTER_AUTO_CAST( Triangle3f )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST( VertId )
+REGISTER_AUTO_CAST( FaceId )
+REGISTER_AUTO_CAST( MeshTriPoint )
 REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_VECTOR( EdgePath )
 
@@ -205,6 +207,12 @@ void mrMeshAddMesh( MRMesh* mesh_, const MRMesh* from_ )
 {
     ARG( mesh ); ARG( from );
     mesh.addMesh( from );
+}
+
+MRMeshTriPoint mrToTriPoint( const MRMesh* mesh_, MRFaceId f_, MRVector3f point_ )
+{
+    ARG( mesh ); ARG_VAL( f ); ARG_VAL( point );
+    RETURN( mesh.toTriPoint( f, point ) );
 }
 
 MRVector3f mrMeshNormalFromVert( const MRMesh* mesh_, MRVertId v_ )

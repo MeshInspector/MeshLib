@@ -4,7 +4,6 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRPlane3.h"
-#include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRViewportId.h"
 #include "MRMesh/MRIRenderObject.h"
@@ -34,18 +33,6 @@ struct ViewportPointsWithColors
 inline bool operator==( const ViewportPointsWithColors& a, const ViewportPointsWithColors& b )
 {
     return a.points == b.points && a.colors == b.colors;
-}
-
-// store lines and corresponding colors (sizes of vectors should be the same)
-struct ViewportLinesWithColors
-{
-    std::vector<LineSegm3f> lines;
-    std::vector<SegmEndColors> colors;
-};
-
-inline bool operator==( const ViewportLinesWithColors& a, const ViewportLinesWithColors& b )
-{
-    return a.lines == b.lines && a.colors == b.colors;
 }
 
 // This class holds data needed to render viewport primitives and accumulative picker via OpenGL

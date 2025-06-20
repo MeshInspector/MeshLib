@@ -279,8 +279,14 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
             options.forceReplaceScene = true;
     }
 
-    viewerRef.loadFiles( paths, options );
-    return true;
+    if ( viewerRef.getSortDroppedFiles() )
+    {
+        auto sortedPaths = paths;
+        std::sort( sortedPaths.begin(), sortedPaths.end() );
+        return viewerRef.loadFiles( sortedPaths, options );
+    }
+    else
+        return viewerRef.loadFiles( paths, options );
 }
 
 void OpenFilesMenuItem::parseLaunchParams_()

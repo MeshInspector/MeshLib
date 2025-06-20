@@ -32,15 +32,25 @@ size_t partitionFacePoints( const FacePointSpan & span )
     Box3f box;
     for ( const auto & fp : span )
         box.include( fp.pt );
-    const auto boxDiag = box.max - box.min;
-    const int splitDim = int( std::max_element( begin( boxDiag ), end( boxDiag ) ) - begin( boxDiag ) );
+
+    // define total order of face points: no two distinct face points must be equivalent
+    auto less = [sortedDims = findSortedBoxDims( box )]( const FacePoint & a, const FacePoint & b )
+    {
+        // first compare (and split later) by the largest box dimension
+        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
+        {
+            const int splitDim = sortedDims[i];
+            const auto aDim = a.pt[splitDim];
+            const auto bDim = b.pt[splitDim];
+            if ( aDim != bDim )
+                return aDim < bDim;
+        }
+        // if two face points have equal coordinates then compare by id to distinguish them
+        return a.f < b.f;
+    };
 
     const auto mid = span.size() / 2;
-    std::nth_element( span.begin(), span.begin() + mid, span.end(),
-        [&]( const FacePoint & a, const FacePoint & b )
-        {
-            return a.pt[splitDim] < b.pt[splitDim];
-        } );
+    std::nth_element( span.begin(), span.begin() + mid, span.end(), less );
     return mid;
 }
 

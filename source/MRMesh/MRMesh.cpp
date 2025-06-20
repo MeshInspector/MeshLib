@@ -10,9 +10,9 @@
 #include "MRConstants.h"
 #include "MRCube.h"
 #include "MREdgeIterator.h"
-#include "MRGTest.h"
 #include "MRLine3.h"
 #include "MRLineSegm.h"
+#include "MRPlane3.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshIntersect.h"
 #include "MRMeshTriPoint.h"
@@ -27,7 +27,6 @@
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
 #include "MRDipole.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -603,117 +602,6 @@ void Mesh::mirror( const Plane3f& plane )
 
     topology.flipOrientation();
     invalidateCaches();
-}
-
-TEST( MRMesh, BasicExport )
-{
-    Mesh mesh = makeCube();
-
-    const std::vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
-
-    const std::vector<Vector3f> & points =  mesh.points.vec_;
-    const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
-
-    (void)points;
-    (void)vertexTripples;
-}
-
-TEST(MRMesh, SplitEdge)
-{
-    Triangulation t{
-        { VertId{0}, VertId{1}, VertId{2} },
-        { VertId{0}, VertId{2}, VertId{3} }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    mesh.points.emplace_back( 0.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 1.f, 0.f );
-    mesh.points.emplace_back( 0.f, 1.f, 0.f );
-
-    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
-    EXPECT_EQ( mesh.points.size(), 4 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(9) ); // 5*2 = 10 half-edges in total
-
-    FaceBitSet region( 2 );
-    region.set( 0_f );
-
-    auto e02 = mesh.topology.findEdge( VertId{0}, VertId{2} );
-    EXPECT_TRUE( e02.valid() );
-    auto ex = mesh.splitEdge( e02, &region );
-    VertId v02 = mesh.topology.org( e02 );
-    EXPECT_EQ( mesh.topology.dest( ex ), v02 );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 5 );
-    EXPECT_EQ( mesh.points.size(), 5 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(15) ); // 8*2 = 16 half-edges in total
-    EXPECT_EQ( mesh.points[v02], ( Vector3f(.5f, .5f, 0.f) ) );
-    EXPECT_EQ( region.count(), 2 );
-
-    auto e01 = mesh.topology.findEdge( VertId{0}, VertId{1} );
-    EXPECT_TRUE( e01.valid() );
-    auto ey = mesh.splitEdge( e01, &region );
-    VertId v01 =  mesh.topology.org( e01 );
-    EXPECT_EQ( mesh.topology.dest( ey ), v01 );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
-    EXPECT_EQ( mesh.points.size(), 6 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 5 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(19) ); // 10*2 = 20 half-edges in total
-    EXPECT_EQ( mesh.points[v01], ( Vector3f(.5f, 0.f, 0.f) ) );
-    EXPECT_EQ( region.count(), 3 );
-}
-
-TEST(MRMesh, SplitEdge1)
-{
-    Mesh mesh;
-    const auto e01 = mesh.topology.makeEdge();
-    mesh.topology.setOrg( e01, mesh.topology.addVertId() );
-    mesh.topology.setOrg( e01.sym(), mesh.topology.addVertId() );
-    mesh.points.emplace_back( 0.f, 0.f, 0.f );
-    mesh.points.emplace_back( 1.f, 0.f, 0.f );
-
-    EXPECT_EQ( mesh.topology.numValidVerts(), 2 );
-    EXPECT_EQ( mesh.points.size(), 2 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(1) ); // 1*2 = 2 half-edges in total
-
-    auto ey = mesh.splitEdge( e01 );
-    VertId v01 =  mesh.topology.org( e01 );
-    EXPECT_EQ( mesh.topology.dest( ey ), v01 );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
-    EXPECT_EQ( mesh.points.size(), 3 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(3) ); // 2*2 = 4 half-edges in total
-    EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
-}
-
-TEST(MRMesh, SplitFace)
-{
-    Triangulation t{
-        { VertId{0}, VertId{1}, VertId{2} }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    mesh.points.emplace_back( 0.f, 0.f, 0.f );
-    mesh.points.emplace_back( 0.f, 0.f, 1.f );
-    mesh.points.emplace_back( 0.f, 1.f, 0.f );
-
-    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
-    EXPECT_EQ( mesh.points.size(), 3 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(5) ); // 3*2 = 6 half-edges in total
-
-    mesh.splitFace( 0_f );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
-    EXPECT_EQ( mesh.points.size(), 4 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
-    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
-}
-
-TEST( MRMesh, isOutside )
-{
-    Mesh mesh = makeCube();
-    EXPECT_TRUE( mesh.isOutside( Vector3f( 2, 0, 0 ) ) );
-    EXPECT_FALSE( mesh.isOutside( Vector3f( 0, 0, 0 ) ) );
 }
 
 } //namespace MR

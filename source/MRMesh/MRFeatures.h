@@ -3,8 +3,6 @@
 #include "MRMesh/MRAffineXf.h"
 #include "MRMesh/MRCone3.h"
 #include "MRMesh/MRCylinder3.h"
-#include "MRMesh/MRLine3.h"
-#include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRVector3.h"
@@ -118,8 +116,8 @@ namespace Primitives
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Vector3f& point ) { return { point, 0 }; }
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Sphere3f& sphere ) { return sphere; }
 
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .referencePoint = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .referencePoint = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
+[[nodiscard]] MRMESH_API Primitives::ConeSegment toPrimitive( const Line3f& line );
+[[nodiscard]] MRMESH_API Primitives::ConeSegment toPrimitive( const LineSegm3f& segm );
 
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cylinder3f& cyl )
 {

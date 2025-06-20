@@ -321,6 +321,11 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
+        UI::checkbox( "Sort Dropped Files",
+                                                std::bind( &Viewer::getSortDroppedFiles, viewer ),
+                                                std::bind( &Viewer::setSortDroppedFiles, viewer, std::placeholders::_1 ) );
+        UI::setTooltipIfHovered( "Whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene", menuScaling );
+
         UI::checkbox( "Show Experimental Features", &viewer->experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls", menuScaling );
     }

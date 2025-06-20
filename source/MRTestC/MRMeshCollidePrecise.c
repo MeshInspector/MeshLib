@@ -33,18 +33,18 @@ void testMeshCollidePrecise( void )
     MRCoordinateConverters conv = mrGetVectorConverters( &meshAPart, &meshBPart, NULL );
 
     MRVectorVarEdgeTri* intersections = mrFindCollidingEdgeTrisPrecise( &meshAPart, &meshBPart, conv.toInt, NULL, false );
-    // FIXME: the results are platform-dependent
-    TEST_ASSERT( intersections->size != 0 )
+    TEST_ASSERT_INT_EQUAL( (int)intersections->size, 152 )
 
     const MRMeshTopology* meshATop = mrMeshTopology( meshA );
     const MRMeshTopology* meshBTop = mrMeshTopology( meshB );
     MRContinuousContours* contours = mrOrderIntersectionContours( meshATop, meshBTop, intersections );
-    TEST_ASSERT( mrContinuousContoursSize( contours ) == 4 )
-    // FIXME: the results are platform-dependent
-    //TEST_ASSERT( mrContinuousContoursGet( contours, 0 ).size == 69 )
-    //TEST_ASSERT( mrContinuousContoursGet( contours, 1 ).size == 71 )
-    //TEST_ASSERT( mrContinuousContoursGet( contours, 2 ).size == 7 )
-    //TEST_ASSERT( mrContinuousContoursGet( contours, 3 ).size == 9 )
+    TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursSize( contours ), 4 )
+    TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 0 ).size, 71 )
+    TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 1 ).size, 7 )
+    TEST_ASSERT( mrContinuousContoursGet( contours, 2 ).size == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 mrContinuousContoursGet( contours, 2 ).size == 71 ); // with FMA instruction (modern compilers for ARM)
+    TEST_ASSERT( mrContinuousContoursGet( contours, 3 ).size == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 mrContinuousContoursGet( contours, 3 ).size == 7 );  // with FMA instruction (modern compilers for ARM)
 
     MROneMeshContours* meshAContours = mrGetOneMeshIntersectionContours( meshA, meshB, contours, true, &conv, NULL );
     MROneMeshContours* meshBContours = mrGetOneMeshIntersectionContours( meshA, meshB, contours, false, &conv, NULL );

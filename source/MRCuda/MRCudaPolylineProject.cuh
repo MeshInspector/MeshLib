@@ -34,6 +34,8 @@ __device__ inline float3 closestPointOnLineSegm( const float3& pt, const float3&
     return a * ( 1 - ratio ) + b * ratio;
 }
 
+#pragma warning( push )
+#pragma warning( disable: 4324 )
 /// CUDA variant of MR::PolylineProjectionResult2
 struct PolylineProjectionResult2
 {
@@ -41,6 +43,7 @@ struct PolylineProjectionResult2
     float2 point;
     float distSq;
 };
+#pragma warning( pop )
 
 /// CUDA variant of MR::findProjectionOnPolyline2
 __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs, float upDistLimitSq, float loDistLimitSq )

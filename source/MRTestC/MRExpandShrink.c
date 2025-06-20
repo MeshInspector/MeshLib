@@ -23,7 +23,8 @@ void testExpandShrink( void )
 
     mrExpandFaceRegion( top, region, 3 );
     num = (int)mrBitSetCount( ( MRBitSet* )region );
-    TEST_ASSERT_INT_EQUAL( num, 274 );
+    TEST_ASSERT( num == 274 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 num == 284 ); // with FMA instruction (modern compilers for ARM)
 
     mrShrinkFaceRegion( top, region, 3 );
     num = (int)mrBitSetCount( ( MRBitSet* )region );

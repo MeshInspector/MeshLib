@@ -19,40 +19,40 @@ namespace MR
             /// <summary>
             /// all edges have same weight=1
             /// </summary>
-            MREdgeWeightsUnit,
+            Unit,
 
             /// <summary>
             /// vertex mass depends on local geometry and proportional to the area of first-ring triangles
             /// </summary>
-            MRVertexMassNeiArea
+            NeiArea
         };
 
         public class Laplacian
         {
             #region C_FUNCTIONS
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
-            private static extern IntPtr mrLaplacianNew(ref Mesh mesh);
+            private static extern IntPtr mrLaplacianNew(IntPtr mesh);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
-            private static extern void mrLaplacianFree(ref IntPtr laplacian);
+            private static extern void mrLaplacianFree(IntPtr laplacian);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLaplacianInit(
-                ref IntPtr laplacian,
-                ref IntPtr freeVerts,
+                IntPtr laplacian,
+                IntPtr freeVerts,
                 EdgeWeights weights,
                 VertexMass vmass,
                 LaplacianRememberShape rem);
 
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern void mrLaplacianFixVertex(
-                ref IntPtr laplacian,
+                IntPtr laplacian,
                 VertId v,
                 ref Vector3f fixedPos,
                 bool smooth);
 
-            [DllImport("MRMeshC", CallingConvention = CallingConvention.Cdecl)]
-            private static extern void mrLaplacianApply(ref IntPtr laplacian);
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern void mrLaplacianApply(IntPtr laplacian);
 
             #endregion
 
@@ -60,7 +60,7 @@ namespace MR
 
             public Laplacian(Mesh mesh)
             {
-                reference_ = mrLaplacianNew(ref mesh);
+                reference_ = mrLaplacianNew(mesh.varMesh());
             }
 
             public void Dispose()
@@ -75,7 +75,7 @@ namespace MR
                 {
                     if (reference_ != IntPtr.Zero)
                     {
-                        mrLaplacianFree(ref reference_);
+                        mrLaplacianFree(reference_);
                         reference_ = IntPtr.Zero;
                     }
                 }
@@ -99,10 +99,10 @@ namespace MR
             public void Init(
                     VertBitSet freeVerts,
                     EdgeWeights weights = EdgeWeights.Unit,
-                    VertexMass vmass = VertexMass.MREdgeWeightsUnit,
+                    VertexMass vmass = VertexMass.Unit,
                     LaplacianRememberShape rem = LaplacianRememberShape.Yes)
             {
-                mrLaplacianInit(ref reference_, ref freeVerts.bs_, weights, vmass, rem);
+                mrLaplacianInit(reference_, freeVerts.bs_, weights, vmass, rem);
             }
 
             /// <summary>
@@ -114,14 +114,14 @@ namespace MR
                     ref Vector3f fixedPos,
                     bool smooth = true)
             {
-                mrLaplacianFixVertex(ref reference_, v, ref fixedPos, smooth);
+                mrLaplacianFixVertex(reference_, v, ref fixedPos, smooth);
             }
 
             /// <summary>
             /// given fixed vertices, computes positions of remaining region vertices
             /// </summary>
             public void Apply() => 
-                mrLaplacianApply(ref reference_);
+                mrLaplacianApply(reference_);
 
             #endregion
 

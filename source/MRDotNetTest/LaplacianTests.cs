@@ -25,7 +25,7 @@ namespace MR.Test
             var ancV1 = mesh.Points[i1.Id];
 
             EdgeWeights edgeWeights = EdgeWeights.Unit;
-            VertexMass vertexMass = VertexMass.MREdgeWeightsUnit;
+            VertexMass vertexMass = VertexMass.Unit;
             LaplacianRememberShape rememberShape = LaplacianRememberShape.No;
 
             // fix specific vertices
@@ -39,6 +39,8 @@ namespace MR.Test
             // apply laplacian
             laplacian.FixVertex(i0, ref ancV0);
             laplacian.FixVertex(i1, ref ancV1);
+
+            laplacian.Apply();
 
             Assert.That(laplacian is not null);
         }

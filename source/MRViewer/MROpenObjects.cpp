@@ -145,15 +145,18 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
     pseudoRoot->addChild( res.obj );
 
     tbb::task_group group;
-    std::atomic<int> completed;
-    bool loadingCanceled = false;
+    std::atomic<int> completed{ 0 };
+    std::atomic<bool> loadingCanceled{ false };
     float dicomScaleFactor = 1.f;
     if ( auto maybeUserScale = UnitSettings::getUiLengthUnit() )
         dicomScaleFactor = getUnitInfo( LengthUnit::meters ).conversionFactor / getUnitInfo( *maybeUserScale ).conversionFactor;
 
     for ( auto& nodeAndRes : nodes )
     {
-        group.run( [&nodeAndRes, &completed, dicomScaleFactor] {
+        group.run( [&nodeAndRes, &completed, &loadingCanceled, dicomScaleFactor]
+        {
+            if ( loadingCanceled.load( std::memory_order_relaxed ) )
+                return;
             if ( !nodeAndRes.node.dicomFolder )
             {
                 nodeAndRes.result = loadObjectFromFile( nodeAndRes.node.path, nodeAndRes.cb );
@@ -183,7 +186,11 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
         loadingCanceled = !cb();
         if ( loadingCanceled )
-            group.cancel(); // cancel faster if possible
+        {
+            // do not call group.cancel() since it makes all prallel_for's/parallel_reduce's stop doing what they do normally with unexpecetd concequences
+            bool expected = false;
+            loadingCanceled.compare_exchange_strong( expected, true, std::memory_order_relaxed );
+        }
     }
 #endif
     group.wait();

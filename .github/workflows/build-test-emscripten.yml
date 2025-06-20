@@ -61,6 +61,11 @@ jobs:
           AWS_INSTANCE_TYPE=$(curl -fsS --max-time 2 \
             -H "X-aws-ec2-metadata-token: $TOKEN" \
             "http://169.254.169.254/latest/meta-data/instance-type" || true)
+          
+          # if not an EC2 instance
+          if [[ -z "$AWS_INSTANCE_TYPE" ]]; then
+            AWS_INSTANCE_TYPE="self-hosted"
+          fi
 
           echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
           echo $AWS_INSTANCE_TYPE

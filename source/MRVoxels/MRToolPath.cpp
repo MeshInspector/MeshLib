@@ -558,6 +558,37 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     };
 
     const float critDistSq = params.critTransitionLength * params.critTransitionLength;
+    MinMaxf borders;
+    const float minZ = box.min.z;
+    if ( params.toolpathOffset > 0.f )
+    {
+        const int offsetStep = int( std::ceil( params.toolpathOffset / params.sectionStep ) );
+        bool odd = offsetStep & 1;
+
+        if ( cutDirection == Axis::X )
+        {
+            borders = { box.min.y - params.toolpathOffset, box.max.y + params.toolpathOffset };
+            float xPos = box.max.x + params.sectionStep * offsetStep;
+            float yPos = odd ? borders.min : borders.max;
+
+            res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+            res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
+            res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+
+            for ( int i = 0; i < offsetStep; ++i )
+            {
+                yPos = odd ? borders.max : borders.min;
+                res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
+                xPos = box.max.x + params.sectionStep * ( offsetStep - i - 1 );
+                res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
+                odd = !odd;
+            }
+        }
+        else
+        {
+
+        }
+    }
 
     for ( int step = 0; step < steps; ++step )
     {
@@ -566,8 +597,26 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
         const auto sections = allSections[step];
         if ( sections.empty() )
-            continue;
+        {
+            if ( params.toolpathOffset > 0.f )
+            {
+                if ( cutDirection == Axis::X )
+                {
+                    const bool odd = step & 1;
+                    const float yPos = odd ? borders.max : borders.min;
+                    res.commands.push_back( { .type = MoveType::FastLinear, .y = yPos } );
+                    const float xPos = box.max.x - params.sectionStep * step;
+                    res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos } );
+                }
+                else
+                {
 
+                }
+            }
+            continue;
+        }
+
+        bool moveToSection = true;
         // there could be many sections in one slice
         for ( const auto& section : sections )
         {
@@ -608,30 +657,47 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
                 if ( !moveForward && bottomLeftIt != contour.begin() )
                     --bottomLeftIt;
             }
-            
+
             const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward, params.millRadius );
             if ( intervals.empty() )
                 continue;
 
-            // go to the first point through the safe height
-            if ( res.commands.empty() )
+            if ( params.toolpathOffset > 0.f && moveToSection )
             {
-                res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                res.commands.push_back( { .type = MoveType::FastLinear, .x = intervals[0].first->x, .y = intervals[0].first->y } );
-                res.commands.push_back( { .type = MoveType::FastLinear, .z = intervals[0].first->z } );
+                moveToSection = false;
+                if ( cutDirection == Axis::X )
+                {
+                    const Vector3f& pointBegin = *intervals[0].first;
+                    res.commands.push_back( { .type = MoveType::Linear, .y = pointBegin.y } );
+                    res.commands.push_back( { .type = MoveType::FastLinear, .z = pointBegin.z } );
+                }
+                else
+                {
+
+                }
             }
             else
             {
-                // otherwise compute distance from the last point to a new one and decide how to get to it
-                const auto nextEdgePoint = section[intervals[0].first - contour.begin()];
-                const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
-
-                if ( distSq > critDistSq )
-                    transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                // go to the first point through the safe height
+                if ( res.commands.empty() )
+                {
+                    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+                    res.commands.push_back( { .type = MoveType::FastLinear, .x = intervals[0].first->x, .y = intervals[0].first->y } );
+                    res.commands.push_back( { .type = MoveType::Linear, .z = intervals[0].first->z } );
+                }
                 else
-                    addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                {
+                    // otherwise compute distance from the last point to a new one and decide how to get to it
+                    const auto nextEdgePoint = section[intervals[0].first - contour.begin()];
+                    const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
+
+                    if ( distSq > critDistSq )
+                        transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    else
+                        addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                }
             }
-            
+
             // process all the intervals except the last one and transit to the next
             for ( size_t i = 0; i < intervals.size() - 1; ++i )
             {
@@ -652,7 +718,12 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
                 }
 
                 if ( *intervals[i + 1].first != lastPoint )
-                    transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                {
+                    if ( params.toolpathOffset > 0.f )
+                        res.commands.push_back( { .type = MoveType::Linear, .x = intervals[i + 1].first->x, .y = intervals[i + 1].first->y } );
+                    else
+                        transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                }   
             }
             // process the last interval
             if ( moveForward )
@@ -668,6 +739,26 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
             const auto dist = ( intervals.back().second - contour.begin() ) % contour.size();
             lastEdgePoint = section[dist];
+        }
+
+        if ( params.toolpathOffset > 0.f )
+        {
+            if ( cutDirection == Axis::X )
+            {
+                res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+                const bool odd = step & 1;
+                const float yPos = odd ? borders.max : borders.min;
+                res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
+                if ( step != steps - 1 )
+                {
+                    const float xPos = box.max.x - params.sectionStep * step;
+                    res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
+                }
+            }
+            else
+            {
+
+            }
         }
     }
 

@@ -48,6 +48,9 @@ struct ToolPathParams
     bool flatTool = false;
     // callback for reporting on progress
     ProgressCallback cb = {};
+
+    // Lacing specific
+    float toolpathOffset = 0.f;
     
     // optional output, stores isolines without transits
     Contours3f* isolines = nullptr;  

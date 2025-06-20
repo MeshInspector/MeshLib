@@ -2,6 +2,7 @@
 #include "MRCudaContoursDistanceMap.cuh"
 
 #include "MRCudaBasic.h"
+#include "MRCudaBasic.cuh"
 
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "MRMesh/MRChunkIterator.h"

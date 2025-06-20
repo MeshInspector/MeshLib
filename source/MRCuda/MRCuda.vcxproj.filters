@@ -22,6 +22,9 @@
     <CudaCompile Include="MRCudaMeshDistanceMap.cu">
       <Filter>DistanceMaps</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaPointsProject.cu">
+      <Filter>PointsProject</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -47,6 +50,15 @@
     </ClCompile>
     <ClCompile Include="MRCudaMeshDistanceMap.cpp">
       <Filter>DistanceMaps</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaMath.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaPointsProject.cpp">
+      <Filter>PointsProject</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaPointCloud.cpp">
+      <Filter>Data Holders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -108,6 +120,42 @@
     <ClInclude Include="MRCudaMeshDistanceMap.cuh">
       <Filter>DistanceMaps</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaMath.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCuda.cuh">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPointsProject.cuh">
+      <Filter>PointsProject</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPointsProject.h">
+      <Filter>PointsProject</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPointCloud.cuh">
+      <Filter>Data Holders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPointCloud.h">
+      <Filter>Data Holders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaProfiling.cuh">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPipeline.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPipeline.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPolylineProject.cuh">
+      <Filter>AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPolyline2Intersect.cuh">
+      <Filter>AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaInplaceStack.cuh">
+      <Filter>AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">
@@ -130,6 +178,18 @@
     </Filter>
     <Filter Include="DistanceMaps">
       <UniqueIdentifier>{74b4c63d-a992-4970-ae29-086c0bcb732c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PointsProject">
+      <UniqueIdentifier>{fb7d6bc2-1a66-4299-807a-57f4a1157f5b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data Holders">
+      <UniqueIdentifier>{d0bcb7cc-9055-4c9d-b0c0-6a90956795cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{5eda00c2-eea4-49eb-b03d-649b9c4e8364}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AABBTree">
+      <UniqueIdentifier>{b86a22cb-6e10-4dbe-aa82-4eb80529e8d5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

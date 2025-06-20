@@ -12,6 +12,19 @@ namespace MR
 {
 namespace Cuda
 {
+
+// struct simular to MR::Box2 with minimal needed functions
+struct Box2
+{
+    float2 min;
+    float2 max;
+
+    __device__ float2 getBoxClosestPointTo( const float2& pt ) const
+    {
+        return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ) };
+    }
+};
+
 // struct simular to MR::Box3 with minimal needed functions
 struct Box3
 {
@@ -22,6 +35,7 @@ struct Box3
     {
         return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ), clamp( pt.z, min.z, max.z ) };
     }
+
     __device__ void include( const float3& pt )
     {
         if ( pt.x < min.x ) min.x = pt.x;
@@ -48,6 +62,22 @@ struct IntersectionPrecomputes
     int idxY = 1;
     int3 sign;
     float Sx, Sy, Sz;
+};
+
+// struct simular to AABBTreeNode<LineTreeTraits<Vector2f>> with minimal needed functions
+struct Node2
+{
+    Box2 box;
+    int l, r;
+
+    __device__ bool leaf() const
+    {
+        return r < 0;
+    }
+    __device__ int leafId() const
+    {
+        return l;
+    }
 };
 
 // struct simular to AABBTreeNode<FaceTreeTraits3> with minimal needed functions

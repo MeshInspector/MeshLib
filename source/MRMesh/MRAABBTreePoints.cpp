@@ -1,26 +1,15 @@
 #include "MRAABBTreePoints.h"
 #include "MRPointCloud.h"
 #include "MRTimer.h"
-#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
-#include "MRMeshToPointCloud.h"
 #include "MRBitSetParallelFor.h"
 #include "MRHeapBytes.h"
 #include "MRBuffer.h"
-#include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include <stack>
 #include <thread>
 
 namespace MR
 {
-
-// returns the number of nodes in the binary tree with given number of points
-inline int getNumNodesPoints( int numPoints )
-{
-    assert( numPoints > 0 );
-    return 2 * ( ( numPoints + AABBTreePoints::MaxNumPointsInLeaf - 1 ) / AABBTreePoints::MaxNumPointsInLeaf ) - 1;
-}
 
 struct SubtreePoints
 {
@@ -53,28 +42,37 @@ private:
 
 private:
     // [firstPoint, result) will go to left child and [result, lastPoint) - to the right child
-    int partitionPoints( Box3f& box, int firstPoint, int lastPoint );
+    int partitionPoints( const Box3f& box, int firstPoint, int lastPoint );
     // constructs not-leaf node
     std::pair<SubtreePoints, SubtreePoints> makeNode( const SubtreePoints& s );
     // constructs given subtree, optionally splitting the job on given number of threads
     void makeSubtree( const SubtreePoints& s, int numThreads );
 };
 
-int AABBTreePointsMaker::partitionPoints( Box3f& box, int firstPoint, int lastPoint )
+int AABBTreePointsMaker::partitionPoints( const Box3f& box, int firstPoint, int lastPoint )
 {
     assert( firstPoint + AABBTreePoints::MaxNumPointsInLeaf < lastPoint );
-    auto boxDiag = box.max - box.min;
-    std::array<double, 3> boxSizes = {boxDiag.x, boxDiag.y, boxDiag.z};
-    const int splitDim = int( std::max_element( boxSizes.begin(), boxSizes.end() ) - boxSizes.begin() );
+
+    // define total order of Points: no two distinct points are equivalent
+    auto less = [sortedDims = findSortedBoxDims( box )]( const AABBTreePoints::Point & a, const AABBTreePoints::Point & b )
+    {
+        // first compare (and split later) by the largest box dimension
+        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
+        {
+            const int splitDim = sortedDims[i];
+            const auto aDim = a.coord[splitDim];
+            const auto bDim = b.coord[splitDim];
+            if ( aDim != bDim )
+                return aDim < bDim;
+        }
+        // if two points have equal coordinates then compare by id to distinguish them
+        return a.id < b.id;
+    };
 
     int midPoint = firstPoint + ( lastPoint - firstPoint ) / 2;
     // to minimize the total number of nodes
     midPoint += ( AABBTreePoints::MaxNumPointsInLeaf - ( midPoint % AABBTreePoints::MaxNumPointsInLeaf ) ) % AABBTreePoints::MaxNumPointsInLeaf;
-    std::nth_element( orderedPoints_.data() + firstPoint, orderedPoints_.data() + midPoint, orderedPoints_.data() + lastPoint,
-        [&]( const AABBTreePoints::Point& a, const AABBTreePoints::Point& b )
-    {
-        return a.coord[splitDim] < b.coord[splitDim];
-    } );
+    std::nth_element( orderedPoints_.data() + firstPoint, orderedPoints_.data() + midPoint, orderedPoints_.data() + lastPoint, less );
     return midPoint;
 }
 
@@ -291,46 +289,6 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & cha
         node.box = nodes_[node.l].box;
         node.box.include( nodes_[node.r].box );
     }
-}
-
-TEST( MRMesh, AABBTreePoints )
-{
-    PointCloud spherePC = meshToPointCloud( makeUVSphere( 1, 8, 8 ) );
-    AABBTreePoints tree( spherePC );
-    EXPECT_EQ( tree.nodes().size(), getNumNodesPoints( int( spherePC.validPoints.count() ) ) );
-
-    Box3f box;
-    for ( auto v : spherePC.validPoints )
-        box.include( spherePC.points[v] );
-
-    EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
-
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
-
-    assert( !tree.nodes().empty() );
-    auto m = std::move( tree );
-    assert( tree.nodes().empty() );
-}
-
-TEST( MRMesh, AABBTreePointsFromMesh )
-{
-    Mesh sphere = makeUVSphere( 1, 8, 8 );
-    AABBTreePoints tree( sphere );
-    EXPECT_EQ( tree.nodes().size(), getNumNodesPoints( sphere.topology.numValidVerts() ) );
-
-    Box3f box;
-    for ( auto v : sphere.topology.getValidVerts() )
-        box.include( sphere.points[v] );
-
-    EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
-
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].r.valid() );
-
-    assert( !tree.nodes().empty() );
-    auto m = std::move( tree );
-    assert( tree.nodes().empty() );
 }
 
 }

@@ -183,7 +183,10 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         std::this_thread::sleep_for( std::chrono::milliseconds ( 200 ) );
         loadingCanceled = !cb();
         if ( loadingCanceled )
+        {
+            spdlog::info( "Canceling makeObjectTreeFromFolder" );
             group.cancel(); // cancel faster if possible
+        }
     }
 #endif
     group.wait();

@@ -271,6 +271,8 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
     // reserve enough elements for faces and vertices
     auto sizeFaces = settings.region ? settings.region->size() : faces.size();
     auto maxVertId = findMaxVertId( verts );
+    if ( !maxVertId )
+        return res; //tbb task was canceled
     res.faceResize( sizeFaces + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
@@ -324,6 +326,8 @@ void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSetti
 
     // reserve enough elements for faces and vertices
     const auto maxVertId = findMaxVertId( t, settings.region );
+    if ( !maxVertId )
+        return; //tbb task was canceled
     res.faceResize( t.size() + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
@@ -431,11 +435,13 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     // reserve enough elements for faces and vertices
     //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
     const auto maxVertId = findMaxVertId( t, settings.region );
+    MeshTopology res;
+    if ( !maxVertId )
+        return res; //tbb task was canceled
 
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
     const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
     assert( numParts > 1 );
-    MeshTopology res;
 
     const size_t vertsInPart = ( (int)maxVertId + numParts ) / numParts;
     std::vector<MeshPiece> parts( numParts );

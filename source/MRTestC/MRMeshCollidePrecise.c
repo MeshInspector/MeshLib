@@ -41,8 +41,10 @@ void testMeshCollidePrecise( void )
     TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursSize( contours ), 4 )
     TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 0 ).size, 71 )
     TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 1 ).size, 7 )
-    TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 2 ).size, 69 )
-    TEST_ASSERT_INT_EQUAL( (int)mrContinuousContoursGet( contours, 3 ).size, 9 )
+    TEST_ASSERT( mrContinuousContoursGet( contours, 2 ).size == 69 || // x86
+                 mrContinuousContoursGet( contours, 2 ).size == 71 ); // ARM (FMA)
+    TEST_ASSERT( mrContinuousContoursGet( contours, 3 ).size == 9 ||  // x86
+                 mrContinuousContoursGet( contours, 3 ).size == 7 );  // ARM (FMA)
 
     MROneMeshContours* meshAContours = mrGetOneMeshIntersectionContours( meshA, meshB, contours, true, &conv, NULL );
     MROneMeshContours* meshBContours = mrGetOneMeshIntersectionContours( meshA, meshB, contours, false, &conv, NULL );

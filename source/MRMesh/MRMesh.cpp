@@ -144,6 +144,11 @@ bool Mesh::operator ==( const Mesh & b ) const
     return true;
 }
 
+LineSegm3f Mesh::edgeSegment( EdgeId e ) const
+{
+    return { MR::orgPnt( topology, points, e ), MR::destPnt( topology, points, e ) };
+}
+
 MeshTriPoint Mesh::toTriPoint( VertId v ) const
 {
     return MeshTriPoint( topology, v );

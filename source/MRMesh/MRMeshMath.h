@@ -2,7 +2,6 @@
 
 #include "MRVector.h"
 #include "MRMeshTopology.h"
-#include "MRLineSegm.h"
 #include "MRPointOnFace.h"
 
 namespace MR
@@ -27,10 +26,7 @@ namespace MR
 }
 
 /// returns line segment of given edge
-[[nodiscard]] inline LineSegm3f edgeSegment( const MeshTopology & topology, const VertCoords & points, EdgeId e )
-{
-    return { orgPnt( topology, points, e ), destPnt( topology, points, e ) };
-}
+MRMESH_API LineSegm3f edgeSegment( const MeshTopology & topology, const VertCoords & points, EdgeId e );
 
 /// returns a point on the edge: origin point for f=0 and destination point for f=1
 [[nodiscard]] inline Vector3f edgePoint( const MeshTopology & topology, const VertCoords & points, EdgeId e, float f )

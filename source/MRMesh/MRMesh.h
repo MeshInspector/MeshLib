@@ -67,7 +67,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return MR::edgeVector( topology, points, e ); }
 
     /// returns line segment of given edge
-    [[nodiscard]] LineSegm3f edgeSegment( EdgeId e ) const { return MR::edgeSegment( topology, points, e ); }
+    [[nodiscard]] MRMESH_API LineSegm3f edgeSegment( EdgeId e ) const;
 
     /// returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return MR::edgePoint( topology, points, e, f ); }

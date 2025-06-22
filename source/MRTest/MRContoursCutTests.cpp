@@ -3,6 +3,7 @@
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRRingIterator.h>
 
 namespace MR
 {
@@ -81,9 +82,35 @@ TEST( MRMesh, MeshCollidePrecise )
     EXPECT_TRUE( contours[3].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
                  contours[3].size() == 7 );  // with FMA instruction (modern compilers for ARM)
 
-    // check edges' orientation
     for ( const auto & c : contours )
     {
+        // check that contour is closed
+        EXPECT_EQ( c.front(), c.back() );
+
+        // check intersections' order
+        for ( int i = 0; i + 1 < c.size(); ++i )
+        {
+            const auto & curr = c[i];
+            const auto& currEdgeTopology = curr.isEdgeATriB() ? meshA.topology : meshB.topology;
+            const auto& currTriTopology = curr.isEdgeATriB() ? meshB.topology : meshA.topology;
+            const auto & next = c[i+1];
+            if ( curr.isEdgeATriB() == next.isEdgeATriB() )
+            {
+                EXPECT_TRUE( currEdgeTopology.next( curr.edge ) == next.edge
+                    || currEdgeTopology.prev( curr.edge.sym() ).sym() == next.edge );
+                EXPECT_EQ( curr.tri(), next.tri() );
+            }
+            else
+            {
+                EXPECT_EQ( currEdgeTopology.left( curr.edge ), next.tri() );
+                bool found = false;
+                for ( EdgeId e : leftRing( currTriTopology, curr.tri() ) )
+                    found = found || e.sym() == next.edge;
+                EXPECT_TRUE( found );
+            }
+        }
+
+        // check edges' orientation
         for ( const auto & vet : c )
         {
             if ( vet.isEdgeATriB() )

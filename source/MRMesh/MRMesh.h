@@ -197,6 +197,10 @@ struct [[nodiscard]] Mesh
     /// computes triangular face normal from its vertices
     [[nodiscard]] Vector3f normal( FaceId f ) const { return MR::normal( topology, points, f ); }
 
+    /// returns the plane containing given triangular face with normal looking outwards
+    [[nodiscard]] MRMESH_API Plane3f getPlane3f( FaceId f ) const;
+    [[nodiscard]] MRMESH_API Plane3d getPlane3d( FaceId f ) const;
+
     /// computes sum of directed double areas of all triangles around given vertex
     [[nodiscard]] Vector3f dirDblArea( VertId v ) const { return MR::dirDblArea( topology, points, v ); }
 

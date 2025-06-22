@@ -6,6 +6,7 @@
 #include "MRComputeBoundingBox.h"
 #include "MRQuadraticForm.h"
 #include "MRLineSegm.h"
+#include "MRPlane3.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -452,6 +453,28 @@ Vector3f leftTangent( const MeshTopology & topology, const VertCoords & points, 
     const auto lNorm = leftNormal( topology, points, e );
     const auto eDir = edgeVector( topology, points, e ).normalized();
     return cross( lNorm, eDir );
+}
+
+Plane3f getPlane3f( const MeshTopology & topology, const VertCoords & points, FaceId f )
+{
+    VertId a, b, c;
+    topology.getTriVerts( f, a, b, c );
+    assert( a.valid() && b.valid() && c.valid() );
+    const Vector3f ap{ points[a] };
+    const Vector3f bp{ points[b] };
+    const Vector3f cp{ points[c] };
+    return Plane3f::fromDirAndPt( cross( bp - ap, cp - ap ).normalized(), ap );
+}
+
+Plane3d getPlane3d( const MeshTopology & topology, const VertCoords & points, FaceId f )
+{
+    VertId a, b, c;
+    topology.getTriVerts( f, a, b, c );
+    assert( a.valid() && b.valid() && c.valid() );
+    const Vector3d ap{ points[a] };
+    const Vector3d bp{ points[b] };
+    const Vector3d cp{ points[c] };
+    return Plane3d::fromDirAndPt( cross( bp - ap, cp - ap ).normalized(), ap );
 }
 
 Vector3f dirDblArea( const MeshTopology & topology, const VertCoords & points, VertId v )

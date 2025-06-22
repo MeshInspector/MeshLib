@@ -120,21 +120,9 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
     HashMap<FaceId, std::vector<VertId>> face2verts;
     Heap<double, FaceId> queue{ 2, NoDist };
 
-    // gets plane containing the face with normal looking outwards
-    auto getPlane3d = [&]( FaceId f )
-    {
-        VertId a, b, c;
-        res.topology.getTriVerts( f, a, b, c );
-        assert( a.valid() && b.valid() && c.valid() );
-        const Vector3d ap{ res.points[a] };
-        const Vector3d bp{ res.points[b] };
-        const Vector3d cp{ res.points[c] };
-        return Plane3d::fromDirAndPt( cross( bp - ap, cp - ap ).normalized(), ap );
-    };
-
     // separate all remaining points as above face #0 or face #1
     {
-        const auto pl0 = getPlane3d( 0_f );
+        const auto pl0 = res.getPlane3d( 0_f );
         std::vector<VertId> vs0, vs1;
         double maxDist0 = NoDist, maxDist1 = NoDist;
         for ( VertId v : validPoints )
@@ -190,7 +178,7 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
 
         VertId topmostVert;
         double maxDist = 0;
-        const auto pl = getPlane3d( myFace );
+        const auto pl = res.getPlane3d( myFace );
         for ( auto v : myverts )
         {
             auto dist = pl.distance( Vector3d{ points[v] } );
@@ -225,10 +213,9 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         newFp.clear();
         for ( EdgeId e : orgRing( res.topology, newv ) )
         {
-            newFp.emplace_back();
-            auto & x = newFp.back();
+            auto & x = newFp.emplace_back();
             x.face = res.topology.left( e );
-            x.plane = getPlane3d( x.face );
+            x.plane = res.getPlane3d( x.face );
         }
 
         for ( auto v : myverts )

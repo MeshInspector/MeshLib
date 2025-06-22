@@ -3,6 +3,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRLineSegm.h>
 
 namespace MR
 {

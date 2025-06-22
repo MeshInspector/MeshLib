@@ -5,10 +5,16 @@
 #include "MRRingIterator.h"
 #include "MRComputeBoundingBox.h"
 #include "MRQuadraticForm.h"
+#include "MRLineSegm.h"
 #include "MRTimer.h"
 
 namespace MR
 {
+
+LineSegm3f edgeSegment( const MeshTopology & topology, const VertCoords & points, EdgeId e )
+{
+    return { orgPnt( topology, points, e ), destPnt( topology, points, e ) };
+}
 
 void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 )
 {

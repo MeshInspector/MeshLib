@@ -81,6 +81,26 @@ TEST( MRMesh, MeshCollidePrecise )
     EXPECT_TRUE( contours[3].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
                  contours[3].size() == 7 );  // with FMA instruction (modern compilers for ARM)
 
+    // check edges' orientation
+    for ( const auto & c : contours )
+    {
+        for ( const auto & vet : c )
+        {
+            if ( vet.isEdgeATriB() )
+            {
+                const auto pl = meshB.getPlane3d( vet.tri() );
+                EXPECT_LE( pl.distance( Vector3d{ meshA.orgPnt( vet.edge ) } ), 0 );
+                EXPECT_GE( pl.distance( Vector3d{ meshA.destPnt( vet.edge ) } ), 0 );
+            }
+            else
+            {
+                const auto pl = meshA.getPlane3d( vet.tri() );
+                EXPECT_GE( pl.distance( Vector3d{ meshB.orgPnt( vet.edge ) } ), 0 );
+                EXPECT_LE( pl.distance( Vector3d{ meshB.destPnt( vet.edge ) } ), 0 );
+            }
+        }
+    }
+
     OneMeshContours meshAContours, meshBContours;
     getOneMeshIntersectionContours( meshA, meshB, contours, &meshAContours, &meshBContours, conv );
     EXPECT_EQ( meshAContours.size(), 4 );

@@ -11,10 +11,19 @@ using OneMeshContours = std::vector<OneMeshContour>;
 using ContinuousContour = std::vector<VarEdgeTri>;
 using ContinuousContours = std::vector<ContinuousContour>;
 
-/// Combines individual intersections into ordered contours with the properties:
-/// a. left  of contours on mesh A is inside of mesh B,
-/// b. right of contours on mesh B is inside of mesh A,
-/// c. each intersected edge has origin inside meshes intersection and destination outside of it
+/// Combines unordered input intersections (and flips orientation of intersected edges from mesh B) into ordered oriented contours with the properties:
+/// 1. Each contour is
+///    a. either closed (then its first and last elements are equal),
+///    b. or open (then its first and last intersected edges are boundary edges).
+/// 2. Next intersection in a contour is located to the left of the current intersected edge:
+///    a. if the current and next intersected triangles are the same, then next intersected edge is either next( curr.edge ) or prev( curr.edge.sym() ).sym(),
+///    b. otherwise next intersected triangle is left( curr.edge ) and next intersected edge is one of the edges having the current intersected triangle to the right.
+/// 3. Orientation of intersected edges in each pair of (intersected edge, intersected triangle):
+///    a. the intersected edge of mesh A is directed from negative half-space of the intersected triangle from mesh B to its positive half-space,
+///    b. the intersected edge of mesh B is directed from positive half-space of the intersected triangle from mesh A to its negative half-space.
+/// 4. Orientation of contours:
+///    a. left  of contours on mesh A is inside of mesh B (consequence of 3a),
+///    b. right of contours on mesh B is inside of mesh A (consequence of 3b).
 MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections );
 
 /// Combines individual self intersections into ordered contours with the properties:

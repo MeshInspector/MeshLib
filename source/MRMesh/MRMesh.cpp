@@ -164,6 +164,16 @@ bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult 
     return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
 }
 
+Plane3f Mesh::getPlane3f( FaceId f ) const
+{
+    return MR::getPlane3f( topology, points, f );
+}
+
+Plane3d Mesh::getPlane3d( FaceId f ) const
+{
+    return MR::getPlane3d( topology, points, f );
+}
+
 float Mesh::signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
 {
     if ( isOutsideByProjNorm( pt, proj, region ) )

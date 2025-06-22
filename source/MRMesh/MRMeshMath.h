@@ -217,6 +217,10 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
     return dirDblArea( topology, points, f ).normalized();
 }
 
+/// returns the plane containing given triangular face with normal looking outwards
+[[nodiscard]] MRMESH_API Plane3f getPlane3f( const MeshTopology & topology, const VertCoords & points, FaceId f );
+[[nodiscard]] MRMESH_API Plane3d getPlane3d( const MeshTopology & topology, const VertCoords & points, FaceId f );
+
 /// computes sum of directed double areas of all triangles around given vertex
 [[nodiscard]] MRMESH_API Vector3f dirDblArea( const MeshTopology & topology, const VertCoords & points, VertId v );
 

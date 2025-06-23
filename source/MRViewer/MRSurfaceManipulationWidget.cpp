@@ -378,15 +378,16 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             expand( oldMesh.topology, visualizationRegion_, 2 );
             updateUVmap_( false );
         }
-        auto faces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
-        if ( faces.any() )
+        auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
+        if ( delFaces.any() )
         {
             SCOPED_HISTORY( "Brush: Patch" );
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
-            auto bds = delRegionKeepBd( *newMesh, faces );
-            VertBitSet stableVerts = newMesh->topology.getValidVerts();
-            stableVerts -= generalEditingRegion_;
+            FaceBitSet faceSelection = obj_->getSelectedFaces() - delFaces;
+            UndirectedEdgeBitSet edgeSelection = obj_->getSelectedEdges() - getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
+            auto bds = delRegionKeepBd( *newMesh, delFaces );
+            const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
             FaceBitSet unchangeableFaces = getIncidentFaces( oldMesh.topology, unchangeableVerts_ );
             FaceBitSet newFaceSelection;
             for ( const auto & bd : bds )
@@ -429,26 +430,16 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         fillHoleNicely( *newMesh, e, settings );
             }
 
-            FaceBitSet faceSelection = obj_->getSelectedFaces();
-            faceSelection -= faces;
             if ( faceSelection.count() != obj_->getSelectedFaces().count() || newFaceSelection.any() )
             {
                 faceSelection |= newFaceSelection;
-                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_ );
-                obj_->selectFaces( faceSelection );
+                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_, std::move( faceSelection ) );
             }
-            UndirectedEdgeBitSet edgeSelection = obj_->getSelectedEdges();
-            edgeSelection -= getInnerEdges( oldMesh.topology, faces );
             if ( edgeSelection.count() != obj_->getSelectedEdges().count() )
-            {
-                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_ );
-                obj_->selectEdges( edgeSelection );
-            }
+                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_, std::move( edgeSelection ) );
 
-            VertBitSet newVerts = newMesh->topology.getValidVerts();
-            newVerts -= stableVerts;
-
-            FaceBitSet newFaces = getInnerFaces( newMesh->topology, newVerts );
+            // newFaces include both faces inside the patch and subdivided faces around
+            const FaceBitSet newFaces = newMesh->topology.getValidFaces() - oldFaces;
             auto meshAttribs = projectMeshAttributes( *obj_, MeshPart( *newMesh, &newFaces ) );
 
             appendMeshChangeHistory_( std::move( newMesh ), newFaces );

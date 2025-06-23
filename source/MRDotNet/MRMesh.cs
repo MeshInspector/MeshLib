@@ -748,7 +748,7 @@ namespace MR
                 {
                     for (int i = 0; i < points.Count; i++)
                     {
-                        Marshal.StructureToPtr(points[i], IntPtr.Add(nativePoints, i * sizeOfVector3f), false);
+                        Marshal.StructureToPtr(points[i].vec_, IntPtr.Add(nativePoints, i * sizeOfVector3f), false);
                     }
 
                     for (int i = 0; i < triangles.Count; i++)

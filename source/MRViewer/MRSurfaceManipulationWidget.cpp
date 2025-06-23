@@ -378,18 +378,16 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             expand( oldMesh.topology, visualizationRegion_, 2 );
             updateUVmap_( false );
         }
-        auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
+        const auto delFaces = getIncidentFaces( oldMesh.topology, generalEditingRegion_ );
         if ( delFaces.any() )
         {
             SCOPED_HISTORY( "Brush: Patch" );
             ownMeshChangedSignal_ = true;
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
-            FaceBitSet faceSelection = obj_->getSelectedFaces() - delFaces;
-            UndirectedEdgeBitSet edgeSelection = obj_->getSelectedEdges() - getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
+            FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;
+            UndirectedEdgeBitSet newEdgeSelection = obj_->getSelectedEdges() - getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
             auto bds = delRegionKeepBd( *newMesh, delFaces );
             const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
-            FaceBitSet unchangeableFaces = getIncidentFaces( oldMesh.topology, unchangeableVerts_ );
-            FaceBitSet newFaceSelection;
             for ( const auto & bd : bds )
             {
                 if ( bd.empty() )
@@ -412,16 +410,10 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 {
                     settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
                     {
-                        if ( unchangeableFaces.test( newMesh->topology.left( e ) ) )
-                        {
+                        if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
                             newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
-                            unchangeableFaces.autoResizeSet( newMesh->topology.left( e1 ) );
-                        }
-                        if ( unchangeableFaces.test( newMesh->topology.right( e ) ) )
-                        {
+                        if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
                             newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
-                            unchangeableFaces.autoResizeSet( newMesh->topology.right( e1 ) );
-                        }
                         unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
                     };
                 }
@@ -430,13 +422,10 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         fillHoleNicely( *newMesh, e, settings );
             }
 
-            if ( faceSelection.count() != obj_->getSelectedFaces().count() || newFaceSelection.any() )
-            {
-                faceSelection |= newFaceSelection;
-                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_, std::move( faceSelection ) );
-            }
-            if ( edgeSelection.count() != obj_->getSelectedEdges().count() )
-                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_, std::move( edgeSelection ) );
+            if ( newFaceSelection != obj_->getSelectedFaces() )
+                AppendHistory<ChangeMeshFaceSelectionAction>( "Change Face Selection", obj_, std::move( newFaceSelection ) );
+            if ( newEdgeSelection != obj_->getSelectedEdges() )
+                AppendHistory<ChangeMeshEdgeSelectionAction>( "Change Edge Selection", obj_, std::move( newEdgeSelection ) );
 
             // newFaces include both faces inside the patch and subdivided faces around
             const FaceBitSet newFaces = newMesh->topology.getValidFaces() - oldFaces;

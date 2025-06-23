@@ -56,4 +56,9 @@ MR_BIND_IGNORE inline auto unexpectedUnsupportedFileExtension()
     return MR::unexpected( stringUnsupportedFileExtension() );
 }
 
+/// Exits the current function with an error if the given expression contains an error.
+#define MR_RETURN_IF_UNEXPECTED( expr ) \
+    if ( auto&& res = ( expr ); !res ) \
+        return unexpected( std::move( res.error() ) );
+
 } //namespace MR

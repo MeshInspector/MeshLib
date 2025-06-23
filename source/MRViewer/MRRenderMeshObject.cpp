@@ -829,7 +829,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
     else
     {
         vertPosSize_ = topology.lastValidVert() + 1;
-        if ( vertColorsSize_ > mesh->points.size() )
+        if ( vertPosSize_ > mesh->points.size() )
         {
             assert( false );
             vertPosSize_ = (int)mesh->points.size();
@@ -905,7 +905,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         else
         {
             vertNormalsSize_ = topology.lastValidVert() + 1;
-            if ( vertColorsSize_ > vertNormals.size() )
+            if ( vertNormalsSize_ > vertNormals.size() )
             {
                 assert( false );
                 vertNormalsSize_ = (int)vertNormals.size();

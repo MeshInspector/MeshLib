@@ -498,8 +498,9 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     if ( cutDirection != Axis::X && cutDirection != Axis::Y )
         return unexpected( "Lacing can be done along the X or Y axis" );
 
+    const bool cutDirectionIsX = cutDirection == Axis::X;
     const auto cutDirectionIdx = int( cutDirection );
-    const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
+    const auto sideDirection = cutDirectionIsX ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
 
     ToolPathResult res;
@@ -518,7 +519,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
 
-    const Vector3f normal = (cutDirection == Axis::X) ? Vector3f::plusX() : Vector3f::plusY();
+    const Vector3f normal = cutDirectionIsX ? Vector3f::plusX() : Vector3f::plusY();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min[cutDirectionIdx] ) / params.sectionStep ) );
 
@@ -529,7 +530,8 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
 
-    float lastFeed = 0;  
+    float lastFeed = 0;
+    const bool expandToolpath = params.toolpathExpansion > 0.f;
 
     Vector3f lastPoint;
     // if the last point is equal to parameter, do nothing
@@ -541,15 +543,15 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
         if ( lastFeed == params.baseFeed )
         {
-            ( cutDirection == Axis::X ) ?
-            res.commands.push_back( { .y = point.y, .z = point.z } ) :
-            res.commands.push_back( { .x = point.x, .z = point.z } );
+            cutDirectionIsX ?
+                res.commands.push_back( { .y = point.y, .z = point.z } ) :
+                res.commands.push_back( { .x = point.x, .z = point.z } );
         }
         else
         {
-            ( cutDirection == Axis::X ) ?
-            res.commands.push_back( { .feed = params.baseFeed, .y = point.y, .z = point.z } ) :
-            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .z = point.z } );
+            cutDirectionIsX ?
+                res.commands.push_back( { .feed = params.baseFeed, .y = point.y, .z = point.z } ) :
+                res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .z = point.z } );
 
             lastFeed = params.baseFeed;
         }
@@ -561,50 +563,46 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     MinMaxf borders;
     const float minZ = box.min.z;
 
-    auto millFullLine = [&] ( int lineIndex, bool odd )
+    auto makeLineToEnd = [&] ( int lineIndex, bool reversedMovement )
     {
-        if ( cutDirection == Axis::X )
-        {
-            const float yPos = odd ? borders.max : borders.min;
-            res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
-            const float xPos = box.max.x - params.sectionStep * ( lineIndex + 1 );
-            res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
-        }
-        else
-        {
-            const float xPos = odd ? borders.min : borders.max;
-            res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
-            const float yPos = box.max.x - params.sectionStep * ( lineIndex + 1 );
-            res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
-        }
+        const float aPos = ( cutDirectionIsX == reversedMovement ) ? borders.max : borders.min;
+        const float bPos = box.max[cutDirectionIdx] - params.sectionStep * ( lineIndex + 1 );
+        GCommand command = { .type = MoveType::Linear };
+        cutDirectionIsX ? command.y = aPos : command.x = aPos;
+        res.commands.push_back( command );
+        command = { .type = MoveType::Linear };
+        cutDirectionIsX ? command.x = bPos : command.y = bPos;
+        res.commands.push_back( command );
     };
 
-    const int offsetmillingCount = int( std::ceil( params.toolpathExpansion / params.sectionStep ) );
-    if ( params.toolpathExpansion > 0.f )
+    const int additionalLineCount = int( std::ceil( params.toolpathExpansion / params.sectionStep ) );
+    if ( expandToolpath )
     {
-        bool odd = offsetmillingCount & 1;
+        bool odd = additionalLineCount & 1;
 
         float xPos = 0.f;
         float yPos = 0.f;
+        borders = { box.min[sideDirectionIdx] - params.toolpathExpansion, box.max[sideDirectionIdx] + params.toolpathExpansion};
         if ( cutDirection == Axis::X )
         {
-            borders = { box.min.y - params.toolpathExpansion, box.max.y + params.toolpathExpansion };
-            xPos = box.max.x + params.sectionStep * offsetmillingCount;
+            xPos = box.max.x + params.sectionStep * additionalLineCount;
             yPos = odd ? borders.min : borders.max;
         }
         else
         {
-            borders = { box.min.x - params.toolpathExpansion, box.max.x + params.toolpathExpansion };
             xPos = odd ? borders.max : borders.min;
-            yPos = box.max.y + params.sectionStep * offsetmillingCount;
+            yPos = box.max.y + params.sectionStep * additionalLineCount;
         }
+
+        // goto start position
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
         res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
         res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
 
-        for ( int i = -offsetmillingCount; i < 0; ++i )
+        // make a side extension of the toolpath
+        for ( int i = -additionalLineCount; i < 0; ++i )
         {
-            millFullLine( i, odd );
+            makeLineToEnd( i, odd );
             odd = !odd;
         }
     }
@@ -620,8 +618,8 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         auto& sections = allSections[step];
         if ( sections.empty() )
         {
-            if ( params.toolpathExpansion > 0.f )
-                millFullLine( step, moveForward );
+            if ( expandToolpath )
+                makeLineToEnd( step, moveForward );
             continue;
         }
 
@@ -686,8 +684,9 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
             if ( intervals.empty() )
                 continue;
 
-            if ( params.toolpathExpansion > 0.f )
+            if ( expandToolpath )
             {
+                // make path from previous section (in same step)
                 res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
                 const Vector3f& pointBegin = *intervals[0].first;
                 if ( cutDirection == Axis::X )
@@ -743,7 +742,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
                 if ( *intervals[i + 1].first != lastPoint )
                 {
-                    if ( params.toolpathExpansion > 0.f )
+                    if ( expandToolpath )
                         res.commands.push_back( { .type = MoveType::Linear, .x = intervals[i + 1].first->x, .y = intervals[i + 1].first->y } );
                     else
                         transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
@@ -765,20 +764,22 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
             lastEdgePoint = section[dist];
         }
 
-        if ( params.toolpathExpansion > 0.f )
+        if ( expandToolpath )
         {
             res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
-            millFullLine( step, moveForward );
+            makeLineToEnd( step, moveForward );
         }
     }
 
-    if ( params.toolpathExpansion > 0.f )
+    // make a side extension of the toolpath
+    if ( expandToolpath )
     {
-        for ( int i = 0; i < offsetmillingCount; ++i )
+        for ( int i = 0; i < additionalLineCount; ++i )
         {
             const int index = steps + i;
-            millFullLine( index, index & 1 );
+            makeLineToEnd( index, index & 1 );
         }
+        // remove created movement to next line from makeLineToEnd 
         res.commands.pop_back();
     }
 

@@ -524,7 +524,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
     MeshEdgePoint lastEdgePoint = {};
     // bypass direction is not meaningful for this toolpath, so leave it as default
-    const auto allSections = extractAllSections( mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
+    auto allSections = extractAllSections( mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( allSections.empty() )
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
@@ -560,33 +560,47 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     const float critDistSq = params.critTransitionLength * params.critTransitionLength;
     MinMaxf borders;
     const float minZ = box.min.z;
-    if ( params.toolpathOffset > 0.f )
-    {
-        const int offsetStep = int( std::ceil( params.toolpathOffset / params.sectionStep ) );
-        bool odd = offsetStep & 1;
 
+    auto millFullLine = [&] ( int lineIndex, bool odd )
+    {
         if ( cutDirection == Axis::X )
         {
-            borders = { box.min.y - params.toolpathOffset, box.max.y + params.toolpathOffset };
-            float xPos = box.max.x + params.sectionStep * offsetStep;
-            float yPos = odd ? borders.min : borders.max;
-
-            res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-            res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
-            res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
-
-            for ( int i = 0; i < offsetStep; ++i )
-            {
-                yPos = odd ? borders.max : borders.min;
-                res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
-                xPos = box.max.x + params.sectionStep * ( offsetStep - i - 1 );
-                res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
-                odd = !odd;
-            }
+            const float yPos = odd ? borders.max : borders.min;
+            res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
+            const float xPos = box.max.x - params.sectionStep * ( lineIndex + 1 );
+            res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
         }
         else
         {
 
+        }
+    };
+
+    const int offsetmillingCount = int( std::ceil( params.toolpathOffset / params.sectionStep ) );
+    if ( params.toolpathOffset > 0.f )
+    {
+        bool odd = offsetmillingCount & 1;
+
+        float xPos = 0.f;
+        float yPos = 0.f;
+        if ( cutDirection == Axis::X )
+        {
+            borders = { box.min.y - params.toolpathOffset, box.max.y + params.toolpathOffset };
+            xPos = box.max.x + params.sectionStep * offsetmillingCount;
+            yPos = odd ? borders.min : borders.max;
+        }
+        else
+        {
+
+        }
+        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+        res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
+        res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+
+        for ( int i = -offsetmillingCount; i < 0; ++i )
+        {
+            millFullLine( i, odd );
+            odd = !odd;
         }
     }
 
@@ -595,28 +609,36 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         if ( !reportProgress( sbp, float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
-        const auto sections = allSections[step];
+        // move from left to right and then  from right to left to make the smoothest path
+        const bool moveForward = step & 1;
+
+        auto& sections = allSections[step];
         if ( sections.empty() )
         {
             if ( params.toolpathOffset > 0.f )
-            {
-                if ( cutDirection == Axis::X )
-                {
-                    const bool odd = step & 1;
-                    const float yPos = odd ? borders.max : borders.min;
-                    res.commands.push_back( { .type = MoveType::FastLinear, .y = yPos } );
-                    const float xPos = box.max.x - params.sectionStep * step;
-                    res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos } );
-                }
-                else
-                {
-
-                }
-            }
+                millFullLine( step, moveForward );
             continue;
         }
 
-        bool moveToSection = true;
+
+        auto compareFn = [&mesh, cutDirection, moveForward] ( const SurfacePath& a, const SurfacePath& b )
+        {
+            if ( cutDirection == Axis::X )
+            {
+                return moveForward ?
+                    mesh.edgePoint( a[0] ).y < mesh.edgePoint( b[0] ).y :
+                    mesh.edgePoint( a[0] ).y > mesh.edgePoint( b[0] ).y;
+            }
+            else
+            {
+                return moveForward ?
+                    mesh.edgePoint( a[0] ).x < mesh.edgePoint( b[0] ).x :
+                    mesh.edgePoint( a[0] ).x > mesh.edgePoint( b[0] ).x;
+            }
+        };
+        if ( sections.size() > 1 )
+            std::sort( sections.begin(), sections.end(), compareFn );
+        
         // there could be many sections in one slice
         for ( const auto& section : sections )
         {
@@ -648,9 +670,6 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
                     bottomRightIt = it;
             }
 
-            // move from left to right and then  from right to left to make the smoothest path
-            const bool moveForward = step & 1;
-
             if ( cutDirection == Axis::Y )
             {
                 std::swap( bottomLeftIt, bottomRightIt );
@@ -662,19 +681,19 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
             if ( intervals.empty() )
                 continue;
 
-            if ( params.toolpathOffset > 0.f && moveToSection )
+            if ( params.toolpathOffset > 0.f )
             {
-                moveToSection = false;
+                res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+                const Vector3f& pointBegin = *intervals[0].first;
                 if ( cutDirection == Axis::X )
                 {
-                    const Vector3f& pointBegin = *intervals[0].first;
                     res.commands.push_back( { .type = MoveType::Linear, .y = pointBegin.y } );
-                    res.commands.push_back( { .type = MoveType::FastLinear, .z = pointBegin.z } );
                 }
                 else
                 {
-
+                    res.commands.push_back( { .type = MoveType::Linear, .x = pointBegin.x } );
                 }
+                res.commands.push_back( { .type = MoveType::Linear, .z = pointBegin.z } );
             }
             else
             {
@@ -743,24 +762,21 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
         if ( params.toolpathOffset > 0.f )
         {
-            if ( cutDirection == Axis::X )
-            {
-                res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
-                const bool odd = step & 1;
-                const float yPos = odd ? borders.max : borders.min;
-                res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
-                if ( step != steps - 1 )
-                {
-                    const float xPos = box.max.x - params.sectionStep * step;
-                    res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
-                }
-            }
-            else
-            {
-
-            }
+            res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+            millFullLine( step, moveForward );
         }
     }
+
+    if ( params.toolpathOffset > 0.f )
+    {
+
+        for ( int i = 0; i < offsetmillingCount; ++i )
+        {
+            const int index = steps + i;
+            millFullLine( index, index & 1 );
+        }
+    }
+
 
     if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();

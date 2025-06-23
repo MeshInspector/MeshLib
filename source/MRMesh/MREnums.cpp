@@ -1,4 +1,5 @@
 #include "MREnums.h"
+#include <cassert>
 
 namespace MR
 {

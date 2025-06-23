@@ -11,7 +11,7 @@ namespace MR::Cuda
 {
 
 /// Helper class to manage the GPU memory-backed buffers for Polyline2 data
-class Polyline2DataHolder
+class MR_BIND_IGNORE Polyline2DataHolder
 {
 public:
     /// Allocates data buffers in the GPU memory and copies data to it.
@@ -32,7 +32,7 @@ private:
 };
 
 /// Helper class to manage the GPU memory-backed buffers for Polyline3 data
-class Polyline3DataHolder
+class MR_BIND_IGNORE Polyline3DataHolder
 {
 public:
     /// Allocates data buffers in the GPU memory and copies data to it.

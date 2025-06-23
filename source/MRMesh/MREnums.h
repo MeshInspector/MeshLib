@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+
 namespace MR
 {
 
@@ -58,6 +60,9 @@ enum class ColoringType
     LinesColorMap = PrimitivesColorMap, ///< Use different color (taken from faces colormap) for each line (primitive for object lines)
     VertsColorMap  ///< Use different color (taken from verts colormap) for each vertex
 };
+
+/// returns string representation of enum values
+[[nodiscard]] MRMESH_API const char * asString( ColoringType ct );
 
 enum class UseAABBTree : char
 {

@@ -13,7 +13,7 @@ namespace Cuda
 
 __global__ void kernel(
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
-    Polyline2Data polyline,
+    const Polyline2Data polyline,
     float* dists, const size_t chunkSize, size_t chunkOffset )
 {
     if ( chunkSize == 0 )
@@ -99,7 +99,7 @@ __global__ void kernel(
 
 void contoursDistanceMapProjectionKernel( 
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
-    Polyline2Data polyline, float* dists,
+    const Polyline2Data polyline, float* dists,
     const size_t chunkSize, size_t chunkOffset )
 {
     constexpr int maxThreadsPerBlock = 640;

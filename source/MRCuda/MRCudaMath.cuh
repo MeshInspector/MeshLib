@@ -400,5 +400,17 @@ __device__ inline void setBit( uint64_t* bitSet, const size_t bitNumber )
     bitSet[bitNumber / 64] += ( 1ull << ( bitNumber % 64 ) );
 }
 
+template <typename T>
+__device__ inline T sqr( T x )
+{
+    return x * x;
+}
+
+template <typename T>
+__device__ inline int sgn( T x )
+{
+    return x > 0 ? 1 : ( x < 0 ? -1 : 0 );
+}
+
 }
 }

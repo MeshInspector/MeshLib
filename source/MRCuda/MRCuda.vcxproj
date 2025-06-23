@@ -127,6 +127,7 @@
     <ClInclude Include="MRCuda.cuh" />
     <ClInclude Include="MRCudaProfiling.cuh" />
     <ClInclude Include="MRCudaInplaceStack.cuh" />
+    <ClInclude Include="MRCudaLineSegm.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />

@@ -60,6 +60,9 @@
     <ClCompile Include="MRCudaPointCloud.cpp">
       <Filter>Data Holders</Filter>
     </ClCompile>
+    <ClCompile Include="MRCudaPolyline.cpp">
+      <Filter>Data Holders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -155,6 +158,12 @@
     </ClInclude>
     <ClInclude Include="MRCudaInplaceStack.cuh">
       <Filter>AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPolyline.cuh">
+      <Filter>Data Holders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPolyline.h">
+      <Filter>Data Holders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

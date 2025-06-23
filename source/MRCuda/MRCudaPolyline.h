@@ -1,5 +1,7 @@
 #pragma once
 
+#if !( defined( MR_PARSING_FOR_PB11_BINDINGS ) || defined(MR_COMPILING_PB11_BINDINGS) )
+
 #include "exports.h"
 #include "MRCudaBasic.cuh"
 #include "MRCudaMath.cuh"
@@ -11,7 +13,7 @@ namespace MR::Cuda
 {
 
 /// Helper class to manage the GPU memory-backed buffers for Polyline2 data
-class MR_BIND_IGNORE Polyline2DataHolder
+class Polyline2DataHolder
 {
 public:
     /// Allocates data buffers in the GPU memory and copies data to it.
@@ -32,7 +34,7 @@ private:
 };
 
 /// Helper class to manage the GPU memory-backed buffers for Polyline3 data
-class MR_BIND_IGNORE Polyline3DataHolder
+class Polyline3DataHolder
 {
 public:
     /// Allocates data buffers in the GPU memory and copies data to it.
@@ -53,3 +55,5 @@ private:
 };
 
 } // namespace MR::Cuda
+
+#endif

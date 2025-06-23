@@ -621,6 +621,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         if ( sections.empty() )
         {
             if ( expandToolpath )
+                // create toolpath to th eend of this section layer (step) (skip empty section)
                 makeLineToEnd( step, moveForward );
             continue;
         }
@@ -764,6 +765,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
         if ( expandToolpath )
         {
+            // create toolpath to th eend of this section layer (step)
             res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
             makeLineToEnd( step, moveForward );
         }

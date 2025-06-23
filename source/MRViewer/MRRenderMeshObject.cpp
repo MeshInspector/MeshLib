@@ -828,7 +828,13 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
     }
     else
     {
-        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = topology.lastValidVert() + 1 );
+        vertPosSize_ = topology.lastValidVert() + 1;
+        if ( vertPosSize_ > mesh->points.size() )
+        {
+            assert( false );
+            vertPosSize_ = (int)mesh->points.size();
+        }
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ );
         std::copy( MR::begin( mesh->points ), MR::begin( mesh->points ) + vertPosSize_, buffer.data() );
         return buffer;
     }
@@ -898,7 +904,13 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         }
         else
         {
-            auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = topology.lastValidVert() + 1 );
+            vertNormalsSize_ = topology.lastValidVert() + 1;
+            if ( vertNormalsSize_ > vertNormals.size() )
+            {
+                assert( false );
+                vertNormalsSize_ = (int)vertNormals.size();
+            }
+            auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ );
             std::copy( MR::begin( vertNormals ), MR::end( vertNormals ), buffer.data() );
             return buffer;
         }
@@ -945,7 +957,13 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
     }
     else
     {
-        auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = topology.lastValidVert() + 1 );
+        vertColorsSize_ = topology.lastValidVert() + 1;
+        if ( vertColorsSize_ > vertsColorMap.size() )
+        {
+            assert( false );
+            vertColorsSize_ = (int)vertsColorMap.size();
+        }
+        auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ );
         std::copy( MR::begin( vertsColorMap ), MR::begin( vertsColorMap ) + vertColorsSize_, buffer.data() );
         return buffer;
     }

@@ -572,7 +572,10 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         }
         else
         {
-
+            const float xPos = odd ? borders.min : borders.max;
+            res.commands.push_back( { .type = MoveType::Linear, .x = xPos } );
+            const float yPos = box.max.x - params.sectionStep * ( lineIndex + 1 );
+            res.commands.push_back( { .type = MoveType::Linear, .y = yPos } );
         }
     };
 
@@ -591,7 +594,9 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         }
         else
         {
-
+            borders = { box.min.x - params.toolpathOffset, box.max.x + params.toolpathOffset };
+            xPos = odd ? borders.max : borders.min;
+            yPos = box.max.y + params.sectionStep * offsetmillingCount;
         }
         res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
         res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
@@ -632,8 +637,8 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
             else
             {
                 return moveForward ?
-                    mesh.edgePoint( a[0] ).x < mesh.edgePoint( b[0] ).x :
-                    mesh.edgePoint( a[0] ).x > mesh.edgePoint( b[0] ).x;
+                    mesh.edgePoint( a[0] ).x > mesh.edgePoint( b[0] ).x :
+                    mesh.edgePoint( a[0] ).x < mesh.edgePoint( b[0] ).x;
             }
         };
         if ( sections.size() > 1 )
@@ -769,12 +774,12 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
     if ( params.toolpathOffset > 0.f )
     {
-
         for ( int i = 0; i < offsetmillingCount; ++i )
         {
             const int index = steps + i;
             millFullLine( index, index & 1 );
         }
+        res.commands.pop_back();
     }
 
 

@@ -2165,6 +2165,9 @@
     <ClCompile Include="MROneMeshContours.cpp">
       <Filter>Source Files\Contours</Filter>
     </ClCompile>
+    <ClCompile Include="MREnums.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

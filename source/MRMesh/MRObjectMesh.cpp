@@ -95,6 +95,8 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         for ( TextureId i = TextureId{ 0 }; i < textures_.size(); ++i )
             res.push_back( "texture " + std::to_string( i ) + ": " + std::to_string( textures_[i].resolution.x) + " x " + std::to_string(textures_[i].resolution.y));
 
+        res.push_back( std::string( "coloring type: " ) + asString( getColoringType() ) );
+
         if ( !data_.uvCoordinates.empty() )
         {
             res.push_back( "uv-coords: " + std::to_string( data_.uvCoordinates.size() ) );

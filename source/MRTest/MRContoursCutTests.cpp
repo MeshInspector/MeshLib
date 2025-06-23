@@ -74,7 +74,6 @@ TEST( MRMesh, MeshCollidePrecise )
 
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
     EXPECT_EQ( contours.size(), 4 );
-    // FIXME: the results are platform-dependent
     EXPECT_EQ(   contours[0].size(), 71 );
     EXPECT_EQ(   contours[1].size(), 7 );
     EXPECT_TRUE( contours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
@@ -137,6 +136,81 @@ TEST( MRMesh, MeshCollidePrecise )
     for ( const auto& contour : meshAContours )
         posCount += contour.intersections.size();
     EXPECT_EQ( posCount, 156 );
+
+    // same for self-intersections
+    auto mergedMesh = meshA;
+    mergedMesh.addMesh( meshB );
+    const auto selfIntersections = findSelfCollidingEdgeTrisPrecise( mergedMesh, conv.toInt );
+    EXPECT_EQ( selfIntersections.size(), 152 );
+
+    const auto selfContours = orderSelfIntersectionContours( mergedMesh.topology, selfIntersections );
+    EXPECT_EQ( selfContours.size(), 8 );
+    for ( int i = 0; i < 8; i += 2 )
+    {
+        const auto & even = selfContours[i];
+        const auto & odd = selfContours[i+1];
+        EXPECT_EQ( even.size(), odd.size() );
+        EXPECT_GT( even.size(), 0 );
+        EXPECT_TRUE( even[0].isEdgeATriB() );
+        EXPECT_FALSE( odd[0].isEdgeATriB() );
+        for ( int j = 0; j < even.size(); ++j )
+        {
+            const auto& ei = even[j];
+            const auto& oi = odd[even.size() - j - 1];
+            EXPECT_EQ( ei.tri(), oi.tri() );
+            EXPECT_EQ( ei.isEdgeATriB(), !oi.isEdgeATriB() );
+            EXPECT_EQ( ei.edge, oi.edge.sym() );
+        }
+    }
+    EXPECT_EQ(   selfContours[0].size(), 71 );
+    EXPECT_TRUE( selfContours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 selfContours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
+    EXPECT_TRUE( selfContours[4].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 selfContours[4].size() == 7 );  // with FMA instruction (modern compilers for ARM)
+    EXPECT_EQ(   selfContours[6].size(), 7 );
+
+    for ( const auto & c : selfContours )
+    {
+        // check that contour is closed
+        EXPECT_EQ( c.front(), c.back() );
+
+        // check intersections' order
+        for ( int i = 0; i + 1 < c.size(); ++i )
+        {
+            const auto & curr = c[i];
+            const auto & next = c[i+1];
+            if ( curr.isEdgeATriB() == next.isEdgeATriB() )
+            {
+                EXPECT_TRUE( mergedMesh.topology.next( curr.edge ) == next.edge
+                    || mergedMesh.topology.prev( curr.edge.sym() ).sym() == next.edge );
+                EXPECT_EQ( curr.tri(), next.tri() );
+            }
+            else
+            {
+                EXPECT_EQ( mergedMesh.topology.left( curr.edge ), next.tri() );
+                bool found = false;
+                for ( EdgeId e : leftRing( mergedMesh.topology, curr.tri() ) )
+                    found = found || e.sym() == next.edge;
+                EXPECT_TRUE( found );
+            }
+        }
+
+        // check edges' orientation
+        for ( const auto & vet : c )
+        {
+            const auto pl = mergedMesh.getPlane3d( vet.tri() );
+            if ( vet.isEdgeATriB() )
+            {
+                EXPECT_LE( pl.distance( Vector3d{ mergedMesh.orgPnt( vet.edge ) } ), 0 );
+                EXPECT_GE( pl.distance( Vector3d{ mergedMesh.destPnt( vet.edge ) } ), 0 );
+            }
+            else
+            {
+                EXPECT_GE( pl.distance( Vector3d{ mergedMesh.orgPnt( vet.edge ) } ), 0 );
+                EXPECT_LE( pl.distance( Vector3d{ mergedMesh.destPnt( vet.edge ) } ), 0 );
+            }
+        }
+    }
 }
 
 } //namespace MR

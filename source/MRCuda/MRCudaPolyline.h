@@ -3,14 +3,12 @@
 #include "exports.h"
 #include "MRCudaBasic.cuh"
 #include "MRCudaMath.cuh"
+#include "MRCudaPolyline.cuh"
 
 #include "MRMesh/MRExpected.h"
 
 namespace MR::Cuda
 {
-
-struct Polyline2Data;
-struct Polyline3Data;
 
 /// Helper class to manage the GPU memory-backed buffers for Polyline2 data
 class Polyline2DataHolder

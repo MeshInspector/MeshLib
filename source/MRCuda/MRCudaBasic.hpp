@@ -53,6 +53,25 @@ DynamicArray<T>::~DynamicArray()
     resize( 0 );
 }
 
+template <typename T>
+DynamicArray<T>::DynamicArray( DynamicArray&& other )
+{
+    data_ = other.data_;
+    size_ = other.size_;
+    other.data_ = nullptr;
+    other.size_ = 0;
+}
+
+template <typename T>
+DynamicArray<T>& DynamicArray<T>::operator=( DynamicArray&& other )
+{
+    data_ = other.data_;
+    size_ = other.size_;
+    other.data_ = nullptr;
+    other.size_ = 0;
+    return *this;
+}
+
 template<typename T>
 template<typename U>
 inline cudaError_t DynamicArray<T>::fromVector( const std::vector<U>& vec )

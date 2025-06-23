@@ -3,6 +3,7 @@
 
 #include "MRCudaBasic.h"
 #include "MRCudaBasic.cuh"
+#include "MRCudaPolyline.h"
 
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "MRMesh/MRChunkIterator.h"
@@ -13,20 +14,10 @@ namespace MR::Cuda
 
 Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params )
 {
-    const auto& tree = polyline.getAABBTree();
-    const auto& nodes = tree.nodes();
-    const auto orgs = polyline.topology.getOrgs();
-
     CUDA_LOGE_RETURN_UNEXPECTED( cudaSetDevice( 0 ) );
 
-    DynamicArray<float2> cudaPts;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaPts.fromVector( polyline.points.vec_ ) );
-
-    DynamicArray<Node2> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
-
-    DynamicArray<int> cudaOrgs;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaOrgs.fromVector( orgs.vec_ ) );
+    auto cudaPolyline = Polyline2DataHolder::fromLines( polyline );
+    MR_RETURN_IF_UNEXPECTED( cudaPolyline )
 
     const auto totalSize = (size_t)params.resolution.x * params.resolution.y;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.resolution, sizeof( float ) );
@@ -43,7 +34,7 @@ Expected<DistanceMap> distanceMapFromContours( const Polyline2& polyline, const 
             { params.orgPoint.x + params.pixelSize.x * 0.5f, params.orgPoint.y + params.pixelSize.y * 0.5f },
             { params.resolution.x, params.resolution.y },
             { params.pixelSize.x, params.pixelSize.y },
-            cudaNodes.data(), cudaPts.data(), cudaOrgs.data(), cudaRes.data(), size, offset );
+            *cudaPolyline, cudaRes.data(), size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaRes.copyTo( vec.data() + offset, size ) );
@@ -58,10 +49,8 @@ size_t distanceMapFromContoursHeapBytes( const Polyline2& polyline, const Contou
 {
     constexpr size_t cMinRowCount = 10;
     /// cannot use polyline.heapBytes here because it has extra fields in topology and does not create AABBTree if it is not present
-    return 
-        polyline.points.heapBytes() + 
-        polyline.getAABBTree().nodes().heapBytes() +
-        polyline.topology.edgeSize() +
+    return
+        Polyline2DataHolder::heapBytes( polyline ) +
         cMinRowCount * params.resolution.y * sizeof( float );
 }
 

@@ -26,9 +26,22 @@ using ContinuousContours = std::vector<ContinuousContour>;
 ///    b. right of contours on mesh B is inside of mesh A (consequence of 3b).
 MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections );
 
-/// Combines individual self intersections into ordered contours with the properties:
-/// a. left  of contours on mesh is inside
-/// b. each intersected edge has origin inside meshes intersection and destination outside of it
+/// Combines unordered input self-intersections (and flips orientation of some intersected edges) into ordered oriented contours with the properties:
+/// 1. Each contour is
+///    a. either closed (then its first and last elements are equal),
+///    b. or open (then its first and last intersected edges are boundary edges).
+/// 2. Next intersection in a contour is located to the left of the current intersected edge:
+///    a. if the current and next intersected triangles are the same, then next intersected edge is either next( curr.edge ) or prev( curr.edge.sym() ).sym(),
+///    b. otherwise next intersected triangle is left( curr.edge ) and next intersected edge is one of the edges having the current intersected triangle to the right.
+/// 3. Orientation of intersected edges in each pair of (intersected edge, intersected triangle):
+///    a. isEdgeATriB() = true:  the intersected edge is directed from negative half-space of the intersected triangle to its positive half-space,
+///    b. isEdgeATriB() = false: the intersected edge is directed from positive half-space of the intersected triangle to its negative half-space.
+/// 4. Contours [2*i] and [2*i+1]
+///    a. have equal lengths and pass via the same intersections but in opposite order,
+///    b. each intersection is present in two contours with different values of isEdgeATriB() flag, and opposite directions of the intersected edge.
+/// 5. Orientation of contours:
+///    a. first element of even (0,2,...) contours has isEdgeATriB() = true, left of even contours goes inside (consequence of 3a),
+///    b. first element of odd (1,3,...) contours has isEdgeATriB() = false, right of odd contours goes inside (consequence of 3b).
 MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections );
 
 /// extracts coordinates from two meshes intersection contours

@@ -563,7 +563,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     MinMaxf borders;
     const float minZ = box.min.z;
 
-    // create toolpath to line end (in one section step)
+    // create a path to the end of the section: z = minZ, side coord = norder.min / max (depending on the direction)
     // use reversed Movement to change movement direction (because the directions of movement in the section alternate in layers (steps))
     auto makeLineToEnd = [&] ( int lineIndex, bool reversedMovement )
     {
@@ -585,7 +585,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         float xPos = 0.f;
         float yPos = 0.f;
         borders = { box.min[sideDirectionIdx] - params.toolpathExpansion, box.max[sideDirectionIdx] + params.toolpathExpansion};
-        if ( cutDirection == Axis::X )
+        if ( cutDirectionIsX )
         {
             xPos = box.max.x + params.sectionStep * additionalLineCount;
             yPos = odd ? borders.min : borders.max;
@@ -601,7 +601,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
         res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
 
-        // make a side extension of the toolpath (several straight lines)
+        // create toolpaths( lines ) to the side of the object (in the direction of cutDirection)
         for ( int i = -additionalLineCount; i < 0; ++i )
         {
             makeLineToEnd( i, odd );
@@ -621,13 +621,13 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         if ( sections.empty() )
         {
             if ( expandToolpath )
-                // create toolpath to th eend of this section layer (step) (skip empty section)
+                // create toolpath to the end of this section layer (step) (skip empty section)
                 makeLineToEnd( step, moveForward );
             continue;
         }
 
         // sort the sections so that the transitions between them do not intersect the original part.
-        auto compareFn = [&mesh, cutDirection, moveForward] ( const SurfacePath& a, const SurfacePath& b )
+        auto compareFn = [&mesh, cutDirectionIsX, moveForward] ( const SurfacePath& a, const SurfacePath& b )
         {
             if ( cutDirectionIsX )
             {
@@ -771,7 +771,7 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
         }
     }
 
-    // make a side extension of the toolpath (several straight lines)
+    // create toolpaths( lines ) to the side of the object (in the direction of cutDirection)
     if ( expandToolpath )
     {
         for ( int i = 0; i < additionalLineCount; ++i )

@@ -406,17 +406,17 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                     .maxEdgeLen = 2 * (float)avgLen,
                     .edgeWeights = settings_.edgeWeights
                 };
-                if ( unchangeableVerts_.any() )
+                settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
                 {
-                    settings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
-                    {
-                        if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
-                            newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
-                        if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
-                            newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
+                    if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
+                        newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
+                    if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
+                        newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
+                    // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
+                    if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
+                         unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
                         unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
-                    };
-                }
+                };
                 for ( auto e : bd )
                     if ( !newMesh->topology.left( e ) )
                         fillHoleNicely( *newMesh, e, settings );
@@ -739,9 +739,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     for ( auto v : singleEditingRegion_ )
         singleEditingRegion_.set( v, editingDistanceMap_[v] <= settings_.radius );
-    if ( singleEditingRegion_.any() && unchangeableVerts_.any() )
-        singleEditingRegion_ -= unchangeableVerts_;
-
+    singleEditingRegion_ -= unchangeableVerts_;
 }
 
 void SurfaceManipulationWidget::abortEdit_()

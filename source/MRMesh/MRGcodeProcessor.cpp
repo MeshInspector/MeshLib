@@ -131,7 +131,7 @@ void GcodeProcessor::parseFrame_( const std::string_view& frame, std::vector<Com
             it = newIt;
             outCommands.push_back( cmd );
         }
-        while ( std::isspace( frame[it] ) )
+        while ( it < frame.size() && std::isspace( frame[it] ) )
             ++it;
     }
 }

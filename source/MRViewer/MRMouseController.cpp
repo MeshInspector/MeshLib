@@ -120,6 +120,7 @@ void MouseController::connect()
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::preMouseDown_ ), boost::signals2::at_front );
     viewer.mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
     viewer.mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
+    viewer.dragDropSignal.connect( MAKE_SLOT( &MouseController::preDragDrop_ ), boost::signals2::at_front );
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
     viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
@@ -266,7 +267,7 @@ bool MouseController::preMouseMove_( int x, int y )
 
     prevMousePos_ = currentMousePos_;
     currentMousePos_ = { x,y };
-
+    
     if ( dragActive_ )
         return viewer.drag( x, y );
     if ( clickButton_ != MouseButton::NoButton )
@@ -327,6 +328,20 @@ bool MouseController::preMouseMove_( int x, int y )
         transformModifierCb_( xf );
     viewport.transformView( xf );
     return true;
+}
+
+bool MouseController::preDragDrop_( const std::vector<std::filesystem::path>& )
+{
+    const auto& v = getViewerInstance();
+    if ( !v.window )
+        return false;
+    double x=0.0;
+    double y=0.0;
+    glfwGetCursorPos( v.window, &x, &y );
+    x *= v.pixelRatio;
+    y *= v.pixelRatio;
+    currentMousePos_ = Vector2i(int(x),int(y));
+    return false;
 }
 
 bool MouseController::mouseScroll_( float delta )

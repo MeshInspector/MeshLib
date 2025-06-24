@@ -77,6 +77,7 @@ private:
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
     bool preMouseUp_( MouseButton button, int modifier );
+    bool preDragDrop_( const std::vector<std::filesystem::path>& paths ); // this slot is needed to guaranteed update `currentMousePos_` before actual drop (it may be not updated in borwser)
     bool preMouseMove_( int x, int y );
     bool mouseScroll_( float delta );
 

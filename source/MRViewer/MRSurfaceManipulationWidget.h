@@ -59,7 +59,7 @@ public:
     /// reset widget state
     MRVIEWER_API void reset();
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
-    /// @note boundary edges can be splitted to improve quality of the patch
+    /// @note boundary edges can be split to improve quality of the patch
     MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)

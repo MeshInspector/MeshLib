@@ -21,8 +21,9 @@ fi
 # Linux
 if [[ $UNAME_S == Linux ]]; then
     # Is `Ubuntu <= 22.04`?
-    # Here we use `compgen -c` to not rely on `which` existing, since it's getting removed from some distros.
-    if compgen -c lsb_release >/dev/null 2>/dev/null && (lsb_release -rs; echo "22.04") | sort -rCV; then
+    # Here we use `type` to not rely on `which` existing, since it's getting removed from some distros.
+    # I also tried `compgen -c`, but that doesn't seem to work in our CI for some reason.
+    if type lsb_release >/dev/null 2>/dev/null && (lsb_release -rs; echo "22.04") | sort -rCV; then
         # Here we need the outdated Clang because the old Boost doesn't compile on the new Clang, because of this change: https://github.com/llvm/llvm-project/issues/59036
         echo "18"
         exit

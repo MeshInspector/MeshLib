@@ -315,6 +315,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "HeaderBackground",
         "HeaderSeparator",
         "TopPanelBackground",
+        "TopPanelSearchBackground",
         "QuickAccessBackground",
         "Borders",
 

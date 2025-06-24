@@ -211,6 +211,12 @@
 			"g": 31,
 			"r": 28
 		},
+		"TopPanelSearchBackground": {
+			"a": 255,
+			"b": 58,
+			"g": 52,
+			"r": 48
+		},
 		"QuickAccessBackground": {
 			"a": 255,
 			"b": 58,
@@ -265,14 +271,12 @@
 			"g": 77,
 			"r": 0
 		},
-
 		"TextContrastBackground": {
 			"a": 0,
 			"b": 0,
 			"g": 0,
 			"r": 0
 		},
-
 		"GradBtnStart": {
 			"a": 255,
 			"b": 255,

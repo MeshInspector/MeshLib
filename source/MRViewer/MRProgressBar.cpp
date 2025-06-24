@@ -300,7 +300,7 @@ void setup( float scaling )
                 const float time = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
                 instance.lastOperationTimeSec_ = time;
                 spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_ );
-                pushNotification( { .header = fmt::format( "{:.1f} sec", time < 5.e-3f ? 0.f : time ),
+                pushNotification( { .header = fmt::format( "{:.2f} sec", time < 5.e-3f ? 0.f : time ),
                                     .text = instance.title_, .type = NotificationType::Time,.tags = NotificationTags::Report } );
             }
             instance.isOrdered_ = false;

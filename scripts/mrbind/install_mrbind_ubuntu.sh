@@ -8,8 +8,7 @@ SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 
 [[ -v MRBIND_DIR ]] || MRBIND_DIR="$(realpath "$SCRIPT_DIR/../../thirdparty/mrbind")"
 
-# Read the Clang version from `clang_version.txt`. `xargs` trims the whitespace.
-CLANG_VER="$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
+CLANG_VER="$("$SCRIPT_DIR/select_clang_version.sh")"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 cd "$MRBIND_DIR"

@@ -10,7 +10,6 @@ rem some other MSYS2 copy.
 setlocal
 
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
-if "%CLANG_VER%" == "" set /p CLANG_VER=<%~dp0\clang_version_msys2.txt
 
 rem ------ Ensure MSYS2 is installed
 
@@ -50,6 +49,6 @@ rem ------ Install needed packages
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed gawk make procps-ng $MINGW_PACKAGE_PREFIX-cmake"
 
 rem ------ Install a specific version of Clang
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "'%~dp0'/msys2_install_clang_ver.sh %CLANG_VER%"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "'%~dp0'/msys2_install_clang_ver.sh $('%~dp0'/select_clang_version.sh)"
 
 endlocal

@@ -48,6 +48,11 @@ struct ToolPathParams
     bool flatTool = false;
     // callback for reporting on progress
     ProgressCallback cb = {};
+
+    // if > 0 - expand the trajectory creation area and create toolpath to mill excess material to make empty areas.
+    // The area has the shape of a box.
+    // Lacing specific only.
+    float toolpathExpansion = 0.f;
     
     // optional output, stores isolines without transits
     Contours3f* isolines = nullptr;  

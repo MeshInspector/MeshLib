@@ -498,8 +498,9 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     if ( cutDirection != Axis::X && cutDirection != Axis::Y )
         return unexpected( "Lacing can be done along the X or Y axis" );
 
+    const bool cutDirectionIsX = cutDirection == Axis::X;
     const auto cutDirectionIdx = int( cutDirection );
-    const auto sideDirection = ( cutDirection == Axis::X ) ? Axis::Y : Axis::X;
+    const auto sideDirection = cutDirectionIsX ? Axis::Y : Axis::X;
     const auto sideDirectionIdx = int( sideDirection );
 
     ToolPathResult res;
@@ -518,18 +519,19 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     const auto box = mesh.computeBoundingBox();
     const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
 
-    const Vector3f normal = (cutDirection == Axis::X) ? Vector3f::plusX() : Vector3f::plusY();
+    const Vector3f normal = cutDirectionIsX ? Vector3f::plusX() : Vector3f::plusY();
     const auto plane = MR::Plane3f::fromDirAndPt( normal, box.max );
     const int steps = int( std::floor( ( plane.d - box.min[cutDirectionIdx] ) / params.sectionStep ) );
 
     MeshEdgePoint lastEdgePoint = {};
     // bypass direction is not meaningful for this toolpath, so leave it as default
-    const auto allSections = extractAllSections( mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
+    auto allSections = extractAllSections( mesh, box, cutDirection, params.sectionStep, steps, BypassDirection::Clockwise, subprogress( params.cb, 0.25f, 0.5f ) );
     if ( allSections.empty() )
         return unexpectedOperationCanceled();
     const auto sbp = subprogress( params.cb, 0.5f, 1.0f );
 
-    float lastFeed = 0;  
+    float lastFeed = 0;
+    const bool expandToolpath = params.toolpathExpansion > 0.f;
 
     Vector3f lastPoint;
     // if the last point is equal to parameter, do nothing
@@ -541,15 +543,15 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
         if ( lastFeed == params.baseFeed )
         {
-            ( cutDirection == Axis::X ) ?
-            res.commands.push_back( { .y = point.y, .z = point.z } ) :
-            res.commands.push_back( { .x = point.x, .z = point.z } );
+            cutDirectionIsX ?
+                res.commands.push_back( { .y = point.y, .z = point.z } ) :
+                res.commands.push_back( { .x = point.x, .z = point.z } );
         }
         else
         {
-            ( cutDirection == Axis::X ) ?
-            res.commands.push_back( { .feed = params.baseFeed, .y = point.y, .z = point.z } ) :
-            res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .z = point.z } );
+            cutDirectionIsX ?
+                res.commands.push_back( { .feed = params.baseFeed, .y = point.y, .z = point.z } ) :
+                res.commands.push_back( { .feed = params.baseFeed, .x = point.x, .z = point.z } );
 
             lastFeed = params.baseFeed;
         }
@@ -558,16 +560,91 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
     };
 
     const float critDistSq = params.critTransitionLength * params.critTransitionLength;
+    MinMaxf borders;
+    const float minZ = box.min.z;
+
+    // create a path to the end of the section: z = minZ, side coord = norder.min / max (depending on the direction)
+    // use reversed Movement to change movement direction (because the directions of movement in the section alternate in layers (steps))
+    auto makeLineToEnd = [&] ( int lineIndex, bool reversedMovement )
+    {
+        const float aPos = ( cutDirectionIsX == reversedMovement ) ? borders.max : borders.min;
+        const float bPos = box.max[cutDirectionIdx] - params.sectionStep * ( lineIndex + 1 );
+        GCommand command = { .type = MoveType::Linear };
+        cutDirectionIsX ? command.y = aPos : command.x = aPos;
+        res.commands.push_back( command );
+        command = { .type = MoveType::Linear };
+        cutDirectionIsX ? command.x = bPos : command.y = bPos;
+        res.commands.push_back( command );
+    };
+
+    const int additionalLineCount = int( std::ceil( params.toolpathExpansion / params.sectionStep ) );
+    if ( expandToolpath )
+    {
+        bool odd = additionalLineCount & 1;
+
+        float xPos = 0.f;
+        float yPos = 0.f;
+        borders = { box.min[sideDirectionIdx] - params.toolpathExpansion, box.max[sideDirectionIdx] + params.toolpathExpansion};
+        if ( cutDirectionIsX )
+        {
+            xPos = box.max.x + params.sectionStep * additionalLineCount;
+            yPos = odd ? borders.min : borders.max;
+        }
+        else
+        {
+            xPos = odd ? borders.max : borders.min;
+            yPos = box.max.y + params.sectionStep * additionalLineCount;
+        }
+
+        // move to start position
+        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+        res.commands.push_back( { .type = MoveType::FastLinear, .x = xPos , .y = yPos } );
+        res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+
+        // create toolpaths( lines ) to the side of the object (in the direction of cutDirection)
+        for ( int i = -additionalLineCount; i < 0; ++i )
+        {
+            makeLineToEnd( i, odd );
+            odd = !odd;
+        }
+    }
 
     for ( int step = 0; step < steps; ++step )
     {
         if ( !reportProgress( sbp, float( step ) / steps ) )
             return unexpectedOperationCanceled();
 
-        const auto sections = allSections[step];
-        if ( sections.empty() )
-            continue;
+        // move from left to right and then from right to left to make the smoothest path
+        const bool moveForward = step & 1;
 
+        auto& sections = allSections[step];
+        if ( sections.empty() )
+        {
+            if ( expandToolpath )
+                // create toolpath to the end of this section layer (step) (skip empty section)
+                makeLineToEnd( step, moveForward );
+            continue;
+        }
+
+        // sort the sections so that the transitions between them do not intersect the original part.
+        auto compareFn = [&mesh, cutDirectionIsX, moveForward] ( const SurfacePath& a, const SurfacePath& b )
+        {
+            if ( cutDirectionIsX )
+            {
+                return moveForward ?
+                    mesh.edgePoint( a[0] ).y < mesh.edgePoint( b[0] ).y :
+                    mesh.edgePoint( a[0] ).y > mesh.edgePoint( b[0] ).y;
+            }
+            else
+            {
+                return moveForward ?
+                    mesh.edgePoint( a[0] ).x > mesh.edgePoint( b[0] ).x :
+                    mesh.edgePoint( a[0] ).x < mesh.edgePoint( b[0] ).x;
+            }
+        };
+        if ( sections.size() > 1 )
+            std::sort( sections.begin(), sections.end(), compareFn );
+        
         // there could be many sections in one slice
         for ( const auto& section : sections )
         {
@@ -599,39 +676,50 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
                     bottomRightIt = it;
             }
 
-            // move from left to right and then  from right to left to make the smoothest path
-            const bool moveForward = step & 1;
-
             if ( cutDirection == Axis::Y )
             {
                 std::swap( bottomLeftIt, bottomRightIt );
                 if ( !moveForward && bottomLeftIt != contour.begin() )
                     --bottomLeftIt;
             }
-            
+
             const auto intervals = getIntervals( mp, params.offsetMesh, bottomLeftIt, bottomRightIt, contour.begin(), contour.end(), moveForward, params.millRadius );
             if ( intervals.empty() )
                 continue;
 
-            // go to the first point through the safe height
-            if ( res.commands.empty() )
+            if ( expandToolpath )
             {
-                res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
-                res.commands.push_back( { .type = MoveType::FastLinear, .x = intervals[0].first->x, .y = intervals[0].first->y } );
-                res.commands.push_back( { .type = MoveType::FastLinear, .z = intervals[0].first->z } );
+                // make path from last tool position to start curent section
+                res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+                const Vector3f& pointBegin = *intervals[0].first;
+                if ( cutDirectionIsX )
+                    res.commands.push_back( { .type = MoveType::Linear, .y = pointBegin.y } );
+                else
+                    res.commands.push_back( { .type = MoveType::Linear, .x = pointBegin.x } );
+                res.commands.push_back( { .type = MoveType::Linear, .z = pointBegin.z } );
             }
             else
             {
-                // otherwise compute distance from the last point to a new one and decide how to get to it
-                const auto nextEdgePoint = section[intervals[0].first - contour.begin()];
-                const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
-
-                if ( distSq > critDistSq )
-                    transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                // go to the first point through the safe height
+                if ( res.commands.empty() )
+                {
+                    res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+                    res.commands.push_back( { .type = MoveType::FastLinear, .x = intervals[0].first->x, .y = intervals[0].first->y } );
+                    res.commands.push_back( { .type = MoveType::Linear, .z = intervals[0].first->z } );
+                }
                 else
-                    addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                {
+                    // otherwise compute distance from the last point to a new one and decide how to get to it
+                    const auto nextEdgePoint = section[intervals[0].first - contour.begin()];
+                    const auto distSq = ( mesh.edgePoint( lastEdgePoint ) - mesh.edgePoint( nextEdgePoint ) ).lengthSq();
+
+                    if ( distSq > critDistSq )
+                        transitOverSafeZ( *intervals[0].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                    else
+                        addSurfacePath( res.commands, mesh, lastEdgePoint, nextEdgePoint );
+                }
             }
-            
+
             // process all the intervals except the last one and transit to the next
             for ( size_t i = 0; i < intervals.size() - 1; ++i )
             {
@@ -652,7 +740,12 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
                 }
 
                 if ( *intervals[i + 1].first != lastPoint )
-                    transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                {
+                    if ( expandToolpath )
+                        res.commands.push_back( { .type = MoveType::Linear, .x = intervals[i + 1].first->x, .y = intervals[i + 1].first->y } );
+                    else
+                        transitOverSafeZ( *intervals[i + 1].first, res, params, safeZ, res.commands.back().z, lastFeed );
+                }   
             }
             // process the last interval
             if ( moveForward )
@@ -669,7 +762,27 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
             const auto dist = ( intervals.back().second - contour.begin() ) % contour.size();
             lastEdgePoint = section[dist];
         }
+
+        if ( expandToolpath )
+        {
+            // create toolpath to th eend of this section layer (step)
+            res.commands.push_back( { .type = MoveType::Linear, .z = minZ } );
+            makeLineToEnd( step, moveForward );
+        }
     }
+
+    // create toolpaths( lines ) to the side of the object (in the direction of cutDirection)
+    if ( expandToolpath )
+    {
+        for ( int i = 0; i < additionalLineCount; ++i )
+        {
+            const int index = steps + i;
+            makeLineToEnd( index, index & 1 );
+        }
+        // remove created movement to next line from makeLineToEnd 
+        res.commands.pop_back();
+    }
+
 
     if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();

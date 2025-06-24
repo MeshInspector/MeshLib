@@ -220,6 +220,10 @@ public:
     using IsoSurfaceChangedSignal = Signal<void()>;
     IsoSurfaceChangedSignal isoSurfaceChangedSignal;
 
+    /// triggered by changes to voxels data
+    using VoxelsChangedSignal = Signal<void()>;
+    VoxelsChangedSignal voxelsChangedSignal;
+
 private:
     VolumeRenderingParams volumeRenderingParams_;
     mutable UniquePtr<SimpleVolume> volumeRenderingData_;

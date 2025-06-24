@@ -73,6 +73,7 @@ public:
         HeaderBackground,
         HeaderSeparator,
         TopPanelBackground,
+        TopPanelSearchBackground,
 
         QuickAccessBackground,
 

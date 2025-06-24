@@ -211,6 +211,12 @@
 			"g": 255,
 			"r": 255
 		},
+		"TopPanelSearchBackground": {
+			"a": 255,
+			"b": 244,
+			"g": 237,
+			"r": 236
+		},
 		"QuickAccessBackground": {
 			"a": 255,
 			"b": 255,

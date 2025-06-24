@@ -352,7 +352,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
     const float inputHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2.f;
     const auto drawList = ImGui::GetWindowDrawList();
     drawList->AddRectFilled( cursorPos, ImVec2( cursorPos.x + cSearchSize * params.scaling, cursorPos.y + inputHeight ),
-        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonHovered ).getUInt32(), style.FrameRounding );
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelSearchBackground ).getUInt32(), style.FrameRounding );
     drawList->AddRect( cursorPos, ImVec2( cursorPos.x + cSearchSize * params.scaling, cursorPos.y + inputHeight ),
         ImGui::GetColorU32( ImGuiCol_Border ), style.FrameRounding );
 

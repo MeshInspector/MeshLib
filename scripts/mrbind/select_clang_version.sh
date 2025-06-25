@@ -20,14 +20,13 @@ fi
 
 # Linux
 if [[ $UNAME_S == Linux ]]; then
-    # Is `Ubuntu <= 22.04`?
-
     # Here we use `type` to not rely on `which` existing, since it's getting removed from some distros.
     if ! type lsb_release >/dev/null 2>/dev/null; then
         echo "`lsb_release` is not installed!" >&2
     fi
 
-    if (lsb_release -rs; echo "22.04") | sort -rCV; then
+    # Is `Ubuntu <= 22.04`?
+    if ! (lsb_release -rs; echo "22.04") | sort -CV; then
         # Here we need the outdated Clang because the old Boost doesn't compile on the new Clang, because of this change: https://github.com/llvm/llvm-project/issues/59036
         echo "18"
         exit

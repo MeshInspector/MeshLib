@@ -67,7 +67,7 @@ TEST( MRMesh, MeshCollidePrecise )
     auto meshB = makeTorus( 1.1f, 0.5f, 8, 8 );
     meshB.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), Vector3f { 0.1f, 0.8f, 0.2f } ) ) );
 
-    const auto conv = getVectorConverters( meshA, meshB );
+    auto conv = getVectorConverters( meshA, meshB );
 
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt );
     EXPECT_EQ( intersections.size(), 152 );
@@ -140,6 +140,7 @@ TEST( MRMesh, MeshCollidePrecise )
     // same for self-intersections
     auto mergedMesh = meshA;
     mergedMesh.addMesh( meshB );
+    conv = getVectorConverters( mergedMesh );
     const auto selfIntersections = findSelfCollidingEdgeTrisPrecise( mergedMesh, conv.toInt );
     EXPECT_EQ( selfIntersections.size(), 152 );
 

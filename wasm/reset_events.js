@@ -205,7 +205,7 @@ var updateEvents = function () {
     GLFW.onDragover = function (event) {
         if (!GLFW.active) 
             return;
-        Browser.calculateMouseEvent(event);
+        Browser.setMouseCoords(event.pageX, event.pageY)
         event.preventDefault();
         return false
     }

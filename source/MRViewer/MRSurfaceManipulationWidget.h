@@ -104,6 +104,7 @@ protected:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
+
     /// need to customize modifiers check on mouse down 
     MRVIEWER_API virtual bool checkModifiers_() const { return true; }
 

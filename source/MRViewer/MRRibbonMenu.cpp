@@ -395,7 +395,7 @@ void RibbonMenu::drawCollapseButton_()
     }
 }
 
-void RibbonMenu::drawHelpButton_()
+void RibbonMenu::drawHelpButton_( const std::string& url )
 {
     const auto scaling = menu_scaling();
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
@@ -412,7 +412,7 @@ void RibbonMenu::drawHelpButton_()
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ).getUInt32() );
     ImGui::PushFont( font );
     if ( ImGui::Button( "\xef\x81\x99", ImVec2( btnSize, btnSize ) ) )
-        OpenLink( "https://meshinspector.com/help/en/" );
+        OpenLink( url );
     ImGui::PopFont();
     ImGui::PopStyleColor();
     UI::setTooltipIfHovered( "Open help page", scaling );
@@ -476,10 +476,8 @@ void RibbonMenu::sortObjectsRecursive_( std::shared_ptr<Object> object )
     object->sortChildren();
 }
 
-void RibbonMenu::drawHeaderQuickAccess_()
+void RibbonMenu::drawHeaderQuickAccess_( float menuScaling )
 {
-    const float menuScaling = menu_scaling();
-
     auto itemSpacing = ImVec2( cHeaderQuickAccessXSpacing * menuScaling, ( cTabHeight + cTabYOffset - cHeaderQuickAccessFrameSize ) * menuScaling * 0.5f );
     auto iconSize = cHeaderQuickAccessIconSize;
     auto itemSize = cHeaderQuickAccessFrameSize * menuScaling;
@@ -499,8 +497,10 @@ void RibbonMenu::drawHeaderQuickAccess_()
     const auto availableWidth = getViewerInstance().framebufferSize.x;
     if ( width * 2 > availableWidth )
         return; // dont show header quick panel if window is too small
-
-    ImGui::SetCursorPos( itemSpacing );
+    
+    auto cursorPos = ImGui::GetCursorPos();
+    ImGui::SetCursorPosX( cursorPos.x + itemSpacing.x );
+    ImGui::SetCursorPosY( cursorPos.y + itemSpacing.y );
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, ImVec2( itemSize,itemSize ), iconSize,DrawButtonParams::RootType::Header };
 
@@ -541,7 +541,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImVec2( float( getViewerInstance().framebufferSize.x ), ( cTabHeight + cTabYOffset ) * menuScaling ),
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderBackground ).getUInt32() );
 
-    drawHeaderQuickAccess_();
+    drawHeaderQuickAccess_( menuScaling );
 
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
     // TODO_store: this needs recalc only on scaling change, no need to calc each frame
@@ -558,18 +558,10 @@ void RibbonMenu::drawHeaderPannel_()
         tabSizes[i] = std::max( textSizes[i] + cTabLabelMinPadding * 2 * menuScaling, cTabMinimumWidth * menuScaling );
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
     }
-    // prepare active button
-    bool needActive = hasAnyActiveItem() && toolbar_->getCurrentToolbarWidth() == 0.0f;
-    float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
 
-    // 40 - active button size (optional)
-    // 40 - help button size
-    // 40 - search button size
-    // 40 - collapse button size
-    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f ) * menuScaling;
-    searcher_.setSmallUI( availWidth - summaryTabPannelSize < searcher_.getSearchStringWidth() * menuScaling );
-    const float searcherWidth = searcher_.getWidthMenuUI();
-    availWidth -= searcherWidth * menuScaling;
+    auto backupPos = ImGui::GetCursorPos();
+    auto availWidth = drawHeaderHelpers_( summaryTabPannelSize, menuScaling );
+    ImGui::SetCursorPos( backupPos );
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -704,6 +696,23 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( getViewerInstance().framebufferSize.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ).getUInt32() );
 
+}
+
+float RibbonMenu::drawHeaderHelpers_( float requiredTabSize, float menuScaling )
+{
+    // prepare active button
+    bool needActive = hasAnyActiveItem() && toolbar_->getCurrentToolbarWidth() == 0.0f;
+    float activeBtnSize = cTabHeight * menuScaling - 4 * menuScaling; // small offset from border
+
+    // 40 - active button size (optional)
+    // 40 - help button size
+    // 40 - search button size
+    // 40 - collapse button size
+    auto availWidth = ImGui::GetContentRegionAvail().x - ( ( needActive ? 3 : 2 ) * 40.0f ) * menuScaling;
+    searcher_.setSmallUI( availWidth - requiredTabSize < searcher_.getSearchStringWidth() * menuScaling );
+    auto searcherWidth = searcher_.getWidthMenuUI();
+    availWidth -= searcherWidth * menuScaling;
+
     if ( needActive )
     {
         ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) -
@@ -714,11 +723,13 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - ( 70.f + searcherWidth ) * menuScaling, cTabYOffset * menuScaling ) );
     drawSearchButton_();
 
-    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset* menuScaling ) );
-    drawHelpButton_();
+    ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset * menuScaling ) );
+    drawHelpButton_( "https://meshinspector.com/help/en/" );
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();
+
+    return availWidth;
 }
 
 void RibbonMenu::drawActiveListButton_( float btnSize )

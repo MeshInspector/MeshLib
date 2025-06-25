@@ -247,21 +247,35 @@ protected:
     // this function changes internal sizes of topPanel when it is enabled or disabled
     MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
 
+    // draw quick access bar at header level
+    MRVIEWER_API virtual void drawHeaderQuickAccess_( float menuScaling );
+
+    // this functions draws header helpers:
+    //  1. Active tools list
+    //  2. Search bar
+    //  3. Help button
+    //  4. Ribbon pin/unpin button
+    // returns width available for drawing tabs
+    MRVIEWER_API virtual float drawHeaderHelpers_( float requiredTabSize, float menuScaling );
+
+    // helper list of active tools
+    MRVIEWER_API virtual void drawActiveListButton_( float btnSize );
+    // header helper search bar at panel 
+    MRVIEWER_API virtual void drawSearchButton_();
+    // header helper button to pin/unpin ribbon
+    MRVIEWER_API virtual void drawCollapseButton_();
+    // header helper button link to help page
+    MRVIEWER_API virtual void drawHelpButton_( const std::string& url );
+
     RibbonMenuSearch searcher_;
 
 private:
     void changeTab_( int newTab );
 
-    void drawSearchButton_();
-    void drawCollapseButton_();
-    void drawHelpButton_();
-
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 
     // part of top panel
-    void drawHeaderQuickAccess_();
     void drawHeaderPannel_();
-    void drawActiveListButton_( float btnSize );
 
     ImVec2 activeListPos_{ 0,0 };
     bool activeListPressed_{ false };

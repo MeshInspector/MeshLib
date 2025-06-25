@@ -96,7 +96,8 @@ enum DirtyFlags
     DIRTY_BORDER_LINES = 0x1000,
     DIRTY_EDGES_SELECTION = 0x2000,
     DIRTY_CACHES = DIRTY_BOUNDING_BOX,
-    DIRTY_ALL = 0x3FFF
+    DIRTY_VOLUME = 0x4000,
+    DIRTY_ALL = 0x7FFF
 };
 
 /// Marks dirty buffers that need to be uploaded to OpenGL.

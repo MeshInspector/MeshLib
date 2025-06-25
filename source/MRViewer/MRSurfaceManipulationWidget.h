@@ -105,8 +105,9 @@ protected:
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
 
-    /// need to customize modifiers check on mouse down 
-    MRVIEWER_API virtual bool checkModifiers_() const { return true; }
+    /// customize modifiers check on mouse down
+    /// @return true if any modifier key is down, false if no modifier keys are pressed
+    MRVIEWER_API virtual bool checkModifiers_( int modifiers ) const { return modifiers != 0; }
 
     /// called to change mesh with history record
     /// newFaces seems to be useful

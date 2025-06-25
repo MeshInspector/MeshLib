@@ -527,10 +527,13 @@ std::shared_ptr<Object> ObjectVoxels::shallowClone() const
 
 void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
-
     if ( mask & DIRTY_VOLUME )
+    {
         voxelsChangedSignal();
+        mask ^= DIRTY_VOLUME;
+    }
+
+    ObjectMeshHolder::setDirtyFlags( mask, invalidateCaches );
 
     if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
         data_.mesh->invalidateCaches();

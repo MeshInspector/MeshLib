@@ -60,6 +60,7 @@ var updateEvents = function () {
     Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
     Module["canvas"].removeEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].removeEventListener("mousewheel", GLFW.onMouseWheel, true);
+    Module["canvas"].removeEventListener("dragover", GLFW.onDragover, true);
 
     // make own touch events callbacks
     var touchEventProcess = function (event, funcName) {
@@ -201,6 +202,14 @@ var updateEvents = function () {
         preventFunc(event)
     }
 
+    GLFW.onDragover = function (event) {
+        if (!GLFW.active) 
+            return;
+        Browser.setMouseCoords(event.pageX, event.pageY)
+        event.preventDefault();
+        return false
+    }
+
     // add new events
     Module["canvas"].addEventListener("pointermove", GLFW.onMousemove, true);
     Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
@@ -208,6 +217,7 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
     Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
+    Module["canvas"].addEventListener("dragover", GLFW.onDragover, true);
     addEventListener('blur', (event) => {
         Module.ccall('emsDropEvents', 'void', [], []);
     });

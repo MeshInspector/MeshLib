@@ -489,7 +489,7 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     MR_TIMER;
     assert( outA || outB || outPtsA );
     // addSelfyTerminalVerts is supported only if both meshes are actually the same without any relative transformation
-    assert( !addSelfyTerminalVerts || &meshA == &meshB && !rigidB2A );
+    assert( !addSelfyTerminalVerts || ( &meshA == &meshB && !rigidB2A ) );
 
     std::function<Vector3f( const Vector3f& coord, bool meshA )> getCoord;
 

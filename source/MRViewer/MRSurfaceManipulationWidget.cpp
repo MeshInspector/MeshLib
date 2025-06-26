@@ -288,7 +288,7 @@ void SurfaceManipulationWidget::removeLastStableObjMesh_()
 
 bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left || checkModifiers_( modifiers ) )
+    if ( button != MouseButton::Left || !checkModifiers_( modifiers ) )
         return false;
 
     ObjAndPick objAndPick;

@@ -43,6 +43,9 @@ public:
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
 
+    // Return true if loop is empty
+    MRVIEWER_API static bool empty();
+
     // Clears the queue without executing the commands
     // if closeLoop is true, does not accept any new commands
     MRVIEWER_API static void removeCommands( bool closeLoop );

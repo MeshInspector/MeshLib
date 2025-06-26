@@ -61,6 +61,8 @@
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
 #include "MRViewportCornerController.h"
+#include "MRWebRequest.h"
+#include "MRMesh/MRCube.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -128,7 +130,6 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
-#include "MRMesh/MRCube.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -625,7 +626,18 @@ int Viewer::launch( const LaunchParams& params )
     }
     if ( params.close )
         launchShut();
+
+    /// wait for all remaining requests
+    for ( int i = 0; i < 3; ++i ) // maximum 3 iterations
+    {
+        WebRequest::waitRamainingAsync();
+        if ( CommandLoop::empty() )
+            break;
+        CommandLoop::processCommands();
+    }
+
     CommandLoop::removeCommands( true );
+
     return EXIT_SUCCESS;
 }
 

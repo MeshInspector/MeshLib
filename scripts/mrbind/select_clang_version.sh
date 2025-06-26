@@ -32,7 +32,7 @@ if [[ $UNAME_S == Darwin ]]; then
     exit
 fi
 
-# Linux
+# Linux.
 if [[ $UNAME_S == Linux ]]; then
     # Here we use `type` to not rely on `which` existing, since it's getting removed from some distros.
     if ! type lsb_release >/dev/null 2>/dev/null; then
@@ -42,11 +42,19 @@ if [[ $UNAME_S == Linux ]]; then
     # Is `Ubuntu <= 22.04`?
     if (lsb_release -rs; echo "22.04") | sort -CV; then
         # Here we need the outdated Clang because the old Boost doesn't compile on the new Clang, because of this change: https://github.com/llvm/llvm-project/issues/59036
+        # This is what is actually locking us to Clang 18 at the moment. Other platforms are using it for less scare reasons.
         echo 18
         exit
     fi
 
-    # Any other linux
+    # Is any other ubuntu?
+    if [[ $(lsb_release -is) == Ubuntu ]]; then
+        # This is because teh stock spdlog and libfmt fail with `call to consteval function ... is not a constant expression` somewhere in the formatting logic. Hmm.
+        echo 18
+        exit
+    fi
+
+    # Any other linux.
     echo 20
     exit
 fi

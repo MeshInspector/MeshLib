@@ -484,10 +484,11 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
 
 void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
+    Contours3f* outPtsA, Contours3f* outPtsB,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A /*= nullptr */ )
 {
     MR_TIMER;
-    assert( outA || outB );
+    assert( outA || outB || outPtsA || outPtsB );
 
     std::function<Vector3f( const Vector3f& coord, bool meshA )> getCoord;
 
@@ -512,15 +513,24 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         outA->resize( contours.size() );
     if ( outB )
         outB->resize( contours.size() );
+    if ( outPtsA )
+        outPtsA->resize( contours.size() );
+    if ( outPtsB )
+        outPtsB->resize( contours.size() );
     ParallelFor( contours, [&]( size_t j )
     {
         OneMeshContour curA, curB;
+        Contour3f ptsA, ptsB;
         const auto& curInContour = contours[j];
         curA.closed = curB.closed = isClosed( curInContour );
         if ( outA )
             curA.intersections.resize( curInContour.size() );
         if ( outB )
             curB.intersections.resize( curInContour.size() );
+        if ( outPtsA )
+            resizeNoInit( ptsA, curInContour.size() );
+        if ( outPtsB )
+            resizeNoInit( ptsB, curInContour.size() );
 
         ParallelFor( curInContour, [&]( size_t i )
         {
@@ -552,18 +562,26 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
                 getCoord( d, inIntersection.isEdgeATriB() ),
                 getCoord( e, inIntersection.isEdgeATriB() ), converters );
 
-            if ( outA )
+            if ( !curA.intersections.empty() )
                 curA.intersections[i] = pntA;
-            if ( outB )
+            if ( !ptsA.empty() )
+                ptsA[i] = pntA.coordinate;
+            if ( !curB.intersections.empty() )
             {
                 pntB.coordinate = rigidB2A ? inverseXf( pntA.coordinate ) : pntA.coordinate;
                 curB.intersections[i] = pntB;
             }
+            if ( !ptsB.empty() )
+                ptsB[i] = rigidB2A ? inverseXf( pntA.coordinate ) : pntA.coordinate;
         } );
         if ( outA )
             (*outA)[j] = std::move( curA );
         if ( outB )
             (*outB)[j] = std::move( curB );
+        if ( outPtsA )
+            (*outPtsA)[j] = std::move( ptsA );
+        if ( outPtsB )
+            (*outPtsB)[j] = std::move( ptsB );
     } );
 }
 

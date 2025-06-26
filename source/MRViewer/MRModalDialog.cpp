@@ -60,7 +60,7 @@ bool ModalDialog::beginPopup( float menuScaling )
     if ( const auto& text = settings_.text; !text.empty() )
     {
         const auto textWidth = ImGui::CalcTextSize( text.c_str() ).x;
-        if ( textWidth < windowSize.x )
+        if ( textWidth < ( windowSize.x - cModalWindowPaddingX * menuScaling * 2.f ) )
         {
             ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
             ImGui::Text( "%s", text.c_str() );

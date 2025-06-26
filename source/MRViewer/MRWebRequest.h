@@ -5,6 +5,7 @@
 #include "MRMesh/MRExpected.h"
 #include <json/forwards.h>
 #include <unordered_map>
+#include <thread>
 #include <string>
 #include <functional>
 
@@ -85,6 +86,8 @@ public:
     MRVIEWER_API void send( std::string url, std::string logName, ResponseCallback callback, bool async = true );
     MRVIEWER_API void send( ResponseCallback callback );
 
+    /// if any async request is still in progress, wait for it
+    MRVIEWER_API static void waitRemainingAsync();
 private:
     Method method_{ Method::Get };
     std::string url_;
@@ -99,6 +102,12 @@ private:
     std::string outputPath_;
     ProgressCallback uploadCallback_;
     ProgressCallback downloadCallback_;
+
+    using AsyncThreads = std::unordered_map<std::thread::id, std::thread>;
+    static AsyncThreads& getWaitingMap_();
+#ifndef __EMSCRIPTEN__
+    void putIntoWaitingMap_( std::thread&& thread );
+#endif
 };
 
 }

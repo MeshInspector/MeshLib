@@ -12,7 +12,6 @@
 #include <cpr/cpr.h>
 #include <fstream>
 #include <optional>
-#include <thread>
 #else
 #include <mutex>
 #endif
@@ -397,7 +396,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
                 callback( resJson );
             }, CommandLoop::StartPosition::AfterPluginInit );
         } );
-        requestThread.detach();
+        putIntoWaitingMap_( std::move( requestThread ) );
     }
 #else
     (void)logName;
@@ -463,6 +462,28 @@ void WebRequest::send( WebRequest::ResponseCallback callback )
 
     send( url_, logName_, std::move( callback ), async_ );
 }
+
+void WebRequest::waitRemainingAsync()
+{
+    auto& asyncMap = getWaitingMap_();
+    for ( auto& [_, thread] : asyncMap )
+        if ( thread.joinable() )
+            thread.join();
+}
+
+MR::WebRequest::AsyncThreads& WebRequest::getWaitingMap_()
+{
+    static AsyncThreads waitingMap;
+    return waitingMap;
+}
+
+#ifndef __EMSCRIPTEN__
+void WebRequest::putIntoWaitingMap_( std::thread&& thread )
+{
+    auto& asyncMap = getWaitingMap_();
+    asyncMap[thread.get_id()] = std::move( thread );
+}
+#endif
 
 Expected<Json::Value> parseResponse( const Json::Value& response )
 {

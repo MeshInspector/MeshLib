@@ -29,7 +29,7 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 /// Combines unordered input self-intersections (and flips orientation of some intersected edges) into ordered oriented contours with the properties:
 /// 1. Each contour is
 ///    a. either closed (then its first and last elements are equal),
-///    b. or open (then its first and last intersected edges are boundary edges).
+///    b. or open if terminal intersection is on mesh boundary or if self-intersection terminates in a vertex.
 /// 2. Next intersection in a contour is located to the left of the current intersected edge:
 ///    a. if the current and next intersected triangles are the same, then next intersected edge is either next( curr.edge ) or prev( curr.edge.sym() ).sym(),
 ///    b. otherwise next intersected triangle is left( curr.edge ) and next intersected edge is one of the edges having the current intersected triangle to the right.

@@ -484,10 +484,12 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
 
 void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
-    const CoordinateConverters& converters, const AffineXf3f* rigidB2A, Contours3f* outPtsA )
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A, Contours3f* outPtsA, bool addSelfyTerminalVerts )
 {
     MR_TIMER;
     assert( outA || outB || outPtsA );
+    // addSelfyTerminalVerts is supported only if both meshes are actually the same without any relative transformation
+    assert( !addSelfyTerminalVerts || ( &meshA == &meshB && !rigidB2A ) );
 
     std::function<Vector3f( const Vector3f& coord, bool meshA )> getCoord;
 
@@ -519,6 +521,8 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         OneMeshContour curA, curB;
         Contour3f ptsA;
         const auto& curInContour = contours[j];
+        if ( curInContour.empty() )
+            return;
         curA.closed = curB.closed = isClosed( curInContour );
         if ( outA )
             curA.intersections.resize( curInContour.size() );
@@ -567,6 +571,39 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
                 curB.intersections[i] = pntB;
             }
         } );
+        if ( !curA.closed && addSelfyTerminalVerts )
+        {
+            const auto & points = meshA.points;
+            const auto & topology = meshA.topology;
+            const auto i0 = curInContour.front();
+            if ( topology.right( i0.edge ) )
+            {
+                const auto v0 = topology.dest( topology.prev( i0.edge ) );
+                assert( topology.isTriVert( i0.tri(), v0 ) );
+                OneMeshIntersection o0{ .primitiveId = v0, .coordinate = points[v0] };
+                if ( !curA.intersections.empty() )
+                    curA.intersections.insert( curA.intersections.begin(), o0 );
+                if ( !ptsA.empty() )
+                    ptsA.insert( ptsA.begin(), o0.coordinate );
+                if ( !curB.intersections.empty() )
+                    curB.intersections.insert( curB.intersections.begin(), o0 );
+            }
+
+            const auto i1 = curInContour.back();
+            if ( topology.left( i1.edge ) )
+            {
+                const auto v1 = topology.dest( topology.next( i1.edge ) );
+                assert( topology.isTriVert( i1.tri(), v1 ) );
+                OneMeshIntersection o1{ .primitiveId = v1, .coordinate = points[v1] };
+                if ( !curA.intersections.empty() )
+                    curA.intersections.push_back( o1 );
+                if ( !ptsA.empty() )
+                    ptsA.push_back( o1.coordinate );
+                if ( !curB.intersections.empty() )
+                    curB.intersections.push_back( o1 );
+            }
+        }
+
         if ( outA )
             (*outA)[j] = std::move( curA );
         if ( outB )

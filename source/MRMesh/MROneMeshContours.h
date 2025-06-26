@@ -54,7 +54,8 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 MRMESH_API void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
     const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr,
-    Contours3f* outPtsA = nullptr );
+    Contours3f* outPtsA = nullptr,
+    bool addSelfyTerminalVerts = false ); ///< if true, then open self-intersection contours will be prolonged to terminal vertices
 
 // Converts ordered continuous self contours of single meshes to OneMeshContours
 // converters are required for better precision in case of degenerations

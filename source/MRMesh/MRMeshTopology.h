@@ -133,6 +133,9 @@ public:
     void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
     [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
 
+    /// return true if triangular face (f) has (v) as one of its vertices
+    [[nodiscard]] bool isTriVert( FaceId f, VertId v ) const { auto vs = getTriVerts( f ); return v == vs[0] || v == vs[1] || v == vs[2]; }
+
     /// returns three vertex ids for valid triangles, invalid triangles are skipped
     [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
 

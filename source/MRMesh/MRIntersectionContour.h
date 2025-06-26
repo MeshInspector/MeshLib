@@ -45,7 +45,7 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections );
 
 /// extracts coordinates from two meshes intersection contours
-MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
+[[deprecated( "Use getOneMeshIntersectionContours")]] MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
 const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
 /// returns true if contour is closed

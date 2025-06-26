@@ -381,7 +381,9 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     auto converters = getVectorConverters( meshA, meshB, rigidB2A );
     auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
     auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
-    return extractIntersectionContours( meshA, meshB, contours, converters, rigidB2A );
+    Contours3f res;
+    getOneMeshIntersectionContours( meshA, meshB, contours, nullptr, nullptr, converters, rigidB2A, &res );
+    return res;
 }
 
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams )

@@ -48,12 +48,13 @@ using OneMeshContours = std::vector<OneMeshContour>;
 MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 /// Converts contours given in topological terms as the intersections of one mesh's edge and another mesh's triangle (ContinuousContours),
-/// into contours of meshA and/or meshB given as a sequence of (primitiveId and euclidean coordinate);
+/// into contours of meshA and/or meshB given as a sequence of (primitiveId and Cartesian coordinates);
 /// converters are required for better precision in case of degenerations;
 /// note that contours should not have intersections
 MRMESH_API void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
-    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr,
+    Contours3f* outPtsA = nullptr );
 
 // Converts ordered continuous self contours of single meshes to OneMeshContours
 // converters are required for better precision in case of degenerations

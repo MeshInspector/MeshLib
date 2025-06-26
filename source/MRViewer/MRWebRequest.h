@@ -5,6 +5,7 @@
 #include "MRMesh/MRExpected.h"
 #include <json/forwards.h>
 #include <unordered_map>
+#include <thread>
 #include <string>
 #include <functional>
 

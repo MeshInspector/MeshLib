@@ -12,7 +12,6 @@
 #include <cpr/cpr.h>
 #include <fstream>
 #include <optional>
-#include <thread>
 #else
 #include <mutex>
 #endif

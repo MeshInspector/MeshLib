@@ -484,11 +484,10 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
 
 void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
-    Contours3f* outPtsA, Contours3f* outPtsB,
-    const CoordinateConverters& converters, const AffineXf3f* rigidB2A /*= nullptr */ )
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A, Contours3f* outPtsA )
 {
     MR_TIMER;
-    assert( outA || outB || outPtsA || outPtsB );
+    assert( outA || outB || outPtsA );
 
     std::function<Vector3f( const Vector3f& coord, bool meshA )> getCoord;
 
@@ -515,12 +514,10 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         outB->resize( contours.size() );
     if ( outPtsA )
         outPtsA->resize( contours.size() );
-    if ( outPtsB )
-        outPtsB->resize( contours.size() );
     ParallelFor( contours, [&]( size_t j )
     {
         OneMeshContour curA, curB;
-        Contour3f ptsA, ptsB;
+        Contour3f ptsA;
         const auto& curInContour = contours[j];
         curA.closed = curB.closed = isClosed( curInContour );
         if ( outA )
@@ -529,8 +526,6 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
             curB.intersections.resize( curInContour.size() );
         if ( outPtsA )
             resizeNoInit( ptsA, curInContour.size() );
-        if ( outPtsB )
-            resizeNoInit( ptsB, curInContour.size() );
 
         ParallelFor( curInContour, [&]( size_t i )
         {
@@ -571,8 +566,6 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
                 pntB.coordinate = rigidB2A ? inverseXf( pntA.coordinate ) : pntA.coordinate;
                 curB.intersections[i] = pntB;
             }
-            if ( !ptsB.empty() )
-                ptsB[i] = rigidB2A ? inverseXf( pntA.coordinate ) : pntA.coordinate;
         } );
         if ( outA )
             (*outA)[j] = std::move( curA );
@@ -580,8 +573,6 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
             (*outB)[j] = std::move( curB );
         if ( outPtsA )
             (*outPtsA)[j] = std::move( ptsA );
-        if ( outPtsB )
-            (*outPtsB)[j] = std::move( ptsB );
     } );
 }
 

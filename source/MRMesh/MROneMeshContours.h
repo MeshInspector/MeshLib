@@ -53,8 +53,8 @@ MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contou
 /// note that contours should not have intersections
 MRMESH_API void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,
     OneMeshContours* outA, OneMeshContours* outB,
-    Contours3f* outPtsA, Contours3f* outPtsB,
-    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
+    const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr,
+    Contours3f* outPtsA = nullptr );
 
 // Converts ordered continuous self contours of single meshes to OneMeshContours
 // converters are required for better precision in case of degenerations

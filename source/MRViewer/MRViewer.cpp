@@ -991,7 +991,7 @@ void Viewer::launchShut()
     SceneCache::invalidateAll();
 
     {
-        // some requests might be sent in shutdown, just wait for them but don't process
+        // some requests might be sent during shutdown, just wait for them but don't process
         spdlog::info( "Wait and DON'T process unfinished web requests." );
         WebRequest::waitRemainingAsync();
     }

@@ -630,7 +630,7 @@ int Viewer::launch( const LaunchParams& params )
     /// wait for all remaining requests
     for ( int i = 0; i < 3; ++i ) // maximum 3 iterations
     {
-        WebRequest::waitRamainingAsync();
+        WebRequest::waitRemainingAsync();
         if ( CommandLoop::empty() )
             break;
         CommandLoop::processCommands();

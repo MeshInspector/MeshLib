@@ -464,7 +464,7 @@ void WebRequest::send( WebRequest::ResponseCallback callback )
     send( url_, logName_, std::move( callback ), async_ );
 }
 
-void WebRequest::waitRamainingAsync()
+void WebRequest::waitRemainingAsync()
 {
     auto& asyncMap = getWaitingMap_();
     for ( auto& [_, thread] : asyncMap )

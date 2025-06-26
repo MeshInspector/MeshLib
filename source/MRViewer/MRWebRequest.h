@@ -86,7 +86,7 @@ public:
     MRVIEWER_API void send( ResponseCallback callback );
 
     /// if any async request is still in progress, wait for it
-    MRVIEWER_API static void waitRamainingAsync();
+    MRVIEWER_API static void waitRemainingAsync();
 private:
     Method method_{ Method::Get };
     std::string url_;

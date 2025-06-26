@@ -105,6 +105,10 @@ protected:
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
 
+    /// customize modifiers check on mouse down
+    /// @return true if widget consumes event, false if modifiers do not satisfy widget requirements
+    MRVIEWER_API virtual bool checkModifiers_( int modifiers ) const { return modifiers == 0; }
+
     /// called to change mesh with history record
     /// newFaces seems to be useful
     MRVIEWER_API virtual void appendMeshChangeHistory_( std::shared_ptr<Mesh> newMesh, const FaceBitSet& newFaces );

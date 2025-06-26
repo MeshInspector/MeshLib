@@ -5,25 +5,15 @@
 
 set -euo pipefail
 
-if [[ $# > 1 ]]; then
-    echo 'Expected at most one argument: `--flags`, or nothing.' >&2
+if [[ $# > 0 ]]; then
+    echo 'Expected no arguments.' >&2
     exit
-fi
-
-IS_FLAGS=
-if [[ $# > 0 && $1 == "--flags" ]]; then
-    IS_FLAGS=1
 fi
 
 
 CLANG_18=18
 CLANG_20=20
 CLANG_MSYS2=20.1.7-1
-if [[ $IS_FLAGS ]]; then
-    CLANG_18="-Wno-enum-constexpr-conversion -frelaxed-template-template-args"
-    CLANG_20=
-    CLANG_MSYS2=
-fi
 
 
 # Windows, Clang installed via MSYS2.
@@ -38,7 +28,7 @@ UNAME_S=$(uname -s)
 if [[ $UNAME_S == Darwin ]]; then
     # Clang 20 can't find the C++ standard library, so staying 18 for now.
     # I didn't dig too deep here, and we have to maintain 18 anyway for Ubuntu 20.04 and 22.04 (see below for why that is).
-    echo $CLANG_18
+    echo 18
     exit
 fi
 
@@ -52,12 +42,12 @@ if [[ $UNAME_S == Linux ]]; then
     # Is `Ubuntu <= 22.04`?
     if (lsb_release -rs; echo "22.04") | sort -CV; then
         # Here we need the outdated Clang because the old Boost doesn't compile on the new Clang, because of this change: https://github.com/llvm/llvm-project/issues/59036
-        echo $CLANG_18
+        echo 18
         exit
     fi
 
     # Any other linux
-    echo $CLANG_20
+    echo 20
     exit
 fi
 

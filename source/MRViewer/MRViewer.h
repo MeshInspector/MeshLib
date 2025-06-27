@@ -31,6 +31,8 @@ class ViewerTitle;
 
 class SpaceMouseHandler;
 
+class IDragDropHandler;
+
 class CornerControllerObject;
 // This struct contains rules for viewer launch
 struct LaunchParams
@@ -547,6 +549,8 @@ public:
     using PostRescaleSignal = boost::signals2::signal<void( float xscale, float yscale )>;
     using InterruptCloseSignal = boost::signals2::signal<bool(), SignalStopHandler>;
     ObjectsLoadedSignal objectsLoadedSignal; // signal is called when objects are loaded by Viewer::loadFiles  function
+    CursorEntranceSignal dragEntranceSignal; // signal is called on drag enter/leave the window
+    MouseMoveSignal dragOverSignal; // signal is called on drag coordinate changed
     DragDropSignal dragDropSignal; // signal is called on drag and drop file
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale
@@ -642,6 +646,7 @@ private:
     std::unique_ptr<SpaceMouseController> spaceMouseController_;
     std::unique_ptr<TouchesController> touchesController_;
     std::unique_ptr<MouseController> mouseController_;
+    std::unique_ptr<IDragDropHandler> dragDropAdvancedHandler_;
 
     std::unique_ptr<RecentFilesStore> recentFilesStore_;
     std::unique_ptr<FrameCounter> frameCounter_;

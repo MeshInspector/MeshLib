@@ -41,9 +41,6 @@
     <Filter Include="History">
       <UniqueIdentifier>{3070cea7-b1d9-4627-9d06-476b27257614}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ShortcutManager">
-      <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Helpers">
       <UniqueIdentifier>{d3956742-dbdd-4b13-8187-f0add3cc770a}</UniqueIdentifier>
     </Filter>
@@ -82,6 +79,9 @@
     </Filter>
     <Filter Include="resource\textures">
       <UniqueIdentifier>{6bd35111-e84a-4284-9b50-7898d961d1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UserInputs">
+      <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -158,22 +158,22 @@
       <Filter>Viewer</Filter>
     </ClCompile>
     <ClCompile Include="MRShortcutManager.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonFontManager.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchesHandler.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchesController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRMouseController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchpadController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonButtonDrawer.cpp">
       <Filter>RibbonMenu</Filter>
@@ -257,7 +257,7 @@
       <Filter>SpaceMouse</Filter>
     </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRWebRequest.cpp">
       <Filter>Requests</Filter>
@@ -302,7 +302,7 @@
       <Filter>Viewer</Filter>
     </ClCompile>
     <ClCompile Include="MRTouchpadWin32Handler.cpp">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPointsHistory.cpp">
       <Filter>History</Filter>
@@ -469,6 +469,15 @@
     <ClCompile Include="MRModalDialog.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRFileDialogInternal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDragDropWin32Handler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDragDropHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -583,19 +592,19 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRShortcutManager.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonFontManager.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRMouseController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchesController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonButtonDrawer.h">
       <Filter>RibbonMenu</Filter>
@@ -670,7 +679,7 @@
       <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRWebRequest.h">
       <Filter>Requests</Filter>
@@ -715,7 +724,7 @@
       <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadWin32Handler.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectPointsHistory.h">
       <Filter>History</Filter>
@@ -733,7 +742,7 @@
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRTouchpadParameters.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportParametersAction.h">
       <Filter>History</Filter>
@@ -742,7 +751,7 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseParameters.h">
-      <Filter>ShortcutManager</Filter>
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRFitData.h">
       <Filter>Viewer</Filter>
@@ -920,6 +929,13 @@
     </ClInclude>
     <ClInclude Include="MRModalDialog.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialogInternal.h" />
+    <ClInclude Include="MRDragDropHandler.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDragDropWin32Handler.h">
+      <Filter>UserInputs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

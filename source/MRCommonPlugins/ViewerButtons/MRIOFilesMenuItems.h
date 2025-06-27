@@ -22,7 +22,7 @@ public:
     void openDirectory( const std::filesystem::path& directory ) const;
 };
 
-class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener>
+class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragEntranceListener, DragOverListener, DragDropListener, PreDrawListener>
 {
 public:
     OpenFilesMenuItem();
@@ -31,7 +31,15 @@ public:
 
     virtual const DropItemsList& dropItems() const override;
 private:
+    virtual void dragEntrance_( bool entered ) override;
+    virtual bool dragOver_( int x, int y ) override;
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
+
+    virtual void preDraw_() override;
+
+    bool dragging_{ false };
+    Vector2i dragPos_;
+
     void parseLaunchParams_();
     void setupListUpdate_();
 

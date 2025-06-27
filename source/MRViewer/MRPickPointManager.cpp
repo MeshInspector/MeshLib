@@ -306,7 +306,7 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
         {
             if ( auto obj = objPtr.lock() )
             {
-                if ( params.onChangeObject && params.onChangeObject( obj ) )
+                if ( params.onUpdatePoints && !params.onUpdatePoints( obj ) )
                     return;
                 auto& points = pickedPoints_[obj];
                 const auto pointCount = points.size();

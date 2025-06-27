@@ -116,6 +116,21 @@ void DragDropListener::connect( Viewer* viewer, int group, boost::signals2::conn
     connection_ = viewer->dragDropSignal.connect( group, MAKE_SLOT( &DragDropListener::dragDrop_ ), pos );
 }
 
+void DragEntranceListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->dragEntranceSignal.connect( group, MAKE_SLOT( &DragEntranceListener::dragEntrance_ ), pos );
+}
+
+
+void DragOverListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->dragOverSignal.connect( group, MAKE_SLOT( &DragOverListener::dragOver_ ), pos );
+}
+
 void PostResizeListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

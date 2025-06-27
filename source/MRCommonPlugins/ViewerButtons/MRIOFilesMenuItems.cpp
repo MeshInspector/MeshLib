@@ -246,8 +246,20 @@ const RibbonMenuItem::DropItemsList& OpenFilesMenuItem::dropItems() const
     return dropList_;
 }
 
+void OpenFilesMenuItem::dragEntrance_( bool entered )
+{
+    dragging_ = entered;
+}
+
+bool OpenFilesMenuItem::dragOver_( int x, int y )
+{
+    dragPos_ = Vector2i( x, y );
+    return dragging_;
+}
+
 bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& paths )
 {
+    dragging_ = false;
     if ( paths.empty() )
         return false;
 
@@ -287,6 +299,67 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     }
     else
         return viewerRef.loadFiles( paths, options );
+}
+
+void OpenFilesMenuItem::preDraw_()
+{
+    if ( !dragging_ )
+        return;
+
+    if ( ProgressBar::isOrdered() )
+        return;
+
+    auto* drawList = ImGui::GetForegroundDrawList();
+    if ( !drawList )
+        return;
+
+    bool addAreaHovered = false;
+
+    float scaling = 1.0f;
+    auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( menu )
+    {
+        scaling = menu->menu_scaling();
+        auto sceneBoxSize = menu->getSceneSize();
+        auto headerHeight = getViewerInstance().framebufferSize.y - sceneBoxSize.y;
+        if ( dragPos_.x <= sceneBoxSize.x && dragPos_.y >= headerHeight )
+            addAreaHovered = true;
+    }
+
+    auto mainColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle );
+    auto secondColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+
+    ImVec2 min = ImVec2( 10.0f * scaling, 10.0f * scaling );
+    ImVec2 max = ImVec2( Vector2f( getViewerInstance().framebufferSize ) );
+    max.x -= min.x;
+    max.y -= min.y;
+    drawList->AddRectFilled( min, max, 
+        ( addAreaHovered ? secondColor : mainColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
+    drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+
+    auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+    if ( bigFont )
+        ImGui::PushFont( bigFont );
+
+    auto textSize = ImGui::CalcTextSize( "Load as Scene" );
+    auto textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
+    drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), "Load as Scene" );
+
+    if ( menu )
+    {
+        auto sceneBoxSize = menu->getSceneSize();
+        min.y += ( getViewerInstance().framebufferSize.y - sceneBoxSize.y );
+        max.x = sceneBoxSize.x - min.x;
+        drawList->AddRectFilled( min, max, ( addAreaHovered ? mainColor : secondColor ).scaledAlpha( 0.8f ).getUInt32(), 10.0f * scaling );
+        drawList->AddRect( min, max, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32(), 10.0f * scaling, 0, 2.0f * scaling );
+
+        textSize = ImGui::CalcTextSize( "Add Files" );
+        textPos = ImVec2( 0.5f * ( max.x + min.x - textSize.x ), 0.5f * ( max.y + min.y - textSize.y ) );
+        drawList->AddText( textPos, ImGui::GetColorU32( ImGuiCol_Text ), "Add Files" );
+    }
+
+    if ( bigFont )
+        ImGui::PopFont();
 }
 
 void OpenFilesMenuItem::parseLaunchParams_()

@@ -14,6 +14,7 @@
 #include "MRRibbonMenu.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
+#include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
 #include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRRenderGLHelpers.h"
@@ -835,6 +836,8 @@ int Viewer::launchInit_( const LaunchParams& params )
             touchpadController_ = std::make_unique<TouchpadController>();
         touchpadController_->connect( this );
         touchpadController_->initialize( window );
+
+        dragDropAdvancedHandler_ = getDragDropHandler( window );
     }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
@@ -980,6 +983,8 @@ void Viewer::launchShut()
 
     if ( touchpadController_ )
         touchpadController_->reset();
+
+    dragDropAdvancedHandler_.reset();
 
     glfwDestroyWindow( window );
     glfwTerminate();

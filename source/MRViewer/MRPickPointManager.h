@@ -80,8 +80,8 @@ public:
         /// This callback is invoked when a point is removed with its index before deletion
         PickerPointCallBack onPointRemove;
 
-        /// This callback is invoked when object was changed and needed update of points
-        /// Return true if update was processed
+        /// This callback is invoked when an object was changed and needed update of points
+        /// Return true and widget will skip internal updates
         ChangeObjectCallBack onChangeObject;
 
     };

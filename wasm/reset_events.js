@@ -203,9 +203,10 @@ var updateEvents = function () {
     }
 
     GLFW.onDragover = function (event) {
-        if (!GLFW.active) 
+        if (!GLFW.active)
             return;
-        Browser.setMouseCoords(event.pageX, event.pageY)
+        Browser.setMouseCoords(event.pageX, event.pageY);
+        Module.ccall('emsDragOver', 'void', ['number', 'number'], [Browser.mouseX, Browser.mouseY]);
         event.preventDefault();
         return false
     }
@@ -218,7 +219,17 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
     Module["canvas"].addEventListener("dragover", GLFW.onDragover, true);
-    addEventListener('blur', (event) => {
+    Module["canvas"].addEventListener("dragenter", (e) => {
+        Module.ccall('emsDragEnter', 'void', [], []);
+    }, true);
+    Module["canvas"].addEventListener("dragleave", (e) => {
+        Module.ccall('emsDragLeave', 'void', [], []);
+        // enforce several frames to toggle animation on drag left
+        for (var i = 0; i < 500; i += 100)
+            setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+    }, true);
+
+    addEventListener('blur', (e) => {
         Module.ccall('emsDropEvents', 'void', [], []);
     });
     // prevent others

@@ -109,7 +109,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragOver(/* [in] */ DWORD grfKeyState, 
     ( void )grfKeyState;
 
     auto& v = getViewerInstance();
-    v.emplaceEvent( "Drag enter", [&v,x = pt.x,y = pt.y] () mutable
+    v.emplaceEvent( "Drag over", [&v,x = pt.x,y = pt.y] () mutable
     {
         int posx = 0, posy = 0;
         glfwGetWindowPos( v.window, &posx, &posy );
@@ -124,7 +124,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragOver(/* [in] */ DWORD grfKeyState, 
 HRESULT STDMETHODCALLTYPE WinDropTarget::DragLeave( void )
 {
     auto& v = getViewerInstance();
-    v.emplaceEvent( "Drag enter", [&v] ()
+    v.emplaceEvent( "Drag leave", [&v] ()
     {
         v.dragEntranceSignal( false );
     } );

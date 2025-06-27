@@ -22,6 +22,7 @@ class MRVIEWER_CLASS PickPointManager : public MultiListener<
 public:
     using PickerPointCallBack = std::function<void( std::shared_ptr<VisualObject> obj, int index )>;
     using AllowCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj, int index )>;
+    using ChangeObjectCallBack = std::function<bool( const std::shared_ptr<VisualObject>& obj )>;
 
     struct Params
     {
@@ -78,6 +79,11 @@ public:
 
         /// This callback is invoked when a point is removed with its index before deletion
         PickerPointCallBack onPointRemove;
+
+        /// This callback is invoked when an object was changed and needed update of points
+        /// Return false if need to skip internal updates
+        ChangeObjectCallBack onUpdatePoints;
+
     };
     Params params;
 

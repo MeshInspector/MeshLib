@@ -28,6 +28,7 @@
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
+    <ClCompile Include="MRDragDropWasmHandler.cpp" />
     <ClCompile Include="MRDragDropWin32Handler.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />

@@ -478,6 +478,9 @@
     <ClCompile Include="MRDragDropHandler.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
+    <ClCompile Include="MRDragDropWasmHandler.cpp">
+      <Filter>UserInputs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">

@@ -40,29 +40,31 @@ jobs:
       matrix:
         config: [ "Debug", "Release" ]
         build_system: [ MSBuild, CMake ]
-        runner: [ windows-2022, windows-2019 ]
+        os: [ windows-2022, windows-2019 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
-            runner: windows-2022
+            os: windows-2022
             build_system: MSBuild
             config: "Debug"
           - full_config_build: false
-            runner: windows-2019
+            os: windows-2019
             build_system: CMake
           - full_config_build: false
-            runner: windows-2022
+            os: windows-2022
             build_system: CMake
             config: "Release"
         include:
-          - runner: windows-2022
+          - os: windows-2022
+            runner: [windows-2022]
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-          - runner: windows-2019
+          - os: windows-2019
+            runner: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
             vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
@@ -73,7 +75,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
+      BUILD_C_SHARP: ${{ matrix.os == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -89,7 +91,7 @@ jobs:
         with:
           target_os: windows
           target_arch: x64
-          cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
+          cxx_compiler: ${{ matrix.os }} # os name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
 
@@ -274,7 +276,7 @@ jobs:
           mrbind: ${{ inputs.mrbind }}
           pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
-          test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
+          test_artifacts_path: windows/${{ matrix.os }}/${{ matrix.config }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Delete unwanted files
@@ -285,11 +287,11 @@ jobs:
           if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -297,7 +299,7 @@ jobs:
           retention-days: 1
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
@@ -305,7 +307,7 @@ jobs:
           python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MRMeshC.dll" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetPatchArchiveWindows-x64
@@ -313,7 +315,7 @@ jobs:
           retention-days: 1
 
       - name: Upload NuGet library DLL to Artifacts
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetDll

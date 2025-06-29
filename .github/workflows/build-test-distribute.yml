@@ -138,7 +138,7 @@ jobs:
       - config
       - windows-build-test
     timeout-minutes: 60
-    runs-on: windows-2019
+    runs-on: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
     env:
       vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
     steps:

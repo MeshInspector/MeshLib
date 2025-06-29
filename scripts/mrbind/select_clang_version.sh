@@ -13,7 +13,7 @@ fi
 
 CLANG_18=18
 CLANG_20=20
-CLANG_MSYS2=20.1.7-1
+CLANG_MSYS2=20.1.5-1
 
 
 # Windows, Clang installed via MSYS2.

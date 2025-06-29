@@ -129,6 +129,7 @@ jobs:
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/install_dnf_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
+              - 'scripts/mrbind/select_clang_version.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Linux vcpkg paths

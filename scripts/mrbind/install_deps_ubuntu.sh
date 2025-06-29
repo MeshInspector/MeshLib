@@ -10,9 +10,8 @@ apt update
 # Install `xargs` because we need it below.
 apt install -y findutils
 
-# Read the Clang version from `clang_version.txt`. `xargs` trims the whitespace.
 SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
-CLANG_VER="$(cat $SCRIPT_DIR/clang_version.txt | xargs)"
+CLANG_VER="$("$SCRIPT_DIR/select_clang_version.sh")"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 # Add LLVM repositories if the required package is not accessible right now.

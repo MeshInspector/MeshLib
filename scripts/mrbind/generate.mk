@@ -156,10 +156,10 @@ MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version.txt))/bin/clang++
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(call safe_shell,$(makefile_dir)select_clang_version.sh)/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
-CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
+CXX_FOR_BINDINGS := clang++-$(call safe_shell,$(makefile_dir)select_clang_version.sh)
 endif
 
 # Which C++ compiler we should try to match for ABI.
@@ -428,7 +428,13 @@ INPUT_GLOBS := *.h
 # `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := $(call load_file,$(makefile_dir)mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
+
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
+# Add some flags for old Clangs.
+ifneq ($(filter 18 19,$(call safe_shell,$(CXX_FOR_BINDINGS) -dumpversion | cut -d. -f1)),)
+COMPILER_FLAGS += -Wno-enum-constexpr-conversion -frelaxed-template-template-args
+endif
+
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
 # Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)

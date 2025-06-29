@@ -23,6 +23,7 @@ libtinyxml2-dev
 libturbojpeg0-dev
 libzip-dev
 libzstd-dev
+lsb-release
 occt-misc
 pkg-config
 python3-venv

@@ -36,4 +36,7 @@ MRVOXELS_API Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float
 /// Returns number of voxels that would be used to perform \ref fillWithTPMS
 MRVOXELS_API size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency, float resolution );
 
+/// Returns number of voxels that would be used to perform \ref buildTPMS or \ref buildTPMSVolume
+MRVOXELS_API size_t getNumberOfVoxelsForTPMS( const Vector3f& size, float frequency, float resolution );
+
 }

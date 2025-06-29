@@ -133,5 +133,11 @@ size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency, float resolu
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 
+size_t getNumberOfVoxelsForTPMS( const Vector3f& size, float frequency, float resolution )
+{
+    const auto dims = getDimsAndSize( size, frequency, resolution ).dims;
+    return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
+}
+
 
 }

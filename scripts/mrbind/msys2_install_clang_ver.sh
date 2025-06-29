@@ -7,6 +7,7 @@
 # The packages are downloaded to `~/clang_downloads`. If they already exist, they aren't downloaded again.
 
 set -euo pipefail
+set -x
 
 # Check that the number of arguments (`$#`) is one, and that the first argument (`$1`) isn't empty.
 [[ $# == 1 && $1 != "" ]] || (echo "Must specify one argument, the desired Clang version."; exit 1)
@@ -21,7 +22,7 @@ DOWNLOAD_DIR="$(realpath ~/clang_downloads)"
 
 # This list should match what you'd see by installing `$MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra}` and then looking at the list of packages (in `pacman -Q`).
 # But I could've included some unnecessary parts.
-PACKAGES="$(echo $MINGW_PACKAGE_PREFIX-{clang,clang-libs,clang-tools-extra,compiler-rt,libc++,libunwind,lld,llvm,llvm-libs})"
+PACKAGES="$(echo $MINGW_PACKAGE_PREFIX-{clang,clang-libs,clang-tools-extra,compiler-rt,libc++,libunwind,lld,llvm,llvm-libs,llvm-tools})"
 
 mkdir -p "$DOWNLOAD_DIR"
 

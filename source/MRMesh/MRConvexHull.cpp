@@ -302,11 +302,7 @@ Contour2f makeConvexHull( Contour2f points )
         return va.lengthSq() > vb.lengthSq();
     } );
 
-    // TODO: in-place moves
-    std::vector<Vector2f> results;
-    results.reserve( results.size() );
-    results.emplace_back( points[0] );
-    results.emplace_back( points[1] );
+    size_t size = 2;
     for ( auto i = 2; i < points.size(); ++i )
     {
         if ( cross( points[i - 1] - minPoint, points[i - 0] - minPoint ) == 0.f )
@@ -316,18 +312,19 @@ Contour2f makeConvexHull( Contour2f points )
         }
 
         const auto& p = points[i];
-        while ( results.size() >= 2 )
+        while ( size >= 2 )
         {
-            const auto& a = results[results.size() - 2];
-            const auto& b = results[results.size() - 1];
+            const auto& a = points[size - 2];
+            const auto& b = points[size - 1];
             if ( cross( b - a, p - a ) > 0.f )
                 break;
-            results.pop_back();
+            size--;
         }
-        results.emplace_back( p );
+        points[size++] = p;
     }
+    points.erase( points.begin() + size, points.end() );
 
-    return results;
+    return points;
 }
 
 TEST( MRMesh, ConvexHull )

@@ -281,6 +281,52 @@ Mesh makeConvexHull( const PointCloud & in )
     return makeConvexHull( in.points, in.validPoints );
 }
 
+Contour2f makeConvexHull( Contour2f points )
+{
+    if ( points.size() < 2 )
+        return points;
+
+    auto minPointIt = std::min_element( points.begin(), points.end(), [] ( auto&& a, auto&& b )
+    {
+        return std::tie( a.y, a.x ) < std::tie( b.y, b.x );
+    } );
+    std::swap( *points.begin(), *minPointIt );
+    const auto& minPoint = points.front();
+
+    // sort points by polar angle and distance to the start point
+    std::sort( points.begin() + 1, points.end(), [&] ( const Vector2f& a, const Vector2f& b )
+    {
+        const auto va = a - minPoint, vb = b - minPoint;
+        if ( auto c = cross( va, vb ); c != 0.f )
+            return c > 0.f;
+        return va.lengthSq() > vb.lengthSq();
+    } );
+
+    size_t size = 2;
+    for ( auto i = 2; i < points.size(); ++i )
+    {
+        if ( cross( points[i - 1] - minPoint, points[i - 0] - minPoint ) == 0.f )
+        {
+            assert( ( points[i - 1] - minPoint ).lengthSq() >= ( points[i - 0] - minPoint ).lengthSq() );
+            continue;
+        }
+
+        const auto& p = points[i];
+        while ( size >= 2 )
+        {
+            const auto& a = points[size - 2];
+            const auto& b = points[size - 1];
+            if ( cross( b - a, p - a ) > 0.f )
+                break;
+            size--;
+        }
+        points[size++] = p;
+    }
+    points.erase( points.begin() + size, points.end() );
+
+    return points;
+}
+
 TEST( MRMesh, ConvexHull )
 {
     Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );

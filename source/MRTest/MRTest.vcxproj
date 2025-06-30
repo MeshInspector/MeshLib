@@ -44,6 +44,7 @@
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp" />
     <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRProgressCallback.cpp" />
+    <ClCompile Include="MRConvexHull.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">

@@ -294,50 +294,40 @@ Contour2f makeConvexHull( Contour2f points )
     const auto& minPoint = points.front();
 
     // sort points by polar angle and distance to the start point
-    struct Precompute
+    std::sort( points.begin() + 1, points.end(), [&] ( const Vector2f& a, const Vector2f& b )
     {
-        Vector2f point;
-        float angle;
-        float distSqNeg;
-    };
-    std::vector<Precompute> precomputes;
-    precomputes.reserve( points.size() );
-    precomputes.emplace_back( minPoint, -PI2_F, 0.f );
-    for ( auto i = 1; i < points.size(); ++i )
-    {
-        const auto& p = points[i];
-        const auto v = p - minPoint;
-        precomputes.emplace_back( p, std::atan2( v.y, v.x ), -v.lengthSq() );
-    }
-    std::sort( precomputes.begin(), precomputes.end(), [] ( auto&& a, auto&& b )
-    {
-        return std::tie( a.angle, a.distSqNeg ) < std::tie( b.angle, b.distSqNeg );
+        const auto va = a - minPoint, vb = b - minPoint;
+        if ( auto c = cross( va, vb ); c != 0.f )
+            return c > 0.f;
+        return va.lengthSq() > vb.lengthSq();
     } );
-    assert( precomputes.front().point == minPoint );
 
-    size_t stackSize = 1;
-    for ( auto i = 1; i < precomputes.size(); ++i )
+    // TODO: in-place moves
+    std::vector<Vector2f> results;
+    results.reserve( results.size() );
+    results.emplace_back( points[0] );
+    results.emplace_back( points[1] );
+    for ( auto i = 2; i < points.size(); ++i )
     {
-        if ( precomputes[i - 0].angle == precomputes[i - 1].angle )
+        if ( cross( points[i - 1] - minPoint, points[i - 0] - minPoint ) == 0.f )
         {
-            assert( precomputes[i - 1].distSqNeg <= precomputes[i - 0].distSqNeg );
+            //assert( ( points[i - 1] - minPoint ).lengthSq() <= ( points[i - 0] - minPoint ).lengthSq() );
             continue;
         }
 
-        const auto& p = precomputes[i].point;
-        while ( stackSize >= 2 )
+        const auto& p = points[i];
+        while ( results.size() >= 2 )
         {
-            const auto& a = points[stackSize - 2];
-            const auto& b = points[stackSize - 1];
+            const auto& a = results[results.size() - 2];
+            const auto& b = results[results.size() - 1];
             if ( cross( b - a, p - a ) > 0.f )
                 break;
-            stackSize--;
+            results.pop_back();
         }
-        points[stackSize++] = p;
+        results.emplace_back( p );
     }
-    points.erase( points.begin() + stackSize, points.end() );
 
-    return points;
+    return results;
 }
 
 TEST( MRMesh, ConvexHull )

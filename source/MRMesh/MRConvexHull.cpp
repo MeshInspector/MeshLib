@@ -283,6 +283,9 @@ Mesh makeConvexHull( const PointCloud & in )
 
 Contour2f makeConvexHull( Contour2f points )
 {
+    if ( points.size() < 2 )
+        return points;
+
     auto minPointIt = std::min_element( points.begin(), points.end(), [] ( auto&& a, auto&& b )
     {
         return std::tie( a.y, a.x ) < std::tie( b.y, b.x );

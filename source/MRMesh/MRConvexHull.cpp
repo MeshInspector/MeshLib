@@ -307,7 +307,7 @@ Contour2f makeConvexHull( Contour2f points )
     {
         if ( cross( points[i - 1] - minPoint, points[i - 0] - minPoint ) == 0.f )
         {
-            //assert( ( points[i - 1] - minPoint ).lengthSq() <= ( points[i - 0] - minPoint ).lengthSq() );
+            assert( ( points[i - 1] - minPoint ).lengthSq() >= ( points[i - 0] - minPoint ).lengthSq() );
             continue;
         }
 

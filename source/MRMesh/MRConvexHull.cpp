@@ -281,6 +281,62 @@ Mesh makeConvexHull( const PointCloud & in )
     return makeConvexHull( in.points, in.validPoints );
 }
 
+Contour2f makeConvexHull( Contour2f points )
+{
+    auto minPointIt = std::min_element( points.begin(), points.end(), [] ( auto&& a, auto&& b )
+    {
+        return std::tie( a.y, a.x ) < std::tie( b.y, b.x );
+    } );
+    std::swap( *points.begin(), *minPointIt );
+    const auto& minPoint = points.front();
+
+    // sort points by polar angle and distance to the start point
+    struct Precompute
+    {
+        Vector2f point;
+        float angle;
+        float distSqNeg;
+    };
+    std::vector<Precompute> precomputes;
+    precomputes.reserve( points.size() );
+    precomputes.emplace_back( minPoint, -PI2_F, 0.f );
+    for ( auto i = 1; i < points.size(); ++i )
+    {
+        const auto& p = points[i];
+        const auto v = p - minPoint;
+        precomputes.emplace_back( p, std::atan2( v.y, v.x ), -v.lengthSq() );
+    }
+    std::sort( precomputes.begin(), precomputes.end(), [] ( auto&& a, auto&& b )
+    {
+        return std::tie( a.angle, a.distSqNeg ) < std::tie( b.angle, b.distSqNeg );
+    } );
+    assert( precomputes.front().point == minPoint );
+
+    size_t stackSize = 1;
+    for ( auto i = 1; i < precomputes.size(); ++i )
+    {
+        if ( precomputes[i - 0].angle == precomputes[i - 1].angle )
+        {
+            assert( precomputes[i - 1].distSqNeg <= precomputes[i - 0].distSqNeg );
+            continue;
+        }
+
+        const auto& p = precomputes[i].point;
+        while ( stackSize >= 2 )
+        {
+            const auto& a = points[stackSize - 2];
+            const auto& b = points[stackSize - 1];
+            if ( cross( b - a, p - a ) > 0.f )
+                break;
+            stackSize--;
+        }
+        points[stackSize++] = p;
+    }
+    points.erase( points.begin() + stackSize, points.end() );
+
+    return points;
+}
+
 TEST( MRMesh, ConvexHull )
 {
     Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );

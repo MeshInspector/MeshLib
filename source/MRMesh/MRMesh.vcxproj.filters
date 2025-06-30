@@ -1328,6 +1328,9 @@
     <ClInclude Include="MRUnionFindParallel.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRTripleFaceIntersections.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2167,6 +2170,9 @@
     </ClCompile>
     <ClCompile Include="MREnums.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTripleFaceIntersections.cpp">
+      <Filter>Source Files\Contours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1270,7 +1270,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             if ( auto cn = commonClassName( result.scene->children() ) )
                 undoName += " as " + *cn;
 
-            if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
+            if ( options.forceReplaceScene || wasEmptyScene )
             {
                 {
                     // the scene is taken as is from a single file, replace the current scene with it

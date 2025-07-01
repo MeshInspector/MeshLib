@@ -307,5 +307,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );
 
-    m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Await call given lambda in GUI thread" );
+    m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
 } )

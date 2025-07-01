@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRFastInt128.h"
+#include <MRPch/MRBindingMacros.h>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace MR
@@ -22,8 +23,9 @@ using Vector3i64 = Vector3<Int64>;
 using Vector2i128 = Vector2<Int128>;
 using Vector3i128 = Vector3<Int128>;
 
-using Vector2i128fast = Vector2<FastInt128>;
-using Vector3i128fast = Vector3<FastInt128>;
+// ignored since no operator << for FastInt128
+using Vector2i128fast MR_BIND_IGNORE = Vector2<FastInt128>;
+using Vector3i128fast MR_BIND_IGNORE = Vector3<FastInt128>;
 
 using Vector2i256 = Vector3<Int256>;
 using Vector3i256 = Vector3<Int256>;

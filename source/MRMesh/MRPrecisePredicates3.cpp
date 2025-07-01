@@ -2,15 +2,10 @@
 #include "MRHighPrecision.h"
 #include "MRVector2.h"
 #include "MRBox.h"
-#include "MRGTest.h"
+#include "MRFastInt128.h"
 
-#if __has_include(<__msvc_int128.hpp>)
-  #include <__msvc_int128.hpp>
-  // this type is much faster than boost::multiprecision::checked_int128_t but lacks conversion in double and sqrt-function
-  using int128_t = std::_Signed128;
-#else
-  using int128_t = __int128_t;
-#endif
+namespace MR
+{
 
 namespace
 {
@@ -18,10 +13,7 @@ namespace
 constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
 }
 
-namespace MR
-{
-
-using Vector3hpFast = Vector3<int128_t>;
+using Vector3hpFast = Vector3<FastInt128>;
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
@@ -269,24 +261,6 @@ Vector3f findTriangleSegmentIntersectionPrecise(
 
     // rare case when `numSum == 0` - segment is fully inside face
     return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
-}
-
-TEST( MRMesh, PrecisePredicates3 )
-{
-    const std::array<PreciseVertCoords, 5> vs = 
-    { 
-        PreciseVertCoords{ 0_v, Vector3i(  2,  1, 0 ) }, //a
-        PreciseVertCoords{ 1_v, Vector3i{ -2,  1, 0 } }, //b
-        PreciseVertCoords{ 2_v, Vector3i{  0, -2, 0 } }, //c
-
-        PreciseVertCoords{ 3_v, Vector3i{  0, 0, -1 } }, //d
-        PreciseVertCoords{ 4_v, Vector3i{  0, 0,  1 } }  //e
-    };
-
-    auto res = doTriangleSegmentIntersect( vs );
-
-    EXPECT_TRUE( res.doIntersect );
-    EXPECT_TRUE( res.dIsLeftFromABC );
 }
 
 } //namespace MR

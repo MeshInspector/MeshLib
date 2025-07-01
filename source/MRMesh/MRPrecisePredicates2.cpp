@@ -10,7 +10,7 @@ namespace MR
 // b=(pi_j,1, pi_j,2)
 bool ccw( const Vector2i & a, const Vector2i & b )
 {
-    if ( auto v = cross( Vector2ll{ a }, Vector2ll{ b } ) )
+    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
         return v > 0; // points are in general position
 
     // points 0, a, b are on the same line
@@ -44,20 +44,17 @@ bool ccw( const Vector2i & a, const Vector2i & b )
 
 bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
 {
-    Vector3ll a( a0.x, a0.y, sqr( (long long) a0.x ) + sqr( (long long) a0.y ) );
-    Vector3ll b( b0.x, b0.y, sqr( (long long) b0.x ) + sqr( (long long) b0.y ) );
-    Vector3ll c( c0.x, c0.y, sqr( (long long) c0.x ) + sqr( (long long) c0.y ) );
-
-    using Vector2hp = Vector2<HighPrecisionInt>;
-    using Vector3hpp = Vector3<HighHighPrecisionInt>;
+    Vector3i64 a( a0.x, a0.y, sqr( (long long) a0.x ) + sqr( (long long) a0.y ) );
+    Vector3i64 b( b0.x, b0.y, sqr( (long long) b0.x ) + sqr( (long long) b0.y ) );
+    Vector3i64 c( c0.x, c0.y, sqr( (long long) c0.x ) + sqr( (long long) c0.y ) );
 
     //e**0
-    if ( auto v = mixed( Vector3hpp{ a }, Vector3hpp{ b }, Vector3hpp{ c } ) )
+    if ( auto v = mixed( Vector3i256{ a }, Vector3i256{ b }, Vector3i256{ c } ) )
         return v > 0;
 
     // e**1
-    const auto bxy_cxy = cross( Vector2hp{ b.x, b.y }, Vector2hp{ c.x, c.y } );
-    if ( auto v = -cross( Vector2hp{ b.x, b.z }, Vector2hp{ c.x, c.z } ) + 2 * a.y * bxy_cxy )
+    const auto bxy_cxy = cross( Vector2i128{ b.x, b.y }, Vector2i128{ c.x, c.y } );
+    if ( auto v = -cross( Vector2i128{ b.x, b.z }, Vector2i128{ c.x, c.z } ) + 2 * a.y * bxy_cxy )
         return v > 0;
 
     // e**2
@@ -66,14 +63,14 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
 
     // e**3
     assert( bxy_cxy == 0 );
-    if ( auto v = cross( Vector2hp{ b.y, b.z }, Vector2hp{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
+    if ( auto v = cross( Vector2i128{ b.y, b.z }, Vector2i128{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
         return v > 0;
 
     // e**6 same as e**2
 
     // e**9
-    const auto axy_cxy = cross( Vector2hp{ a.x, a.y }, Vector2hp{ c.x, c.y } );
-    if ( auto v = cross( Vector2hp{ a.x, a.z }, Vector2hp{ c.x, c.z } ) - 2 * b.y * axy_cxy )
+    const auto axy_cxy = cross( Vector2i128{ a.x, a.y }, Vector2i128{ c.x, c.y } );
+    if ( auto v = cross( Vector2i128{ a.x, a.z }, Vector2i128{ c.x, c.z } ) - 2 * b.y * axy_cxy )
         return v > 0;
 
     // e**10
@@ -99,7 +96,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     assert( c.x == 0 && c.y == 0 && c.z == 0 );
 
     // e**81
-    if ( auto v = b.x * HighPrecisionInt( a.z ) - a.x * HighPrecisionInt( b.z ) )
+    if ( auto v = b.x * Int128( a.z ) - a.x * Int128( b.z ) )
         return v > 0;
 
     // e**82
@@ -212,23 +209,23 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
 Vector2i findSegmentSegmentIntersectionPrecise(
     const Vector2i& ai, const Vector2i& bi, const Vector2i& ci, const Vector2i& di )
 {
-    auto abc = cross( Vector2hp( ai - ci ), Vector2hp( bi - ci ) );
+    auto abc = cross( Vector2i128( ai - ci ), Vector2i128( bi - ci ) );
     if ( abc < 0 )
         abc = -abc;
-    auto abd = cross( Vector2hp( ai - di ), Vector2hp( bi - di ) );
+    auto abd = cross( Vector2i128( ai - di ), Vector2i128( bi - di ) );
     if ( abd < 0 )
         abd = -abd;
     auto sum = abc + abd;
-    if ( sum != HighPrecisionInt( 0 ) )
-        return Vector2i{ Vector2d( abc * Vector2hp( di ) + abd * Vector2hp( ci ) ) / double( sum ) };
-    auto adLSq = Vector2hp( di - ai ).lengthSq();
-    auto bcLSq = Vector2hp( bi - ci ).lengthSq();
+    if ( sum != Int128( 0 ) )
+        return Vector2i{ Vector2d( abc * Vector2i128( di ) + abd * Vector2i128( ci ) ) / double( sum ) };
+    auto adLSq = Vector2i128( di - ai ).lengthSq();
+    auto bcLSq = Vector2i128( bi - ci ).lengthSq();
     if ( adLSq > bcLSq )
         return ci;
     else if ( bcLSq > adLSq )
         return di;
     else
-        return Vector2i( Vector2d( Vector2hp( ai ) + Vector2hp( bi ) + Vector2hp( ci ) + Vector2hp( di ) ) * 0.5 );
+        return Vector2i( Vector2d( Vector2i128( ai ) + Vector2i128( bi ) + Vector2i128( ci ) + Vector2i128( di ) ) * 0.5 );
 }
 
 Vector2f findSegmentSegmentIntersectionPrecise( 

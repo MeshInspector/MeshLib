@@ -1,15 +1,50 @@
 #include "MRPreciseSegmentIntersectionOrder3.h"
+#include "MRHighPrecision.h"
 
 namespace MR
 {
+
+namespace
+{
+
+/// computes signed volume of the parallelepiped ABC0
+Int128 orient3dVolume( const Vector3i& a, const Vector3i& b, const Vector3i& c )
+{
+    return dot( Vector3i128{ a }, Vector3i128{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
+}
+
+/// computes signed volume of the parallelepiped ABCD
+inline Int128 orient3dVolume( const Vector3i& a, const Vector3i& b, const Vector3i& c, const Vector3i& d )
+    { return orient3dVolume( a - d, b - d, c - d ); }
+
+} // anonymous namespace
 
 bool segmentIntersectionOrder(
     const PreciseVertCoords segm[2],
     const PreciseVertCoords ta[3],
     const PreciseVertCoords tb[3] )
 {
-    // res = ( mixed(tb,org)*mixed(ta,dest)   -   mixed(ta,org)*mixed(tb,dest) ) /
-    //       ( mixed(ta,org)-mixed(ta,dest) ) * ( mixed(tb,org)-mixed(tb,dest) )
+    // res = ( orient3d(ta,segm[0])*orient3d(tb,segm[1])   -   orient3d(tb,segm[0])*orient3d(ta,segm[1]) ) /
+    //       ( orient3d(ta,segm[0])-orient3d(ta,segm[1]) ) * ( orient3d(tb,segm[0])-orient3d(tb,segm[1]) )
+    const auto volTaOrg  = orient3dVolume( ta[0].pt, ta[1].pt, ta[2].pt, segm[0].pt );
+    const auto volTaDest = orient3dVolume( ta[0].pt, ta[1].pt, ta[2].pt, segm[1].pt );
+    const auto volTbOrg  = orient3dVolume( tb[0].pt, tb[1].pt, tb[2].pt, segm[0].pt );
+    const auto volTbDest = orient3dVolume( tb[0].pt, tb[1].pt, tb[2].pt, segm[1].pt );
+
+    const auto den0 = volTaOrg - volTaDest;
+    const auto den1 = volTbOrg - volTbDest;
+    bool changeResSign = false;
+    if ( den0 != 0 && den1 != 0 )
+        changeResSign = ( den0 < 0 ) != ( den1 < 0 );
+    else
+        assert( !"not implemented" );
+    
+    const auto nom = Int256( volTaOrg ) * Int256( volTbDest ) - Int256( volTbOrg ) * Int256( volTaDest );
+    if ( nom != 0 )
+        return ( nom > 0 ) != changeResSign;
+
+    assert( !"not implemented" );
+    return false;
 }
 
 } //namespace MR

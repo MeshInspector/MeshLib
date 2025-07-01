@@ -1,5 +1,6 @@
 #include "MRPreciseSegmentIntersectionOrder3.h"
 #include "MRHighPrecision.h"
+#include <array>
 
 namespace MR
 {
@@ -17,6 +18,12 @@ Int128 orient3dVolume( const Vector3i& a, const Vector3i& b, const Vector3i& c )
 inline Int128 orient3dVolume( const Vector3i& a, const Vector3i& b, const Vector3i& c, const Vector3i& d )
     { return orient3dVolume( a - d, b - d, c - d ); }
 
+[[maybe_unused]] bool allUnique( std::array<VertId, 8> a )
+{
+    std::sort( begin( a ), end( a ) );
+    return std::adjacent_find( begin( a ), end( a ) ) == end( a );
+}
+
 } // anonymous namespace
 
 bool segmentIntersectionOrder(
@@ -24,6 +31,10 @@ bool segmentIntersectionOrder(
     const PreciseVertCoords ta[3],
     const PreciseVertCoords tb[3] )
 {
+    assert( doTriangleSegmentIntersect( { ta[0], ta[1], ta[2], segm[0], segm[1] } ) );
+    assert( doTriangleSegmentIntersect( { tb[0], tb[1], tb[2], segm[0], segm[1] } ) );
+    assert( allUnique( { segm[0].id, segm[1].id, ta[0].id, ta[1].id, ta[2].id, tb[0].id, tb[1].id, tb[2].id } ) );
+
     // res = ( orient3d(ta,segm[0])*orient3d(tb,segm[1])   -   orient3d(tb,segm[0])*orient3d(ta,segm[1]) ) /
     //       ( orient3d(ta,segm[0])-orient3d(ta,segm[1]) ) * ( orient3d(tb,segm[0])-orient3d(tb,segm[1]) )
     const auto volTaOrg  = orient3dVolume( ta[0].pt, ta[1].pt, ta[2].pt, segm[0].pt );

@@ -64,7 +64,7 @@ jobs:
             CUDA-MINOR: '0'
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
           - os: windows-2019
-            runner: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
+            runner: [self-hosted, windows, x64, vs-2019, meshinspector]
             vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
@@ -96,8 +96,9 @@ jobs:
           build_system: ${{ matrix.build_system }}
 
       - name: Clean Vcpkg Directory
+        if: ${{ matrix.os == 'windows-2022' }}
         working-directory: C:\vcpkg
-        run: git clean -ffdx
+        run: git clean -ffdx 
 
       - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
         working-directory: C:\vcpkg

@@ -2,15 +2,10 @@
 #include "MRHighPrecision.h"
 #include "MRVector2.h"
 #include "MRBox.h"
-#include "MRGTest.h"
+#include <optional>
 
-#if __has_include(<__msvc_int128.hpp>)
-  #include <__msvc_int128.hpp>
-  // this type is much faster than boost::multiprecision::checked_int128_t but lacks conversion in double and sqrt-function
-  using int128_t = std::_Signed128;
-#else
-  using int128_t = __int128_t;
-#endif
+namespace MR
+{
 
 namespace
 {
@@ -18,44 +13,39 @@ namespace
 constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
 }
 
-namespace MR
-{
-
-using Vector3hpFast = Vector3<int128_t>;
-
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    auto vhp = dot( Vector3hpFast{ a }, Vector3hpFast{ cross( Vector3ll{ b }, Vector3ll{ c } ) } );
+    auto vhp = dot( Vector3i128fast{ a }, Vector3i128fast{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
     if ( vhp ) return vhp > 0;
 
-    auto v = cross( Vector2ll{ b.x, b.y }, Vector2ll{ c.x, c.y } );
+    auto v = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
     if ( v ) return v > 0;
 
-    v = -cross( Vector2ll{ b.x, b.z }, Vector2ll{ c.x, c.z } );
+    v = -cross( Vector2i64{ b.x, b.z }, Vector2i64{ c.x, c.z } );
     if ( v ) return v > 0;
 
-    v = cross( Vector2ll{ b.y, b.z }, Vector2ll{ c.y, c.z } );
+    v = cross( Vector2i64{ b.y, b.z }, Vector2i64{ c.y, c.z } );
     if ( v ) return v > 0;
 
-    v = -cross( Vector2ll{ a.x, a.y }, Vector2ll{ c.x, c.y } );
+    v = -cross( Vector2i64{ a.x, a.y }, Vector2i64{ c.x, c.y } );
     if ( v ) return v > 0;
 
     if ( c.x ) return c.x > 0;
 
     if ( c.y ) return c.y < 0;
 
-    v = cross( Vector2ll{ a.x, a.z }, Vector2ll{ c.x, c.z } );
+    v = cross( Vector2i64{ a.x, a.z }, Vector2i64{ c.x, c.z } );
     if ( v ) return v > 0;
 
     if ( c.z ) return c.z > 0;
 
 #ifndef NDEBUG
-    v = -cross( Vector2ll{ a.y, a.z }, Vector2ll{ c.y, c.z } );
+    v = -cross( Vector2i64{ a.y, a.z }, Vector2i64{ c.y, c.z } );
     assert( v == 0 );
     if ( v ) return v > 0;
 #endif
 
-    v = cross( Vector2ll{ a.x, a.y }, Vector2ll{ b.x, b.y } );
+    v = cross( Vector2i64{ a.x, a.y }, Vector2i64{ b.x, b.y } );
     if ( v ) return v > 0;
 
     if ( b.x ) return b.x < 0;
@@ -164,19 +154,19 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
 // ab - segment
 // cd - segment
 // if segments intersects - returns intersection point, nullopt otherwise
-std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
+static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
 {
-    auto ab = Vector3hp{ bi - ai };
-    auto ac = Vector3hp{ ci - ai };
-    auto ad = Vector3hp{ di - ai };
+    auto ab = Vector3i128{ bi - ai };
+    auto ac = Vector3i128{ ci - ai };
+    auto ad = Vector3i128{ di - ai };
     auto abc = cross( ab, ac );
     auto abd = cross( ab, ad );
 
     if ( dot( abc, abd ) > 0 )
         return std::nullopt; // CD is on one side of AB
 
-    auto cd = Vector3hp{ di - ci };
-    auto cb = Vector3hp{ bi - ci };
+    auto cd = Vector3i128{ di - ci };
+    auto cb = Vector3i128{ bi - ci };
     auto cda = cross( cd, -ac );
     auto cdb = cross( cd, cb );
     if ( dot( cda, cdb ) > 0 )
@@ -192,7 +182,7 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
             return std::nullopt; // both C and D are lower than A (on the AB segment)
 
         auto dBC = dot( -ab, -cb );
-        auto dBD = dot( -ab, Vector3hp{ di - bi } );
+        auto dBD = dot( -ab, Vector3i128{ di - bi } );
         if ( dBC < 0 && dBD < 0 )
             return std::nullopt; // both C and D are greater than B (on the AB segment)
 
@@ -205,7 +195,7 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
     // common intersection - non-collinear
     auto abcS = boost::multiprecision::sqrt( abcHSq );
     auto abdS = boost::multiprecision::sqrt( abdHSq );
-    return Vector3i( Vector3d( abdS * Vector3hp{ ci } + abcS * Vector3hp{ di } ) / double( abcS + abdS ) );
+    return Vector3i( Vector3d( abdS * Vector3i128{ ci } + abcS * Vector3i128{ di } ) / double( abcS + abdS ) );
 }
 
 /// https://stackoverflow.com/a/18067292/7325599
@@ -236,32 +226,32 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     auto ci = converters.toInt( c );
     auto di = converters.toInt( d );
     auto ei = converters.toInt( e );
-    auto abcd = dot( Vector3hpFast{ ai - di }, Vector3hpFast{ cross( Vector3ll{ bi - di }, Vector3ll{ ci - di } ) } );
+    auto abcd = dot( Vector3i128fast{ ai - di }, Vector3i128fast{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
     if ( abcd < 0 )
         abcd = -abcd;
-    auto abce = dot( Vector3hpFast{ ai - ei }, Vector3hpFast{ cross( Vector3ll{ bi - ei }, Vector3ll{ ci - ei } ) } );
+    auto abce = dot( Vector3i128fast{ ai - ei }, Vector3i128fast{ cross( Vector3i64{ bi - ei }, Vector3i64{ ci - ei } ) } );
     if ( abce < 0 )
         abce = -abce;
     auto sum = abcd + abce;
     if ( sum != 0 )
-        return converters.toFloat( Vector3i{ divRoundClosest( abcd * Vector3hpFast{ ei } + abce * Vector3hpFast{ di }, sum ) } );
+        return converters.toFloat( Vector3i{ divRoundClosest( abcd * Vector3i128fast{ ei } + abce * Vector3i128fast{ di }, sum ) } );
     // rare case when `sum == 0` 
     // suggest finding middle point of edge segment laying inside triangle
-    Vector3ll sumVec;
+    Vector3i64 sumVec;
     int numSum = 0;
     if ( auto iABDE = findTwoSegmentsIntersection( ai, bi, di, ei ) )
     {
-        sumVec += Vector3ll{ *iABDE };
+        sumVec += Vector3i64{ *iABDE };
         ++numSum;
     }
     if ( auto iBCDE = findTwoSegmentsIntersection( bi, ci, di, ei ) )
     {
-        sumVec += Vector3ll{ *iBCDE };
+        sumVec += Vector3i64{ *iBCDE };
         ++numSum;
     }
     if ( auto iCADE = findTwoSegmentsIntersection( ci, ai, di, ei ) )
     {
-        sumVec += Vector3ll{ *iCADE };
+        sumVec += Vector3i64{ *iCADE };
         ++numSum;
     }
     if ( numSum > 0 )
@@ -269,24 +259,6 @@ Vector3f findTriangleSegmentIntersectionPrecise(
 
     // rare case when `numSum == 0` - segment is fully inside face
     return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
-}
-
-TEST( MRMesh, PrecisePredicates3 )
-{
-    const std::array<PreciseVertCoords, 5> vs = 
-    { 
-        PreciseVertCoords{ 0_v, Vector3i(  2,  1, 0 ) }, //a
-        PreciseVertCoords{ 1_v, Vector3i{ -2,  1, 0 } }, //b
-        PreciseVertCoords{ 2_v, Vector3i{  0, -2, 0 } }, //c
-
-        PreciseVertCoords{ 3_v, Vector3i{  0, 0, -1 } }, //d
-        PreciseVertCoords{ 4_v, Vector3i{  0, 0,  1 } }  //e
-    };
-
-    auto res = doTriangleSegmentIntersect( vs );
-
-    EXPECT_TRUE( res.doIntersect );
-    EXPECT_TRUE( res.dIsLeftFromABC );
 }
 
 } //namespace MR

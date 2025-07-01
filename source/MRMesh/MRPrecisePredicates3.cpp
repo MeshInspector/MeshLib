@@ -3,6 +3,7 @@
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRFastInt128.h"
+#include <optional>
 
 namespace MR
 {
@@ -156,7 +157,7 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
 // ab - segment
 // cd - segment
 // if segments intersects - returns intersection point, nullopt otherwise
-std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
+static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
 {
     auto ab = Vector3hp{ bi - ai };
     auto ac = Vector3hp{ ci - ai };

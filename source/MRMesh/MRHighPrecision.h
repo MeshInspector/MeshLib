@@ -10,8 +10,8 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
-using HighPrecisionInt = boost::multiprecision::checked_int128_t;
-using HighHighPrecisionInt = boost::multiprecision::checked_int256_t;
+using HighPrecisionInt = boost::multiprecision::int128_t;
+using HighHighPrecisionInt = boost::multiprecision::int256_t;
 
 using Vector2hp = Vector2<HighPrecisionInt>;
 using Vector3hp = Vector3<HighPrecisionInt>;

@@ -176,7 +176,7 @@ void RibbonFontManager::updateFontsScaledOffset_( float scaling )
         box.include( Vector2f( glyph.X0, glyph.Y0 ) );
         box.include( Vector2f( glyph.X1, glyph.Y1 ) );
         fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
-        fontRef.scaledOffset.x = std::round( -box.min.x );
+        fontRef.scaledOffset.x = std::round( -box.min.x ); // looks like Dear ImGui expecting glyph to start at the left side of the box, and not being in the center
         fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
     }
     io.Fonts->Clear();

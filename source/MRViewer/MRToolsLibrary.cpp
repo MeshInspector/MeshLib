@@ -13,7 +13,12 @@
 #include "MRUIStyle.h"
 #include "MRRibbonConstants.h"
 #include "MRMesh/MRDirectory.h"
+#include "ImGuiHelpers.h"
+#include "MRMesh/MREndMill.h"
+#include "MRMesh/MRSerializer.h"
+
 #include <imgui.h>
+
 #include <cassert>
 
 namespace MR
@@ -50,10 +55,15 @@ bool GcodeToolsLibrary::drawInterface()
 
             if ( ImGui::Selectable( filesList_[i].c_str(), &selected ) && selected )
             {
-                result = loadMeshFromFile_( filesList_[i] );
+                result = loadFromFile_( filesList_[i] );
             }
         }
-        
+
+        selected = false;
+        if ( ImGui::Selectable( "<Create Tool>", &selected ) )
+        {
+            createToolDialogIsOpen_ = true;
+        }
 
         if ( !getFolder_().empty() )
         {
@@ -95,16 +105,61 @@ bool GcodeToolsLibrary::drawInterface()
     ImGui::SameLine( btnPosX );
     if ( UI::button( "Remove", selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
     {
-        const auto folderPath = getFolder_();
-        if ( !folderPath.empty() )
-        {
-            std::error_code ec;
-            std::filesystem::remove( folderPath / ( selectedFileName_ + ".mrmesh" ), ec );
-            selectedFileName_ = defaultName;
-            result = true;
-            toolMesh_ = defaultToolMesh_;
-        }
+        removeSelectedTool_();
+        result = true;
     }
+
+    return result;
+}
+
+bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
+{
+    if ( !createToolDialogIsOpen_ )
+        return false;
+
+    const auto menuWidth = 220.f * menuScaling;
+    if ( !ImGui::BeginCustomStatePlugin( "Create Tool", &createToolDialogIsOpen_, {
+        .width = menuWidth,
+        .menuScaling = menuScaling,
+    } ) )
+        return false;
+
+    bool result = false;
+
+    const auto itemWidth = 150.f * menuScaling;
+
+    UI::inputTextCentered( "Name", createToolName_, itemWidth );
+
+    static const std::vector<std::string> cToolTypeNames {
+        "Flat End Mill",
+        "Ball End Mill",
+    };
+    assert( cToolTypeNames.size() == (int)EndMillCutter::Type::Count );
+    ImGui::SetNextItemWidth( itemWidth );
+    UI::combo( "Type", &createToolType_, cToolTypeNames );
+
+    ImGui::PushItemWidth( itemWidth );
+    UI::drag<LengthUnit>( "Length", createToolLength_, 1e-3f, 1e-3f, 1e+3f );
+    UI::drag<LengthUnit>( "Radius", createToolRadius_, 1e-3f, 1e-3f, 1e+3f );
+    ImGui::PopItemWidth();
+
+    // TODO: visualize tool
+
+    const auto isValid = !createToolName_.empty() && createToolLength_ > 0.f && createToolRadius_ > 0.f;
+    if ( UI::button( "Create", isValid, { -1.f, 0.f } ) )
+    {
+        addNewTool_( createToolName_, {
+            .length = createToolLength_,
+            .cutter = EndMillCutter {
+                .type = (EndMillCutter::Type)createToolType_,
+                .radius = createToolRadius_,
+            },
+        } );
+        createToolDialogIsOpen_ = false;
+        result = true;
+    }
+
+    ImGui::EndCustomStatePlugin();
 
     return result;
 }
@@ -162,7 +217,8 @@ void GcodeToolsLibrary::updateFilesList_()
         if ( !entry.is_regular_file( ec ) )
             continue;
         const auto filename = entry.path().filename();
-        if ( utf8string( filename.extension() ) == ".mrmesh" )
+        const auto extension = utf8string( filename.extension() );
+        if ( extension == ".mrmesh" || extension == ".json" )
             filesList_.push_back( utf8string( filename.stem() ) );
     }
 }
@@ -185,6 +241,7 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     toolMesh_->setName( utf8string( path.filename().stem() ) );
     toolMesh_->setMesh( std::make_shared<Mesh>( *loadRes ) );
     (void)MeshSave::toMrmesh( *loadRes, folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
+    endMillTool_.reset();
     selectedFileName_ = toolMesh_->name();
 }
 
@@ -193,9 +250,52 @@ void GcodeToolsLibrary::addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& 
     const auto folderPath = getFolder_();
     if ( folderPath.empty() )
         return;
+
     toolMesh_ = std::dynamic_pointer_cast< ObjectMesh >( objMesh->clone() );
     (void)MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
+    endMillTool_.reset();
     selectedFileName_ = toolMesh_->name();
+}
+
+void GcodeToolsLibrary::addNewTool_( const std::string& name, const EndMillTool& tool )
+{
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return;
+
+    const auto jsonPath = folderPath / ( name + ".json" );
+    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream ofs( jsonPath, std::ofstream::binary );
+    Json::StreamWriterBuilder builder;
+    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
+    Json::Value root;
+    tool.serialize( root );
+    if ( !ofs || writer->write( root, &ofs ) != 0 )
+        return;
+    ofs.close();
+
+    toolMesh_ = std::make_shared<ObjectMesh>();
+    toolMesh_->setName( name );
+    toolMesh_->setMesh( std::make_shared<Mesh>( tool.toMesh() ) );
+
+    endMillTool_ = std::make_shared<EndMillTool>( tool );
+
+    selectedFileName_ = name;
+}
+
+void GcodeToolsLibrary::removeSelectedTool_()
+{
+    const auto folderPath = getFolder_();
+    if ( folderPath.empty() )
+        return;
+
+    std::error_code ec;
+    std::filesystem::remove( folderPath / ( selectedFileName_ + ".mrmesh" ), ec );
+    std::filesystem::remove( folderPath / ( selectedFileName_ + ".json" ), ec );
+
+    toolMesh_ = defaultToolMesh_;
+    endMillTool_.reset();
+    selectedFileName_ = defaultName;
 }
 
 void GcodeToolsLibrary::drawSelectMeshPopup_()
@@ -213,26 +313,53 @@ void GcodeToolsLibrary::drawSelectMeshPopup_()
     ImGui::EndPopup();
 }
 
-bool GcodeToolsLibrary::loadMeshFromFile_( const std::string& filename )
+bool GcodeToolsLibrary::loadFromFile_( const std::string& filename )
 {
     const auto folderPath = getFolder_();
     if ( folderPath.empty() )
         return false;
 
-    const auto path = folderPath / ( filename + ".mrmesh" );
     std::error_code ec;
-    if ( !std::filesystem::exists( path, ec ) )
-        return false;
 
-    auto loadRes = MeshLoad::fromMrmesh( path );
-    if ( !loadRes )
-        return false;
+    const auto meshPath = folderPath / ( filename + ".mrmesh" );
+    if ( std::filesystem::exists( meshPath, ec ) )
+    {
+        auto loadRes = MeshLoad::fromMrmesh( meshPath );
+        if ( !loadRes )
+            return false;
 
-    toolMesh_ = std::make_shared<ObjectMesh>();
-    toolMesh_->setName( filename );
-    toolMesh_->setMesh( std::make_shared<Mesh>( *loadRes ) );
-    selectedFileName_ = filename;
-    return true;
+        toolMesh_ = std::make_shared<ObjectMesh>();
+        toolMesh_->setName( filename );
+        toolMesh_->setMesh( std::make_shared<Mesh>( *loadRes ) );
+
+        endMillTool_.reset();
+
+        selectedFileName_ = filename;
+        return true;
+    }
+
+    const auto jsonPath = folderPath / ( filename + ".json" );
+    if ( std::filesystem::exists( jsonPath, ec ) )
+    {
+        auto loadRes = deserializeJsonValue( jsonPath );
+        if ( !loadRes )
+            return false;
+
+        auto tool = EndMillTool::deserialize( *loadRes );
+        if ( !tool )
+            return false;
+
+        toolMesh_ = std::make_shared<ObjectMesh>();
+        toolMesh_->setName( filename );
+        toolMesh_->setMesh( std::make_shared<Mesh>( tool->toMesh() ) );
+
+        endMillTool_ = std::make_shared<EndMillTool>( *tool );
+
+        selectedFileName_ = filename;
+        return true;
+    }
+
+    return false;
 }
 
 }

@@ -35,3 +35,5 @@ source/MRDotNetTest/obj/*
 /include
 /out/build/
 .cache
+venv/*
+wheelhouse/*

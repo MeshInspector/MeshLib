@@ -88,6 +88,28 @@ TEST( MRMesh, PrecisePredicates2InCircle )
     EXPECT_TRUE( inCircle( vs ) );
 }
 
+TEST( MRMesh, PrecisePredicates2More )
+{
+    const std::array<PreciseVertCoords2, 6> vs = 
+    { 
+        PreciseVertCoords2{ 0_v, Vector2i(  0, -1 ) },
+        PreciseVertCoords2{ 1_v, Vector2i(  0, -1 ) },
+
+        PreciseVertCoords2{ 2_v, Vector2i(  0,  0 ) },
+        PreciseVertCoords2{ 3_v, Vector2i(  0,  0 ) },
+
+        PreciseVertCoords2{ 4_v, Vector2i(  0,  0 ) },
+        PreciseVertCoords2{ 5_v, Vector2i(  1,  0 ) }
+    };
+
+    // both segments 03 and 12 intersect line segment 45
+    EXPECT_TRUE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[4], vs[5] } ).doIntersect );
+    EXPECT_TRUE( doSegmentSegmentIntersect( { vs[1], vs[2], vs[4], vs[5] } ).doIntersect );
+
+    // segments 03 and 12 intersect one with another
+    EXPECT_TRUE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
+}
+
 TEST( MRMesh, PrecisePredicates2InCircle2 )
 {
     std::array<PreciseVertCoords2, 5> vs =
@@ -128,6 +150,34 @@ TEST( MRMesh, PrecisePredicates3 )
 
     EXPECT_TRUE( res.doIntersect );
     EXPECT_TRUE( res.dIsLeftFromABC );
+}
+
+TEST( MRMesh, PrecisePredicates3More )
+{
+    const std::array<PreciseVertCoords, 8> vs = 
+    { 
+        PreciseVertCoords{ 0_v, Vector3i(  0, -1, -1 ) },
+        PreciseVertCoords{ 1_v, Vector3i(  0, -1, -1 ) },
+
+        PreciseVertCoords{ 2_v, Vector3i{  0, -1,  1 } },
+
+        PreciseVertCoords{ 3_v, Vector3i{  0,  1,  1 } },
+
+        PreciseVertCoords{ 4_v, Vector3i{  0, -1,  1 } },
+
+        PreciseVertCoords{ 5_v, Vector3i{  0,  1,  1 } },
+
+        PreciseVertCoords{ 6_v, Vector3i{  0,  0,  1 } },
+        PreciseVertCoords{ 7_v, Vector3i{  1,  0,  1 } }
+    };
+
+    // both triangles 045 and 123 intersect line segment 67
+    EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[6], vs[7] } ).doIntersect );
+    EXPECT_TRUE( doTriangleSegmentIntersect( { vs[1], vs[2], vs[3], vs[6], vs[7] } ).doIntersect );
+
+    // triangles 045 and 123 intersect one with another
+    EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[1], vs[2] } ).doIntersect );
+    EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[3], vs[1] } ).doIntersect );
 }
 
 } //namespace MR

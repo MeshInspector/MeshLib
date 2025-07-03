@@ -11,6 +11,7 @@
 #include "MRRegionBoundary.h"
 #include "MRStringConvert.h"
 
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRJson.h"
 
 namespace MR

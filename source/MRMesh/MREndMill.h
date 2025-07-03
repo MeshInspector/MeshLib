@@ -8,37 +8,43 @@ namespace Json { class Value; }
 namespace MR
 {
 
+/// end mill cutter specifications
 struct EndMillCutter
 {
+    /// cutter type
     enum class Type
     {
+        /// flat end mill
         Flat,
+        /// ball end mill
         Ball,
         // TODO: bull nose
         // TODO: chamfer
         Count
     };
-
     Type type;
-    float radius;
-
-    MRMESH_API static EndMillCutter makeFlat( float radius );
-    MRMESH_API static EndMillCutter makeBall( float radius );
-
-    MRMESH_API static Expected<EndMillCutter> deserialize( const Json::Value& root );
-    MRMESH_API void serialize( Json::Value& root ) const;
+    // TODO: corner radius
+    // TODO: cutting angle
 };
 
+/// end mill tool specifications
 struct EndMillTool
 {
+    /// overall tool length
     float length;
+    /// tool diameter
+    float diameter;
+    /// cutter
     EndMillCutter cutter;
 
-    /// ...
-    [[nodiscard]] MRMESH_API Mesh toMesh( float minEdgeLen = 0.f ) const;
-
-    MRMESH_API static Expected<EndMillTool> deserialize( const Json::Value& root );
-    MRMESH_API void serialize( Json::Value& root ) const;
+    /// create a tool mesh
+    [[nodiscard]] MRMESH_API Mesh toMesh( int horizontalResolution = 32, int verticalResolution = 32 ) const;
 };
+
+MRMESH_API void serializeToJson( const EndMillCutter& cutter, Json::Value& root );
+MRMESH_API void serializeToJson( const EndMillTool& tool, Json::Value& root );
+
+MRMESH_API Expected<void> deserializeFromJson( const Json::Value& root, EndMillCutter& cutter );
+MRMESH_API Expected<void> deserializeFromJson( const Json::Value& root, EndMillTool& tool );
 
 } // namespace MR

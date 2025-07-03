@@ -126,7 +126,7 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
 
     bool result = false;
 
-    const auto itemWidth = 150.f * menuScaling;
+    const auto itemWidth = 160.f * menuScaling;
 
     UI::inputTextCentered( "Name", createToolName_, itemWidth );
 
@@ -138,21 +138,29 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
     ImGui::SetNextItemWidth( itemWidth );
     UI::combo( "Type", &createToolType_, cToolTypeNames );
 
-    ImGui::PushItemWidth( itemWidth );
+    UI::separator( menuScaling, "Specifications" );
+
+    ImGui::PushItemWidth( 115.f * menuScaling );
     UI::drag<LengthUnit>( "Length", createToolLength_, 1e-3f, 1e-3f, 1e+3f );
-    UI::drag<LengthUnit>( "Radius", createToolRadius_, 1e-3f, 1e-3f, 1e+3f );
+    UI::drag<LengthUnit>( "Diameter", createToolDiameter_, 1e-3f, 1e-3f, 1e+3f );
+    if ( createToolType_ == (int)EndMillCutter::Type::Ball )
+    {
+        auto radius = createToolDiameter_ / 2.f;
+        if ( UI::drag<LengthUnit>( "Cutter Radius", radius, 1e-3f, 1e-3f, 1e+3f ) )
+            createToolDiameter_ = radius * 2.f;
+    }
     ImGui::PopItemWidth();
 
     // TODO: visualize tool
 
-    const auto isValid = !createToolName_.empty() && createToolLength_ > 0.f && createToolRadius_ > 0.f;
+    const auto isValid = !createToolName_.empty() && createToolLength_ > 0.f && createToolDiameter_ > 0.f;
     if ( UI::button( "Create", isValid, { -1.f, 0.f } ) )
     {
         addNewTool_( createToolName_, {
             .length = createToolLength_,
+            .diameter = createToolDiameter_,
             .cutter = EndMillCutter {
                 .type = (EndMillCutter::Type)createToolType_,
-                .radius = createToolRadius_,
             },
         } );
         createToolDialogIsOpen_ = false;
@@ -269,7 +277,7 @@ void GcodeToolsLibrary::addNewTool_( const std::string& name, const EndMillTool&
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     Json::Value root;
-    tool.serialize( root );
+    serializeToJson( tool, root );
     if ( !ofs || writer->write( root, &ofs ) != 0 )
         return;
     ofs.close();
@@ -345,15 +353,15 @@ bool GcodeToolsLibrary::loadFromFile_( const std::string& filename )
         if ( !loadRes )
             return false;
 
-        auto tool = EndMillTool::deserialize( *loadRes );
-        if ( !tool )
+        EndMillTool tool;
+        if ( auto res = deserializeFromJson( *loadRes, tool ); !res )
             return false;
 
         toolMesh_ = std::make_shared<ObjectMesh>();
         toolMesh_->setName( filename );
-        toolMesh_->setMesh( std::make_shared<Mesh>( tool->toMesh() ) );
+        toolMesh_->setMesh( std::make_shared<Mesh>( tool.toMesh() ) );
 
-        endMillTool_ = std::make_shared<EndMillTool>( *tool );
+        endMillTool_ = std::make_shared<EndMillTool>( tool );
 
         selectedFileName_ = filename;
         return true;

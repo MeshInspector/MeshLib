@@ -16,86 +16,25 @@
 namespace MR
 {
 
-EndMillCutter EndMillCutter::makeFlat( float radius )
+Mesh EndMillTool::toMesh( int horizontalResolution, int verticalResolution ) const
 {
-    assert( radius > 0.f );
-    return {
-        .type = Type::Flat,
-        .radius = radius,
-    };
-}
-
-EndMillCutter EndMillCutter::makeBall( float radius )
-{
-    assert( radius > 0.f );
-    return {
-        .type = Type::Ball,
-        .radius = radius,
-    };
-}
-
-Expected<EndMillCutter> EndMillCutter::deserialize( const Json::Value& root )
-{
-    EndMillCutter result;
-
-    if ( root["Type"].type() != Json::stringValue )
-        return unexpected( fmt::format( "Missing field: {}", "Type" ) );
-    const auto type = toLower( root["Type"].asString() );
-    static const HashMap<std::string, Type> knownValues {
-        { "flat", Type::Flat },
-        { "ball", Type::Ball },
-    };
-    assert( knownValues.size() == (int)Type::Count );
-    if ( auto it = knownValues.find( type ); it != knownValues.end() )
-        result.type = it->second;
-    else
-        return unexpected( fmt::format( "Invalid value: {}", "Type" ) );
-
-    if ( root["Radius"].type() != Json::realValue )
-        return unexpected( fmt::format( "Missing field: {}", "Radius" ) );
-    result.radius = root["Radius"].asFloat();
-
-    return result;
-}
-
-void EndMillCutter::serialize( Json::Value& root ) const
-{
-    static const std::array knownValues {
-        "flat",
-        "ball",
-    };
-    static_assert( knownValues.size() == (int)Type::Count );
-
-    root["Type"] = knownValues[(int)type];
-    root["Radius"] = radius;
-}
-
-Mesh EndMillTool::toMesh( float minEdgeLen ) const
-{
-    if ( minEdgeLen <= 0.f )
-    {
-        constexpr auto cResolution = 64;
-        static const auto cChordLength = std::sin( PI_F / cResolution );
-        minEdgeLen = cChordLength * 2.f * cutter.radius;
-    }
-
-    const auto resolution = (int)std::floor( 2.f * PI_F * cutter.radius / minEdgeLen );
+    const auto radius = diameter / 2.f;
 
     switch ( cutter.type )
     {
     case EndMillCutter::Type::Flat:
-        return makeCylinder( cutter.radius, length, resolution );
+        return makeCylinder( radius, length, horizontalResolution );
 
     case EndMillCutter::Type::Ball:
     {
         // TODO: custom implementation
-        auto sphere = makeUVSphere( cutter.radius, resolution, resolution );
+        auto sphere = makeUVSphere( radius, horizontalResolution, verticalResolution );
 
         trimWithPlane( sphere, TrimWithPlaneParams {
             .plane = Plane3f{ Vector3f::minusZ(), 0.f },
         } );
 
-        sphere.transform( AffineXf3f::translation( Vector3f::plusZ() * cutter.radius ) );
+        sphere.transform( AffineXf3f::translation( Vector3f::plusZ() * radius ) );
 
         const auto borderEdges = sphere.topology.findHoleRepresentiveEdges();
         assert( borderEdges.size() == 1 );
@@ -123,28 +62,56 @@ Mesh EndMillTool::toMesh( float minEdgeLen ) const
     MR_UNREACHABLE
 }
 
-Expected<EndMillTool> EndMillTool::deserialize( const Json::Value& root )
+void serializeToJson( const EndMillCutter& cutter, Json::Value& root )
 {
-    EndMillTool result;
+    static const std::array knownValues {
+        "flat",
+        "ball",
+    };
+    static_assert( knownValues.size() == (int)EndMillCutter::Type::Count );
+    root["Type"] = knownValues[(int)cutter.type];
+}
 
+void serializeToJson( const EndMillTool& tool, Json::Value& root )
+{
+    root["Length"] = tool.length;
+    root["Diameter"] = tool.diameter;
+    serializeToJson( tool.cutter, root["Cutter"] );
+}
+
+Expected<void> deserializeFromJson( const Json::Value& root, EndMillCutter& cutter )
+{
+    if ( root["Type"].type() != Json::stringValue )
+        return unexpected( fmt::format( "Missing field: {}", "Type" ) );
+    static const HashMap<std::string, EndMillCutter::Type> knownValues {
+        { "flat", EndMillCutter::Type::Flat },
+        { "ball", EndMillCutter::Type::Ball },
+    };
+    assert( knownValues.size() == (int)EndMillCutter::Type::Count );
+    if ( auto it = knownValues.find( toLower( root["Type"].asString() ) ); it != knownValues.end() )
+        cutter.type = it->second;
+    else
+        return unexpected( fmt::format( "Invalid value: {}", "Type" ) );
+
+    return {};
+}
+
+Expected<void> deserializeFromJson( const Json::Value& root, EndMillTool& tool )
+{
     if ( root["Cutter"].type() != Json::objectValue )
         return unexpected( fmt::format( "Missing field: {}", "Cutter" ) );
-    if ( auto res =  EndMillCutter::deserialize( root["Cutter"] ) )
-        result.cutter = *res;
-    else
+    if ( auto res = deserializeFromJson( root["Cutter"], tool.cutter ); !res )
         return unexpected( std::move( res.error() ) );
 
     if ( root["Length"].type() != Json::realValue )
         return unexpected( fmt::format( "Missing field: {}", "Length" ) );
-    result.length = root["Length"].asFloat();
+    tool.length = root["Length"].asFloat();
 
-    return result;
-}
+    if ( root["Diameter"].type() != Json::realValue )
+        return unexpected( fmt::format( "Missing field: {}", "Diameter" ) );
+    tool.diameter = root["Diameter"].asFloat();
 
-void EndMillTool::serialize( Json::Value& root ) const
-{
-    root["Length"] = length;
-    cutter.serialize( root["Cutter"] );
+    return {};
 }
 
 } // namespace MR

@@ -19,7 +19,8 @@ public:
     // draw interface for interacting with storage (based on UI::combo)
     MRVIEWER_API bool drawInterface();
 
-    // ...
+    // draw dialog for creating end mill tools
+    // must be called outside any BeginCustomStatePlugin/EndCustomStatePlugin blocks
     MRVIEWER_API bool drawCreateToolDialog( float menuScaling );
 
     // get selected tool as ObjectMesh
@@ -40,9 +41,9 @@ private:
     void addNewToolFromFile_();
     // add new tool in storage from exist ObjectMesh
     void addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& objMesh );
-    // ...
+    // add new end mill tool in storage
     void addNewTool_( const std::string& name, const EndMillTool& tool );
-    // ...
+    // remove the selected tool from storage
     void removeSelectedTool_();
     // draw popup with ObjectMeshes available for adding
     void drawSelectMeshPopup_();
@@ -59,10 +60,10 @@ private:
 
     // Create Tool dialog state
     bool createToolDialogIsOpen_ = false;
-    std::string createToolName_ = "Flat End Mill R1";
+    std::string createToolName_ = "Flat End Mill D2";
     int createToolType_ = 0;
     float createToolLength_ = 8.f;
-    float createToolRadius_ = 1.f;
+    float createToolDiameter_ = 2.f;
 };
 
 }

@@ -5,6 +5,11 @@
 namespace MR
 {
 
+template <typename C, typename D>
+class SparsePolynomial;
+template <typename C, typename D>
+SparsePolynomial<C,D> operator *( const SparsePolynomial<C,D>& a, const SparsePolynomial<C,D>& b );
+
 /// \tparam C - type of coefficients
 /// \tparam D - type of degrees
 template <typename C, typename D = int>
@@ -14,26 +19,37 @@ public:
     /// constructs zero polynomial
     SparsePolynomial() = default;
 
+    /// takes existing coefficients in ownership
+    SparsePolynomial( std::map<D, C> && );
+
     /// constructs polynomial c0 + c*x^d
     SparsePolynomial( C c0, D d, C c );
 
-    /// gets access to all not-zero coefficients
-          std::map<D, C> & get()       { return map_; }
+    /// gets read-only access to all not-zero coefficients
     const std::map<D, C> & get() const { return map_; }
 
     SparsePolynomial& operator +=( const SparsePolynomial& b );
     SparsePolynomial& operator -=( const SparsePolynomial& b );
-    //friend SparsePolynomial<C,D> operator *( const SparsePolynomial<C,D>& a, const SparsePolynomial<C,D>& b );
+    friend SparsePolynomial operator *<>( const SparsePolynomial& a, const SparsePolynomial& b );
 
 private:
     std::map<D, C> map_; // degree -> not-zero coefficient
 };
 
 template <typename C, typename D>
+SparsePolynomial<C,D>::SparsePolynomial( std::map<D, C> && m ) : map_( std::move( m ) )
+{
+#ifndef NDEBUG
+    for ( const auto & [deg, cf] : map_ )
+        assert( cf != 0 );
+#endif
+}
+
+template <typename C, typename D>
 SparsePolynomial<C,D>::SparsePolynomial( C c0, D d, C c )
 {
     assert( c != 0 );
-    assert( d > 0 );
+    assert( d != 0 );
     if ( c0 != 0 )
         map_[D(0)] = c0;
     map_[d] = c;
@@ -44,7 +60,6 @@ SparsePolynomial<C,D>& SparsePolynomial<C,D>::operator +=( const SparsePolynomia
 {
     for ( const auto & [degB, cfB] : b.map_ )
     {
-        assert( degB >= 0 );
         assert( cfB != 0 );
         auto [it,inserted] = map_.insert( { degB, cfB } );
         if ( !inserted )
@@ -64,7 +79,6 @@ SparsePolynomial<C,D>& SparsePolynomial<C,D>::operator -=( const SparsePolynomia
 {
     for ( const auto & [degB, cfB] : b.map_ )
     {
-        assert( degB >= 0 );
         assert( cfB != 0 );
         auto [it,inserted] = map_.insert( { degB, -cfB } );
         if ( !inserted )
@@ -82,29 +96,27 @@ SparsePolynomial<C,D>& SparsePolynomial<C,D>::operator -=( const SparsePolynomia
 template <typename C, typename D>
 SparsePolynomial<C,D> operator *( const SparsePolynomial<C,D>& a, const SparsePolynomial<C,D>& b )
 {
-    SparsePolynomial<C,D> res;
-    for ( const auto & [degA, cfA] : a.get() )
+    std::map<D,C> resMap;
+    for ( const auto & [degA, cfA] : a.map_ )
     {
-        assert( degA >= 0 );
         assert( cfA != 0 );
-        for ( const auto & [degB, cfB] : b.get() )
+        for ( const auto & [degB, cfB] : b.map_ )
         {
-            assert( degB >= 0 );
             assert( cfB != 0 );
             const auto deg = degA + degB;
             const auto cf = cfA * cfB;
-            auto [it,inserted] = res.get().insert( { deg, cf } );
+            auto [it,inserted] = resMap.insert( { deg, cf } );
             if ( !inserted )
             {
                 const auto sum = it->second + cf;
                 if ( sum != 0 )
                     it->second = sum;
                 else
-                    res.get().erase( it );
+                    resMap.erase( it );
             }
         }
     }
-    return res;
+    return resMap;
 }
 
 } //namespace MR

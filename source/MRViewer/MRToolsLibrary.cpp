@@ -16,6 +16,7 @@
 #include "ImGuiHelpers.h"
 #include "MRMesh/MREndMill.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRPch/MRJson.h"
 
 #include <imgui.h>
 

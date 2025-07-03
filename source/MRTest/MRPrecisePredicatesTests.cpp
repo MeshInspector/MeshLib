@@ -126,6 +126,48 @@ TEST( MRMesh, PrecisePredicates2FullDegen )
     EXPECT_FALSE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
 }
 
+TEST( MRMesh, PrecisePredicates2PartialDegen )
+{
+    EXPECT_TRUE( doSegmentSegmentIntersect( {
+        PreciseVertCoords2{ 0_v, { 0,  0} },
+        PreciseVertCoords2{ 2_v, {-1, -1} },
+        PreciseVertCoords2{ 1_v, {-1, -1} },
+        PreciseVertCoords2{ 3_v, {-1, -1} } } ).doIntersect );
+
+    EXPECT_TRUE( doSegmentSegmentIntersect( {
+        PreciseVertCoords2{ 1_v, { 0,  0} },
+        PreciseVertCoords2{ 2_v, {-2, -2} },
+        PreciseVertCoords2{ 0_v, {-1, -1} },
+        PreciseVertCoords2{ 3_v, {-1, -1} } } ).doIntersect );
+
+    // degenerated segment with ends at last vertices (with smallest perturbation) never intersects anything
+    for ( int x = -1; x <= 1; ++x )
+        for ( int y = -1; y <= 1; ++y )
+        {
+            if ( x == 0 && y == 0 )
+                continue;
+
+            const PreciseVertCoords2 p2{ 2_v, {x, y} };
+            const PreciseVertCoords2 p3{ 3_v, {x, y} };
+
+            EXPECT_FALSE( doSegmentSegmentIntersect( {
+                PreciseVertCoords2{ 0_v, {0, 0} },
+                PreciseVertCoords2{ 1_v, {x, y} }, p2, p3 } ).doIntersect );
+
+            EXPECT_FALSE( doSegmentSegmentIntersect( {
+                PreciseVertCoords2{ 1_v, {0, 0} },
+                PreciseVertCoords2{ 0_v, {x, y} }, p2, p3 } ).doIntersect );
+
+            EXPECT_FALSE( doSegmentSegmentIntersect( {
+                PreciseVertCoords2{ 0_v, {0, 0} },
+                PreciseVertCoords2{ 1_v, {2*x, 2*y} }, p2, p3 } ).doIntersect );
+
+            EXPECT_FALSE( doSegmentSegmentIntersect( {
+                PreciseVertCoords2{ 1_v, {0, 0} },
+                PreciseVertCoords2{ 0_v, {2*x, 2*y} }, p2, p3 } ).doIntersect );
+        }
+}
+
 TEST( MRMesh, PrecisePredicates2InCircle2 )
 {
     std::array<PreciseVertCoords2, 5> vs =

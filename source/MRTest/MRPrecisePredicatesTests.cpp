@@ -1,6 +1,7 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRGTest.h>
+#include <algorithm>
 
 namespace MR
 {
@@ -110,6 +111,21 @@ TEST( MRMesh, PrecisePredicates2More )
     EXPECT_TRUE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
 }
 
+TEST( MRMesh, PrecisePredicates2FullDegen )
+{
+    std::array<PreciseVertCoords2, 4> vs = 
+    { 
+        PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 1_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 3_v, Vector2i( 0, 0 ) }
+    };
+
+    EXPECT_FALSE( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ).doIntersect );
+    EXPECT_TRUE(  doSegmentSegmentIntersect( { vs[0], vs[2], vs[1], vs[3] } ).doIntersect );
+    EXPECT_FALSE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
+}
+
 TEST( MRMesh, PrecisePredicates2InCircle2 )
 {
     std::array<PreciseVertCoords2, 5> vs =
@@ -178,6 +194,29 @@ TEST( MRMesh, PrecisePredicates3More )
     // triangles 045 and 123 intersect one with another
     EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[1], vs[2] } ).doIntersect );
     EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[3], vs[1] } ).doIntersect );
+}
+
+TEST( MRMesh, PrecisePredicates3FullDegen )
+{
+    std::array<PreciseVertCoords, 5> vs = 
+    { 
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 2_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 3_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 0, 0, 0 ) }
+    };
+
+    do
+    {
+        if ( vs[0].id < vs[1].id && vs[1].id < vs[2].id && vs[3].id < vs[4].id ) // ignore same triangles and segments with changed order of vertices
+        {
+            //spdlog::info( "{}{}{}x{}{}: {}", (int)vs[0].id, (int)vs[1].id, (int)vs[2].id, (int)vs[3].id, (int)vs[4].id,
+            //    doTriangleSegmentIntersect( { vs[0], vs[1], vs[2], vs[3], vs[4] } ).doIntersect );
+            EXPECT_EQ( doTriangleSegmentIntersect( { vs[0], vs[1], vs[2], vs[3], vs[4] } ).doIntersect, vs[3].id == 1 && vs[4].id == 3 );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
 } //namespace MR

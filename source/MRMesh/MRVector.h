@@ -30,7 +30,7 @@ public:
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
-    Vector( std::initializer_list<T> init ) : vec_( init ) { }
+    MR_BIND_IGNORE Vector( std::initializer_list<T> init ) : vec_( init ) { }
 
     [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ == b.vec_; }
     [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ != b.vec_; }

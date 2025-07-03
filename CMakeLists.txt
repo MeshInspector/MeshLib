@@ -41,6 +41,7 @@ option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding libr
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
+option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -232,6 +233,10 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 
 IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)
+ENDIF()
+
+IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/c_bindings ./c_bindings)
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)

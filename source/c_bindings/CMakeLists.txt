@@ -1,0 +1,53 @@
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(MeshLibC2 CXX)
+
+file(GLOB_RECURSE SOURCES "mrmesh/src/*.cpp")
+file(GLOB_RECURSE HEADERS "mrmesh/include/*.h")
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  MRIOExtras
+  MRSymbolMesh
+  MRVoxels
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC mrmesh/include)
+target_include_directories(${PROJECT_NAME} PRIVATE mrmesh/source ..)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}
+  LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+  ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+  RUNTIME DESTINATION "${MR_BIN_DIR}"
+)
+
+install(
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)
+
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
+  DESTINATION ${MR_CONFIG_DIR}
+)
+
+install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
+install(FILES ${UI_JSON} DESTINATION "${MR_RESOURCES_DIR}")
+install(FILES ${ITEMS_JSON} DESTINATION "${MR_RESOURCES_DIR}")
+
+install(
+  EXPORT ${PROJECT_NAME}
+  FILE ${PROJECT_NAME}Targets.cmake
+  NAMESPACE MeshLib::
+  DESTINATION ${MR_CONFIG_DIR}
+)
+
+IF(MR_PCH)
+  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+ENDIF()

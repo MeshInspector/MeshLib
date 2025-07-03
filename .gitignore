@@ -35,4 +35,4 @@ source/MRDotNetTest/obj/*
 /include
 /out/build/
 .cache
-/source/c_bindings
+/source/c_bindings/mrmesh

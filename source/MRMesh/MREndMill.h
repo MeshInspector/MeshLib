@@ -22,7 +22,7 @@ struct EndMillCutter
         // TODO: chamfer
         Count
     };
-    Type type;
+    Type type = Type::Flat;
     // TODO: corner radius
     // TODO: cutting angle
 };
@@ -31,9 +31,9 @@ struct EndMillCutter
 struct EndMillTool
 {
     /// overall tool length
-    float length;
+    float length = 1.f;
     /// tool diameter
-    float diameter;
+    float diameter = 0.1f;
     /// cutter
     EndMillCutter cutter;
 

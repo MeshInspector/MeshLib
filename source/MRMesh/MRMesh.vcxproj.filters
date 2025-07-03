@@ -1334,6 +1334,9 @@
     <ClInclude Include="MRFastInt128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPreciseSegmentIntersectionOrder3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2176,6 +2179,9 @@
     </ClCompile>
     <ClCompile Include="MRTripleFaceIntersections.cpp">
       <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPreciseSegmentIntersectionOrder3.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -7,7 +7,7 @@ namespace Cuda
 {
 
 __global__ void kernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
-                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, unsigned chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
+                        IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, size_t chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if ( index >= chunkSize )

@@ -1,27 +1,25 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
 #include "MRPrecisePredicates3.h"
-#include <boost/math/tools/polynomial.hpp>
+#include "MRSparsePolynomial.h"
 
 namespace MR
 {
 
 bool ccwViaPolynomial( const Vector2i & a, const Vector2i & b )
 {
-    using boost::math::tools::polynomial;
+    using Poly = SparsePolynomial<Int64>;
 
-    const polynomial<Int64> xx( { a.x, 0, 1 } );
-    const polynomial<Int64> xy( { a.y, 1 } );
-    const polynomial<Int64> yx( { b.x, 0, 0, 0, 0, 0, 0, 0, 1 } );
-    const polynomial<Int64> yy( { b.y, 0, 0, 0, 1 } );
-    const auto det = xx * yy - xy * yx;
-    //std::ostringstream s;
-    //s << det;
-    //spdlog::info( "{}", s.str() );
+    const Poly xx( a.x, 2, 1 );
+    const Poly xy( a.y, 1, 1 );
+    const Poly yx( b.x, 8, 1 );
+    const Poly yy( b.y, 4, 1 );
+    auto det = xx * yy;
+    det -= xy * yx;
 
-    for ( int i = 0; i < det.size(); ++i )
-        if ( auto v = det[i] )
-            return v > 0;
+    const auto & mapDegToCf = det.get();
+    if ( !mapDegToCf.empty() )
+        return mapDegToCf.begin()->second > 0;
 
     assert (false);
     return false;

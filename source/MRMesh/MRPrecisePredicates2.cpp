@@ -1,16 +1,39 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
 #include "MRPrecisePredicates3.h"
+#include <boost/math/tools/polynomial.hpp>
 
 namespace MR
 {
+
+bool ccwViaPolynomial( const Vector2i & a, const Vector2i & b )
+{
+    using boost::math::tools::polynomial;
+
+    const polynomial<Int64> xx( { a.x, 0, 1 } );
+    const polynomial<Int64> xy( { a.y, 1 } );
+    const polynomial<Int64> yx( { b.x, 0, 0, 0, 0, 0, 0, 0, 1 } );
+    const polynomial<Int64> yy( { b.y, 0, 0, 0, 1 } );
+    const auto det = xx * yy - xy * yx;
+    //std::ostringstream s;
+    //s << det;
+    //spdlog::info( "{}", s.str() );
+
+    for ( int i = 0; i < det.size(); ++i )
+        if ( auto v = det[i] )
+            return v > 0;
+
+    assert (false);
+    return false;
+}
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
 // b=(pi_j,1, pi_j,2)
 bool ccw( const Vector2i & a, const Vector2i & b )
 {
-    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
+    return ccwViaPolynomial( a, b );
+/*    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
         return v > 0; // points are in general position
 
     // points 0, a, b are on the same line
@@ -39,7 +62,7 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // b = (    0,       db.y ) ~ (  0, 1 )
     // the smallest permutation db.x does not change anything here, and
     // the rotation from a to b is always ccw independently on a.y sign
-    return true;
+    return true;*/
 }
 
 bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )

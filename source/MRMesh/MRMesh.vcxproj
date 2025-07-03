@@ -423,6 +423,7 @@
     <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MROffsetVerts.h" />
+    <ClInclude Include="MREndMill.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />
@@ -706,6 +707,7 @@
     <ClCompile Include="MRTbbThreadMutex.cpp" />
     <ClCompile Include="MROffsetVerts.cpp" />
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
+    <ClCompile Include="MREndMill.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

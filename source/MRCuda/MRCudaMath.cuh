@@ -31,6 +31,11 @@ struct Box3
     float3 min;
     float3 max;
 
+    __device__ bool valid() const
+    {
+        return min.x <= max.x && min.y <= max.y && min.z <= max.z;
+    }
+
     __device__ float3 getBoxClosestPointTo( const float3& pt ) const
     {
         return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ), clamp( pt.z, min.z, max.z ) };
@@ -44,6 +49,18 @@ struct Box3
         if ( pt.y > max.y ) max.y = pt.y;
         if ( pt.z < min.z ) min.z = pt.z;
         if ( pt.z > max.z ) max.z = pt.z;
+    }
+
+    __device__ Box3 intersection( const Box3& b ) const
+    {
+        Box3 res;
+        res.min.x = fmax( min.x, b.min.x );
+        res.min.y = fmax( min.y, b.min.y );
+        res.min.z = fmax( min.z, b.min.z );
+        res.max.x = fmin( max.x, b.max.x );
+        res.max.y = fmin( max.y, b.max.y );
+        res.max.z = fmin( max.z, b.max.z );
+        return res;
     }
 
     __device__ float3 operator[]( const int i ) const

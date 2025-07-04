@@ -10,6 +10,7 @@ class SparsePolynomial;
 template <typename C, typename D>
 SparsePolynomial<C,D> operator *( const SparsePolynomial<C,D>& a, const SparsePolynomial<C,D>& b );
 
+/// The class to store a polynomial with a large number of zero coefficient (only non-zeros are stored in std::map)
 /// \tparam C - type of coefficients
 /// \tparam D - type of degrees
 template <typename C, typename D = int>

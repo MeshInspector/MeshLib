@@ -109,6 +109,10 @@ TEST( MRMesh, PrecisePredicates2More )
 
     // segments 03 and 12 intersect one with another
     EXPECT_TRUE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
+
+    // intersection of 45 and 03 is closer to 4 than intersection of 45 and 12
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[4], vs[5], vs[0], vs[3], vs[1], vs[2] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[5], vs[4], vs[0], vs[3], vs[1], vs[2] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates2FullDegen )

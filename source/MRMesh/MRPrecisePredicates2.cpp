@@ -1,9 +1,72 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
 #include "MRPrecisePredicates3.h"
+#include "MRSparsePolynomial.h"
 
 namespace MR
 {
+
+namespace
+{
+
+struct PointDegree
+{
+    Vector2i pt;
+    int d = 0; // degree of epsilon for pt.y
+};
+
+std::array<PointDegree, 6> getPointDegrees( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    struct VertN
+    {
+        VertId v;
+        int n = 0;
+    };
+    std::array<VertN, 6> as;
+    for ( int i = 0; i < 6; ++i )
+        as[i] = { vs[i].id, i };
+    std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
+
+    std::array<PointDegree, 6> res;
+    int d = 1;
+    for ( int i = 0; i < 6; ++i )
+    {
+        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
+        const auto n = as[i].n;
+        res[n] = { vs[n].pt, d };
+        d *= 9;
+    }
+    return res;
+}
+
+SparsePolynomial<FastInt128> ccwPoly(
+    const PointDegree & a,
+    const PointDegree & b,
+    const PointDegree & c,
+    int db ) // degree.x = degree.y * db
+{
+    using Poly = SparsePolynomial<FastInt128>;
+
+    const Poly xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
+    const Poly xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
+    const Poly yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
+    const Poly yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
+    auto det = xx * yy;
+    det -= xy * yx;
+    return det;
+}
+
+bool isPositive( const SparsePolynomial<FastInt128>& poly )
+{
+    const auto & mapDegToCf = poly.get();
+    if ( !mapDegToCf.empty() )
+        return mapDegToCf.begin()->second > 0;
+
+    assert (false);
+    return false;
+}
+
+} // anonymous namespace
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
@@ -203,6 +266,32 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
         return res; // segment AB is located at one side of the line CD
 
     res.doIntersect = true;
+    return res;
+}
+
+bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    // s=01, sa=23, sb=45
+    assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ) );
+    assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
+    const auto ds = getPointDegrees( vs );
+
+    // res = ( ccw(sa,s[0])*ccw(sb,ds[1])   -   ccw(sb,s[0])*ccw(sa,ds[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,ds[1]) ) * ( ccw(sb,s[0])-ccw(sb,ds[1]) )
+    const auto polySaOrg  = ccwPoly( ds[2], ds[3], ds[0], 3 );
+    const auto polySaDest = ccwPoly( ds[2], ds[3], ds[1], 3 );
+    assert( isPositive( polySaOrg ) != isPositive( polySaDest ) );
+
+    const auto polySbOrg  = ccwPoly( ds[4], ds[5], ds[0], 3 );
+    const auto polySbDest = ccwPoly( ds[4], ds[5], ds[1], 3 );
+    assert( isPositive( polySbOrg ) != isPositive( polySbDest ) );
+
+    auto nom = polySaOrg * polySbDest;
+    nom -= polySbOrg * polySaDest;
+
+    bool res = isPositive( nom );
+    if ( isPositive( polySaOrg ) != isPositive( polySbOrg ) ) // denominator is negative
+        res = !res;
     return res;
 }
 

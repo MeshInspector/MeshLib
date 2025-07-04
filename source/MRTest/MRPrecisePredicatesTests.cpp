@@ -109,6 +109,10 @@ TEST( MRMesh, PrecisePredicates2More )
 
     // segments 03 and 12 intersect one with another
     EXPECT_TRUE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
+
+    // intersection of 45 and 03 is closer to 4 than intersection of 45 and 12
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[4], vs[5], vs[0], vs[3], vs[1], vs[2] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[5], vs[4], vs[0], vs[3], vs[1], vs[2] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates2FullDegen )
@@ -190,6 +194,33 @@ TEST( MRMesh, PrecisePredicates2InCircle2 )
     EXPECT_TRUE( ccw( { vs[2],vs[1],vs[0] } ) );
     // it means that 142 circle should be larger in +Y half plane and so 3_v should be inside it
     EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
+}
+
+TEST( MRMesh, PreciseSegmentIntersectionOrder2 )
+{
+    PreciseVertCoords2 vs[6] =
+    {
+        // s:
+        PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 1_v, Vector2i( 3, 0 ) },
+        // sa:
+        PreciseVertCoords2{ 2_v, Vector2i( 1,-1 ) },
+        PreciseVertCoords2{ 3_v, Vector2i( 1, 1 ) },
+        // sb:
+        PreciseVertCoords2{ 5_v, Vector2i( 2,-1 ) },
+        PreciseVertCoords2{ 6_v, Vector2i( 2, 1 ) }
+    };
+
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[5], vs[4] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[1], vs[0], vs[3], vs[2], vs[5], vs[4] } ) );
+
+    // swapped sa and sb
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[4], vs[5], vs[2], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[4], vs[5], vs[3], vs[2] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[4], vs[3], vs[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[1], vs[0], vs[5], vs[4], vs[3], vs[2] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates3 )

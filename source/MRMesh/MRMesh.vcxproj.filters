@@ -1337,6 +1337,9 @@
     <ClInclude Include="MREndMill.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>
+    <ClInclude Include="MRSparsePolynomial.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

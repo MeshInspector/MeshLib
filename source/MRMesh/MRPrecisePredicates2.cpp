@@ -15,6 +15,30 @@ struct PointDegree
     int d = 0; // degree of epsilon for pt.y
 };
 
+std::array<PointDegree, 6> getPointDegrees( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    struct VertN
+    {
+        VertId v;
+        int n = 0;
+    };
+    std::array<VertN, 6> as;
+    for ( int i = 0; i < 6; ++i )
+        as[i] = { vs[i].id, i };
+    std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
+
+    std::array<PointDegree, 6> res;
+    int d = 1;
+    for ( int i = 0; i < 6; ++i )
+    {
+        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
+        const auto n = as[i].n;
+        res[n] = { vs[n].pt, d };
+        d *= 9;
+    }
+    return res;
+}
+
 SparsePolynomial<FastInt128> ccwPoly(
     const PointDegree & a,
     const PointDegree & b,
@@ -43,11 +67,6 @@ bool isPositive( const SparsePolynomial<FastInt128>& poly )
 }
 
 } // anonymous namespace
-
-bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
-{
-    return isPositive( ccwPoly( { a, 1 }, { b, 4 }, { c, 16 }, 2 ) );
-}
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
@@ -250,59 +269,30 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
     return res;
 }
 
-static std::array<int,6> getDegrees( const std::array<VertId, 6>& ids )
+bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
 {
-    struct VertN
-    {
-        VertId v;
-        int n = 0;
-    };
-    std::array<VertN, 6> as;
-    for ( int i = 0; i < 6; ++i )
-        as[i] = { ids[i], i };
-    std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
+    // s=01, sa=23, sb=45
+    assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ) );
+    assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
+    const auto ds = getPointDegrees( vs );
 
-    std::array<int,6> res;
-    int d = 1;
-    for ( int i = 0; i < 6; ++i )
-    {
-        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
-        res[as[i].n] = d;
-        d *= 9;
-    }
+    // res = ( ccw(sa,s[0])*ccw(sb,ds[1])   -   ccw(sb,s[0])*ccw(sa,ds[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,ds[1]) ) * ( ccw(sb,s[0])-ccw(sb,ds[1]) )
+    const auto polySaOrg  = ccwPoly( ds[2], ds[3], ds[0], 3 );
+    const auto polySaDest = ccwPoly( ds[2], ds[3], ds[1], 3 );
+    assert( isPositive( polySaOrg ) != isPositive( polySaDest ) );
+
+    const auto polySbOrg  = ccwPoly( ds[4], ds[5], ds[0], 3 );
+    const auto polySbDest = ccwPoly( ds[4], ds[5], ds[1], 3 );
+    assert( isPositive( polySbOrg ) != isPositive( polySbDest ) );
+
+    auto nom = polySaOrg * polySbDest;
+    nom -= polySbOrg * polySaDest;
+
+    bool res = isPositive( nom );
+    if ( isPositive( polySaOrg ) != isPositive( polySbOrg ) ) // denominator is negative
+        res = !res;
     return res;
-}
-
-bool segmentIntersectionOrder(
-    const PreciseVertCoords2 s[2],
-    const PreciseVertCoords2 sa[2],
-    const PreciseVertCoords2 sb[2] )
-{
-    assert( doSegmentSegmentIntersect( { sa[0], sa[1], s[0], s[1] } ) );
-    assert( doSegmentSegmentIntersect( { sb[0], sb[1], s[0], s[1] } ) );
-    const auto degress = getDegrees( { s[0].id, s[1].id, sa[0].id, sa[1].id, sb[0].id, sb[1].id } );
-
-    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
-    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
-/*    const auto polyTaOrg  = ccwPoly( sa[0].pt, sa[1].pt, sa[2].pt, s[0].pt );
-    const auto polyTaDest = ccwPoly( sa[0].pt, sa[1].pt, sa[2].pt, s[1].pt );
-    const auto polyTbOrg  = ccwPoly( sb[0].pt, sb[1].pt, sb[2].pt, s[0].pt );
-    const auto polyTbDest = ccwPoly( sb[0].pt, sb[1].pt, sb[2].pt, s[1].pt );
-
-    const auto den0 = polyTaOrg - polyTaDest;
-    const auto den1 = polyTbOrg - polyTbDest;
-    bool changeResSign = false;
-    if ( den0 != 0 && den1 != 0 )
-        changeResSign = ( den0 < 0 ) != ( den1 < 0 );
-    else
-        assert( !"not implemented" );
-
-    const auto nom = Int256( polyTaOrg ) * Int256( polyTbDest ) - Int256( polyTbOrg ) * Int256( polyTaDest );
-    if ( nom != 0 )
-        return ( nom > 0 ) != changeResSign;*/
-
-    assert( !"not implemented" );
-    return false;
 }
 
 Vector2i findSegmentSegmentIntersectionPrecise(

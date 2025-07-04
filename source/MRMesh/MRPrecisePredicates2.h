@@ -28,9 +28,8 @@ MRMESH_API bool ccw( const Vector2i & a, const Vector2i & b );
 
 /// return true if the smallest rotation from vector (a-c) to vector (b-c) is in counter-clock-wise direction;
 /// uses simulation-of-simplicity to avoid "vectors are collinear"
-//inline bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
-//    { return ccw( a - c, b - c ); }
-MRMESH_API bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c );
+inline bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+    { return ccw( a - c, b - c ); }
 
 struct PreciseVertCoords2
 {
@@ -77,13 +76,10 @@ struct CoordinateConverters2
     ConvertToFloatVector2 toFloat{};
 };
 
-/// given line segment s and two other segments sa,sb known to intersect it, finds the order of intersection using precise predicates:
+/// given line segment s=01 and two other segments sa=23, sb=45 known to intersect it, finds the order of intersection using precise predicates:
 /// true:  s[0], s ^ sa, s ^ sb, s[1]
 /// false: s[0], s ^ sb, s ^ sa, s[1]
-[[nodiscard]] MRMESH_API bool segmentIntersectionOrder(
-    const PreciseVertCoords2 s[2],
-    const PreciseVertCoords2 sa[2],
-    const PreciseVertCoords2 sb[2] );
+[[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs );
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection

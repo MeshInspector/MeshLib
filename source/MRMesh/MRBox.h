@@ -209,6 +209,36 @@ public:
         return res;
     }
 
+    /// returns the closest point on the box to the given point
+    /// for points outside the box this is equivalent to getBoxClosestPointTo
+    V getProjection( const V & pt ) const
+    {
+        assert( valid() );
+        if ( !contains( pt ) )
+            return getBoxClosestPointTo( pt );
+
+        T minDist = std::numeric_limits<T>::max();
+        int minDistDim {};
+        T minDistPos {};
+
+        for ( auto dim = 0; dim < elements; ++dim )
+        {
+            for ( const auto& border : { min, max } )
+            {
+                if ( auto dist = std::abs( VTraits::getElem( dim, border ) - VTraits::getElem( dim, pt ) ); dist < minDist )
+                {
+                    minDist = dist;
+                    minDistDim = dim;
+                    minDistPos = VTraits::getElem( dim, border );
+                }
+            }
+        }
+
+        auto proj = pt;
+        VTraits::getElem( minDistDim, proj ) = minDistPos;
+        return proj;
+    }
+
     /// decreases min and increased max on given value
     Box expanded( const V & expansion ) const
     {

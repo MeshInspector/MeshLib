@@ -274,6 +274,28 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     // s=01, sa=23, sb=45
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ) );
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
+
+    // if sa and sb have a shared point
+    auto sa0 = vs[2];
+    auto sa1 = vs[3];
+    auto sb0 = vs[4];
+    auto sb1 = vs[5];
+    if ( sa1.id == sb0.id )
+        std::swap( sa0, sa1 );
+    else if ( sa0.id == sb1.id )
+        std::swap( sb0, sb1 );
+    else if ( sa1.id == sb1.id )
+    {
+        std::swap( sa0, sa1 );
+        std::swap( sb0, sb1 );
+    }
+    if ( sa0.id == sb0.id )
+    {
+        assert( sa0.pt == sb0.pt );
+        assert( sa1.id != sb1.id );
+        return ccw( { sa0, sa1, sb1 } ) == ccw( { sa0, sa1, vs[1] } );
+    }
+
     const auto ds = getPointDegrees( vs );
 
     // res = ( ccw(sa,s[0])*ccw(sb,ds[1])   -   ccw(sb,s[0])*ccw(sa,ds[1]) ) /

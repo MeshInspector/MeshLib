@@ -25,17 +25,25 @@ bool ccwViaPolynomial( const Vector2i & a, const Vector2i & b )
     return false;
 }
 
-bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+SparsePolynomial<FastInt128> ccwPoly(
+    const Vector2i & a, int axDeg, int ayDeg,
+    const Vector2i & b, int bxDeg, int byDeg,
+    const Vector2i & c, int cxDeg, int cyDeg )
 {
-    using Poly = SparsePolynomial<Int64>;
+    using Poly = SparsePolynomial<FastInt128>;
 
-    const Poly xx( a.x - c.x, 2, 1, 32, -1 );
-    const Poly xy( a.y - c.y, 1, 1, 16, -1 );
-    const Poly yx( b.x - c.x, 8, 1, 32, -1 );
-    const Poly yy( b.y - c.y, 4, 1, 16, -1 );
+    const Poly xx( a.x - c.x, axDeg, 1, cxDeg, -1 );
+    const Poly xy( a.y - c.y, ayDeg, 1, cyDeg, -1 );
+    const Poly yx( b.x - c.x, bxDeg, 1, cxDeg, -1 );
+    const Poly yy( b.y - c.y, byDeg, 1, cyDeg, -1 );
     auto det = xx * yy;
     det -= xy * yx;
+    return det;
+}
 
+bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+{
+    const auto det = ccwPoly( a, 2, 1, b, 8, 4, c, 32, 16 );
     const auto & mapDegToCf = det.get();
     if ( !mapDegToCf.empty() )
         return mapDegToCf.begin()->second > 0;

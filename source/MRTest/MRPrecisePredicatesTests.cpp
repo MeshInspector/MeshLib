@@ -192,6 +192,33 @@ TEST( MRMesh, PrecisePredicates2InCircle2 )
     EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
+TEST( MRMesh, PreciseSegmentIntersectionOrder2 )
+{
+    PreciseVertCoords2 vs[6] =
+    {
+        // s:
+        PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 1_v, Vector2i( 3, 0 ) },
+        // sa:
+        PreciseVertCoords2{ 2_v, Vector2i( 1,-1 ) },
+        PreciseVertCoords2{ 3_v, Vector2i( 1, 1 ) },
+        // sb:
+        PreciseVertCoords2{ 5_v, Vector2i( 2,-1 ) },
+        PreciseVertCoords2{ 6_v, Vector2i( 2, 1 ) }
+    };
+
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[5], vs[4] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[1], vs[0], vs[3], vs[2], vs[5], vs[4] } ) );
+
+    // swapped sa and sb
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[4], vs[5], vs[2], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[4], vs[5], vs[3], vs[2] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[4], vs[3], vs[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[1], vs[0], vs[5], vs[4], vs[3], vs[2] } ) );
+}
+
 TEST( MRMesh, PrecisePredicates3 )
 {
     const std::array<PreciseVertCoords, 5> vs = 

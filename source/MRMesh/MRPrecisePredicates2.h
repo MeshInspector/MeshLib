@@ -77,6 +77,14 @@ struct CoordinateConverters2
     ConvertToFloatVector2 toFloat{};
 };
 
+/// given line segment s and two other segments sa,sb known to intersect it, finds the order of intersection using precise predicates:
+/// true:  s[0], s ^ sa, s ^ sb, s[1]
+/// false: s[0], s ^ sb, s ^ sa, s[1]
+[[nodiscard]] MRMESH_API bool segmentIntersectionOrder(
+    const PreciseVertCoords2 s[2],
+    const PreciseVertCoords2 sa[2],
+    const PreciseVertCoords2 sb[2] );
+
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection
 [[nodiscard]] MRMESH_API Vector2i findSegmentSegmentIntersectionPrecise(
@@ -84,7 +92,7 @@ struct CoordinateConverters2
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection
-[[nodiscard]] MRMESH_API Vector2f findSegmentSegmentIntersectionPrecise( 
+[[nodiscard]] MRMESH_API Vector2f findSegmentSegmentIntersectionPrecise(
     const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
     CoordinateConverters2 converters );
 

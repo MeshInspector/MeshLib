@@ -6,26 +6,7 @@
 namespace MR
 {
 
-bool ccwViaPolynomial( const Vector2i & a, const Vector2i & b )
-{
-    using Poly = SparsePolynomial<Int64>;
-
-    const Poly xx( a.x, 2, 1 );
-    const Poly xy( a.y, 1, 1 );
-    const Poly yx( b.x, 8, 1 );
-    const Poly yy( b.y, 4, 1 );
-    auto det = xx * yy;
-    det -= xy * yx;
-
-    const auto & mapDegToCf = det.get();
-    if ( !mapDegToCf.empty() )
-        return mapDegToCf.begin()->second > 0;
-
-    assert (false);
-    return false;
-}
-
-SparsePolynomial<FastInt128> ccwPoly(
+static SparsePolynomial<FastInt128> ccwPoly(
     const Vector2i & a, int axDeg, int ayDeg,
     const Vector2i & b, int bxDeg, int byDeg,
     const Vector2i & c, int cxDeg, int cyDeg )
@@ -57,8 +38,7 @@ bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
 // b=(pi_j,1, pi_j,2)
 bool ccw( const Vector2i & a, const Vector2i & b )
 {
-    return ccwViaPolynomial( a, b );
-/*    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
+    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
         return v > 0; // points are in general position
 
     // points 0, a, b are on the same line
@@ -87,7 +67,7 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // b = (    0,       db.y ) ~ (  0, 1 )
     // the smallest permutation db.x does not change anything here, and
     // the rotation from a to b is always ccw independently on a.y sign
-    return true;*/
+    return true;
 }
 
 bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
@@ -252,6 +232,61 @@ SegmentSegmentIntersectResult doSegmentSegmentIntersect( const std::array<Precis
 
     res.doIntersect = true;
     return res;
+}
+
+static std::array<int,6> getDegrees( const std::array<VertId, 6>& ids )
+{
+    struct VertN
+    {
+        VertId v;
+        int n = 0;
+    };
+    std::array<VertN, 6> as;
+    for ( int i = 0; i < 6; ++i )
+        as[i] = { ids[i], i };
+    std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
+
+    std::array<int,6> res;
+    int d = 1;
+    for ( int i = 0; i < 6; ++i )
+    {
+        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
+        res[as[i].n] = d;
+        d *= 9;
+    }
+    return res;
+}
+
+bool segmentIntersectionOrder(
+    const PreciseVertCoords2 s[2],
+    const PreciseVertCoords2 sa[2],
+    const PreciseVertCoords2 sb[2] )
+{
+    assert( doSegmentSegmentIntersect( { sa[0], sa[1], s[0], s[1] } ) );
+    assert( doSegmentSegmentIntersect( { sb[0], sb[1], s[0], s[1] } ) );
+    const auto degress = getDegrees( { s[0].id, s[1].id, sa[0].id, sa[1].id, sb[0].id, sb[1].id } );
+
+    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
+/*    const auto polyTaOrg  = ccwPoly( sa[0].pt, sa[1].pt, sa[2].pt, s[0].pt );
+    const auto polyTaDest = ccwPoly( sa[0].pt, sa[1].pt, sa[2].pt, s[1].pt );
+    const auto polyTbOrg  = ccwPoly( sb[0].pt, sb[1].pt, sb[2].pt, s[0].pt );
+    const auto polyTbDest = ccwPoly( sb[0].pt, sb[1].pt, sb[2].pt, s[1].pt );
+
+    const auto den0 = polyTaOrg - polyTaDest;
+    const auto den1 = polyTbOrg - polyTbDest;
+    bool changeResSign = false;
+    if ( den0 != 0 && den1 != 0 )
+        changeResSign = ( den0 < 0 ) != ( den1 < 0 );
+    else
+        assert( !"not implemented" );
+
+    const auto nom = Int256( polyTaOrg ) * Int256( polyTbDest ) - Int256( polyTbOrg ) * Int256( polyTaDest );
+    if ( nom != 0 )
+        return ( nom > 0 ) != changeResSign;*/
+
+    assert( !"not implemented" );
+    return false;
 }
 
 Vector2i findSegmentSegmentIntersectionPrecise(

@@ -6,31 +6,47 @@
 namespace MR
 {
 
-static SparsePolynomial<FastInt128> ccwPoly(
-    const Vector2i & a, int axDeg, int ayDeg,
-    const Vector2i & b, int bxDeg, int byDeg,
-    const Vector2i & c, int cxDeg, int cyDeg )
+namespace
+{
+
+struct PointDegree
+{
+    Vector2i pt;
+    int d = 0; // degree of epsilon for pt.y
+};
+
+SparsePolynomial<FastInt128> ccwPoly(
+    const PointDegree & a,
+    const PointDegree & b,
+    const PointDegree & c,
+    int db ) // degree.x = degree.y * db
 {
     using Poly = SparsePolynomial<FastInt128>;
 
-    const Poly xx( a.x - c.x, axDeg, 1, cxDeg, -1 );
-    const Poly xy( a.y - c.y, ayDeg, 1, cyDeg, -1 );
-    const Poly yx( b.x - c.x, bxDeg, 1, cxDeg, -1 );
-    const Poly yy( b.y - c.y, byDeg, 1, cyDeg, -1 );
+    const Poly xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
+    const Poly xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
+    const Poly yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
+    const Poly yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
     auto det = xx * yy;
     det -= xy * yx;
     return det;
 }
 
-bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+bool isPositive( const SparsePolynomial<FastInt128>& poly )
 {
-    const auto det = ccwPoly( a, 2, 1, b, 8, 4, c, 32, 16 );
-    const auto & mapDegToCf = det.get();
+    const auto & mapDegToCf = poly.get();
     if ( !mapDegToCf.empty() )
         return mapDegToCf.begin()->second > 0;
 
     assert (false);
     return false;
+}
+
+} // anonymous namespace
+
+bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+{
+    return isPositive( ccwPoly( { a, 1 }, { b, 4 }, { c, 16 }, 2 ) );
 }
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:

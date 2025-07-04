@@ -223,14 +223,14 @@ public:
 
         for ( auto dim = 0; dim < elements; ++dim )
         {
-            const auto distToMin = VTraits::getElem( dim, pt ) - VTraits::getElem( dim, min );
-            const auto distToMax = VTraits::getElem( dim, max ) - VTraits::getElem( dim, pt );
-            const auto dist = std::min( distToMin, distToMax );
-            if ( dist < minDist )
+            for ( const auto& border : { min, max } )
             {
-                minDist = dist;
-                minDistDim = dim;
-                minDistPos = distToMin < distToMax ? VTraits::getElem( dim, min ) : VTraits::getElem( dim, max );
+                if ( auto dist = std::abs( VTraits::getElem( dim, border ) - VTraits::getElem( dim, pt ) ); dist < minDist )
+                {
+                    minDist = dist;
+                    minDistDim = dim;
+                    minDistPos = VTraits::getElem( dim, border );
+                }
             }
         }
 

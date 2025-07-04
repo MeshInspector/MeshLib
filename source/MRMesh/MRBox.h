@@ -218,8 +218,8 @@ public:
             return getBoxClosestPointTo( pt );
 
         T minDist = std::numeric_limits<T>::max();
-        int minDistDim;
-        T minDistPos;
+        int minDistDim {};
+        T minDistPos {};
 
         for ( auto dim = 0; dim < elements; ++dim )
         {

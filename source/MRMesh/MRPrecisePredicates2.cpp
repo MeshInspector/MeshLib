@@ -25,6 +25,25 @@ bool ccwViaPolynomial( const Vector2i & a, const Vector2i & b )
     return false;
 }
 
+bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+{
+    using Poly = SparsePolynomial<Int64>;
+
+    const Poly xx( a.x - c.x, 2, 1, 32, -1 );
+    const Poly xy( a.y - c.y, 1, 1, 16, -1 );
+    const Poly yx( b.x - c.x, 8, 1, 32, -1 );
+    const Poly yy( b.y - c.y, 4, 1, 16, -1 );
+    auto det = xx * yy;
+    det -= xy * yx;
+
+    const auto & mapDegToCf = det.get();
+    if ( !mapDegToCf.empty() )
+        return mapDegToCf.begin()->second > 0;
+
+    assert (false);
+    return false;
+}
+
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
 // b=(pi_j,1, pi_j,2)

@@ -28,8 +28,9 @@ MRMESH_API bool ccw( const Vector2i & a, const Vector2i & b );
 
 /// return true if the smallest rotation from vector (a-c) to vector (b-c) is in counter-clock-wise direction;
 /// uses simulation-of-simplicity to avoid "vectors are collinear"
-inline bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
-    { return ccw( a - c, b - c ); }
+//inline bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+//    { return ccw( a - c, b - c ); }
+MRMESH_API bool ccw( const Vector2i & a, const Vector2i & b, const Vector2i & c );
 
 struct PreciseVertCoords2
 {

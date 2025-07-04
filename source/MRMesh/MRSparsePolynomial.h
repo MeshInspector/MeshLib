@@ -22,8 +22,11 @@ public:
     /// takes existing coefficients in ownership
     SparsePolynomial( std::map<D, C> && );
 
-    /// constructs polynomial c0 + c*x^d
-    SparsePolynomial( C c0, D d, C c );
+    /// constructs polynomial c0 + c1*x^d1
+    SparsePolynomial( C c0, D d1, C c1 );
+
+    /// constructs polynomial c0 + c1*x^d1 + c2*x^d2
+    SparsePolynomial( C c0, D d1, C c1, D d2, C c2 );
 
     /// gets read-only access to all not-zero coefficients
     const std::map<D, C> & get() const { return map_; }
@@ -46,13 +49,27 @@ SparsePolynomial<C,D>::SparsePolynomial( std::map<D, C> && m ) : map_( std::move
 }
 
 template <typename C, typename D>
-SparsePolynomial<C,D>::SparsePolynomial( C c0, D d, C c )
+SparsePolynomial<C,D>::SparsePolynomial( C c0, D d1, C c1 )
 {
-    assert( c != 0 );
-    assert( d != 0 );
+    assert( c1 != 0 );
+    assert( d1 != 0 );
     if ( c0 != 0 )
         map_[D(0)] = c0;
-    map_[d] = c;
+    map_[d1] = c1;
+}
+
+template <typename C, typename D>
+SparsePolynomial<C,D>::SparsePolynomial( C c0, D d1, C c1, D d2, C c2 )
+{
+    assert( c1 != 0 );
+    assert( d1 != 0 );
+    assert( c2 != 0 );
+    assert( d2 != 0 );
+    assert( d1 != d2 );
+    if ( c0 != 0 )
+        map_[D(0)] = c0;
+    map_[d1] = c1;
+    map_[d2] = c2;
 }
 
 template <typename C, typename D>

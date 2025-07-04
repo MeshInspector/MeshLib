@@ -5,6 +5,8 @@
 #include "MRPch/MRBindingMacros.h"
 #include <cmath>
 #include <algorithm>
+#include <cstring>
+#include <utility>
 
 namespace MR
 {
@@ -200,3 +202,15 @@ MR_BIND_IGNORE inline auto end( Vector2<T> & v ) { return &v[2]; }
 #endif
 
 } // namespace MR
+
+template<>
+struct std::hash<MR::Vector2f>
+{
+    size_t operator()( MR::Vector2f const& p ) const noexcept
+    {
+        std::uint64_t xy;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        return size_t( xy );
+    }
+};

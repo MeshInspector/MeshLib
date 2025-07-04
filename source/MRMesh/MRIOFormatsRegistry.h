@@ -1,6 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
 #include "MRDistanceMap.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
@@ -144,7 +144,7 @@ struct MeshLoader
 
 MR_FORMAT_REGISTRY_DECL( MeshLoader )
 
-/** 
+/**
  * \brief Register filter with loader function
  * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, const MeshLoadSettings& settings );
  * example:

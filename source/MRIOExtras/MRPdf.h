@@ -44,9 +44,6 @@ public:
     /// Dtor. Automatically do close
     MRIOEXTRAS_API ~Pdf();
 
-    Pdf( const Pdf& rhs ) = delete;
-    Pdf& operator = ( const Pdf& rhs ) = delete;
-
     /**
      * Add text block in current cursor position.
      * Move cursor.

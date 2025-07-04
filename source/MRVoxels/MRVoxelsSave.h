@@ -72,7 +72,7 @@ MRVOXELS_API Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, co
 
 /// \}
 
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
 using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
 
 MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRVOXELS_API, VoxelsSaver )

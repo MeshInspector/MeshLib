@@ -2,6 +2,7 @@
 
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_LAS
+#include "MRMesh/MRPointCloud.h"
 #include "exports.h"
 
 #include <MRMesh/MRExpected.h>

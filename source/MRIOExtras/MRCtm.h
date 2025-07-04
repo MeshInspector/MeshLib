@@ -2,6 +2,8 @@
 
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_CTM
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPointCloud.h"
 #include "exports.h"
 
 #include <MRMesh/MRExpected.h>

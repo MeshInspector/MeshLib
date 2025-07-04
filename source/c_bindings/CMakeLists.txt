@@ -16,8 +16,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRVoxels
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC mrmesh/include)
-target_include_directories(${PROJECT_NAME} PRIVATE mrmesh/source ..)
+target_include_directories(${PROJECT_NAME} PRIVATE mrmesh/include mrmesh/src ../..)
+target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
 
 install(
   TARGETS ${PROJECT_NAME}

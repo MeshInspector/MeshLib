@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRPartMapping.h"
+#include "MRMesh/MRVector3.h"
 
 namespace MR
 {

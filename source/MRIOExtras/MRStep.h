@@ -2,6 +2,7 @@
 
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_STEP
+#include "MRMesh/MRMesh.h"
 #include "exports.h"
 
 #include <MRMesh/MRExpected.h>

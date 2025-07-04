@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRBitSet.h"
+#include "MRVector3.h"
 
 namespace MR
 {

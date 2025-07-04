@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRHash.h"
+#include "MRMesh/MRMeshFwd.h"
 
 #if defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push

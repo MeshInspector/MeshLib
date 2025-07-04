@@ -4,6 +4,13 @@
 #include "MRMeshFwd.h"
 #include <type_traits>
 
+#if MR_COMPILING_C_BINDINGS
+// Include the headers for the matrices that are otherwise missing.
+// I'm not sure how the binding generator could possibly guess that it has to include those.
+#include "MRMatrix2.h"
+#include "MRMatrix3.h"
+#endif
+
 namespace MR
 {
 

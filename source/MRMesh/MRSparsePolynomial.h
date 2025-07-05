@@ -31,6 +31,9 @@ public:
     /// constructs polynomial c0 + c1*x^d1 + c2*x^d2
     SparsePolynomial( C c0, D d1, C c1, D d2, C c2 );
 
+    /// sets coefficient for given degree to zero
+    void setZeroCoeff( D d ) { map_.erase( d ); }
+
     /// returns true if no single polynomial coefficient is defined
     [[nodiscard]] bool empty() const { return map_.empty(); }
 

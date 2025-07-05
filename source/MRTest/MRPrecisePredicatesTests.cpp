@@ -121,17 +121,30 @@ TEST( MRMesh, PrecisePredicates2More )
 
 TEST( MRMesh, PrecisePredicates2FullDegen )
 {
-    std::array<PreciseVertCoords2, 4> vs = 
+    std::array<PreciseVertCoords2, 6> vs = 
     { 
         PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
         PreciseVertCoords2{ 1_v, Vector2i( 0, 0 ) },
         PreciseVertCoords2{ 2_v, Vector2i( 0, 0 ) },
-        PreciseVertCoords2{ 3_v, Vector2i( 0, 0 ) }
+        PreciseVertCoords2{ 3_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 4_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 5_v, Vector2i( 0, 0 ) }
     };
 
     EXPECT_FALSE( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ).doIntersect );
     EXPECT_TRUE(  doSegmentSegmentIntersect( { vs[0], vs[2], vs[1], vs[3] } ).doIntersect );
     EXPECT_FALSE( doSegmentSegmentIntersect( { vs[0], vs[3], vs[1], vs[2] } ).doIntersect );
+
+    // test that maximum degree in segmentIntersectionOrder can cope with most degenerate situation possible
+    do
+    {
+        if ( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ).doIntersect
+            && doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ).doIntersect )
+        {
+            (void)segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
 TEST( MRMesh, PrecisePredicates2PartialDegen )

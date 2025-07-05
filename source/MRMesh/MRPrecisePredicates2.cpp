@@ -39,9 +39,10 @@ std::array<PointDegree, 6> getPointDegrees( const std::array<PreciseVertCoords2,
     return res;
 }
 
+// Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
 // 840 was found experimentally for segmentIntersectionOrder with all 6 points have equal coordinates (but different ids);
 // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-using Poly = SparsePolynomial<FastInt128, int, 840>;
+using Poly = SparsePolynomial<Int64, int, 840>;
 
 Poly ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
     int db ) // degree.x = degree.y * db
@@ -53,6 +54,15 @@ Poly ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & 
     auto det = xx * yy;
     det -= xy * yx;
     return det;
+}
+
+Int64 area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+{
+    const Int64 xx( a.x - c.x );
+    const Int64 xy( a.y - c.y );
+    const Int64 yx( b.x - c.x );
+    const Int64 yy( b.y - c.y );
+    return xx * yy - xy * yx;
 }
 
 } // anonymous namespace
@@ -285,10 +295,32 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
         return ccw( { sa0, sa1, sb1 } ) == ccw( { sa0, sa1, vs[1] } );
     }
 
+    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
+    const auto areaSaOrg  = area( vs[2].pt, vs[3].pt, vs[0].pt );
+    const auto areaSaDest = area( vs[2].pt, vs[3].pt, vs[1].pt );
+    assert( ( areaSaOrg <= 0 && areaSaDest >= 0 ) || ( areaSaOrg >= 0 && areaSaDest <= 0 ) );
+
+    const auto areaSbOrg  = area( vs[4].pt, vs[5].pt, vs[0].pt );
+    const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
+    assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
+
+    const auto nomSimple = FastInt128( areaSaOrg ) * FastInt128( areaSbDest ) - FastInt128( areaSbOrg ) * FastInt128( areaSaDest );
+    if ( nomSimple != 0 )
+    {
+        // happy not-degenerated path
+        bool res = nomSimple > 0;
+        assert( areaSaOrg || areaSaDest );
+        if ( areaSaOrg < areaSaDest )
+            res = !res;
+        assert( areaSbOrg || areaSbDest );
+        if ( areaSbOrg < areaSbDest )
+            res = !res;
+        return res;
+    }
+
     const auto ds = getPointDegrees( vs );
 
-    // res = ( ccw(sa,s[0])*ccw(sb,ds[1])   -   ccw(sb,s[0])*ccw(sa,ds[1]) ) /
-    //       ( ccw(sa,s[0])-ccw(sa,ds[1]) ) * ( ccw(sb,s[0])-ccw(sb,ds[1]) )
     const auto polySaOrg  = ccwPoly( ds[2], ds[3], ds[0], 3 );
     const auto polySaDest = ccwPoly( ds[2], ds[3], ds[1], 3 );
     assert( !polySaOrg.empty() || !polySaDest.empty() );
@@ -303,6 +335,9 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
 
     auto nom = polySaOrg * polySbDest;
     nom -= polySbOrg * polySaDest;
+
+    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
+    nom.setZeroCoeff( 0 );
 
     bool res = nom.isPositive();
     if ( posSaOrg != posSbOrg ) // denominator is negative

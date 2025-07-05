@@ -79,6 +79,7 @@ struct CoordinateConverters2
 /// given line segment s=01 and two other segments sa=23, sb=45 known to intersect it, finds the order of intersection using precise predicates:
 /// true:  s[0], s ^ sa, s ^ sb, s[1]
 /// false: s[0], s ^ sb, s ^ sa, s[1]
+/// segments sa and sb can have at most one shared point, all other points must be unique
 [[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs );
 
 /// finds intersection precise, using high precision int inside

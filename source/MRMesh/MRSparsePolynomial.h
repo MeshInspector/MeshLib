@@ -42,7 +42,7 @@ public:
 
     SparsePolynomial& operator +=( const SparsePolynomial& b );
     SparsePolynomial& operator -=( const SparsePolynomial& b );
-    [[nodiscard]] friend SparsePolynomial operator *<>( const SparsePolynomial& a, const SparsePolynomial& b );
+    friend SparsePolynomial operator *<>( const SparsePolynomial& a, const SparsePolynomial& b );
 
 private:
     std::map<D, C> map_; // degree -> not-zero coefficient
@@ -136,7 +136,7 @@ SparsePolynomial<C,D,M>& SparsePolynomial<C,D,M>::operator -=( const SparsePolyn
 }
 
 template <typename C, typename D, D M>
-SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b )
+[[nodiscard]] SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b )
 {
     std::map<D,C> resMap;
     for ( const auto & [degA, cfA] : a.map_ )

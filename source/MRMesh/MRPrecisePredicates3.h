@@ -2,8 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
-
 #include <array>
+#include <optional>
 
 namespace MR
 {

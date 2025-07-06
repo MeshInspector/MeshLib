@@ -173,9 +173,7 @@ static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, 
     if ( dot( cda, cdb ) > 0 )
         return std::nullopt; // AB is on one side of CD
 
-    auto abcHSq = abc.lengthSq();
-    auto abdHSq = abd.lengthSq();
-    if ( ( abcHSq == 0 && abdHSq == 0 ) || ( cda.lengthSq() == 0 && cdb.lengthSq() == 0 ) ) // collinear
+    if ( ( abc == Vector3i128() && abd == Vector3i128() ) || ( cda == Vector3i128() && cdb == Vector3i128() ) ) // collinear
     {
         auto dAC = dot( ab, ac );
         auto dAD = dot( ab, ad );
@@ -193,10 +191,12 @@ static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, 
         return Vector3i( ( onePoint + otherPoint ) / 2 ); // return middle point of overlapping segment
     }
 
-    // common intersection - non-collinear
-    auto abcS = boost::multiprecision::sqrt( abcHSq );
-    auto abdS = boost::multiprecision::sqrt( abdHSq );
-    return Vector3i( Vector3d( abdS * Vector3i128{ ci } + abcS * Vector3i128{ di } ) / double( abcS + abdS ) );
+    // common intersection - AB and CD are non-collinear
+    const auto n = abc - abd; // not unit
+    const auto ck = dot( n, abc );
+    const auto dk = dot( n, abd );
+    assert( ( ck >=0 && dk <= 0 ) || ( ck <= 0 && dk >= 0 ) );
+    return Vector3i( divRound( dk * Vector3i128{ ci } - ck * Vector3i128{ di }, ck + dk ) );
 }
 
 Vector3f findTriangleSegmentIntersectionPrecise( 

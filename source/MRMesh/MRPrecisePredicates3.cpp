@@ -152,9 +152,6 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     };
 }
 
-// ab - segment
-// cd - segment
-// if segments intersects - returns intersection point, nullopt otherwise
 std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
 {
     const auto ab = Vector3i64{ bi - ai };

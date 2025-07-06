@@ -2,6 +2,7 @@
 #include "MRHighPrecision.h"
 #include "MRVector2.h"
 #include "MRBox.h"
+#include "MRDivRound.h"
 #include <optional>
 
 namespace MR
@@ -198,24 +199,6 @@ static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, 
     return Vector3i( Vector3d( abdS * Vector3i128{ ci } + abcS * Vector3i128{ di } ) / double( abcS + abdS ) );
 }
 
-/// https://stackoverflow.com/a/18067292/7325599
-template <class T>
-T divRoundClosest( T n, T d )
-{
-    return ((n < 0) == (d < 0)) ? ((n + d/2)/d) : ((n - d/2)/d);
-}
-
-template <class T>
-Vector3<T> divRoundClosest( const Vector3<T>& n, T d )
-{
-    return
-    {
-        divRoundClosest( n.x, d ),
-        divRoundClosest( n.y, d ),
-        divRoundClosest( n.z, d )
-    };
-}
-
 Vector3f findTriangleSegmentIntersectionPrecise( 
     const Vector3f& a, const Vector3f& b, const Vector3f& c, 
     const Vector3f& d, const Vector3f& e, 
@@ -234,7 +217,7 @@ Vector3f findTriangleSegmentIntersectionPrecise(
         abce = -abce;
     auto sum = abcd + abce;
     if ( sum != 0 )
-        return converters.toFloat( Vector3i{ divRoundClosest( abcd * Vector3i128fast{ ei } + abce * Vector3i128fast{ di }, sum ) } );
+        return converters.toFloat( Vector3i{ divRound( abcd * Vector3i128fast{ ei } + abce * Vector3i128fast{ di }, sum ) } );
     // rare case when `sum == 0` 
     // suggest finding middle point of edge segment laying inside triangle
     Vector3i64 sumVec;

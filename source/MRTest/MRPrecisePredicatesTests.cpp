@@ -1,7 +1,9 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRGTest.h>
 #include <algorithm>
+#include <climits>
 
 namespace MR
 {
@@ -315,6 +317,17 @@ TEST( MRMesh, PrecisePredicates3FullDegen )
         }
     }
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
+TEST( MRMesh, getToIntConverter )
+{
+    auto toInt = getToIntConverter( Box3d( {0,0,-1.0}, {0,0,1.0} ) );
+    auto i0 = toInt( { 0,0,-1.f } );
+    auto i1 = toInt( { 0,0, 1.f } );
+    // check that sum and difference of any two points can be computed in integer without overflow
+    EXPECT_LE( -i0.z, INT_MAX / 2 );
+    EXPECT_LE(  i1.z, INT_MAX / 2 );
+    EXPECT_GT( i1.z - i0.z, 0 );
 }
 
 } //namespace MR

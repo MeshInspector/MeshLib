@@ -145,12 +145,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2022 ]  # windows-2019 
+        runner: [ windows-2022 ]
         include:
           - runner: windows-2022
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-          #- runner: windows-2019
-           # vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
     steps:
       - name: Setup vcpkg
         working-directory: C:\vcpkg

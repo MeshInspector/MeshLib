@@ -250,6 +250,40 @@ TEST( MRMesh, PreciseSegmentIntersectionOrder2 )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[4], vs[5], vs[2] } ) );
 }
 
+TEST( MRMesh, findTwoSegmentsIntersection )
+{
+    const Vector3i a( -100, -50 , 0 );
+    const Vector3i b(  300, 150 , 0 );
+
+    auto v = findTwoSegmentsIntersection( a, b, { 0, -200, 0 }, { 0, 100, 0 } );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, Vector3i{} );
+
+    v = findTwoSegmentsIntersection( a, b, { 0, -100, 0 }, { 0, 100, 0 } );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, Vector3i{} );
+
+    v = findTwoSegmentsIntersection( a, b, { 0, -100, 0 }, { 0, 300, 0 } );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, Vector3i{} );
+
+    v = findTwoSegmentsIntersection( a, b, { 0, 100, 0 }, { 0, 300, 0 } );
+    EXPECT_FALSE( v.has_value() );
+
+    // test with largest possible values
+    constexpr int h = INT_MAX / 2 - 3;
+    const Vector3i d( 1, 2, 3 );
+    v = findTwoSegmentsIntersection( Vector3i{ h,  h, h } + d, Vector3i{ -h, -h, -h } + d,
+                                     Vector3i{ h, -h, h } + d, Vector3i{ -h,  h, -h } + d );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, d );
+
+    v = findTwoSegmentsIntersection( Vector3i{ h,  h, h } + d, Vector3i{ -h, -h, -h } + d,
+                                     Vector3i{-h,  h,-h } + d, Vector3i{  h, -h,  h } + d );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, d );
+}
+
 TEST( MRMesh, PrecisePredicates3 )
 {
     const std::array<PreciseVertCoords, 5> vs = 

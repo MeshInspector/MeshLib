@@ -4,6 +4,7 @@
 #include "MRRibbonMenuUIConfig.h"
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRJson.h"
+#include <optional>
 
 namespace MR
 {
@@ -23,4 +24,4 @@ MRVIEWER_API RibbonConfig createRibbonConfigFromJson( const Json::Value& root );
 // apply given config to the application
 MRVIEWER_API void applyRibbonConfig( const RibbonConfig& config );
 
-}
+} //namespace MR

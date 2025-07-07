@@ -37,6 +37,7 @@ runs:
   using: composite
   steps:
     - name: Debug inputs
+      if: ${{ runner.os != 'Windows' }}
       shell: bash
       run: |
         echo << EOF
@@ -49,6 +50,19 @@ runs:
         ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}
         upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
         EOF
+
+    - name: Debug inputs (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      run: |
+        Write-Output "autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}"
+        Write-Output "build_config: ${{ inputs.build_config }}"
+        Write-Output "mrbind: ${{ inputs.mrbind }}"
+        Write-Output "pytest_args: ${{ inputs.pytest_args }}"
+        Write-Output "smoke: ${{ inputs.smoke }}"
+        Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
+        Write-Output "ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}"
+        Write-Output "upload_test_artifacts: ${{ inputs.upload_test_artifacts }}"
 
     # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
     - name: Cache autotest data from S3 Tests
@@ -64,19 +78,14 @@ runs:
         aws-region: us-east-1
 
     - name: Copy autotest data from S3 Tests
+      if: ${{ runner.os != 'Windows' }}
       shell: bash
       run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only --quiet
 
-    - name: Python Regression Tests
+    - name: Copy autotest data from S3 Tests (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
-      working-directory: source\x64\${{ inputs.build_config }}
-      run: >
-        py -3 ..\..\..\scripts\run_python_test_script.py
-        -d '..\test_regression'
-        -s ${{ inputs.smoke }}
-        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
-        -a='${{ inputs.pytest_args }}'
+      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only --quiet
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}
@@ -90,8 +99,24 @@ runs:
         -s ${{ inputs.smoke }}
         -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
+        
+    - name: Python Regression Tests (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      working-directory: source\x64\${{ inputs.build_config }}
+      run: >
+        py -3 ..\..\..\scripts\run_python_test_script.py
+        -d '..\test_regression'
+        -s ${{ inputs.smoke }}
+        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
+        -a='${{ inputs.pytest_args }}'
 
     - name: Copy test artifacts to S3
-      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
+      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() && runner.os != 'Windows' }}
       shell: bash
+      run: aws s3 cp pytest_temp 's3://test-artifacts-git/tests/${{ github.run_id }}/${{ inputs.test_artifacts_path }}' --recursive --quiet
+
+    - name: Copy test artifacts to S3 (Windows)
+      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() && runner.os == 'Windows' }}
+      shell: powershell
       run: aws s3 cp pytest_temp 's3://test-artifacts-git/tests/${{ github.run_id }}/${{ inputs.test_artifacts_path }}' --recursive --quiet

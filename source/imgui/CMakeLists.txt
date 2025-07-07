@@ -42,7 +42,11 @@ file(GLOB FREETYPE_HEADERS
   "${IMGUI_ROOT}/misc/freetype/*.h"
 )
 
-add_library(imgui SHARED ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS})
+file(GLOB MISC_HEADERS
+  "${IMGUI_ROOT}/misc/cpp/imgui_stdlib.h"
+)
+
+add_library(imgui SHARED ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS} ${MISC_HEADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${IMGUI_ROOT}>
@@ -94,6 +98,10 @@ install(
 install(
   FILES ${FREETYPE_HEADERS}
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}/misc/freetype"
+)
+install(
+  FILES ${MISC_HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}/misc/cpp"
 )
 
 install(

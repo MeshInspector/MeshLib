@@ -1,5 +1,8 @@
 #pragma once
-#include "MRRibbonMenu.h"
+
+#include "exports.h"
+#include "MRRibbonMenuUIConfig.h"
+#include "MRMesh/MRColor.h"
 #include "MRPch/MRJson.h"
 
 namespace MR

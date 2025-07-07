@@ -3,6 +3,7 @@
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRDivRound.h"
+#include "MRSparsePolynomial.h"
 #include <optional>
 
 namespace MR
@@ -12,7 +13,83 @@ namespace
 {
 // INT_MAX in double for mapping in int range
 constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
+
+struct PointDegree
+{
+    Vector3i pt;
+    Int64 d = 0; // degree of epsilon for pt.z
+};
+
+std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
+{
+    struct VertN
+    {
+        VertId v;
+        int n = 0;
+    };
+    std::array<VertN, 8> as;
+    for ( int i = 0; i < 8; ++i )
+        as[i] = { vs[i].id, i };
+    std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
+
+    std::array<PointDegree, 8> res;
+    Int64 d = 1;
+    //constexpr int maxD = INT_MAX / 27;
+    for ( int i = 0; i < 8; ++i )
+    {
+        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
+        const auto n = as[i].n;
+        res[n] = { vs[n].pt, d };
+        //if ( d > 0 && d <= maxD )
+            d *= 27;
+        // else assume that such huge powers will never be necessary
+        //else
+        //    d = maxD; // assume that such huge powers will never be necessary
+    }
+    return res;
 }
+
+// !!!
+// Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(tb,s[1])   -   ccw(tb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
+// 840 was found experimentally for segmentIntersectionOrder with all 6 points have equal coordinates (but different ids);
+// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
+using Poly = SparsePolynomial<Int256, Int64, LLONG_MAX>;
+
+Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
+    int dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
+{
+    const int dx = dy * dy;
+
+    const Poly xx( a.pt.x - d.pt.x, a.d * dx, 1, d.d * dx, -1 );
+    const Poly xy( a.pt.y - d.pt.y, a.d * dy, 1, d.d * dy, -1 );
+    const Poly xz( a.pt.z - d.pt.z, a.d     , 1, d.d     , -1 );
+
+    const Poly yx( b.pt.x - d.pt.x, b.d * dx, 1, d.d * dx, -1 );
+    const Poly yy( b.pt.y - d.pt.y, b.d * dy, 1, d.d * dy, -1 );
+    const Poly yz( b.pt.z - d.pt.z, b.d     , 1, d.d     , -1 );
+
+    const Poly zx( c.pt.x - d.pt.x, c.d * dx, 1, d.d * dx, -1 );
+    const Poly zy( c.pt.y - d.pt.y, c.d * dy, 1, d.d * dy, -1 );
+    const Poly zz( c.pt.z - d.pt.z, c.d     , 1, d.d     , -1 );
+
+    Poly t;
+
+    t  = yy * zz;
+    t -= yz * zy;
+    Poly det = xx * t;
+
+    t  = yx * zz;
+    t -= yz * zx;
+    det -= xy * t;
+
+    t  = yx * zy;
+    t -= yy * zx;
+    det += xz * t;
+
+    return det;
+}
+
+} // anonymous namespace
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
@@ -116,6 +193,83 @@ TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<Prec
     assert ( dcae == dabe ); // segment BC is crossed by the plane DEA
 
     res.doIntersect = true;
+    return res;
+}
+
+bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
+{
+    // s=01, ta=234, tb=567
+    assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
+    assert( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
+
+    // if ta and tb have a shared point
+/*    auto ta0 = vs[2];
+    auto ta1 = vs[3];
+    auto tb0 = vs[4];
+    auto tb1 = vs[5];
+    if ( ta1.id == tb0.id )
+        std::swap( ta0, ta1 );
+    else if ( ta0.id == tb1.id )
+        std::swap( tb0, tb1 );
+    else if ( ta1.id == tb1.id )
+    {
+        std::swap( ta0, ta1 );
+        std::swap( tb0, tb1 );
+    }
+    if ( ta0.id == tb0.id )
+    {
+        assert( ta0.pt == tb0.pt );
+        assert( ta1.id != tb1.id );
+        return orient3d( { ta0, ta1, tb1 } ) == orient3d( { ta0, ta1, vs[1] } );
+    }*/
+
+    // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
+    //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
+/*    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[0].pt );
+    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[1].pt );
+    assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
+
+    const auto volumeTbOrg  = volume( vs[4].pt, vs[5].pt, vs[0].pt );
+    const auto volumeTbDest = volume( vs[4].pt, vs[5].pt, vs[1].pt );
+    assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
+
+    const auto nomSimple = FastInt128( volumeTaOrg ) * FastInt128( volumeTbDest ) - FastInt128( volumeTbOrg ) * FastInt128( volumeTaDest );
+    if ( nomSimple != 0 )
+    {
+        // happy not-degenerated path
+        bool res = nomSimple > 0;
+        assert( volumeTaOrg || volumeTaDest );
+        if ( volumeTaOrg < volumeTaDest )
+            res = !res;
+        assert( volumeTbOrg || volumeTbDest );
+        if ( volumeTbOrg < volumeTbDest )
+            res = !res;
+        return res;
+    }*/
+
+    const auto ds = getPointDegrees( vs );
+
+    const auto polyTaOrg  = orient3dPoly( ds[2], ds[3], ds[4], ds[0], 3 );
+    const auto polyTaDest = orient3dPoly( ds[2], ds[3], ds[4], ds[1], 3 );
+    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
+    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
+    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
+
+    const auto polyTbOrg  = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
+    const auto polyTbDest = orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
+    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
+    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
+    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
+
+    auto nom = polyTaOrg * polyTbDest;
+    nom -= polyTbOrg * polyTaDest;
+
+    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
+    //nom.setZeroCoeff( 0 );
+
+    bool res = nom.isPositive();
+    if ( posTaOrg != posTbOrg ) // denominator is negative
+        res = !res;
     return res;
 }
 

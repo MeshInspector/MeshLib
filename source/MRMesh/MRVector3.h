@@ -6,6 +6,8 @@
 #include "MRPch/MRBindingMacros.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
 #endif
@@ -256,3 +258,19 @@ MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 #endif
 
 } // namespace MR
+
+template<>
+struct std::hash<MR::Vector3f>
+{
+    size_t operator()( MR::Vector3f const& p ) const noexcept
+    {
+        // standard implementation is slower:
+        // phmap::HashState().combine(phmap::Hash<float>()(p.x), p.y, p.z);
+        std::uint64_t xy;
+        std::uint32_t z;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        std::memcpy( &z, &p.z, sizeof( std::uint32_t ) );
+        return size_t( xy ) ^ ( size_t( z ) << 16 );
+    }
+};

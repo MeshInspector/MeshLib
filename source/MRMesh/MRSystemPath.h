@@ -12,7 +12,7 @@ namespace MR
 class SystemPath
 {
 public:
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
     /// get the current executable's file path
     MRMESH_API static Expected<std::filesystem::path> getExecutablePath();
 

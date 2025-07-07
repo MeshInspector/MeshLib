@@ -111,7 +111,7 @@ public:
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 
     // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
-    #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+    #if defined(MR_PARSING_FOR_ANY_BINDINGS) || defined(MR_COMPILING_ANY_BINDINGS)
     std::size_t size() const { return dynamic_bitset::size(); }
     std::size_t count() const { return dynamic_bitset::count(); }
     void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }

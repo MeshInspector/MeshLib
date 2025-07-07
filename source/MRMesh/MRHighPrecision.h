@@ -24,7 +24,7 @@ using Vector2i128 = Vector2<Int128>;
 using Vector3i128 = Vector3<Int128>;
 
 // no bindings since no operator << and no sqrt for FastInt128
-#if !defined MR_PARSING_FOR_PB11_BINDINGS && !defined MR_COMPILING_PB11_BINDINGS
+#if !defined MR_PARSING_FOR_ANY_BINDINGS && !defined MR_COMPILING_ANY_BINDINGS
 using Vector2i128fast = Vector2<FastInt128>;
 using Vector3i128fast = Vector3<FastInt128>;
 #endif

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace MR
 {
@@ -175,3 +176,12 @@ inline constexpr UndirectedEdgeId operator ""_ue( unsigned long long i ) noexcep
 inline constexpr VoxelId operator ""_vox( unsigned long long i ) noexcept { return VoxelId{ size_t( i ) }; }
 
 } //namespace MR
+
+template <typename T>
+struct std::hash<MR::Id<T>>
+{
+    size_t operator() ( MR::Id<T> const& p ) const noexcept
+    {
+        return (int)p;
+    }
+};

@@ -98,6 +98,8 @@ void MultiwayAligningTransform::Impl::forEachUpBlock( const std::function<void(i
         callback( ij.first, ij.second, *b );
 }
 
+MultiwayAligningTransform::MultiwayAligningTransform() {}
+
 MultiwayAligningTransform::MultiwayAligningTransform( int numObjs )
 {
     if ( numObjs != 0 )

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
@@ -212,8 +213,12 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
 
 struct ResolveMeshDegenSettings
 {
-    [[deprecated]]
+    #if !MR_COMPILING_C_BINDINGS
+    [[deprecated]] // C bindings choke on this deprecation (the implicit copy constructor copies this field and triggers the warning, which is treated as an error).
+    #endif
+    MR_BIND_IGNORE
     int maxIters = 1;
+
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
     /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
@@ -239,9 +244,9 @@ struct ResolveMeshDegenSettings
  * \sa \ref decimateMesh
  */
 [[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
+MRMESH_API MR_BIND_IGNORE bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
 [[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
+MRMESH_API MR_BIND_IGNORE bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 
 struct RemeshSettings

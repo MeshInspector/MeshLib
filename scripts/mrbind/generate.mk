@@ -430,7 +430,8 @@ mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Include the `MRCuda` project?
 # Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
-ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+# Also is currently disabled for the C bindings.
+ENABLE_CUDA := $(if $(or $(IS_MACOS),$(is_c)),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 ifneq ($(ENABLE_CUDA),)
@@ -457,12 +458,14 @@ ifeq ($(TARGET),python)
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 endif
 ifeq ($(TARGET),c)
-C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/c_bindings
+C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2
 endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
-ifneq ($(IS_WINDOWS),)
+ifeq ($(TARGET),c)
+TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
+else ifneq ($(IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds

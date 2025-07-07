@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBitSet.h"
@@ -373,15 +374,15 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> getLeftRings( const std::vector<EdgeId> & es ) const;
 
     /// returns all boundary edges, where each edge does not have valid left face
-    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
+    [[nodiscard]] [[deprecated( "Use findLeftBdEdges")]] MRMESH_API MR_BIND_IGNORE EdgeBitSet findBoundaryEdges() const;
 
     /// returns all boundary faces, having at least one boundary edge;
     /// \param region if given then search among faces there otherwise among all valid faces
-    [[nodiscard]] [[deprecated( "Use findBdFaces")]] MRMESH_API FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdFaces")]] MRMESH_API MR_BIND_IGNORE FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
 
     /// returns all boundary vertices, incident to at least one boundary edge;
     /// \param region if given then search among vertices there otherwise among all valid vertices
-    [[nodiscard]] [[deprecated( "Use findBdVerts")]] MRMESH_API VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
+    [[nodiscard]] [[deprecated( "Use findBdVerts")]] MRMESH_API MR_BIND_IGNORE VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
 
 
     /// returns all vertices incident to path edges

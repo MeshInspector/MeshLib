@@ -3,6 +3,7 @@
 #include "MRPolyline.h"
 #include "MRPointCloud.h"
 #include "MRTimer.h"
+#include "MRVector2.h"
 #include <MRPch/MRTBB.h>
 #include <cfloat>
 

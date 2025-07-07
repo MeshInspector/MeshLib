@@ -14,7 +14,61 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRIOExtras
   MRSymbolMesh
   MRVoxels
+  JsonCpp::JsonCpp
 )
+
+
+IF(APPLE)
+  include_directories(${jsoncpp_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    jsoncpp
+  )
+ELSEIF(MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    jsoncpp
+  )
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    JsonCpp::JsonCpp
+  )
+ELSE()
+  include_directories(${jsoncpp_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    jsoncpp
+  )
+ENDIF()
+
+
+IF(MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    openvdb
+  )
+ELSEIF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    OpenVDB
+  )
+ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  find_package(OpenVDB REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    OpenVDB::openvdb
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    openvdb
+  )
+ENDIF()
+
+
+IF(WIN32 OR MESHLIB_USE_VCPKG)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    TBB::tbb
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    tbb
+  )
+ENDIF()
+
 
 target_include_directories(${PROJECT_NAME} PRIVATE mrmesh/include mrmesh/src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)

@@ -290,18 +290,13 @@ public:
     [[nodiscard]] const T * bitset() const { return bitset_; }
     [[nodiscard]] reference operator *() const { return index_; }
 
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+    [[nodiscard]] friend bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a != *b; }
+
 private:
     const T * bitset_ = nullptr;
     IndexType index_ = IndexType( ~size_t( 0 ) );
 };
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a == *b; }
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a != *b; }
 
 
 [[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )

@@ -35,4 +35,5 @@ source/MRDotNetTest/obj/*
 /include
 /out/build/
 .cache
-/source/c_bindings/mrmesh
+/source/MeshLibC2/mrmesh
+/source/MeshLibC2/temp

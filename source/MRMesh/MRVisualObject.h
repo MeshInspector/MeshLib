@@ -157,9 +157,9 @@ public:
 
     /// shows/hides labels
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }
+    MR_BIND_IGNORE void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    bool showLabels() const { return getVisualizeProperty( VisualizeMaskType::Labels, ViewportMask::any() ); }
+    MR_BIND_IGNORE bool showLabels() const { return getVisualizeProperty( VisualizeMaskType::Labels, ViewportMask::any() ); }
 
     /// shows/hides object name in all viewports
     void showName( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Name, ViewportMask::all() ); }
@@ -197,15 +197,15 @@ public:
     MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
+    MRMESH_API MR_BIND_IGNORE const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
+    MRMESH_API MR_BIND_IGNORE virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
+    MRMESH_API MR_BIND_IGNORE const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
+    MRMESH_API MR_BIND_IGNORE virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
 
     /// sets some dirty flags for the object (to force its visual update)
     /// \param mask is a union of DirtyFlags flags
@@ -258,9 +258,9 @@ public:
     virtual void setAmbientStrength( float ambientStrength ) { ambientStrength_ = ambientStrength; needRedraw_ = true; }
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    const std::vector<PositionedText>& getLabels() const { return labels_; }
+    MR_BIND_IGNORE const std::vector<PositionedText>& getLabels() const { return labels_; }
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
+    MR_BIND_IGNORE virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     /// clones this object only, without its children,
     /// making new object the owner of all copied resources

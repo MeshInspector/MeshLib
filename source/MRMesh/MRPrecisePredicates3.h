@@ -2,8 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
-
 #include <array>
+#include <optional>
 
 namespace MR
 {
@@ -58,6 +58,10 @@ struct CoordinateConverters
 MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
 /// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
 MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
+
+/// given two line segments AB and CD located in one plane,
+/// finds whether they intersect and if yes, computes their common point using integer-only arithmetic
+[[nodiscard]] MRMESH_API std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di );
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection

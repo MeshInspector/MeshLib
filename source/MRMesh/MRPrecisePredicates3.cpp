@@ -152,55 +152,62 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     };
 }
 
-// ab - segment
-// cd - segment
-// if segments intersects - returns intersection point, nullopt otherwise
-static std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
+std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
 {
-    auto ab = Vector3i128{ bi - ai };
-    auto ac = Vector3i128{ ci - ai };
-    auto ad = Vector3i128{ di - ai };
-    auto abc = cross( ab, ac );
-    auto abd = cross( ab, ad );
+    const auto ab = Vector3i64{ bi - ai };
+    const auto ac = Vector3i64{ ci - ai };
+    const auto ad = Vector3i64{ di - ai };
+    const auto abc = cross( ab, ac );
+    const auto abd = cross( ab, ad );
 
-    if ( dot( abc, abd ) > 0 )
+    if ( dot( Vector3i128fast( abc ), Vector3i128fast( abd ) ) > 0 )
         return std::nullopt; // CD is on one side of AB
 
-    auto cd = Vector3i128{ di - ci };
-    auto cb = Vector3i128{ bi - ci };
-    auto cda = cross( cd, -ac );
-    auto cdb = cross( cd, cb );
-    if ( dot( cda, cdb ) > 0 )
+    const auto cd = Vector3i64{ di - ci };
+    const auto cb = Vector3i64{ bi - ci };
+    const auto cda = cross( cd, -ac );
+    const auto cdb = cross( cd, cb );
+    if ( dot( Vector3i128fast( cda ), Vector3i128fast( cdb ) ) > 0 )
         return std::nullopt; // AB is on one side of CD
 
-    auto abcHSq = abc.lengthSq();
-    auto abdHSq = abd.lengthSq();
-    if ( ( abcHSq == 0 && abdHSq == 0 ) || ( cda.lengthSq() == 0 && cdb.lengthSq() == 0 ) ) // collinear
+    constexpr Vector3i64 zero;
+    if ( ( abc == zero && abd == zero ) || ( cda == zero && cdb == zero ) ) // collinear
     {
-        auto dAC = dot( ab, ac );
-        auto dAD = dot( ab, ad );
+        const auto dAC = dot( ab, ac );
+        const auto dAD = dot( ab, ad );
         if ( dAC < 0 && dAD < 0 )
             return std::nullopt; // both C and D are lower than A (on the AB segment)
 
-        auto dBC = dot( -ab, -cb );
-        auto dBD = dot( -ab, Vector3i128{ di - bi } );
+        const auto dBC = dot( -ab, -cb );
+        const auto dBD = dot( -ab, Vector3i64{ di - bi } );
         if ( dBC < 0 && dBD < 0 )
             return std::nullopt; // both C and D are greater than B (on the AB segment)
 
         // have common points
         auto onePoint = dAC < 0 ? ai : ci; // find point that is closer to B
         auto otherPoint = dBD < 0 ? bi : di; // find point that is closer to A
-        return Vector3i( ( onePoint + otherPoint ) / 2 ); // return middle point of overlapping segment
+        return ( onePoint + otherPoint ) / 2; // return middle point of overlapping segment
     }
 
-    // common intersection - non-collinear
-    auto abcS = boost::multiprecision::sqrt( abcHSq );
-    auto abdS = boost::multiprecision::sqrt( abdHSq );
-    return Vector3i( Vector3d( abdS * Vector3i128{ ci } + abcS * Vector3i128{ di } ) / double( abcS + abdS ) );
+    // common intersection - AB and CD are non-collinear
+    const Vector3i64 n = abc - abd; // not unit
+    FastInt128 ck = dot( Vector3i128fast( n ), Vector3i128fast( abc ) );
+    FastInt128 dk = dot( Vector3i128fast( n ), Vector3i128fast( abd ) );
+    assert( ck >=0 && dk <= 0 );
+
+    // scale down ck and dk to make sure that below products can be computed in 128 bits
+    // assume that abs( di ) <= 2^30 and abs( ci ) <= 2^30
+    constexpr FastInt128 x = FastInt128( 1 ) << 96; //2^96
+    if ( ck > x || -dk > x )
+    {
+        ck = ck >> 32;
+        dk = -( (-dk) >> 32 );
+    }
+    return Vector3i( divRound( ck * Vector3i128fast{ di } - dk * Vector3i128fast{ ci }, ck - dk ) );
 }
 
-Vector3f findTriangleSegmentIntersectionPrecise( 
-    const Vector3f& a, const Vector3f& b, const Vector3f& c, 
+Vector3f findTriangleSegmentIntersectionPrecise(
+    const Vector3f& a, const Vector3f& b, const Vector3f& c,
     const Vector3f& d, const Vector3f& e, 
     CoordinateConverters converters )
 {

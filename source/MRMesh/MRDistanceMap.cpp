@@ -1178,7 +1178,7 @@ DistanceMap combineXYderivativeMaps( std::pair<DistanceMap, DistanceMap> XYderiv
                 if ( valY )
                     dMap.set( x, y, std::sqrt( ( *valX ) * ( *valX ) + ( *valY ) * ( *valY ) ) );
                 else
-                    dMap.set( x, y, *valY );
+                    dMap.set( x, y, *valX );
             }
             else
             {

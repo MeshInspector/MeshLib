@@ -940,6 +940,9 @@
     <ClInclude Include="MRDragDropWin32Handler.h">
       <Filter>UserInputs</Filter>
     </ClInclude>
+    <ClInclude Include="MRRibbonMenuUIConfig.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

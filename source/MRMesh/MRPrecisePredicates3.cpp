@@ -17,8 +17,11 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 struct PointDegree
 {
     Vector3i pt;
-    Int64 d = 0; // degree of epsilon for pt.z
+    int d = 0; // degree of epsilon for pt.z
 };
+
+// this value was found experimentally for segmentIntersectionOrder with all 8 points have equal coordinates (but different ids)
+constexpr int cMaxPolyD = 14'941'836;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {
@@ -33,19 +36,20 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
     std::array<PointDegree, 8> res;
-    Int64 d = 1;
-    //constexpr int maxD = INT_MAX / 27;
+    int d = 1;
+    constexpr int maxD = INT_MAX / 9;
+    static_assert( maxD > cMaxPolyD );
+    constexpr int preMaxD = maxD / 27;
     for ( int i = 0; i < 8; ++i )
     {
         const auto n = as[i].n;
         res[n] = { vs[n].pt, d };
         if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
         {
-            //if ( d > 0 && d <= maxD )
-                d *= 27;
-            // else assume that such huge powers will never be necessary
-            //else
-            //    d = maxD; // assume that such huge powers will never be necessary
+            if ( d <= preMaxD )
+                d *= 27; // normal power up
+            else if ( d <= maxD )
+                d = maxD; // to avoid integer overflow in orient3dPoly, assuming that such huge powers will never be necessary
         }
     }
     return res;
@@ -53,9 +57,8 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
 
 // !!!
 // Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(tb,s[1])   -   ccw(tb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
-// 840 was found experimentally for segmentIntersectionOrder with all 6 points have equal coordinates (but different ids);
 // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-using Poly = SparsePolynomial<Int256, Int64, LLONG_MAX>;
+using Poly = SparsePolynomial<Int256, int, cMaxPolyD>;
 
 Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
     int dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
@@ -265,8 +268,6 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
 
     auto nom = polyTaOrg * polyTbDest;
     nom -= polyTbOrg * polyTaDest;
-
-    spdlog::info( "nom degree: {}", nom.get().begin()->first );
 
     // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
     //nom.setZeroCoeff( 0 );

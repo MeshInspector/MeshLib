@@ -266,6 +266,8 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     auto nom = polyTaOrg * polyTbDest;
     nom -= polyTbOrg * polyTaDest;
 
+    spdlog::info( "nom degree: {}", nom.get().begin()->first );
+
     // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
     //nom.setZeroCoeff( 0 );
 

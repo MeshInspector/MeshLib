@@ -37,14 +37,16 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     //constexpr int maxD = INT_MAX / 27;
     for ( int i = 0; i < 8; ++i )
     {
-        assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
         const auto n = as[i].n;
         res[n] = { vs[n].pt, d };
-        //if ( d > 0 && d <= maxD )
-            d *= 27;
-        // else assume that such huge powers will never be necessary
-        //else
-        //    d = maxD; // assume that such huge powers will never be necessary
+        if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
+        {
+            //if ( d > 0 && d <= maxD )
+                d *= 27;
+            // else assume that such huge powers will never be necessary
+            //else
+            //    d = maxD; // assume that such huge powers will never be necessary
+        }
     }
     return res;
 }

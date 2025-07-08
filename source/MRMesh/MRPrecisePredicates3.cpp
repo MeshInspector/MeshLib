@@ -260,6 +260,23 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
             return orient3d( { vs[2], vs[3], vs[4], thirdPointB } )
                 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
         }
+        else
+        {
+            // only one shared point in ta and tb
+            PreciseVertCoords secondPointB, thirdPointB;
+            for ( auto vb : bs )
+                if ( vb.id != firstSharedPoint.id )
+                {
+                    if ( !secondPointB.id )
+                        secondPointB = vb;
+                    else
+                        thirdPointB = vb;
+                }
+            assert( secondPointB.id && thirdPointB.id );
+            const bool b2 = orient3d( { vs[2], vs[3], vs[4], secondPointB } );
+            if ( b2 == orient3d( { vs[2], vs[3], vs[4], thirdPointB } ) ) //both not-shared b-points are on one side of ta
+                return b2 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
+        }
     }
 
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /

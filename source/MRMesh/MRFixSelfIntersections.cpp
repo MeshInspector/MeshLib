@@ -115,8 +115,13 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     {
         FixMeshDegeneraciesParams fdParams;
         fdParams.maxDeviation = mesh.getBoundingBox().diagonal() * 1e-4f;
-        fdParams.tinyEdgeLength = fdParams.tinyEdgeLength * 0.1f;
-        fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+        fdParams.tinyEdgeLength = fdParams.maxDeviation * 0.1f;
+
+        // do not subdivide if it is explicitly forbidden by user
+        fdParams.mode = FixMeshDegeneraciesParams::Mode::Decimate;
+        if ( settings.subdivideEdgeLen < FLT_MAX )
+            fdParams.mode = FixMeshDegeneraciesParams::Mode::Remesh;
+
         fdParams.cb = subprogress( settings.callback, 0.0f, 0.2f );
         auto fdRes = fixMeshDegeneracies( mesh, fdParams );
         if ( !fdRes.has_value() )

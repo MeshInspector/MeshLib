@@ -301,6 +301,7 @@
     <ClInclude Include="MRUINonOverlappingLabels.h" />
     <ClInclude Include="MRRenderImGuiLabelObject.h" />
     <ClInclude Include="MRSceneOperations.h" />
+    <ClInclude Include="MRRibbonMenuUIConfig.h" />
     <ClInclude Include="SceneReorder.h" />
     <ClInclude Include="MRFileDialogInternal.h" />
     <ClInclude Include="MRModalDialog.h" />

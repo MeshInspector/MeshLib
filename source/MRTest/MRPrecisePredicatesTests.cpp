@@ -376,6 +376,8 @@ TEST( MRMesh, PrecisePredicates3FullDegen2 )
         vs[i].id = i; //and point coordinate is (0,0,0)
 
     // test that maximum degree in segmentIntersectionOrder can cope with most degenerate situation possible
+
+    // no shared vertices
     do
     {
         if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
@@ -385,6 +387,17 @@ TEST( MRMesh, PrecisePredicates3FullDegen2 )
         }
     }
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+
+    // one shared vertex
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+         && doTriangleSegmentIntersect( { vs[5], vs[6], vs[2], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
 TEST( MRMesh, PreciseSegmentIntersectionOrder3a )

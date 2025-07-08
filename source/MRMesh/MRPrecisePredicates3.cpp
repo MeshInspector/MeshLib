@@ -216,8 +216,64 @@ TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<Prec
 bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
 {
     // s=01, ta=234, tb=567
+    auto as = { vs[2], vs[3], vs[4] };
+    auto bs = { vs[5], vs[6], vs[7] };
+
     assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
     assert( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
+
+    // check for shared points in ta and tb
+    PreciseVertCoords firstSharedPoint;
+    for ( auto va : as )
+        for ( auto vb : bs )
+            if ( va.id == vb.id )
+            {
+                assert( va.pt == vb.pt );
+                firstSharedPoint = va;
+                goto exitLoop1;
+            }
+    exitLoop1:
+
+    if ( firstSharedPoint.id )
+    {
+        PreciseVertCoords secondSharedPoint;
+        for ( auto va : as )
+            for ( auto vb : bs )
+                if ( va.id == vb.id && va.id != firstSharedPoint.id )
+                {
+                    assert( va.pt == vb.pt );
+                    secondSharedPoint = va;
+                    goto exitLoop2;
+                }
+        exitLoop2:
+
+        if ( secondSharedPoint.id )
+        {
+            PreciseVertCoords thirdPointA;
+            for ( auto va : as )
+            {
+                if ( va.id != firstSharedPoint.id && va.id != secondSharedPoint.id )
+                {
+                    thirdPointA = va;
+                    break;
+                }
+            }
+            assert( thirdPointA.id );
+
+            PreciseVertCoords thirdPointB;
+            for ( auto vb : bs )
+            {
+                if ( vb.id != firstSharedPoint.id && vb.id != secondSharedPoint.id )
+                {
+                    thirdPointB = vb;
+                    break;
+                }
+            }
+            assert( thirdPointB.id );
+            return orient3d( { firstSharedPoint, secondSharedPoint, thirdPointA, thirdPointB } )
+                == orient3d( { firstSharedPoint, secondSharedPoint, thirdPointA, vs[1] } );
+        }
+    }
 
     // if ta and tb have a shared point
 /*    auto ta0 = vs[2];

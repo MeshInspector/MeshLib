@@ -20,7 +20,8 @@ struct PointDegree
     int d = 0; // degree of epsilon for pt.z
 };
 
-// this value was found experimentally for segmentIntersectionOrder with all 8 points have equal coordinates (but different ids)
+// this value was found experimentally for segmentIntersectionOrder with all 8 points have equal coordinates (but different ids),
+// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
 constexpr int cMaxPolyD = 14'941'836;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
@@ -55,10 +56,9 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     return res;
 }
 
-// !!!
-// Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(tb,s[1])   -   ccw(tb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
-// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-using Poly = SparsePolynomial<Int256, int, cMaxPolyD>;
+// 128 bits are enough to store all coefficients in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) )
+// except for degree 0, which is computed separately.
+using Poly = SparsePolynomial<FastInt128, int, cMaxPolyD>;
 
 Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
     int dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
@@ -92,6 +92,18 @@ Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegr
     det += xz * t;
 
     return det;
+}
+
+Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+{
+    const Vector3i64 x( a - d );
+    const Vector3i64 y( b - d );
+    const Vector3i64 z( c - d );
+
+    return
+        x.x * Int128( y.y * z.z - y.z * z.y )
+     -  x.y * Int128( y.x * z.z - y.z * z.x )
+     +  x.z * Int128( y.x * z.y - y.y * z.x );
 }
 
 } // anonymous namespace
@@ -230,15 +242,15 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
 
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
     //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
-/*    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[0].pt );
-    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[1].pt );
+    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt );
+    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt );
     assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
 
-    const auto volumeTbOrg  = volume( vs[4].pt, vs[5].pt, vs[0].pt );
-    const auto volumeTbDest = volume( vs[4].pt, vs[5].pt, vs[1].pt );
+    const auto volumeTbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
+    const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
     assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
 
-    const auto nomSimple = FastInt128( volumeTaOrg ) * FastInt128( volumeTbDest ) - FastInt128( volumeTbOrg ) * FastInt128( volumeTaDest );
+    const auto nomSimple = Int256( volumeTaOrg ) * Int256( volumeTbDest ) - Int256( volumeTbOrg ) * Int256( volumeTaDest );
     if ( nomSimple != 0 )
     {
         // happy not-degenerated path
@@ -250,7 +262,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
         if ( volumeTbOrg < volumeTbDest )
             res = !res;
         return res;
-    }*/
+    }
 
     const auto ds = getPointDegrees( vs );
 
@@ -269,8 +281,8 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     auto nom = polyTaOrg * polyTbDest;
     nom -= polyTbOrg * polyTaDest;
 
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
-    //nom.setZeroCoeff( 0 );
+    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 128-bit arithmetic
+    nom.setZeroCoeff( 0 );
 
     bool res = nom.isPositive();
     if ( posTaOrg != posTbOrg ) // denominator is negative

@@ -276,24 +276,41 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
 
     // if sa and sb have a shared point
-    auto sa0 = vs[2];
-    auto sa1 = vs[3];
-    auto sb0 = vs[4];
-    auto sb1 = vs[5];
-    if ( sa1.id == sb0.id )
-        std::swap( sa0, sa1 );
-    else if ( sa0.id == sb1.id )
-        std::swap( sb0, sb1 );
-    else if ( sa1.id == sb1.id )
+    PreciseVertCoords2 sharedPoint;
+    for ( auto va : { vs[2], vs[3] } )
+        for ( auto vb : { vs[4], vs[5] } )
+            if ( va.id == vb.id )
+            {
+                assert( va.pt == vb.pt );
+                sharedPoint = va;
+                goto exitLoop;
+            }
+    exitLoop:
+
+    if ( sharedPoint.id )
     {
-        std::swap( sa0, sa1 );
-        std::swap( sb0, sb1 );
+        // segments sa and sb have one shared point
+        auto secondPointB = ( sharedPoint.id == vs[4].id ) ? vs[5] : vs[4];
+        return ccw( { vs[2], vs[3], secondPointB } ) == ccw( { vs[2], vs[3], vs[1] } );
     }
-    if ( sa0.id == sb0.id )
+    else
     {
-        assert( sa0.pt == sb0.pt );
-        assert( sa1.id != sb1.id );
-        return ccw( { sa0, sa1, sb1 } ) == ccw( { sa0, sa1, vs[1] } );
+        // segments sa and sb have no shared points
+        const bool a1 = ccw( { vs[4], vs[5], vs[2] } );
+        if ( a1 == ccw( { vs[4], vs[5], vs[3] } ) )
+        {
+            // all a-points are on one side of sb
+            return a1 == ccw( { vs[4], vs[5], vs[0] } );
+        }
+
+        const bool b1 = ccw( { vs[2], vs[3], vs[4] } );
+        if ( b1 == ccw( { vs[2], vs[3], vs[5] } ) )
+        {
+            // all b-points are on one side of sa
+            return b1 == ccw( { vs[2], vs[3], vs[1] } );
+        }
+
+        // segments sa and sb intersect one another, process it as general case
     }
 
     // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /

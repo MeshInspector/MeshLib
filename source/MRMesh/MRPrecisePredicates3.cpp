@@ -260,40 +260,57 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
             return orient3d( { vs[2], vs[3], vs[4], thirdPointB } )
                 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
         }
-        else
+
+        // only one shared point in ta and tb
+
+        PreciseVertCoords secondPointA, thirdPointA;
+        for ( auto va : as )
+            if ( va.id != firstSharedPoint.id )
+            {
+                if ( !secondPointA.id )
+                    secondPointA = va;
+                else
+                    thirdPointA = va;
+            }
+        assert( secondPointA.id && thirdPointA.id );
+        const bool a2 = orient3d( { vs[5], vs[6], vs[7], secondPointA } );
+        if ( a2 == orient3d( { vs[5], vs[6], vs[7], thirdPointA } ) ) //both not-shared a-points are on one side of tb
+            return a2 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+
+        PreciseVertCoords secondPointB, thirdPointB;
+        for ( auto vb : bs )
+            if ( vb.id != firstSharedPoint.id )
+            {
+                if ( !secondPointB.id )
+                    secondPointB = vb;
+                else
+                    thirdPointB = vb;
+            }
+        assert( secondPointB.id && thirdPointB.id );
+        const bool b2 = orient3d( { vs[2], vs[3], vs[4], secondPointB } );
+        if ( b2 == orient3d( { vs[2], vs[3], vs[4], thirdPointB } ) ) //both not-shared b-points are on one side of ta
+            return b2 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
+
+        // triangles ta and tb intersect one another, process it as general case
+    }
+    else
+    {
+        // no shared points in ta and tb
+        const bool a1 = orient3d( { vs[5], vs[6], vs[7], vs[2] } );
+        if ( a1 == orient3d( { vs[5], vs[6], vs[7], vs[3] } ) && a1 == orient3d( { vs[5], vs[6], vs[7], vs[4] } ) )
         {
-            // only one shared point in ta and tb
-
-            PreciseVertCoords secondPointA, thirdPointA;
-            for ( auto va : as )
-                if ( va.id != firstSharedPoint.id )
-                {
-                    if ( !secondPointA.id )
-                        secondPointA = va;
-                    else
-                        thirdPointA = va;
-                }
-            assert( secondPointA.id && thirdPointA.id );
-            const bool a2 = orient3d( { vs[5], vs[6], vs[7], secondPointA } );
-            if ( a2 == orient3d( { vs[5], vs[6], vs[7], thirdPointA } ) ) //both not-shared a-points are on one side of tb
-                return a2 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
-
-            PreciseVertCoords secondPointB, thirdPointB;
-            for ( auto vb : bs )
-                if ( vb.id != firstSharedPoint.id )
-                {
-                    if ( !secondPointB.id )
-                        secondPointB = vb;
-                    else
-                        thirdPointB = vb;
-                }
-            assert( secondPointB.id && thirdPointB.id );
-            const bool b2 = orient3d( { vs[2], vs[3], vs[4], secondPointB } );
-            if ( b2 == orient3d( { vs[2], vs[3], vs[4], thirdPointB } ) ) //both not-shared b-points are on one side of ta
-                return b2 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
-
-            // triangles ta and tb intersect one another, process it as general case
+            // all a-points are on one side of tb
+            return a1 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
         }
+
+        const bool b1 = orient3d( { vs[2], vs[3], vs[4], vs[5] } );
+        if ( b1 == orient3d( { vs[2], vs[3], vs[4], vs[6] } ) && b1 == orient3d( { vs[2], vs[3], vs[4], vs[7] } ) )
+        {
+            // all b-points are on one side of ta
+            return b1 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
+        }
+
+        // triangles ta and tb intersect one another, process it as general case
     }
 
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /

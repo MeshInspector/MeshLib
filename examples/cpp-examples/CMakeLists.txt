@@ -52,6 +52,6 @@ target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHL
 target_link_directories(MRBasedMainFunc PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer fmt::fmt spdlog::spdlog)
 if(EMSCRIPTEN)
-  target_compile_options(MRBasedMainFunc PRIVATE ${MESHLIB_EMSCRIPTEN_CXX_FLAGS})
-  target_link_options(MRBasedMainFunc PRIVATE ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}")
 endif()

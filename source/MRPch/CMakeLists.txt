@@ -17,6 +17,10 @@ IF(MR_PCH)
   IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+    # hack to make it work with new version of fmt
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
+
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE

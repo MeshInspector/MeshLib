@@ -43,7 +43,7 @@ file(GLOB FREETYPE_HEADERS
 )
 
 file(GLOB MISC_HEADERS
-  "${IMGUI_ROOT}/misc/cpp/imgui_stdlib.h"
+  "${IMGUI_ROOT}/misc/cpp/*.h"
 )
 
 add_library(imgui SHARED ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS} ${MISC_HEADERS})

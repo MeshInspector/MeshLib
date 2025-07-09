@@ -137,7 +137,7 @@ MeshViewer
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build Dependencies and Compile**:
+ 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
@@ -208,7 +208,7 @@ brew install git
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build Dependencies and Compile**:
+ 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh

@@ -167,6 +167,7 @@ IF(NOT MR_EMSCRIPTEN)
   find_package(fmt)
   find_package(spdlog REQUIRED)
   find_package(TBB REQUIRED)
+  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)

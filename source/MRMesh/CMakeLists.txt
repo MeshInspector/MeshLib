@@ -67,7 +67,6 @@ IF(NOT EMSCRIPTEN)
     target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
   ENDIF()
 ELSE()
-  target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
   # hack to make it work with new version of fmt
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)

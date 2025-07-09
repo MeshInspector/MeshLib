@@ -47,3 +47,7 @@ endif(MESHLIB_BUILD_MRVIEWER)
 if(APPLE)
     message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")
 endif(APPLE)
+
+if(EMSCRIPTEN)
+    include(${SELF_DIR}/EmscriptenHelpers.cmake)
+endif(EMSCRIPTEN)

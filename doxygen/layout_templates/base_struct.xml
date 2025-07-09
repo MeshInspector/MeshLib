@@ -67,7 +67,7 @@
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
     </tab>
-    <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Thirdparty List"/>
+    <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>
 
   <!-- Layout definition for a class page -->

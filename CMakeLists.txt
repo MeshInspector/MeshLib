@@ -16,6 +16,9 @@ set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
 include(CompilerOptions)
+IF(EMSCRIPTEN)
+  include(ConfigureEmscripten)
+ENDIF()
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -164,10 +167,6 @@ IF(NOT MR_EMSCRIPTEN)
   find_package(fmt)
   find_package(spdlog REQUIRED)
   find_package(TBB REQUIRED)
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    add_compile_definitions(SPDLOG_FMT_EXTERNAL)
-  ENDIF()
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)

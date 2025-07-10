@@ -26,53 +26,29 @@ IF(NOT MRVOXELS_NO_DICOM)
 ENDIF()
 
 IF(NOT MRVOXELS_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES TIFF::TIFF)
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    openvdb
-    jsoncpp
-    spdlog
-    tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    OpenVDB
-    PkgConfig::jsoncpp
-    fmt
-    spdlog
-    tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+IF(EMSCRIPTEN)
   find_package(OpenVDB REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    OpenVDB::openvdb
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      OpenVDB::openvdb
+    PRIVATE
+      TBB::tbb
+      ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    openvdb
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
-    tbb
-    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      openvdb
+    PRIVATE
+      tbb
+      ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
 
@@ -80,7 +56,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

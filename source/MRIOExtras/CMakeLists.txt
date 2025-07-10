@@ -49,11 +49,9 @@ ENDIF()
 IF(NOT MRIOEXTRAS_NO_E57)
   list(APPEND MRIOEXTRAS_DEPENDENCIES E57Format)
   IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-  
-  file(GLOB XERCES_DLL_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/xerces-c_3_*.dll")
-  file(GLOB XERCES_DLL_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/xerces-c_3_*.dll")
+    file(GLOB XERCES_DLL_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/xerces-c_3_*.dll")
+    file(GLOB XERCES_DLL_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/xerces-c_3_*.dll")
 
-  
     # Not sure why this isn't auto-copied.
     IF($<CONFIG:Debug>)
       file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/E57Format-d.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -96,13 +94,11 @@ IF(NOT MRIOEXTRAS_NO_PDF)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_PNG)
-  IF(MR_EMSCRIPTEN)
+  IF(EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_LIBPNG=1")
-  ELSEIF(WIN32)
+  ELSE()
     find_package(PNG REQUIRED)
     list(APPEND MRIOEXTRAS_DEPENDENCIES PNG::PNG)
-  ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES png)
   ENDIF()
 ENDIF()
 
@@ -131,16 +127,12 @@ IF(NOT MRIOEXTRAS_NO_STEP)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRIOEXTRAS_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRIOEXTRAS_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  list(APPEND MRIOEXTRAS_DEPENDENCIES TIFF::TIFF)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_ZLIB)
-  IF(MR_EMSCRIPTEN)
+  IF(EMSCRIPTEN)
     list(APPEND MRIOEXTRAS_DEPENDENCIES z)
   ELSE()
     find_package(ZLIB REQUIRED)
@@ -154,47 +146,13 @@ target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
 target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_LIBRARY_DIRS}
 )
-IF(MR_EMSCRIPTEN)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
     MRMesh
-    spdlog
-    tbb
-    jsoncpp
+  PRIVATE
     ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(APPLE)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt
-    spdlog
-    tbb
-    jsoncpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSEIF(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    spdlog::spdlog
-    TBB::tbb
-    JsonCpp::JsonCpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ELSE()
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    fmt::fmt
-    spdlog::spdlog
-    tbb
-    JsonCpp::JsonCpp
-    ${MRIOEXTRAS_DEPENDENCIES}
-  )
-ENDIF()
+)
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

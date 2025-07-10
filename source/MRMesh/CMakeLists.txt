@@ -23,20 +23,14 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
-set(MRMESH_OPTIONAL_LIBRARY_DIRS "")
-set(MRMESH_OPTIONAL_INCLUDE_DIRS "")
 
 IF(NOT MRMESH_NO_TIFF)
-  IF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(TIFF REQUIRED)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
-  ELSE()
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
-  ENDIF()
+  find_package(TIFF REQUIRED)
+  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES TIFF::TIFF)
 ENDIF()
 
 IF(NOT MRMESH_NO_GTEST)
-  IF(APPLE OR WIN32 OR MESHLIB_USE_VCPKG)
+  IF(NOT EMSCRIPTEN)
     find_package(GTest REQUIRED)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
   ELSE()
@@ -55,116 +49,78 @@ IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 ENDIF()
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED)
-ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF()
-
 IF(NOT EMSCRIPTEN)
-  # FIXME: the definition must be populated by spdlog
+  find_package(Boost 1.73 CONFIG COMPONENTS headers serialization REQUIRED)
+
+  IF(APPLE OR MESHLIB_USE_VCPKG)
+    find_package(libzip REQUIRED)
+  ELSE()
+    # libzip's CMake config is broken on Ubuntu (requires binaries to be installed)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(libzip REQUIRED IMPORTED_TARGET libzip)
+    add_library(libzip::zip ALIAS PkgConfig::libzip)
+  ENDIF()
+
+  # TODO: remove after upgrading dependencies
   IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
     target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
   ENDIF()
+
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      Boost::boost
+      fmt::fmt
+      JsonCpp::JsonCpp
+      libzip::zip
+      spdlog::spdlog
+      TBB::tbb
+    PRIVATE
+      ${CMAKE_DL_LIBS}
+      ${MRMESH_OPTIONAL_DEPENDENCIES}
+  )
+
+  IF(APPLE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE) # for Boost.Stacktrace
+
+    find_library(COCOA_LIBRARY Cocoa ONLY)
+    target_link_libraries(${PROJECT_NAME}
+      PRIVATE
+        ${COCOA_LIBRARY}
+    )
+  ELSE()
+    # FIXME: incorrect thirdparty deployment on macOS
+    find_package(tl-expected REQUIRED)
+    target_link_libraries(${PROJECT_NAME}
+      PUBLIC
+        tl::expected
+    )
+  ENDIF()
 ELSE()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
   # hack to make it work with new version of fmt
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
-ENDIF()
 
-IF(APPLE OR MR_EMSCRIPTEN)
-  #jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
-  #because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.
-  #include_directories(/opt/homebrew/opt/jpeg-turbo/include)
-  #link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
-
-  IF(APPLE)
-    find_library(COCOA_LIBRARY Cocoa ONLY)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      zip
-      Boost::boost
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      fmt
       jsoncpp
-      fmt
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-      ${COCOA_LIBRARY}
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
       spdlog
-      fmt
+      tbb
+      zip
+    PRIVATE
       blosc
+      mbedcrypto
       mbedtls
       mbedx509
-      mbedcrypto
-      zip
-      jsoncpp
-      tbb
       ${MRMESH_OPTIONAL_DEPENDENCIES}
-    )
-  ENDIF()
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(tl-expected REQUIRED)
-  find_package(libzip REQUIRED)
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    tl::expected
-    fmt::fmt
-    spdlog::spdlog
-    libzip::zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    TBB::tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
-  )
-ELSE()
-  find_package(tl-expected REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tl::expected
-    fmt
-    spdlog
-    zip
-    Boost::boost
-    JsonCpp::JsonCpp
-    tbb
-    ${CMAKE_DL_LIBS}
-    ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
-
 
 install(
   FILES ${HEADERS} "config_cmake.h"

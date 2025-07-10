@@ -15,40 +15,20 @@ ELSE()
   find_package(Freetype REQUIRED)
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    freetype
-    spdlog
-    jsoncpp
-  )
-ELSEIF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    PkgConfig::jsoncpp
-    fmt
-    spdlog
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
+IF(NOT EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      Freetype::Freetype
   )
 ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    Freetype::Freetype
-    fmt::fmt
-    spdlog::spdlog
-    JsonCpp::JsonCpp
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+      MRMesh
+      freetype
   )
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}
@@ -75,5 +55,5 @@ install(
 )
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

@@ -93,12 +93,13 @@ struct SystemMemory
 [[nodiscard]] MRMESH_API SystemMemory getSystemMemory();
 
 #ifdef _WIN32
-struct ProccessMemoryInfo
+// This is removed from the bindings because it's not cross-platform.
+struct MR_BIND_IGNORE ProccessMemoryInfo
 {
     size_t currVirtual = 0, maxVirtual = 0;
     size_t currPhysical = 0, maxPhysical = 0;
 };
-[[nodiscard]] MRMESH_API ProccessMemoryInfo getProccessMemoryInfo();
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE ProccessMemoryInfo getProccessMemoryInfo();
 #endif //_WIN32
 
 /// Setups logger:

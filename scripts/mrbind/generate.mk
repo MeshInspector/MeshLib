@@ -519,7 +519,7 @@ MRBIND_GEN_C_FLAGS := --clean-output-dirs --helper-name-prefix MR_ --helper-head
 
 # Adjusting canonical types to fixed-size typedefs.
 ifeq ($(TARGET),c)
-MRBIND_FLAGS += --canonicalize-to-fixed-size-typedefs
+MRBIND_FLAGS += --canonicalize-to-fixed-size-typedefs --implicit-enum-underlying-type-is-always-int
 MRBIND_GEN_C_FLAGS += --reject-long-and-long-long
 endif
 

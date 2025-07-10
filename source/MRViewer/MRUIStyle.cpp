@@ -538,15 +538,20 @@ bool buttonIconEx(
     const float maxSize = std::max( iconSize.x, iconSize.y );
     auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
 
-    assert( icon );
-
     StyleParamHolder sh;
     if ( !params.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
 
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
 
-    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    if ( icon )
+        ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    else
+    {
+        assert( false );
+        ImGui::Dummy( iconSize );
+    }
+
     ImGui::SameLine();
 
     const auto font = ImGui::GetFont();

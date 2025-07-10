@@ -515,7 +515,7 @@ LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(ME
 COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 
 
-MRBIND_GEN_C_FLAGS := --clean-output-dirs --helper-name-prefix MR_ --helper-header-dir MRCMisc
+MRBIND_GEN_C_FLAGS := --clean-output-dirs --helper-name-prefix MR_ --helper-header-dir MRCMisc --max-header-name-length 100
 
 # Adjusting canonical types to fixed-size typedefs.
 ifeq ($(TARGET),c)

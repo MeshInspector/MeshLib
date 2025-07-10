@@ -50,7 +50,8 @@ IF(EMSCRIPTEN)
 ENDIF()
 
 IF(NOT EMSCRIPTEN)
-  find_package(Boost 1.73 CONFIG COMPONENTS headers serialization REQUIRED)
+  # TODO: require Boost 1.73 to include the fix for Boost.Signals2: https://github.com/boostorg/signals2/commit/15fcf213563718d2378b6b83a1614680a4fa8cec
+  find_package(Boost CONFIG COMPONENTS headers serialization REQUIRED)
 
   IF(APPLE OR MESHLIB_USE_VCPKG)
     find_package(libzip REQUIRED)
@@ -88,7 +89,7 @@ IF(NOT EMSCRIPTEN)
         ${COCOA_LIBRARY}
     )
   ELSE()
-    # FIXME: incorrect thirdparty deployment on macOS
+    # FIXME: incorrect third-party deployment on macOS
     find_package(tl-expected REQUIRED)
     target_link_libraries(${PROJECT_NAME}
       PUBLIC

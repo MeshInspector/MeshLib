@@ -31,7 +31,7 @@ IF(MR_PCH)
       tbb
     )
   ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
+    find_package(Boost CONFIG COMPONENTS headers REQUIRED)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 

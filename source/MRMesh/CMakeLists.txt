@@ -46,9 +46,15 @@ IF(EMSCRIPTEN)
 ENDIF()
 
 IF(NOT EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED)
-  find_package(libzip REQUIRED)
+  find_package(Boost 1.73 CONFIG COMPONENTS headers serialization REQUIRED)
   find_package(tl-expected REQUIRED)
+
+  find_package(libzip QUIET)
+  IF(NOT libzip_FOUND)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(libzip REQUIRED IMPORTED_TARGET libzip)
+    add_library(libzip::zip ALIAS PkgConfig::libzip)
+  ENDIF()
 
   target_link_libraries(${PROJECT_NAME}
     PUBLIC

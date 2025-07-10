@@ -488,8 +488,9 @@ MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makef
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
-# Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
-COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)
+COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
+# Need whitespace to handle `~` correctly.
+COMPILER_FLAGS += -I $(MRBIND_SOURCE)/include
 
 COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_ANY_BINDINGS
 COMPILER += -DMR_COMPILING_ANY_BINDINGS
@@ -512,6 +513,16 @@ LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(ME
 #   because the header override with it being constexpr is in this resource directory.
 # We certainly need this on Windows and MacOS. It's not strictly necessary on Ubuntu, but is needed on Arch, so better make it unconditional.
 COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
+
+
+MRBIND_GEN_C_FLAGS := --clean-output-dirs --helper-name-prefix MR_ --helper-header-dir MRCMisc
+
+# Adjusting canonical types to fixed-size typedefs.
+ifeq ($(TARGET),c)
+MRBIND_FLAGS += --canonicalize-to-fixed-size-typedefs
+MRBIND_GEN_C_FLAGS += --reject-long-and-long-long
+endif
+
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -756,7 +767,7 @@ $(call var,$1__CCodeGenerationMarker := $(TEMP_OUTPUT_DIR)/$1.generation_marker)
 $(call var,$1__CCodeOutputDir := $(C_CODE_OUTPUT_DIR)/$1)
 $($1__CCodeGenerationMarker): $($1__ParserSourceOutput) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Generating C Code] $($1__CCodeOutputDir))
-	@$(MRBIND_GEN_C_EXE) --input $(call quote,$($1__ParserSourceOutput)) --output-header-dir $(call quote,$($1__CCodeOutputDir)/include) --output-source-dir $(call quote,$($1__CCodeOutputDir)/src) $(foreach x,$($1_InputProjects),--map-path $(call quote,$(makefile_dir)../../source/$x) $(patsubst MR%,MRC%,$x)) --assume-include-dir $(call quote,$(makefile_dir)../../source) --clean-output-dirs --helper-name-prefix MR_ --helper-header-dir MRCMisc
+	@$(MRBIND_GEN_C_EXE) --input $(call quote,$($1__ParserSourceOutput)) --output-header-dir $(call quote,$($1__CCodeOutputDir)/include) --output-source-dir $(call quote,$($1__CCodeOutputDir)/src) $(foreach x,$($1_InputProjects),--map-path $(call quote,$(makefile_dir)../../source/$x) $(patsubst MR%,MRC%,$x)) --assume-include-dir $(call quote,$(makefile_dir)../../source) $(MRBIND_GEN_C_FLAGS)
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_generate_c,$x)))
 endif # $(TARGET) == c

@@ -12,7 +12,7 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
-using Int64 = long long;
+using Int64 = std::int64_t;
 static_assert( sizeof( Int64 ) == 8 );
 using Int128 = boost::multiprecision::int128_t;
 using Int256 = boost::multiprecision::int256_t;

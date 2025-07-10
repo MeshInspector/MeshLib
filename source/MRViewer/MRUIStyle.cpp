@@ -1856,6 +1856,11 @@ const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
     return notificationParams[int( type )];
 }
 
+void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling )
+{
+
+}
+
 void transparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );

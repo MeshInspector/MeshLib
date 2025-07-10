@@ -385,6 +385,9 @@ void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textCol
 /// returns icons font character for given notification type, and its color
 MRVIEWER_API const std::pair<const char*, ImU32>& notificationChar( NotificationType type );
 
+/// draws hint with corresponding mouse btn icon
+MRVIEWER_API void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling );
+
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5

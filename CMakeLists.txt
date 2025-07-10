@@ -163,8 +163,9 @@ IF(NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
-  find_package(fmt 8 REQUIRED)
-  find_package(spdlog 1.7 REQUIRED)
+  # TODO: require fmt >=8 and spdlog >=1.7 (not available on Ubuntu 20.04)
+  find_package(fmt)
+  find_package(spdlog REQUIRED)
   find_package(TBB 2020.1 REQUIRED)
 ENDIF() # NOT MR_EMSCRIPTEN
 

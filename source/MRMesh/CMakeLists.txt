@@ -59,6 +59,11 @@ IF(NOT EMSCRIPTEN)
     add_library(libzip::zip ALIAS PkgConfig::libzip)
   ENDIF()
 
+  # TODO: remove after upgrading dependencies
+  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+  ENDIF()
+
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       Boost::boost

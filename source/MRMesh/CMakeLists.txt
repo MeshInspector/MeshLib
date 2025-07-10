@@ -30,8 +30,12 @@ IF(NOT MRMESH_NO_TIFF)
 ENDIF()
 
 IF(NOT MRMESH_NO_GTEST)
-  find_package(GTest REQUIRED)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
+  IF(NOT EMSCRIPTEN)
+    find_package(GTest REQUIRED)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES GTest::gtest)
+  ELSE()
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gtest)
+  ENDIF()
 ENDIF()
 
 # alternative Eigen include for external project

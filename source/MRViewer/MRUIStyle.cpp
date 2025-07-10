@@ -1861,6 +1861,40 @@ const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
     return notificationParams[int( type )];
 }
 
+void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling )
+{
+    std::string btnIconName;
+    switch ( btn )
+    {
+    default:
+    case ImGuiMouseButton_Left:
+        btnIconName = "mouse left";
+        break;
+    case ImGuiMouseButton_Right:
+        btnIconName = "mouse right";
+        break;
+    case ImGuiMouseButton_Middle:
+        btnIconName = "mouse scroll";
+        break;
+    }
+    ImVec2 iconSize = ImVec2( 24, 24 ) * scaling;
+    auto icon = RibbonIcons::findByName( btnIconName, iconSize.x, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+    if ( icon )
+    {
+        ImGui::Image( *icon, iconSize );
+    }
+    else
+    {
+        assert( false );
+        ImGui::Dummy( iconSize );
+    }
+
+    ImGui::SameLine();
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x + 8 * scaling );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( iconSize.y - ImGui::GetFontSize() ) * 0.5f );
+    UI::transparentText( "%s", hint.c_str() );
+}
+
 void transparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );

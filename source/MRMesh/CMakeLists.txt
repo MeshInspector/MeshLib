@@ -51,7 +51,6 @@ ENDIF()
 
 IF(NOT EMSCRIPTEN)
   find_package(Boost 1.73 CONFIG COMPONENTS headers serialization REQUIRED)
-  find_package(tl-expected REQUIRED)
 
   find_package(libzip QUIET)
   IF(NOT libzip_FOUND)
@@ -68,7 +67,6 @@ IF(NOT EMSCRIPTEN)
       libzip::zip
       spdlog::spdlog
       TBB::tbb
-      tl::expected
     PRIVATE
       ${CMAKE_DL_LIBS}
       ${MRMESH_OPTIONAL_DEPENDENCIES}
@@ -81,6 +79,13 @@ IF(NOT EMSCRIPTEN)
     target_link_libraries(${PROJECT_NAME}
       PRIVATE
         ${COCOA_LIBRARY}
+    )
+  ELSE()
+    # FIXME: incorrect thirdparty deployment on macOS
+    find_package(tl-expected REQUIRED)
+    target_link_libraries(${PROJECT_NAME}
+      PUBLIC
+        tl::expected
     )
   ENDIF()
 ELSE()

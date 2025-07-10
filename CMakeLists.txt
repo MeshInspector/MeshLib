@@ -100,8 +100,7 @@ IF(APPLE)
 
   IF(BUILD_TESTING)
     set(GTest_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/GTest)
-    find_package(GTest REQUIRED CONFIG)
-    include_directories(${GTEST_INCLUDE_DIRS})
+    find_package(GTest REQUIRED)
   ENDIF()
 ENDIF()
 
@@ -164,10 +163,9 @@ IF(NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
-  find_package(fmt)
-  find_package(spdlog REQUIRED)
-  find_package(TBB REQUIRED)
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
+  find_package(fmt 8 REQUIRED)
+  find_package(spdlog 1.7 REQUIRED)
+  find_package(TBB 2020.1 REQUIRED)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)

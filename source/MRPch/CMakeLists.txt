@@ -30,7 +30,7 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
-  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+  ELSE()
     find_package(Boost COMPONENTS REQUIRED)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
@@ -41,19 +41,6 @@ IF(MR_PCH)
       Boost::boost
       JsonCpp::JsonCpp
       TBB::tbb
-    )
-  ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
-      Boost::boost
-      JsonCpp::JsonCpp
-      tbb
     )
   ENDIF()
 

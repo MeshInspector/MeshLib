@@ -39,7 +39,7 @@ void computeMeshDistanceMapKernel(
     float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset )
 {
     constexpr size_t maxThreadsPerBlock = 640;
-    int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+    auto numBlocks = unsigned( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
 
     float3 xStep = params.xRange / float( params.resolution.x );
     float3 yStep = params.yRange / float( params.resolution.y );

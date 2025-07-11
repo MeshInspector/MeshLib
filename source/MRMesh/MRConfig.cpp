@@ -2,6 +2,7 @@
 #include "MRStringConvert.h"
 #include "MRSystem.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
 #include <cassert>

@@ -7,8 +7,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
-#include "MRPch/MRSpdlog.h"
-
+#include "MRLog.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -130,7 +129,7 @@ private:
     {
         if ( points.size() < 6 )
         {
-            spdlog::warn( "Cylinder3Approximation :: Too low point for cylinder approximation count={}" , points.size() );
+            Logger::warn( "Cylinder3Approximation :: Too low point for cylinder approximation count=" + std::to_string( points.size() ) );
             return -1;
         }
         assert( points.size() >= 6 ); // "At least 6 points needs for correct fitting requires ."
@@ -161,7 +160,7 @@ private:
         }
         else
         {
-            spdlog::warn( "Cylinder3Approximation :: unsupported fitter" );
+            Logger::warn( "Cylinder3Approximation :: unsupported fitter" );
             assert( false ); // unsupported fitter
             return -1;
         }

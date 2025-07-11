@@ -46,6 +46,7 @@ ELSE()
     fmt::fmt
     spdlog::spdlog
     TBB::tbb
+    Eigen3::Eigen
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 
@@ -59,6 +60,12 @@ ELSE()
     list(APPEND CMAKE_MODULE_PATH
       "${HOMEBREW_PREFIX}/lib/cmake/OpenVDB/"
     )
+    IF(NOT DEFINED Blosc_ROOT)
+      set(Blosc_ROOT "${HOMEBREW_PREFIX}")
+    ENDIF()
+    IF(NOT DEFINED TBB_ROOT)
+      set(TBB_ROOT "${HOMEBREW_PREFIX}")
+    ENDIF()
     find_package(OpenVDB 10.1 COMPONENTS openvdb REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC
       OpenVDB::openvdb

@@ -1,10 +1,12 @@
 #include "MRConfig.h"
 #include "MRStringConvert.h"
-#include <assert.h>
+#include "MRSystem.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
+
+#include <cassert>
 #include <iostream>
 #include <fstream>
-#include "MRSystem.h"
-#include "MRPch/MRWasm.h"
 
 namespace MR
 {

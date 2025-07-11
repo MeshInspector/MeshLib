@@ -1331,6 +1331,15 @@
     <ClInclude Include="MRFastInt128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MREndMill.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSparsePolynomial.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDivRound.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2173,6 +2182,9 @@
     </ClCompile>
     <ClCompile Include="MRTripleFaceIntersections.cpp">
       <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MREndMill.cpp">
+      <Filter>Source Files\Gcode</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

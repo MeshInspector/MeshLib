@@ -182,7 +182,7 @@ jobs:
   windows-pip-build:
     needs: setup
     timeout-minutes: 90
-    runs-on: windows-2019
+    runs-on:  [self-hosted, windows, x64, vs-2019, meshinspector]
     strategy:
       fail-fast: false
     permissions:

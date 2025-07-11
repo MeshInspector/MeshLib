@@ -54,6 +54,11 @@ __device__ inline float lengthSq( const float2& a )
     return a.x * a.x + a.y * a.y;
 }
 
+__device__ inline float length( const float2& a )
+{
+    return sqrt( a.x * a.x + a.y * a.y );
+}
+
 __device__ inline float dot( const float2& a, const float2& b )
 {
     return a.x * b.x + a.y * b.y;

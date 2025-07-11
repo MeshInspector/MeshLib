@@ -571,7 +571,8 @@ void CornerControllerObject::initDefault()
         }
         else
         {
-            obj->setTextures( { textures.front() } );
+            if ( !textures.empty() )
+                obj->setTextures( { textures.front() } );
         }
 
         if ( !obj->getTextures().empty() )

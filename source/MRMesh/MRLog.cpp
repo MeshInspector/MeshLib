@@ -1,5 +1,6 @@
 #include "MRLog.h"
 
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWinapi.h"
 
 namespace MR
@@ -9,6 +10,36 @@ Logger& Logger::instance()
 {
     static Logger theLogger;
     return theLogger;
+}
+
+void Logger::trace( std::string_view msg )
+{
+    instance().logger_->trace( msg );
+}
+
+void Logger::debug( std::string_view msg )
+{
+    instance().logger_->debug( msg );
+}
+
+void Logger::info( std::string_view msg )
+{
+    instance().logger_->info( msg );
+}
+
+void Logger::warn( std::string_view msg )
+{
+    instance().logger_->warn( msg );
+}
+
+void Logger::error( std::string_view msg )
+{
+    instance().logger_->error( msg );
+}
+
+void Logger::critical( std::string_view msg )
+{
+    instance().logger_->critical( msg );
 }
 
 const std::shared_ptr<spdlog::logger>& Logger::getSpdLogger() const

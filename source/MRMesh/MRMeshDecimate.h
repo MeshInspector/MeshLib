@@ -213,24 +213,23 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
 
 struct ResolveMeshDegenSettings
 {
-    #if !MR_COMPILING_C_BINDINGS
-    [[deprecated]] // C bindings choke on this deprecation (the implicit copy constructor copies this field and triggers the warning, which is treated as an error).
-    #endif
-    MR_BIND_IGNORE
-    int maxIters = 1;
-
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
+
     /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
     float tinyEdgeLength = 0;
+
     /// Permit edge flips if it does not change dihedral angle more than on this value
     float maxAngleChange = PI_F / 3;
+
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalAspectRatio = 10000;
+
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 1e-6f;
+
     /// degenerations will be fixed only in given region, which is updated during the processing
     FaceBitSet * region = nullptr;
 };

@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
@@ -236,6 +237,7 @@
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
     <ClInclude Include="MRSolarRadiation.h" />
+    <ClInclude Include="MRSparsePolynomial.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRStacktrace.h" />
     <ClInclude Include="MRSurfaceLineOffset.h" />
@@ -422,6 +424,7 @@
     <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MROffsetVerts.h" />
+    <ClInclude Include="MREndMill.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />
@@ -705,6 +708,7 @@
     <ClCompile Include="MRTbbThreadMutex.cpp" />
     <ClCompile Include="MROffsetVerts.cpp" />
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
+    <ClCompile Include="MREndMill.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

@@ -1,10 +1,26 @@
 namespace MR {
 
-/** \page ThirdParty Thirdparty List
+/** \page ThirdParty Third-Party Dependencies
+
+# List of dependencies
+
+MeshLib is modular by design. Our goal is to provide only what you need, so you can avoid what you do not and keep your project lightweight. The only mandatory module is MRMesh. All others are optional.
+
+Below is a summary of all modules and their dependencies, so you can see what each requires before including it in your build
+
+|Module|Task|Required modules|Optional?|
+|------|----|----------------|---------|
+|MRMesh|Core geometry|-|No, Mandatory|
+|MRIOExtras|Input/Output|MRMesh|Yes|
+|MRSymbolMesh|Text-to-mesh|MRMesh|Yes|
+|MRPython|Python|MRMesh|Yes|
+|MRVoxels|Volumetric|MRMesh|Yes|
+|MRCuda|GPU acceleration|MRMesh and MRVoxels|Yes|
+|MRViewer|Rendering and user interface|MRMesh, MRVoxels, MRSymbolMesh and MRIOExtras|Yes|
 
 ### MRMesh
 
-Main library with geometry operations
+\b MRMesh is our core module, handling geometry operations. Since it is mandatory, its dependencies are required for every build.
 
 |Name                                                                                   |Description                                                                  |License                        |
 |---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------|
@@ -25,9 +41,8 @@ Main library with geometry operations
 
 ### MRIOExtras
 
-Library with additional Input/Output formats
+\b MRIOExtras adds support for the input and output of additional file formats (e.g., glTF, STEP, PDF). It requires MRMesh and includes:
 
-\b MRMesh + 
 |Name                                                                                |Description                                                                  |License                                    |
 |------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |<a rel="nofollow" href="http://libharu.org">libHaru</a>                             |free, cross platform, open source library for generating PDF files           |zlib                                       |
@@ -42,18 +57,16 @@ Library with additional Input/Output formats
 
 ### MRSymbolMesh
 
-Library with text to mesh operations
+\b MRSymbolMesh is our module responsible for text-to-mesh conversion operations. As such, it requires MRMesh plus:
 
-\b MRMesh +
 |Name                                                       |Description                                                                  |License                                    |
 |-----------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |<a rel="nofollow" href="https://freetype.org">FreeType</a> |a freely available software library to render fonts                          |GPL-2.0, FTL(BSD like)                     |
 
 ### MRPython
 
-Library for creating python bindings and for Embedded python
+\b MRPython enables Python bindings and embedded Python scripting for MeshLib. It depends on MRMesh and: 
 
-\b MRMesh +
 |Name                                                                     |Description                                                                  |License                                    |
 |-------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |<a rel="nofollow" href="https://www.python.org">python3</a>              |is a high-level, general-purpose programming language.                       |PSF                                        |
@@ -62,9 +75,8 @@ Library for creating python bindings and for Embedded python
 
 ### MRVoxels
 
-Library for voxels operations
+\b MRVoxels provides functionality for volumetric operations. It depends on MRMesh plus: 
 
-\b MRMesh +
 |Name                                                                                      |Description                                                                  |License             |
 |------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
 |<a rel="nofollow" href="https://github.com/AcademySoftwareFoundation/openvdb">OpenVDB</a> |efficient manipulation of sparse, time-varying, volumetric data discretized  |MPL2                |
@@ -72,9 +84,8 @@ Library for voxels operations
 
 ### MRCuda
 
-Library for CUDA based algorithms
+\b MRCuda enables GPU-accelerated algorithms using NVIDIA CUDA. Here, you need MRMesh, MRVoxels, and:
 
-\b MRMesh + **MRVoxels** +
 |Name                                                                        |Description                                                                                          |License                                              |
 |----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 |<a rel="nofollow" href="https://developer.nvidia.com/cuda-toolkit">CUDA</a> |GPU-accelerated libraries, debugging and optimization tools, a C/C++ compiler, and a runtime library |<a rel="nofollow" href="https://docs.nvidia.com/cuda/eula/index.html#license">CUDA License</a> |
@@ -82,9 +93,8 @@ Library for CUDA based algorithms
 
 ### MRViewer
 
-Main library with rendering and window handling
+\b MRViewer is MeshLib’s module for rendering and UI. It handles window creation, input, and GUI elements. It needs MRMesh, MRVoxels, MRSymbolMesh, MRIOExtras, and:
 
-\b MRMesh + **MRVoxels** + **MRSymbolMesh** + **MRIOExtras** +
 |Name                                                                                   |Description                                                                                         |License                      |
 |---------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------|
 |<a rel="nofollow" href="https://github.com/Dav1dde/glad">glad</a>                      |GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs                                    |MIT                          |

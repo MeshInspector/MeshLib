@@ -263,13 +263,16 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         if ( aCaptionWeightCorrect != bCaptionWeightCorrect )
             return aCaptionWeightCorrect;
 
-        const bool aAvailable = requirementsFunc( a.first.item->item ).empty();
-        const bool bAvailable = requirementsFunc( b.first.item->item ).empty();
+        if ( requirementsFunc )
+        {
+            const bool aAvailable = requirementsFunc( a.first.item->item ).empty();
+            const bool bAvailable = requirementsFunc( b.first.item->item ).empty();
 
-        // 2 sort priority
-        // available tool takes precedence over unavailable
-        if ( aAvailable != bAvailable )
-            return aAvailable;
+            // 2 sort priority
+            // available tool takes precedence over unavailable
+            if ( aAvailable != bAvailable )
+                return aAvailable;
+        }
 
         // 3 sort priority
         // if both have the correct caption weight, then compare by caption, otherwise compare by tooltip

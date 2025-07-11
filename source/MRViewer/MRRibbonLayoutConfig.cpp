@@ -1,8 +1,9 @@
 #include "MRRibbonLayoutConfig.h"
-#include "MRMesh/MRSerializer.h"
 #include "MRColorTheme.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
+#include "MRRibbonMenu.h"
+#include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR

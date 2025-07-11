@@ -193,6 +193,6 @@ set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
 find_package(Eigen3 QUIET)
-IF(EIGEN3_VERSION VERSION_LESS 3.4)
+IF(EIGEN3_VERSION_STRING VERSION_LESS 3.4)
   add_subdirectory(./eigen)
 ENDIF()

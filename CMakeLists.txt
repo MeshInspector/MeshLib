@@ -166,6 +166,7 @@ IF(NOT MR_EMSCRIPTEN)
 
   # TODO: upgrade to version 1.73 after dropping Ubuntu 20.04 support
   find_package(Boost 1.71 COMPONENTS headers REQUIRED)
+  find_package(Eigen3 3.4 REQUIRED)
   find_package(fmt 8 REQUIRED)
   find_package(spdlog 1.9 REQUIRED)
   find_package(TBB 2020 COMPONENTS tbb REQUIRED)

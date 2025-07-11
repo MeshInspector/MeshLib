@@ -60,6 +60,13 @@ ELSE()
       OpenVDB
     )
   ELSE()
+    # TODO: correct OpenVDB module search
+    list(APPEND CMAKE_MODULE_PATH
+      "/usr/lib/cmake/OpenVDB/"
+      "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
+      "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
+      "/usr/lib64/cmake/OpenVDB/"
+    )
     # TODO: upgrade to version 10.1 after dropping Ubuntu 20.04 support
     find_package(OpenVDB 9 COMPONENTS openvdb REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE

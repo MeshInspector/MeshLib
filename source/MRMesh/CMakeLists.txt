@@ -44,19 +44,13 @@ IF(NOT MRMESH_NO_GTEST)
   ENDIF()
 ENDIF()
 
-# alternative Eigen include for external project
-find_package(Eigen3 NO_MODULE)
-IF(DEFINED EIGEN3_FOUND)
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
-  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
-ENDIF()
 IF(EMSCRIPTEN)
   # FIXME: comment required
   target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS stacktrace REQUIRED)
+  find_package(Boost REQUIRED)
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF()
@@ -81,6 +75,7 @@ IF(APPLE)
     JsonCpp::JsonCpp
     fmt::fmt
     TBB::tbb
+    Eigen3::Eigen
     ${MRMESH_OPTIONAL_DEPENDENCIES}
     ${COCOA_LIBRARY}
     ${CMAKE_DL_LIBS}
@@ -109,6 +104,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     Boost::boost
     JsonCpp::JsonCpp
     TBB::tbb
+    Eigen3::Eigen
     ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
@@ -122,6 +118,7 @@ ELSE()
     Boost::boost
     JsonCpp::JsonCpp
     TBB::tbb
+    Eigen3::Eigen
     ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )

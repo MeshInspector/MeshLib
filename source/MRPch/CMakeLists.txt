@@ -41,6 +41,7 @@ IF(MR_PCH)
       Boost::boost
       JsonCpp::JsonCpp
       TBB::tbb
+      Eigen3::Eigen
     )
   ELSE()
     find_package(Boost COMPONENTS REQUIRED)

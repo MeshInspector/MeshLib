@@ -6,6 +6,7 @@ project(cpp-examples CXX)
 
 find_package(MeshLib CONFIG REQUIRED)
 find_package(TBB REQUIRED)
+find_package(Threads)
 
 set(EXAMPLES
   FreeFormDeformation
@@ -44,13 +45,10 @@ target_link_libraries(Triangulation PRIVATE MeshLib::MRVoxels)
 # MeshLoadSave additionally depends on MRIOExtras
 target_link_libraries(MeshLoadSave PRIVATE MeshLib::MRIOExtras)
 
-find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-
 add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
 target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 target_link_directories(MRBasedMainFunc PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
-target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer fmt::fmt spdlog::spdlog)
+target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)
 if(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}")

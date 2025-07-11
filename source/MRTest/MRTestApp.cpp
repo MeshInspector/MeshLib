@@ -10,6 +10,7 @@
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
 
 #ifndef MESHLIB_NO_PYTHON
 #include "MRPython/MRPython.h"

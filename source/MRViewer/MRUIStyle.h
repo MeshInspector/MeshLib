@@ -40,16 +40,16 @@ MRVIEWER_API void init();
 /// parameters to customize buttonEx
 struct ButtonCustomizationParams
 {
-    /// gradient texture other than default
-    /// {start, hover_start, acitve_start, disabled_start,
-    ///  end, hover_end, acitve_end, disabled_end  }
-    ImGuiImage* customTexture = nullptr;
+    /// determines if this button is enabled or disabled
+    bool enabled = true;
 
     /// imgui flags for this button
     ImGuiButtonFlags flags = ImGuiButtonFlags_None;
 
-    /// determines if this button is enabled or disabled
-    bool enabled = true;
+    /// gradient texture other than default
+    /// {start, hover_start, acitve_start, disabled_start,
+    ///  end, hover_end, acitve_end, disabled_end  }
+    ImGuiImage* customTexture = nullptr;
 
     /// force use imgui background if !customTexture
     bool forceImGuiBackground = false;
@@ -66,8 +66,11 @@ struct ButtonCustomizationParams
     bool enableTestEngine = true;
 };
 
-struct ButtonIconCustomizationParams : public ButtonCustomizationParams
+struct ButtonIconCustomizationParams
 {
+    // basic customization parameters
+    ButtonCustomizationParams baseParams;
+
     // button without a gradient, always active, configurable by an external style
     bool flatBackgroundColor = false;
     // if false - text is to the right
@@ -141,7 +144,7 @@ MRVIEWER_API bool buttonIconEx(
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
 {
     ButtonIconCustomizationParams params;
-    params.enabled = active;
+    params.baseParams.enabled = active;
     params.flatBackgroundColor = true;
     return buttonIconEx(name, iconSize, text, buttonSize, params );
 }
@@ -161,9 +164,9 @@ inline bool buttonIconFlatBG(
 {
     ButtonIconCustomizationParams params;
     params.flatBackgroundColor = true;
-    params.forceImguiTextColor = true;
+    params.baseParams.forceImguiTextColor = true;
     params.textUnderImage = textUnderIcon;
-    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
+    params.baseParams.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
     return buttonIconEx( name, iconSize, text, buttonSize, params ) || checkKey( key );
 }
 /// draw button with icon same logic as radioButton

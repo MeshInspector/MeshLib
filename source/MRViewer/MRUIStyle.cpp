@@ -429,12 +429,12 @@ bool buttonIconEx(
     if ( params.flatBackgroundColor )
     {
         res = ImGui::Button( buttonText.c_str(), buttonSize );
-        if( params.enableTestEngine )
+        if( params.baseParams.enableTestEngine )
             res = UI::TestEngine::createButton( buttonText ) || res;
     }
     else
     {
-        res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params );
+        res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
     }
     ImGui::SameLine();
 
@@ -548,7 +548,7 @@ bool buttonIconEx(
     auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
 
     StyleParamHolder sh;
-    if ( !params.forceImguiTextColor )
+    if ( !params.baseParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
 
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
@@ -579,7 +579,7 @@ bool buttonIconEx(
                 color,
                 detail.start,
                 detail.end );
-        if ( numStr == 0 && params.underlineFirstLetter )
+        if ( numStr == 0 && params.baseParams.underlineFirstLetter )
             ImGui::GetWindowDrawList()->AddText( font, cFontSize, screenPos, color, "_" );
 
         numStr++;

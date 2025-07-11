@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(cpp-examples CXX)
 
 find_package(MeshLib CONFIG REQUIRED)
+find_package(TBB REQUIRED)
 
 set(EXAMPLES
   FreeFormDeformation
@@ -33,7 +34,7 @@ foreach(TARGET ${EXAMPLES})
   add_executable(${TARGET} ${TARGET}.dox.cpp)
   target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
   target_link_directories(${TARGET} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
-  target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh)
+  target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
 endforeach()
 # MeshFromText additionally depends on MRSymbolMesh
 target_link_libraries(MeshFromText PRIVATE MeshLib::MRSymbolMesh)

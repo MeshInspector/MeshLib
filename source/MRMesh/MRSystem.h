@@ -49,7 +49,8 @@ MRMESH_API void SetCurrentThreadName( const char * name );
 
 #ifdef _WIN32
 // returns the folder where Windows installed, typically "C:\Windows"
-[[nodiscard]] MRMESH_API std::filesystem::path GetWindowsInstallDirectory();
+// This is removed from the bindings because it doesn't exist on all platforms.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE std::filesystem::path GetWindowsInstallDirectory();
 #endif //_WIN32
 
 // returns version of MR

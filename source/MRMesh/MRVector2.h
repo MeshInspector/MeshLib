@@ -45,7 +45,9 @@ struct Vector2
     static constexpr Vector2 minusX() noexcept { return Vector2( -1, 0 ); }
     static constexpr Vector2 minusY() noexcept { return Vector2( 0, -1 ); }
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and looks out of place there.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector2( const Vector2<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ) { }
 
     constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }

@@ -2239,6 +2239,7 @@ void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
     else
     {
         boxMin = windowPos + min;
+        boxMin.y -= ImGui::GetScrollY();
     }
 
     ImVec2 boxMax;
@@ -2252,6 +2253,7 @@ void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
     else
     {
         boxMax = windowPos + max;
+        boxMax.y -= ImGui::GetScrollY();
     }
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );

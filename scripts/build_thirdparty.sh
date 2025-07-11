@@ -136,6 +136,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 
   # build libE57Format separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
+  # build c-blosc separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/c-blosc.sh ${MESHLIB_THIRDPARTY_DIR}/c-blosc
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else

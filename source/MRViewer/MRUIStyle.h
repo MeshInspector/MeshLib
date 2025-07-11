@@ -40,16 +40,17 @@ MRVIEWER_API void init();
 /// parameters to customize buttonEx
 struct ButtonCustomizationParams
 {
-    /// determines if this button is enabled or disabled
-    bool enabled = true;
-
-    /// imgui flags for this button
-    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
-
     /// gradient texture other than default
     /// {start, hover_start, acitve_start, disabled_start,
     ///  end, hover_end, acitve_end, disabled_end  }
     ImGuiImage* customTexture = nullptr;
+
+    /// imgui flags for this button
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
+
+    /// determines if this button is enabled or disabled
+    bool enabled = true;
+
     /// force use imgui background if !customTexture
     bool forceImGuiBackground = false;
 

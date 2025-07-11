@@ -19,6 +19,12 @@ MR_SUPPRESS_WARNING_POP
 
 namespace MR
 {
+
+MR_SUPPRESS_WARNING_PUSH
+#if defined( _MSC_VER )
+#pragma warning(disable:4251) // 'type': 'type1' needs to have dll - interface to be used by clients of 'type2'
+#endif
+
 template <typename T>
 class Cylinder3Approximation
 {
@@ -106,5 +112,7 @@ private:
 
 MRMESH_EXTERN( template class MRMESH_CLASS_INST_DECL Cylinder3Approximation<float> )
 MRMESH_EXTERN( template class MRMESH_CLASS_INST_DECL Cylinder3Approximation<double> )
+
+MR_SUPPRESS_WARNING_POP
 
 }

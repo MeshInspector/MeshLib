@@ -7,7 +7,6 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRMakeSphereMesh.h>
-#include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRObjectsAccess.h"

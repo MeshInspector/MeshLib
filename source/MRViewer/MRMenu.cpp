@@ -29,7 +29,6 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRToFromEigen.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRSceneSettings.h"

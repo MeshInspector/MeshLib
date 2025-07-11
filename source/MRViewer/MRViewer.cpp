@@ -35,7 +35,6 @@
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRMakePlane.h>
-#include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRMeshLoad.h"

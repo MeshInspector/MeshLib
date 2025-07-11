@@ -22,6 +22,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace ImGui

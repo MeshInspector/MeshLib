@@ -11,6 +11,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRSystem.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #if _WIN32

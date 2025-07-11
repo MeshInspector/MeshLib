@@ -3,6 +3,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
+#include "MRPch/MRJson.h"
 
 namespace
 {

@@ -105,10 +105,10 @@ MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 /// draw gradient button, which can be disabled (active = false)
 [[deprecated( "Use UI::buttonEx( label, size, params ) instead" )]]
 MRVIEWER_API bool buttonEx( const char* label,bool active, const Vector2f& size = Vector2f( 0, 0 ), 
-    ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& custmParams = {} );
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& customParams = {} );
 
 /// draw gradient button, which can be customized
-MRVIEWER_API bool buttonEx( const char* label, const Vector2f& size = Vector2f( 0, 0 ), const ButtonCustomizationParams& custmParams = {} );
+MRVIEWER_API bool buttonEx( const char* label, const Vector2f& size = Vector2f( 0, 0 ), const ButtonCustomizationParams& customParams = {} );
 /// draw gradient button, which can be disabled (active = false)
 /// returns true if button is clicked in this frame, or key is pressed (optional)
 MRVIEWER_API bool button( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );

@@ -40,36 +40,44 @@ constexpr HPDF_REAL marksWidth = 30 * scaleFactor;
 
 }
 
+struct Pdf::State
+{
+    HPDF_Doc document = nullptr;
+    HPDF_Page activePage = nullptr;
+    HPDF_Font activeFont = nullptr;
+};
+
 Pdf::Pdf( const std::filesystem::path& documentPath, const PdfParameters& params /*= PdfParameters()*/ )
-    : filename_{ documentPath }
+    : state_( std::make_unique<State>() )
+    , filename_{ documentPath }
     , params_( params )
 {
     cursorX_ = borderFieldLeft;
     cursorY_ = borderFieldTop;
 
-    state_.document = HPDF_New( NULL, NULL );
-    if ( !state_.document )
+    state_->document = HPDF_New( NULL, NULL );
+    if ( !state_->document )
     {
-        spdlog::warn( "Can't create PDF document. HPDF error code {}", HPDF_GetError( state_.document ) );
+        spdlog::warn( "Can't create PDF document. HPDF error code {}", HPDF_GetError( state_->document ) );
         return;
     }
-    HPDF_SetCompressionMode( state_.document, HPDF_COMP_ALL );
-    state_.activePage = HPDF_AddPage( state_.document );
-    if ( !state_.activePage )
+    HPDF_SetCompressionMode( state_->document, HPDF_COMP_ALL );
+    state_->activePage = HPDF_AddPage( state_->document );
+    if ( !state_->activePage )
     {
-        spdlog::warn( "Can't create page. HPDF error code {}", HPDF_GetError( state_.document ) );
-        return;
-    }
-
-    HPDF_Page_SetSize( state_.activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT );
-    state_.activeFont = HPDF_GetFont( state_.document, params_.fontName.c_str(), NULL );
-    if ( !state_.activeFont )
-    {
-        spdlog::debug( "Can't find font: \"{}\". HPDF error code {}", params_.fontName, HPDF_GetError( state_.document ) );
+        spdlog::warn( "Can't create page. HPDF error code {}", HPDF_GetError( state_->document ) );
         return;
     }
 
-    HPDF_Page_SetFontAndSize( state_.activePage, state_.activeFont, params_.textSize );
+    HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT );
+    state_->activeFont = HPDF_GetFont( state_->document, params_.fontName.c_str(), NULL );
+    if ( !state_->activeFont )
+    {
+        spdlog::debug( "Can't find font: \"{}\". HPDF error code {}", params_.fontName, HPDF_GetError( state_->document ) );
+        return;
+    }
+
+    HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
 }
 
 Pdf::Pdf( Pdf&& other ) noexcept
@@ -91,7 +99,7 @@ Pdf::~Pdf()
 
 void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
 {
-    if ( !state_.document )
+    if ( !state_->document )
     {
         spdlog::warn( "Can't add text to pdf page: no valid document" );
         return;
@@ -106,17 +114,17 @@ void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
     }
 
 
-    const HPDF_REAL textHeight = static_cast<HPDF_REAL>(( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.);
+    const auto textHeight = static_cast<HPDF_REAL>(( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.);
 
     if ( cursorY_ - textHeight < borderFieldBottom )
         newPage();
 
     HPDF_TextAlignment alignment = isTitle ? HPDF_TALIGN_CENTER : HPDF_TALIGN_LEFT;
-    HPDF_Page_SetFontAndSize( state_.activePage, state_.activeFont, ( isTitle ? params_.titleSize : params_.textSize ) );
-    HPDF_Page_BeginText( state_.activePage );
-    HPDF_Page_SetTextLeading( state_.activePage, textSpacing );
-    HPDF_Page_TextRect( state_.activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - textHeight, text.c_str(), alignment, nullptr );
-    HPDF_Page_EndText( state_.activePage );
+    HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, ( isTitle ? params_.titleSize : params_.textSize ) );
+    HPDF_Page_BeginText( state_->activePage );
+    HPDF_Page_SetTextLeading( state_->activePage, textSpacing );
+    HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - textHeight, text.c_str(), alignment, nullptr );
+    HPDF_Page_EndText( state_->activePage );
 
     cursorY_ -= textHeight;
     if ( cursorY_ - spacing < borderFieldBottom )
@@ -128,16 +136,16 @@ void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
 void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= {}*/,
         const std::vector<std::pair<double, std::string>>& valuesMarks /*= {}*/ )
 {
-    if ( !state_.document )
+    if ( !state_->document )
     {
         spdlog::warn( "Can't add image to pdf page: no valid document" );
         return;
     }
 
-    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_.document, utf8string( imagePath ).c_str() );
+    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() );
     if ( !pdfImage )
     {
-        spdlog::warn( "Failed to load image from file. HPDF error code {}", HPDF_GetError( state_.document ) );
+        spdlog::warn( "Failed to load image from file. HPDF error code {}", HPDF_GetError( state_->document ) );
         return;
     }
 
@@ -150,7 +158,7 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         newPage();
 
     cursorY_ -= scalingHeight;
-    HPDF_Page_DrawImage( state_.activePage, pdfImage, cursorX_, cursorY_, scalingWidth, scalingHeight );
+    HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_, cursorY_, scalingWidth, scalingHeight );
 
     if ( !valuesMarks.empty() )
     {
@@ -160,11 +168,11 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         HPDF_REAL posX = cursorX_;
         for ( auto& mark : valuesMarks )
         {
-            HPDF_Page_BeginText( state_.activePage );
-            HPDF_Page_SetFontAndSize( state_.activePage, state_.activeFont, params_.textSize );
-            HPDF_Page_MoveTextPos( state_.activePage, posX, cursorY_ - marksHeight / 2 );
-            HPDF_Page_ShowText( state_.activePage, mark.second.c_str() );
-            HPDF_Page_EndText( state_.activePage );
+            HPDF_Page_BeginText( state_->activePage );
+            HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
+            HPDF_Page_MoveTextPos( state_->activePage, posX, cursorY_ - marksHeight / 2 );
+            HPDF_Page_ShowText( state_->activePage, mark.second.c_str() );
+            HPDF_Page_EndText( state_->activePage );
             posX += step;
         }
         cursorY_ -= marksHeight;
@@ -172,10 +180,10 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
     if ( !caption.empty() )
     {
         cursorY_ -= textSpacing / 2.;
-        HPDF_Page_BeginText( state_.activePage );
-        HPDF_Page_SetFontAndSize( state_.activePage, state_.activeFont, params_.textSize );
-        HPDF_Page_TextRect( state_.activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - labelHeight, caption.c_str(), HPDF_TALIGN_CENTER, nullptr );
-        HPDF_Page_EndText( state_.activePage );
+        HPDF_Page_BeginText( state_->activePage );
+        HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
+        HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - labelHeight, caption.c_str(), HPDF_TALIGN_CENTER, nullptr );
+        HPDF_Page_EndText( state_->activePage );
         cursorY_ -= labelHeight;
     }
 
@@ -187,45 +195,55 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
 
 void Pdf::newPage()
 {
-    if ( !state_.document )
+    if ( !state_->document )
     {
         spdlog::warn( "Can't create new pdf page: no valid document" );
         return;
     }
 
-    state_.activePage = HPDF_AddPage( state_.document );
-    if ( !state_.activePage )
+    state_->activePage = HPDF_AddPage( state_->document );
+    if ( !state_->activePage )
     {
-        spdlog::warn( "Error while creating new pdf page: {}", HPDF_GetError( state_.document ) );
+        spdlog::warn( "Error while creating new pdf page: {}", HPDF_GetError( state_->document ) );
         return;
     }
 
     cursorX_ = borderFieldLeft;
     cursorY_ = borderFieldTop;
-    HPDF_Page_SetSize( state_.activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
+    HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
 }
 
 void Pdf::close()
 {
-    if ( state_.document )
+    if ( state_->document )
     {
         // reset all errors before saving document
-        HPDF_ResetError( state_.document );
+        HPDF_ResetError( state_->document );
 
         auto pathString = utf8string( filename_ );
-        HPDF_SaveToFile( state_.document, pathString.c_str() );
+        HPDF_SaveToFile( state_->document, pathString.c_str() );
 
-        HPDF_STATUS status = HPDF_GetError( state_.document );
+        HPDF_STATUS status = HPDF_GetError( state_->document );
         if (status != HPDF_OK)
         {
             spdlog::error( "HPDF Error while saving pdf: {}", status );
-            HPDF_ResetError( state_.document );
+            HPDF_ResetError( state_->document );
         }
-        HPDF_Free( state_.document );
-        state_.document = nullptr;
+        HPDF_Free( state_->document );
+        state_->document = nullptr;
     }
-    state_.activePage = nullptr;
-    state_.activeFont = nullptr;
+    state_->activePage = nullptr;
+    state_->activeFont = nullptr;
+}
+
+Pdf::operator bool() const
+{
+    return state_->document != 0;
+}
+
+bool Pdf::checkDocument() const
+{
+    return state_->document && state_->activePage;
 }
 
 }

@@ -51,13 +51,17 @@ ELSE()
 
   IF(MESHLIB_USE_VCPKG)
     find_package(OpenVDB 10.1 COMPONENTS openvdb REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
+    target_link_libraries(${PROJECT_NAME} PUBLIC
       OpenVDB::openvdb
     )
   ELSEIF(APPLE)
     # FIXME: OpenVDB's CMake config cannot be found
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      OpenVDB
+    list(APPEND CMAKE_MODULE_PATH
+      "${HOMEBREW_PREFIX}/lib/cmake/OpenVDB/"
+    )
+    find_package(OpenVDB 10.1 COMPONENTS openvdb REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+      OpenVDB::openvdb
     )
   ELSE()
     # TODO: correct OpenVDB module search
@@ -69,7 +73,7 @@ ELSE()
     )
     # TODO: upgrade to version 10.1 after dropping Ubuntu 20.04 support
     find_package(OpenVDB 9 COMPONENTS openvdb REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
+    target_link_libraries(${PROJECT_NAME} PUBLIC
       OpenVDB::openvdb
     )
   ENDIF()

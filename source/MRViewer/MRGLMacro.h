@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef NDEBUG
+#if !defined( NDEBUG ) && !defined( MR_GL_NO_LOGGING )
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRFinally.h"
 #define GL_EXEC( ... ) \

@@ -2189,6 +2189,9 @@
     <ClCompile Include="MREndMill.cpp">
       <Filter>Source Files\Gcode</Filter>
     </ClCompile>
+    <ClCompile Include="MRCylinderApproximator.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

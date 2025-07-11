@@ -1881,7 +1881,7 @@ void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scal
     auto icon = RibbonIcons::findByName( btnIconName, iconSize.x, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
     if ( icon )
     {
-        ImGui::Image( *icon, iconSize );
+        ImGui::Image( *icon, iconSize, ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
     }
     else
     {
@@ -1891,7 +1891,7 @@ void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scal
 
     ImGui::SameLine();
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x + 8 * scaling );
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( iconSize.y - ImGui::GetFontSize() ) * 0.5f );
+    UI::alignTextToControl( iconSize.y );
     UI::transparentText( "%s", hint.c_str() );
 }
 

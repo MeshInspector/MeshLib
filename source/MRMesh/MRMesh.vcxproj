@@ -710,6 +710,7 @@
     <ClCompile Include="MROffsetVerts.cpp" />
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
     <ClCompile Include="MREndMill.cpp" />
+    <ClCompile Include="MRCylinderApproximator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

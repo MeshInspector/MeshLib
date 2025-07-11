@@ -764,6 +764,7 @@ override define module_snippet_generate_c =
 # Produce the one combined header including all our input headers.
 # And if PCH is enabled, this also includes the headers to bake.
 $(call var,$1__CCodeGenerationMarker := $(TEMP_OUTPUT_DIR)/$1.generation_marker)
+$(call var,all_outputs += $($1__CCodeGenerationMarker))
 $(call var,$1__CCodeOutputDir := $(C_CODE_OUTPUT_DIR)/$1)
 $($1__CCodeGenerationMarker): $($1__ParserSourceOutput) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Generating C Code] $($1__CCodeOutputDir))

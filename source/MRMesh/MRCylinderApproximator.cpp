@@ -331,7 +331,7 @@ T Cylinder3Approximation<T>::SpecificAxisFit( Eigen::Vector<T, 3>& PC, Eigen::Ve
     return G( W, PC, resultedRootSquare );
 }
 
-template class Cylinder3Approximation<float>;
-template class Cylinder3Approximation<double>;
+template class MRMESH_CLASS_INST_DEF Cylinder3Approximation<float>;
+template class MRMESH_CLASS_INST_DEF Cylinder3Approximation<double>;
 
 } // namespace MR

@@ -42,23 +42,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
 
-IF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog::spdlog
-    fmt::fmt
-    TBB::tbb
-    ${MRCUDA_OPTIONAL_DEPENDENCIES}
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRMesh
-    spdlog
-    fmt
-    tbb
-    ${MRCUDA_OPTIONAL_DEPENDENCIES}
-  )
-ENDIF()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  spdlog::spdlog
+  fmt::fmt
+  TBB::tbb
+  ${MRCUDA_OPTIONAL_DEPENDENCIES}
+)
 
 IF(MESHLIB_EXPERIMENTAL_HIP)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-result)
@@ -76,7 +66,6 @@ ELSE()
   )
 ENDIF()
 
-set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}
@@ -104,7 +93,7 @@ install(
 
 IF(MR_PCH)
   IF(CMAKE_CXX_STANDARD EQUAL MR_CXX_STANDARD)
-    TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
     message( "MRCuda: using PCH" )
   ELSE()
     message( "MRCuda: not using PCH" )

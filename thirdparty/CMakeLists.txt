@@ -41,9 +41,7 @@ ENDIF()
 IF(APPLE)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest ./googletest)
-ENDIF()
-
-IF(APPLE OR MR_EMSCRIPTEN)
+ELSEIF(MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
 ELSE()
   # TODO: correct OpenVDB module search
@@ -89,6 +87,22 @@ add_subdirectory(./OpenCTM-git ./OpenCTM)
 option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
+find_package(fmt QUIET)
+IF(fmt_VERSION VERSION_LESS 8)
+  add_subdirectory(./fmt)
+ENDIF()
+
+find_package(spdlog QUIET)
+IF(spdlog_VERSION VERSION_LESS 1.9)
+  set(SPDLOG_INSTALL ON)
+  set(SPDLOG_FMT_EXTERNAL ON)
+  IF(MR_EMSCRIPTEN)
+    # hack to make it work with new version of fmt
+    add_compile_definitions(SPDLOG_WCHAR_FILENAMES) 
+  ENDIF()
+  add_subdirectory(./spdlog)
+ENDIF()
+
 IF(MR_EMSCRIPTEN)
   set(GDCM_BUILD_APPLICATIONS OFF)
   set(GDCM_BUILD_SHARED_LIBS OFF)
@@ -122,14 +136,6 @@ IF(MR_EMSCRIPTEN)
   set(BUILD_STATIC_LIBS OFF)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
-
-  add_subdirectory(./fmt)
-  #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-
-  set(SPDLOG_INSTALL ON)
-  set(SPDLOG_FMT_EXTERNAL ON)
-  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
-  add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
@@ -186,5 +192,7 @@ set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
-install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+find_package(Eigen3 QUIET)
+IF(EIGEN3_VERSION VERSION_LESS 3.4)
+  add_subdirectory(./eigen)
+ENDIF()

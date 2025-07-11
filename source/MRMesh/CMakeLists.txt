@@ -56,78 +56,51 @@ IF(EMSCRIPTEN)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED)
+  find_package(Boost COMPONENTS stacktrace REQUIRED)
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF()
 
-IF(NOT EMSCRIPTEN)
-  # FIXME: the definition must be populated by spdlog
-  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-  ENDIF()
-ELSE()
-  target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+IF(EMSCRIPTEN)
   # hack to make it work with new version of fmt
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
 ENDIF()
 
-IF(APPLE OR MR_EMSCRIPTEN)
-  #jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
-  #because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.
-  #include_directories(/opt/homebrew/opt/jpeg-turbo/include)
-  #link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
+IF(NOT WIN32)
+  # required for Boost.Stacktrace
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+ENDIF()
 
-  IF(APPLE)
-    find_library(COCOA_LIBRARY Cocoa ONLY)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      zip
-      Boost::boost
-      jsoncpp
-      fmt
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-      ${COCOA_LIBRARY}
-      ${CMAKE_DL_LIBS}
-    )
-  ELSE()
-    target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-    )
-    target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-      ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      spdlog
-      fmt
-      blosc
-      mbedtls
-      mbedx509
-      mbedcrypto
-      zip
-      jsoncpp
-      tbb
-      ${MRMESH_OPTIONAL_DEPENDENCIES}
-    )
-  ENDIF()
+IF(APPLE)
+  find_library(COCOA_LIBRARY Cocoa ONLY)
+  find_package(libzip REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    spdlog::spdlog
+    libzip::zip
+    Boost::boost
+    JsonCpp::JsonCpp
+    fmt::fmt
+    TBB::tbb
+    ${MRMESH_OPTIONAL_DEPENDENCIES}
+    ${COCOA_LIBRARY}
+    ${CMAKE_DL_LIBS}
+  )
+ELSEIF(EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    spdlog
+    fmt
+    blosc
+    mbedtls
+    mbedx509
+    mbedcrypto
+    zip
+    jsoncpp
+    tbb
+    ${MRMESH_OPTIONAL_DEPENDENCIES}
+  )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(tl-expected REQUIRED)
   find_package(libzip REQUIRED)
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
   target_link_libraries(${PROJECT_NAME} PUBLIC
     tl::expected
     fmt::fmt
@@ -141,30 +114,22 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   )
 ELSE()
   find_package(tl-expected REQUIRED)
-  include_directories(${jsoncpp_INCLUDE_DIRS})
-  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_INCLUDE_DIRS}
-  )
-  target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${MRMESH_OPTIONAL_LIBRARY_DIRS}
-  )
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tl::expected
-    fmt
-    spdlog
+    fmt::fmt
+    spdlog::spdlog
     zip
     Boost::boost
     JsonCpp::JsonCpp
-    tbb
+    TBB::tbb
     ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
-
 
 install(
   FILES ${HEADERS} "config_cmake.h"

@@ -75,7 +75,7 @@ fi
 rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 # FIXME: make it optional
-for SUBDIR in lib include ; do
+for SUBDIR in lib include share ; do
   rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
   mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
 done
@@ -136,6 +136,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 
   # build libE57Format separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
+  # build c-blosc separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/c-blosc.sh ${MESHLIB_THIRDPARTY_DIR}/c-blosc
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else
@@ -144,16 +146,5 @@ else
   cmake --install .
 fi
 popd
-
-# copy libs (some of them are handled by their `cmake --install`, but some are not)
-echo "Copying thirdparty libs.."
-if [[ $OSTYPE == 'darwin'* ]]; then
-  LIB_SUFFIX="*.dylib"
-elif [ "${MR_EMSCRIPTEN}" = "ON" ]; then
-  LIB_SUFFIX="*.a"
-else
-  LIB_SUFFIX="*.so"
-fi
-cp "${MESHLIB_THIRDPARTY_BUILD_DIR}"/${LIB_SUFFIX} "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/"
 
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

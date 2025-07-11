@@ -4,8 +4,6 @@
 #ifndef MRIOEXTRAS_NO_PDF
 #include "exports.h"
 
-#include <hpdf.h>
-
 #include <filesystem>
 #include <vector>
 
@@ -17,8 +15,8 @@ namespace MR
  */
 struct PdfParameters
 {
-    HPDF_REAL titleSize = 18.f;
-    HPDF_REAL textSize = 14.f;
+    float titleSize = 18.f;
+    float textSize = 14.f;
     /**
      * @brief Font name
      * list of available fonts:
@@ -75,31 +73,26 @@ public:
     /// Save and close document. After this impossible add anything in document
     MRIOEXTRAS_API void close();
 
-    void setCursorPosX( HPDF_REAL posX ) { cursorX_ = posX; };
-    void setCursorPosY( HPDF_REAL posY ) { cursorY_ = posY; };
-    float getCursorPosX() const { return cursorX_; };
-    float getCursorPosY() const { return cursorY_; };
+    void setCursorPosX( float posX ) { cursorX_ = posX; }
+    void setCursorPosY( float posY ) { cursorY_ = posY; }
+    float getCursorPosX() const { return cursorX_; }
+    float getCursorPosY() const { return cursorY_; }
 
     /// Checking the ability to work with a document
-    operator bool() const { return state_.document != 0; };
+    operator bool() const;
 
 private:
-    struct State
-    {
-        HPDF_Doc document = nullptr;
-        HPDF_Page activePage = nullptr;
-        HPDF_Font activeFont = nullptr;
-    };
-    State state_;
+    struct State;
+    std::unique_ptr<State> state_;
 
     std::filesystem::path filename_;
 
     PdfParameters params_;
 
-    HPDF_REAL cursorX_ = 0;
-    HPDF_REAL cursorY_ = 0;
+    float cursorX_ = 0;
+    float cursorY_ = 0;
 
-    bool checkDocument() const { return state_.document && state_.activePage; };
+    bool checkDocument() const;
 };
 
 }

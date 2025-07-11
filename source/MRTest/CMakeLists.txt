@@ -23,6 +23,7 @@ IF(APPLE)
     spdlog
     OpenVDB
     tbb
+    Eigen3::Eigen
     ${CMAKE_DL_LIBS}
   )
 ELSE()

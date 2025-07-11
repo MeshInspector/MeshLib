@@ -85,6 +85,7 @@ ELSEIF(APPLE)
     glfw
     hidapi
     clip
+    Eigen3::Eigen
     ${APPKIT_LIBRARY}
     ${CMAKE_DL_LIBS}
     ${MRVIEWER_OPTIONAL_DEPENDENCIES}

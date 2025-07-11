@@ -152,7 +152,7 @@ IF(NOT MR_EMSCRIPTEN)
       if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0)
         set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
       endif()
-      find_package(jsoncpp)
+      find_package(JsonCpp QUIET)
       IF(NOT JsonCpp_FOUND)
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
@@ -164,10 +164,15 @@ IF(NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
-  find_package(fmt)
+  # TODO: upgrade to version 1.73 after dropping Ubuntu 20.04 support
+  find_package(Boost NO_MODULE COMPONENTS headers REQUIRED)
+  # TODO: upgrade to version 3.4 after dropping Ubuntu 20.04 support
+  find_package(Eigen3 REQUIRED)
+  # TODO: upgrade to version 8 after dropping Ubuntu 20.04 support
+  find_package(fmt REQUIRED)
+  # TODO: upgrade to version 1.9 after dropping Ubuntu 20.04 support
   find_package(spdlog REQUIRED)
-  find_package(TBB REQUIRED)
-  add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
+  find_package(TBB 2020 COMPONENTS tbb REQUIRED)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 include_directories(${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap)

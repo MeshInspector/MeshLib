@@ -2,6 +2,7 @@ build-essential
 cmake
 libblosc-dev
 libboost-all-dev
+libeigen3-dev
 libexpected-dev
 libfmt-dev
 libfreetype-dev

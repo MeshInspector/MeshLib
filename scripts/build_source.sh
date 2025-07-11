@@ -67,6 +67,10 @@ fi
 # add env options to cmake
 MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
 
+MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+  -D CMAKE_PREFIX_PATH=${PWD} \
+"
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
@@ -99,7 +103,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
-    -D CMAKE_FIND_ROOT_PATH=${PWD} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \

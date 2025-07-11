@@ -19,6 +19,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRIOExtras
   MRVoxels
 )
+IF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    Eigen3::Eigen
+  )
+ENDIF()
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(

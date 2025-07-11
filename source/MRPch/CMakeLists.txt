@@ -19,7 +19,6 @@ IF(MR_PCH)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
     # hack to make it work with new version of fmt
     target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
     # FIXME: comment required
@@ -31,8 +30,6 @@ IF(MR_PCH)
       tbb
     )
   ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-    find_package(Boost COMPONENTS REQUIRED)
-
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -41,19 +38,18 @@ IF(MR_PCH)
       Boost::boost
       JsonCpp::JsonCpp
       TBB::tbb
+      Eigen3::Eigen
     )
   ELSE()
-    find_package(Boost COMPONENTS REQUIRED)
-    include_directories(${jsoncpp_INCLUDE_DIRS})
-
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
+      fmt::fmt
+      spdlog::spdlog
       Boost::boost
       JsonCpp::JsonCpp
-      tbb
+      TBB::tbb
+      Eigen3::Eigen
     )
   ENDIF()
 

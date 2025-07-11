@@ -41,11 +41,7 @@ ENDIF()
 IF(APPLE)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest ./googletest)
-ENDIF()
-
-IF(APPLE OR MR_EMSCRIPTEN)
-  add_subdirectory(./expected ./expected)
-ELSE()
+ELSEIF(NOT MR_EMSCRIPTEN)
   # TODO: correct OpenVDB module search
   list(APPEND CMAKE_MODULE_PATH
     "/usr/lib/cmake/OpenVDB/"
@@ -53,7 +49,7 @@ ELSE()
     "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"
     "/usr/lib64/cmake/OpenVDB/"
   )
-  find_package(OpenVDB 9 COMPONENTS openvdb)
+  find_package(OpenVDB 9 COMPONENTS openvdb QUIET)
   IF(NOT OpenVDB_FOUND)
     set(OPENVDB_ENABLE_UNINSTALL OFF)
     set(OPENVDB_ENABLE_INSTALL OFF)
@@ -73,7 +69,7 @@ ELSE()
     ENDIF()
   ENDIF()
 
-  find_package(cpr)
+  find_package(cpr QUIET)
   IF(NOT cpr_FOUND)
     set(CPR_ENABLE_UNINSTALL "OFF")
     set(CPR_ENABLE_INSTALL "OFF")
@@ -86,10 +82,12 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
-option(PHMAP_INSTALL "" ON)
+set(PHMAP_INSTALL ON CACHE BOOL "")
 add_subdirectory(./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
+  add_subdirectory(./expected ./expected)
+
   set(GDCM_BUILD_APPLICATIONS OFF)
   set(GDCM_BUILD_SHARED_LIBS OFF)
   set(GDCM_BUILD_TESTING OFF)
@@ -140,12 +138,8 @@ IF(MR_EMSCRIPTEN)
 
   add_subdirectory(./tinyxml2)
 
-  set(BUILD_TESTS OFF CACHE BOOL "")
-  set(BUILD_FUZZERS OFF CACHE BOOL "")
-  set(BUILD_BENCHMARKS OFF CACHE BOOL "")
-  set(BUILD_STATIC OFF CACHE BOOL "")
-  set(BLOSC_INSTALL ON)
-  add_subdirectory(./c-blosc)
+  set(CMAKE_POLICY_DEFAULT_CMP0090 NEW)
+  add_subdirectory(./eigen)
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)
@@ -159,7 +153,7 @@ ELSE() # not MR_EMSCRIPTEN
   add_subdirectory(./libE57Format)
 ENDIF()
 
-find_package(glad)
+find_package(glad QUIET)
 IF(NOT glad_FOUND)
   set(GLAD_INSTALL ON CACHE BOOL "")
   set(GLAD_REPRODUCIBLE ON CACHE BOOL "")
@@ -185,6 +179,3 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
-
-install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})

@@ -104,7 +104,9 @@ private:
     T SpecificAxisFit( Eigen::Vector<T, 3>& PC, Eigen::Vector<T, 3>& W, T& resultedRootSquare );
 };
 
+#ifdef MRMesh_EXPORTS
 extern template class MRMESH_API Cylinder3Approximation<float>;
 extern template class MRMESH_API Cylinder3Approximation<double>;
+#endif
 
 }

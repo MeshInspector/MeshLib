@@ -73,6 +73,7 @@ ELSE()
   ELSE()
     # TODO: correct OpenVDB module search
     list(APPEND CMAKE_MODULE_PATH
+      "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/OpenVDB/"
       "/usr/lib/cmake/OpenVDB/"
       "/usr/lib/x86_64-linux-gnu/cmake/OpenVDB/"
       "/usr/lib/aarch64-linux-gnu/cmake/OpenVDB/"

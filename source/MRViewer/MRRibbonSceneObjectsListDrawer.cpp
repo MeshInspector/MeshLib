@@ -257,7 +257,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::gray().scaledAlpha( 0.2f ).getUInt32() );
     UI::ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
-    UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, Vector2f( -1, cFrameHeight ), ImGuiButtonFlags_AllowOverlap, params );
+    params.flags = ImGuiButtonFlags_AllowOverlap;
+    UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), Vector2f( -1, cFrameHeight ), params );
     if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) && needDragDropTarget_() )
     {
         auto rect = context->LastItemData.Rect;
@@ -325,7 +326,7 @@ void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::st
     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0, 0, 0, 0 ) );
-    bool changed = UI::buttonEx( ( "##VisibilityBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, ImVec2( -1, cFrameHeight ), 0, params );
+    bool changed = UI::buttonEx( ( "##VisibilityBtn_" + object.name() + "_" + uniqueStr ).c_str(), ImVec2( -1, cFrameHeight ), params );
     ImGui::PopStyleColor( 3 );
     ImGui::PopStyleVar();
 

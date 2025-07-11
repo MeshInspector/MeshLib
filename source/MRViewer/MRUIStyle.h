@@ -40,6 +40,12 @@ MRVIEWER_API void init();
 /// parameters to customize buttonEx
 struct ButtonCustomizationParams
 {
+    /// determines if this button is enabled or disabled
+    bool enabled = true;
+
+    /// imgui flags for this button
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
+
     /// gradient texture other than default
     /// {start, hover_start, acitve_start, disabled_start,
     ///  end, hover_end, acitve_end, disabled_end  }
@@ -61,9 +67,6 @@ struct ButtonCustomizationParams
 
 struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 {
-    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
-    // flag for buttonEx, which can be disabled
-    bool active = true;
     // button without a gradient, always active, configurable by an external style
     bool flatBackgroundColor = false;
     // if false - text is to the right
@@ -100,8 +103,12 @@ struct PlotAxis
 MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 
 /// draw gradient button, which can be disabled (active = false)
-MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
+[[deprecated( "Use UI::buttonEx( label, size, params ) instead" )]]
+MRVIEWER_API bool buttonEx( const char* label,bool active, const Vector2f& size = Vector2f( 0, 0 ), 
     ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& custmParams = {} );
+
+/// draw gradient button, which can be customized
+MRVIEWER_API bool buttonEx( const char* label, const Vector2f& size = Vector2f( 0, 0 ), const ButtonCustomizationParams& custmParams = {} );
 /// draw gradient button, which can be disabled (active = false)
 /// returns true if button is clicked in this frame, or key is pressed (optional)
 MRVIEWER_API bool button( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
@@ -133,7 +140,7 @@ MRVIEWER_API bool buttonIconEx(
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
 {
     ButtonIconCustomizationParams params;
-    params.active = active;
+    params.enabled = active;
     params.flatBackgroundColor = true;
     return buttonIconEx(name, iconSize, text, buttonSize, params );
 }

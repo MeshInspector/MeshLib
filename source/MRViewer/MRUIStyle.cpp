@@ -181,12 +181,11 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
-    ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
+bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& custmParams )
 {
     bool simulateClick = custmParams.enableTestEngine && TestEngine::createButton( label );
-    assert( ( simulateClick <= active ) && "Trying to programmatically press a button, but it's inactive!" );
-    if ( !active )
+    assert( ( simulateClick <= custmParams.enabled ) && "Trying to programmatically press a button, but it's inactive!" );
+    if ( !custmParams.enabled )
         simulateClick = false;
 
     // copy from ImGui::ButtonEx and replaced visualize part
@@ -198,6 +197,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImGuiID id = window->GetID( label );
     const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
+
+    auto flags = custmParams.flags;
 
     ImVec2 pos = window->DC.CursorPos;
     if ( ( flags & ImGuiButtonFlags_AlignTextBaseLine ) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset ) // Try to vertically align buttons that are smaller/have no padding so that text baseline matches (bit hacky, since it shouldn't be a flag)
@@ -223,7 +224,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     auto texture = ( custmParams.customTexture || custmParams.forceImGuiBackground ) ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
-        const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
+        const float textureU = 0.125f + ( !custmParams.enabled ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
         window->DrawList->AddImageRounded(
             texture->getImTextureId(),
             bb.Min, bb.Max,
@@ -234,7 +235,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     }
     else
     {
-        const ImGuiCol colIdx = ( !active ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImGuiCol colIdx = ( !custmParams.enabled ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
         const ImU32 col = ImGui::GetColorU32( colIdx );
         ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
     }
@@ -251,7 +252,15 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
 
-    return ( pressed || simulateClick ) && active;
+    return ( pressed || simulateClick ) && custmParams.enabled;
+}
+
+bool buttonEx( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams /*= {} */ )
+{
+    auto paramscpy = custmParams;
+    paramscpy.enabled = active;
+    paramscpy.flags = flags;
+    return buttonEx( label, size, paramscpy );
 }
 
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
@@ -263,13 +272,13 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
     bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
-    return buttonEx( label, active, size, 0, { .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
+    return buttonEx( label, size, { .enabled = active, .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
 }
 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
-    return buttonEx( label, true, size, 0, { .underlineFirstLetter = sameKey } ) || checkKey( key );
+    return buttonEx( label, size, { .underlineFirstLetter = sameKey } ) || checkKey( key );
 }
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
@@ -293,7 +302,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     params.forceImguiTextColor = true;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
 
-    auto res = buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    auto res = buttonEx( label, ImVec2( size.x, size.y ), params ) || checkKey( key );
     if ( res )
         value[0] = ownValue;
 
@@ -425,7 +434,7 @@ bool buttonIconEx(
     }
     else
     {
-        res = UI::buttonEx( buttonText.c_str(), params.active, Vector2f( buttonSize.x, buttonSize.y ), params.flags, params );
+        res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params );
     }
     ImGui::SameLine();
 

@@ -85,22 +85,6 @@ add_subdirectory(./OpenCTM-git ./OpenCTM)
 set(PHMAP_INSTALL ON CACHE BOOL "")
 add_subdirectory(./parallel-hashmap)
 
-find_package(fmt QUIET)
-IF(fmt_VERSION VERSION_LESS 8)
-  add_subdirectory(./fmt)
-ENDIF()
-
-find_package(spdlog QUIET)
-IF(spdlog_VERSION VERSION_LESS 1.9)
-  set(SPDLOG_INSTALL ON)
-  set(SPDLOG_FMT_EXTERNAL ON)
-  IF(MR_EMSCRIPTEN)
-    # hack to make it work with new version of fmt
-    add_compile_definitions(SPDLOG_WCHAR_FILENAMES) 
-  ENDIF()
-  add_subdirectory(./spdlog)
-ENDIF()
-
 IF(MR_EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
 
@@ -136,6 +120,14 @@ IF(MR_EMSCRIPTEN)
   set(BUILD_STATIC_LIBS OFF)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
+
+  add_subdirectory(./fmt)
+  #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+  set(SPDLOG_INSTALL ON)
+  set(SPDLOG_FMT_EXTERNAL ON)
+  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
+  add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")

@@ -84,7 +84,7 @@ ENDIF()
 
 add_subdirectory(./OpenCTM-git ./OpenCTM)
 
-option(PHMAP_INSTALL "" ON)
+set(PHMAP_INSTALL ON CACHE BOOL "")
 add_subdirectory(./parallel-hashmap)
 
 find_package(fmt QUIET)
@@ -165,7 +165,7 @@ ELSE() # not MR_EMSCRIPTEN
   add_subdirectory(./libE57Format)
 ENDIF()
 
-find_package(glad)
+find_package(glad QUIET)
 IF(NOT glad_FOUND)
   set(GLAD_INSTALL ON CACHE BOOL "")
   set(GLAD_REPRODUCIBLE ON CACHE BOOL "")

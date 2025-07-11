@@ -49,9 +49,7 @@ IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 ENDIF()
 
-IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost REQUIRED)
-ELSE()
+IF(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF()
 
@@ -110,7 +108,10 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   )
 ELSE()
   find_package(tl-expected REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+  target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+    Eigen3::Eigen
+    PRIVATE
     tl::expected
     fmt::fmt
     spdlog::spdlog
@@ -118,7 +119,6 @@ ELSE()
     Boost::boost
     JsonCpp::JsonCpp
     TBB::tbb
-    Eigen3::Eigen
     ${CMAKE_DL_LIBS}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )

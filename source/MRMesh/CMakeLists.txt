@@ -68,8 +68,6 @@ IF(NOT EMSCRIPTEN)
   ENDIF()
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-  # hack to make it work with new version of fmt
-  target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)

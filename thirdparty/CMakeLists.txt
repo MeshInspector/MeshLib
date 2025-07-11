@@ -128,7 +128,6 @@ IF(MR_EMSCRIPTEN)
 
   set(SPDLOG_INSTALL ON)
   set(SPDLOG_FMT_EXTERNAL ON)
-  add_compile_definitions(SPDLOG_WCHAR_FILENAMES) # hack to make it work with new version of fmt
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)

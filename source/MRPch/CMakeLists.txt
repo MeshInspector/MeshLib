@@ -25,6 +25,14 @@ IF(MR_PCH)
     target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
+      fmt
+      jsoncpp
+      tbb
+    )
+  ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE
       fmt::fmt
       spdlog::spdlog
       Boost::boost

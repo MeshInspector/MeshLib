@@ -2,13 +2,11 @@
 #include "MRMeshFwd.h"
 #include "MRColor.h"
 #include "MRSerializer.h"
+#include "MRPch/MRJson.h"
 #include "MRVector2.h"
 #include "MRLog.h"
-
 #include <filesystem>
 #include <string>
-
-namespace Json { class Value; }
 
 namespace MR
 {
@@ -85,15 +83,14 @@ public:
     // returns true if json value with this key exists
     MRMESH_API bool hasJsonValue( const std::string& key );
     // returns custom json value
-    MRMESH_API Json::Value getJsonValue( const std::string& key );
-    MRMESH_API Json::Value getJsonValue( const std::string& key, const Json::Value& defaultValue );
+    MRMESH_API Json::Value getJsonValue( const std::string& key, const Json::Value& defaultValue = {} );
     // sets custom json value
     MRMESH_API void setJsonValue( const std::string& key, const Json::Value& keyValue );
 
 private:
     std::string appName_;
 
-    std::shared_ptr<Json::Value> config_;
+    Json::Value config_;
     std::filesystem::path filePath_;
     // prolong logger life
     std::shared_ptr<spdlog::logger> loggerHandle_ = Logger::instance().getSpdLogger();

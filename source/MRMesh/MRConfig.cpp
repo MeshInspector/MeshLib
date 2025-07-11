@@ -1,7 +1,6 @@
 #include "MRConfig.h"
 #include "MRStringConvert.h"
 #include "MRSystem.h"
-#include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
@@ -13,7 +12,6 @@ namespace MR
 {
 
 Config::Config()
-    : config_( std::make_shared<Json::Value>() )
 {}
 
 void Config::reset( std::string appName )
@@ -40,7 +38,7 @@ void Config::writeToFile()
         loggerHandle_->info( "Saving config file: " + utf8string( filePath_ ) );
     if ( os.is_open() )
     {
-        os << *config_;
+        os << config_;
         os.close();
     }
     else
@@ -50,7 +48,7 @@ void Config::writeToFile()
     }
 #else
     std::stringstream strStream;
-    strStream << *config_;
+    strStream << config_;
     std::string str = strStream.str();
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
@@ -73,7 +71,7 @@ void Config::reset( const std::filesystem::path& filePath )
         }
         else
         {
-            *config_ = std::move( readRes.value() );
+            config_ = std::move( readRes.value() );
         }
     }
     else
@@ -107,7 +105,7 @@ void Config::reset( const std::filesystem::path& filePath )
         }
         else
         {
-            *config_ = std::move( readRes.value() );
+            config_ = std::move( readRes.value() );
         }
     }
     else
@@ -133,41 +131,34 @@ Config::~Config()
 
 bool Config::hasBool( const std::string& key ) const
 {
-    const auto& config = *config_;
-    return ( !config[key].isNull() && config[key].isBool() );
+    return ( !config_[key].isNull() && config_[key].isBool() );
 }
-
 bool Config::getBool( const std::string& key, bool defaultValue ) const
 {
-    const auto& config = *config_;
-    if ( !config[key].isNull() )
+    if ( !config_[key].isNull() )
     {
-        return config[key].asBool();
+        return config_[key].asBool();
     }
     if ( loggerHandle_ )
         loggerHandle_->debug( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
     return defaultValue;
 }
-
 void Config::setBool( const std::string& key, bool keyValue )
 {
-    auto& config = *config_;
-    config[key] = keyValue;
+    config_[key] = keyValue;
 }
 
 bool Config::hasColor( const std::string& key ) const
 {
-    const auto& config = *config_;
-    return ( config[key].isObject() &&
-        config[key]["r"].isNumeric() && config[key]["g"].isNumeric() && config[key]["b"].isNumeric() && config[key]["a"].isNumeric() );
+    return ( config_[key].isObject() &&
+        config_[key]["r"].isNumeric() && config_[key]["g"].isNumeric() && config_[key]["b"].isNumeric() && config_[key]["a"].isNumeric() );
 }
-
 Color Config::getColor( const std::string& key, const Color& defaultValue ) const
 {
-    const auto& config = *config_;
-    if ( config[key].isObject() )
+
+    if ( config_[key].isObject() )
     {
-        auto& val = config[key];
+        auto& val = config_[key];
         Color res;
         deserializeFromJson( val, res );
         return res;
@@ -177,25 +168,20 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
             defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;
 }
-
 void Config::setColor( const std::string& key, const Color& keyValue )
 {
-    auto& config = *config_;
-    serializeToJson( keyValue, config[key] );
+    serializeToJson( keyValue, config_[key] );
 }
 
 bool Config::hasFileStack( const std::string& key ) const
 {
-    const auto& config = *config_;
-    return ( config[key].isArray() );
+    return ( config_[key].isArray() );
 }
-
 FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStack& defaultValue ) const
 {
-    const auto& config = *config_;
-    if ( config[key].isArray() )
+    if ( config_[key].isArray() )
     {
-        auto& val = config[key];
+        auto& val = config_[key];
         FileNamesStack res;
         for ( auto& v : val )
         {
@@ -207,26 +193,22 @@ FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStac
         loggerHandle_->debug( "Key {} does not exist, default value returned", key );
     return defaultValue;
 }
-
 void Config::setFileStack( const std::string& key, const FileNamesStack& keyValue )
 {
-    auto& config = *config_;
     for ( auto i = 0; i < keyValue.size(); i++ )
     {
-        config[key][i] = utf8string( keyValue[i] );
+        config_[key][i] = utf8string( keyValue[i] );
     }
 }
 
 bool Config::hasVector2i( const std::string& key ) const
 {
-    const auto& config = *config_;
-    return config[key].isObject() && ( config[key]["x"].isInt() && config[key]["y"].isInt() );
+    return config_[key].isObject() && ( config_[key]["x"].isInt() && config_[key]["y"].isInt() );
 }
 
 Vector2i Config::getVector2i( const std::string& key, const Vector2i& defaultValue /*= Vector2i( 0, 0 ) */ ) const
 {
-    const auto& config = *config_;
-    auto& val = config[key];
+    auto& val = config_[key];
     Vector2i res = defaultValue;
     deserializeFromJson( val, res );
     return res;
@@ -234,16 +216,14 @@ Vector2i Config::getVector2i( const std::string& key, const Vector2i& defaultVal
 
 void Config::setVector2i( const std::string& key, const Vector2i& keyValue )
 {
-    auto& config = *config_;
-    serializeToJson( keyValue, config[key] );
+    serializeToJson( keyValue, config_[key] );
 }
 
 bool MR::Config::hasEnum( const Enum& enumeration, const std::string& key ) const
 {
-    const auto& config = *config_;
-    if ( !config[key].isString() )
+    if ( !config_[key].isString() )
         return false;
-    std::string value = config[key].asString();
+    std::string value = config_[key].asString();
     for ( const char* e : enumeration )
         if ( value == e )
             return true;
@@ -252,10 +232,9 @@ bool MR::Config::hasEnum( const Enum& enumeration, const std::string& key ) cons
 
 int MR::Config::getEnum( const Enum& enumeration, const std::string& key, int defaultValue ) const
 {
-    const auto& config = *config_;
-    if ( !config[key].isString() )
+    if ( !config_[key].isString() )
         return defaultValue;
-    std::string value = config[key].asString();
+    std::string value = config_[key].asString();
     for ( size_t i = 0; i < enumeration.size(); i++ )
         if ( value == enumeration[i] )
             return ( int )i;
@@ -264,32 +243,24 @@ int MR::Config::getEnum( const Enum& enumeration, const std::string& key, int de
 
 void MR::Config::setEnum( const Enum& enumeration, const std::string& key, int keyValue )
 {
-    auto& config = *config_;
-    config[key] = enumeration[keyValue];
+    config_[key] = enumeration[keyValue];
 }
 
 bool Config::hasJsonValue( const std::string& key )
 {
-    return config_->isMember( key );
+    return config_.isMember( key );
 }
 
-Json::Value Config::getJsonValue( const std::string& key )
+Json::Value Config::getJsonValue( const std::string& key, const Json::Value& defaultValue /*= {} */ )
 {
-    return getJsonValue( key, {} );
-}
-
-Json::Value Config::getJsonValue( const std::string& key, const Json::Value& defaultValue )
-{
-    auto& config = *config_;
     if ( hasJsonValue( key ) )
-        return config[key];
+        return config_[key];
     return defaultValue;
 }
 
 void Config::setJsonValue( const std::string& key, const Json::Value& keyValue )
 {
-    auto& config = *config_;
-    config[key] = keyValue;
+    config_[key] = keyValue;
 }
 
 } //namespace MR

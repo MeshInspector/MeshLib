@@ -21,7 +21,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRVoxels/MRObjectVoxels.h"
-#include "MRPch/MRJson.h"
 
 namespace
 {

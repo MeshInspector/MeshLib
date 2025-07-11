@@ -8,6 +8,8 @@ MR_SUPPRESS_WARNING_PUSH
 #if defined( _MSC_VER )
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
 #pragma warning(disable:4127)  //C4127. "Consider using 'if constexpr' statement instead"
+#elif defined( __apple_build_version__ )
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif defined( __clang__ )
 #elif defined( __GNUC__ )
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"

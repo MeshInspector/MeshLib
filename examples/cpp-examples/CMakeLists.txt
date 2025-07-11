@@ -6,6 +6,7 @@ project(cpp-examples CXX)
 
 find_package(MeshLib CONFIG REQUIRED)
 find_package(TBB REQUIRED)
+find_package(Threads)
 
 set(EXAMPLES
   FreeFormDeformation

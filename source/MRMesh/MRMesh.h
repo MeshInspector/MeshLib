@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
 #include "MRMeshProject.h"
@@ -82,7 +83,8 @@ struct [[nodiscard]] Mesh
     void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getLeftTriPoints( topology, points, e, v0, v1, v2 ); }
 
     /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
-    void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { return MR::getLeftTriPoints( topology, points, e, v ); }
+    /// This one is not in the bindings because of the reference-to-array parameter.
+    MR_BIND_IGNORE void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { return MR::getLeftTriPoints( topology, points, e, v ); }
 
     /// returns three points of left face of e: res[0] = orgPnt( e ), res[1] = destPnt( e )
     [[nodiscard]] Triangle3f getLeftTriPoints( EdgeId e ) const { return MR::getLeftTriPoints( topology, points, e ); }
@@ -91,7 +93,8 @@ struct [[nodiscard]] Mesh
     void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { return MR::getTriPoints( topology, points, f, v0, v1, v2 ); }
 
     /// returns three points of given face
-    void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { return MR::getTriPoints( topology, points, f, v ); }
+    /// This one is not in the bindings because of the reference-to-array parameter.
+    MR_BIND_IGNORE void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { return MR::getTriPoints( topology, points, f, v ); }
 
     /// returns three points of given face
     [[nodiscard]] Triangle3f getTriPoints( FaceId f ) const { return MR::getTriPoints( topology, points, f ); }

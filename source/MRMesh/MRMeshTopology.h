@@ -129,9 +129,9 @@ public:
 
     /// gets 3 vertices of given triangular face;
     /// the vertices are returned in counter-clockwise order if look from mesh outside
-    void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
-    void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
-    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
+                   void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
+    MR_BIND_IGNORE void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); } // This one is not in the bindings because of the reference-to-array parameter.
+                   void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
     [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
 
     /// return true if triangular face (f) has (v) as one of its vertices
@@ -146,9 +146,9 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
-               void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-               void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
+                   void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
     [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
@@ -165,8 +165,8 @@ public:
 
     /// gets 3 edges of given triangular face, oriented to have it on the left;
     /// the edges are returned in counter-clockwise order if look from mesh outside
-    void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const { getLeftTriEdges( e0 = edgeWithLeft( f ), e1, e2 ); }
-    void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getLeftTriEdges( e[0] = edgeWithLeft( f ), e[1], e[2] ); }
+                   void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const { getLeftTriEdges( e0 = edgeWithLeft( f ), e1, e2 ); }
+    MR_BIND_IGNORE void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getLeftTriEdges( e[0] = edgeWithLeft( f ), e[1], e[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
 
     /// returns true if the cell to the left of a is quadrangular
     [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;

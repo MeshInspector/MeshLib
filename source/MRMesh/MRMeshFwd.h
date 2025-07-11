@@ -71,27 +71,16 @@
 #ifdef _WIN32
 #   ifdef MRMesh_EXPORTS
 #       define MRMESH_API __declspec(dllexport)
-#       define MRMESH_EXTERN(...)
 #   else
 #       define MRMESH_API __declspec(dllimport)
-#       define MRMESH_EXTERN(...) extern __VA_ARGS__;
 #   endif
 #   define MRMESH_CLASS
 #else
-#   define MRMESH_API __attribute__((visibility("default")))
-#   define MRMESH_EXTERN(...) extern __VA_ARGS__;
+#   define MRMESH_API   __attribute__((visibility("default")))
 // to fix undefined reference to `typeinfo/vtable`
 // Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
 //   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
 #   define MRMESH_CLASS __attribute__((visibility("default")))
-#endif
-
-#ifdef _MSC_VER
-#   define MRMESH_CLASS_INST_DECL
-#   define MRMESH_CLASS_INST_DEF  MRMESH_API
-#else
-#   define MRMESH_CLASS_INST_DECL MRMESH_API
-#   define MRMESH_CLASS_INST_DEF
 #endif
 
 namespace MR

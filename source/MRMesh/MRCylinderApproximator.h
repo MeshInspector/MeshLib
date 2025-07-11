@@ -20,11 +20,6 @@ MR_SUPPRESS_WARNING_POP
 namespace MR
 {
 
-MR_SUPPRESS_WARNING_PUSH
-#if defined( _MSC_VER )
-#pragma warning(disable:4251) // 'type': 'type1' needs to have dll - interface to be used by clients of 'type2'
-#endif
-
 template <typename T>
 class Cylinder3Approximation
 {
@@ -71,16 +66,17 @@ private:
     Eigen::Matrix <T, 6, 6>  precomputedF2_ = {};
 
 public:
-    Cylinder3Approximation();
+    MRMESH_API Cylinder3Approximation();
 
-    void reset();
+    MRMESH_API void reset();
+
     // Solver for CylinderFitterType::HemisphereSearchFit type
     // thetaResolution_, phiResolution_  must be positive and as large as it posible. Price is CPU time. (~ 100 gives good results).
-    T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true );
+    MRMESH_API T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true );
 
     // Solver for CylinderFitterType::SpecificAxisFit type
     // Simplet way in case of we already know clinder axis
-    T solveSpecificAxis( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, MR::Vector3<T> const& cylinderAxis );
+    MRMESH_API T solveSpecificAxis( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, MR::Vector3<T> const& cylinderAxis );
 
 private:
     // main solver.
@@ -109,10 +105,5 @@ private:
 
     T SpecificAxisFit( Eigen::Vector<T, 3>& PC, Eigen::Vector<T, 3>& W, T& resultedRootSquare );
 };
-
-MRMESH_EXTERN( template class MRMESH_CLASS_INST_DECL Cylinder3Approximation<float> )
-MRMESH_EXTERN( template class MRMESH_CLASS_INST_DECL Cylinder3Approximation<double> )
-
-MR_SUPPRESS_WARNING_POP
 
 }

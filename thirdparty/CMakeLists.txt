@@ -194,5 +194,6 @@ add_subdirectory(./laz-perf)
 
 find_package(Eigen3 QUIET)
 IF(EIGEN3_VERSION_STRING VERSION_LESS 3.4)
+  set(CMAKE_POLICY_DEFAULT_CMP0090 NEW)
   add_subdirectory(./eigen)
 ENDIF()

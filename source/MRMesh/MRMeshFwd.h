@@ -193,7 +193,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector3,
     ( Vector3d,   Vector3<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Vector3ll [[deprecated("Use `Vector3i64` instead.")]] MR_BIND_IGNORE = Vector3<long long>;
+using Vector3ll [[deprecated("Use `Vector3i64` instead.")]] = Vector3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Vector4,
@@ -204,7 +204,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Vector4,
     ( Vector4d,   Vector4<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Vector4ll [[deprecated("Use `Vector4i64` instead.")]] MR_BIND_IGNORE = Vector4<long long>;
+using Vector4ll [[deprecated("Use `Vector4i64` instead.")]] = Vector4<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix2,
@@ -215,7 +215,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix2,
     ( Matrix2d,   Matrix2<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Matrix2ll [[deprecated("Use `Matrix2i64` instead.")]] MR_BIND_IGNORE = Matrix2<long long>;
+using Matrix2ll [[deprecated("Use `Matrix2i64` instead.")]] = Matrix2<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix3,
@@ -226,7 +226,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix3,
     ( Matrix3d,   Matrix3<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Matrix3ll [[deprecated("Use `Matrix3i64` instead.")]] MR_BIND_IGNORE = Matrix3<long long>;
+using Matrix3ll [[deprecated("Use `Matrix3i64` instead.")]] = Matrix3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix4,
@@ -237,7 +237,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix4,
     ( Matrix4d,   Matrix4<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Matrix4ll [[deprecated("Use `Matrix4i64` instead.")]] MR_BIND_IGNORE = Matrix4<long long>;
+using Matrix4ll [[deprecated("Use `Matrix4i64` instead.")]] = Matrix4<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix2,
@@ -248,7 +248,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix2,
     ( SymMatrix2d,   SymMatrix2<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using SymMatrix2ll [[deprecated("Use `SymMatrix2i64` instead.")]] MR_BIND_IGNORE = SymMatrix2<long long>;
+using SymMatrix2ll [[deprecated("Use `SymMatrix2i64` instead.")]] = SymMatrix2<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix3,
@@ -259,7 +259,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix3,
     ( SymMatrix3d,   SymMatrix3<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using SymMatrix3ll [[deprecated("Use `SymMatrix3i64` instead.")]] MR_BIND_IGNORE = SymMatrix3<long long>;
+using SymMatrix3ll [[deprecated("Use `SymMatrix3i64` instead.")]] = SymMatrix3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
@@ -270,7 +270,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
     ( SymMatrix4d,   SymMatrix4<double>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] MR_BIND_IGNORE = SymMatrix4<long long>;
+using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] = SymMatrix4<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct), AffineXf,
@@ -385,9 +385,9 @@ MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
     ( Box3d,   Box<Vector3<double>>       )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
-using Box1ll [[deprecated("Use `Box1i64` instead.")]] MR_BIND_IGNORE = Box<long long>;
-using Box2ll [[deprecated("Use `Box2i64` instead.")]] MR_BIND_IGNORE = Box<Vector2<long long>>;
-using Box3ll [[deprecated("Use `Box3i64` instead.")]] MR_BIND_IGNORE = Box<Vector3<long long>>;
+using Box1ll [[deprecated("Use `Box1i64` instead.")]] = Box<long long>;
+using Box2ll [[deprecated("Use `Box2i64` instead.")]] = Box<Vector2<long long>>;
+using Box3ll [[deprecated("Use `Box3i64` instead.")]] = Box<Vector3<long long>>;
 #endif
 
 template <typename T> using MinMax = Box<T>;

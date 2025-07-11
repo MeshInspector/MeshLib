@@ -57,6 +57,7 @@ ELSE()
     )
   ELSEIF(APPLE)
     # FIXME: OpenVDB's CMake config cannot be found
+    set(_CMAKE_MODULE_PATH_BACKUP ${CMAKE_MODULE_PATH})
     list(APPEND CMAKE_MODULE_PATH
       "${HOMEBREW_PREFIX}/lib/cmake/OpenVDB/"
     )
@@ -70,8 +71,10 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PUBLIC
       OpenVDB::openvdb
     )
+    set(CMAKE_MODULE_PATH ${_CMAKE_MODULE_PATH_BACKUP})
   ELSE()
     # TODO: correct OpenVDB module search
+    set(_CMAKE_MODULE_PATH_BACKUP ${CMAKE_MODULE_PATH})
     list(APPEND CMAKE_MODULE_PATH
       "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/OpenVDB/"
       "/usr/lib/cmake/OpenVDB/"
@@ -84,6 +87,7 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PUBLIC
       OpenVDB::openvdb
     )
+    set(CMAKE_MODULE_PATH ${_CMAKE_MODULE_PATH_BACKUP})
   ENDIF()
 ENDIF()
 

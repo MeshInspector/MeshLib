@@ -12,13 +12,8 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
-using Int64 = std::int64_t;
-static_assert( sizeof( Int64 ) == 8 );
 using Int128 = boost::multiprecision::int128_t;
 using Int256 = boost::multiprecision::int256_t;
-
-using Vector2i64 = Vector2<Int64>;
-using Vector3i64 = Vector3<Int64>;
 
 using Vector2i128 = Vector2<Int128>;
 using Vector3i128 = Vector3<Int128>;

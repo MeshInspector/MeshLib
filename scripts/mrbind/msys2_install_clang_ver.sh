@@ -6,7 +6,7 @@
 # The existing Clang version, if any, is uninstalled.
 # The packages are downloaded to `~/clang_downloads`. If they already exist, they aren't downloaded again.
 
-set -euo pipefail
+set -euxo pipefail
 
 # Check that the number of arguments (`$#`) is one, and that the first argument (`$1`) isn't empty.
 [[ $# == 1 && $1 != "" ]] || (echo "Must specify one argument, the desired Clang version."; exit 1)

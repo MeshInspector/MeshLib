@@ -758,12 +758,26 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
 
+    const ImVec2 labelStartPos = ImGui::GetCursorScreenPos();
+    const ImVec2 labelTextSize = ImGui::CalcTextSize( label, nullptr, true );
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
     if ( titleFont )
         ImGui::PopFont();
 
     ImGui::SameLine();
+
+    if ( params.customHeaderFn )
+    {
+        const float labelOffsetX = labelTextSize.x + style.ItemInnerSpacing.x * params.menuScaling;
+        const float labelOffsetY = 0.5f * ( titleBarHeight - 2.f * borderSize - labelTextSize.y );
+
+        const ImVec2 customHeaderCursorPos{ labelStartPos.x + labelOffsetX, window->Rect().Min.y + labelOffsetY };
+        ImGui::SetCursorScreenPos( customHeaderCursorPos );
+
+        params.customHeaderFn();
+        ImGui::SameLine();
+    }
 
     if ( params.helpBtnFn )
     {

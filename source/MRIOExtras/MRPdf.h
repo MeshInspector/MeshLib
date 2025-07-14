@@ -79,7 +79,7 @@ public:
     float getCursorPosY() const { return cursorY_; }
 
     /// Checking the ability to work with a document
-    operator bool() const;
+    MRIOEXTRAS_API operator bool() const;
 
 private:
     struct State;

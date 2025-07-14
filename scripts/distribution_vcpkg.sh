@@ -27,6 +27,7 @@ if [[ ${ARCH} -eq "x86_64" ]] ; then
 elif [[ ${ARCH} -eq "aarch64" ]] ; then
   ARCH="arm64"
 fi
+echo ${ARCH}
 
 # create distr dirs
 DISTR_DIR=./vcpkg-distr

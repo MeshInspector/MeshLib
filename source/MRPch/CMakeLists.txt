@@ -20,8 +20,6 @@ IF(MR_PCH)
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
-    # hack to make it work with new version of fmt
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_WCHAR_FILENAMES)
     # FIXME: comment required
     target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
 

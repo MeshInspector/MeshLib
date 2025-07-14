@@ -284,6 +284,14 @@ TEST( MRMesh, findTwoSegmentsIntersection )
     EXPECT_EQ( *v, d );
 }
 
+TEST( MRMesh, orientParaboloid3d )
+{
+    // large numbers requiring more than 64-bit arithmetic, and degeneration (b==c)
+    const Vector2i a{ 54209929, -710917541 };
+    const Vector2i b{ 0, -365379885 };
+    EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
+}
+
 TEST( MRMesh, PrecisePredicates3 )
 {
     const std::array<PreciseVertCoords, 5> vs = 

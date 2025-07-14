@@ -122,7 +122,9 @@ jobs:
 
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}
-        run: ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
+        run: |
+          ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
+          mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}

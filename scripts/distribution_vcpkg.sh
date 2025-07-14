@@ -21,14 +21,6 @@ if [ ${1} ]; then
 fi
 echo $version > build/Release/bin/mr.version
 
-ARCH=$(uname --machine)
-if [[ ${ARCH} -eq "x86_64" ]] ; then
-  ARCH="x64"
-elif [[ ${ARCH} -eq "aarch64" ]] ; then
-  ARCH="arm64"
-fi
-echo ${ARCH}
-
 # create distr dirs
 DISTR_DIR=./vcpkg-distr
 if [ -d ${DISTR_DIR} ]; then
@@ -41,6 +33,6 @@ cp -a ${VCPKG_ROOT}/installed/${VCPKG_TRIPLET}/* ${DISTR_DIR}/
 # install MeshLib files
 cmake --install ./build/Release --prefix ${DISTR_DIR}
 # create tar.xz file
-tar --create --use-compress-program='xz -9 -T0' --file=meshlib_linux-vcpkg-${ARCH}.tar.xz --directory=${DISTR_DIR} .
+tar --create --use-compress-program='xz -9 -T0' --file=meshlib_linux-vcpkg.tar.xz --directory=${DISTR_DIR} .
 
 rm -rf ${DISTR_DIR}

@@ -15,6 +15,9 @@ on:
       need_windows_vcpkg_rebuild:
         required: true
         type: boolean
+      vcpkg_docker_image_tag:
+        required: true
+        type: string
       vs19_vcpkg_version:
         required: true
         type: string
@@ -112,7 +115,7 @@ jobs:
             os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
     runs-on: ${{ matrix.os }}
     env:
-      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
       - name: Remove unused Docker data

@@ -1,5 +1,6 @@
 #include "MRLog.h"
 
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWinapi.h"
 
 namespace MR

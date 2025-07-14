@@ -17,6 +17,7 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRSubfeatures.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR::RenderFeatures
 {

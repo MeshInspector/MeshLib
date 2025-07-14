@@ -85,13 +85,13 @@ git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 \endcode
  2. \b (Optional) **Speed Up with AWS CLI**
   - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
- 3. **Install MeshLib Third-Party Dependencies**
+ 3. **Install MeshLib [Third-Party Dependencies](\ref ThirdParty)**
   - Execute the following commands to run the MeshLib third-party installation script:
 \code{.cmd}
 cd vcpkg
 ..\MeshLib\thirdparty\install.bat
 \endcode
-  - This script automates the installation of necessary third-party dependencies.
+  - This script automates the installation of necessary [Third-Party Dependencies](\ref ThirdParty).
  4. **Build and Run Visual Studio Solution**
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
@@ -137,7 +137,7 @@ MeshViewer
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build Dependencies and Compile**:
+ 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
@@ -208,7 +208,7 @@ brew install git
 git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build Dependencies and Compile**:
+ 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
@@ -279,7 +279,7 @@ emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
 \code{.sh}
 cd ~/MeshLib
 \endcode
- - Run the script to build third-party dependencies. When prompted, select \b Emscripten as the build target:
+ - Run the script to build [Third-Party Dependencies](\ref ThirdParty). When prompted, select \b Emscripten as the build target:
   - Choose `y` for multithreaded, `s` for single-threaded, or `n` for a standard Linux build.
 \code{.sh}
 ./scripts/build_thirdparty.sh

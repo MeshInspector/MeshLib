@@ -284,6 +284,14 @@ TEST( MRMesh, findTwoSegmentsIntersection )
     EXPECT_EQ( *v, d );
 }
 
+TEST( MRMesh, orientParaboloid3d )
+{
+    // large numbers requiring more than 64-bit arithmetic, and degeneration (b==c)
+    const Vector2i a{ 54209929, -710917541 };
+    const Vector2i b{ 0, -365379885 };
+    EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
+}
+
 TEST( MRMesh, PrecisePredicates3 )
 {
     const std::array<PreciseVertCoords, 5> vs = 
@@ -328,6 +336,22 @@ TEST( MRMesh, PrecisePredicates3More )
     // triangles 045 and 123 intersect one with another
     EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[1], vs[2] } ).doIntersect );
     EXPECT_TRUE( doTriangleSegmentIntersect( { vs[0], vs[4], vs[5], vs[3], vs[1] } ).doIntersect );
+
+    // intersection of 67 and 045 is closer to 6 than intersection of 67 and 123
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[5], vs[1], vs[2], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[7], vs[6], vs[0], vs[4], vs[5], vs[1], vs[2], vs[3] } ) );
+
+    // one shared point 0: triangles 045 and 023 do not intersect one another
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[5], vs[0], vs[2], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[2], vs[3], vs[0], vs[4], vs[5] } ) );
+
+    // intersection of 67 and 045 is closer to 6 than intersection of 67 and 143 (one shared point 4)
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[5], vs[1], vs[4], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[6], vs[7], vs[1], vs[4], vs[3], vs[0], vs[4], vs[5] } ) );
+
+    // intersection of 67 and 045 is closer to 6 than intersection of 67 and 043 (two shared points 0 and 4)
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[5], vs[0], vs[4], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[3], vs[0], vs[4], vs[5] } ) );
 }
 
 TEST( MRMesh, PrecisePredicates3FullDegen )
@@ -351,6 +375,97 @@ TEST( MRMesh, PrecisePredicates3FullDegen )
         }
     }
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
+TEST( MRMesh, PrecisePredicates3FullDegen2 )
+{
+    std::array<PreciseVertCoords, 8> vs;
+    for ( VertId i = 0_v; i < 8; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // test that maximum degree in segmentIntersectionOrder can cope with most degenerate situation possible
+
+    // no shared vertices
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+         && doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+
+    // one shared vertex
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+         && doTriangleSegmentIntersect( { vs[5], vs[6], vs[2], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
+TEST( MRMesh, PreciseSegmentIntersectionOrder3a )
+{
+    PreciseVertCoords vs[8] =
+    {
+        // s:
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 3, 0, 0 ) },
+        // ta:
+        PreciseVertCoords{ 2_v, Vector3i( 1,-1,-1 ) },
+        PreciseVertCoords{ 3_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 1, 0, 1 ) },
+        // tb:
+        PreciseVertCoords{ 5_v, Vector3i( 2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 2, 0, 1 ) }
+    };
+
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[6], vs[5], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[1], vs[0], vs[3], vs[2], vs[4], vs[6], vs[5], vs[7] } ) );
+
+    // swapped ta and tb
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[4], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[7], vs[6], vs[2], vs[4], vs[3] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[1], vs[0], vs[5], vs[7], vs[6], vs[2], vs[4], vs[3] } ) );
+
+    // one shared point in ta and tb
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[4] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[6], vs[4], vs[5], vs[6], vs[7] } ) );
+
+    // two shared points in ta and tb
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[3], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[4], vs[3] } ) );
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[6], vs[7], vs[5], vs[6], vs[7] } ) );
+}
+
+TEST( MRMesh, PreciseSegmentIntersectionOrder3b )
+{
+    PreciseVertCoords vs[8] =
+    {
+        // s:
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 4, 0, 0 ) },
+        // shared vertex of tris:
+        PreciseVertCoords{ 2_v, Vector3i( 2, 0, 1 ) },
+        // ta:
+        PreciseVertCoords{ 3_v, Vector3i( 1,  100, -1 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 1, -100, -1 ) },
+        // tb:
+        PreciseVertCoords{ 5_v, Vector3i( 3,    1, -1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2,   -1, -1 ) }
+    };
+
+    EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[2], vs[2], vs[3], vs[4] } ) );
 }
 
 TEST( MRMesh, getToIntConverter )

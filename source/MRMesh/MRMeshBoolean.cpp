@@ -24,6 +24,7 @@
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
 #include "MRParallelFor.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {

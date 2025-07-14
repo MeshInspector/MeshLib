@@ -43,6 +43,12 @@ struct TriangleSegmentIntersectResult
 [[nodiscard]] MRMESH_API TriangleSegmentIntersectResult doTriangleSegmentIntersect(
     const std::array<PreciseVertCoords, 5> & vs );
 
+/// given line segment s=01 and two triangles ta=234, tb=567 known to intersect it, finds the order of intersection using precise predicates:
+/// true:  s[0], s ^ ta, s ^ tb, s[1]
+/// false: s[0], s ^ tb, s ^ ta, s[1]
+/// segments ta and tb can have at most two shared points, all other points must be unique
+[[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
+
 /// float-to-int coordinate converter
 using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
 /// int-to-float coordinate converter

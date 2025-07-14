@@ -6,6 +6,7 @@ project(cpp-examples CXX)
 
 find_package(MeshLib CONFIG REQUIRED)
 find_package(TBB REQUIRED)
+find_package(Threads)
 
 set(EXAMPLES
   FreeFormDeformation
@@ -33,8 +34,8 @@ set(EXAMPLES
 foreach(TARGET ${EXAMPLES})
   add_executable(${TARGET} ${TARGET}.dox.cpp)
   target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-  target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
   target_link_directories(${TARGET} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
+  target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
 endforeach()
 # MeshFromText additionally depends on MRSymbolMesh
 target_link_libraries(MeshFromText PRIVATE MeshLib::MRSymbolMesh)
@@ -44,17 +45,11 @@ target_link_libraries(Triangulation PRIVATE MeshLib::MRVoxels)
 # MeshLoadSave additionally depends on MRIOExtras
 target_link_libraries(MeshLoadSave PRIVATE MeshLib::MRIOExtras)
 
-find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-
 add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
-target_compile_definitions(MRBasedMainFunc PRIVATE SPDLOG_FMT_EXTERNAL)
 target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer fmt::fmt spdlog::spdlog)
 target_link_directories(MRBasedMainFunc PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
+target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)
 if(EMSCRIPTEN)
-  target_link_options(MRBasedMainFunc PRIVATE -sUSE_WEBGL2=1)
-  target_link_options(MRBasedMainFunc PRIVATE -sUSE_GLFW=3)
-  target_link_options(MRBasedMainFunc PRIVATE -sUSE_LIBPNG=1)
-  target_compile_definitions(MRBasedMainFunc PRIVATE SPDLOG_WCHAR_FILENAMES)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}")
 endif()

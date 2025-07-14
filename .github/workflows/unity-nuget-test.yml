@@ -63,22 +63,23 @@ jobs:
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3643.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\*" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --skip-existing
       
       - name: Move nuget package to repo folder
-        # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step
+        # with renaming MeshLib_v3.1.2.3.nupkg to MeshLib.3.1.2.3.nupkg
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
           if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
+            $newName = $pkg.Name -replace '_(?=v)','' -replace '^(.+)v','${1}.'
+            Move-Item $pkg.FullName "C:/work/nuget_repo/$newName"
           } else {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1

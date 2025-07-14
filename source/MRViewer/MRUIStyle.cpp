@@ -454,7 +454,6 @@ bool buttonIconEx(
 
     StringDetail curDetail;
     curDetail.start = text.data();
-    auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
 
     const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x - 2.0f * style.FramePadding.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
@@ -474,9 +473,12 @@ bool buttonIconEx(
             return oldLength + cSpaceWidth + additionalLength;
     };
 
-    if ( text.find( "##" ) != 0 )
+    auto sharpsPos = text.find( "##" );
+    std::string_view textView = std::string_view( text.c_str(), sharpsPos == std::string::npos ? text.size() : sharpsPos );
+    auto endText = textView.end();
+    if ( textView.begin() != endText )
     {
-        split( text, " ", [&] ( std::string_view str )
+        split( textView, " ", [&] ( std::string_view str )
         {
             startWord = str.data();
             endWord = &str.back() + 1;
@@ -520,7 +522,7 @@ bool buttonIconEx(
         if ( vecDetail.empty() )
         {
             iconYPadding = ( buttonSize.y - iconSize.y ) / 2.0f;
-            iconYPadding = std::max( iconYPadding, style.FramePadding.x );
+            iconYPadding = std::max( iconYPadding, style.FramePadding.y );
         }
         else
         {
@@ -571,7 +573,7 @@ bool buttonIconEx(
     {
         ImVec2 screenPos = winPos - scroll;
         screenPos.x += startPosText.x - detail.lenght / 2.0f;
-        screenPos.y += startPosText.y + ( style.FramePadding.y + cFontSize ) * numStr;
+        screenPos.y += startPosText.y + ( cFontSize )*numStr;
         ImGui::GetWindowDrawList()->AddText(
                 font,
                 cFontSize,

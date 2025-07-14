@@ -193,7 +193,7 @@ struct CustomStatePluginWindowParameters
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
     /// outside owned parameter for windows with resize option
     ImVec2* changedSize{ nullptr };
-    /// customized dialog header items
+    /// draw custom header items immediately after the caption
     std::function<void()> customHeaderFn = nullptr;
     /// reaction on press "Help" button
     std::function<void()> helpBtnFn = nullptr;

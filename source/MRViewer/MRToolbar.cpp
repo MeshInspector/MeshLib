@@ -90,7 +90,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.0f );
     ImGui::Begin(
-        "QuickAccess##[rect_allocator_ignore]", nullptr,
+        "Toolbar##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing
     );
@@ -143,7 +143,6 @@ void Toolbar::drawToolbar()
         buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
         ImGui::SameLine();
     }
-    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x / 2.f );
 
@@ -165,6 +164,8 @@ void Toolbar::drawToolbar()
                            ImGui::GetCursorPosY() + ( customizeBtnSize.y - textSize.y ) / 2.f );
     if ( ImGui::Button( "##ToolbarCustomizeBtn", customizeBtnSize ) )
         openCustomize();
+
+    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
@@ -401,6 +402,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
     if ( UI::inputText( "##QuickAccessSearch", searchString_ ) )
     {
+        assert( searchString_ != "123" ); // TMP for task test
         searchResult_.clear();
         searchResult_.resize( RibbonSchemaHolder::schema().tabsMap.size() );
         auto searchResRaw_ = RibbonSchemaHolder::search( searchString_, {} );

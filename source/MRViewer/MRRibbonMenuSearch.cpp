@@ -395,7 +395,6 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
 
 void RibbonMenuSearch::updateSearchResult_()
 {
-    assert( searchLine_ != "123" ); // TMP for task test
     searchResult_ = RibbonSchemaHolder::search( searchLine_, { &captionCount_, &searchResultWeight_, requirementsFunc_ } );
     hightlightedSearchItem_ = 0;
 }

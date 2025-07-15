@@ -402,7 +402,6 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
     if ( UI::inputText( "##QuickAccessSearch", searchString_ ) )
     {
-        assert( searchString_ != "123" ); // TMP for task test
         searchResult_.clear();
         searchResult_.resize( RibbonSchemaHolder::schema().tabsMap.size() );
         auto searchResRaw_ = RibbonSchemaHolder::search( searchString_, {} );

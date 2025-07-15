@@ -22,6 +22,10 @@ on:
       upload_test_artifacts:
         required: true
         type: boolean
+      mrbind:
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   linux-vcpkg-build-test:

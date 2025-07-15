@@ -51,9 +51,11 @@ jobs:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
+            cxx-standard: 23
           - compiler: GCC 11
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
+            cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
           - arch: arm64
@@ -108,7 +110,29 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind
+
+      - name: Install mrbind
+        if: ${{ inputs.mrbind }}
+        run: scripts/mrbind/install_mrbind_centos.sh
+
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          python3 -m ensurepip --upgrade
+          python3 -m pip install --upgrade pip
+          echo $PATH >> $GITHUB_PATH
+
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
+
+      - name: Build mrbind-pybind11
+        if: ${{ inputs.mrbind }}
+        run: |
+          cmake -S thirdparty/mrbind-pybind11 -B pybind11_build -D CMAKE_INSTALL_PREFIX=${PWD} -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTING=OFF -D PYBIND11_INSTALL=ON -D PYBIND11_NONLIMITEDAPI_BUILD_STUBS=OFF 
+          cmake --build pybind11_build --parallel $(nproc)
+          cmake --install pybind11_build
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -119,9 +143,16 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DMR_CXX_STANDARD=23
+            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMESHLIB_PYTHON_SUPPORT=OFF
+
+      - name: Generate and build MRBind bindings
+        if: ${{ inputs.mrbind }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+          CXX_FOR_BINDINGS: /usr/bin/clang++
+          VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
@@ -139,6 +170,25 @@ jobs:
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: C Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: Python Sanity Tests
+        timeout-minutes: 8
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+
+      - name: Python Regression Tests
+        if: ${{ inputs.internal_build }}
+        uses: ./.github/actions/python-regression-tests
+        with:
+          build_config: ${{ matrix.config }}
+          mrbind: ${{ inputs.mrbind }}
+          pytest_args: "--run-cuda=negative"
+          smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
+          test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
+          upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 19' }}

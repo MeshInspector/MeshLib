@@ -69,6 +69,25 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+      - name: Get AWS instance type
+        run: |
+          TOKEN=$(curl -fsS --max-time 2 \
+            -X PUT "http://169.254.169.254/latest/api/token" \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 10" || true)
+
+          AWS_INSTANCE_TYPE=$(curl -fsS --max-time 2 \
+            -H "X-aws-ec2-metadata-token: $TOKEN" \
+            "http://169.254.169.254/latest/meta-data/instance-type" || true)
+          
+          # if not an EC2 instance
+          if test -z "$AWS_INSTANCE_TYPE" ; then
+            AWS_INSTANCE_TYPE="self-hosted"
+          fi
+
+          echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
+          echo $AWS_INSTANCE_TYPE
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -81,6 +100,7 @@ jobs:
           target_arch: ${{ matrix.arch }}
           cxx_compiler: ${{ matrix.cxx-compiler }}
           build_config: ${{ matrix.config }}
+          aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
 
       - name: Checkout third-party submodules
         run: |

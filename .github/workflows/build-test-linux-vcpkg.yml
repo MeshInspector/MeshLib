@@ -158,6 +158,21 @@ jobs:
           VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
+      - name: Build Python shim libs
+        if: ${{ inputs.mrbind }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+          CXX_FOR_BINDINGS: /usr/bin/clang++
+          VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
+        run: |
+          python3 -m pip install uv
+          for PYTHON_VER in $(cat scripts/mrbind-pybind11/python_versions.txt | xargs) ; do
+            export PKG_CONFIG_PATH=$(uv run -p ${PYTHON_VER} python -c "import sysconfig; print(sysconfig.get_config_var('LIBPC'))")
+            make shims -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin PYTHON_VERSIONS=${PYTHON_VER}
+          done
+          # debug
+          ls -l ./build/${{ matrix.config }}/bin/meshlib/
+
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
 

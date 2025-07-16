@@ -124,7 +124,9 @@ jobs:
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Work-around old image
-        run: dnf -y install python3.12-pip
+        run: |
+          echo $PATH
+          dnf -y install python3.12-pip
 
       - name: Create virtualenv
         run: |
@@ -148,8 +150,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMRCUDA_OVERRIDE_HOST_COMPILER=ON
-            -DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler
+            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-10/root/usr/bin/g++
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

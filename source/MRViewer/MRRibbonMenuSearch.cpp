@@ -63,7 +63,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     if ( !isSmallUI_ && resultsList.empty() )
         return;
 
-    UI::TestEngine::pushTree( "RibbonMenuSearch" );
+    UI::TestEngine::pushTree( "RibbonSearchPopup" );
     MR_FINALLY{ UI::TestEngine::popTree(); };
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );

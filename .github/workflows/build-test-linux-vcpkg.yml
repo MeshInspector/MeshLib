@@ -39,7 +39,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 11]
+        compiler: [Clang 19, GCC 12]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -56,9 +56,9 @@ jobs:
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-          - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
+          - compiler: GCC 12
+            cxx-compiler: /opt/rh/gcc-toolset-12/root/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-12/root/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
@@ -138,8 +138,12 @@ jobs:
           cmake --build pybind11_build --parallel $(nproc)
           cmake --install pybind11_build
 
+      - name: Install GCC 12
+        if: ${{ matrix.compiler == 'GCC 12' }}
+        run: |
+          dnf install gcc-toolset-12
+
       - name: Build
-        run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
@@ -149,6 +153,11 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+        run: |
+          if [[ "${{ matrix.compiler }}" -eq "GCC 12" ]] ; then
+            source /opt/rh/gcc-toolset-12/enable
+          fi
+          ./scripts/build_source.sh
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind }}
@@ -156,7 +165,11 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
           CXX_FOR_BINDINGS: /usr/bin/clang++
           VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+        run: |
+          if [[ "${{ matrix.compiler }}" -eq "GCC 12" ]] ; then
+            source /opt/rh/gcc-toolset-12/enable
+          fi
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       # TODO: move to pip-build.yml after migrating from ubuntu20
       #- name: Build Python shim libs

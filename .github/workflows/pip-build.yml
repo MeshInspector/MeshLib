@@ -100,6 +100,12 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
 
+      - name: Install mrbind
+        # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
+        run: |
+          ./scripts/mrbind/install_mrbind_rockylinux.sh
+          free -h
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -133,10 +139,14 @@ jobs:
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -multi-cmd
+        run: |
+          python3.12 -m venv ./test_venv
+          source ./test_venv/bin/activate
+          python3.12 -m pip install -r ./requirements/python.txt
+          python3.12 -m pip install pytest
+          python3.12 ./../../../scripts/run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
-        shell: bash
         run: |
           python3.12 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate

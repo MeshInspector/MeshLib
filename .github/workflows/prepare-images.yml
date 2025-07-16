@@ -108,14 +108,15 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ x64, arm64 ]
+        os: [ rockylinux8 ] # also available: rockylinux9
         include:
           - arch: x64
-            os: ubuntu-latest
+            runner: ubuntu-latest
           - arch: arm64
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-    runs-on: ${{ matrix.os }}
+            runner: [ self-hosted, linux-arm64, on-demand, meshinspector ]
+    runs-on: ${{ matrix.runner }}
     env:
-      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
       - name: Remove unused Docker data
@@ -131,7 +132,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux vcpkg image
-        run: docker build -f ./docker/vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+        run: docker build -f ./docker/${{ matrix.os }}-vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
 
       - name: Push Linux vcpkg image
         run: docker push ${{ env.image }}

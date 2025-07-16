@@ -57,8 +57,8 @@ jobs:
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
           - compiler: GCC 10
-            cxx-compiler: g++
-            c-compiler: gcc
+            cxx-compiler: /opt/rh/gcc-toolset-10/root/usr/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-10/root/usr/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest

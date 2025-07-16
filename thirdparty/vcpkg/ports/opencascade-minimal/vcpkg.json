@@ -6,8 +6,6 @@
   "license": "LGPL-2.1-only",
   "supports": "!xbox",
   "dependencies": [
-    "eigen3",
-    "tbb",
     {
       "name": "vcpkg-cmake",
       "host": true
@@ -16,5 +14,26 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "default-features": [
+    "eigen",
+    "tbb"
+  ],
+  "features": {
+    "eigen": {
+      "description": "Enable optional usage of Eigen",
+      "dependencies": [
+        "eigen3"
+      ]
+    },
+    "lto": {
+      "description": "Build with link-time optimization"
+    },
+    "tbb": {
+      "description": "Enable optional usage of tbb",
+      "dependencies": [
+        "tbb"
+      ]
+    }
+  }
 }

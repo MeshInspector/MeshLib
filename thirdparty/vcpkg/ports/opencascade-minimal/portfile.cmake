@@ -20,12 +20,22 @@ else()
     set(BUILD_TYPE "Static")
 endif()
 
+vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
+    FEATURES
+        eigen   USE_EIGEN
+        tbb     USE_TBB
+)
+
+if ("lto" IN_LIST FEATURES)
+    list(APPEND FEATURE_OPTIONS "-DBUILD_OPT_PROFILE=Production")
+endif()
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
+        ${FEATURE_OPTIONS}
         -DBUILD_LIBRARY_TYPE=${BUILD_TYPE}
         -DBUILD_CPP_STANDARD=C++20
-        -DBUILD_OPT_PROFILE=Production
         -DBUILD_RELEASE_DISABLE_EXCEPTIONS=ON
         -DBUILD_MODULE_ApplicationFramework=OFF
         -DBUILD_MODULE_DataExchange=OFF
@@ -43,14 +53,12 @@ vcpkg_cmake_configure(
         -DINSTALL_SAMPLES=OFF
         -DINSTALL_TEST_CASES=OFF
         -DUSE_DRACO=OFF
-        -DUSE_EIGEN=ON
         -DUSE_FREETYPE=OFF
         -DUSE_FREEIMAGE=OFF
         -DUSE_OPENGL=OFF
         -DUSE_OPENVR=OFF
         -DUSE_GLES2=OFF
         -DUSE_RAPIDJSON=OFF
-        -DUSE_TBB=ON
         -DUSE_TK=OFF
         -DUSE_VTK=OFF
         -DUSE_XLIB=OFF

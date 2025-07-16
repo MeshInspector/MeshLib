@@ -106,7 +106,7 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     return true;
 }
 
-bool ccwLess( const std::array<PreciseVertCoords2, 4> & vs )
+bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
 {
     if ( auto d = area( vs[0].pt, vs[1].pt, vs[2].pt ) - area( vs[0].pt, vs[1].pt, vs[3].pt ) )
         return d < 0;
@@ -114,7 +114,7 @@ bool ccwLess( const std::array<PreciseVertCoords2, 4> & vs )
     // areas are equal, apply simulation-of-simplicity
     const auto ds = getPointDegrees( vs );
 
-    // 84 was found experimentally for ccwLess with all 4 points having equal coordinates (but different ids);
+    // 84 was found experimentally to be enough for all cases with 4 points having equal coordinates (but different ids);
     // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
     constexpr int MaxD = 84;
     auto poly = ccwPoly<MaxD>( ds[0], ds[1], ds[2], 3 );
@@ -357,7 +357,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
 
     const auto ds = getPointDegrees( vs );
 
-    // 840 was found experimentally for segmentIntersectionOrder with all 6 points having equal coordinates (but different ids);
+    // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
     // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
     constexpr int MaxD = 840;
     const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );

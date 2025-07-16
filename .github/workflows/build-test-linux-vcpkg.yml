@@ -39,7 +39,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 10]
+        compiler: [Clang 19, GCC 14]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -47,25 +47,25 @@ jobs:
           - full_config_build: false
             compiler: Clang 19
             config: Debug
-          # Do not run Release GCC 10 build on every commit (but only once a day)
+          # Do not run Release GCC 14 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 10
+            compiler: GCC 14
             config: Release
         include:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-          - compiler: GCC 10
-            cxx-compiler: /opt/rh/gcc-toolset-10/root/usr/bin/g++
-            c-compiler: /opt/rh/gcc-toolset-10/root/usr/bin/gcc
+          - compiler: GCC 14
+            cxx-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-14/root/usr/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
           - arch: arm64
             os: [ self-hosted, linux-arm64, spot, meshinspector ]
           - arch: arm64
-            compiler: GCC 10
+            compiler: GCC 14
             skip_mrbind: true # GCC + ARM64 build has unresolved problems
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -149,7 +149,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-10/root/usr/bin/g++
+            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/g++
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

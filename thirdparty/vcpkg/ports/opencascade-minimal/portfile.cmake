@@ -36,7 +36,7 @@ vcpkg_cmake_configure(
         -DBUILD_MODULE_Visualization=OFF
         -DBUILD_DOC_Overview=OFF
         -DBUILD_Inspector=OFF
-        -DBUILD_ADDITIONAL_TOOLKITS='TKDESTEP;TKBinXCAF'
+        -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKBinXCAF"
         -DINSTALL_DIR_LAYOUT=Unix
         -DINSTALL_DIR_DOC=share/trash
         -DINSTALL_DIR_SCRIPT=share/trash # not relocatable

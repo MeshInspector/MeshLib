@@ -47,9 +47,9 @@ jobs:
           - full_config_build: false
             compiler: Clang 19
             config: Debug
-          # Do not run Release GCC 11 build on every commit (but only once a day)
+          # Do not run Release GCC 12 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 11
+            compiler: GCC 12
             config: Release
         include:
           - compiler: Clang 19
@@ -141,7 +141,7 @@ jobs:
       - name: Install GCC 12
         if: ${{ matrix.compiler == 'GCC 12' }}
         run: |
-          dnf install gcc-toolset-12
+          dnf -y install gcc-toolset-12
 
       - name: Build
         env:

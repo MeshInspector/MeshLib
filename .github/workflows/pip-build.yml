@@ -113,6 +113,7 @@ jobs:
           MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: ${{ matrix.compiler }}
           MR_CMAKE_OPTIONS: >
+            -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++

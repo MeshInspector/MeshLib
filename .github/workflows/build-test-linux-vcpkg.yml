@@ -118,7 +118,7 @@ jobs:
 
       - name: Install mrbind
         if: ${{ inputs.mrbind }}
-        run: scripts/mrbind/install_mrbind_centos.sh
+        run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
         run: |

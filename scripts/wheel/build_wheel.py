@@ -111,7 +111,7 @@ def build_wheel():
 
     if SYSTEM == "Linux":
         # see also: https://github.com/mayeut/pep600_compliance
-        manylinux_version = "2_31"
+        manylinux_version = "2_28"
 
         os.chdir(WHEEL_ROOT_DIR)
         subprocess.check_call(

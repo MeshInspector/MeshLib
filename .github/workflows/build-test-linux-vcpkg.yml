@@ -39,7 +39,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 13]
+        compiler: [Clang 19, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -47,18 +47,18 @@ jobs:
           - full_config_build: false
             compiler: Clang 19
             config: Debug
-          # Do not run Release GCC 13 build on every commit (but only once a day)
+          # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 13
+            compiler: GCC 11
             config: Release
         include:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-          - compiler: GCC 13
-            cxx-compiler: /opt/rh/gcc-toolset-13/root/bin/g++
-            c-compiler: /opt/rh/gcc-toolset-13/root/bin/gcc
+          - compiler: GCC 11
+            cxx-compiler: /usr/bin/g++
+            c-compiler: /usr/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
@@ -138,27 +138,17 @@ jobs:
           cmake --build pybind11_build --parallel $(nproc)
           cmake --install pybind11_build
 
-      - name: Install GCC 13
-        if: ${{ matrix.compiler == 'GCC 13' }}
-        run: |
-          dnf -y install gcc-toolset-13
-
       - name: Build
+        run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-        run: |
-          if [[ "${{ matrix.compiler }}" -eq "GCC 13" ]] ; then
-            source /opt/rh/gcc-toolset-13/enable
-          fi
-          ./scripts/build_source.sh
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind }}
@@ -166,11 +156,7 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
           CXX_FOR_BINDINGS: /usr/bin/clang++
           VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
-        run: |
-          if [[ "${{ matrix.compiler }}" -eq "GCC 13" ]] ; then
-            source /opt/rh/gcc-toolset-13/enable
-          fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       # TODO: move to pip-build.yml after migrating from ubuntu20
       #- name: Build Python shim libs

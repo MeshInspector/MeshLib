@@ -56,16 +56,17 @@ jobs:
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-            mrbind: ${{ inputs.mrbind }}
           - compiler: GCC 11
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
             cxx-standard: 20
-            mrbind: ${{ inputs.mrbind && matrix.arch == 'x64' }} # GCC + ARM64 build has unresolved problems
           - arch: x64
             os: ubuntu-latest
           - arch: arm64
             os: [ self-hosted, linux-arm64, spot, meshinspector ]
+          - arch: arm64
+            compiler: GCC 11
+            skip_mrbind: true
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -119,7 +120,7 @@ jobs:
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind
 
       - name: Install mrbind
-        if: ${{ matrix.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
@@ -134,7 +135,7 @@ jobs:
         run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build mrbind-pybind11
-        if: ${{ matrix.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         run: |
           cmake -S thirdparty/mrbind-pybind11 -B pybind11_build -D CMAKE_INSTALL_PREFIX=${PWD} -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTING=OFF -D PYBIND11_INSTALL=ON -D PYBIND11_NONLIMITEDAPI_BUILD_STUBS=OFF 
           cmake --build pybind11_build --parallel $(nproc)
@@ -153,7 +154,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Generate and build MRBind bindings
-        if: ${{ matrix.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
           CXX_FOR_BINDINGS: /usr/bin/clang++
@@ -162,7 +163,7 @@ jobs:
 
       # TODO: move to pip-build.yml after migrating from ubuntu20
       #- name: Build Python shim libs
-      #  if: ${{ matrix.mrbind }}
+      #  if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
       #  env:
       #    CXX: ${{ matrix.cxx-compiler }}
       #    CXX_FOR_BINDINGS: /usr/bin/clang++
@@ -204,7 +205,7 @@ jobs:
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          mrbind: ${{ matrix.mrbind }}
+          mrbind: ${{ inputs.mrbind && !matrix.skip_mrbind }}
           pytest_args: "--run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}

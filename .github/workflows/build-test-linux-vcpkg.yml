@@ -134,13 +134,6 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
-      - name: Build mrbind-pybind11
-        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
-        run: |
-          cmake -S thirdparty/mrbind-pybind11 -B pybind11_build -D CMAKE_INSTALL_PREFIX=${PWD} -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTING=OFF -D PYBIND11_INSTALL=ON -D PYBIND11_NONLIMITEDAPI_BUILD_STUBS=OFF 
-          cmake --build pybind11_build --parallel $(nproc)
-          cmake --install pybind11_build
-
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -157,9 +150,7 @@ jobs:
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-          CXX_FOR_BINDINGS: /usr/bin/clang++
-          VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
 
       # TODO: move to pip-build.yml after migrating from ubuntu20
       #- name: Build Python shim libs

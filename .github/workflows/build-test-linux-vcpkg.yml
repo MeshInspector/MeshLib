@@ -39,7 +39,7 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 19, GCC 12]
+        compiler: [Clang 19, GCC 13]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
@@ -47,18 +47,18 @@ jobs:
           - full_config_build: false
             compiler: Clang 19
             config: Debug
-          # Do not run Release GCC 12 build on every commit (but only once a day)
+          # Do not run Release GCC 13 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: GCC 12
+            compiler: GCC 13
             config: Release
         include:
           - compiler: Clang 19
             cxx-compiler: /usr/bin/clang++-19
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
-          - compiler: GCC 12
-            cxx-compiler: /opt/rh/gcc-toolset-12/root/bin/g++
-            c-compiler: /opt/rh/gcc-toolset-12/root/bin/gcc
+          - compiler: GCC 13
+            cxx-compiler: /opt/rh/gcc-toolset-13/root/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-13/root/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
@@ -138,10 +138,10 @@ jobs:
           cmake --build pybind11_build --parallel $(nproc)
           cmake --install pybind11_build
 
-      - name: Install GCC 12
-        if: ${{ matrix.compiler == 'GCC 12' }}
+      - name: Install GCC 13
+        if: ${{ matrix.compiler == 'GCC 13' }}
         run: |
-          dnf -y install gcc-toolset-12
+          dnf -y install gcc-toolset-13
 
       - name: Build
         env:
@@ -154,8 +154,8 @@ jobs:
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: |
-          if [[ "${{ matrix.compiler }}" -eq "GCC 12" ]] ; then
-            source /opt/rh/gcc-toolset-12/enable
+          if [[ "${{ matrix.compiler }}" -eq "GCC 13" ]] ; then
+            source /opt/rh/gcc-toolset-13/enable
           fi
           ./scripts/build_source.sh
 
@@ -166,8 +166,8 @@ jobs:
           CXX_FOR_BINDINGS: /usr/bin/clang++
           VCPKG_BASE_DIR: /opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
         run: |
-          if [[ "${{ matrix.compiler }}" -eq "GCC 12" ]] ; then
-            source /opt/rh/gcc-toolset-12/enable
+          if [[ "${{ matrix.compiler }}" -eq "GCC 13" ]] ; then
+            source /opt/rh/gcc-toolset-13/enable
           fi
           make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 

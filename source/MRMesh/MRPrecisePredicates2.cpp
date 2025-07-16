@@ -16,7 +16,7 @@ struct PointDegree
     int d = 0; // degree of epsilon for pt.y
 };
 
-template<int N>
+template<size_t N>
 std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2, N> & vs )
 {
     struct VertN

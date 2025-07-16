@@ -43,6 +43,7 @@ vcpkg_cmake_configure(
         -DINSTALL_SAMPLES=OFF
         -DINSTALL_TEST_CASES=OFF
         -DUSE_DRACO=OFF
+        -DUSE_EIGEN=ON
         -DUSE_FREETYPE=OFF
         -DUSE_FREEIMAGE=OFF
         -DUSE_OPENGL=OFF

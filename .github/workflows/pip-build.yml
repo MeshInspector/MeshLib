@@ -150,6 +150,7 @@ jobs:
         run: |
           python3.12 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
+          python3.12 -m pip install patchelf
           python3.12 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload Python Stubs

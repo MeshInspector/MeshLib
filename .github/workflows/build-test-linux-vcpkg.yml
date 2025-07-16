@@ -78,6 +78,14 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      - name: Enable GCC 11 toolset
+        run: |
+          source /opt/rh/gcc-toolset-11/enable
+          for VAR in PATH ; do
+            echo "${VAR}=${!VAR}" >> $GITHUB_ENV
+            echo "${VAR}=${!VAR}"
+          done
+
       # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
       - name: Get AWS instance type
         run: |

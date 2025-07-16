@@ -159,6 +159,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DCMAKE_CUDA_HOST_COMPILER=g++
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

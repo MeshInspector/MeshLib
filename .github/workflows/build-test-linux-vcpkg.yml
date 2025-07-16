@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ${{ matrix.os }}
     container:
-      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
       options: --user root
     strategy:
       fail-fast: false

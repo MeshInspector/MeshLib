@@ -148,6 +148,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMRCUDA_OVERRIDE_HOST_COMPILER=ON
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

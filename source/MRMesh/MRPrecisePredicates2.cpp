@@ -42,17 +42,17 @@ std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2,
 }
 
 // Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
-// 840 was found experimentally for segmentIntersectionOrder with all 6 points have equal coordinates (but different ids);
-// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-using Poly = SparsePolynomial<Int64, int, 840>;
+template<int M>
+using Poly = SparsePolynomial<Int64, int, M>;
 
-Poly ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
+template<int M>
+Poly<M> ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
     int db ) // degree.x = degree.y * db
 {
-    const Poly xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
-    const Poly xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
-    const Poly yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
-    const Poly yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
+    const Poly<M> xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
+    const Poly<M> xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
+    const Poly<M> yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
+    const Poly<M> yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
     auto det = xx * yy;
     det -= xy * yx;
     return det;
@@ -114,8 +114,11 @@ bool ccwLess( const std::array<PreciseVertCoords2, 4> & vs )
     // areas are equal, apply simulation-of-simplicity
     const auto ds = getPointDegrees( vs );
 
-    auto poly = ccwPoly( ds[0], ds[1], ds[2], 3 );
-        poly -= ccwPoly( ds[0], ds[1], ds[3], 3 );
+    // 84 was found experimentally for ccwLess with all 4 points having equal coordinates (but different ids);
+    // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
+    constexpr int MaxD = 84;
+    auto poly = ccwPoly<MaxD>( ds[0], ds[1], ds[2], 3 );
+        poly -= ccwPoly<MaxD>( ds[0], ds[1], ds[3], 3 );
 
     return !poly.isPositive();
 }
@@ -354,14 +357,17 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
 
     const auto ds = getPointDegrees( vs );
 
-    const auto polySaOrg  = ccwPoly( ds[2], ds[3], ds[0], 3 );
-    const auto polySaDest = ccwPoly( ds[2], ds[3], ds[1], 3 );
+    // 840 was found experimentally for segmentIntersectionOrder with all 6 points having equal coordinates (but different ids);
+    // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
+    constexpr int MaxD = 840;
+    const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
+    const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
     assert( !polySaOrg.empty() || !polySaDest.empty() );
     assert( polySaOrg.empty() || polySaDest.empty() || polySaOrg.isPositive() != polySaDest.isPositive() );
     const bool posSaOrg = polySaOrg.empty() ? !polySaDest.isPositive() : polySaOrg.isPositive();
 
-    const auto polySbOrg  = ccwPoly( ds[4], ds[5], ds[0], 3 );
-    const auto polySbDest = ccwPoly( ds[4], ds[5], ds[1], 3 );
+    const auto polySbOrg  = ccwPoly<MaxD>( ds[4], ds[5], ds[0], 3 );
+    const auto polySbDest = ccwPoly<MaxD>( ds[4], ds[5], ds[1], 3 );
     assert( !polySbOrg.empty() || !polySbDest.empty() );
     assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
     const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();

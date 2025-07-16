@@ -93,6 +93,26 @@ TEST( MRMesh, ccwLess )
     EXPECT_FALSE( ccwLess( { vs[1], vs[0], vs[4], vs[2] } ) );
 }
 
+TEST( MRMesh, ccwLessFullDegen )
+{
+    std::array<PreciseVertCoords2, 4> vs = 
+    { 
+        PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 1_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 3_v, Vector2i( 0, 0 ) }
+    };
+
+    EXPECT_TRUE(  ccwLess( { vs[0], vs[1], vs[2], vs[3] } ) );
+
+    // test that maximum degree in ccwLess can cope with most degenerate situation possible
+    do
+    {
+        (void)ccwLess( { vs[0], vs[1], vs[2], vs[3] } );
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
 TEST( MRMesh, PrecisePredicates2InCircle )
 {
     std::array<PreciseVertCoords2, 4> vs =
@@ -143,7 +163,7 @@ TEST( MRMesh, PrecisePredicates2More )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[4], vs[5], vs[0], vs[2], vs[0], vs[3] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2FullDegen )
+TEST( MRMesh, segmentIntersectionOrder2dFullDegen )
 {
     std::array<PreciseVertCoords2, 6> vs = 
     { 

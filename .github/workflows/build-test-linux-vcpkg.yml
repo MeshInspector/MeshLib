@@ -196,12 +196,13 @@ jobs:
         run: ./build/${{ matrix.config }}/bin/MRTestC
 
       - name: Python Sanity Tests
+        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Python Regression Tests
-        if: ${{ inputs.internal_build }}
+        if: ${{ inputs.internal_build && inputs.mrbind && !matrix.skip_mrbind }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}

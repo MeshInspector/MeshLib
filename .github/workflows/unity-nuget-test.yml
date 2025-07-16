@@ -64,6 +64,7 @@ jobs:
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3643.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib.3.0.5.349.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
@@ -73,12 +74,12 @@ jobs:
           gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
       
       - name: Move nuget package to repo folder
-        # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step
+        # We use the constant fake version 3.0.5.349 to simplify test workflow for Install package step
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
           if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
+            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.3.0.5.349.nupkg"
           } else {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1

@@ -49,7 +49,7 @@ vcpkg_cmake_configure(
         -DUSE_OPENVR=OFF
         -DUSE_GLES2=OFF
         -DUSE_RAPIDJSON=OFF
-        -DUSE_TBB=OFF
+        -DUSE_TBB=ON
         -DUSE_TK=OFF
         -DUSE_VTK=OFF
         -DUSE_XLIB=OFF

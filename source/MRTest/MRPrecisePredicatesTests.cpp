@@ -71,6 +71,28 @@ TEST( MRMesh, PrecisePredicates2more )
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
 }
 
+TEST( MRMesh, ccwLess )
+{
+    std::array<PreciseVertCoords2, 5> vs =
+    {
+        PreciseVertCoords2{ 0_v, Vector2i{ 0, 0 } },
+        PreciseVertCoords2{ 1_v, Vector2i( 1, 0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i{ 0, 1 } },
+        PreciseVertCoords2{ 3_v, Vector2i{ 0, 2 } },
+        PreciseVertCoords2{ 4_v, Vector2i{ 0, 1 } } // vs[4].pt == vs[2].pt
+    };
+
+    // not-degenerate
+    EXPECT_TRUE(  ccwLess( { vs[0], vs[1], vs[2], vs[3] } ) );
+    EXPECT_FALSE( ccwLess( { vs[0], vs[1], vs[3], vs[2] } ) );
+    EXPECT_FALSE( ccwLess( { vs[1], vs[0], vs[2], vs[3] } ) );
+
+    // partially degenerate
+    EXPECT_TRUE(  ccwLess( { vs[0], vs[1], vs[4], vs[2] } ) );
+    EXPECT_FALSE( ccwLess( { vs[0], vs[1], vs[2], vs[4] } ) );
+    EXPECT_FALSE( ccwLess( { vs[1], vs[0], vs[4], vs[2] } ) );
+}
+
 TEST( MRMesh, PrecisePredicates2InCircle )
 {
     std::array<PreciseVertCoords2, 4> vs =

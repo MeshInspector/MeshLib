@@ -16,21 +16,22 @@ struct PointDegree
     int d = 0; // degree of epsilon for pt.y
 };
 
-std::array<PointDegree, 6> getPointDegrees( const std::array<PreciseVertCoords2, 6> & vs )
+template<int N>
+std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2, N> & vs )
 {
     struct VertN
     {
         VertId v;
         int n = 0;
     };
-    std::array<VertN, 6> as;
-    for ( int i = 0; i < 6; ++i )
+    std::array<VertN, N> as;
+    for ( int i = 0; i < N; ++i )
         as[i] = { vs[i].id, i };
     std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
-    std::array<PointDegree, 6> res;
+    std::array<PointDegree, N> res;
     int d = 1;
-    for ( int i = 0; i < 6; ++i )
+    for ( int i = 0; i < N; ++i )
     {
         assert( i == 0 || as[i-1].v < as[i].v ); // no duplicate vertices are permitted
         const auto n = as[i].n;
@@ -103,6 +104,20 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // the smallest permutation db.x does not change anything here, and
     // the rotation from a to b is always ccw independently on a.y sign
     return true;
+}
+
+bool ccwLess( const std::array<PreciseVertCoords2, 4> & vs )
+{
+    if ( auto d = area( vs[0].pt, vs[1].pt, vs[2].pt ) - area( vs[0].pt, vs[1].pt, vs[3].pt ) )
+        return d < 0;
+
+    // areas are equal, apply simulation-of-simplicity
+    const auto ds = getPointDegrees( vs );
+
+    auto poly = ccwPoly( ds[0], ds[1], ds[2], 3 );
+        poly -= ccwPoly( ds[0], ds[1], ds[3], 3 );
+
+    return !poly.isPositive();
 }
 
 bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )

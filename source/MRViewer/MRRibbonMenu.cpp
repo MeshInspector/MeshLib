@@ -308,9 +308,7 @@ void RibbonMenu::drawActiveNonBlockingDialogs_()
 
 void RibbonMenu::drawSearchButton_()
 {
-    UI::TestEngine::pushTree( "RibbonSearch" );
     searcher_.drawMenuUI( { buttonDrawer_, fontManager_, [this] ( int i ) { changeTab_( i ); }, menu_scaling() } );
-    UI::TestEngine::popTree();
 }
 
 void RibbonMenu::drawCollapseButton_()

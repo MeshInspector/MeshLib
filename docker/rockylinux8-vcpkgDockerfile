@@ -55,7 +55,7 @@ ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 RUN echo "install_weak_deps=false" >> /etc/dnf/dnf.conf && \
     dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-10 ninja-build clang-devel \
+        git cmake gcc-toolset-11 ninja-build clang-devel \
         $(: vcpkg requirements ) \
         curl zip unzip tar \
         $(: vcpkg package requirements ) \
@@ -78,6 +78,3 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "aws
     unzip awscliv2.zip && \
     ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update && \
     rm -rf awscliv2.zip aws/
-
-ENTRYPOINT ["/bin/bash", "-c", "source /opt/rh/gcc-toolset-10/enable && exec \"$@\"", "--"]
-CMD ["/bin/bash"]

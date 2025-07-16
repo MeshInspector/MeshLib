@@ -123,6 +123,9 @@ jobs:
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
+      - name: Work-around old image
+        run: dnf -y install python3.12-pip
+
       - name: Create virtualenv
         run: |
           python3.12 -m venv .venv

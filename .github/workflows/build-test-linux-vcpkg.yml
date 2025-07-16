@@ -79,7 +79,6 @@ jobs:
 
     steps:
       - name: Enable GCC 10 toolset
-        if: ${{ matrix.compiler == 'GCC 10' }}
         run: |
           source /opt/rh/gcc-toolset-10/enable
           for VAR in PATH LD_LIBRARY_PATH PKG_CONFIG_PATH ; do

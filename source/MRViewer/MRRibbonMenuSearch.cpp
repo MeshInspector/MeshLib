@@ -95,13 +95,6 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 setInputFocus_ = false;
             }
             ImGui::SetNextItemWidth( minSearchSize );
-            // FIX programmatically input in inputString in popup window
-            // https://github.com/MeshInspector/MeshInspectorCode/issues/6252
-            auto cursorPos = ImGui::GetCursorPos();
-            ImGui::SetCursorPos( { -100, -100 } );
-            UI::button( "##dummy", {1, 1} );
-            ImGui::SetCursorPos( cursorPos );
-            // END FIX
             if ( UI::inputText( "##SearchLine", searchLine_ ) )
                 updateSearchResult_();
             if ( !ImGui::IsWindowAppearing() &&

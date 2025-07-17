@@ -95,7 +95,7 @@ EdgeId PolylineTopology::makeEdge()
     return he0;
 }
 
-EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
+EdgeId PolylineTopology::makeEdge( VertId a, VertId b, EdgeId e )
 {
     if ( (size_t)a >= edgePerVertex_.size() )
         return {};
@@ -111,28 +111,37 @@ EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
     if ( eb && next( eb ) != eb )
         return {};
 
-    const auto newe = makeEdge();
+    if ( e )
+    {
+        if ( e >= edgeSize() || !isLoneEdge( e ) )
+            return {};
+    }
+    else
+        e = makeEdge();
 
     if ( ea )
-        splice( ea, newe );
+        splice( ea, e );
     else
-        setOrg( newe, a );
+        setOrg( e, a );
 
     if ( eb )
-        splice( eb, newe.sym() );
+        splice( eb, e.sym() );
     else
-        setOrg( newe.sym(), b );
+        setOrg( e.sym(), b );
 
-    return newe;
+    return e;
 }
 
 int PolylineTopology::makeEdges( const Edges & edges )
 {
     MR_TIMER;
     int res = 0;
-    for ( const auto & e : edges )
-        if ( makeEdge( e[0], e[1] ) )
+    for ( auto ue = 0_ue; ue < edges.size(); ++ue )
+    {
+        auto e = ue < undirectedEdgeSize() ? EdgeId(ue) : makeEdge();
+        if ( makeEdge( edges[ue][0], edges[ue][1], e ) )
             ++res;
+    }
     return res;
 }
 

@@ -32,11 +32,16 @@ public:
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
 
     /// makes an edge connecting vertices a and b
-    /// \details if any of the vertices is invalid or not within the vertSize(), or a==b, 
-    /// or either a or b already has 2 incident edges, then makeEdge(a,b) does nothing and returns invalid edge
-    MRMESH_API EdgeId makeEdge( VertId a, VertId b );
+    /// \param e if valid then the function does not make new edge, but connects the vertices using given one (and returns it)
+    /// \details if
+    ///   1) any of the vertices is invalid or not within the vertSize(),
+    ///   2) or a==b,
+    ///   3) or either a or b already has 2 incident edges,
+    ///   4) given edge e is not lone or not within the edgeSize()
+    /// then makeEdge(a,b) does nothing and returns invalid edge
+    MRMESH_API EdgeId makeEdge( VertId a, VertId b, EdgeId e = {} );
 
-    /// calls makeEdge() for every given pair of vertices,
+    /// for every given edge[ue] calls makeEdge( edge[ue][0], edge[ue][1], ue ), making new edges so that edges.size() <= undirectedEdgeSize() at the end
     /// \return the total number of edges created
     MRMESH_API int makeEdges( const Edges & edges );
 

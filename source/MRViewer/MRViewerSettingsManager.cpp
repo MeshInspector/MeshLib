@@ -24,16 +24,16 @@
 
 namespace
 {
-const std::string cOrthogrphicParamKey = "orthographic";
+const std::string cOrthographicParamKey = "orthographic";
 const std::string cFlatShadingParamKey = "flatShading"; // Legacy
 const std::string cShadingModeParamKey = "defaultMeshShading";
 const MR::Config::Enum cShadingModeEnum = { "AutoDetect", "Smooth", "Flat" }; // SceneSettings::ShadingMode
 const std::string cGLPickRadiusParamKey = "glPickRadius";
 const std::string cUserUIScaleKey = "userUIScale";
 const std::string cColorThemeParamKey = "colorTheme";
-const std::string cSceneControlParamKey = "sceneControls";
+const std::string cSceneControlsParamKey = "sceneControls";
 const std::string cTopPanelPinnedKey = "topPanelPinned";
-const std::string cQuickAccesListKey = "quickAccesList";
+const std::string cQuickAccessListKey = "quickAccesList";
 const std::string cQuickAccessListVersionKey = "quickAccessListVersion";
 const std::string cMainWindowSize = "mainWindowSize";
 const std::string cMainWindowPos = "mainWindowPos";
@@ -43,7 +43,7 @@ const std::string cRibbonNotificationAllowedTags = "ribbonNotificationAllowedTag
 const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string cDeselectNewHiddenObjects = "deselectNewHiddenObjects";
 const std::string cCloseContextOnChange = "closeContextOnChange";
-const std::string lastExtentionsParamKey = "lastExtentions";
+const std::string lastExtensionsParamKey = "lastExtentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
 const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
@@ -200,8 +200,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 {
     auto& viewport = viewer.viewport();
     auto params = viewport.getParameters();
+
     auto& cfg = Config::instance();
-    params.orthographic = cfg.getBool( cOrthogrphicParamKey, params.orthographic );
+    params.orthographic = cfg.getBool( cOrthographicParamKey, params.orthographic );
     if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
@@ -253,9 +254,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
-    if ( cfg.hasJsonValue( cSceneControlParamKey ) )
+    if ( cfg.hasJsonValue( cSceneControlsParamKey ) )
     {
-        const auto& controls = cfg.getJsonValue( cSceneControlParamKey );
+        const auto& controls = cfg.getJsonValue( cSceneControlsParamKey );
         for ( int i = 0; i < int( MouseMode::Count ); ++i )
         {
             MouseMode mode = MouseMode( i );
@@ -367,8 +368,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cQuickAccessListVersionKey ) )
             ribbonMenu->setQuickAccessListVersion( cfg.getJsonValue( cQuickAccessListVersionKey ).asInt() );
 
-        if ( cfg.hasJsonValue( cQuickAccesListKey ) )
-            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
+        if ( cfg.hasJsonValue( cQuickAccessListKey ) )
+            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccessListKey ) );
 
         if ( cfg.hasJsonValue( cRibbonNotificationAllowedTags ) )
             ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTagMask( cfg.getJsonValue( cRibbonNotificationAllowedTags ).asUInt() );
@@ -396,7 +397,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
     ColorTheme::apply();
 
-    Json::Value lastExtentions = cfg.getJsonValue( lastExtentionsParamKey );
+    Json::Value lastExtentions = cfg.getJsonValue( lastExtensionsParamKey );
     if ( lastExtentions.isArray() )
     {
         const int end = std::min( (int)lastExtentions.size(), (int)lastExtentions_.size() );
@@ -522,7 +523,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     const auto& viewport = viewer.viewport();
     const auto& params = viewport.getParameters();
     auto& cfg = Config::instance();
-    cfg.setBool( cOrthogrphicParamKey, params.orthographic );
+    cfg.setBool( cOrthographicParamKey, params.orthographic );
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     if ( viewer.globalBasisAxes )
     {
@@ -534,7 +535,6 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
             globalBasis[cGlobalBasisScaleKey] = viewer.globalBasisAxes->xf( viewport.id ).A.x.x;
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
     }
-
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
 
@@ -571,7 +571,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         int key = control ? MouseController::mouseAndModToKey( *control ) : -1;
         sceneControls[getMouseModeString( mode )] = key;
     }
-    cfg.setJsonValue( cSceneControlParamKey, sceneControls );
+    cfg.setJsonValue( cSceneControlsParamKey, sceneControls );
 
     // SceneSettings
     cfg.setEnum( cShadingModeEnum, cShadingModeParamKey, ( int )SceneSettings::getDefaultShadingMode() );
@@ -594,7 +594,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         for ( int i = 0; i < quickAccessList.size(); ++i )
             qaList[i]["Name"] = quickAccessList[i];
         cfg.setJsonValue( cQuickAccessListVersionKey, toolbar.getItemsListVersion() );
-        cfg.setJsonValue( cQuickAccesListKey, qaList );
+        cfg.setJsonValue( cQuickAccessListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );
 
@@ -604,7 +604,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     Json::Value exts = Json::arrayValue;
     for ( int i = 0; i < lastExtentions_.size(); ++i )
         exts[i] = lastExtentions_[i];
-    cfg.setJsonValue( lastExtentionsParamKey, exts );
+    cfg.setJsonValue( lastExtensionsParamKey, exts );
 
     // this is necessary for older versions of the software not to crash on reading these settings
     Json::Value xtext;

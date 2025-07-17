@@ -163,7 +163,8 @@ void Toolbar::drawToolbar()
     auto textPos = ImVec2( ImGui::GetCursorPosX() + ( customizeBtnSize.x - textSize.x ) / 2.f,
                            ImGui::GetCursorPosY() + ( customizeBtnSize.y - textSize.y ) / 2.f );
     const std::string customizeBtnName = "##ToolbarCustomizeBtn";
-    if ( ImGui::Button( customizeBtnName.c_str(), customizeBtnSize) || UI::TestEngine::createButton( customizeBtnName ) )
+    //if ( ImGui::Button( customizeBtnName.c_str(), customizeBtnSize ) || UI::TestEngine::createButton( customizeBtnName ) )
+    if ( UI::buttonEx( customizeBtnName.c_str(), customizeBtnSize, {.forceImGuiBackground = true} ) )
         openCustomize();
 
     UI::TestEngine::popTree(); // "Toolbar"

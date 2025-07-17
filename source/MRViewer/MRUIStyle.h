@@ -64,6 +64,9 @@ struct ButtonCustomizationParams
 
     /// Allow interacting with this button from `UI::TestEngine`.
     bool enableTestEngine = true;
+
+    /// if not empty, force use this string as name in TestEngine
+    std::string testEngineName;
 };
 
 struct ButtonIconCustomizationParams

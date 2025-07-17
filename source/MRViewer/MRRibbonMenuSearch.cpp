@@ -332,7 +332,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     float btnSize = params.scaling * cTopPanelAditionalButtonSize;
     if ( font )
         ImGui::PushFont( font );
-    bool pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) ) || UI::TestEngine::createButton( "ActivateSearchBtn" );
+    bool pressed = UI::buttonEx( "\xef\x80\x82", ImVec2( btnSize, btnSize ), { .forceImGuiBackground = true, .testEngineName = "ActivateSearchBtn" } );
     if ( font )
     {
         ImGui::PopFont();

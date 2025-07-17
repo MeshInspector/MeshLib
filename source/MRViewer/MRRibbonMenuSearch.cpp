@@ -63,7 +63,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     if ( !isSmallUI_ && resultsList.empty() )
         return;
 
-    UI::TestEngine::pushTree( "RibbonMenuSearch" );
+    UI::TestEngine::pushTree( "RibbonSearchPopup" );
     MR_FINALLY{ UI::TestEngine::popTree(); };
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );
@@ -245,6 +245,7 @@ void RibbonMenuSearch::deactivateSearch_()
 
 void RibbonMenuSearch::drawMenuUI( const Parameters& params )
 {
+    UI::TestEngine::pushTree( "RibbonSearch" );
     if ( isSmallUI_ )
     {
         if ( smallSearchButton_( params ) )
@@ -289,6 +290,8 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
     if ( active_ )
         drawWindow_( params );
 
+    UI::TestEngine::popTree();
+
     prevFrameActive_ = active_;
     isSmallUILast_ = isSmallUI_;
 }
@@ -329,7 +332,7 @@ bool RibbonMenuSearch::smallSearchButton_( const Parameters& params )
     float btnSize = params.scaling * cTopPanelAditionalButtonSize;
     if ( font )
         ImGui::PushFont( font );
-    bool pressed = ImGui::Button( "\xef\x80\x82", ImVec2( btnSize, btnSize ) ) ;
+    bool pressed = UI::buttonEx( "\xef\x80\x82", ImVec2( btnSize, btnSize ), { .forceImGuiBackground = true, .testEngineName = "ActivateSearchBtn" } );
     if ( font )
     {
         ImGui::PopFont();

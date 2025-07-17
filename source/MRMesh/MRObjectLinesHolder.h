@@ -66,6 +66,9 @@ public:
     /// returns mask of viewports where given property is set
     MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
+    /// copies vertex colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyColors( const ObjectLinesHolder& src, const VertMap& thisToSrc );
+
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;

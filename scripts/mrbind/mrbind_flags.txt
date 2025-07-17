@@ -1,4 +1,5 @@
 --combine-types=cv,ref,ptr,smart_ptr
+--buggy-substitute-default-template-args
 --ignore ::
 --ignore MR::detail
 --ignore MR::Signal

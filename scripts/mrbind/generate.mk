@@ -515,7 +515,7 @@ LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(ME
 COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 
 
-MRBIND_GEN_C_FLAGS := --clean-output-dirs --helper-name-prefix MR_ --helper-header-dir MRCMisc --max-header-name-length 100
+MRBIND_GEN_C_FLAGS := $(call load_file,$(makefile_dir)mrbind_gen_c_flags.txt)
 
 # Adjusting canonical types to fixed-size typedefs.
 ifeq ($(TARGET),c)
@@ -707,7 +707,7 @@ $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 $(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated$(MRBIND_PARSER_OUTPUT_EXT))
 only-generate: $($1__ParserSourceOutput)
 $($1__ParserSourceOutput): $($1__CombinedHeaderOutput) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[$1] [Generating] $($1__ParserSourceOutput))
+	@echo $(call quote,[$1] [Parsing] $($1__ParserSourceOutput))
 	@$(MRBIND_EXE) $(MRBIND_FLAGS) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_parse,$x)))

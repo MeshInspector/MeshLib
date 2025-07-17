@@ -43,7 +43,8 @@ public:
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
 
     BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    BitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    BitSet & set( IndexType n ) { base::set( n ); return * this; }
     BitSet & set() { base::set(); return * this; }
     BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
     BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
@@ -142,7 +143,8 @@ public:
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
     TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    TypedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }

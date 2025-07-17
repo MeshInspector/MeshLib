@@ -3,6 +3,7 @@
 #include "config.h"
 
 #include "MRMesh/MRCanonicalTypedefs.h"
+#include "MRPch/MRBindingMacros.h"
 
 // Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
 //
@@ -117,6 +118,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), Id,
     ( GraphVertId,      Id<GraphVertTag>      )
     ( GraphEdgeId,      Id<GraphEdgeTag>      )
 )
+// Those are full specializations in `MRId.h`, so `MR_CANONICAL_TYPEDEFS` doesn't work on them.
+// Have to add this too.
+template <> class MR_BIND_PREFERRED_NAME(MR::EdgeId) Id<EdgeTag>;
+template <> class MR_BIND_PREFERRED_NAME(MR::VoxelId) Id<VoxelTag>;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), NoInitId,
     ( NoInitNodeId, NoInitId<NodeTag> )

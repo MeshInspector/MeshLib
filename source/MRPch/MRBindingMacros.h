@@ -20,12 +20,17 @@
 // Mark a declaration with this to avoid generating a binding for it.
 #define MR_BIND_IGNORE __attribute__((__annotate__("mrbind::ignore")))
 
+// This is a specialized replacement for `MR_CANONICAL_TYPEDEFS()`, to be used on full template specializations, where that macro doesn't work.
+#define MR_BIND_PREFERRED_NAME(...) __attribute__((__annotate__(DETAIL_MR_BIND_PREFERRED_NAME(mrbind::preferred_name=__VA_ARGS__))))
+#define DETAIL_MR_BIND_PREFERRED_NAME(...) #__VA_ARGS__
+
 #else
 #define MR_BIND_TEMPLATE(...)
 #define MR_BIND_IGNORE
+#define MR_BIND_PREFERRED_NAME(...)
 #endif
 
-#ifdef MR_COMPILING_ANY_BINDINGS
+#ifdef MR_COMPILING_PB11_BINDINGS
 // Put this inside of a class.
 // Then when this class is used as a function parameter, calling that function will temporarily unlock GIL when it's called.
 // This e.g. prevents deadlocks if your function calls Python lambdas.

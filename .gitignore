@@ -39,3 +39,4 @@ venv/*
 wheelhouse/*
 /source/MeshLibC2/mrmesh
 /source/MeshLibC2/temp
+compile_commands.json

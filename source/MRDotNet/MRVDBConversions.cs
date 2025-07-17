@@ -37,6 +37,7 @@ namespace MR
             public MRVector3f voxelSize = new MRVector3f();
             public MRAffineXf3f worldXf = new MRAffineXf3f();
             public IntPtr outXf = IntPtr.Zero;
+            public IntPtr cb = IntPtr.Zero;
 
             public MRMeshToVolumeSettings() { }
         }

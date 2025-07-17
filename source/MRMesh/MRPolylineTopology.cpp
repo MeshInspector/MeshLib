@@ -97,8 +97,10 @@ EdgeId PolylineTopology::makeEdge()
 
 EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
 {
-    assert( a.valid() && a < int( edgePerVertex_.size() ) );
-    assert( b.valid() && b < int( edgePerVertex_.size() ) );
+    if ( (size_t)a >= edgePerVertex_.size() )
+        return {};
+    if ( (size_t)b >= edgePerVertex_.size() )
+        return {};
     if ( a == b )
         return {};
 
@@ -122,6 +124,16 @@ EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
         setOrg( newe.sym(), b );
 
     return newe;
+}
+
+int PolylineTopology::makeEdges( const Edges & edges )
+{
+    MR_TIMER;
+    int res = 0;
+    for ( const auto & e : edges )
+        if ( makeEdge( e[0], e[1] ) )
+            ++res;
+    return res;
 }
 
 bool PolylineTopology::isLoneEdge( EdgeId a ) const

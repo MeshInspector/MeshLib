@@ -565,6 +565,7 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
     PlyLoadParams params =
     {
         .tris = &tris,
+        .edges = settings.edges,
         .colors = settings.colors,
         .uvCoords = settings.uvCoords,
         .normals = settings.normals,

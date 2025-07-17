@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include <iostream>
 #include <optional>
 
 namespace MR

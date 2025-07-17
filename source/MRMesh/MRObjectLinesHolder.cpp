@@ -5,7 +5,7 @@
 #include "MRHeapBytes.h"
 #include "MRSceneColors.h"
 #include "MRPolylineComponents.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
 #include <filesystem>
 
@@ -172,6 +172,27 @@ const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMas
     {
         return VisualObject::getVisualizePropertyMask( type );
     }
+}
+
+void ObjectLinesHolder::copyColors( const ObjectLinesHolder& src, const VertMap& thisToSrc )
+{
+    MR_TIMER;
+
+    setColoringType( src.getColoringType() );
+
+    const auto& srcColorMap = src.getVertsColorMap();
+    if ( srcColorMap.empty() )
+        return;
+
+    VertColors colorMap;
+    colorMap.resizeNoInit( thisToSrc.size() );
+    ParallelFor( colorMap, [&] ( VertId id )
+    {
+        auto curId = thisToSrc[id];
+        if( curId.valid() )
+            colorMap[id] = srcColorMap[curId];
+    } );
+    setVertsColorMap( std::move( colorMap ) );
 }
 
 ObjectLinesHolder::ObjectLinesHolder()

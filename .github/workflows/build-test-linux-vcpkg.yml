@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ${{ matrix.os }}
     container:
-      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
       options: --user root
     strategy:
       fail-fast: false
@@ -57,8 +57,8 @@ jobs:
             c-compiler: /usr/bin/clang-19
             cxx-standard: 23
           - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
+            cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
+            c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
           - arch: x64
             os: ubuntu-latest
@@ -78,6 +78,14 @@ jobs:
       AWS_EC2_METADATA_DISABLED: true
 
     steps:
+      - name: Enable GCC 11 toolset
+        run: |
+          source /opt/rh/gcc-toolset-11/enable
+          for VAR in PATH ; do
+            echo "${VAR}=${!VAR}" >> $GITHUB_ENV
+            echo "${VAR}=${!VAR}"
+          done
+
       # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
       - name: Get AWS instance type
         run: |
@@ -125,7 +133,7 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          python3 -m venv .venv
+          python3.12 -m venv .venv
           . .venv/bin/activate
           python3 -m ensurepip --upgrade
           python3 -m pip install --upgrade pip
@@ -145,6 +153,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
@@ -201,6 +210,7 @@ jobs:
           pytest_args: "--run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: linux-vcpkg-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
+          ubuntu20_arm_workaround: ${{ inputs.mrbind && matrix.arch == 'arm64' }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Create Package

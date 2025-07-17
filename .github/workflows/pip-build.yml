@@ -459,7 +459,7 @@ jobs:
 
       - name: Debian/Ubuntu system setup
         if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' }}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
+        run: apt -y update && apt -y install curl libssl-dev python3-pip
 
       - name: Fedora system setup
         if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}

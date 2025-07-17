@@ -67,6 +67,7 @@ const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
 const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
+const std::string cScrollForceConfigKey = "scrollForce";
 }
 
 namespace Defaults
@@ -203,6 +204,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 
     auto& cfg = Config::instance();
     params.orthographic = cfg.getBool( cOrthographicParamKey, params.orthographic );
+
+    if ( cfg.hasJsonValue( cScrollForceConfigKey ) && cfg.getJsonValue( cScrollForceConfigKey ).isDouble() )
+    {
+        viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
+    }
+
     if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
@@ -525,6 +532,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     auto& cfg = Config::instance();
     cfg.setBool( cOrthographicParamKey, params.orthographic );
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
+    cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
+
     if ( viewer.globalBasisAxes )
     {
         Json::Value globalBasis;

@@ -131,9 +131,11 @@ jobs:
       - name: Build Python shim libs
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
           
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
-            export PKG_CONFIG_PATH=$(uv run --python ${PYTHON_VER} ./scripts/wheel/get_pkgconfig_path.py)
+            export PKG_CONFIG_PATH=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+          
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
               CXX_FOR_ABI=${{ matrix.compiler }} \
@@ -152,9 +154,13 @@ jobs:
         run: |
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           REQUIREMENTS_FILE=${PWD}/requirements/python.txt
+          GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
           
           cd build/Release/bin
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
+            PYTHON_LIB_DIR=$(uv run --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBDIR)
+          
+            LD_LIBRARY_PATH=${PYTHON_LIB_DIR} \
             uv run \
               --python ${PYTHON_VER} \
               --with-requirements ${REQUIREMENTS_FILE} \

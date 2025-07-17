@@ -2,4 +2,5 @@
 import sysconfig
 
 if __name__ == '__main__':
-    print(sysconfig.get_config_var('LIBPC'))
+    import sys
+    print(sysconfig.get_config_var(sys.argv[1]))

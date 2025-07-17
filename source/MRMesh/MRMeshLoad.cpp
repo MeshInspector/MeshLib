@@ -13,7 +13,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
-#include "MRPLY.h"
+#include "MRPly.h"
 #include "MRParallelFor.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"

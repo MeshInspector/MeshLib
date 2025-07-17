@@ -1,6 +1,6 @@
 #include "MRPointsLoad.h"
 #include "MRTimer.h"
-#include "miniply.h"
+#include "MRPly.h"
 #include "MRColor.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
@@ -117,7 +117,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     return cloud;
 }
 
-Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, const PointsLoadSettings& settings )
+Expected<PointCloud> fromPts( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -126,7 +126,7 @@ Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, const Point
     return addFileNameInError( fromPts( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settings )
+Expected<PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
     auto startPos = in.tellg();
@@ -200,7 +200,7 @@ Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& se
     return pc;
 }
 
-Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, const PointsLoadSettings& settings )
+Expected<PointCloud> fromPly( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -209,73 +209,27 @@ Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, const Point
     return addFileNameInError( fromPly( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromPly( std::istream& in, const PointsLoadSettings& settings )
+Expected<PointCloud> fromPly( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
 
-    const auto posStart = in.tellg();
-    miniply::PLYReader reader( in );
-    if ( !reader.valid() )
-        return unexpected( std::string( "PLY file open error" ) );
-
-    uint32_t indecies[3];
-    bool gotVerts = false;
-
-    std::vector<unsigned char> colorsBuffer;
     PointCloud res;
-    const auto posEnd = reader.get_end_pos();
-    const auto streamSize = float( posEnd - posStart );
-
-    for ( int i = 0; reader.has_element() && !gotVerts; reader.next_element(), ++i )
+    PlyLoadParams params =
     {
-        if ( reader.element_is( miniply::kPLYVertexElement ) && reader.load_element() )
-        {
-            auto numVerts = reader.num_rows();
-            if ( reader.find_pos( indecies ) )
-            {
-                res.points.resize( numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
-                gotVerts = true;
-            }
-            if ( reader.find_normal( indecies ) )
-            {
-                Timer t( "extractNormals" );
-                res.normals.resize( numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.normals.data() );
-            }
-            if ( settings.colors && reader.find_color( indecies ) )
-            {
-                colorsBuffer.resize( 3 * numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
-            }
-            const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( settings.callback && !settings.callback( progress ) )
-                return unexpectedOperationCanceled();
-            continue;
-        }
-    }
+        .colors = settings.colors,
+        .normals = &res.normals,
+        .callback = settings.callback
+    };
+    auto maybePoints = loadPly( in, params );
+    if ( !maybePoints )
+        return unexpected( std::move( maybePoints.error() ) );
 
-    if ( !reader.valid() )
-        return unexpected( std::string( "PLY file read or parse error" ) );
-
-    if ( !gotVerts )
-        return unexpected( std::string( "PLY file does not contain vertices" ) );
-
+    res.points = std::move( *maybePoints );
     res.validPoints.resize( res.points.size(), true );
-    if ( settings.colors && !colorsBuffer.empty() )
-    {
-        settings.colors->resize( res.points.size() );
-        for ( VertId i{ 0 }; i < res.points.size(); ++i )
-        {
-            int ind = 3 * i;
-            ( *settings.colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
-        }
-    }
-
     return res;
 }
 
-Expected<MR::PointCloud> fromObj( const std::filesystem::path& file, const PointsLoadSettings& settings )
+Expected<PointCloud> fromObj( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -284,7 +238,7 @@ Expected<MR::PointCloud> fromObj( const std::filesystem::path& file, const Point
     return addFileNameInError( fromObj( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& settings )
+Expected<PointCloud> fromObj( std::istream& in, const PointsLoadSettings& settings )
 {
     PointCloud cloud;
 
@@ -324,7 +278,7 @@ Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& se
     return cloud;
 }
 
-Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, const PointsLoadSettings& settings )
+Expected<PointCloud> fromDxf( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -333,7 +287,7 @@ Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, const Point
     return addFileNameInError( fromDxf( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settings )
+Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settings )
 {
     PointCloud cloud;
 

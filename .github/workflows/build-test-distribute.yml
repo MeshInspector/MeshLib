@@ -332,7 +332,7 @@ jobs:
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
     with:
-      vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
 
   collect-stats:
     timeout-minutes: 5

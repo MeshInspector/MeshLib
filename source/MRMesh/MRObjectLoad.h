@@ -19,9 +19,9 @@ namespace MR
 /// loads mesh from given file in new object
 MRMESH_API Expected<LoadedObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 
-/// loads data from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
+/// loads data from given file and makes either ObjectMesh, ObjectLines or ObjectPoints (if the file has points or edges but not faces)
 MRMESH_API Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file, const ProgressCallback& cb = {},
-    bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never ObjectPoints
+    bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never other object type
 
 /// loads lines from given file in new object
 MRMESH_API Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );

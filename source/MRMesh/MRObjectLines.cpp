@@ -1,9 +1,9 @@
 #include "MRObjectLines.h"
 #include "MRObjectFactory.h"
 #include "MRPolyline.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -132,6 +132,31 @@ std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLine
     auto objectLines = std::make_shared<ObjectLines>();
     objectLines->setPolyline( std::move( line ) );
     return objectLines;
+}
+
+std::shared_ptr<ObjectLines> cloneRegion( const std::shared_ptr<ObjectLines>& objLines, const UndirectedEdgeBitSet& region )
+{
+    MR_TIMER;
+    std::shared_ptr<Polyline3> newPolyline = std::make_shared<Polyline3>();
+    VertMap src2clone;
+    newPolyline->addPartByMask( *objLines->polyline(), region, &src2clone );
+    std::shared_ptr<ObjectLines> newObj = std::make_shared<ObjectLines>();
+    newObj->setFrontColor( objLines->getFrontColor( true ), true );
+    newObj->setFrontColor( objLines->getFrontColor( false ), false );
+    newObj->setBackColor( objLines->getBackColor() );
+    newObj->setPolyline( newPolyline );
+    newObj->setAllVisualizeProperties( objLines->getAllVisualizeProperties() );
+
+    VertMap clone2src;
+    clone2src.resizeNoInit( newPolyline->points.size() );
+    ParallelFor( src2clone, [&] ( VertId srcV )
+    {
+        if( auto cloneV = src2clone[srcV] )
+            clone2src[cloneV] = srcV;
+    } );
+    newObj->copyColors( *objLines, clone2src );
+    newObj->setName( objLines->name() + "_part" );
+    return newObj;
 }
 
 } // namespace MR

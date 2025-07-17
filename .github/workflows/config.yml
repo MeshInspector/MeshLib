@@ -123,11 +123,10 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/(ubuntu20|ubuntu22|ubuntu24|fedora39|emscripten)Dockerfile'
-              - 'requirements/(ubuntu|fedora|distribution_python).txt'
+              - 'docker/(ubuntu20|ubuntu22|ubuntu24|emscripten)Dockerfile'
+              - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
-              - 'scripts/install_dnf_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
@@ -137,7 +136,7 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/vcpkgDockerfile'
+              - 'docker/(rockylinux8|rockylinux9)-vcpkgDockerfile'
               - 'requirements/vcpkg-linux.txt'
               - 'thirdparty/vcpkg/**'
 

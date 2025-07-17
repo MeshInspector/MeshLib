@@ -90,7 +90,7 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.0f );
     ImGui::Begin(
-        "QuickAccess##[rect_allocator_ignore]", nullptr,
+        "Toolbar##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing
     );
@@ -143,7 +143,6 @@ void Toolbar::drawToolbar()
         buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
         ImGui::SameLine();
     }
-    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x / 2.f );
 
@@ -163,8 +162,10 @@ void Toolbar::drawToolbar()
     auto textSize = ImGui::CalcTextSize( text );
     auto textPos = ImVec2( ImGui::GetCursorPosX() + ( customizeBtnSize.x - textSize.x ) / 2.f,
                            ImGui::GetCursorPosY() + ( customizeBtnSize.y - textSize.y ) / 2.f );
-    if ( ImGui::Button( "##ToolbarCustomizeBtn", customizeBtnSize ) )
+    if ( UI::buttonEx( "##ToolbarCustomizeBtn", customizeBtnSize, { .forceImGuiBackground = true } ) )
         openCustomize();
+
+    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );

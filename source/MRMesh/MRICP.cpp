@@ -381,11 +381,16 @@ AffineXf3f ICP::calculateTransformation()
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
+    AffineXf3f resXf = flt_.xf;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         updatePointPairs();
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
+
+        if ( iter_ == 1 )
+            minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane(); // update initial metric before doing iteration
+
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
             resultType_ = ICPExitType::NotFoundSolution;
@@ -393,17 +398,19 @@ AffineXf3f ICP::calculateTransformation()
         }
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-        if ( prop_.exitVal > curDist )
-        {
-            resultType_ = ICPExitType::StopMsdReached;
-            break;
-        }
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if (curDist < minDist)
         {
+            resXf = flt_.xf;
             minDist = curDist;
             badIterCount = 0;
+
+            if ( prop_.exitVal > curDist )
+            {
+                resultType_ = ICPExitType::StopMsdReached;
+                break;
+            }
         }
         else
         {
@@ -415,7 +422,8 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    return flt_.xf;
+    flt_.xf = resXf;
+    return resXf;
 }
 
 size_t getNumActivePairs( const IPointPairs& pairs )

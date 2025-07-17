@@ -1692,20 +1692,22 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
     return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
 }
 
-static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto&& func )
+static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    bool ret = func();
-
     std::optional<std::string> valueOverride;
     if ( shouldExposeTextInputToTestEngine( flags ) )
     {
         valueOverride = TestEngine::createValue( label, str );
         if ( valueOverride )
-        {
             str = std::move( *valueOverride );
-            detail::markItemEdited( ImGui::GetID( label ) );
-            ret = true;
-        }
+    }
+
+    bool ret = func();
+
+    if ( valueOverride )
+    {
+        detail::markItemEdited( ImGui::GetID( label ) );
+        ret = true;
     }
 
     return ret;

@@ -145,12 +145,14 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     VertUVCoords uvCoords;
     VertNormals normals;
     MeshTexture texture;
+    std::optional<Edges> edges;
     int skippedFaceCount = 0;
     int duplicatedVertexCount = 0;
     int holesCount = 0;
     AffineXf3f xf;
     MeshLoadSettings settings
     {
+        .edges = &edges,
         .colors = &colors,
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
@@ -168,7 +170,30 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     {
         if ( returnOnlyMesh )
             return unexpected( "File contains a point cloud and not a mesh: " + utf8string( file ) );
-        auto pointCloud = std::make_shared<MR::PointCloud>();
+
+        if ( edges )
+        {
+            auto polyline = std::make_shared<Polyline3>();
+            polyline->points = std::move( mesh->points );
+            polyline->topology.vertResize( polyline->points.size() );
+            polyline->topology.makeEdges( *edges );
+
+            auto objectLines = std::make_unique<ObjectLines>();
+            objectLines->setName( utf8string( file.stem() ) );
+            objectLines->setPolyline( polyline );
+
+            if ( !colors.empty() )
+            {
+                objectLines->setVertsColorMap( std::move( colors ) );
+                objectLines->setColoringType( ColoringType::VertsColorMap );
+            }
+
+            objectLines->setXf( xf );
+
+            return LoadedObject{ .obj = std::move( objectLines ) };
+        }
+
+        auto pointCloud = std::make_shared<PointCloud>();
         pointCloud->points = std::move( mesh->points );
         pointCloud->normals = std::move( normals );
         pointCloud->validPoints.resize( pointCloud->points.size(), true );
@@ -233,7 +258,7 @@ Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file
 
     ObjectLines objectLines;
     objectLines.setName( utf8string( file.stem() ) );
-    objectLines.setPolyline( std::make_shared<MR::Polyline3>( std::move( lines.value() ) ) );
+    objectLines.setPolyline( std::make_shared<Polyline3>( std::move( lines.value() ) ) );
 
     return objectLines;
 }
@@ -256,7 +281,7 @@ Expected<ObjectPoints> makeObjectPointsFromFile( const std::filesystem::path& fi
 
     ObjectPoints objectPoints;
     objectPoints.setName( utf8string( file.stem() ) );
-    objectPoints.setPointCloud( std::make_shared<MR::PointCloud>( std::move( pointsCloud.value() ) ) );
+    objectPoints.setPointCloud( std::make_shared<PointCloud>( std::move( pointsCloud.value() ) ) );
     objectPoints.setXf( xf );
     if ( !colors.empty() )
     {
@@ -283,7 +308,7 @@ Expected<ObjectDistanceMap> makeObjectDistanceMapFromFile( const std::filesystem
 
     ObjectDistanceMap objectDistanceMap;
     objectDistanceMap.setName( utf8string( file.stem() ) );
-    objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMap.value() ) ), params );
+    objectDistanceMap.setDistanceMap( std::make_shared<DistanceMap>( std::move( distanceMap.value() ) ), params );
 
     return objectDistanceMap;
 }

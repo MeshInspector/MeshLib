@@ -381,7 +381,7 @@ AffineXf3f ICP::calculateTransformation()
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
-    AffineXf3f bestIterXf = flt_.xf;
+    AffineXf3f resXf = flt_.xf;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         updatePointPairs();
@@ -402,7 +402,7 @@ AffineXf3f ICP::calculateTransformation()
         // exit if several(3) iterations didn't decrease minimization parameter
         if (curDist < minDist)
         {
-            bestIterXf = flt_.xf;
+            resXf = flt_.xf;
             minDist = curDist;
             badIterCount = 0;
 
@@ -422,8 +422,8 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    flt_.xf = bestIterXf;
-    return flt_.xf;
+    flt_.xf = resXf;
+    return resXf;
 }
 
 size_t getNumActivePairs( const IPointPairs& pairs )

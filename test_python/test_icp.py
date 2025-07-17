@@ -20,6 +20,11 @@ def test_icp():
     icp = mrmesh.ICP(
         torusMove, torusRef, xf, mrmesh.AffineXf3f(), torusMove.topology.getValidVerts(), torusRef.topology.getValidVerts()
     )
+
+    props = mrmesh.ICPProperties()
+    props.iterLimit = 20
+    props.distThresholdSq = 1
+    icp.setParams(props)
     newXf = icp.calculateTransformation()
     print(icp.getStatusInfo())
 

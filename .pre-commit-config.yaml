@@ -6,6 +6,7 @@ repos:
     -   id: vcxproj-missing-files
         name: Check Visual Studio projects for missing file entries
         stages: [pre-push]
+        always_run: true
         entry: scripts/check_vcxproj.py
         language: script
         files: \.vcxproj$

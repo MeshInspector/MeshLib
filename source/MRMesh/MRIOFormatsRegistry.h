@@ -5,6 +5,7 @@
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
+#include "MRLinesLoadSettings.h"
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
 #include "MRSaveSettings.h"
@@ -185,8 +186,8 @@ MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<M
 namespace LinesLoad
 {
 
-using LinesFileLoader = Expected<Polyline3>( * )( const std::filesystem::path&, ProgressCallback );
-using LinesStreamLoader = Expected<Polyline3>( * )( std::istream&, ProgressCallback );
+using LinesFileLoader = Expected<Polyline3>( * )( const std::filesystem::path&, const LinesLoadSettings& );
+using LinesStreamLoader = Expected<Polyline3>( * )( std::istream&, const LinesLoadSettings& );
 
 struct LinesLoader
 {

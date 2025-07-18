@@ -160,10 +160,10 @@ bool PolylineTopology::isLoneEdge( EdgeId a ) const
     return true;
 }
 
-EdgeId PolylineTopology::lastNotLoneEdge() const
+UndirectedEdgeId PolylineTopology::lastNotLoneUndirectedEdge() const
 {
     assert( edges_.size() % 2 == 0 );
-    for ( EdgeId i{ (int)edges_.size() - 1 }; i.valid(); ----i ) // one decrement returns sym-edge
+    for ( UndirectedEdgeId i{ (int)undirectedEdgeSize() - 1 }; i.valid(); --i )
     {
         if ( !isLoneEdge( i ) )
             return i;

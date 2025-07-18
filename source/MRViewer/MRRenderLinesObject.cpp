@@ -1,18 +1,19 @@
 #include "MRRenderLinesObject.h"
+#include "MRGLMacro.h"
+#include "MRCreateShader.h"
+#include "MRViewer.h"
+#include "MRGladGlfw.h"
+#include "MRRenderGLHelpers.h"
+#include "MRRenderHelpers.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRTimer.h"
-#include "MRCreateShader.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMatrix4.h"
-#include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRVector2.h"
-#include "MRRenderGLHelpers.h"
-#include "MRRenderHelpers.h"
-#include "MRViewer.h"
-#include "MRGladGlfw.h"
-#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {
@@ -290,7 +291,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
         assert( maxTexSize > 0 );
 
-        bool useColorMap = objLines_->getColoringType() == ColoringType::VertsColorMap;
+        bool useColorMap = objLines_->getColoringType() == ColoringType::VertsColorMap && !objLines_->getVertsColorMap().empty();
         RenderBufferRef<Color> textVertColorMap;
         Vector2i res;
         if ( useColorMap && objLines_->polyline() )
@@ -298,30 +299,16 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
             auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
             const auto& polyline = objLines_->polyline();
             const auto& topology = polyline->topology;
-            auto lastValid = topology.lastNotLoneEdge();
-            auto numL = lastValid.valid() ? lastValid.undirected() + 1 : 0;
-            res = calcTextureRes( int( 2 * numL ), maxTexSize );
+            res = calcTextureRes( (int)topology.edgeSize(), maxTexSize );
             textVertColorMap = glBuffer.prepareBuffer<Color>( res.x * res.y );
-            auto undirEdgesSize = numL;
             const auto& vertsColorMap = objLines_->getVertsColorMap();
-            auto lastValidVert = topology.lastValidVert() - 1;
-            tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+            ParallelFor( 0_ue, UndirectedEdgeId( topology.undirectedEdgeSize() ), [&]( UndirectedEdgeId ue )
             {
-                for ( int ue = range.begin(); ue < range.end(); ++ue )
-                {
-                    auto o = topology.org( UndirectedEdgeId( ue ) );
-                    auto d = topology.dest( UndirectedEdgeId( ue ) );
-                    if ( !o || !d )
-                    {
-                        textVertColorMap[2 * ue] = vertsColorMap[lastValidVert];
-                        textVertColorMap[2 * ue + 1] = vertsColorMap[lastValidVert];
-                    }
-                    else
-                    {
-                        textVertColorMap[2 * ue] = vertsColorMap[o];
-                        textVertColorMap[2 * ue + 1] = vertsColorMap[d];
-                    }
-                }
+                auto o = topology.org( ue );
+                textVertColorMap[2 * ue] = (size_t)o >= vertsColorMap.size() ? vertsColorMap.back() : vertsColorMap[o];
+
+                auto d = topology.dest( ue );
+                textVertColorMap[2 * ue + 1] = (size_t)d >= vertsColorMap.size() ? vertsColorMap.back() : vertsColorMap[d];
             } );
         }
         vertColorsTex_.loadData(

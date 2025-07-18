@@ -69,6 +69,9 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     {
         if ( objLines->polyline() )
         {
+            const auto& colors = objLines->getVertsColorMap();
+            if ( !colors.empty() )
+                saveSettings.colors = &colors;
             result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, saveSettings );
         }
         else

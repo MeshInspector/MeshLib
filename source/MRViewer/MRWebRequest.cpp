@@ -4,9 +4,10 @@
 
 #include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
-#include "MRPch/MRWasm.h"
-#include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRSerializer.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
@@ -67,17 +68,12 @@ extern "C"
 EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
-    std::string resStr = response;
-    Json::Value resJson;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( reader->parse( resStr.data(), resStr.data() + resStr.size(), &resJson, &error ) )
+    if ( auto resJson = deserializeJsonValue( response, std::strlen( response ) ) )
     {
         if ( !async )
         {
             auto& ctx = sRequestContextMap.at( ctxId );
-            ctx->responseCallback( resJson );
+            ctx->responseCallback( *resJson );
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
@@ -88,7 +84,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
             CommandLoop::appendCommand( [resJson, ctxId] ()
             {
                 auto& ctx = sRequestContextMap.at( ctxId );
-                ctx->responseCallback( resJson );
+                ctx->responseCallback( *resJson );
 
                 std::unique_lock lock( sRequestContextMutex );
                 sRequestContextMap.erase( ctxId );
@@ -98,7 +94,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     }
     else
     {
-        spdlog::info(error);
+        spdlog::info( resJson.error() );
     }
     return 1;
 }
@@ -503,12 +499,11 @@ Expected<Json::Value> parseResponse( const Json::Value& response )
 
     text = response["text"].asString();
 
-    Json::Value root;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( !reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
+    auto rootRes = deserializeJsonValue( text );
+    if ( !rootRes )
         return unexpected( "Unknown error." );
+    auto& root = *rootRes;
+
     if ( root.isObject() && root["message"].isString() )
         return unexpected( root["message"].asString() );
     return root;

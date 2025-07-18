@@ -269,11 +269,7 @@ std::string AddCustomThemePlugin::save_()
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         std::filesystem::create_directories( saveDir.parent_path(), ec );
 
-        auto json = makeJson_();
-        std::ofstream ofs( saveDir );
-        Json::StreamWriterBuilder builder;
-        std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-        if ( !ofs || writer->write( json, &ofs ) != 0 )
+        if ( !serializeJsonValue( makeJson_(), saveDir ) )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
             return "Cannot save theme with name: \"" + themeName_ + "\"";

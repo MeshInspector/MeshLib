@@ -1939,13 +1939,9 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     if ( !transformClipboardText_.empty() )
     {
-        Json::Value root;
-        Json::CharReaderBuilder readerBuilder;
-        std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-        std::string error;
-        if ( reader->parse( transformClipboardText_.data(), transformClipboardText_.data() + transformClipboardText_.size(), &root, &error ) )
+        if ( auto root = deserializeJsonValue( transformClipboardText_ ) )
         {
-            if ( auto tr = deserializeTransform( root ))
+            if ( auto tr = deserializeTransform( *root ) )
             {
                 if ( UI::button( "Paste", Vector2f( buttonSize, 0 ) ) )
                 {
@@ -1982,29 +1978,16 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { .filters = { { "JSON (.json)", "*.json" } } } );
-        std::string errorString;
         if ( !filename.empty() )
         {
-            std::ifstream ifs( filename );
-            if ( ifs )
+            std::string errorString;
+            if ( auto root = deserializeJsonValue( filename ) )
             {
-                std::string text( ( std::istreambuf_iterator<char>( ifs ) ), std::istreambuf_iterator<char>() );
-
-                Json::Value root;
-                Json::CharReaderBuilder readerBuilder;
-                std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-                std::string error;
-                if ( reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
+                if ( auto tr = deserializeTransform( *root ) )
                 {
-                    if ( auto tr = deserializeTransform( root ))
-                    {
-                        AppendHistory<ChangeXfAction>( "Load Transform from File", selected );
-                        selected->setXf( tr->xf );
-                        uniformScale_ = tr->uniformScale;
-                    } else
-                    {
-                        errorString = "Cannot parse transform";
-                    }
+                    AppendHistory<ChangeXfAction>( "Load Transform from File", selected );
+                    selected->setXf( tr->xf );
+                    uniformScale_ = tr->uniformScale;
                 }
                 else
                 {
@@ -2013,7 +1996,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             }
             else
             {
-                errorString = "Cannot open file for reading";
+                errorString = "Cannot parse transform";
             }
             if ( !errorString.empty() )
                 pushNotification( { .text = errorString, .type = NotificationType::Error } );

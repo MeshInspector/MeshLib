@@ -197,4 +197,46 @@ Mesh makeCone( float radius0, float length, int resolution )
     return makeCylinderAdvanced( radius0, 0.f, 0.f, 2.0f * PI_F, length, resolution );
 }
 
+Mesh makeSolidOfRevolution( const Contour2f& profile, int resolution )
+{
+    std::vector<Vector3f> points;
+    points.reserve( profile.size() * resolution );
+    for ( auto i = 0; i < resolution; ++i )
+    {
+        const auto angle = 2.f * PI_F * (float)i / (float)resolution;
+        const auto x = std::cos( angle ), y = std::sin( angle );
+        for ( const auto& p : profile )
+        {
+            points.emplace_back(
+                p.x * x,
+                p.x * y,
+                p.y
+            );
+        }
+    }
+
+    Triangulation t;
+    t.reserve( 2 * ( profile.size() - 1 ) * resolution );
+    for ( auto y0 = 0; y0 < resolution; ++y0 )
+    {
+        const auto y1 = ( y0 + 1 ) % resolution;
+        for ( auto x0 = 0; x0 + 1 < profile.size(); ++x0 )
+        {
+            const auto x1 = x0 + 1;
+            const VertId
+                v00 { y0 * profile.size() + x0 },
+                v01 { y0 * profile.size() + x1 },
+                v10 { y1 * profile.size() + x0 },
+                v11 { y1 * profile.size() + x1 };
+
+            if ( points[v00] != points[v10] )
+                t.push_back( { v00, v10, v11 } );
+            if ( points[v01] != points[v11] )
+                t.push_back( { v00, v11, v01 } );
+        }
+    }
+
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
 }

@@ -64,6 +64,9 @@ private:
     int createToolType_ = 0;
     float createToolLength_ = 8.f;
     float createToolDiameter_ = 2.f;
+    float createToolCornerRadius_ = 0.5f;
+    float createToolCuttingAngle_ = 90.f;
+    float createToolEndDiameter_ = 0.f;
 };
 
 }

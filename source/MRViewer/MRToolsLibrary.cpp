@@ -134,6 +134,8 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
     static const std::vector<std::string> cToolTypeNames {
         "Flat End Mill",
         "Ball End Mill",
+        "Bull Nose End Mill",
+        "Chamfer End Mill",
     };
     assert( cToolTypeNames.size() == (int)EndMillCutter::Type::Count );
     ImGui::SetNextItemWidth( itemWidth );
@@ -150,6 +152,15 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
         if ( UI::drag<LengthUnit>( "Cutter Radius", radius, 1e-3f, 1e-3f, 1e+3f ) )
             createToolDiameter_ = radius * 2.f;
     }
+    if ( createToolType_ == (int)EndMillCutter::Type::BullNose )
+    {
+        UI::drag<LengthUnit>( "Cutter Radius", createToolCornerRadius_, 1e-3f, 0.f, createToolDiameter_ / 2.f );
+    }
+    if ( createToolType_ == (int)EndMillCutter::Type::Chamfer )
+    {
+        UI::drag<AngleUnit>( "Cutting Angle", createToolCuttingAngle_, 1.f, 0.f, 180.f, { .sourceUnit = AngleUnit::degrees } );
+        UI::drag<LengthUnit>( "End Diameter", createToolEndDiameter_, 1e-3f, 0.f, createToolDiameter_ );
+    }
     ImGui::PopItemWidth();
 
     // TODO: visualize tool
@@ -162,6 +173,9 @@ bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
             .diameter = createToolDiameter_,
             .cutter = EndMillCutter {
                 .type = (EndMillCutter::Type)createToolType_,
+                .cornerRadius = createToolType_ == (int)EndMillCutter::Type::BullNose ? createToolCornerRadius_ : 0.f,
+                .cuttingAngle = createToolType_ == (int)EndMillCutter::Type::Chamfer ? createToolCuttingAngle_ : 0.f,
+                .endDiameter = createToolType_ == (int)EndMillCutter::Type::Chamfer ? createToolEndDiameter_ : 0.f,
             },
         } );
         createToolDialogIsOpen_ = false;

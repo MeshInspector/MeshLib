@@ -223,11 +223,15 @@ Mesh makeSolidOfRevolution( const Contour2f& profile, int resolution )
         for ( auto x0 = 0; x0 + 1 < profile.size(); ++x0 )
         {
             const auto x1 = x0 + 1;
-            const VertId
-                v00 { y0 * profile.size() + x0 },
-                v01 { y0 * profile.size() + x1 },
-                v10 { y1 * profile.size() + x0 },
-                v11 { y1 * profile.size() + x1 };
+
+            // for profile points with x = 0 (point is lying on the axis) use the same vertex
+            #define FIND_VERTEX( y_, x_ ) VertId { int( bool( profile[x_].x ) ) * y_ * profile.size() + x_ }
+            const auto
+                v00 = FIND_VERTEX( y0, x0 ),
+                v01 = FIND_VERTEX( y0, x1 ),
+                v10 = FIND_VERTEX( y1, x0 ),
+                v11 = FIND_VERTEX( y1, x1 );
+            #undef FIND_VERTEX
 
             if ( points[v00] != points[v10] )
                 t.push_back( { v00, v10, v11 } );

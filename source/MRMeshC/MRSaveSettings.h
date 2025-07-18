@@ -9,10 +9,10 @@ typedef struct MRSaveSettings
 {
     /// true - save valid points/vertices only (pack them);
     /// false - save all points/vertices preserving their indices
-    bool saveValidOnly;
-    /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed;
-    /// currently affects .ctm format only
-    bool rearrangeTriangles;
+    bool onlyValidPoints;
+    /// if it is turned on, then higher compression ratios are reached but the order of primitives (triangles in meshes or edges in polylines) is changed;
+    /// currently this flag affects the saving in .ctm and .ply formats only
+    bool packPrimitives;
     /// optional per-vertex color to save with the geometry
     const MRVertColors* colors;
     /// to report save progress and cancel saving if user desires

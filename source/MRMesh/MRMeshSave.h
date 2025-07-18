@@ -18,7 +18,7 @@ namespace MeshSave
 /// \{
 
 /// saves in internal file format;
-/// SaveSettings::saveValidOnly = true is ignored
+/// SaveSettings::onlyValidPoints = true is ignored
 MRMESH_API Expected<void> toMrmesh( const Mesh & mesh, const std::filesystem::path & file,
                                                      const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out,
@@ -40,12 +40,12 @@ MRMESH_API Expected<void> toObj( const Mesh & mesh, const std::filesystem::path 
 MRMESH_API Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in binary .stl file;
-/// SaveSettings::saveValidOnly = false is ignored
+/// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in textual .stl file;
-/// SaveSettings::saveValidOnly = false is ignored
+/// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings = {} );
 

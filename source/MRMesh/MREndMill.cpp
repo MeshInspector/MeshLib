@@ -28,17 +28,33 @@ Mesh EndMillTool::toMesh( int horizontalResolution, int verticalResolution ) con
 
     case EndMillCutter::Type::Ball:
     {
-        Contour2f profile;
-        profile.reserve( verticalResolution + 3 );
-        for ( auto i = 0; i < verticalResolution; ++i )
+        // TODO: custom implementation
+        auto sphere = makeUVSphere( radius, horizontalResolution, verticalResolution );
+
+        trimWithPlane( sphere, TrimWithPlaneParams {
+            .plane = Plane3f{ Vector3f::minusZ(), 0.f },
+        } );
+
+        sphere.transform( AffineXf3f::translation( Vector3f::plusZ() * radius ) );
+
+        const auto borderEdges = sphere.topology.findHoleRepresentiveEdges();
+        assert( borderEdges.size() == 1 );
+        auto borderEdge = borderEdges.front();
+        borderEdge = makeDegenerateBandAroundHole( sphere, borderEdge );
+
+        for ( auto e : trackRightBoundaryLoop( sphere.topology, borderEdge ) )
         {
-            const auto angle = PI2_F * (float)i / (float)verticalResolution;
-            profile.emplace_back( radius * std::sin( angle ), radius * ( 1 - std::cos( angle ) ) );
+            const auto v = sphere.topology.org( e );
+            auto& p = sphere.points[v];
+            p.z = length;
         }
-        profile.emplace_back( radius, radius );
-        profile.emplace_back( radius, length );
-        profile.emplace_back( 0.f, length );
-        return makeSolidOfRevolution( profile, horizontalResolution );
+        sphere.invalidateCaches();
+
+        fillHole( sphere, borderEdge, {
+            .metric = getPlaneFillMetric( sphere, borderEdge ),
+        } );
+
+        return sphere;
     }
 
     case EndMillCutter::Type::Count:

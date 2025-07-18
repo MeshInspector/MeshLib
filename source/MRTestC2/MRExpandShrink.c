@@ -23,12 +23,12 @@ void testExpandShrink( void )
     int num = (int)MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT_INT_EQUAL( num, 75 );
 
-    MR_expand_MR_FaceBitSet_ref( top, region, &(int){3} );
+    MR_expand_MR_FaceBitSet( top, region, &(int){3} );
     num = (int)MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT( num == 274 || // without FMA instruction (default settings for x86 or old compilers for ARM)
                  num == 284 ); // with FMA instruction (modern compilers for ARM)
 
-    MR_shrink_MR_FaceBitSet_ref( top, region, &(int){3} );
+    MR_shrink_MR_FaceBitSet( top, region, &(int){3} );
     num = (int)MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT_INT_EQUAL( num, 75 );
 
@@ -53,11 +53,11 @@ void testExpandShrinkVerts( void )
     size_t num = MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT( num == 37 );
 
-    MR_expand_MR_VertBitSet_ref( top, region, &(int){3} );
+    MR_expand_MR_VertBitSet( top, region, &(int){3} );
     num = MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT( num > 37 ); //platform dependent results
 
-    MR_shrink_MR_VertBitSet_ref( top, region, &(int){3} );
+    MR_shrink_MR_VertBitSet( top, region, &(int){3} );
     num = MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( region ) );
     TEST_ASSERT( num == 37 );
 

@@ -30,18 +30,18 @@ void testMeshBoolean( void )
     float secondaryRadiusA = 0.5f;
     int32_t primaryResolutionA = 8;
     int32_t secondaryResolutionA = 8;
-	MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL );
+    MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL );
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int32_t primaryResolutionB = 8;
     int32_t secondaryResolutionB = 8;
-	MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL );
+    MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL );
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();
         const MR_Vector3f plusY = MR_Vector3f_plusY();
-        const MR_Matrix3f rot = MR_Matrix3f_rotation_const_MR_Vector3f_ref( &plusZ, &plusY );
+        const MR_Matrix3f rot = MR_Matrix3f_rotation_MR_Vector3f( &plusZ, &plusY );
         const MR_AffineXf3f xf = MR_AffineXf3f_linear( &rot );
         MR_Mesh_transform( meshB, &xf, NULL );
     }
@@ -102,26 +102,20 @@ void testMeshBoolean( void )
 
 void testBooleanMultipleEdgePropogationSort( void )
 {
-    const MR_Vector3f points[6] = {
-        {  0.0f, 0.0f, 0.0f },
-        { -0.5f, 1.0f, 0.0f },
-        { +0.5f, 1.0f, 0.0f },
-        {  0.0f, 1.5f, 0.5f },
-        { -1.0f, 1.5f, 0.0f },
-        { +1.0f, 1.5f, 0.0f }
-    };
+    MR_VertCoords* pointsVec = MR_VertCoords_Construct_1_uint64_t( 6 );
+    *MR_VertCoords_at( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
+    *MR_VertCoords_at( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_at( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_at( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){  0.0f, 1.5f, 0.5f };
+    *MR_VertCoords_at( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
+    *MR_VertCoords_at( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
-    MR_VertCoords *pointsVec = MR_VertCoords_Construct_2( 6, points );
-
-    MR_std_array_MR_VertId_3 vertIds[5] = {
-        {{ {0}, {2}, {1} }},
-        {{ {1}, {2}, {3} }},
-        {{ {3}, {4}, {1} }},
-        {{ {2}, {5}, {3} }},
-        {{ {3}, {5}, {4} }},
-    };
-
-    MR_Triangulation *triangulation = MR_Triangulation_Construct_2( 5, vertIds );
+    MR_Triangulation *triangulation = MR_Triangulation_Construct_1_uint64_t( 5 );
+    *MR_Triangulation_at( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
+    *MR_Triangulation_at( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
+    *MR_Triangulation_at( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
+    *MR_Triangulation_at( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
+    *MR_Triangulation_at( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
 
     MR_Mesh* meshA = MR_Mesh_fromTriangles( MR_PassBy_Move, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 
@@ -183,18 +177,18 @@ void testBooleanMapper( void )
     float secondaryRadiusA = 0.5f;
     int32_t primaryResolutionA = 8;
     int32_t secondaryResolutionA = 8;
-	MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL);
+    MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL);
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int32_t primaryResolutionB = 8;
     int32_t secondaryResolutionB = 8;
-	MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL);
+    MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL);
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();
         const MR_Vector3f plusY = MR_Vector3f_plusY();
-        const MR_Matrix3f rot = MR_Matrix3f_rotation_const_MR_Vector3f_ref( &plusZ, &plusY );
+        const MR_Matrix3f rot = MR_Matrix3f_rotation_MR_Vector3f( &plusZ, &plusY );
         const MR_AffineXf3f xf = MR_AffineXf3f_linear( &rot );
         MR_Mesh_transform( meshB, &xf, NULL );
     }
@@ -203,59 +197,58 @@ void testBooleanMapper( void )
     MR_BooleanParameters* parameters = MR_BooleanParameters_DefaultConstruct();
     MR_BooleanParameters_Set_mapper( parameters, mapper );
 
-    MR_BooleanResult result = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MRBooleanOperationUnion, &parameters );
+    MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, parameters );
     MR_BooleanParameters_Destroy( parameters );
     MR_BooleanResultMapper_Destroy( mapper );
 
-    TEST_ASSERT( mrStringSize( result.errorString ) == 0 )
+    TEST_ASSERT( MR_BooleanResult_valid( result ) )
 
-    const MRVertBitSet* meshAValidPoints = mrMeshTopologyGetValidVerts( mrMeshTopology( meshA ) );
-    const MRVertBitSet* meshBValidPoints = mrMeshTopologyGetValidVerts( mrMeshTopology( meshB ) );
-    MRVertBitSet* vMapA = mrBooleanResultMapperMapVerts( mapper, meshAValidPoints, MRBooleanResultMapperMapObjectA );
-    MRVertBitSet* vMapB = mrBooleanResultMapperMapVerts( mapper, meshBValidPoints, MRBooleanResultMapperMapObjectB );
-    TEST_ASSERT( mrBitSetSize( (MRBitSet*)vMapA ) == 60 )
-    TEST_ASSERT( mrBitSetSize( (MRBitSet*)vMapB ) == 204 )
-    TEST_ASSERT( mrBitSetCount( (MRBitSet*)vMapA ) == 60 )
-    TEST_ASSERT( mrBitSetCount( (MRBitSet*)vMapB ) == 48 )
+    const MR_VertBitSet* meshAValidPoints = MR_MeshTopology_getValidVerts( MR_Mesh_Get_topology( meshA ) );
+    const MR_VertBitSet* meshBValidPoints = MR_MeshTopology_getValidVerts( MR_Mesh_Get_topology( meshB ) );
+    MR_VertBitSet* vMapA = MR_BooleanResultMapper_map_MR_VertBitSet( mapper, meshAValidPoints, MR_BooleanResultMapper_MapObject_A );
+    MR_VertBitSet* vMapB = MR_BooleanResultMapper_map_MR_VertBitSet( mapper, meshBValidPoints, MR_BooleanResultMapper_MapObject_B );
+    TEST_ASSERT( MR_BitSet_size( MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ) ) == 60 )
+    TEST_ASSERT( MR_BitSet_size( MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) == 204 )
+    TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( vMapA ) ) == 60 )
+    TEST_ASSERT( MR_BitSet_count( MR_VertBitSet_UpcastTo_MR_BitSet( vMapB ) ) == 48 )
 
-    const MRFaceBitSet* meshAValidFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshA ) );
-    const MRFaceBitSet* meshBValidFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshB ) );
-    MRFaceBitSet* fMapA = mrBooleanResultMapperMapFaces( mapper, meshAValidFaces, MRBooleanResultMapperMapObjectA );
-    MRFaceBitSet* fMapB = mrBooleanResultMapperMapFaces( mapper, meshBValidFaces, MRBooleanResultMapperMapObjectB );
-    TEST_ASSERT( mrBitSetSize( (MRBitSet*)fMapA ) == 224 )
-    TEST_ASSERT( mrBitSetSize( (MRBitSet*)fMapB ) == 416 )
-    TEST_ASSERT( mrBitSetCount( (MRBitSet*)fMapA ) == 224 )
-    TEST_ASSERT( mrBitSetCount( (MRBitSet*)fMapB ) == 192 )
+    const MR_FaceBitSet* meshAValidFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshA ) );
+    const MR_FaceBitSet* meshBValidFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshB ) );
+    MR_FaceBitSet* fMapA = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, meshAValidFaces, MR_BooleanResultMapper_MapObject_A );
+    MR_FaceBitSet* fMapB = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, meshBValidFaces, MR_BooleanResultMapper_MapObject_B );
+    TEST_ASSERT( MR_BitSet_size( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ) ) == 224 )
+    TEST_ASSERT( MR_BitSet_size( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) == 416 )
+    TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapA ) ) == 224 )
+    TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( fMapB ) ) == 192 )
 
-    MRFaceBitSet* newFaces = mrBooleanResultMapperNewFaces( mapper );
-    TEST_ASSERT( mrBitSetSize( (MRBitSet*)newFaces ) == 416 )
-    TEST_ASSERT( mrBitSetCount( (MRBitSet*)newFaces ) == 252 )
+    MR_FaceBitSet* newFaces = MR_BooleanResultMapper_newFaces( mapper );
+    TEST_ASSERT( MR_BitSet_size( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) ) == 416 )
+    TEST_ASSERT( MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) ) == 252 )
 
-    const MRBooleanResultMapperMaps* mapsA = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectA );
-    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsA ) )
-    TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsA ).size == 160 )
-    TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsA ).size == 348 )
-    TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsA ).size == 348 )
+    const MR_BooleanResultMapper_Maps* mapsA = MR_BooleanResultMapper_getMaps( mapper, MR_BooleanResultMapper_MapObject_A );
+    TEST_ASSERT( !*MR_BooleanResultMapper_Maps_Get_identity( mapsA ) )
+    TEST_ASSERT( MR_VertMap_size( MR_BooleanResultMapper_Maps_Get_old2newVerts( mapsA ) ) == 160 )
+    TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2newFaces( mapsA ) ) == 348 )
+    TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2origin( mapsA ) ) == 348 )
 
-    const MRBooleanResultMapperMaps* mapsB = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectB );
-    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsB ) )
-    TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsB ).size == 160 )
-    TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsB ).size == 384 )
-    TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsB ).size == 384 )
+    const MR_BooleanResultMapper_Maps* mapsB = MR_BooleanResultMapper_getMaps( mapper, MR_BooleanResultMapper_MapObject_B );
+    TEST_ASSERT( !*MR_BooleanResultMapper_Maps_Get_identity( mapsB ) )
+    TEST_ASSERT( MR_VertMap_size( MR_BooleanResultMapper_Maps_Get_old2newVerts( mapsB ) ) == 160 )
+    TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2newFaces( mapsB ) ) == 384 )
+    TEST_ASSERT( MR_FaceMap_size( MR_BooleanResultMapper_Maps_Get_cut2origin( mapsB ) ) == 384 )
 
-    mrFaceBitSetFree( newFaces );
+    MR_FaceBitSet_Destroy( newFaces );
 
-    mrFaceBitSetFree( fMapB );
-    mrFaceBitSetFree( fMapA );
+    MR_FaceBitSet_Destroy( fMapB );
+    MR_FaceBitSet_Destroy( fMapA );
 
-    mrVertBitSetFree( vMapB );
-    mrVertBitSetFree( vMapA );
+    MR_VertBitSet_Destroy( vMapB );
+    MR_VertBitSet_Destroy( vMapA );
 
-    mrStringFree( result.errorString );
-    mrMeshFree( result.mesh );
+    MR_BooleanResult_Destroy( result );
 
-    mrBooleanResultMapperFree( mapper );
+    MR_BooleanResultMapper_Destroy( mapper );
 
-    mrMeshFree( meshB );
-    mrMeshFree( meshA );
+    MR_Mesh_Destroy( meshB );
+    MR_Mesh_Destroy( meshA );
 }

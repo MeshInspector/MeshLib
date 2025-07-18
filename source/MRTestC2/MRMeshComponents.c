@@ -5,93 +5,120 @@
 #include <MRCMesh/MRBitSet.h>
 #include <MRCMesh/MRCube.h>
 #include <MRCMesh/MRMesh.h>
-#include <MRCMesh/MRMeshPart.h>
 #include <MRCMesh/MRMeshBoolean.h>
 #include <MRCMesh/MRMeshComponents.h>
+#include <MRCMesh/MRMeshPart.h>
+#include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
+#include <MRCMisc/std_pair_MR_Face2RegionMap_int32_t.h>
+#include <MRCMisc/std_pair_MR_FaceBitSet_int32_t.h>
 
-MRMeshPart createMesh(void)
+typedef struct CreatedMesh
 {
-    const MRVector3f meshASize = mrVector3fDiagonal( 1.0f );
-    const MRVector3f meshABase = mrVector3fDiagonal( -0.5f );
+    MR_Mesh* mesh;
+    MR_MeshPart* part;
+} CreatedMesh;
 
-    const MRVector3f meshBSize = mrVector3fDiagonal( 0.1f );
-    const MRVector3f meshBBase = mrVector3fDiagonal( 1.0f );
+CreatedMesh createMesh( void )
+{
+    const MR_Vector3f meshASize = MR_Vector3f_diagonal( 1.0f );
+    const MR_Vector3f meshABase = MR_Vector3f_diagonal( -0.5f );
 
-    MRMesh* meshA = mrMakeCube( &meshASize, &meshABase );
-    MRMesh* meshB = mrMakeCube( &meshBSize, &meshBBase );
+    const MR_Vector3f meshBSize = MR_Vector3f_diagonal( 0.1f );
+    const MR_Vector3f meshBBase = MR_Vector3f_diagonal( 1.0f );
 
-    MRBooleanResult resultAB = mrBoolean( meshA, meshB, MRBooleanOperationUnion, NULL );
-    mrMeshFree( meshA );
-    mrMeshFree( meshB );
+    MR_Mesh* meshA = MR_makeCube( &meshASize, &meshABase );
+    MR_Mesh* meshB = MR_makeCube( &meshBSize, &meshBBase );
 
-    MRMeshPart mp = { resultAB.mesh, NULL };
-    return mp;
+    MR_BooleanResult* resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, NULL );
+    MR_Mesh_Destroy( meshA );
+    MR_Mesh_Destroy( meshB );
+
+    CreatedMesh ret;
+    ret.mesh = MR_Mesh_ConstructFromAnother( MR_PassBy_Copy, MR_BooleanResult_GetMutable_mesh( resultAB ) );
+    MR_BooleanResult_Destroy( resultAB );
+
+    ret.part = MR_MeshPart_Construct( ret.mesh, NULL );
+
+    return ret;
+}
+
+void destroyMesh( CreatedMesh target )
+{
+    MR_MeshPart_Destroy( target.part );
+    MR_Mesh_Destroy( target.mesh );
 }
 
 void testComponentsMap( void )
 {
-    MRMeshPart mp = createMesh();
+    CreatedMesh m = createMesh();
 
-    MRMeshComponentsMap map = mrMeshComponentsGetAllComponentsMap( &mp, MRFaceIncidencePerEdge );
-    TEST_ASSERT( map.numComponents == 2 );
-    TEST_ASSERT( map.faceMap->size == 24 );
-    TEST_ASSERT( map.faceMap->data[0].id == 0 );
-    TEST_ASSERT( map.faceMap->data[12].id == 1 );
+    MR_std_pair_MR_Face2RegionMap_int32_t* map = MR_MeshComponents_getAllComponentsMap( m.part, NULL, NULL );
+    TEST_ASSERT( *MR_std_pair_MR_Face2RegionMap_int32_t_Second( map ) == 2 );
+    TEST_ASSERT( MR_Face2RegionMap_size( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ) ) == 24 );
+    TEST_ASSERT( MR_Face2RegionMap_at_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){0} )->id_ == 0 );
+    TEST_ASSERT( MR_Face2RegionMap_at_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){12} )->id_ == 1 );
 
-    mrMeshFree( (MRMesh*)mp.mesh );
-    mrMeshComponentsAllComponentsMapFree( &map );
+    MR_std_pair_MR_Face2RegionMap_int32_t_Destroy( map );
+
+    destroyMesh( m );
 }
 
 void testLargeRegions( void )
 {
-    MRMeshPart mp = createMesh();
+    CreatedMesh m = createMesh();
 
-    MRMeshComponentsMap map = mrMeshComponentsGetAllComponentsMap( &mp, MRFaceIncidencePerEdge );
-    MRMeshRegions regions = mrMeshComponentsGetLargeByAreaRegions( &mp, map.faceMap, map.numComponents, 0.1f );
+    MR_std_pair_MR_Face2RegionMap_int32_t* map = MR_MeshComponents_getAllComponentsMap( m.part, NULL, NULL );
+    MR_std_pair_MR_FaceBitSet_int32_t* regions = MR_MeshComponents_getLargeByAreaRegions( m.part, MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), *MR_std_pair_MR_Face2RegionMap_int32_t_Second( map ), 0.1f );
 
-    TEST_ASSERT( regions.numRegions == 1 );
-    TEST_ASSERT( mrBitSetTest( ( const MRBitSet* ) regions.faces, 0 ) );
-    TEST_ASSERT( !mrBitSetTest( ( const MRBitSet* ) regions.faces, 12 ) );
+    TEST_ASSERT( *MR_std_pair_MR_FaceBitSet_int32_t_Second( regions ) == 1 );
+    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int32_t_First( regions ) ), 0 ) );
+    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( MR_std_pair_MR_FaceBitSet_int32_t_First( regions ) ), 12 ) );
 
-    mrMeshFree( ( MRMesh* ) mp.mesh );
-    mrMeshComponentsAllComponentsMapFree( &map );
+    MR_std_pair_MR_Face2RegionMap_int32_t_Destroy( map );
+
+    destroyMesh( m );
 }
 
 void testLargeComponents( void )
 {
-    MRMeshPart mp = createMesh();
+    CreatedMesh m = createMesh();
 
-    MRFaceBitSet* components = mrMeshComponentsGetLargeByAreaComponents( &mp, 0.1f, NULL );
-    TEST_ASSERT( mrBitSetTest( ( const MRBitSet* ) components, 0 ) );
-    TEST_ASSERT( !mrBitSetTest( ( const MRBitSet* ) components, 12 ) );
+    MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents_3( m.part, 0.1f, NULL );
+    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( components ), 0 ) );
+    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( components ), 12 ) );
 
-    mrFaceBitSetFree( components );
-    mrMeshFree( ( MRMesh* ) mp.mesh );
+    MR_FaceBitSet_Destroy( components );
+
+    destroyMesh( m );
 }
 
 void testLargestComponent( void )
 {
-    MRMeshPart mp = createMesh();
+    CreatedMesh m = createMesh();
 
     int smallerComponents = 0;
-    MRFaceBitSet* largestComponent = mrMeshComponentsGetLargestComponent( &mp, MRFaceIncidencePerEdge, NULL, 0.1f, &smallerComponents );
-    TEST_ASSERT( mrBitSetTest( ( const MRBitSet* ) largestComponent, 0 ) );
-    TEST_ASSERT( !mrBitSetTest( ( const MRBitSet* ) largestComponent, 12 ) );
+    MR_FaceBitSet* largestComponent = MR_MeshComponents_getLargestComponent( m.part, NULL, NULL, &(float){0.1f}, &smallerComponents );
+    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( largestComponent ), 0 ) );
+    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( largestComponent ), 12 ) );
     TEST_ASSERT( smallerComponents == 1 );
 
-    mrFaceBitSetFree( largestComponent );
-    mrMeshFree( ( MRMesh* ) mp.mesh );
+    MR_FaceBitSet_Destroy( largestComponent );
+
+    destroyMesh( m );
 }
 
 void testGetComponent( void )
 {
-    MRMeshPart mp = createMesh();
-    MRFaceId face;
-    face.id = 12;
-    MRFaceBitSet* component = mrMeshComponentsGetComponent( &mp, face, MRFaceIncidencePerEdge, NULL );
-    TEST_ASSERT( !mrBitSetTest( ( const MRBitSet* ) component, 0 ) );
-    TEST_ASSERT( mrBitSetTest( ( const MRBitSet* ) component, 12 ) );
-    mrFaceBitSetFree( component );
-    mrMeshFree( ( MRMesh* ) mp.mesh );
+    CreatedMesh m = createMesh();
+    MR_FaceId face;
+    face.id_ = 12;
+
+    MR_FaceBitSet* component = MR_MeshComponents_getComponent( m.part, face, NULL, NULL );
+
+    TEST_ASSERT( !MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( component ), 0 ) );
+    TEST_ASSERT( MR_BitSet_test( MR_FaceBitSet_UpcastTo_MR_BitSet( component ), 12 ) );
+    MR_FaceBitSet_Destroy( component );
+
+    destroyMesh( m );
 }

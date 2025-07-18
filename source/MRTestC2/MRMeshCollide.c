@@ -6,22 +6,24 @@
 
 void testMeshCollide( void )
 {
-    MRMakeTorusParameters params = {
-    .primaryRadius = 1.1f,
-    .secondaryRadius = 0.5f,
-    .primaryResolution = 8,
-    .secondaryResolution = 8,
-    };
-    MRMesh* meshA = mrMakeTorus( &params );
-    params.secondaryRadius = 0.2f;
-    MRMesh* meshB = mrMakeTorus( &params );
+    float primaryRadius = 1.1f;
+    float secondaryRadius = 0.5f;
+    int32_t primaryResolution = 8;
+    int32_t secondaryResolution = 8;
+    MR_Mesh* meshA = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
 
-    MRMeshPart meshAPart = { meshA, NULL };
-    MRMeshPart meshBPart = { meshB, NULL };
+    secondaryRadius = 0.2f;
+    MR_Mesh* meshB = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
 
-    TEST_ASSERT( mrIsInside( &meshBPart, &meshAPart, NULL ) );
-    TEST_ASSERT( !mrIsInside( &meshAPart, &meshBPart, NULL ) );
+    MR_MeshPart* meshAPart = MR_MeshPart_Construct( meshA, NULL );
+    MR_MeshPart* meshBPart = MR_MeshPart_Construct( meshB, NULL );
 
-    mrMeshFree( meshB );
-    mrMeshFree( meshA );
+    TEST_ASSERT( MR_isInside_MR_MeshPart( meshBPart, meshAPart, NULL ) );
+    TEST_ASSERT( !MR_isInside_MR_MeshPart( meshAPart, meshBPart, NULL ) );
+
+    MR_MeshPart_Destroy( meshAPart );
+    MR_MeshPart_Destroy( meshBPart );
+
+    MR_Mesh_Destroy( meshB );
+    MR_Mesh_Destroy( meshA );
 }

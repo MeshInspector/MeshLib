@@ -45,7 +45,7 @@ void testShortEdges( void )
     float secondaryRadius = 0.05f;
     int32_t primaryResolution = 16;
     int32_t secondaryResolution = 16;
-	MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
+    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
 
     MR_MeshPart *mp = MR_MeshPart_Construct( mesh, NULL );
 
@@ -71,7 +71,7 @@ void testIncidentFacesFromVerts( void )
     MR_BitSet_resize( MR_VertBitSet_MutableUpcastTo_MR_BitSet( verts ), 8, &(bool){false} );
     MR_BitSet_set_2( MR_VertBitSet_MutableUpcastTo_MR_BitSet( verts ), 0, true );
 
-    MR_FaceBitSet* faces = MR_getIncidentFaces_const_MR_VertBitSet_ref( MR_Mesh_Get_topology(mesh), verts );
+    MR_FaceBitSet* faces = MR_getIncidentFaces_MR_VertBitSet( MR_Mesh_Get_topology(mesh), verts );
     size_t num = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( faces ) );
     TEST_ASSERT( num == 6 );
     MR_FaceBitSet_Destroy( faces );
@@ -90,7 +90,7 @@ void testIncidentFacesFromEdges( void )
     MR_BitSet_resize( MR_UndirectedEdgeBitSet_MutableUpcastTo_MR_BitSet( edges ), 12, &(bool){false} );
     MR_BitSet_set_2( MR_UndirectedEdgeBitSet_MutableUpcastTo_MR_BitSet( edges ), 0, &(bool){true} );
 
-    MR_FaceBitSet* faces = MR_getIncidentFaces_const_MR_UndirectedEdgeBitSet_ref( MR_Mesh_Get_topology( mesh ), edges );
+    MR_FaceBitSet* faces = MR_getIncidentFaces_MR_UndirectedEdgeBitSet( MR_Mesh_Get_topology( mesh ), edges );
     size_t num = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( faces ) );
     TEST_ASSERT( num == 8 );
     MR_FaceBitSet_Destroy( faces );

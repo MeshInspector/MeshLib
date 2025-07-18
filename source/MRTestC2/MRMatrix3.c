@@ -36,7 +36,7 @@ void testMrMatrix3fRotationVector(void) {
     MR_Vector3f from = {1.0f, 0.0f, 0.0f}; // Initial vector (x-axis)
     MR_Vector3f to = {0.0f, 1.0f, 0.0f}; // Target vector (y-axis)
 
-    MR_Matrix3f rotationMatrix = MR_Matrix3f_rotation_const_MR_Vector3f_ref(&from, &to);
+    MR_Matrix3f rotationMatrix = MR_Matrix3f_rotation_MR_Vector3f(&from, &to);
 
     // Expected results for a 90-degree rotation from x-axis to y-axis
     TEST_ASSERT_FLOAT_EQUAL_APPROX(rotationMatrix.x.x, 0.0f, 0.001f);

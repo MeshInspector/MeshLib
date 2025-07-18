@@ -39,6 +39,16 @@ float coneVolume( float radius, float height )
     return PI_F * sqr( radius ) * height / 3.f;
 }
 
+float torusArea( float majorRadius, float minorRadius )
+{
+    return 4.f * sqr( PI_F ) * majorRadius * minorRadius;
+}
+
+float torusVolume( float majorRadius, float minorRadius )
+{
+    return 2.f * sqr( PI_F ) * majorRadius * sqr( minorRadius );
+}
+
 } // namespace
 
 namespace MR
@@ -48,8 +58,8 @@ TEST( MRMesh, makeSolidOfRevolution )
 {
     const auto radius = 2.f;
     const auto height = 10.f;
-    const auto resolution = 32;
-    const auto errRatio = 0.01f;
+    const auto resolution = 64;
+    const auto errRatio = 0.005f;
 
     // sphere
     Contour2f sphereProfile;
@@ -96,6 +106,20 @@ TEST( MRMesh, makeSolidOfRevolution )
     EXPECT_EQ( cone.topology.getValidVerts().count(), resolution + 2 );
     EXPECT_NEAR( cone.area(), coneArea( radius, height ), errRatio * coneArea( radius, height ) );
     EXPECT_NEAR( cone.volume(), coneVolume( radius, height ), errRatio * coneVolume( radius, height ) );
+
+    // torus
+    Contour2f torusProfile;
+    for ( auto i = 0; i < resolution; ++i )
+    {
+        const auto angle = 2.f * PI_F * (float)i / (float)resolution;
+        torusProfile.emplace_back( height + radius * std::cos( angle ), radius * std::sin( angle ) );
+    }
+    torusProfile.emplace_back( height + radius, 0.f );
+
+    const auto torus = makeSolidOfRevolution( torusProfile, resolution );
+    EXPECT_EQ( torus.topology.getValidVerts().count(), resolution * resolution );
+    EXPECT_NEAR( torus.area(), torusArea( height, radius ), errRatio * torusArea( height, radius ) );
+    EXPECT_NEAR( torus.volume(), torusVolume( height, radius ), errRatio * torusVolume( height, radius ) );
 }
 
 } // namespace MR

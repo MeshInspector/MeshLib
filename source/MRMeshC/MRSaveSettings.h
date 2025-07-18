@@ -9,7 +9,7 @@ typedef struct MRSaveSettings
 {
     /// true - save valid points/vertices only (pack them);
     /// false - save all points/vertices preserving their indices
-    bool saveValidOnly;
+    bool onlyValidPoints;
     /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed;
     /// currently affects .ctm format only
     bool rearrangeTriangles;

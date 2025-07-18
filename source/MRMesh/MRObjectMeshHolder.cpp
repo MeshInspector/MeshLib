@@ -55,7 +55,7 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
         return {};
 
     SaveSettings saveSettings;
-    saveSettings.saveValidOnly = false;
+    saveSettings.onlyValidPoints = false;
     saveSettings.rearrangeTriangles = false;
     if ( !data_.vertColors.empty() )
         saveSettings.colors = &data_.vertColors;

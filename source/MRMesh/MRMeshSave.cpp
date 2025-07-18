@@ -60,7 +60,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
     const int numPolygons = mesh.topology.numValidFaces();
@@ -69,7 +69,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
         auto saveVertex = [&]( auto && p )
         {
@@ -143,7 +143,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     if ( settings.uvMap )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
@@ -151,7 +151,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     auto sb = subprogress( settings.progress, 0.0f, settings.uvMap ? 0.35f : 0.5f );
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
 
         auto saveVertex = [&]( auto && p )
@@ -181,7 +181,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         sb = subprogress( settings.progress, 0.35f, 0.7f );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )
         {
-            if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
             const auto& uv = ( *settings.uvMap )[i];
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
@@ -372,7 +372,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
     const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
@@ -399,7 +399,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );

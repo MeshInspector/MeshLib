@@ -279,7 +279,7 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
         return std::async( getAsyncLaunchType(), []{ return Expected<void>{}; } );
 
     SaveSettings saveSettings;
-    saveSettings.saveValidOnly = false;
+    saveSettings.onlyValidPoints = false;
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;

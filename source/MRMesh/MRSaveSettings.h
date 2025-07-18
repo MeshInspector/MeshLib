@@ -14,7 +14,7 @@ struct SaveSettings
 {
     /// true - save valid points/vertices only (pack them);
     /// false - save all points/vertices preserving their indices
-    bool saveValidOnly = true;
+    bool onlyValidPoints = true;
 
     /// whether to allow the pack or shuffle of triangles;
     /// if it is turned on, then ids of invalid triangles are reused by the following valid triangles

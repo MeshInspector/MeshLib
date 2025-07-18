@@ -18,7 +18,7 @@ void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, cons
     SaveSettings settings;
     if ( settings_ )
     {
-        settings.saveValidOnly = settings_->saveValidOnly;
+        settings.onlyValidPoints = settings_->onlyValidPoints;
         settings.rearrangeTriangles = settings_->rearrangeTriangles;
         settings.progress = settings_->progress;
         vector_wrapper<Color>* wrapper = (vector_wrapper<Color>*)( settings_->colors );

@@ -56,7 +56,7 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
 
     SaveSettings saveSettings;
     saveSettings.onlyValidPoints = false;
-    saveSettings.rearrangeTriangles = false;
+    saveSettings.packPrimitives = false;
     if ( !data_.vertColors.empty() )
         saveSettings.colors = &data_.vertColors;
     auto save = [mesh = data_.mesh, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()

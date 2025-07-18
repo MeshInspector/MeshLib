@@ -383,7 +383,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
     const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = settings.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
     out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
 
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
@@ -435,7 +435,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             for ( int i = 0; i < 3; ++i )
                 tri.v[i] = vertRenumber( vs[i] );
         }
-        else if ( !settings.rearrangeTriangles )
+        else if ( !settings.packPrimitives )
             tri.v[0] = tri.v[1] = tri.v[2] = 0;
         else
             continue;

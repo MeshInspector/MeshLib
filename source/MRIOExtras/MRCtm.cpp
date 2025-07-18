@@ -243,7 +243,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         ctmVertexPrecision( context, options.vertexPrecision );
         break;
     }
-    ctmRearrangeTriangles( context, options.rearrangeTriangles ? 1 : 0 );
+    ctmRearrangeTriangles( context, options.packPrimitives ? 1 : 0 );
     ctmCompressionLevel( context, options.compressionLevel );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.onlyValidPoints );
@@ -252,7 +252,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
 
     std::vector<CTMuint> aIndices;
     const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto numSaveFaces = options.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
     aIndices.reserve( numSaveFaces * 3 );
     for ( FaceId f{0}; f <= fLast; ++f )
     {
@@ -263,7 +263,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
             for ( int i = 0; i < 3; ++i )
                 aIndices.push_back( vertRenumber( v[i] ) );
         }
-        else if ( !options.rearrangeTriangles )
+        else if ( !options.packPrimitives )
         {
             for ( int i = 0; i < 3; ++i )
                 aIndices.push_back( 0 );

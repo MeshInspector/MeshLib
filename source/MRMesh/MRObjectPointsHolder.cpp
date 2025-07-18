@@ -280,7 +280,7 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
 
     SaveSettings saveSettings;
     saveSettings.onlyValidPoints = false;
-    saveSettings.rearrangeTriangles = false;
+    saveSettings.packPrimitives = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
     auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializePointsFormat(), path, saveSettings]()

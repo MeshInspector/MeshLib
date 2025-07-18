@@ -272,16 +272,10 @@ void GcodeToolsLibrary::addNewTool_( const std::string& name, const EndMillTool&
     if ( folderPath.empty() )
         return;
 
-    const auto jsonPath = folderPath / ( name + ".json" );
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( jsonPath, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     Json::Value root;
     serializeToJson( tool, root );
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, folderPath / ( name + ".json" ) ) )
         return;
-    ofs.close();
 
     toolMesh_ = std::make_shared<ObjectMesh>();
     toolMesh_->setName( name );

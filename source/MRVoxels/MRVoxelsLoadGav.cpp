@@ -1,8 +1,11 @@
 #include "MRVoxelsFwd.h"
 
 #include "MRVoxelsLoad.h"
+
+#include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRJson.h"
+
 #include <fstream>
 
 namespace MR
@@ -30,12 +33,10 @@ Expected<VdbVolume> fromGav( std::istream& in, const ProgressCallback& cb )
     if ( !in.read( header.data(), headerLen ) )
         return unexpected( "Gav-header read error" );
 
-    Json::Value headerJson;
-    Json::CharReaderBuilder readerBuilder;
-    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
-    std::string error;
-    if ( !reader->parse( header.data(), header.data() + header.size(), &headerJson, &error ) )
-        return unexpected( "Gav-header parse error: " + error );
+    auto headerJsonRes = deserializeJsonValue( header );
+    if ( !headerJsonRes )
+        return unexpected( "Gav-header parse error: " + headerJsonRes.error() );
+    auto& headerJson = *headerJsonRes;
 
     RawParameters params;
 

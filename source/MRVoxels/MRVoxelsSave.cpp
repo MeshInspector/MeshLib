@@ -12,6 +12,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRSerializer.h"
 
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
@@ -129,13 +130,11 @@ Expected<void> writeGavHeader( std::ostream & out, const Vector3i & dims, const 
     rangeJson["Max"] = mm.max;
     headerJson["Range"] = rangeJson;
 
-    std::ostringstream oss;
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( writer->write( headerJson, &oss ) != 0 || !oss )
+    const auto headerRes = serializeJsonValue( headerJson );
+    if ( !headerRes )
         return unexpected( "Header composition error" );
+    const auto& header = *headerRes;
 
-    const auto header = oss.str();
     const auto headerLen = uint32_t( header.size() );
     out.write( (const char*)&headerLen, sizeof( headerLen ) );
     out.write( header.data(), headerLen );

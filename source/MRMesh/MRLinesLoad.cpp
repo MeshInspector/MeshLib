@@ -2,10 +2,11 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRIOParsing.h"
 #include "MRPolyline.h"
-#include "MRTimer.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRStreamOperators.h"
+#include "MRPly.h"
+#include "MRTimer.h"
 #include <fstream>
 
 namespace MR
@@ -14,16 +15,16 @@ namespace MR
 namespace LinesLoad
 {
 
-Expected<Polyline3> fromMrLines( const std::filesystem::path & file, ProgressCallback callback )
+Expected<Polyline3> fromMrLines( const std::filesystem::path & file, const LinesLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromMrLines( in, callback ), file );
+    return addFileNameInError( fromMrLines( in, settings ), file );
 }
 
-Expected<Polyline3> fromMrLines( std::istream & in, ProgressCallback callback )
+Expected<Polyline3> fromMrLines( std::istream & in, const LinesLoadSettings& settings )
 {
     MR_TIMER;
 
@@ -43,23 +44,23 @@ Expected<Polyline3> fromMrLines( std::istream & in, ProgressCallback callback )
     if ( !in )
         return unexpected( std::string( "Error reading the number of points from lines-file" ) );
     polyline.points.resize( numPoints );
-    readByBlocks( in, (char*)polyline.points.data(), polyline.points.size() * sizeof(Vector3f), callback );
+    readByBlocks( in, (char*)polyline.points.data(), polyline.points.size() * sizeof(Vector3f), settings.callback );
     if ( !in )
         return unexpected( std::string( "Error reading  points from lines-file" ) );
 
     return polyline;
 }
 
-Expected<MR::Polyline3> fromPts( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<MR::Polyline3> fromPts( const std::filesystem::path& file, const LinesLoadSettings& settings /*= {} */ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromPts( in, callback ), file );
+    return addFileNameInError( fromPts( in, settings ), file );
 }
 
-Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*= {} */ )
+Expected<MR::Polyline3> fromPts( std::istream& in, const LinesLoadSettings& settings /*= {} */ )
 {
     std::string line;
     int pointCount = 0;
@@ -106,10 +107,10 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
         points.push_back( point );
         ++pointCount;
 
-        if ( callback && !( pointCount & 0x3FF ) )
+        if ( settings.callback && !( pointCount & 0x3FF ) )
         {
             const float progress = float( in.tellg() - posStart ) / float( streamSize );
-            if ( !callback( progress ) )
+            if ( !settings.callback( progress ) )
                 return unexpectedOperationCanceled();
         }
     }
@@ -119,7 +120,46 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
     return polyline;
 }
 
-Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
+Expected<Polyline3> fromPly( const std::filesystem::path& file, const LinesLoadSettings& settings )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromPly( in, settings ), file );
+}
+
+Expected<Polyline3> fromPly( std::istream& in, const LinesLoadSettings& settings )
+{
+    MR_TIMER;
+
+    std::optional<Edges> edges;
+    PlyLoadParams params =
+    {
+        .edges = &edges,
+        .colors = settings.colors,
+        // suppose that reading is 10% of progress and building polyline is 90% of progress
+        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+    };
+    auto maybePoints = loadPly( in, params );
+    if ( !maybePoints )
+        return unexpected( std::move( maybePoints.error() ) );
+
+    Polyline3 res;
+    res.points = std::move( *maybePoints );
+
+    if ( edges )
+    {
+        res.topology.vertResize( res.points.size() );
+        res.topology.makeEdges( *edges );
+    }
+
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, const LinesLoadSettings& settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -130,10 +170,10 @@ Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, P
     if ( !loader.fileLoad )
         return unexpectedUnsupportedFileExtension();
 
-    return loader.fileLoad( file, callback );
+    return loader.fileLoad( file, settings );
 }
 
-Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
+Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::string& extension, const LinesLoadSettings& settings )
 {
     auto ext = extension;
     for ( auto& c : ext )
@@ -143,11 +183,12 @@ Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::str
     if ( !loader.streamLoad )
         return unexpected( std::string( "unsupported stream extension" ) );
 
-    return loader.streamLoad( in, callback );
+    return loader.streamLoad( in, settings );
 }
 
 MR_ADD_LINES_LOADER_WITH_PRIORITY( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), fromMrLines, -1 )
 MR_ADD_LINES_LOADER( IOFilter( "PTS (.pts)",         "*.pts" ),     fromPts )
+MR_ADD_LINES_LOADER( IOFilter( "PLY (.ply)",         "*.ply" ),     fromPly )
 
 } //namespace LinesLoad
 

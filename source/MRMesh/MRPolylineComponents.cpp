@@ -86,7 +86,7 @@ std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const Polyli
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructure( topology );
     const auto& allRoots = unionFindStruct.roots();
-    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    UndirectedEdgeBitSet region( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : undirectedEdges( topology ) )
         region.set( e );
     auto [uniqueRootsMap, componentsCount] = getUniqueRootIds( allRoots, region );
@@ -146,7 +146,7 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
     auto& topology = polyline.topology;
     auto unionFindStruct = getUnionFindStructure( topology );
 
-    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    UndirectedEdgeBitSet region( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : undirectedEdges( topology ) )
         region.set( e );
 
@@ -168,7 +168,7 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
         }
     }
 
-    UndirectedEdgeBitSet maxLengthComponent( topology.lastNotLoneEdge() + 1 );
+    UndirectedEdgeBitSet maxLengthComponent( topology.lastNotLoneUndirectedEdge() + 1 );
     for ( auto e : region )
     {
         auto index = uniqueRootsMap[e];

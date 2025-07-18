@@ -68,7 +68,7 @@ extern "C"
 EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
-    if ( auto resJson = deserializeJsonValue( response ) )
+    if ( auto resJson = deserializeJsonValue( response, std::strlen( response ) ) )
     {
         if ( !async )
         {

@@ -1112,6 +1112,7 @@ float ImGuiMenu::drawSelectionInformation_()
     double totalVolume = 0.0;
     double totalArea = 0.;
     double totalSelectedArea = 0.;
+    double totalLength = 0;
     float avgEdgeLen = 0.f;
     size_t holes = 0;
     size_t components = 0;
@@ -1191,6 +1192,9 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 totalVerts += polyline->topology.numValidVerts();
                 totalEdges += lObj->numUndirectedEdges();
+                totalLength += polyline->totalLength();
+                avgEdgeLen = lObj->avgEdgeLen();
+                components += lObj->numComponents();
             }
         }
 #ifndef MRVIEWER_NO_VOXELS
@@ -1380,27 +1384,28 @@ float ImGuiMenu::drawSelectionInformation_()
     {
         drawUnitInfo( "Volume", totalVolume, VolumeUnit{} );
 
-        if ( selectedObjs.size() == 1 )
+        ImGui::SetNextItemWidth( itemWidth );
+        if ( totalSelectedArea > 0 )
         {
-            ImGui::SetNextItemWidth( itemWidth );
-            if ( totalSelectedArea > 0 )
-            {
-                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
-                    { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
-                UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
-            }
-            else
-            {
-                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
-                UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
-            }
-
-            drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
-
-            drawPrimitivesInfo( "Holes", holes );
-            drawPrimitivesInfo( "Components", components );
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
+                { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
+            UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+        }
+        else
+        {
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
+            UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
         }
     }
+
+    if ( totalLength > 0 )
+        drawUnitInfo( "Length", totalLength, LengthUnit{} );
+
+    if ( selectedObjs.size() == 1 && avgEdgeLen > 0 )
+        drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
+
+     drawPrimitivesInfo( "Holes", holes );
+     drawPrimitivesInfo( "Components", components );
 
 #ifndef MRVIEWER_NO_VOXELS
     if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )

@@ -1190,6 +1190,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( auto polyline = lObj->polyline() )
             {
                 totalVerts += polyline->topology.numValidVerts();
+                totalEdges += lObj->numUndirectedEdges();
             }
         }
 #ifndef MRVIEWER_NO_VOXELS

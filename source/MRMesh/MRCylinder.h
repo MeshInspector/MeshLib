@@ -21,8 +21,4 @@ MRMESH_API Mesh makeCylinderAdvanced( float radius0 = 0.1f, float radius1 = 0.1f
 // Makes cone mesh by calling makeCylinderAdvanced with the top radius 0.
 MRMESH_API Mesh makeCone( float radius0 = 0.1f, float length = 1.0f, int resolution = 32 );
 
-/// Makes a solid-of-revolution mesh. The resulting mesh is symmetrical about the z-axis.
-/// The profile points must be in the format { distance to the z-axis; z value }.
-MRMESH_API Mesh makeSolidOfRevolution( const Contour2f& profile, int resolution = 16 );
-
 } // namespace MR

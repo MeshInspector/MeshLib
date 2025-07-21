@@ -1,6 +1,6 @@
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRSolidOfRevolution.h>
 
 #include <gtest/gtest.h>
 

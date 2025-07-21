@@ -309,7 +309,7 @@ Expected<void> toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& s
     return toCtm( mesh, out, CtmSaveOptions { settings } );
 }
 
-MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)", "*.ctm" ), toCtm )
+MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)", "*.ctm" ), toCtm, true )
 
 } // namespace MeshSave
 

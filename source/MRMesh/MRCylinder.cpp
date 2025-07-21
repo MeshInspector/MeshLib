@@ -2,7 +2,6 @@
 #include "MRMesh.h"
 #include "MRConstants.h"
 #include "MRMeshBuilder.h"
-#include "MRParallelFor.h"
 
 namespace MR
 {

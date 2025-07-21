@@ -24,8 +24,8 @@ void testDegenerateBandNonEmpty(void) {
     // Create a face bit set and select a few faces (for example, faces 0 and 1)
     MR_FaceBitSet* region = MR_FaceBitSet_DefaultConstruct();
 
-    MR_BitSet_autoResizeSet_2( MR_FaceBitSet_MutableUpcastTo_MR_BitSet( region ), 0, true );
-    MR_BitSet_autoResizeSet_2( MR_FaceBitSet_MutableUpcastTo_MR_BitSet( region ), 1, true );
+    MR_BitSet_autoResizeSet_2( MR_FaceBitSet_MutableUpcastTo_MR_BitSet( region ), 0, &(bool){true} );
+    MR_BitSet_autoResizeSet_2( MR_FaceBitSet_MutableUpcastTo_MR_BitSet( region ), 1, &(bool){true} );
 
     // Call the function to create a band of degenerate faces along the region boundary
     MR_makeDegenerateBandAroundRegion( mesh, region, NULL );

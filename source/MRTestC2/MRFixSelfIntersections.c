@@ -13,7 +13,7 @@ void testFixSelfIntersections( void )
 {
     float primaryRadius = 1.0f;
     float secondaryRadius = 0.2f;
-    int32_t primaryResolution = 42;
+    int32_t primaryResolution = 32;
     int32_t secondaryResolution = 16;
 
     MR_Mesh* mesh = MR_makeTorusWithSelfIntersections( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );

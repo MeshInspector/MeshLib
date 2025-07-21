@@ -199,7 +199,6 @@ void testBooleanMapper( void )
 
     MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, parameters );
     MR_BooleanParameters_Destroy( parameters );
-    MR_BooleanResultMapper_Destroy( mapper );
 
     TEST_ASSERT( MR_BooleanResult_valid( result ) )
 

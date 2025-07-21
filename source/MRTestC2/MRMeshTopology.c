@@ -1,88 +1,90 @@
 #include "TestMacros.h"
 #include "TestFunctions.h"
-#include <MRCMesh/MRMeshTopology.h>
 #include <MRCMesh/MRCube.h>
 #include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRVector.h>
+#include <MRCMisc/std_vector_MR_EdgeId.h>
 #include <stdio.h>
 
 
 void testMrMeshTopologyPack(void)
 {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
-    mrMeshTopologyPack(topology);
-    mrMeshFree(mesh);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
+    MR_MeshTopology_pack_4( topology, NULL, NULL, NULL, NULL);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyGetValidVerts(void)
 {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
-    const MRVertBitSet* verts = mrMeshTopologyGetValidVerts(topology);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
+    const MR_VertBitSet* verts = MR_MeshTopology_getValidVerts(topology);
     TEST_ASSERT(verts != NULL);
-    mrMeshFree(mesh);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyGetValidFaces(void)
 {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
-    const MRFaceBitSet* faces = mrMeshTopologyGetValidFaces(topology);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
+    const MR_FaceBitSet* faces = MR_MeshTopology_getValidFaces(topology);
     TEST_ASSERT(faces != NULL);
-    mrMeshFree(mesh);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyFindHoleRepresentiveEdges( void ) {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
-    MREdgePath* holes = mrMeshTopologyFindHoleRepresentiveEdges(topology);
-    mrEdgePathFree(holes);
-    mrMeshFree(mesh);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
+    MR_std_vector_MR_EdgeId* holes = MR_MeshTopology_findHoleRepresentiveEdges(topology, NULL);
+    MR_std_vector_MR_EdgeId_Destroy(holes);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyGetLeftTriVerts( void ) {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
 
-    MREdgeId edge = { 0 };
-    MRVertId v0, v1, v2;
-    mrMeshTopologyGetLeftTriVerts(topology, edge, &v0, &v1, &v2);
-    mrMeshFree(mesh);
+    MR_EdgeId edge = { 0 };
+    MR_VertId v0, v1, v2;
+    MR_MeshTopology_getLeftTriVerts_4(topology, edge, &v0, &v1, &v2);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyFindNumHoles( void ) {
-    MRMesh* mesh = createCube();
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
+    MR_Mesh* mesh = createCube();
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
     TEST_ASSERT(mesh != NULL);
 
-    int numHoles = mrMeshTopologyFindNumHoles(topology, NULL);
+    int numHoles = MR_MeshTopology_findNumHoles(topology, NULL);
     TEST_ASSERT_INT_EQUAL(0, numHoles);
-    mrMeshFree(mesh);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyFaceSize(void) {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
 
-    size_t faceSize = mrMeshTopologyFaceSize(topology);
+    size_t faceSize = MR_MeshTopology_faceSize(topology);
     TEST_ASSERT_INT_EQUAL(12, (int)faceSize);
-    mrMeshFree(mesh);
+    MR_Mesh_Destroy(mesh);
 }
 
 void testMrMeshTopologyGetTriangulation(void) {
-    MRMesh* mesh = createCube();
+    MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
-    MRMeshTopology* topology = mrMeshTopologyRef(mesh);
+    MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
 
-    MRTriangulation* triangulation = mrMeshTopologyGetTriangulation(topology);
+    MR_Triangulation* triangulation = MR_MeshTopology_getTriangulation(topology);
     TEST_ASSERT(triangulation != NULL);
-    TEST_ASSERT_INT_EQUAL(12, (int)triangulation->size);
-    mrTriangulationFree(triangulation);
-    mrMeshFree(mesh);
+    TEST_ASSERT_INT_EQUAL(12, (int)MR_Triangulation_size(triangulation));
+    MR_Triangulation_Destroy(triangulation);
+    MR_Mesh_Destroy(mesh);
 }

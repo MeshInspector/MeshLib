@@ -2,30 +2,35 @@
 
 #include "MRPointsToMeshProjector.h"
 
+#include "MRCMesh/MRAffineXf.h"
 #include "MRCMesh/MRMesh.h"
 #include "MRCMesh/MRPointsToMeshProjector.h"
+#include "MRCMesh/MRVector.h"
 
 void testFindSignedDistances( void )
 {
-    MRMesh* meshA = createCube();
-    MRMesh* meshB = createCube();
+    MR_Mesh* meshA = createCube();
+    MR_Mesh* meshB = createCube();
 
-    MRMeshProjectionParameters params = mrMeshProjectionParametersNew();
-    const MRVector3f shift = { 1.f, 2.f, 3.f };
-    const MRAffineXf3f xf = mrAffineXf3fTranslation( &shift );
-    params.xf = &xf;
+    const MR_Vector3f shift = { 1.f, 2.f, 3.f };
+    const MR_AffineXf3f xf = MR_AffineXf3f_translation( &shift );
 
-    MRScalars* results = mrFindSignedDistances( meshA, meshB, &params );
-    TEST_ASSERT_INT_EQUAL( (int)results->size, (int)mrMeshPointsNum( meshB ) );
+    MR_MeshProjectionParameters* params = MR_MeshProjectionParameters_DefaultConstruct();
+    MR_MeshProjectionParameters_Set_xf( params, &xf );
+
+    MR_VertScalars* results = MR_findSignedDistances_4( meshA, meshB, params, NULL );
+    MR_MeshProjectionParameters_Destroy( params );
+
+    TEST_ASSERT_INT_EQUAL( (int)MR_VertScalars_size( results ), (int)MR_VertCoords_size( MR_Mesh_Get_points( meshB ) ) );
 
     float maxDist = 0.f;
-    for ( int i = 0; i < results->size; i++ )
-        if ( maxDist < fabsf( results->data[i] ) )
-            maxDist = fabsf( results->data[i] );
-    TEST_ASSERT_FLOAT_EQUAL_APPROX( maxDist, mrVector3fLength( &shift ), 1e-6f )
+    for ( int i = 0; i < MR_VertScalars_size( results ); i++ )
+        if ( maxDist < fabsf( *MR_VertScalars_at_const( results, (MR_VertId){i} ) ) )
+            maxDist = fabsf( *MR_VertScalars_at_const( results, (MR_VertId){i} ) );
+    TEST_ASSERT_FLOAT_EQUAL_APPROX( maxDist, MR_Vector3f_length( &shift ), 1e-6f )
 
-    mrScalarsFree( results );
+    MR_VertScalars_Destroy( results );
 
-    mrMeshFree( meshB );
-    mrMeshFree( meshA );
+    MR_Mesh_Destroy( meshB );
+    MR_Mesh_Destroy( meshA );
 }

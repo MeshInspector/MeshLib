@@ -18,7 +18,7 @@ void testUniteCloseVertices( void )
 
     MR_VertMap* vertMap = MR_VertMap_DefaultConstruct();
 
-    int unitedCount = MR_MeshBuilder_uniteCloseVertices_4( mesh, 0.1f, false, vertMap );
+    int unitedCount = MR_MeshBuilder_uniteCloseVertices_4( mesh, 0.1f, &(bool){false}, vertMap );
     TEST_ASSERT( unitedCount == 2230 );
     TEST_ASSERT( MR_VertMap_at( vertMap, (MR_VertId){1000} )->id_ == 42 );
 

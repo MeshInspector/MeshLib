@@ -4,12 +4,16 @@
 
 void testMeshSubdivide(void)
 {
-    MRMakeTorusParameters paramsTorus = { 1.1f, 0.5f, 16, 16 };
-    MRMesh* mesh = mrMakeTorus(&paramsTorus);
+    float primaryRadius = 1.1f;
+    float secondaryRadius = 0.5f;
+    int32_t primaryResolution = 16;
+    int32_t secondaryResolution = 16;
+    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
 
-    MRSubdivideSettings subdivideSettings = mrSubdivideSettingsNew();
-    subdivideSettings.maxDeviationAfterFlip = 0.5f;
-    mrSubdivideMesh(mesh, &subdivideSettings);
+    MR_SubdivideSettings* subdivideSettings = MR_SubdivideSettings_DefaultConstruct();
+    MR_SubdivideSettings_Set_maxDeviationAfterFlip( subdivideSettings, 0.5f );
+    MR_subdivideMesh_MR_Mesh(mesh, subdivideSettings);
 
-    mrMeshFree(mesh);
+    MR_SubdivideSettings_Destroy(subdivideSettings);
+    MR_Mesh_Destroy(mesh);
 }

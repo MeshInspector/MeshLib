@@ -32,10 +32,9 @@ double timespec_to_seconds( const struct timespec* ts )
     return (double)ts->tv_sec + (double)ts->tv_nsec / NSECS;
 }
 
-MRMesh* createCube(void)
+MR_Mesh* createCube(void)
 {
-    MRVector3f size = mrVector3fDiagonal(1.0f);
-    MRVector3f base = mrVector3fDiagonal(-0.5f);
-    MRMesh* mesh = mrMakeCube(&size, &base);
-    return mesh;
+    MR_Vector3f size = MR_Vector3f_diagonal(1.0f);
+    MR_Vector3f base = MR_Vector3f_diagonal(-0.5f);
+    return MR_makeCube(&size, &base);
 }

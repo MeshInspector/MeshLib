@@ -75,8 +75,6 @@ void testMeshCollidePrecise( void )
 
     MR_CoordinateConverters_Destroy( conv );
 
-    MR_CoordinateConverters_Destroy( conv );
-
     MR_Mesh_Destroy( meshB );
     MR_Mesh_Destroy( meshA );
 }

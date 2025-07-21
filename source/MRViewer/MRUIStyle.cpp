@@ -593,12 +593,12 @@ bool buttonIconEx(
     return res;
 }
 
-bool buttonUniqueIcon( 
-    const std::string& iconName, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
-    int* value, 
+bool buttonUniqueIcon(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    int* value,
     int ownValue,
     bool textUnderIcon /*= true*/,
     ImGuiKey key /*= ImGuiKey_None*/ )
@@ -1391,7 +1391,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
     bool valueOverridden = false;
-    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, options ) )
+    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, true, options ) )
     {
         if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
         {
@@ -1694,17 +1694,10 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    if ( shouldExposeTextInputToTestEngine( flags ) )
-    {
-        std::optional<std::string> peekedValue = TestEngine::peekValue( label, str );
-        if ( peekedValue )
-            ImGui::SetKeyboardFocusHere( -1 );
-    }
+    if ( detail::isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
+        ImGui::ClearActiveID();
 
     bool ret = func();
-
-    if ( ImGui::IsItemActive() )
-        return ret;
 
     if ( shouldExposeTextInputToTestEngine( flags ) )
     {
@@ -1953,7 +1946,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
         scaling * StyleConsts::Notification::cTextFrameRounding );
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * scaling );
     transparentTextWrapped( "%s", str.c_str() );
-    
+
     auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( iconsFont )
     {

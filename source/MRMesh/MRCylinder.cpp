@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRConstants.h"
 #include "MRMeshBuilder.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -202,21 +203,19 @@ Mesh makeSolidOfRevolution( const Contour2f& profile, int resolution )
     const auto isClosed = ( profile.front() == profile.back() );
     const auto profileSize = profile.size() - int( isClosed );
 
-    std::vector<Vector3f> points;
-    points.reserve( profileSize * resolution );
-    for ( auto i = 0; i < resolution; ++i )
+    std::vector<Vector3f> points( profileSize * resolution );
+    ParallelFor( points, [&] ( int index )
     {
-        const auto angle = 2.f * PI_F * (float)i / (float)resolution;
+        const auto angle = 2.f * PI_F * (float)( index / profileSize ) / (float)resolution;
         const auto x = std::cos( angle ), y = std::sin( angle );
-        for ( auto p = 0; p < profileSize; ++p )
-        {
-            points.emplace_back(
-                profile[p].x * x,
-                profile[p].x * y,
-                profile[p].y
-            );
-        }
-    }
+
+        const auto& pp = profile[index % profileSize];
+        points[index] = {
+            pp.x * x,
+            pp.x * y,
+            pp.y,
+        };
+    } );
 
     Triangulation t;
     t.reserve( 2 * ( profileSize - 1 ) * resolution );

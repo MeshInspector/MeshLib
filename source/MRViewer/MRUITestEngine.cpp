@@ -49,6 +49,7 @@ void checkForNewFrame()
                 else
                 {
                     it->second.visitedOnThisFrame = false;
+                    it->second.usedName = false;
 
                     if ( auto subgroup = std::get_if<GroupEntry>( &it->second.value ) )
                         pruneDeadEntries( pruneDeadEntries, *subgroup );
@@ -65,7 +66,7 @@ void checkForNewFrame()
 } // namespace
 
 template <typename T>
-std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value )
+std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/ )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
 
@@ -80,7 +81,7 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     else
     {
         // If you see this assert, you likely have duplicate drag/slider names.
-        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
+        assert( !iter->second.usedName && "Registering the same entry more than once in a single frame!" );
     }
 
     ValueEntry* entry = std::get_if<ValueEntry>( &iter->second.value );
@@ -92,8 +93,15 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     ValueEntry::Value<T>* val = std::get_if<ValueEntry::Value<T>>( &entry->value );
     if ( val )
     {
-        ret = std::move( val->simulatedValue );
-        val->simulatedValue = {};
+        if ( consumeValueOverride )
+        {
+            ret = std::move( val->simulatedValue );
+            val->simulatedValue = {};
+        }
+        else
+        {
+            ret = val->simulatedValue;
+        }
     }
     else
     {
@@ -103,6 +111,7 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     if ( value )
     {
         iter->second.visitedOnThisFrame = true;
+        iter->second.usedName = consumeValueOverride;
         val->value = std::move( value->value ); // Could also read `ret` here, but that would be a bit weird, I guess?
         if constexpr ( std::is_same_v<T, std::string> )
         {
@@ -122,10 +131,10 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     #endif
 }
 
-template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
-template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
-template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
-template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value );
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
+template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
+template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
 
 bool createButton( std::string_view name )
 {
@@ -144,7 +153,7 @@ bool createButton( std::string_view name )
         // If you truly have several buttons with the same name in one place, add unique `##...` suffixes to them.
         // If the buttons are in different parts of the application and shouldn't collide,
         // use `UI::TestEngine::pushTree("...")` and `popTree()` to group them into named groups, with unique names in each group.
-        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
+        assert( !iter->second.usedName && "Registering the same entry more than once in a single frame!" );
     }
 
     ButtonEntry* button = std::get_if<ButtonEntry>( &iter->second.value );
@@ -152,6 +161,7 @@ bool createButton( std::string_view name )
         button = &iter->second.value.emplace<ButtonEntry>();
 
     iter->second.visitedOnThisFrame = true;
+    iter->second.usedName = true;
 
     // commented, because it is already logged in MRPythonUiInteraction.cpp/pressButton
     // if ( button->simulateClick )
@@ -168,6 +178,11 @@ std::optional<std::string> createValue( std::string_view name, std::string value
     return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) } );
 }
 
+std::optional<std::string> peekValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues )
+{
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{.value = std::move( value ), .allowedValues = std::move( allowedValues ) }, false );
+}
+
 void pushTree( std::string_view name )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
@@ -178,13 +193,14 @@ void pushTree( std::string_view name )
     if ( iter == map.end() )
         iter = map.try_emplace( std::string( name ) ).first;
     else
-        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
+        assert( !iter->second.usedName && "Registering the same entry more than once in a single frame!" );
 
     GroupEntry* subgroup = std::get_if<GroupEntry>( &iter->second.value );
     if ( !subgroup )
         subgroup = &iter->second.value.emplace<GroupEntry>();
 
     iter->second.visitedOnThisFrame = true;
+    iter->second.usedName = true;
 
     state.stack.push_back( subgroup );
     #endif

@@ -37,12 +37,12 @@ namespace detail
     };
 
     template <typename T>
-    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value );
+    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride = true );
 
-    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
-    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
-    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
-    extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value );
+    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
+    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
+    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
+    extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
 
     template <typename T>
     using UnderlyingValueType = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
@@ -77,6 +77,8 @@ requires std::is_arithmetic_v<T>
 }
 // This overload is for strings.
 [[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
+
+[[nodiscard]] MRVIEWER_API std::optional<std::string> peekValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
@@ -155,6 +157,9 @@ struct Entry
     // Mostly for internal use.
     // If this is false, the entry will be removed on the next frame.
     bool visitedOnThisFrame = false;
+    // Internal use.
+    // Used to check for matching names.
+    bool usedName = false;
 
     // Returns a string describing the type currently stored in `value`, which is `T::kindName`.
     [[nodiscard]] MRVIEWER_API std::string_view getKindName() const;

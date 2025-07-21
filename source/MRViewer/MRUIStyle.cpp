@@ -1694,20 +1694,30 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    std::optional<std::string> valueOverride;
     if ( shouldExposeTextInputToTestEngine( flags ) )
     {
-        valueOverride = TestEngine::createValue( label, str );
-        if ( valueOverride )
-            str = std::move( *valueOverride );
+        std::optional<std::string> valueTentative = TestEngine::peekValue( label, str );
+        if ( valueTentative )
+        {
+            ImGui::SetKeyboardFocusHere( -1 );
+            str = *valueTentative;
+        }
     }
 
     bool ret = func();
 
-    if ( valueOverride )
+    if ( ImGui::IsItemActive() )
+        return ret;
+
+    if ( shouldExposeTextInputToTestEngine( flags ) )
     {
-        detail::markItemEdited( ImGui::GetID( label ) );
-        ret = true;
+        std::optional<std::string> valueOverride = TestEngine::createValue( label, str );
+        if ( valueOverride )
+        {
+            str = std::move( *valueOverride );
+            detail::markItemEdited( ImGui::GetID( label ) );
+            ret = true;
+        }
     }
 
     return ret;

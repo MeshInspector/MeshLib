@@ -167,6 +167,9 @@ IF(NOT MR_EMSCRIPTEN)
   find_package(fmt)
   find_package(spdlog REQUIRED)
   find_package(TBB REQUIRED)
+  IF(spdlog_VERSION VERSION_GREATER_EQUAL "1.7" AND fmt_VERSION VERSION_GREATER_EQUAL "7.0")
+    add_compile_definitions(SPDLOG_FMT_EXTERNAL)
+  ENDIF()
   add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 

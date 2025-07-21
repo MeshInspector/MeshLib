@@ -236,12 +236,13 @@ public:
 
     /// returns overriden file extension used to serialize mesh inside this object, nullptr means defaultSerializeMeshFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
-    [[deprecated]] const char * saveMeshFormat() const { return serializeFormat(); }
+
+    /// returns overriden file extension used to serialize mesh inside this object if set, or defaultSerializeMeshFormat().c_str() otherwise; never returns nullptr
+    [[nodiscard]] MRMESH_API const char * actualSerializeFormat() const;
 
     /// overrides file extension used to serialize mesh inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializeMeshFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
-    [[deprecated]] void setSaveMeshFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;

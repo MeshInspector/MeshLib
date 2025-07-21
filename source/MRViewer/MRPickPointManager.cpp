@@ -675,10 +675,13 @@ void PickPointManager::setFullState( FullState s )
 
 PickPointManager::~PickPointManager()
 {
-    FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+    if ( params.writeHistory )
     {
-        return bool( dynamic_cast<const WidgetHistoryAction *>( action.get() ) );
-    } );
+        FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+        {
+            return bool( dynamic_cast<const WidgetHistoryAction *>( action.get() ) );
+        } );
+    }
     disconnect();
 }
 

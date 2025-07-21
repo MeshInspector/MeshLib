@@ -76,23 +76,22 @@ jobs:
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
-          if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/"
-          } else {
+          if (!$pkg) {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1
           }
           $matches = $null
           $foundVersion = $pkg.Name -match '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
-          if ($foundVersion) {
-            $xmlPath = "C:\work\unity_proj\NugetTestProj\Assets\packages.config"
-            $xml = [xml](Get-Content -Path $xmlPath)
-            $xml.packages.package.version = $matches[0]
-            $xml.Save($xmlPath)
-          } else {
+          if (!$foundVersion) {
             Write-Error "Cannot extract version MeshLib*.nupkg"
             exit 1
           }
+          $pkgVersion = $matches[0]
+          Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.$pkgVersion.nupkg"
+          $xmlPath = "C:\work\unity_proj\NugetTestProj\Assets\packages.config"
+          $xml = [xml](Get-Content -Path $xmlPath)
+          $xml.packages.package.version = $pkgVersion
+          $xml.Save($xmlPath)
 
       
       - name: Install nuget package

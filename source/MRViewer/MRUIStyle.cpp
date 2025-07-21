@@ -1698,10 +1698,7 @@ static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextF
     {
         std::optional<std::string> peekedValue = TestEngine::peekValue( label, str );
         if ( peekedValue )
-        {
             ImGui::SetKeyboardFocusHere( -1 );
-            str = *valueTentative;
-        }
     }
 
     bool ret = func();

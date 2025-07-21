@@ -76,11 +76,18 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// returns cached average edge length
+    [[nodiscard]] MRMESH_API float avgEdgeLen() const;
+
+    /// returns cached information about the number of undirected edges in the polyline
+    [[nodiscard]] MRMESH_API size_t numUndirectedEdges() const;
+
     /// returns cached information about the number of components in the polyline
-    MRMESH_API size_t numComponents() const;
+    [[nodiscard]] MRMESH_API size_t numComponents() const;
 
     /// return cached total length
-    MRMESH_API float totalLength() const;
+    [[nodiscard]] MRMESH_API float totalLength() const;
+
 protected:
     ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 
@@ -106,7 +113,9 @@ protected:
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
+    mutable std::optional<size_t> numUndirectedEdges_;
     mutable std::optional<size_t> numComponents_;
+    mutable std::optional<float> avgEdgeLen_;
     mutable std::optional<float> totalLength_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 

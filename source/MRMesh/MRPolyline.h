@@ -96,6 +96,9 @@ public:
     /// returns total length of the polyline
     [[nodiscard]] MRMESH_API float totalLength() const;
 
+    /// returns average edge length in the polyline
+    [[nodiscard]] float averageEdgeLength() const { auto n = topology.computeNotLoneUndirectedEdges(); return n ? totalLength() / n : 0.0f; }
+
     /// returns cached aabb-tree for this polyline, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePolyline<V>& getAABBTree() const;
 

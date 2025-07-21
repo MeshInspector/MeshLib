@@ -31,6 +31,10 @@ MRMESH_API Expected<void> toPts( const Polyline3& polyline, std::ostream& out, c
 MRMESH_API Expected<void> toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
+/// saves in .ply file
+MRMESH_API Expected<void> toPly( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveSettings & settings = {} );
+
 /// detects the format from file extension and saves polyline in it
 MRMESH_API Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format

@@ -60,11 +60,13 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     if ( mask & DIRTY_PRIMITIVES )
     {
         numComponents_.reset();
+        numUndirectedEdges_.reset();
     }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {
         totalLength_.reset();
+        avgEdgeLen_.reset();
         worldBox_.reset();
         worldBox_.get().reset();
         if ( invalidateCaches && polyline_ )
@@ -118,6 +120,21 @@ size_t ObjectLinesHolder::heapBytes() const
         + linesColorMap_.heapBytes()
         + vertsColorMap_.heapBytes()
         + MR::heapBytes( polyline_ );
+}
+
+float ObjectLinesHolder::avgEdgeLen() const
+{
+    if ( !avgEdgeLen_ )
+        avgEdgeLen_ = polyline_ ? polyline_->averageEdgeLength() : 0;
+
+    return *avgEdgeLen_;
+}
+
+size_t ObjectLinesHolder::numUndirectedEdges() const
+{
+    if ( !numUndirectedEdges_ )
+        numUndirectedEdges_ = polyline_ ? polyline_->topology.computeNotLoneUndirectedEdges() : 0;
+    return *numUndirectedEdges_;
 }
 
 size_t ObjectLinesHolder::numComponents() const

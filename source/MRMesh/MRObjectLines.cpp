@@ -4,6 +4,7 @@
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -94,7 +95,14 @@ std::vector<std::string> ObjectLines::getInfoLines() const
         if( polyline_->topology.vertSize() < polyline_->topology.vertCapacity() )
             res.back() += " / " + std::to_string( polyline_->topology.vertCapacity() ) + " capacity";
 
-        res.push_back( "total length : " + std::to_string( totalLength() ) );
+        res.push_back( "edges: " + std::to_string( numUndirectedEdges() ) );
+        if( numUndirectedEdges() < polyline_->topology.undirectedEdgeSize() )
+            res.back() += " / " + std::to_string( polyline_->topology.undirectedEdgeSize() ) + " size";
+        if( polyline_->topology.undirectedEdgeSize() < polyline_->topology.undirectedEdgeCapacity() )
+            res.back() += " / " + std::to_string( polyline_->topology.undirectedEdgeCapacity() ) + " capacity";
+
+        res.push_back( fmt::format( "total length: {:.6}", totalLength() ) );
+        res.push_back( fmt::format( "avg edge len: {:.6}", avgEdgeLen() ) );
 
         boundingBoxToInfoLines_( res );
     }
@@ -109,28 +117,63 @@ std::vector<std::string> ObjectLines::getInfoLines() const
 std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLines>>& objsLines )
 {
     MR_TIMER;
+
+    size_t totalVerts = 0;
+    bool hasVertColorMap = false; // least one input line has
+    for ( const auto& obj : objsLines )
+    {
+        if ( !obj->polyline() )
+            continue;
+        totalVerts += obj->polyline()->topology.numValidVerts();
+        if ( !obj->getVertsColorMap().empty() )
+            hasVertColorMap = true;
+    }
+
+    VertColors vertColors;
+    if ( hasVertColorMap )
+        vertColors.resizeNoInit( totalVerts );
+
     auto line = std::make_shared<Polyline3>();
     auto& points = line->points;
+    points.reserve( totalVerts );
+    line->topology.vertReserve( totalVerts );
+
     for ( const auto& obj : objsLines )
     {
         if ( !obj->polyline() )
             continue;
 
-        VertMap vertMap{};
+        VertMap srcToMergeVmap;
         UndirectedEdgeBitSet validPoints;
         validPoints.resize( obj->polyline()->topology.undirectedEdgeSize(), true );
-        line->addPartByMask( *obj->polyline(), validPoints, &vertMap );
+        line->addPartByMask( *obj->polyline(), validPoints, &srcToMergeVmap );
 
         auto worldXf = obj->worldXf();
-        for ( const auto& vInd : vertMap )
+        for ( const auto& vInd : srcToMergeVmap )
         {
             if ( vInd.valid() )
                 points[vInd] = worldXf( points[vInd] );
         }
+
+        if ( hasVertColorMap )
+        {
+            const auto& curColorMap = obj->getVertsColorMap();
+            for ( VertId thisId = 0_v; thisId < srcToMergeVmap.size(); ++thisId )
+            {
+                if ( auto mergeId = srcToMergeVmap[thisId] )
+                    vertColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
+            }
+        }
     }
+
+    assert( points.size() == totalVerts );
+    assert( line->topology.vertSize() == totalVerts );
 
     auto objectLines = std::make_shared<ObjectLines>();
     objectLines->setPolyline( std::move( line ) );
+    objectLines->setVertsColorMap( std::move( vertColors ) );
+    if( hasVertColorMap )
+        objectLines->setColoringType( ColoringType::VertsColorMap );
     return objectLines;
 }
 

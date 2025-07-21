@@ -26,7 +26,7 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
-opencascade[core]
+opencascade-minimal
 openctm
 openvdb
 parallel-hashmap

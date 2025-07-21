@@ -155,17 +155,10 @@ void ColorTheme::serializeCurrentToFile( const std::filesystem::path& path )
 {
     Json::Value root;
     serializeCurrentToJson( root );
-
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( path, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, path ) )
     {
         spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( path ) );
     }
-
-    ofs.close();
 }
 
 void ColorTheme::serializeCurrentToJson( Json::Value& root )

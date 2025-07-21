@@ -31,17 +31,61 @@
 namespace MR
 {
 
-Expected<Json::Value> deserializeJsonValue( const std::string& str )
+Expected<std::string> serializeJsonValue( const Json::Value& root )
+{
+    std::ostringstream oss;
+    return serializeJsonValue( root, oss )
+        .transform( [&] { return std::move( oss ).str(); } );
+}
+
+Expected<void> serializeJsonValue( const Json::Value& root, std::ostream& out )
+{
+    Json::StreamWriterBuilder builder;
+    // see json/writer.h for available configurations
+    std::unique_ptr<Json::StreamWriter> writer { builder.newStreamWriter() };
+
+    if ( !out || writer->write( root, &out ) != 0 )
+        // TODO: get an error string from the writer
+        return unexpected( "Failed to write JSON" );
+
+    return {};
+}
+
+Expected<void> serializeJsonValue( const Json::Value& root, const std::filesystem::path& path )
+{
+    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream out( path, std::ofstream::binary );
+    return serializeJsonValue( root, out );
+}
+
+Expected<Json::Value> deserializeJsonValue( const char* data, size_t size )
 {
     Timer t( "deserializeJsonValue( const std::string& )" );
+
     Json::Value root;
     Json::CharReaderBuilder readerBuilder;
     std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
     std::string error;
-    if ( !reader->parse( str.data(), str.data() + str.size(), &root, &error ) )
+    if ( !reader->parse( data, data + size, &root, &error ) )
         return unexpected( "Cannot parse json file: " + error );
 
     return root;
+}
+
+Expected<Json::Value> deserializeJsonValue( const std::string& str )
+{
+    return deserializeJsonValue( str.data(), str.size() );
+}
+
+Expected<Json::Value> deserializeJsonValue( std::istream& in )
+{
+    Timer t( "deserializeJsonValue( std::istream& )" );
+
+    auto maybeStr = readString( in );
+    if ( !maybeStr )
+        return unexpected( "Json " + maybeStr.error() );
+
+    return deserializeJsonValue( *maybeStr );
 }
 
 Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path )
@@ -54,17 +98,6 @@ Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path )
         return unexpected( "Cannot open json file " + utf8string( path ) );
 
     return addFileNameInError( deserializeJsonValue( ifs ), path );
-}
-
-Expected<Json::Value> deserializeJsonValue( std::istream& in )
-{
-    Timer t( "deserializeJsonValue( std::istream& )" );
-
-    auto maybeStr = readString( in );
-    if ( !maybeStr )
-        return unexpected( "Json " + maybeStr.error() );
-
-    return deserializeJsonValue( *maybeStr );
 }
 
 void serializeToJson( const Vector2i& vec, Json::Value& root )

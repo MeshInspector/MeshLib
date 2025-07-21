@@ -13,6 +13,7 @@ namespace MR
 struct PlyLoadParams
 {
     std::optional<Triangulation>* tris = nullptr; ///< optional load artifact: mesh triangles
+    std::optional<Edges>* edges = nullptr; ///< optional load artifact: polyline edges
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals

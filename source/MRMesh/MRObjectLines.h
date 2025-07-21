@@ -55,4 +55,7 @@ protected:
 /// constructs new ObjectLines containing the union of valid data from all input objects
 [[nodiscard]] MRMESH_API std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLines>>& objsLines );
 
+/// constructs new ObjectLines containing the region of data from input object
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectLines> cloneRegion( const std::shared_ptr<ObjectLines>& objLines, const UndirectedEdgeBitSet& region );
+
 } // namespace MR

@@ -177,7 +177,7 @@ private:
     // N>number of objects - same as 0
     int maxGroupSize_{ 64 };
     int iter_ = 0;
-    bool doIteration_( bool p2pl );
+    bool doIteration_( bool p2pl, bool updateAllParis );
     bool p2ptIter_();
     bool p2plIter_();
     bool multiwayIter_( bool p2pl = true );

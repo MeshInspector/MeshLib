@@ -83,6 +83,15 @@ Expected<VertCoords> loadPly( std::istream& in, const PlyLoadParams& params )
                 return unexpectedOperationCanceled();
             *params.tris = std::move( tris );
         }
+
+        if ( params.edges && reader.element_is( "edge" ) && reader.load_element() && reader.find_properties( indecies, 2, "vertex1", "vertex2" ) )
+        {
+            auto numEdges = reader.num_rows();
+            Edges es( numEdges );
+            static_assert( sizeof( es.front() ) == 8 );
+            if ( reader.extract_properties( indecies, 2, miniply::PLYPropertyType::Int, es.data() ) )
+                *params.edges = std::move( es );
+        }
     }
 
     if ( !reader.valid() )

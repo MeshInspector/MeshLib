@@ -479,11 +479,11 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extens
     return saver.streamSave( mesh, out, settings );
 }
 
-MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, false, -1 )
-MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl, false )
-MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff, false )
-MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj, true )
-MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly, true )
+MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, {}, -1 )
+MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl, {} )
+MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff, {} )
+MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj, { .storesVertexColors = true } )
+MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly, { .storesVertexColors = true } )
 
 } //namespace MeshSave
 

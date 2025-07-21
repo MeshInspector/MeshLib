@@ -167,6 +167,13 @@ namespace MeshSave
 using MeshFileSaver = Expected<void>( * )( const Mesh&, const std::filesystem::path&, const SaveSettings& );
 using MeshStreamSaver = Expected<void>( * )( const Mesh&, std::ostream&, const SaveSettings& );
 
+/// describes optional abilities of a MeshSaver
+struct MeshSaverCapabilities
+{
+    /// true if the saver serializes per-vertex mesh colors, false if per-vertex colors are not saved
+    bool storesVertexColors{ false };
+};
+
 struct MeshSaver
 {
     /// saver in a file given by its path
@@ -175,17 +182,16 @@ struct MeshSaver
     /// saver in a std::ostream
     MeshStreamSaver streamSave{ nullptr };
 
-    /// true if the saver serializes per-vertex mesh colors, false if per-vertex colors are not saved
-    bool storesVertexColors{ false };
+    MeshSaverCapabilities capabilities;
 };
 
 MR_FORMAT_REGISTRY_DECL( MeshSaver )
 
-#define MR_ADD_MESH_SAVER( filter, saver, storesVertexColors ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), storesVertexColors } ); };
+#define MR_ADD_MESH_SAVER( filter, saver, caps ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), caps } ); };
 
-#define MR_ADD_MESH_SAVER_WITH_PRIORITY( filter, saver, storesVertexColors, priority ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), storesVertexColors }, priority ); };
+#define MR_ADD_MESH_SAVER_WITH_PRIORITY( filter, saver, caps, priority ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), caps }, priority ); };
 
 } // namespace MeshSave
 

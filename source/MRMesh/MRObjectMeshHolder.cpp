@@ -102,7 +102,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
 
     const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
-    if ( !meshSaver.storesVertexColors )
+    if ( !meshSaver.capabilities.storesVertexColors )
         serializeToJson( data_.vertColors.vec_, root["VertColors"] );
 
     // texture

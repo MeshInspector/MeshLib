@@ -44,8 +44,14 @@ namespace detail
     extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
     extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
 
+    template <typename T, typename = void> struct UnderlyingValueTypeHelper {};
+    template <typename T> struct UnderlyingValueTypeHelper<T, std::enable_if_t<std::is_floating_point_v<T>>> {using type = double;};
+    template <typename T> struct UnderlyingValueTypeHelper<T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>> {using type = std::int64_t;};
+    template <typename T> struct UnderlyingValueTypeHelper<T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>> {using type = std::uint64_t;};
+    template <> struct UnderlyingValueTypeHelper<std::string> {using type = std::string;};
+
     template <typename T>
-    using UnderlyingValueType = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
+    using UnderlyingValueType = typename UnderlyingValueTypeHelper<T>::type;
 }
 
 // Call this every frame when drawing a button you want to track (regardless of whether it returns true of false).
@@ -61,7 +67,7 @@ concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::str
 // If this returns true, use the new value in place of the current one.
 template <AllowedValueType T>
 requires std::is_arithmetic_v<T>
-[[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max )
+[[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max, bool consumeValueOverride = true )
 {
     if ( !( min < max ) )
     {
@@ -72,22 +78,20 @@ requires std::is_arithmetic_v<T>
     using U = detail::UnderlyingValueType<T>;
     static_assert(sizeof(T) <= sizeof(U), "The used type is too large.");
 
-    auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) } );
+    auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) }, consumeValueOverride );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 // This overload is for strings.
-[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
-
-[[nodiscard]] MRVIEWER_API std::optional<std::string> peekValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
+[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride = true, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
 // For those, call this version first to read the value override, then draw the widget, then call the normal `CreateValue()` with the same name
 //   and with the new value, and discard its return value.
 template <AllowedValueType T>
-[[nodiscard]] std::optional<T> createValueTentative( std::string_view name )
+[[nodiscard]] std::optional<T> createValueTentative( std::string_view name, bool consumeValueOverride = true )
 {
-    auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt );
+    auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt, consumeValueOverride );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 
@@ -157,9 +161,6 @@ struct Entry
     // Mostly for internal use.
     // If this is false, the entry will be removed on the next frame.
     bool visitedOnThisFrame = false;
-    // Internal use.
-    // Used to check for matching names.
-    bool usedName = false;
 
     // Returns a string describing the type currently stored in `value`, which is `T::kindName`.
     [[nodiscard]] MRVIEWER_API std::string_view getKindName() const;

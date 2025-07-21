@@ -101,6 +101,10 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
     serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
 
+    const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+    if ( !meshSaver.storesVertexColors )
+        serializeToJson( data_.vertColors.vec_, root["VertColors"] );
+
     // texture
     if ( !textures_.empty() )
     {
@@ -175,6 +179,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
             setColoringType( ColoringType::FacesColorMap );
     }
     deserializeFromJson( root["FaceColors"], data_.faceColors.vec_ );
+    deserializeFromJson( root["VertColors"], data_.vertColors.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );

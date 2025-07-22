@@ -680,7 +680,7 @@ $(if $($1_PyNumFragments),,$(call var,$1_PyNumFragments := 1))
 $(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
-$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$1 $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
+$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$($1_PyName) $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_vars_py,$x)))
 endif # $(TARGET) == python
@@ -832,8 +832,8 @@ $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 	@cp $< $@
 override modules_copied_to_bin_dir := $(patsubst %,,$(MODULES))
 $(foreach m,$(MODULES),\
-	$(call var,_in := $(MODULE_OUTPUT_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
-	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_in := $(MODULE_OUTPUT_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
 	$(call var,all_outputs += $(_out))\
 	$(eval $(_out): $(_in) ; @cp $(_in) $(_out))\
 )

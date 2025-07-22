@@ -65,7 +65,7 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() || ImGui::GetIO().WantCaptureKeyboard )
         return false;
 
     reserveKeyEvent( passedKey );

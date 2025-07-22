@@ -26,6 +26,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
       nuget_build:
         default: false
         required: false
@@ -103,7 +107,7 @@ jobs:
       - name: Clean Vcpkg Directory
         if: ${{ matrix.os == 'windows-2022' }}
         working-directory: C:\vcpkg
-        run: git clean -ffdx 
+        run: git clean -ffdx
 
       - name: Checkout & Update Vcpkg ${{ matrix.vcpkg-version }}
         working-directory: C:\vcpkg
@@ -188,14 +192,14 @@ jobs:
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
         uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
-        if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         with:
           msystem: clang64
           install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
@@ -203,6 +207,25 @@ jobs:
       - name: Install Ninja for CMake
         if: ${{ matrix.build_system == 'CMake' }}
         uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+
+      - name: Build MRBind
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        shell: cmd
+        env:
+          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
+          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+
+      - name: Generate C bindings
+        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
       - name: Build
         shell: cmd
@@ -214,7 +237,7 @@ jobs:
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind_c] }}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j
             if errorlevel 1 exit 1
@@ -235,16 +258,7 @@ jobs:
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
-      - name: Build MRBind
-        if: ${{inputs.mrbind}}
-        shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
-
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
         shell: cmd
         env:
@@ -263,8 +277,12 @@ jobs:
       - name: Unit Tests
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
+
+      - name: C Unit Tests
+        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}

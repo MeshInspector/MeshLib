@@ -26,6 +26,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   linux-vcpkg-build-test:
@@ -96,7 +100,7 @@ jobs:
           AWS_INSTANCE_TYPE=$(curl -fsS --max-time 2 \
             -H "X-aws-ec2-metadata-token: $TOKEN" \
             "http://169.254.169.254/latest/meta-data/instance-type" || true)
-          
+
           # if not an EC2 instance
           if test -z "$AWS_INSTANCE_TYPE" ; then
             AWS_INSTANCE_TYPE="self-hosted"
@@ -127,8 +131,8 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/mrbind-pybind11 thirdparty/mrbind
 
-      - name: Install mrbind
-        if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
+      - name: Install MRBind
+        if: ${{ (inputs.mrbind || inputs.mrbind_c) && !matrix.skip_mrbind }}
         run: scripts/mrbind/install_mrbind_rockylinux.sh
 
       - name: Create virtualenv
@@ -142,6 +146,12 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
+      - name: Generate C bindings
+        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: make -f scripts/mrbind/generate.mk -B --trace TARGET=c DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -154,8 +164,9 @@ jobs:
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind_c] }}
 
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
@@ -178,8 +189,12 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest ${{ matrix.skip_mrbind && '--no-python-tests' || '' }}
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: C Unit Tests
+        if: ${{ inputs.mrbind_c && !matrix.skip_mrbind }}
+        run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
         if: ${{ inputs.mrbind && !matrix.skip_mrbind }}

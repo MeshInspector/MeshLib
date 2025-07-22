@@ -29,6 +29,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
       nuget_build_patch:
         default: false
         required: false
@@ -78,8 +82,8 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
-      - name: Install mrbind
-        if: ${{ inputs.mrbind }}
+      - name: Install MRBind
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Create virtualenv
@@ -106,6 +110,7 @@ jobs:
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind_c] }}
 
       - name: Generate and build MRBind bindings
         if: ${{ inputs.mrbind }}
@@ -131,8 +136,12 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: C Unit Tests
+        if: ${{ inputs.mrbind_c }}
+        run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
         timeout-minutes: 8

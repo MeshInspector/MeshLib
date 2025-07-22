@@ -252,6 +252,10 @@ public:
     MRVIEWER_API std::unordered_map<std::shared_ptr<ObjectMesh>, FaceBitSet> findVisibleFaces( const BitSet& includePixBs,
         int maxRenderResolutionSide = 512 ) const;
 
+    /// finds all triangles of a mesh that having normals oriented toward the camera in this viewport
+    [[nodiscard]] MRVIEWER_API FaceBitSet findCameraLookingFaces( const Mesh& mesh, const AffineXf3f& meshToWorld ) const;
+
+
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     const auto [obj,pick] = pick_render_object();

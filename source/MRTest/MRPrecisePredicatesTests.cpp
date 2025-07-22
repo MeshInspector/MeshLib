@@ -8,7 +8,7 @@
 namespace MR
 {
 
-TEST( MRMesh, PrecisePredicates2 )
+TEST( MRMesh, doSegmentSegmentIntersect )
 {
     std::array<PreciseVertCoords2, 4> vs = 
     { 
@@ -33,7 +33,7 @@ TEST( MRMesh, PrecisePredicates2 )
     EXPECT_FALSE( res.doIntersect );
 }
 
-TEST( MRMesh, PrecisePredicates2other )
+TEST( MRMesh, sosCCW )
 {
     std::array<PreciseVertCoords2, 9> vs =
     {
@@ -57,7 +57,7 @@ TEST( MRMesh, PrecisePredicates2other )
     EXPECT_TRUE(  ccw( { vs[0],vs[3],vs[8] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2more )
+TEST( MRMesh, sosCCW2 )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
@@ -71,7 +71,49 @@ TEST( MRMesh, PrecisePredicates2more )
     EXPECT_TRUE(  ccw( { vs[2],vs[3],vs[0] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2InCircle )
+TEST( MRMesh, sosSmaller2 )
+{
+    std::array<PreciseVertCoords2, 5> vs =
+    {
+        PreciseVertCoords2{ 0_v, Vector2i{ 0, 0 } },
+        PreciseVertCoords2{ 1_v, Vector2i( 1, 0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i{ 0, 1 } },
+        PreciseVertCoords2{ 3_v, Vector2i{ 0, 2 } },
+        PreciseVertCoords2{ 4_v, Vector2i{ 0, 1 } } // vs[4].pt == vs[2].pt
+    };
+
+    // not-degenerate
+    EXPECT_TRUE(  smaller2( { vs[0], vs[1], vs[2], vs[3] } ) );
+    EXPECT_FALSE( smaller2( { vs[0], vs[1], vs[3], vs[2] } ) );
+    EXPECT_FALSE( smaller2( { vs[1], vs[0], vs[2], vs[3] } ) );
+
+    // partially degenerate
+    EXPECT_TRUE(  smaller2( { vs[0], vs[1], vs[4], vs[2] } ) );
+    EXPECT_FALSE( smaller2( { vs[0], vs[1], vs[2], vs[4] } ) );
+    EXPECT_FALSE( smaller2( { vs[1], vs[0], vs[4], vs[2] } ) );
+}
+
+TEST( MRMesh, sosSmaller2FullDegen )
+{
+    std::array<PreciseVertCoords2, 4> vs = 
+    { 
+        PreciseVertCoords2{ 0_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 1_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 2_v, Vector2i( 0, 0 ) },
+        PreciseVertCoords2{ 3_v, Vector2i( 0, 0 ) }
+    };
+
+    EXPECT_TRUE(  smaller2( { vs[0], vs[1], vs[2], vs[3] } ) );
+
+    // test that maximum degree in smaller2 can cope with most degenerate situation possible
+    do
+    {
+        (void)smaller2( { vs[0], vs[1], vs[2], vs[3] } );
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
+TEST( MRMesh, sosInCircle )
 {
     std::array<PreciseVertCoords2, 4> vs =
     {
@@ -91,7 +133,7 @@ TEST( MRMesh, PrecisePredicates2InCircle )
     EXPECT_TRUE( inCircle( vs ) );
 }
 
-TEST( MRMesh, PrecisePredicates2More )
+TEST( MRMesh, segmentIntersectionOrder2a )
 {
     const std::array<PreciseVertCoords2, 6> vs = 
     { 
@@ -121,7 +163,7 @@ TEST( MRMesh, PrecisePredicates2More )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[4], vs[5], vs[0], vs[2], vs[0], vs[3] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2FullDegen )
+TEST( MRMesh, segmentIntersectionOrder2FullDegen )
 {
     std::array<PreciseVertCoords2, 6> vs = 
     { 
@@ -149,7 +191,7 @@ TEST( MRMesh, PrecisePredicates2FullDegen )
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, PrecisePredicates2PartialDegen )
+TEST( MRMesh, doSegmentSegmentIntersectPartialDegen )
 {
     EXPECT_TRUE( doSegmentSegmentIntersect( {
         PreciseVertCoords2{ 0_v, { 0,  0} },
@@ -191,7 +233,7 @@ TEST( MRMesh, PrecisePredicates2PartialDegen )
         }
 }
 
-TEST( MRMesh, PrecisePredicates2InCircle2 )
+TEST( MRMesh, sosInCircle2 )
 {
     std::array<PreciseVertCoords2, 5> vs =
     {
@@ -215,7 +257,7 @@ TEST( MRMesh, PrecisePredicates2InCircle2 )
     EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
-TEST( MRMesh, PreciseSegmentIntersectionOrder2 )
+TEST( MRMesh, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =
     {
@@ -284,7 +326,15 @@ TEST( MRMesh, findTwoSegmentsIntersection )
     EXPECT_EQ( *v, d );
 }
 
-TEST( MRMesh, PrecisePredicates3 )
+TEST( MRMesh, orientParaboloid3d )
+{
+    // large numbers requiring more than 64-bit arithmetic, and degeneration (b==c)
+    const Vector2i a{ 54209929, -710917541 };
+    const Vector2i b{ 0, -365379885 };
+    EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
+}
+
+TEST( MRMesh, doTriangleSegmentIntersect )
 {
     const std::array<PreciseVertCoords, 5> vs = 
     { 
@@ -302,7 +352,7 @@ TEST( MRMesh, PrecisePredicates3 )
     EXPECT_TRUE( res.dIsLeftFromABC );
 }
 
-TEST( MRMesh, PrecisePredicates3More )
+TEST( MRMesh, doTriangleSegmentIntersect2 )
 {
     const std::array<PreciseVertCoords, 8> vs = 
     { 
@@ -346,7 +396,7 @@ TEST( MRMesh, PrecisePredicates3More )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[6], vs[7], vs[0], vs[4], vs[3], vs[0], vs[4], vs[5] } ) );
 }
 
-TEST( MRMesh, PrecisePredicates3FullDegen )
+TEST( MRMesh, doTriangleSegmentIntersectFullDegen )
 {
     std::array<PreciseVertCoords, 5> vs = 
     { 
@@ -369,7 +419,7 @@ TEST( MRMesh, PrecisePredicates3FullDegen )
     while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, PrecisePredicates3FullDegen2 )
+TEST( MRMesh, segmentIntersectionOrder3FullDegen )
 {
     std::array<PreciseVertCoords, 8> vs;
     for ( VertId i = 0_v; i < 8; ++i )
@@ -400,7 +450,7 @@ TEST( MRMesh, PrecisePredicates3FullDegen2 )
     while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
-TEST( MRMesh, PreciseSegmentIntersectionOrder3a )
+TEST( MRMesh, segmentIntersectionOrder3a )
 {
     PreciseVertCoords vs[8] =
     {
@@ -439,7 +489,7 @@ TEST( MRMesh, PreciseSegmentIntersectionOrder3a )
     EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[6], vs[7], vs[5], vs[6], vs[7] } ) );
 }
 
-TEST( MRMesh, PreciseSegmentIntersectionOrder3b )
+TEST( MRMesh, segmentIntersectionOrder3b )
 {
     PreciseVertCoords vs[8] =
     {

@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="MRParallel.h" />
     <ClInclude Include="MRParallelMinMax.h" />
     <ClInclude Include="MRPartialChangeMeshAction.h" />
+    <ClInclude Include="MRPly.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRClosestWeightedPoint.h" />
@@ -425,6 +427,7 @@
     <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MROffsetVerts.h" />
     <ClInclude Include="MREndMill.h" />
+    <ClInclude Include="MRSolidOfRevolution.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />
@@ -551,6 +554,7 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPly.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
     <ClCompile Include="MRClosestWeightedPoint.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
@@ -709,6 +713,8 @@
     <ClCompile Include="MROffsetVerts.cpp" />
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
     <ClCompile Include="MREndMill.cpp" />
+    <ClCompile Include="MRCylinderApproximator.cpp" />
+    <ClCompile Include="MRSolidOfRevolution.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

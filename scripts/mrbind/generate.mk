@@ -487,6 +487,7 @@ endif
 MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
+COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
 # Need whitespace to handle `~` correctly.
@@ -534,7 +535,6 @@ LINKER_FLAGS += -rtlib=platform
 # Don't generate .lib files.
 LINKER_FLAGS += -Wl,-noimplib
 # Library paths:
-COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.

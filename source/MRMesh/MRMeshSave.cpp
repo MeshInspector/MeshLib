@@ -60,7 +60,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
     const int numPolygons = mesh.topology.numValidFaces();
@@ -69,7 +69,7 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
         auto saveVertex = [&]( auto && p )
         {
@@ -143,7 +143,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     if ( settings.uvMap )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
@@ -151,7 +151,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     auto sb = subprogress( settings.progress, 0.0f, settings.uvMap ? 0.35f : 0.5f );
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
 
         auto saveVertex = [&]( auto && p )
@@ -181,7 +181,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         sb = subprogress( settings.progress, 0.35f, 0.7f );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )
         {
-            if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+            if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
             const auto& uv = ( *settings.uvMap )[i];
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
@@ -372,7 +372,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
     const bool saveColors = settings.colors && settings.colors->size() > lastVertId;
@@ -383,7 +383,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
 
     const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = settings.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
     out <<  "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\nend_header\n";
 
     static_assert( sizeof( Vector3f ) == 12, "wrong size of Vector3f" );
@@ -399,7 +399,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );
@@ -435,7 +435,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
             for ( int i = 0; i < 3; ++i )
                 tri.v[i] = vertRenumber( vs[i] );
         }
-        else if ( !settings.rearrangeTriangles )
+        else if ( !settings.packPrimitives )
             tri.v[0] = tri.v[1] = tri.v[2] = 0;
         else
             continue;
@@ -479,11 +479,11 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extens
     return saver.streamSave( mesh, out, settings );
 }
 
-MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, -1 )
-MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl )
-MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff )
-MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj )
-MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly )
+MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, {}, -1 )
+MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl, {} )
+MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff, {} )
+MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj, { .storesVertexColors = true } )
+MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly, { .storesVertexColors = true } )
 
 } //namespace MeshSave
 

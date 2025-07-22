@@ -51,13 +51,13 @@ Expected<void> toXyz( const PointCloud& points, const std::filesystem::path& fil
 Expected<void> toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER;
-    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
+    const size_t totalPoints = settings.onlyValidPoints ? cloud.validPoints.count() : cloud.points.size();
     size_t numSaved = 0;
 
     NormalXfMatrix normXf( settings.xf );
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
-        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+        if ( settings.onlyValidPoints && !cloud.validPoints.test( v ) )
             continue;
         auto saveVertex = [&]( auto && p )
         {
@@ -93,13 +93,13 @@ Expected<void> toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSet
     MR_TIMER;
     if ( !cloud.hasNormals() )
         return unexpected( std::string( "Point cloud does not have normal data" ) );
-    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
+    const size_t totalPoints = settings.onlyValidPoints ? cloud.validPoints.count() : cloud.points.size();
     size_t numSaved = 0;
 
     NormalXfMatrix normXf( settings.xf );
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
-        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+        if ( settings.onlyValidPoints && !cloud.validPoints.test( v ) )
             continue;
         auto saveVertex = [&]( auto && p, auto && n )
         {
@@ -150,7 +150,7 @@ Expected<void> toPly( const PointCloud& points, const std::filesystem::path& fil
 Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER;
-    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
+    const size_t totalPoints = settings.onlyValidPoints ? cloud.validPoints.count() : cloud.points.size();
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << totalPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
@@ -176,7 +176,7 @@ Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSett
     size_t numSaved = 0;
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
-        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+        if ( settings.onlyValidPoints && !cloud.validPoints.test( v ) )
             continue;
         const Vector3f p = applyFloat( settings.xf, cloud.points[v] );
         out.write( ( const char* )&p, 12 );

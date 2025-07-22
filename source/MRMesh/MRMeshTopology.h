@@ -24,8 +24,11 @@ public:
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
 
+    /// returns last not lone undirected edge id, or invalid id if no such edge exists
+    [[nodiscard]] MRMESH_API UndirectedEdgeId lastNotLoneUndirectedEdge() const;
+
     /// returns last not lone edge id, or invalid id if no such edge exists
-    [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
+    [[nodiscard]] EdgeId lastNotLoneEdge() const { auto ue = lastNotLoneUndirectedEdge(); return ue ? EdgeId( ue ) + 1 : EdgeId(); }
 
     /// remove all lone edges from given set
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;

@@ -145,12 +145,14 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     VertUVCoords uvCoords;
     VertNormals normals;
     MeshTexture texture;
+    std::optional<Edges> edges;
     int skippedFaceCount = 0;
     int duplicatedVertexCount = 0;
     int holesCount = 0;
     AffineXf3f xf;
     MeshLoadSettings settings
     {
+        .edges = &edges,
         .colors = &colors,
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
@@ -168,7 +170,30 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     {
         if ( returnOnlyMesh )
             return unexpected( "File contains a point cloud and not a mesh: " + utf8string( file ) );
-        auto pointCloud = std::make_shared<MR::PointCloud>();
+
+        if ( edges )
+        {
+            auto polyline = std::make_shared<Polyline3>();
+            polyline->points = std::move( mesh->points );
+            polyline->topology.vertResize( polyline->points.size() );
+            polyline->topology.makeEdges( *edges );
+
+            auto objectLines = std::make_unique<ObjectLines>();
+            objectLines->setName( utf8string( file.stem() ) );
+            objectLines->setPolyline( polyline );
+
+            if ( !colors.empty() )
+            {
+                objectLines->setVertsColorMap( std::move( colors ) );
+                objectLines->setColoringType( ColoringType::VertsColorMap );
+            }
+
+            objectLines->setXf( xf );
+
+            return LoadedObject{ .obj = std::move( objectLines ) };
+        }
+
+        auto pointCloud = std::make_shared<PointCloud>();
         pointCloud->points = std::move( mesh->points );
         pointCloud->normals = std::move( normals );
         pointCloud->validPoints.resize( pointCloud->points.size(), true );
@@ -211,7 +236,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
 
     objectMesh->setXf( xf );
 
-        holesCount = int( objectMesh->numHoles() );
+    holesCount = int( objectMesh->numHoles() );
     std::string warnings = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
         if ( !colors.empty() && !hasColors )
         warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
@@ -225,15 +250,28 @@ Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file
 {
     MR_TIMER;
 
-    auto lines = LinesLoad::fromAnySupportedFormat( file, callback );
-    if ( !lines.has_value() )
+    VertColors colors;
+    LinesLoadSettings settings
     {
-        return unexpected( lines.error() );
-    }
+        .colors = &colors,
+        .callback = callback
+    };
+    auto lines = LinesLoad::fromAnySupportedFormat( file, settings );
+    if ( !lines.has_value() )
+        return unexpected( std::move( lines.error() ) );
+
+    const auto numVerts = lines->points.size();
+    const bool hasColors = colors.size() >= numVerts;
 
     ObjectLines objectLines;
     objectLines.setName( utf8string( file.stem() ) );
-    objectLines.setPolyline( std::make_shared<MR::Polyline3>( std::move( lines.value() ) ) );
+    objectLines.setPolyline( std::make_shared<Polyline3>( std::move( lines.value() ) ) );
+
+    if ( hasColors )
+    {
+        objectLines.setVertsColorMap( std::move( colors ) );
+        objectLines.setColoringType( ColoringType::VertsColorMap );
+    }
 
     return objectLines;
 }
@@ -256,7 +294,7 @@ Expected<ObjectPoints> makeObjectPointsFromFile( const std::filesystem::path& fi
 
     ObjectPoints objectPoints;
     objectPoints.setName( utf8string( file.stem() ) );
-    objectPoints.setPointCloud( std::make_shared<MR::PointCloud>( std::move( pointsCloud.value() ) ) );
+    objectPoints.setPointCloud( std::make_shared<PointCloud>( std::move( pointsCloud.value() ) ) );
     objectPoints.setXf( xf );
     if ( !colors.empty() )
     {
@@ -283,7 +321,7 @@ Expected<ObjectDistanceMap> makeObjectDistanceMapFromFile( const std::filesystem
 
     ObjectDistanceMap objectDistanceMap;
     objectDistanceMap.setName( utf8string( file.stem() ) );
-    objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMap.value() ) ), params );
+    objectDistanceMap.setDistanceMap( std::make_shared<DistanceMap>( std::move( distanceMap.value() ) ), params );
 
     return objectDistanceMap;
 }
@@ -345,19 +383,6 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
 
     if ( !result.has_value() && result.error() != stringOperationCanceled() )
     {
-        auto objectPoints = makeObjectPointsFromFile( filename, callback );
-        if ( objectPoints.has_value() )
-        {
-            objectPoints->select( true );
-            auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
-            result = LoadedObjects{ .objs = { obj } };
-        }
-        else if ( objectPoints.error() != stringUnsupportedFileExtension() )
-            result = unexpected( std::move( objectPoints.error() ) );
-    }
-
-    if ( !result.has_value() && result.error() != stringOperationCanceled() )
-    {
         auto objectLines = makeObjectLinesFromFile( filename, callback );
         if ( objectLines.has_value() )
         {
@@ -367,6 +392,19 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
         }
         else if ( objectLines.error() != stringUnsupportedFileExtension() )
             result = unexpected( std::move( objectLines.error() ) );
+    }
+
+    if ( !result.has_value() && result.error() != stringOperationCanceled() )
+    {
+        auto objectPoints = makeObjectPointsFromFile( filename, callback );
+        if ( objectPoints.has_value() )
+        {
+            objectPoints->select( true );
+            auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
+            result = LoadedObjects{ .objs = { obj } };
+        }
+        else if ( objectPoints.error() != stringUnsupportedFileExtension() )
+            result = unexpected( std::move( objectPoints.error() ) );
     }
 
     if ( !result.has_value() && result.error() != stringOperationCanceled() )

@@ -388,10 +388,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 Vector2f buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( dragY ); // Usually redundant, but when the user does something weird, this is sometimes required.
-                action -= UI::buttonEx( "\xe2\x88\x92", true, buttonSize, 0, { .enableTestEngine = false } );
+                action -= UI::buttonEx( "\xe2\x88\x92", buttonSize, { .enableTestEngine = false } );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( dragY );
-                action += UI::buttonEx( "+", true, buttonSize, 0, { .enableTestEngine = false } );
+                action += UI::buttonEx( "+", buttonSize, { .enableTestEngine = false } );
 
                 if ( action )
                 {

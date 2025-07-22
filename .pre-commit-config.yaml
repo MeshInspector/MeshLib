@@ -1,0 +1,12 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: local
+    hooks:
+    -   id: vcxproj-missing-files
+        name: Check Visual Studio projects for missing file entries
+        stages: [pre-push, manual]
+        always_run: true
+        entry: scripts/check_vcxproj.py source/
+        language: script
+        pass_filenames: false

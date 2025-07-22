@@ -17,8 +17,8 @@ void mrPointsSaveToAnySupportedFormat( const MRPointCloud* pc_, const char* file
     SaveSettings settings;
     if ( settings_ )
     {
-        settings.saveValidOnly = settings_->saveValidOnly;
-        settings.rearrangeTriangles = settings_->rearrangeTriangles;
+        settings.onlyValidPoints = settings_->onlyValidPoints;
+        settings.packPrimitives = settings_->packPrimitives;
         settings.progress = settings_->progress;
         vector_wrapper<Color>* wrapper = (vector_wrapper<Color>*)( settings_->colors );
         if ( wrapper )

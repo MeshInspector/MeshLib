@@ -492,12 +492,18 @@ template <typename I> struct IteratorRange;
 /// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
-/// three vertex ids describing a triangle topology
+/// two vertex ids describing an edge with the ends in vertices given by their ids
+using TwoVertIds = std::array<VertId, 2>;
+
+/// three vertex ids describing a triangle with the corners in vertices given by their ids
 using ThreeVertIds = std::array<VertId, 3>;
 
 struct MRMESH_CLASS Dipole;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
+    /// mapping from UndirectedEdgeId to its end vertices
+    ( Edges,    Vector<TwoVertIds, UndirectedEdgeId> )
+
     /// mapping from FaceId to a triple of vertex indices
     ( Triangulation,  Vector<ThreeVertIds, FaceId> )
 

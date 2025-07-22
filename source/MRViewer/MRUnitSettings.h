@@ -20,7 +20,7 @@ MRVIEWER_API void setShowLeadingZero( bool show );
 // Can be '\0' to indicate no separator.
 // `fractional == true` means to the right of the fractional point, if any.
 [[nodiscard]] MRVIEWER_API char getThousandsSeparator();
-void setThousandsSeparator( char ch );
+MRVIEWER_API void setThousandsSeparator( char ch );
 
 // Length:
 

@@ -810,14 +810,8 @@ Expected<void> PalettePresets::savePreset( const std::string& name, const Palett
     }
 
     path /= asU8String( name ) + u8".json";
-
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( path, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, path ) )
         return unexpected( "Cannot save preset with name: \"" + name + "\"" );
-    ofs.close();
 
     instance_().update_();
     return {};

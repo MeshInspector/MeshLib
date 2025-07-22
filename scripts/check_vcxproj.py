@@ -78,18 +78,18 @@ def process_file(vcxproj_path):
 
 
 if __name__ == "__main__":
-    arg = Path(sys.argv[1])
-    if arg.is_file() and arg.suffix == '.vcxproj':
-        if process_file(arg):
-            sys.exit(0)
+    exit_code = 0
+    queue=[]
+    for arg in sys.argv[1:]:
+        path = Path(arg)
+        if path.is_dir():
+            queue += [*path.rglob('*.vcxproj')]
+        elif path.is_file() and path.suffix == '.vcxproj':
+            queue += [path]
         else:
-            sys.exit(1)
-    elif arg.is_dir():
-        exit_code = 0
-        for path in arg.rglob('*.vcxproj'):
-            if not process_file(path):
-                exit_code = 1
-        sys.exit(exit_code)
-    else:
-        print(f"Unsupported file: {arg}", file=sys.stderr)
-        sys.exit(1)
+            print(f"Unsupported file: {arg}", file=sys.stderr)
+            exit_code = 1
+    for path in queue:
+        if not process_file(path):
+            exit_code = 1
+    sys.exit(exit_code)

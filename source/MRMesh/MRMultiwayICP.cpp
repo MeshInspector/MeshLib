@@ -287,12 +287,24 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
 
+    Vector<AffineXf3f, ObjId> resXfs;
+    resXfs.resize( objs_.size() );
+    for ( int i = 0; i < objs_.size(); ++i )
+        resXfs[ObjId( i )] = objs_[ObjId( i )].xf;
+
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
 
-        bool res = doIteration_( !pt2pt );
+        if ( iter_ == 1 )
+        {
+            // update metric before first iteration
+            updateAllPointPairs();
+            minDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        }
+
+        bool res = doIteration_( !pt2pt, iter_ != 1 );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -304,17 +316,20 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
         }
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
-        if ( prop_.exitVal > curDist )
-        {
-            resultType_ = ICPExitType::StopMsdReached;
-            break;
-        }
 
         // exit if several(3) iterations didn't decrease minimization parameter
         if ( curDist < minDist )
         {
             minDist = curDist;
             badIterCount = 0;
+            for ( int i = 0; i < objs_.size(); ++i )
+                resXfs[ObjId( i )] = objs_[ObjId( i )].xf;
+
+            if ( prop_.exitVal > curDist )
+            {
+                resultType_ = ICPExitType::StopMsdReached;
+                break;
+            }
         }
         else
         {
@@ -329,11 +344,9 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
             return {};
     }
 
-    Vector<AffineXf3f, ObjId> res;
-    res.resize( objs_.size() );
     for ( int i = 0; i < objs_.size(); ++i )
-        res[ObjId( i )] = objs_[ObjId( i )].xf;
-    return res;
+        objs_[ObjId( i )].xf = resXfs[ObjId( i )];
+    return resXfs;
 }
 
 Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( ProgressCallback cb )
@@ -769,12 +782,13 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
     }
 }
 
-bool MultiwayICP::doIteration_( bool p2pl )
+bool MultiwayICP::doIteration_( bool p2pl, bool updateAllParis )
 {
     if ( pairsGridPerLayer_.size() > 1 )
         return cascadeIter_( p2pl );
 
-    updateAllPointPairs();
+    if ( updateAllParis )
+        updateAllPointPairs();
 
     if ( maxGroupSize_ == 1 )
         return p2pl ? p2plIter_() : p2ptIter_();

@@ -745,7 +745,7 @@ $(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(
 
 # Link the module.
 # Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
-$(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/($1_PyName)$(PYTHON_MODULE_SUFFIX))
+$(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$($1_PyName)$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)

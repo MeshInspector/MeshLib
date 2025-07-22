@@ -1291,28 +1291,37 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
 Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf )
 {
-    std::vector<MeshTriPoint> surfaceLine( contour.size() );
-    tbb::task_group_context ctx;
-    bool ok = true;
-    ParallelFor( (size_t)0, contour.size(), [&] ( size_t i )
+    return cutMeshByContours( mesh, { contour }, xf );
+}
+
+Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, const AffineXf3f& xf )
+{
+    MR_TIMER;
+    if ( mesh.topology.faceSize() <= 0 )
+        return unexpected( "Mesh is empty" );
+
+    std::vector<Expected<OneMeshContour>> maybeOneMeshContours( contours.size() );
+    ParallelFor( contours, [&]( size_t ic )
     {
-        PointOnFace projPt;
-        if ( !mesh.projectPoint( xf( contour[i] ), projPt ) )
+        const auto & contour = contours[ic];
+        std::vector<MeshTriPoint> surfaceLine( contour.size() );
+        ParallelFor( surfaceLine, [&] ( size_t i )
         {
-            if ( ctx.cancel_group_execution() )
-                ok = false;
-            return;
-        }
-        surfaceLine[i] = mesh.toTriPoint( projPt );
+            auto proj = findProjection( xf( contour[i] ), mesh );
+            surfaceLine[i] = proj.mtp;
+        } );
+        maybeOneMeshContours[ic] = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
     } );
-    if ( !ok )
-        return unexpected( "Cannot project point to mesh" );
 
-    auto meshContour = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
-    if ( !meshContour )
-        return unexpected( "Cannot convert tri points to mesh contour: " + meshContour.error() );
+    std::vector<OneMeshContour> oneMeshContours( contours.size() );
+    for( size_t ic = 0; ic < contours.size(); ++ic )
+    {
+        if ( !maybeOneMeshContours[ic] )
+            return unexpected( std::move( maybeOneMeshContours[ic].error() ) );
+        oneMeshContours[ic] = std::move( *maybeOneMeshContours[ic] );
+    }
 
-    auto cutRes = cutMesh( mesh, { *meshContour } );
+    auto cutRes = cutMesh( mesh, oneMeshContours );
     if ( !cutRes.fbsWithContourIntersections.none() )
         return unexpected( "Cannot cut mesh because of contour self intersections" );
     auto sideFbv = fillContourLeft( mesh.topology, cutRes.resultCut );

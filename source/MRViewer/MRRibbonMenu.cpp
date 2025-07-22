@@ -724,7 +724,7 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize, float menuScaling )
     drawSearchButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset * menuScaling ) );
-    drawHelpButton_( "https://meshinspector.com/help/en/" );
+    drawHelpButton_( "https://meshinspector.com/inapphelp/" );
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();

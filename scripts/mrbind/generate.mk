@@ -765,7 +765,9 @@ override define module_snippet_generate_c =
 # And if PCH is enabled, this also includes the headers to bake.
 $(call var,$1__CCodeGenerationMarker := $(TEMP_OUTPUT_DIR)/$1.generation_marker)
 $(call var,all_outputs += $($1__CCodeGenerationMarker))
-$(call var,$1__CCodeOutputDir := $(C_CODE_OUTPUT_DIR)/$1)
+# Currently I'm not adding a `/$1` suffix to the output directory because we only have one project enabled for C, and only run the parser once.
+# Even if we support more projects (Cuda?), the parser should only be ran one anyway. So when we need multiple projects, this makefile will need to be reworked.
+$(call var,$1__CCodeOutputDir := $(C_CODE_OUTPUT_DIR))
 $($1__CCodeGenerationMarker): $($1__ParserSourceOutput) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Generating C Code] $($1__CCodeOutputDir))
 	@$(MRBIND_GEN_C_EXE) --input $(call quote,$($1__ParserSourceOutput)) --output-header-dir $(call quote,$($1__CCodeOutputDir)/include) --output-source-dir $(call quote,$($1__CCodeOutputDir)/src) $(foreach x,$($1_InputProjects),--map-path $(call quote,$(makefile_dir)../../source/$x) $(patsubst MR%,MRC%,$x)) --assume-include-dir $(call quote,$(makefile_dir)../../source) $(MRBIND_GEN_C_FLAGS)

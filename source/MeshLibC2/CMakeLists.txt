@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MeshLibC2 CXX)
 
-file(GLOB_RECURSE SOURCES "mrmesh/src/*.cpp")
-file(GLOB_RECURSE HEADERS "mrmesh/include/*.h")
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE HEADERS "include/*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 

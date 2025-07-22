@@ -59,6 +59,7 @@ jobs:
 
       - name: rm previous data
         shell: powershell
+        # clean `com.github-glitchenzo.nugetforunity` due to: https://github.com/GlitchEnzo/NuGetForUnity/issues/721
         run: |
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\ProjectSettings\Packages\com.github-glitchenzo.nugetforunity" -Recurse -Force -ErrorAction SilentlyContinue

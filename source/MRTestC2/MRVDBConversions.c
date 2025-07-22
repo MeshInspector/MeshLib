@@ -26,7 +26,6 @@ MR_VdbVolume* createVolume(void)
     MR_MeshToVolumeParams_Set_voxelSize( mtvParams, MR_Vector3f_diagonal( 0.1f ) );
 
 
-
     MR_expected_MR_VdbVolume_std_string* volumeEx = MR_meshToVolume( mp, mtvParams );
 
     MR_MeshPart_Destroy( mp );
@@ -44,7 +43,7 @@ void testVDBConversions( void )
 
     const MR_Box1f* box = MR_VdbVolume_UpcastTo_MR_Box1f( volume );
     TEST_ASSERT( box->min > -0.001f && box->min < 0.001f );
-    TEST_ASSERT( box->min > 2.999f && box->max < 3.001f );
+    TEST_ASSERT( box->max > 2.999f && box->max < 3.001f );
     const MR_VoxelsVolume_std_shared_ptr_MR_OpenVdbFloatGrid* baseVolume = MR_VdbVolume_UpcastTo_MR_VoxelsVolume_std_shared_ptr_MR_OpenVdbFloatGrid( volume );
     const MR_Vector3i* dims = MR_VoxelsVolume_std_shared_ptr_MR_OpenVdbFloatGrid_Get_dims( baseVolume );
     TEST_ASSERT( dims->x == 26 );

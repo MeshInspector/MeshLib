@@ -56,8 +56,8 @@ void testComponentsMap( void )
     MR_std_pair_MR_Face2RegionMap_int32_t* map = MR_MeshComponents_getAllComponentsMap( m.part, NULL, NULL );
     TEST_ASSERT( *MR_std_pair_MR_Face2RegionMap_int32_t_Second( map ) == 2 );
     TEST_ASSERT( MR_Face2RegionMap_size( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ) ) == 24 );
-    TEST_ASSERT( MR_Face2RegionMap_at_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){0} )->id_ == 0 );
-    TEST_ASSERT( MR_Face2RegionMap_at_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){12} )->id_ == 1 );
+    TEST_ASSERT( MR_Face2RegionMap_index_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){0} )->id_ == 0 );
+    TEST_ASSERT( MR_Face2RegionMap_index_const( MR_std_pair_MR_Face2RegionMap_int32_t_First( map ), (MR_FaceId){12} )->id_ == 1 );
 
     MR_std_pair_MR_Face2RegionMap_int32_t_Destroy( map );
 

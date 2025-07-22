@@ -23,7 +23,7 @@ void testBitSet( void )
     MR_BitSet_set_2( a, 6, true );
     MR_BitSet_resize( b, 10, false );
     MR_BitSet_set_2( b, 6, true );
-    MR_BitSet* c = MR_minus_MR_BitSet( a, b );
+    MR_BitSet* c = MR_sub_MR_BitSet( a, b );
     TEST_ASSERT( MR_BitSet_test( c, 5 ) )
     TEST_ASSERT( !MR_BitSet_test( c, 6 ) )
 

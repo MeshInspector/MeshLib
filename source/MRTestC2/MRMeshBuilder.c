@@ -20,7 +20,7 @@ void testUniteCloseVertices( void )
 
     int unitedCount = MR_MeshBuilder_uniteCloseVertices_4( mesh, 0.1f, &(bool){false}, vertMap );
     TEST_ASSERT( unitedCount == 2230 );
-    TEST_ASSERT( MR_VertMap_at( vertMap, (MR_VertId){1000} )->id_ == 42 );
+    TEST_ASSERT( MR_VertMap_index( vertMap, (MR_VertId){1000} )->id_ == 42 );
 
     MR_VertMap_Destroy( vertMap );
     MR_Mesh_Destroy( mesh );

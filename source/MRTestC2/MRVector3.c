@@ -36,7 +36,7 @@ void testMrVector3fPlusZ(void) {
 void testMrVector3fAdd(void) {
     MR_Vector3f a = {1.0f, 2.0f, 3.0f};
     MR_Vector3f b = {4.0f, 5.0f, 6.0f};
-    MR_Vector3f result = MR_plus_MR_Vector3f(&a, &b);
+    MR_Vector3f result = MR_add_MR_Vector3f(&a, &b);
 
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x, 5.0f, 0.0001f);
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.y, 7.0f, 0.0001f);
@@ -46,7 +46,7 @@ void testMrVector3fAdd(void) {
 void testMrVector3fSub(void) {
     MR_Vector3f a = {5.0f, 7.0f, 9.0f};
     MR_Vector3f b = {4.0f, 5.0f, 6.0f};
-    MR_Vector3f result = MR_minus_MR_Vector3f(&a, &b);
+    MR_Vector3f result = MR_sub_MR_Vector3f(&a, &b);
 
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x, 1.0f, 0.0001f);
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.y, 2.0f, 0.0001f);

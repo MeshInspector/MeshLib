@@ -65,7 +65,7 @@ void testMrMatrix3fAdd(void) {
         {3.0f, 2.0f, 1.0f}
     };
 
-    MR_Matrix3f result = MR_plus_MR_Matrix3f(&matrixA, &matrixB);
+    MR_Matrix3f result = MR_add_MR_Matrix3f(&matrixA, &matrixB);
 
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x.x, 10.0f, 0.001f);
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x.y, 10.0f, 0.001f);
@@ -91,7 +91,7 @@ void testMrMatrix3fSub(void) {
         {3.0f, 2.0f, 1.0f}
     };
 
-    MR_Matrix3f result = MR_minus_MR_Matrix3f(&matrixA, &matrixB);
+    MR_Matrix3f result = MR_sub_MR_Matrix3f(&matrixA, &matrixB);
 
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x.x, -8.0f, 0.001f);
     TEST_ASSERT_FLOAT_EQUAL_APPROX(result.x.y, -6.0f, 0.001f);

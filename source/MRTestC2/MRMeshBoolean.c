@@ -62,7 +62,7 @@ void testMeshBoolean( void )
                 MR_Vector3f shiftVec = { 0.f, 0.f, 0.f };
                 for ( int i = 0; i < 3; ++i )
                     if ( maskTrans & ( 1 << i ) )
-                        shiftVec = MR_plus_MR_Vector3f( &shiftVec, &baseAxis[i] );
+                        shiftVec = MR_add_MR_Vector3f( &shiftVec, &baseAxis[i] );
                 for ( float angle = PI_F * 0.01f; angle < PI_F * 7.0f / 18.0f; angle += angleStep )
                 {
                     MR_Matrix3f rotation = MR_Matrix3f_identity();
@@ -103,19 +103,19 @@ void testMeshBoolean( void )
 void testBooleanMultipleEdgePropogationSort( void )
 {
     MR_VertCoords* pointsVec = MR_VertCoords_Construct_1_uint64_t( 6 );
-    *MR_VertCoords_at( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
-    *MR_VertCoords_at( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
-    *MR_VertCoords_at( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
-    *MR_VertCoords_at( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){  0.0f, 1.5f, 0.5f };
-    *MR_VertCoords_at( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
-    *MR_VertCoords_at( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){3} ) = (MR_Vector3f){  0.0f, 1.5f, 0.5f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
+    *MR_VertCoords_index( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
     MR_Triangulation *triangulation = MR_Triangulation_Construct_1_uint64_t( 5 );
-    *MR_Triangulation_at( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_at( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
-    *MR_Triangulation_at( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
-    *MR_Triangulation_at( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
-    *MR_Triangulation_at( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
+    *MR_Triangulation_index( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
+    *MR_Triangulation_index( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
+    *MR_Triangulation_index( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
+    *MR_Triangulation_index( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
 
     MR_Mesh* meshA = MR_Mesh_fromTriangles( MR_PassBy_Move, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 

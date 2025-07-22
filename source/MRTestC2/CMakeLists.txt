@@ -14,7 +14,7 @@ file(GLOB SOURCES "*.c")
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ../MeshLibC2/mrmesh/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ../MeshLibC2/include)
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")

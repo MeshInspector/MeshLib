@@ -70,7 +70,7 @@ ELSE()
 ENDIF()
 
 
-target_include_directories(${PROJECT_NAME} PRIVATE mrmesh/include mrmesh/src ../..)
+target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
 
 install(

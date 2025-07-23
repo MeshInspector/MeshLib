@@ -59,11 +59,13 @@ jobs:
 
       - name: rm previous data
         shell: powershell
+        # clean `com.github-glitchenzo.nugetforunity` due to: https://github.com/GlitchEnzo/NuGetForUnity/issues/721
         run: |
           Remove-Item -Path "C:\work\unity_proj\NugetTestProj\Assets\Packages" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\unity_proj\NugetTestProj\ProjectSettings\Packages\com.github-glitchenzo.nugetforunity" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\results.xml" -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\work\batch_log.txt" -ErrorAction SilentlyContinue
-          Remove-Item -Path "C:\work\nuget_repo\MeshLib.1.0.0.3643.nupkg" -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\work\nuget_repo\MeshLib.*.nupkg" -ErrorAction SilentlyContinue
 
       - name: Download nuget package
         shell: powershell
@@ -73,16 +75,26 @@ jobs:
           gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }}
       
       - name: Move nuget package to repo folder
-        # We use the constant fake version 1.0.0.3643 to simplify test workflow for Install package step
         shell: powershell
         run: |
           $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
-          if ($pkg) {
-            Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.1.0.0.3643.nupkg"
-          } else {
+          if (!$pkg) {
             Write-Error "No MeshLib*.nupkg file found"
             exit 1
           }
+          $matches = $null
+          $foundVersion = $pkg.Name -match '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
+          if (!$foundVersion) {
+            Write-Error "Cannot extract version MeshLib*.nupkg"
+            exit 1
+          }
+          $pkgVersion = $matches[0]
+          Move-Item $pkg.FullName "C:/work/nuget_repo/MeshLib.$pkgVersion.nupkg"
+          $xmlPath = "C:\work\unity_proj\NugetTestProj\Assets\packages.config"
+          $xml = [xml](Get-Content -Path $xmlPath)
+          $xml.packages.package.version = $pkgVersion
+          $xml.Save($xmlPath)
+
       
       - name: Install nuget package
         shell: powershell

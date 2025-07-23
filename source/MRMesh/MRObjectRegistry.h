@@ -2,72 +2,88 @@
 
 #include "MRMeshFwd.h"
 
-#include <boost/type_index.hpp>
+#include <map>
+#include <shared_mutex>
+#include <typeindex>
 
 namespace MR::detail
 {
 
-MRMESH_API void registerObject( const std::string& typeName, std::shared_ptr<void> objectPtr );
-
-MRMESH_API void unregisterObject( const std::string& typeName, void* objectPtr );
-
-MRMESH_API std::vector<std::shared_ptr<void>> getObjects( const std::string& typeName );
-
-MRMESH_API std::shared_ptr<void> getObject( const std::string& typeName );
-
-template <typename T>
-auto getTypeName()
+class GenericObjectRegistry
 {
-    return boost::typeindex::type_id<T>().pretty_name();
-}
+public:
+    MRMESH_API static GenericObjectRegistry& get( const std::type_index& type );
 
-template <typename T>
-void registerObject( std::shared_ptr<T> object )
-{
-    auto* objectPtr = (void*)object.get();
-    registerObject( getTypeName<T>(), std::shared_ptr<void>( std::move( object ), objectPtr ) );
-}
+    MRMESH_API bool add( std::string id, std::shared_ptr<void> object, int priority = 0 );
 
-template <typename T>
-void unregisterObject( T* objectPtr )
-{
-    unregisterObject( getTypeName<T>(), (void*)objectPtr );
-}
+    MRMESH_API void remove( const std::string& id );
+    MRMESH_API void remove( const std::shared_ptr<void>& object );
 
-template <typename T>
-std::vector<std::shared_ptr<T>> getObjects()
-{
-    std::vector<std::shared_ptr<T>> results;
-    for ( auto&& objectPtr : getObjects( getTypeName<T>() ) )
-        results.emplace_back( std::move( objectPtr ), reinterpret_cast<T*>( objectPtr.get() ) );
-    return results;
-}
+    MRMESH_API std::shared_ptr<void> findObject( const std::string& id ) const;
 
-template <typename T>
-std::shared_ptr<T> getObject()
-{
-    auto objectPtr = getObject( getTypeName<T>() );
-    return { std::move( objectPtr ), reinterpret_cast<T*>( objectPtr.get() ) };
-}
+    MRMESH_API std::shared_ptr<void> getTopObject() const;
+
+    MRMESH_API std::vector<std::shared_ptr<void>> getAllObjects() const;
+
+private:
+    std::unordered_map<std::string, std::shared_ptr<void>> map_;
+    std::multimap<int, std::string> priorityQueue_;
+    mutable std::shared_mutex mutex_;
+};
 
 } // namespace MR::detail
 
 namespace MR
 {
 
+template <typename T>
 class ObjectRegistry
 {
 public:
-    template <typename T>
-    static void add( std::shared_ptr<T> object )
+    static bool add( std::string id, std::shared_ptr<T> object, int priority = 0 )
     {
-        detail::registerObject<T>( std::move( object ) );
+        static auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        return registry.add( std::move( id ), cast_<void>( std::move( object ) ), priority );
     }
 
-    template <typename T>
-    static std::shared_ptr<T> get()
+    static void remove( const std::string& id )
     {
-        return detail::getObject<T>();
+        static auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        registry.remove( id );
+    }
+    static void remove( const std::shared_ptr<T>& objectPtr )
+    {
+        static auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        registry.remove( cast_<void>( objectPtr ) );
+    }
+
+    static std::shared_ptr<T> findObject( const std::string& id )
+    {
+        static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        return cast_<T>( registry.findObject( id ) );
+    }
+
+    static std::shared_ptr<T> getTopObject()
+    {
+        static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        return cast_<T>( registry.getTopObject() );
+    }
+
+    static std::vector<std::shared_ptr<T>> getAllObjects()
+    {
+        static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
+        std::vector<std::shared_ptr<T>> results;
+        for ( auto&& object : registry.getAllObjects() )
+            results.emplace_back( cast_<T>( std::move( object ) ) );
+        return results;
+    }
+
+private:
+    template <typename To, typename From>
+    static std::shared_ptr<To> cast_( std::shared_ptr<From>&& object )
+    {
+        auto* ptr = object.get();
+        return { std::forward<std::shared_ptr<From>>( object ), reinterpret_cast<To*>( ptr ) };
     }
 };
 

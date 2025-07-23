@@ -1,60 +1,104 @@
 #include "MRObjectRegistry.h"
 
 #include <mutex>
-#include <shared_mutex>
 
 namespace
 {
 
-std::unordered_multimap<std::string, std::shared_ptr<void>> cObjectRegistry = {};
-std::shared_mutex cObjectRegistryMutex = {};
+auto findValue( const auto& container, const auto& value )
+{
+    for ( auto it = container.begin(); it != container.end(); ++it )
+        if ( it->second == value )
+            return it;
+    return container.end();
+}
 
 } // namespace
 
 namespace MR::detail
 {
 
-void registerObject( const std::string& typeName, std::shared_ptr<void> objectPtr )
+GenericObjectRegistry& GenericObjectRegistry::get( const std::type_index& type )
 {
-    std::unique_lock lock( cObjectRegistryMutex );
-    cObjectRegistry.emplace( typeName, std::move( objectPtr ) );
+    static std::map<std::type_index, GenericObjectRegistry> storage = {};
+    static std::shared_mutex mutex = {};
+
+    {
+        std::shared_lock readLock( mutex );
+        if ( auto it = storage.find( type ); it != storage.end() )
+            return it->second;
+    }
+
+    std::unique_lock writeLock( mutex );
+    return storage[type];
 }
 
-void unregisterObject( const std::string& typeName, void* objectPtr )
+bool GenericObjectRegistry::add( std::string id, std::shared_ptr<void> object, int priority )
 {
-    std::unique_lock lock( cObjectRegistryMutex );
-    for ( auto [it, end] = cObjectRegistry.equal_range( typeName ); it != end; ++it )
+    std::unique_lock lock( mutex_ );
+
+    if ( auto it = map_.find( id ); it != map_.end() )
+        return false;
+
+    priorityQueue_.emplace( priority, id );
+    map_.emplace( std::move( id ), std::move( object ) );
+    return true;
+}
+
+void GenericObjectRegistry::remove( const std::string& id )
+{
+    std::unique_lock lock( mutex_ );
+
+    if ( auto rit = map_.find( id ); rit != map_.end() )
     {
-        auto& [_, ptr] = *it;
-        if ( ptr.get() == objectPtr )
-        {
-            cObjectRegistry.erase( it );
-            return;
-        }
+        if ( auto pqit = findValue( priorityQueue_, id ); pqit != priorityQueue_.end() )
+            priorityQueue_.erase( pqit );
+
+        map_.erase( rit );
     }
 }
 
-std::vector<std::shared_ptr<void>> getObjects( const std::string& typeName )
+void GenericObjectRegistry::remove( const std::shared_ptr<void>& object )
 {
-    std::shared_lock lock( cObjectRegistryMutex );
-    std::vector<std::shared_ptr<void>> results;
-    for ( auto [it, end] = cObjectRegistry.equal_range( typeName ); it != end; ++it )
+    std::unique_lock lock( mutex_ );
+
+    if ( auto rit = findValue( map_, object ); rit != map_.end() )
     {
-        auto& [_, ptr] = *it;
-        results.emplace_back( ptr );
+        const auto& id = rit->first;
+        if ( auto pqit = findValue( priorityQueue_, id ); pqit != priorityQueue_.end() )
+            priorityQueue_.erase( pqit );
+
+        map_.erase( rit );
     }
-    return results;
 }
 
-std::shared_ptr<void> getObject( const std::string& typeName )
+std::shared_ptr<void> GenericObjectRegistry::findObject( const std::string& id ) const
 {
-    std::shared_lock lock( cObjectRegistryMutex );
-    if ( auto it = cObjectRegistry.find( typeName ); it != cObjectRegistry.end() )
-    {
-        auto& [_, ptr] = *it;
-        return ptr;
-    }
+    std::shared_lock lock( mutex_ );
+
+    if ( auto rit = map_.find( id ); rit != map_.end() )
+        return rit->second;
     return {};
+}
+
+std::shared_ptr<void> GenericObjectRegistry::getTopObject() const
+{
+    std::shared_lock lock( mutex_ );
+
+    if ( priorityQueue_.empty() )
+        return {};
+    return map_.at( priorityQueue_.begin()->second );
+}
+
+std::vector<std::shared_ptr<void>> GenericObjectRegistry::getAllObjects() const
+{
+    std::shared_lock lock( mutex_ );
+
+    std::vector<std::shared_ptr<void>> results;
+    results.reserve( map_.size() );
+    for ( const auto& [_, id] : priorityQueue_ )
+        results.emplace_back( map_.at( id ) );
+    return results;
 }
 
 } // namespace MR::detail

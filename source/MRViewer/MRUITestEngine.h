@@ -65,6 +65,8 @@ concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::str
 // `T` must be a scalar; vector support must be implemented manually.
 // Pass `min >= max` to disable the range checks.
 // If this returns true, use the new value in place of the current one.
+// \param consumeValueOverride If true - retrieves (deletes) a value from storage.
+// If false - copies the value from the storage (saves the original to the storage to be retrieved again, for example, in the next frame)
 template <AllowedValueType T>
 requires std::is_arithmetic_v<T>
 [[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max, bool consumeValueOverride = true )

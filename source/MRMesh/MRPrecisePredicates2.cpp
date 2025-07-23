@@ -43,7 +43,7 @@ std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2,
 
 // Int64 is enough to store all coefficients in ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
 template<int M>
-using Poly = SparsePolynomial<std::int64_t, int, M>;
+using Poly = SparsePolynomial<Int64, int, M>;
 
 template<int M>
 Poly<M> ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
@@ -58,12 +58,12 @@ Poly<M> ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree
     return det;
 }
 
-std::int64_t area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
+Int64 area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
 {
-    const std::int64_t xx( a.x - c.x );
-    const std::int64_t xy( a.y - c.y );
-    const std::int64_t yx( b.x - c.x );
-    const std::int64_t yy( b.y - c.y );
+    const Int64 xx( a.x - c.x );
+    const Int64 xy( a.y - c.y );
+    const Int64 yx( b.x - c.x );
+    const Int64 yy( b.y - c.y );
     return xx * yy - xy * yx;
 }
 
@@ -125,9 +125,9 @@ bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
 
 bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
 {
-    const Vector3i64 a( a0.x, a0.y, sqr( std::int64_t( a0.x ) ) + sqr( std::int64_t( a0.y ) ) );
-    const Vector3i64 b( b0.x, b0.y, sqr( std::int64_t( b0.x ) ) + sqr( std::int64_t( b0.y ) ) );
-    const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
+    const Vector3i64 a( a0.x, a0.y, sqr( Int64( a0.x ) ) + sqr( Int64( a0.y ) ) );
+    const Vector3i64 b( b0.x, b0.y, sqr( Int64( b0.x ) ) + sqr( Int64( b0.y ) ) );
+    const Vector3i64 c( c0.x, c0.y, sqr( Int64( c0.x ) ) + sqr( Int64( c0.y ) ) );
 
     //e**0
     if ( auto v = mixed( Vector3i128fast( a ), Vector3i128fast( b ), Vector3i128fast( c ) ) )
@@ -405,7 +405,7 @@ Vector2i findSegmentSegmentIntersectionPrecise(
     else if ( bcLSq > adLSq )
         return di;
     else
-        return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), std::int64_t( 2 ) ) );
+        return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), Int64( 2 ) ) );
 }
 
 Vector2f findSegmentSegmentIntersectionPrecise(

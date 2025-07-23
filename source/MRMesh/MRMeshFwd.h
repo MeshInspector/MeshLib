@@ -171,108 +171,128 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), SetBitIterato
 
 struct Color;
 
+// Must our `Int64` and `Uint64` everywhere in the public API instead of `long`, `long long`, `int64_t`, `uint64_t`, etc.
+// But `size_t` and `ptrdiff_t` are allowed as is.
+// This is required to generate consistent C bindings on all platforms, and this is checked during binding generation.
+//
+// Those standard typedefs are a mess across platforms. On Windows, they all expand to `long long`, because `long` is not wide enough.
+// On Linux, they all expand to `long`, which again makes sense, because it's wide enough, and it's natural to use it instead of `long long` if it's wide enough.
+// This difference alone causes issues, but what's worse is that on Mac, the typedefs use both `long` and `long long`, despite them having
+//   the same size (anything with digits in the name is `long long`, everything else is `long`, for some reason).
+// The only way around that is to only use `long` or `long long` in the interface per platform, but not both. Then during binding generation,
+//   replace that type with `int64_t`, and complain if we got another one. This only makes sense on 64-bit platforms, but we only generate bindings on those.
+// Since `size_t` and `ptrdiff_t` are so important, we allow those, and anything that expands to the same type. Sadly `[u]int64_t` doesn't on Mac,
+//   so we can't use it directly, and have to instead use our own typedefs defined below. The untypedefed `long` and `long long` can't be used either,
+//   for the same reasons (whether they match `size_t` depends on the platform, and we can't allow that).
+#ifdef __APPLE__
+using Int64 = std::ptrdiff_t;
+using Uint64 = std::size_t;
+static_assert(sizeof(Int64) == 8);
+static_assert(sizeof(Int64) == 8);
+#else
+using Int64 = std::int64_t;
+using Uint64 = std::uint64_t;
+static_assert(sizeof(Int64) == 8);
+static_assert(sizeof(Int64) == 8);
+#endif
+
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector2,
-    ( Vector2b,   Vector2<bool>         )
-    ( Vector2i,   Vector2<int>          )
-    ( Vector2i64, Vector2<std::int64_t> )
-    ( Vector2f,   Vector2<float>        )
-    ( Vector2d,   Vector2<double>       )
+    ( Vector2b,   Vector2<bool>   )
+    ( Vector2i,   Vector2<int>    )
+    ( Vector2i64, Vector2<Int64>  )
+    ( Vector2f,   Vector2<float>  )
+    ( Vector2d,   Vector2<double> )
 )
-// Here and below I'm deprecating `Vector3ll` in favor of `Vector3i64`, because that helps us generate portable C bindings across all platforms.
-// On platforms other than Windows, `std::int64_t` expands to `long` instead of `long long`, and so do all other standard typedefs of this size,
-//   so we can have the binding generator replace `long` -> `int64_t`, and ban the use of `long long` entirely (and the opposite on Windows).
-// We can't map both `long` and `long long` to the same type, because that creates all sorts of issues (firstly conflicts e.g. between overloads
-//   if they support both `long` and `long long`; and secondly that's a type change, so passing pointers would now need casts and would break
-//   strict aliasing, etc).
-// Also note that we have to hide this behind an `#ifdef` instead of using `MR_BIND_IGNORE` because the latter still allows the class to be instantiated,
-//   which isn't what we want. (Though it's not good that the parser instantiates the ignored typedef targets, we should probably fix that later.)
+// See `Int64` above for why this is deprecated.
+// This is behind an `#ifdef` to avoid instantiating `Vector2<T>` with `T == long long`, which happens even if the typedef has `MR_BIND_IGNORE`,
+//   which is a bug.
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Vector2ll [[deprecated("Use `Vector2i64` instead.")]] = Vector2<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector3,
-    ( Vector3b,   Vector3<bool>         )
-    ( Vector3i,   Vector3<int>          )
-    ( Vector3i64, Vector3<std::int64_t> )
-    ( Vector3f,   Vector3<float>        )
-    ( Vector3d,   Vector3<double>       )
+    ( Vector3b,   Vector3<bool>   )
+    ( Vector3i,   Vector3<int>    )
+    ( Vector3i64, Vector3<Int64>  )
+    ( Vector3f,   Vector3<float>  )
+    ( Vector3d,   Vector3<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Vector3ll [[deprecated("Use `Vector3i64` instead.")]] = Vector3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Vector4,
-    ( Vector4b,   Vector4<bool>         )
-    ( Vector4i,   Vector4<int>          )
-    ( Vector4i64, Vector4<std::int64_t> )
-    ( Vector4f,   Vector4<float>        )
-    ( Vector4d,   Vector4<double>       )
+    ( Vector4b,   Vector4<bool>   )
+    ( Vector4i,   Vector4<int>    )
+    ( Vector4i64, Vector4<Int64>  )
+    ( Vector4f,   Vector4<float>  )
+    ( Vector4d,   Vector4<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Vector4ll [[deprecated("Use `Vector4i64` instead.")]] = Vector4<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix2,
-    ( Matrix2b,   Matrix2<bool>         )
-    ( Matrix2i,   Matrix2<int>          )
-    ( Matrix2i64, Matrix2<std::int64_t> )
-    ( Matrix2f,   Matrix2<float>        )
-    ( Matrix2d,   Matrix2<double>       )
+    ( Matrix2b,   Matrix2<bool>   )
+    ( Matrix2i,   Matrix2<int>    )
+    ( Matrix2i64, Matrix2<Int64>  )
+    ( Matrix2f,   Matrix2<float>  )
+    ( Matrix2d,   Matrix2<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Matrix2ll [[deprecated("Use `Matrix2i64` instead.")]] = Matrix2<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix3,
-    ( Matrix3b,   Matrix3<bool>         )
-    ( Matrix3i,   Matrix3<int>          )
-    ( Matrix3i64, Matrix3<std::int64_t> )
-    ( Matrix3f,   Matrix3<float>        )
-    ( Matrix3d,   Matrix3<double>       )
+    ( Matrix3b,   Matrix3<bool>   )
+    ( Matrix3i,   Matrix3<int>    )
+    ( Matrix3i64, Matrix3<Int64>  )
+    ( Matrix3f,   Matrix3<float>  )
+    ( Matrix3d,   Matrix3<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Matrix3ll [[deprecated("Use `Matrix3i64` instead.")]] = Matrix3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Matrix4,
-    ( Matrix4b,   Matrix4<bool>         )
-    ( Matrix4i,   Matrix4<int>          )
-    ( Matrix4i64, Matrix4<std::int64_t> )
-    ( Matrix4f,   Matrix4<float>        )
-    ( Matrix4d,   Matrix4<double>       )
+    ( Matrix4b,   Matrix4<bool>   )
+    ( Matrix4i,   Matrix4<int>    )
+    ( Matrix4i64, Matrix4<Int64>  )
+    ( Matrix4f,   Matrix4<float>  )
+    ( Matrix4d,   Matrix4<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Matrix4ll [[deprecated("Use `Matrix4i64` instead.")]] = Matrix4<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix2,
-    ( SymMatrix2b,   SymMatrix2<bool>         )
-    ( SymMatrix2i,   SymMatrix2<int>          )
-    ( SymMatrix2i64, SymMatrix2<std::int64_t> )
-    ( SymMatrix2f,   SymMatrix2<float>        )
-    ( SymMatrix2d,   SymMatrix2<double>       )
+    ( SymMatrix2b,   SymMatrix2<bool>   )
+    ( SymMatrix2i,   SymMatrix2<int>    )
+    ( SymMatrix2i64, SymMatrix2<Int64>  )
+    ( SymMatrix2f,   SymMatrix2<float>  )
+    ( SymMatrix2d,   SymMatrix2<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using SymMatrix2ll [[deprecated("Use `SymMatrix2i64` instead.")]] = SymMatrix2<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix3,
-    ( SymMatrix3b,   SymMatrix3<bool>         )
-    ( SymMatrix3i,   SymMatrix3<int>          )
-    ( SymMatrix3i64, SymMatrix3<std::int64_t> )
-    ( SymMatrix3f,   SymMatrix3<float>        )
-    ( SymMatrix3d,   SymMatrix3<double>       )
+    ( SymMatrix3b,   SymMatrix3<bool>   )
+    ( SymMatrix3i,   SymMatrix3<int>    )
+    ( SymMatrix3i64, SymMatrix3<Int64>  )
+    ( SymMatrix3f,   SymMatrix3<float>  )
+    ( SymMatrix3d,   SymMatrix3<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using SymMatrix3ll [[deprecated("Use `SymMatrix3i64` instead.")]] = SymMatrix3<long long>;
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SymMatrix4,
-    ( SymMatrix4b,   SymMatrix4<bool>         )
-    ( SymMatrix4i,   SymMatrix4<int>          )
-    ( SymMatrix4i64, SymMatrix4<std::int64_t> )
-    ( SymMatrix4f,   SymMatrix4<float>        )
-    ( SymMatrix4d,   SymMatrix4<double>       )
+    ( SymMatrix4b,   SymMatrix4<bool>   )
+    ( SymMatrix4i,   SymMatrix4<int>    )
+    ( SymMatrix4i64, SymMatrix4<Int64>  )
+    ( SymMatrix4f,   SymMatrix4<float>  )
+    ( SymMatrix4d,   SymMatrix4<double> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using SymMatrix4ll [[deprecated("Use `SymMatrix4i64` instead.")]] = SymMatrix4<long long>;
@@ -376,18 +396,18 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
 )
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
-    ( Box1i,   Box<int>          )
-    ( Box1i64, Box<std::int64_t> )
-    ( Box1f,   Box<float>        )
-    ( Box1d,   Box<double>       )
-    ( Box2i,   Box<Vector2<int>>          )
-    ( Box2i64, Box<Vector2<std::int64_t>> )
-    ( Box2f,   Box<Vector2<float>>        )
-    ( Box2d,   Box<Vector2<double>>       )
-    ( Box3i,   Box<Vector3<int>>          )
-    ( Box3i64, Box<Vector3<std::int64_t>> )
-    ( Box3f,   Box<Vector3<float>>        )
-    ( Box3d,   Box<Vector3<double>>       )
+    ( Box1i,   Box<int>             )
+    ( Box1i64, Box<Int64>           )
+    ( Box1f,   Box<float>           )
+    ( Box1d,   Box<double>          )
+    ( Box2i,   Box<Vector2<int>>    )
+    ( Box2i64, Box<Vector2<Int64>>  )
+    ( Box2f,   Box<Vector2<float>>  )
+    ( Box2d,   Box<Vector2<double>> )
+    ( Box3i,   Box<Vector3<int>>    )
+    ( Box3i64, Box<Vector3<Int64>>  )
+    ( Box3f,   Box<Vector3<float>>  )
+    ( Box3d,   Box<Vector3<double>> )
 )
 #if !MR_PARSING_FOR_ANY_BINDINGS
 using Box1ll [[deprecated("Use `Box1i64` instead.")]] = Box<long long>;
@@ -409,8 +429,8 @@ template<typename T, typename I> struct MaxArg;
 template<typename T, typename I> struct MinMaxArg;
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Ball,
-    ( Ball1f,  Ball<float>     )
-    ( Ball1d,  Ball<double>    )
+    ( Ball1f,  Ball<float>              )
+    ( Ball1d,  Ball<double>             )
     ( Ball2f,  Ball<Vector2<float>>     )
     ( Ball2d,  Ball<Vector2<double>>    )
     ( Ball3f,  Ball<Vector3<float>>     )

@@ -1,5 +1,8 @@
 #include "MRObjectRegistry.h"
 
+#include <mutex>
+#include <shared_mutex>
+
 namespace
 {
 

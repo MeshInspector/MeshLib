@@ -684,8 +684,115 @@ bool Viewer::checkOpenGL_( const LaunchParams& params )
     return true;
 }
 
+bool Viewer::setupWindow_( const LaunchParams& params )
+{
+    MR_TIMER;
+    assert( window );
+    spdlog::info( "Setting up window" );
+
+    glfwMakeContextCurrent( window );
+    if ( !loadGL() )
+    {
+        spdlog::error( "Failed to load OpenGL and its extensions" );
+        return false;
+    }
+    glInitialized_ = true;
+#ifndef __EMSCRIPTEN__
+    spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
+#endif
+    int major, minor, rev;
+    major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
+    minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
+    rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
+    spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
+    if ( glInitialized_ )
+    {
+        spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
+        spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+    }
+
+    if ( !windowTitle )
+        windowTitle = std::make_shared<ViewerTitle>();
+
+    windowTitle->setAppName( params.name );
+    if ( params.showMRVersionInTitle )
+        windowTitle->setVersion( GetMRVersionString() );
+
+    glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
+    // Register callbacks
+    glfwSetKeyCallback( window, glfw_key_callback );
+    glfwSetCursorPosCallback( window, glfw_mouse_move );
+    glfwSetFramebufferSizeCallback( window, glfw_framebuffer_size );
+    glfwSetWindowPosCallback( window, glfw_window_pos );
+    glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
+#ifndef __EMSCRIPTEN__
+    glfwSetWindowMaximizeCallback( window, glfw_window_maximize );
+    glfwSetWindowIconifyCallback( window, glfw_window_iconify );
+    glfwSetWindowContentScaleCallback( window, glfw_window_scale );
+    glfwSetWindowFocusCallback( window, glfw_window_focus );
+    glfwSetWindowCloseCallback( window, glfw_window_close );
+#endif
+    glfwSetMouseButtonCallback( window, glfw_mouse_press );
+    glfwSetCharCallback( window, glfw_char_mods_callback );
+    glfwSetDropCallback( window, glfw_drop_callback );
+    glfwSetJoystickCallback( glfw_joystick_callback );
+
+    // Handle retina displays (windows and mac)
+    int width, height;
+    glfwGetFramebufferSize( window, &width, &height );
+    // Initialize IGL viewer
+    glfw_framebuffer_size( window, width, height );
+
+    if ( hasScaledFramebuffer_ )
+        updatePixelRatio_();
+
+    float xscale{ 1.0f }, yscale{ 1.0f };
+#ifndef __EMSCRIPTEN__
+    glfwGetWindowContentScale( window, &xscale, &yscale );
+#endif
+    glfw_window_scale( window, xscale, yscale );
+    spdlog::info( "glfw configured" );
+
+    enableAlphaSort( true );
+    if ( sceneTexture_ )
+    {
+        sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        spdlog::info( "SceneTexture created" );
+    }
+
+    if ( alphaSorter_ )
+    {
+        alphaSorter_->init();
+        alphaSorter_->updateTransparencyTexturesSize( width, height );
+        spdlog::info( "AlphaSorter created" );
+    }
+
+    mouseController_->connect();
+
+    if ( !touchesController_ )
+        touchesController_ = std::make_unique<TouchesController>();
+    touchesController_->connect( this );
+    spdlog::info( "TouchesController created" );
+
+    if ( !spaceMouseController_ )
+        spaceMouseController_ = std::make_unique<SpaceMouseController>();
+    spaceMouseController_->connect();
+    initSpaceMouseHandler_();
+    spdlog::info( "SpaceMouseController created" );
+
+    if ( !touchpadController_ )
+        touchpadController_ = std::make_unique<TouchpadController>();
+    touchpadController_->connect( this );
+    touchpadController_->initialize( window );
+    spdlog::info( "TouchpadController created" );
+
+    dragDropAdvancedHandler_ = getDragDropHandler( window );
+    return true;
+}
+
 int Viewer::launchInit_( const LaunchParams& params )
 {
+    MR_TIMER;
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
@@ -746,100 +853,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         }
     }
 
-    if ( windowMode )
-    {
-        assert( window );
-
-        glfwMakeContextCurrent( window );
-        if ( !loadGL() )
-        {
-            spdlog::error( "Failed to load OpenGL and its extensions" );
-            return( -1 );
-        }
-        glInitialized_ = true;
-#ifndef __EMSCRIPTEN__
-        spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
-#endif
-        int major, minor, rev;
-        major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
-        minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
-        rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
-        spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
-        if ( glInitialized_ )
-        {
-            spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
-            spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
-        }
-
-        if ( !windowTitle )
-            windowTitle = std::make_shared<ViewerTitle>();
-
-        windowTitle->setAppName( params.name );
-        if ( params.showMRVersionInTitle )
-            windowTitle->setVersion( GetMRVersionString() );
-
-        glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
-        // Register callbacks
-        glfwSetKeyCallback( window, glfw_key_callback );
-        glfwSetCursorPosCallback( window, glfw_mouse_move );
-        glfwSetFramebufferSizeCallback( window, glfw_framebuffer_size );
-        glfwSetWindowPosCallback( window, glfw_window_pos );
-        glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
-#ifndef __EMSCRIPTEN__
-        glfwSetWindowMaximizeCallback( window, glfw_window_maximize );
-        glfwSetWindowIconifyCallback( window, glfw_window_iconify );
-        glfwSetWindowContentScaleCallback( window, glfw_window_scale );
-        glfwSetWindowFocusCallback( window, glfw_window_focus );
-        glfwSetWindowCloseCallback( window, glfw_window_close );
-#endif
-        glfwSetMouseButtonCallback( window, glfw_mouse_press );
-        glfwSetCharCallback( window, glfw_char_mods_callback );
-        glfwSetDropCallback( window, glfw_drop_callback );
-        glfwSetJoystickCallback( glfw_joystick_callback );
-
-        // Handle retina displays (windows and mac)
-        int width, height;
-        glfwGetFramebufferSize( window, &width, &height );
-        // Initialize IGL viewer
-        glfw_framebuffer_size( window, width, height );
-
-        if ( hasScaledFramebuffer_ )
-            updatePixelRatio_();
-
-        float xscale{ 1.0f }, yscale{ 1.0f };
-#ifndef __EMSCRIPTEN__
-        glfwGetWindowContentScale( window, &xscale, &yscale );
-#endif
-        glfw_window_scale( window, xscale, yscale );
-
-        enableAlphaSort( true );
-        if ( sceneTexture_ )
-            sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
-
-        if ( alphaSorter_ )
-        {
-            alphaSorter_->init();
-            alphaSorter_->updateTransparencyTexturesSize( width, height );
-        }
-
-        mouseController_->connect();
-
-        if ( !touchesController_ )
-            touchesController_ = std::make_unique<TouchesController>();
-        touchesController_->connect( this );
-
-        if ( !spaceMouseController_ )
-            spaceMouseController_ = std::make_unique<SpaceMouseController>();
-        spaceMouseController_->connect();
-        initSpaceMouseHandler_();
-
-        if ( !touchpadController_ )
-            touchpadController_ = std::make_unique<TouchpadController>();
-        touchpadController_->connect( this );
-        touchpadController_->initialize( window );
-
-        dragDropAdvancedHandler_ = getDragDropHandler( window );
-    }
+    if ( windowMode && !setupWindow_( params ) )
+        return -1;
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
     CommandLoop::processCommands();
@@ -899,6 +914,8 @@ void Viewer::launchEventLoop()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
+
+    spdlog::info( "Launching event loop" );
 
     // Rendering loop
     while ( !windowShouldClose() )
@@ -1047,6 +1064,7 @@ void Viewer::launchShut()
 
 void Viewer::init_()
 {
+    MR_TIMER;
     initBasisAxesObject_();
     initBasisViewControllerObject_();
     initClippingPlaneObject_();
@@ -1612,6 +1630,7 @@ static void resetRedrawFlagRecursive( const Object& obj )
 
 bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor )
 {
+    MR_TIMER;
     glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, major );
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, minor );
     if ( fullscreen )
@@ -1637,6 +1656,7 @@ bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const s
             height = 800;
         window = glfwCreateWindow( width, height, name.c_str(), nullptr, nullptr );
     }
+    spdlog::info( window ? "glfwCreateWindow succeeded" : "glfwCreateWindow failed" );
     return bool( window );
 }
 

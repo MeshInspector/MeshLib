@@ -127,7 +127,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMR_CXX_STANDARD=23
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind_c] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}

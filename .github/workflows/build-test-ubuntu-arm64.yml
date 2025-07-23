@@ -153,7 +153,7 @@ jobs:
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind_c] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}

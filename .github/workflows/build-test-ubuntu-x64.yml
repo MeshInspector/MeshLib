@@ -97,6 +97,13 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
+      - name: Generate C bindings
+        if: ${{ inputs.mrbind_c }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -112,7 +119,7 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}

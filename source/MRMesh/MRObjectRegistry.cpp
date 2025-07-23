@@ -20,7 +20,7 @@ void registerObject( const std::string& typeName, std::shared_ptr<void> objectPt
 void unregisterObject( const std::string& typeName, void* objectPtr )
 {
     std::unique_lock lock( cObjectRegistryMutex );
-    for ( auto [it, end] = cObjectRegistry.equal_range( std::string { typeName } ); it != end; ++it )
+    for ( auto [it, end] = cObjectRegistry.equal_range( typeName ); it != end; ++it )
     {
         auto& [_, ptr] = *it;
         if ( ptr.get() == objectPtr )

@@ -164,6 +164,7 @@ void selectRecursive( Object& obj )
 
 void ImGuiMenu::init( MR::Viewer* _viewer )
 {
+    MR_TIMER;
     ViewerPlugin::init( _viewer );
     // Setup ImGui binding
     if ( _viewer )

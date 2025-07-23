@@ -7,13 +7,13 @@
 namespace MR::detail
 {
 
-MRMESH_API void registerObject( const std::string& typeName, std::shared_ptr<void*> objectPtr );
+MRMESH_API void registerObject( const std::string& typeName, std::shared_ptr<void> objectPtr );
 
 MRMESH_API void unregisterObject( const std::string& typeName, void* objectPtr );
 
-MRMESH_API std::vector<std::shared_ptr<void*>> getObjects( const std::string& typeName );
+MRMESH_API std::vector<std::shared_ptr<void>> getObjects( const std::string& typeName );
 
-MRMESH_API std::shared_ptr<void*> getObject( const std::string& typeName );
+MRMESH_API std::shared_ptr<void> getObject( const std::string& typeName );
 
 template <typename T>
 auto getTypeName()
@@ -25,7 +25,7 @@ template <typename T>
 void registerObject( std::shared_ptr<T> object )
 {
     auto* objectPtr = (void*)object.get();
-    registerObject( getTypeName<T>(), std::shared_ptr<void*>( std::move( object ), objectPtr ) );
+    registerObject( getTypeName<T>(), std::shared_ptr<void>( std::move( object ), objectPtr ) );
 }
 
 template <typename T>

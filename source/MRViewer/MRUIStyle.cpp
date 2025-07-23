@@ -68,7 +68,7 @@ bool checkKey( ImGuiKey passedKey )
     if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
         return false;
 
-    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be alwys true, 
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
     // so use special case for modals
     bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
     if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )

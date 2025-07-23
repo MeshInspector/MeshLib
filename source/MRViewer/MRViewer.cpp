@@ -438,6 +438,9 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-transparentBgOn" ||
             flag == "-transparentBgOff" ||
             flag == "-noSplash" ||
+    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+            flag == "-showSplash" ||
+    #endif
             flag == "-console" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
@@ -517,6 +520,10 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.enableTransparentBackground = false;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
+    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+        else if ( flag == "-showSplash" )
+            params.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+    #endif
         else if ( flag == "-console" )
             params.console = true;
         else if ( flag == "-openGL3" )

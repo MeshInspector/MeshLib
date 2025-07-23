@@ -1,5 +1,6 @@
 --clean-output-dirs
 --helper-name-prefix MR_
+--helper-macro-name-prefix MRC_
 --helper-header-dir MRCMisc
 --max-header-name-length 100
 --merge-std-and-tl-expected

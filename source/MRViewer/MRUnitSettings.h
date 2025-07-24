@@ -30,6 +30,11 @@ MRVIEWER_API void setThousandsSeparator( char ch );
 [[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getUiLengthUnit();
 MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero );
 
+// In addition to length, this also controls the units for speed, area, volume, etc.
+// This can be null to indicate "no unit".
+[[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getModelLengthUnit();
+MRVIEWER_API void setModelLengthUnit( std::optional<LengthUnit> unit );
+
 // Angle:
 
 [[nodiscard]] MRVIEWER_API DegreesMode getDegreesMode();

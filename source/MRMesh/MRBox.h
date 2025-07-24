@@ -65,8 +65,8 @@ public:
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
 
     /// returns the corner of this box as specified by given bool-vector:
-    /// 1 element in (c) means take min's coordinate,
-    /// 0 element in (c) means take max's coordinate
+    /// 0 element in (c) means take min's coordinate,
+    /// 1 element in (c) means take max's coordinate
     V corner( const Vb& c ) const
     {
         V res;

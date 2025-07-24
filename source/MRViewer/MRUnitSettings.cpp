@@ -80,7 +80,7 @@ std::optional<LengthUnit> getUiLengthUnit()
     return getDefaultUnitParams<LengthUnit>().targetUnit;
 }
 
-auto getLengthDependentUnit()
+static auto getLengthDependentUnit()
 {
     return overloaded{
         // All length-related unit types must be listed here.

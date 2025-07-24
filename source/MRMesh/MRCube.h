@@ -18,11 +18,14 @@ namespace MR
 ///   7_v: x=max, y=min, z=max
 [[nodiscard]] MRMESH_API MeshTopology makeCubeTopology();
 
-// Base is "lower" corner of the cube coordinates
+/// creates box mesh with given min-corner (base) and given size in every dimension;
+/// with default parameters, creates unit cube mesh with the centroid in (0,0,0)
 [[nodiscard]] MRMESH_API Mesh makeCube( const Vector3f& size = Vector3f::diagonal(1.0f), const Vector3f& base = Vector3f::diagonal(-0.5f) );
 
+/// creates parallelepiped mesh with given min-corner \p base and given directional vectors \p size
 [[nodiscard]] MRMESH_API Mesh makeParallelepiped( const Vector3f side[3], const Vector3f& base );
 
+/// creates mesh visualizing a box
 [[nodiscard]] MRMESH_API Mesh makeBoxMesh( const Box3f& box );
 
 } //namespace MR

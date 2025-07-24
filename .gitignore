@@ -37,3 +37,7 @@ source/MRDotNetTest/obj/*
 .cache
 venv/*
 wheelhouse/*
+/source/MeshLibC2/include
+/source/MeshLibC2/src
+/source/MeshLibC2/temp
+compile_commands.json

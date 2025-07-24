@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector.h"
 #include "MRMeshTopology.h"
 #include "MRPointOnFace.h"
@@ -50,7 +51,8 @@ MRMESH_API LineSegm3f edgeSegment( const MeshTopology & topology, const VertCoor
 MRMESH_API void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 );
 
 /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
-inline void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f (&v)[3] )
+/// This one is not in the bindings because of the reference-to-array parameter.
+MR_BIND_IGNORE inline void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f (&v)[3] )
 {
     getLeftTriPoints( topology, points, e, v[0], v[1], v[2] );
 }
@@ -70,7 +72,8 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 }
 
 /// returns three points of given face
-inline void getTriPoints( const MeshTopology & topology, const VertCoords & points, FaceId f, Vector3f (&v)[3] )
+/// This one is not in the bindings because of the reference-to-array parameter.
+MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const VertCoords & points, FaceId f, Vector3f (&v)[3] )
 {
     getTriPoints( topology, points, f, v[0], v[1], v[2] );
 }
@@ -91,7 +94,7 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 
 /// returns aspect ratio of given mesh triangle equal to the ratio of the circum-radius to twice its in-radius
 [[nodiscard]] MRMESH_API float triangleAspectRatio( const MeshTopology & topology, const VertCoords & points, FaceId f );
-    
+
 /// returns squared circumcircle diameter of given mesh triangle
 [[nodiscard]] MRMESH_API float circumcircleDiameterSq( const MeshTopology & topology, const VertCoords & points, FaceId f );
 

@@ -9,10 +9,8 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( copyMesh,                             Mesh                                                );
     MR_ALIAS( FaceMap.vec,                          FaceMap.vec_                                        );
     MR_ALIAS( FaceNormals.vec,                      FaceNormals.vec_                                    );
-    MR_ALIAS( findUndercuts,                        FixUndercuts.findUndercuts                          );
     MR_ALIAS( FixSelfIntersectionMethod,            SelfIntersections.Settings.Method                   );
     MR_ALIAS( FixSelfIntersectionSettings,          SelfIntersections.Settings                          );
-    MR_ALIAS( fixUndercuts,                         FixUndercuts.fixUndercuts                           );
     MR_ALIAS( GeneralOffsetParametersMode,          GeneralOffsetParameters.Mode                        );
     MR_ALIAS( getAllComponents,                     MeshComponents.getAllComponents                     );
     MR_ALIAS( getAllComponentsVerts,                MeshComponents.getAllComponentsVerts                );

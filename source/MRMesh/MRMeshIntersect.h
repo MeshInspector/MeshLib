@@ -2,6 +2,7 @@
 
 #include "MRPointOnFace.h"
 #include "MRTriPoint.h"
+#include "MRLine3.h"
 #include "MRMeshPart.h"
 #include "MRMeshTriPoint.h"
 #include <cfloat>

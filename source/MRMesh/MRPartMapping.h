@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMapOrHashMap.h"
 
 namespace MR
@@ -31,7 +32,7 @@ class Src2TgtMaps
 {
 public:
     MRMESH_API Src2TgtMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
-    [[deprecated]] Src2TgtMaps( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+    [[deprecated]] MR_BIND_IGNORE Src2TgtMaps( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
         : Src2TgtMaps( outFmap, outVmap, outEmap ) {}
     MRMESH_API ~Src2TgtMaps(); // maps are moved back to user here
 
@@ -48,7 +49,7 @@ private:
     WholeEdgeMapOrHashMap src2tgtEdges_;
 };
 
-using HashToVectorMappingConverter [[deprecated]] = Src2TgtMaps;
+using HashToVectorMappingConverter [[deprecated]] MR_BIND_IGNORE = Src2TgtMaps;
 
 /// use this adapter to call functions expecting PartMapping parameter to receive tgt2src dense maps
 class Tgt2SrcMaps

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRPlane3.h"
 #include <functional>
@@ -14,7 +15,7 @@ namespace MR
 MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void(EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 /** \brief trim mesh by plane
-  * 
+  *
   * This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal
   * \param mesh Input mesh that will be cut
   * \param plane Input plane to cut mesh with
@@ -23,11 +24,11 @@ MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, Fa
   * \param eps if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
   * \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
   */
-[[deprecated]] MRMESH_API void trimWithPlane( Mesh& mesh, const Plane3f & plane,
+[[deprecated]] MRMESH_API MR_BIND_IGNORE void trimWithPlane( Mesh& mesh, const Plane3f & plane,
     UndirectedEdgeBitSet * outCutEdges = nullptr, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 /** \brief trim mesh by plane
-  * 
+  *
   * This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal
   * \param mesh Input mesh that will be cut
   * \param plane Input plane to cut mesh with
@@ -36,7 +37,7 @@ MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, Fa
   * \param eps if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
   * \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
   */
-[[deprecated]] MRMESH_API void trimWithPlane( Mesh& mesh, const Plane3f & plane,
+[[deprecated]] MRMESH_API MR_BIND_IGNORE void trimWithPlane( Mesh& mesh, const Plane3f & plane,
     std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 // stores basic params for trimWithPlane function

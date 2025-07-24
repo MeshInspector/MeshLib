@@ -6,6 +6,8 @@
 #include "MRPch/MRBindingMacros.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <utility>
 #if MR_HAS_REQUIRES
 #include <concepts>
 #endif
@@ -46,7 +48,9 @@ struct Vector3
     static constexpr Vector3 minusY() noexcept { return Vector3( 0, -1, 0 ); }
     static constexpr Vector3 minusZ() noexcept { return Vector3( 0, 0, -1 ); }
 
-    template <typename U>
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and looks out of place there.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
     constexpr explicit Vector3( const Vector3<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ) { }
 
     constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
@@ -256,3 +260,19 @@ MR_BIND_IGNORE inline auto end( Vector3<T> & v ) { return &v[3]; }
 #endif
 
 } // namespace MR
+
+template<>
+struct std::hash<MR::Vector3f>
+{
+    size_t operator()( MR::Vector3f const& p ) const noexcept
+    {
+        // standard implementation is slower:
+        // phmap::HashState().combine(phmap::Hash<float>()(p.x), p.y, p.z);
+        std::uint64_t xy;
+        std::uint32_t z;
+        static_assert( sizeof( float ) == sizeof( std::uint32_t ) );
+        std::memcpy( &xy, &p.x, sizeof( std::uint64_t ) );
+        std::memcpy( &z, &p.z, sizeof( std::uint32_t ) );
+        return size_t( xy ) ^ ( size_t( z ) << 16 );
+    }
+};

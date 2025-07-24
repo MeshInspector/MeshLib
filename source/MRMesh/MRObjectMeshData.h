@@ -1,7 +1,9 @@
 #pragma once
 
+#include "MRColor.h"
 #include "MRMeshFwd.h"
 #include "MRVector.h"
+#include "MRVector2.h"
 #include "MRBitSet.h"
 
 namespace MR

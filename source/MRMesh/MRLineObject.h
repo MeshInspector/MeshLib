@@ -1,4 +1,5 @@
 #pragma once
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 #include "MRVisualObject.h"
@@ -53,7 +54,7 @@ public:
     [[nodiscard]] MRMESH_API Vector3f getPointB( ViewportId id = {} ) const;
 
     [[deprecated( "This confusingly sets half-length. Use `setLength(halfLen * 2)` instead." )]]
-    void setSize( float halfLen, ViewportId id = {} )
+    MR_BIND_IGNORE void setSize( float halfLen, ViewportId id = {} )
     {
         setLength( halfLen * 2 , id );
     }

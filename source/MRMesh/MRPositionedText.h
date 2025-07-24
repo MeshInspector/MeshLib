@@ -1,4 +1,5 @@
 #pragma once
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector3.h"
 #include <string>
 
@@ -16,6 +17,6 @@ struct PositionedText
     bool operator==( const PositionedText& ) const = default;
 };
 
-using MeshLabel [[deprecated]] = PositionedText;
+using MeshLabel [[deprecated]] MR_BIND_IGNORE = PositionedText;
 
 }

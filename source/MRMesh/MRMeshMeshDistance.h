@@ -19,7 +19,7 @@ struct MeshMeshDistanceResult
     /// squared distance between a and b
     float distSq = 0;
 };
-using MeshDistanceResult [[deprecated]] = MeshMeshDistanceResult;
+using MeshDistanceResult [[deprecated]] MR_BIND_IGNORE = MeshMeshDistanceResult;
 
 struct MeshMeshSignedDistanceResult
 {
@@ -28,7 +28,7 @@ struct MeshMeshSignedDistanceResult
     /// signed distance between a and b, positive if meshes do not collide
     float signedDist = 0;
 };
-using MeshSignedDistanceResult [[deprecated]] = MeshMeshSignedDistanceResult;
+using MeshSignedDistanceResult [[deprecated]] MR_BIND_IGNORE = MeshMeshSignedDistanceResult;
 
 /**
  * \brief computes minimal distance between two meshes or two mesh regions

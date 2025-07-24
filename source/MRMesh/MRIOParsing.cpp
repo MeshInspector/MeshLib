@@ -97,7 +97,7 @@ std::vector<size_t> splitByLines( const char* data, size_t size )
     return newlines;
 }
 
-std::streamoff getStreamSize( std::istream& in )
+Int64 getStreamSize( std::istream& in )
 {
     const auto posStart = in.tellg();
     in.seekg( 0, std::ios::end );
@@ -228,9 +228,9 @@ Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, C
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        ( 
+        (
             floatT[coord] >> floatT[coord] >> floatT[coord] >>
-            double_[skip_pos] >> 
+            double_[skip_pos] >>
             uint8_[col] >> uint8_[col] >> uint8_[col] ),
         ascii::space
     );

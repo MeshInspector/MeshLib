@@ -1,6 +1,7 @@
 #include "MRMeshDecimateCallbacks.h"
 
 #include "MRMesh/MRVector.h"
+#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
 
 namespace MR

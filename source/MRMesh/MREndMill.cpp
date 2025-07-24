@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRSolidOfRevolution.h"
 #include "MRStringConvert.h"
+#include "MRVector2.h"
 
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRJson.h"

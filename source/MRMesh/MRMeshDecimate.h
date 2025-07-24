@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
@@ -242,9 +243,9 @@ struct ResolveMeshDegenSettings
  * \sa \ref decimateMesh
  */
 [[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
+MRMESH_API MR_BIND_IGNORE bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
 [[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
+MRMESH_API MR_BIND_IGNORE bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 
 struct RemeshSettings

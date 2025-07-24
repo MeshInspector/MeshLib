@@ -408,7 +408,7 @@ Vector2i findSegmentSegmentIntersectionPrecise(
         return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), Int64( 2 ) ) );
 }
 
-Vector2f findSegmentSegmentIntersectionPrecise( 
+Vector2f findSegmentSegmentIntersectionPrecise(
     const Vector2f& a, const Vector2f& b, const Vector2f& c, const Vector2f& d,
     CoordinateConverters2 converters )
 {

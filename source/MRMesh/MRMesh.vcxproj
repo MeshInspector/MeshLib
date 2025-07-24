@@ -128,7 +128,6 @@
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
-    <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />

@@ -5,7 +5,6 @@
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRHash.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRBox.h"
 #include "MRPch/MRSpdlog.h"

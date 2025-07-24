@@ -12,7 +12,8 @@ namespace MR
 MRMESH_API std::vector<size_t> splitByLines( const char* data, size_t size );
 
 // get the size of the remaining data in the input stream
-MRMESH_API std::streamoff getStreamSize( std::istream& in );
+// The return type would've been `std::streamoff`, but we need our own typedef to make the C bindings happy on Mac.
+MRMESH_API Int64 getStreamSize( std::istream& in );
 
 // reads input stream to string
 MRMESH_API Expected<std::string> readString( std::istream& in );

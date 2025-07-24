@@ -372,9 +372,6 @@
     <ClInclude Include="MRPointCloudRadius.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
-    <ClInclude Include="MRHash.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>

@@ -48,11 +48,11 @@ MRVOXELS_API Expected<FloatGrid> gridFromRaw( std::istream& in, const RawParamet
 ///             on output: if success existing file name
 MRVOXELS_API Expected<RawParameters> findRawParameters( std::filesystem::path& file );
 
-/// Load raw voxels file, parsing parameters from name 
+/// Load raw voxels file, parsing parameters from name
 MRVOXELS_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
-/// Load raw voxels file, parsing parameters from name 
+/// Load raw voxels file, parsing parameters from name
 MRVOXELS_API Expected<FloatGrid> gridFromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
@@ -103,7 +103,7 @@ struct LoadingTiffSettings
 MRVOXELS_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
 #endif // MRVOXELS_NO_TIFF
 
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
 using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesystem::path&, const ProgressCallback& );
 
 MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRVOXELS_API, VoxelsLoader )

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRAffineXf.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshProject.h"

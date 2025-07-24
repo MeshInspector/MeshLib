@@ -30,7 +30,7 @@ public:
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
-    Vector( std::initializer_list<T> init ) : vec_( init ) { }
+    MR_BIND_IGNORE Vector( std::initializer_list<T> init ) : vec_( init ) { }
 
     [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ == b.vec_; }
     [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ != b.vec_; }
@@ -137,7 +137,7 @@ public:
     /// the user can directly manipulate the vector, anyway she cannot break anything
     std::vector<T> vec_;
 
-#if defined( MR_PARSING_FOR_PB11_BINDINGS ) || defined( MR_COMPILING_PB11_BINDINGS )
+#if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
 #endif
 };

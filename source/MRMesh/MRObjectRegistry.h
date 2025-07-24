@@ -19,11 +19,9 @@ public:
     MRMESH_API void remove( const std::string& id );
     MRMESH_API void remove( const std::shared_ptr<void>& object );
 
-    MRMESH_API std::shared_ptr<void> findObject( const std::string& id ) const;
+    MRMESH_API std::shared_ptr<void> find( const std::string& id ) const;
 
-    MRMESH_API std::shared_ptr<void> getTopObject() const;
-
-    MRMESH_API std::vector<std::shared_ptr<void>> getAllObjects() const;
+    MRMESH_API std::vector<std::pair<std::string, std::shared_ptr<void>>> get() const;
 
 private:
     std::unordered_map<std::string, std::shared_ptr<void>> map_;
@@ -57,24 +55,18 @@ public:
         registry.remove( cast_<void>( objectPtr ) );
     }
 
-    static std::shared_ptr<T> findObject( const std::string& id )
+    static std::shared_ptr<T> find( const std::string& id )
     {
         static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
-        return cast_<T>( registry.findObject( id ) );
+        return cast_<T>( registry.find( id ) );
     }
 
-    static std::shared_ptr<T> getTopObject()
-    {
-        static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
-        return cast_<T>( registry.getTopObject() );
-    }
-
-    static std::vector<std::shared_ptr<T>> getAllObjects()
+    static std::vector<std::pair<std::string, std::shared_ptr<void>>> get()
     {
         static const auto& registry = detail::GenericObjectRegistry::get( typeid( T ) );
         std::vector<std::shared_ptr<T>> results;
-        for ( auto&& object : registry.getAllObjects() )
-            results.emplace_back( cast_<T>( std::move( object ) ) );
+        for ( auto&& [id, object] : registry.get() )
+            results.emplace_back( id, cast_<T>( std::move( object ) ) );
         return results;
     }
 

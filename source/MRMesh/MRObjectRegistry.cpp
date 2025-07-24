@@ -72,7 +72,7 @@ void GenericObjectRegistry::remove( const std::shared_ptr<void>& object )
     }
 }
 
-std::shared_ptr<void> GenericObjectRegistry::findObject( const std::string& id ) const
+std::shared_ptr<void> GenericObjectRegistry::find( const std::string& id ) const
 {
     std::shared_lock lock( mutex_ );
 
@@ -81,23 +81,14 @@ std::shared_ptr<void> GenericObjectRegistry::findObject( const std::string& id )
     return {};
 }
 
-std::shared_ptr<void> GenericObjectRegistry::getTopObject() const
+std::vector<std::pair<std::string, std::shared_ptr<void>>> GenericObjectRegistry::get() const
 {
     std::shared_lock lock( mutex_ );
 
-    if ( priorityQueue_.empty() )
-        return {};
-    return map_.at( priorityQueue_.begin()->second );
-}
-
-std::vector<std::shared_ptr<void>> GenericObjectRegistry::getAllObjects() const
-{
-    std::shared_lock lock( mutex_ );
-
-    std::vector<std::shared_ptr<void>> results;
+    std::vector<std::pair<std::string, std::shared_ptr<void>>> results;
     results.reserve( map_.size() );
     for ( const auto& [_, id] : priorityQueue_ )
-        results.emplace_back( map_.at( id ) );
+        results.emplace_back( id, map_.at( id ) );
     return results;
 }
 

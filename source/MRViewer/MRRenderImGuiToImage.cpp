@@ -62,7 +62,7 @@ Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundCol
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, fbo ) );
     GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0 ) );
 
-    GL_EXEC( glReadPixels( 0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, (void*)result.pixels.data() ) );
+    GL_EXEC( glReadPixels( 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, (void*)result.pixels.data() ) );
 
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
     glDeleteFramebuffers( 1, &fbo );

@@ -103,33 +103,6 @@ typedef struct MRDecimateResult
 /// Collapse edges in mesh region according to the settings
 MRMESHC_API MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* settings );
 
-/// parameters for \ref mrResolveMeshDegenerations
-typedef struct MRResolveMeshDegenSettings
-{
-    /// maximum permitted deviation from the original surface
-    float maxDeviation;
-    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
-    float tinyEdgeLength;
-    /// Permit edge flips if it does not change dihedral angle more than on this value
-    float maxAngleChange;
-    /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
-    /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
-    float criticalAspectRatio;
-    /// Small stabilizer is important to achieve good results on completely planar mesh parts,
-    /// if your mesh is not-planer everywhere, then you can set it to zero
-    float stabilizer;
-    /// degenerations will be fixed only in given region, which is updated during the processing
-    MRFaceBitSet* region;
-} MRResolveMeshDegenSettings;
-
-/// initializes a default instance
-MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsNew( void );
-
-/// Resolves degenerate triangles in given mesh
-/// This function performs decimation, so it can affect topology
-/// \return true if the mesh has been changed
-MRMESHC_API bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
-
 /// parameters for \ref mrRemesh
 typedef struct MRRemeshSettings
 {

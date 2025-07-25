@@ -1,7 +1,7 @@
 #include "MRRenderImGuiToImage.h"
 
+#include "MRGladGlfw.h"
 #include "MRImGui.h"
-#include "MRCommandLoop.h"
 #include "MRRenderGLHelpers.h"
 #include "MRViewer.h"
 
@@ -19,7 +19,7 @@ Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundCol
         return {};
 
     FramebufferData fd;
-    fd.gen( resolution, 1 );
+    fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
 
     GL_EXEC( glClearColor( backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a ) );
@@ -35,12 +35,7 @@ Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundCol
     ImGui::GetIO().IniFilename = nullptr;
 
     // render ImGui
-    #ifdef __EMSCRIPTEN__
-        const char* glsl_version = "#version 300 es";
-    #else
-        const char* glsl_version = "#version 150";
-    #endif
-    ImGui_ImplOpenGL3_Init( glsl_version );
+    ImGui_ImplOpenGL3_Init( MR_GLSL_VERSION_LINE );
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::GetIO().DisplaySize = { (float)resolution.x, (float)resolution.y };
     if ( viewer.hasScaledFramebuffer() )

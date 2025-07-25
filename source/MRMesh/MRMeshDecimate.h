@@ -166,7 +166,6 @@ struct DecimateSettings
  *
  * \sa \ref decimateMesh
  * \sa \ref decimateParallelMesh
- * \sa \ref resolveMeshDegenerations
  */
 struct DecimateResult
 {
@@ -232,20 +231,6 @@ struct ResolveMeshDegenSettings
     /// degenerations will be fixed only in given region, which is updated during the processing
     FaceBitSet * region = nullptr;
 };
-
-/**
- * \brief Resolves degenerate triangles in given mesh
- * \details This function performs decimation, so it can affect topology
- * \ingroup DecimateGroup
- * \return true if the mesh has been changed
- *
- * \sa \ref decimateMesh
- */
-[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
-[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
-
 
 struct RemeshSettings
 {

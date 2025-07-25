@@ -108,42 +108,6 @@ MRDecimateResult mrDecimateMesh( MRMesh* mesh_, const MRDecimateSettings* settin
     };
 }
 
-MRResolveMeshDegenSettings mrResolveMeshDegenSettingsNew()
-{
-    static const ResolveMeshDegenSettings def;
-    return {
-        COPY_FROM( def, maxDeviation )
-        COPY_FROM( def, tinyEdgeLength )
-        COPY_FROM( def, maxAngleChange )
-        COPY_FROM( def, criticalAspectRatio )
-        COPY_FROM( def, stabilizer )
-        .region = nullptr,
-    };
-}
-
-bool mrResolveMeshDegenerations( MRMesh* mesh_, const MRResolveMeshDegenSettings* settings_ )
-{
-    ARG( mesh );
-
-    ResolveMeshDegenSettings settings;
-    if ( settings_ )
-    {
-        auto& src = *settings_;
-        settings = {
-            COPY_FROM( src, maxDeviation )
-            COPY_FROM( src, tinyEdgeLength )
-            COPY_FROM( src, maxAngleChange )
-            COPY_FROM( src, criticalAspectRatio )
-            COPY_FROM( src, stabilizer )
-            .region = auto_cast( src.region ),
-        };
-    }
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    return resolveMeshDegenerations( mesh, settings );
-MR_SUPPRESS_WARNING_POP
-}
-
 MRRemeshSettings mrRemeshSettingsNew()
 {
     static const RemeshSettings def;

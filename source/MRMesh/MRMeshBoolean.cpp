@@ -10,7 +10,6 @@
 #include "MRAffineXf3.h"
 #include "MRLog.h"
 #include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include "MRFillContour.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
@@ -19,17 +18,18 @@
 #include "MRCube.h"
 #include "MRMeshBuilder.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRBox.h"
 #include "MRContoursStitch.h"
 #include "MREdgePaths.h"
 #include "MRRingIterator.h"
-#include "MRParallelFor.h"
 #include "MRPch/MRSpdlog.h"
+
+namespace MR
+{
 
 namespace
 {
-
-using namespace MR;
 
 enum class EdgeTriComponent
 {
@@ -79,10 +79,16 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
-}
+} //anonymous namespace
 
-namespace MR
+void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
 {
+    MR_TIMER;
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v] = conv.toFloat( conv.toInt( mesh.points[v] ) );
+    } );
+}
 
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams );
 
@@ -337,6 +343,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
+    convertIntFloatAllVerts( mesh, converters );
 
     for ( auto [f, s, r] : holePairs )
     {
@@ -560,6 +567,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             if ( params.forceCut )
                 cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
             auto res = cutMesh( meshA, meshAContours, cmParams );
+            convertIntFloatAllVerts( meshA, converters );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
             if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
@@ -595,6 +603,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         if ( params.forceCut )
             cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
         auto res = cutMesh( meshB, meshBContours, cmParams );
+        convertIntFloatAllVerts( meshB, converters );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory
         if ( cut2oldBPtr && !new2orgSubdivideMapB.empty() )

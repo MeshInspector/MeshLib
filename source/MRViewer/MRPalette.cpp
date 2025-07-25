@@ -1,5 +1,8 @@
 #include "MRPalette.h"
 #include "ImGuiMenu.h"
+#include "MRMesh/MRFinally.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRViewer.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
 #include "MRMesh/MRSerializer.h"
@@ -18,6 +21,8 @@
 
 namespace MR
 {
+
+using namespace ImGuiMath;
 
 const std::vector<Color> Palette::DefaultColors =
 {
@@ -368,12 +373,23 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     const auto& style = ImGui::GetStyle();
     const auto menu = ImGuiMenu::instance();
-    const auto& windowSize = Viewport::get().getViewportRect();
+    const auto& viewportSize = Viewport::get().getViewportRect();
 
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
-    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * ImGui::GetFontSize() }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
+    // Top-left window padding.
+    const ImVec2 windowPaddingA( style.WindowPadding.x, 0 );
+    // Bottom-right window padding.
+    const ImVec2 windowPaddingB( style.WindowPadding.x, 0 );
+
+    // Spacing between the labels and the colored rect.
+    const float labelToColoredRectSpacing = style.FramePadding.x;
+
+    // The min width of the colored rect.
+    const float minColoredRectWidth = 32.0f * menu->menu_scaling();
+
+    ImGui::SetNextWindowSizeConstraints( { windowPaddingA.x + maxTextSize + labelToColoredRectSpacing + minColoredRectWidth + windowPaddingB.x, 2 * ImGui::GetFontSize() }, { width( viewportSize ), height( viewportSize ) }, &resizeCallback_, ( void* )this );
 
     auto paletteWindow = ImGui::FindWindowByName( windowName.c_str() );
 
@@ -409,22 +425,121 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     ImGui::Begin( windowName.c_str(), &isWindowOpen_,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
 
+    MR_FINALLY{ ImGui::End(); };
+
     // draw gradient palette
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
     // allows to move window
-    const auto& actualPose = ImGui::GetWindowPos();
-    const auto& actualSize = ImGui::GetWindowSize();
+    const ImVec2 windowPos = ImGui::GetWindowPos();
+    const ImVec2 windowSize = ImGui::GetWindowSize();
 
+    const float maxColoredRectWidth = windowSize.x - windowPaddingA.x - windowPaddingB.x - maxTextSize - labelToColoredRectSpacing;
+
+    // The screen coordinates of the bottom-right corner of the colored rectangle.
+    const ImVec2 coloredRectEndPos( windowPos.x + windowSize.x - windowPaddingB.x, windowPos.y + windowSize.y - windowPaddingB.y );
+    // The top-left corner.
+    const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? minColoredRectWidth : maxColoredRectWidth ), windowPos.y + windowPaddingA.y );
+    const ImVec2 coloredRectSize = coloredRectEndPos - coloredRectPos;
+
+    // The X coordinate of the right edge of the labels.
+    const float labelsRightSideX = coloredRectPos.x - labelToColoredRectSpacing;
+
+
+    // Draw histogram, below the labels.
+    if ( isHistogramEnabled() && maxHistogramEntry_ > 0 )
+    {
+        // We split each bucket into smaller segments for pretty interpolation.
+        // This is the desired segment size (the max size, it can end up smaller).
+        const int maxNumPixelsPerSegment = 4; // Intentionally not multiplying by GUI scale.
+
+        int numBuckets = getNumHistogramBuckets();
+
+        int numSegmentsPerBucket = std::max( 1, ( std::max( 1, int( coloredRectSize.y ) / numBuckets ) + maxNumPixelsPerSegment - 1 ) / maxNumPixelsPerSegment );
+
+        // How many points in total. The last bucket gets only one instead of `numSegmentsPerBucket`.
+        int numPoints = numBuckets * numSegmentsPerBucket - numSegmentsPerBucket + 1;
+
+        const ImVec2 histPos( windowPos.x + windowPaddingA.x, coloredRectPos.y );
+        const ImVec2 histEndPos( coloredRectPos.x, coloredRectEndPos.y );
+        const ImVec2 histSize = histEndPos - histPos;
+
+        // Returns a value in range 0..1.
+        auto getBucketValue = [&]( int bucketIndex ) -> float
+        {
+            return histogramBuckets_.at( bucketIndex ) / float( maxHistogramEntry_ );
+        };
+
+        auto getHistPoint = [&]( int pointIndex ) -> ImVec2
+        {
+            ImVec2 ret;
+            ret.y = histPos.y + float( pointIndex ) / ( numPoints - 1 ) * histSize.y;
+
+            int thisBucketIndex = pointIndex / numSegmentsPerBucket;
+            int segmentInBucket = pointIndex % numSegmentsPerBucket;
+
+            float value = getBucketValue( thisBucketIndex );
+            if ( segmentInBucket > 0 )
+            {
+                float t = segmentInBucket / float( numSegmentsPerBucket );
+                value = value * ( 1 - t ) + getBucketValue( thisBucketIndex + 1 ) * t;
+            }
+
+            ret.x = histEndPos.x - value * histSize.x;
+
+            return ret;
+        };
+
+        const Color lineColor = SceneColors::get( SceneColors::Labels );
+        const Color bgColor = lineColor.scaledAlpha( 0.5f );
+
+        { // First draw the background.
+            const ImU32 bgColorInt = bgColor.getUInt32();
+
+            ImVec2 prevPoint;
+            for ( int i = 0; i < numPoints; i++ )
+            {
+                ImVec2 point = round( getHistPoint( i ) );
+
+                if ( i > 0 )
+                {
+                    drawList->PathLineTo( point );
+                    drawList->PathLineTo( prevPoint );
+                    drawList->PathLineTo( ImVec2( histEndPos.x, prevPoint.y ) );
+                    drawList->PathLineTo( ImVec2( histEndPos.x, point.y ) );
+                    drawList->PathFillConvex( bgColorInt );
+                }
+
+                prevPoint = point;
+            }
+        }
+
+        { // Then draw the line.
+            const float lineWidth = 2 * menu->menu_scaling();
+
+            for ( int i = 0; i < numPoints; i++ )
+                drawList->PathLineTo( getHistPoint( i ) );
+            drawList->PathStroke( lineColor.getUInt32(), 0, lineWidth );
+        }
+    }
+
+    // Draw labels.
     if ( showLabels_ )
     {
+        const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * menu->menu_scaling() );
+        const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * menu->menu_scaling() );
+        const float bgRounding = 2 * menu->menu_scaling();
+        const Color bgColor = getBackgroundColor_().scaledAlpha( 0.75f );
+
+        const float labelHeight = ImGui::GetTextLineHeight() + bgPaddingA.y + bgPaddingB.y;
+
         if ( labels_.size() == 0 )
         {
-            setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
+            setMaxLabelCount( int( ImGui::GetWindowSize().y / labelHeight ) );
             resetLabels();
         }
 
-        auto pixRange = actualSize.y - ImGui::GetFontSize();
+        auto pixRange = windowSize.y - labelHeight;
         if ( onlyTopHalf )
             pixRange *= 2;
 
@@ -432,9 +547,27 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         {
             if ( !onlyTopHalf || labels_[i].value <= 0.5f )
             {
-                float textW = ImGui::CalcTextSize( labels_[i].text.c_str() ).x;
+                const float textW = ImGui::CalcTextSize( labels_[i].text.c_str() ).x;
+
+                const ImVec2 textPos = round( ImVec2( labelsRightSideX - textW, coloredRectPos.y + bgPaddingA.y + labels_[i].value * pixRange ) );
+
+                { // The background rectangle.
+                    // Avoid tiny clipping by the window borders.
+                    drawList->PushClipRectFullScreen();
+                    MR_FINALLY{ drawList->PopClipRect(); };
+
+                    drawList->AddRectFilled(
+                        textPos - bgPaddingA,
+                        textPos + ImVec2( textW, ImGui::GetTextLineHeight() ) + bgPaddingB,
+                        bgColor.getUInt32(),
+                        bgRounding,
+                        0
+                    );
+                }
+
+                // The text itself.
                 drawList->AddText(
-                    ImVec2( actualPose.x + style.WindowPadding.x + maxTextSize - textW, actualPose.y + labels_[i].value * pixRange ),
+                    textPos,
                     ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
                     labels_[i].text.c_str()
                 );
@@ -442,52 +575,56 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         }
     }
 
-    if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
-        return ImGui::End();
+    // Skip drawing the colored rectangle if it has negative width.
+    // This should be impossible due to our window size constraints.
+    if ( coloredRectEndPos.x <= coloredRectPos.x )
+        return;
 
     const std::vector<Color>& colors = texture_.pixels;
     const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
 
-    if ( texture_.filter == FilterType::Discrete )
+    // Draw the colored rectangle.
+    switch ( texture_.filter )
     {
-        auto yStep = actualSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
-        const int indexBegin = int( sz ) - legendLimitIndexes_.max;
-        const int indexEnd = int( sz ) - legendLimitIndexes_.min;
-        const float legendLimitShift = indexBegin * yStep;
-        if ( onlyTopHalf )
-            yStep *= 2;
-        for ( int i = indexBegin; i < indexEnd; i++ )
+    case FilterType::Discrete:
         {
-            drawList->AddRectFilled(
-                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y - legendLimitShift + i * yStep },
-                { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y - legendLimitShift + ( i + 1 ) * yStep },
-                colors[sz - 1 - i].getUInt32() );
+            auto yStep = windowSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+            const int indexBegin = int( sz ) - legendLimitIndexes_.max;
+            const int indexEnd = int( sz ) - legendLimitIndexes_.min;
+            const float legendLimitShift = indexBegin * yStep;
+            if ( onlyTopHalf )
+                yStep *= 2;
+            for ( int i = indexBegin; i < indexEnd; i++ )
+            {
+                drawList->AddRectFilled(
+                    { coloredRectPos.x, coloredRectPos.y - legendLimitShift + i * yStep },
+                    { coloredRectEndPos.x, coloredRectPos.y - legendLimitShift + ( i + 1 ) * yStep },
+                    colors[sz - 1 - i].getUInt32()
+                );
+            }
         }
-    }
+        break;
 
-    if ( texture_.filter == FilterType::Linear )
-    {
-        const float scale = 1.f / relativeLimits_.diagonal();
-        const float startPos = actualPose.y - actualSize.y * ( 1.f - relativeLimits_.max ) * scale;
-        auto yStep = actualSize.y / ( sz - 1 ) * scale;
-        if ( onlyTopHalf )
-            yStep *= 2;
-        for ( int i = 0; i + 1 < sz; i++ )
+    case FilterType::Linear:
         {
-            const auto color1 = colors[sz - 1 - i].getUInt32();
-            const auto color2 = colors[sz - 2 - i].getUInt32();
-            drawList->AddRectFilledMultiColor(
-                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                startPos + i * yStep },
-                { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                startPos + ( i + 1 ) * yStep },
-                color1, color1, color2, color2 );
+            const float scale = 1.f / relativeLimits_.diagonal();
+            const float startPos = coloredRectPos.y - windowSize.y * ( 1.f - relativeLimits_.max ) * scale;
+            auto yStep = windowSize.y / ( sz - 1 ) * scale;
+            if ( onlyTopHalf )
+                yStep *= 2;
+            for ( int i = 0; i + 1 < sz; i++ )
+            {
+                const auto color1 = colors[sz - 1 - i].getUInt32();
+                const auto color2 = colors[sz - 2 - i].getUInt32();
+                drawList->AddRectFilledMultiColor(
+                    { coloredRectPos.x, startPos + i * yStep },
+                    { coloredRectEndPos.x, startPos + ( i + 1 ) * yStep },
+                    color1, color1, color2, color2
+                );
+            }
         }
+        break;
     }
-
-    ImGui::End();
 }
 
 Color Palette::getColor( float val ) const
@@ -502,7 +639,7 @@ Color Palette::getColor( float val ) const
     float dIdx = val * ( colors.size() - 1 );
 
     if ( texture_.filter == FilterType::Discrete )
-        return colors[int( round( dIdx ) )];
+        return colors[int( std::round( dIdx ) )];
 
     if ( texture_.filter == FilterType::Linear )
     {
@@ -515,7 +652,7 @@ Color Palette::getColor( float val ) const
     return Color();
 }
 
-VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const
+VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids )
 {
     MR_TIMER;
 
@@ -525,6 +662,8 @@ VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& 
     {
         result[v] = getColor( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) );
     } );
+
+    updateHistogram( values, region, valids ? [valids]( VertId v ) { return valids->test( v ); } : VertPredicate{} );
     return result;
 }
 
@@ -590,7 +729,7 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids )
 {
     MR_TIMER;
 
@@ -600,10 +739,12 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
     {
         res[v] = getUVcoord( values[v], contains( valids, v ) );
     } );
+
+    updateHistogram( values, region, valids );
     return res;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids )
 {
     return getUVcoords( values, region, valids ? [valids]( VertId v ) { return valids->test( v ); } : VertPredicate{} );
 }
@@ -660,6 +801,12 @@ Color Palette::getBaseColor_( float val )
     int dId = int( trunc( dIdx ) );
     float c = dIdx - dId;
     return  ( 1.f - c ) * parameters_.baseColors[dId] + c * parameters_.baseColors[dId + 1];
+}
+
+Color Palette::getBackgroundColor_() const
+{
+    // We arbitrarily grab the color from the active viewport.
+    return getViewerInstance().viewport().getParameters().backgroundColor;
 }
 
 void Palette::updateCustomLabels_()
@@ -750,6 +897,50 @@ void Palette::setLegendLimits( const MinMaxf& limits )
 
     updateLegendLimits_( limits );
     resetLabels();
+}
+
+int Palette::getNumHistogramBuckets() const
+{
+    return int( histogramBuckets_.size() );
+}
+
+void Palette::setNumHistogramBuckets( int n )
+{
+    histogramBuckets_.clear(); // Zero the buckets.
+    histogramBuckets_.resize( n );
+
+    numHistogramEntries_ = 0; // Since we're zeroing the buckets, zero this too.
+    numHistogramEntries_ = 0; // ^
+    maxHistogramEntry_ = 0; // ^
+}
+
+int Palette::getDefaultNumHistogramBuckets() const
+{
+    return 127; // Odd, to have a bucket for zero in the middle.
+}
+
+void Palette::updateHistogram( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate )
+{
+    if ( !isHistogramEnabled() )
+        return;
+
+    std::fill( histogramBuckets_.begin(), histogramBuckets_.end(), 0 );
+    numHistogramEntries_ = 0;
+    maxHistogramEntry_ = 0;
+
+    int numBuckets = getNumHistogramBuckets();
+
+    for ( VertId v : region )
+    {
+        if ( vertPredicate && !vertPredicate( v ) )
+            return;
+
+        int bucketIndex = std::clamp( int( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) * numBuckets ), 0, numBuckets - 1 );
+        histogramBuckets_[bucketIndex]++;
+
+        numHistogramEntries_++;
+    }
+    maxHistogramEntry_ = *std::max_element( histogramBuckets_.begin(), histogramBuckets_.end() ); // Safe to dereference because we check `isHistogramEnabled()` above.
 }
 
 Palette::Label::Label( float val, std::string text_ )

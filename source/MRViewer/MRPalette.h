@@ -17,10 +17,10 @@ namespace MR
 
 /**
  * @brief Class to hold one dimension texture with value to UV mapping
- * 
+ *
  * Discrete mode will draw rectangle for each color
  * Continuous mode will draw interpolated color
- * 
+ *
  */
 class Palette
 {
@@ -98,7 +98,7 @@ public:
     /// get colors for given vert value
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const;
+    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids );
 
     const MeshTexture& getTexture() const { return texture_; };
 
@@ -118,8 +118,8 @@ public:
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} ) const;
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const;
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} );
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids );
 
     // base parameters of palette
     struct Parameters
@@ -151,11 +151,29 @@ public:
     /// set legend limits. if min > max - limits are disabled
     MRVIEWER_API void setLegendLimits( const MinMaxf& limits );
 
+
+    // Histogram:
+
+    [[nodiscard]] bool isHistogramEnabled() const { return getNumHistogramBuckets() != 0; }
+    [[nodiscard]] MRVIEWER_API int getNumHistogramBuckets() const;
+    // Pass zero to disable the histogram. Pass `getDefaultNumHistogramBuckets()` or any other number to enable it.
+    // This should probably be odd, to have a bucket for zero in the middle.
+    MRVIEWER_API void setNumHistogramBuckets( int n );
+    // Returns the recommended argument for `setNumHistogramBuckets()`.
+    [[nodiscard]] MRVIEWER_API int getDefaultNumHistogramBuckets() const;
+
+    // This is called automatically by `getValidVerts()` and `getUVcoords(), so usually you don't need to call this manually.
+    // Call this after `setNumHistogramBuckets()`.
+    MRVIEWER_API void updateHistogram( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
+
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
 
     void updateDiscretizatedColors_();
     Color getBaseColor_( float val );
+
+    // What color we assume the pallete is drawn on top of. Typically should be the viewport background color.
+    Color getBackgroundColor_() const;
 
 
     // fill labels with equal distance between
@@ -194,6 +212,13 @@ private:
     MinMaxi legendLimitIndexes_ = { 0, 7 };
     MinMaxf relativeLimits_ = { 0.f, 1.f };
 
+    // If this is empty, the histogram is disabled.
+    std::vector<int> histogramBuckets_;
+    // The sum of all values in `numHistogramEntries_`.
+    int numHistogramEntries_ = 0;
+    // The max value in `histogramBuckets_`.
+    int maxHistogramEntry_ = 0;
+
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };
 
@@ -215,7 +240,7 @@ private:
     ~PalettePresets() = default;
 
     std::vector<std::string> names_;
-    
+
     void update_();
 
     static PalettePresets& instance_();

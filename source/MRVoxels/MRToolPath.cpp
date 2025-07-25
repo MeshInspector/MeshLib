@@ -23,6 +23,7 @@
 #include "MRMesh/MRFillContourByGraphCut.h"
 #include "MRMesh/MRInnerShell.h"
 #include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MRDistanceMap.h"
 
 #include <sstream>
 #include <span>
@@ -72,7 +73,7 @@ Vector2f project( const GCommand& command, Axis axis )
         ( axis == Axis::Y ) ? Vector2f{ command.x, command.z } : Vector2f{ command.x, command.y };
 }
 
-Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, bool needToDecimate )
+Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, bool needToDecimate, bool fixUndercuts = true )
 {
     Mesh meshCopy = inputMesh;
 
@@ -95,8 +96,11 @@ Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& para
     if ( !reportProgress( params.cb, 0.15f ) )
         return unexpectedOperationCanceled();
     
-    if ( auto e = FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } ); !e )
-        return unexpected( std::move( e.error() ) );
+    if ( fixUndercuts )
+    {
+        if ( auto e = FixUndercuts::fix( meshCopy, { .findParameters = {.upDirection = Vector3f::plusZ()},.voxelSize = params.voxelSize } ); !e )
+            return unexpected( std::move( e.error() ) );
+    }
     
     if ( !reportProgress( params.cb, 0.20f ) )
         return unexpectedOperationCanceled();
@@ -786,6 +790,122 @@ Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParam
 
     if ( !reportProgress( params.cb, 1.0f ) )
         return unexpectedOperationCanceled();
+
+    return res;
+}
+
+Expected<ToolPathResult> lacingToolPathDM( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection )
+{
+
+    if ( cutDirection != Axis::X && cutDirection != Axis::Y )
+        return unexpected( "Lacing can be done along the X or Y axis" );
+
+    const bool cutDirectionIsX = cutDirection == Axis::X;
+    const auto cutDirectionIdx = int( cutDirection );
+    const auto sideDirection = cutDirectionIsX ? Axis::Y : Axis::X;
+    const auto sideDirectionIdx = int( sideDirection );
+
+    ToolPathResult res;
+
+    if ( !params.offsetMesh )
+    {
+        auto preprocessedMesh = preprocessMesh( mp.mesh, params, false, false );
+        if ( !preprocessedMesh )
+            return unexpected( preprocessedMesh.error() );
+
+        res.modifiedMesh = std::move( *preprocessedMesh );
+    }
+
+    const auto& mesh = params.offsetMesh ? params.offsetMesh->mesh : res.modifiedMesh;
+
+    auto box = mesh.computeBoundingBox();
+    const bool toolpathExpansion = params.toolpathExpansion > 0.f;
+    if ( toolpathExpansion )
+        box = box.expanded( { params.toolpathExpansion, params.toolpathExpansion, 0.f } );
+    const float safeZ = std::max( box.max.z + 10.0f * params.millRadius, params.safeZ );
+
+    Vector3f boxMin = box.min;
+    Matrix3f m;
+    m.z = Vector3f::minusZ();
+    Vector2i resolution{ (int) std::ceil( box.size().x / params.sectionStep), (int) std::ceil( box.size().y / params.sectionStep ) };
+    MeshToDistanceMapParams paramsDM( m, { boxMin.x, boxMin.y, 0.f }, resolution, { box.size().x, box.size().y } );
+    DistanceMap distanceMap = computeDistanceMapD( mesh, paramsDM );
+
+    Vector2<size_t> resDM = { distanceMap.resX(), distanceMap.resY() };
+
+    auto safeMoveToPoint = [&] ( Vector2<size_t> coord, float z )
+    {
+        res.commands.push_back( { .type = MoveType::FastLinear, .z = safeZ } );
+        res.commands.push_back( { .x = coord.x * params.sectionStep + boxMin.x,
+            .y = coord.y * params.sectionStep + boxMin.y } );
+        res.commands.push_back( { .type = MoveType::Linear, .z = z } );
+    };
+
+    if ( toolpathExpansion )
+    {
+        // move to start point
+        {
+            auto zRes = distanceMap.get( 0, 0 );
+            float z = zRes ? -*zRes : boxMin.z;
+            safeMoveToPoint( { 0, 0 }, z );
+        }
+
+        res.commands.resize( distanceMap.size() + 2 );
+        auto convertRes = ParallelFor( size_t( 1 ), distanceMap.size(), [&] ( size_t index )
+        {
+            Vector2<size_t> coord;
+            coord[sideDirectionIdx] = index / resDM[cutDirectionIdx];
+            coord[cutDirectionIdx] = index % resDM[cutDirectionIdx];
+            if ( coord[sideDirectionIdx] & 1 ) // backward direction
+                coord[cutDirectionIdx] = resDM[cutDirectionIdx] - 1 - coord[cutDirectionIdx];
+
+            auto zRes = distanceMap.get( coord.x, coord.y );
+            float z = zRes ? -*zRes : boxMin.z;
+
+            //res.commands.push_back( { .x = coord[cutDirectionIdx] * params.sectionStep + boxMin.x, .z = z } );
+            res.commands[index + 2] = GCommand( { .x = coord.x * params.sectionStep + boxMin.x,
+                .y = coord.y * params.sectionStep + boxMin.y,
+                .z = z } );
+
+        }, subprogress( params.cb, 0.5f, 1.f ) );
+        
+        if ( !convertRes )
+            return unexpectedOperationCanceled();
+    }
+    else
+    {
+        /*
+        class CommandCreator {
+            DistanceMap* dm_;
+        public:
+            std::vector<GCommand> commands;
+            void operator()( const tbb::blocked_range<size_t>& r )
+            {
+                for ( size_t i = r.begin(); i != r.end(); ++i )
+                {
+                    Vector2<size_t> coord;
+                    coord[sideDirectionIdx] = index / resDM[cutDirectionIdx];
+                    coord[cutDirectionIdx] = index % resDM[cutDirectionIdx];
+                    if ( coord[sideDirectionIdx] & 1 ) // backward direction
+                        coord[cutDirectionIdx] = resDM[cutDirectionIdx] - 1 - coord[cutDirectionIdx];
+
+                    auto zRes = distanceMap.get( coord.x, coord.y );
+                    float z = zRes ? -*zRes : boxMin.z;
+
+                    //res.commands.push_back( { .x = coord[cutDirectionIdx] * params.sectionStep + boxMin.x, .z = z } );
+                    commands[index + 2] = GCommand( { .x = coord.x * params.sectionStep + boxMin.x,
+                        .y = coord.y * params.sectionStep + boxMin.y,
+                        .z = z } );
+                }
+            }
+
+
+            CommandCreator( CommandCreator& cc, tbb::split ) : dm_( cc.dm_ ) {}
+            void join( const CommandCreator& cc ) { commands.append_range( cc.commands ); }
+            CommandCreator( DistanceMap* dm ) : dm_( dm ) {}
+        };
+        */
+    }
 
     return res;
 }

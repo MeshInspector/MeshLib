@@ -27,7 +27,18 @@ void renderImGuiToImage( Vector2i resolution, Color backgroundColor, std::functi
         GL_EXEC( glClearColor( backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a ) );
         GL_EXEC( glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
 
+        // backup ImGui context
+        auto* backupCtx = ImGui::GetCurrentContext();
+        auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
+        ImGui::SetCurrentContext( ctx );
+
         // render ImGui
+        #ifdef __EMSCRIPTEN__
+            const char* glsl_version = "#version 300 es";
+        #else
+            const char* glsl_version = "#version 150";
+        #endif
+        ImGui_ImplOpenGL3_Init( glsl_version );
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::GetIO().DisplaySize = { (float)resolution.x, (float)resolution.y };
         if ( viewer.hasScaledFramebuffer() )
@@ -36,6 +47,10 @@ void renderImGuiToImage( Vector2i resolution, Color backgroundColor, std::functi
         renderFunc();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+
+        // restore ImGui context
+        ImGui::SetCurrentContext( backupCtx );
+        ImGui::DestroyContext( ctx );
 
         fd.copyTextureBindDef();
         fd.bindTexture();

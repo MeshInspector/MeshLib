@@ -7,6 +7,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRViewer/MRImGui.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRVector.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -69,6 +70,10 @@ public:
         float value = 0.f; // label position according normal scale (from Min to Max)
         std::string text; // label text
 
+        // The special zero label.
+        // The flag is there so we can hide it if we want.
+        bool isZero = false;
+
         Label() = default;
         MRVIEWER_API Label( float val, std::string text );
     };
@@ -98,7 +103,7 @@ public:
     /// get colors for given vert value
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids );
+    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForHistogram );
 
     const MeshTexture& getTexture() const { return texture_; };
 
@@ -115,11 +120,20 @@ public:
         };
     }
 
+    // If `bits` is non-zero, captures the pointer and returns a predicate that checks against this bitset.
+    // Otherwise returns null.
+    [[nodiscard]] MRVIEWER_API static VertPredicate predFromBitSet( const VertBitSet* bits );
+
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} );
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids );
+    /// \param validsIfHistogram If specified, replaces \p valids for the purposes of creating the histogram.
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {}, const VertPredicate & validsForHistogram = {} );
+
+    VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids, const VertBitSet * validsForHistogram = nullptr )
+    {
+        return getUVcoords( values, region, predFromBitSet( valids ), predFromBitSet( validsForHistogram ) );
+    }
 
     // base parameters of palette
     struct Parameters
@@ -214,9 +228,12 @@ private:
 
     // If this is empty, the histogram is disabled.
     std::vector<int> histogramBuckets_;
-    // The sum of all values in `numHistogramEntries_`.
+    // The buckets for out-of-range elements.
+    int histogramLowBucket_ = 0;
+    int histogramHighBucket_ = 0;
+    // The sum of all values in `numHistogramEntries_` and `histogram{Low,High}Bucket_`.
     int numHistogramEntries_ = 0;
-    // The max value in `histogramBuckets_`.
+    // The max value in `histogramBuckets_` (but ignoring `histogram{Low,High}Bucket_`).
     int maxHistogramEntry_ = 0;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );

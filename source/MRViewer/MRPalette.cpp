@@ -409,22 +409,36 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     ImGui::Begin( windowName.c_str(), &isWindowOpen_,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
 
-    // draw gradient palette
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-
     // allows to move window
     const auto& actualPose = ImGui::GetWindowPos();
     const auto& actualSize = ImGui::GetWindowSize();
 
+    if ( showLabels_ && labels_.empty() )
+    {
+        setMaxLabelCount( int( actualSize.y / ImGui::GetFontSize() ) );
+        resetLabels();
+    }
+
+    render( ImGui::GetWindowDrawList(), actualPose, actualSize, onlyTopHalf );
+
+    ImGui::End();
+}
+
+void Palette::render( ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf ) const
+{
+    float maxTextSize = 0.0f;
+    for ( const auto& label : labels_ )
+    {
+        auto textSize = ImGui::CalcTextSize( label.text.c_str() ).x;
+        if ( textSize > maxTextSize )
+            maxTextSize = textSize;
+    }
+
+    const auto& style = ImGui::GetStyle();
+
     if ( showLabels_ )
     {
-        if ( labels_.size() == 0 )
-        {
-            setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
-            resetLabels();
-        }
-
-        auto pixRange = actualSize.y - ImGui::GetFontSize();
+        auto pixRange = size.y - ImGui::GetFontSize();
         if ( onlyTopHalf )
             pixRange *= 2;
 
@@ -434,7 +448,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             {
                 float textW = ImGui::CalcTextSize( labels_[i].text.c_str() ).x;
                 drawList->AddText(
-                    ImVec2( actualPose.x + style.WindowPadding.x + maxTextSize - textW, actualPose.y + labels_[i].value * pixRange ),
+                    ImVec2( pos.x + style.WindowPadding.x + maxTextSize - textW, pos.y + labels_[i].value * pixRange ),
                     ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
                     labels_[i].text.c_str()
                 );
@@ -442,15 +456,15 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         }
     }
 
-    if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
-        return ImGui::End();
+    if ( size.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
+        return;
 
     const std::vector<Color>& colors = texture_.pixels;
     const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
 
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+        auto yStep = size.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
         const int indexBegin = int( sz ) - legendLimitIndexes_.max;
         const int indexEnd = int( sz ) - legendLimitIndexes_.min;
         const float legendLimitShift = indexBegin * yStep;
@@ -459,10 +473,10 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         for ( int i = indexBegin; i < indexEnd; i++ )
         {
             drawList->AddRectFilled(
-                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
-                actualPose.y - legendLimitShift + i * yStep },
-                { actualPose.x - style.WindowPadding.x + actualSize.x ,
-                actualPose.y - legendLimitShift + ( i + 1 ) * yStep },
+                { pos.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
+                pos.y - legendLimitShift + i * yStep },
+                { pos.x - style.WindowPadding.x + size.x ,
+                pos.y - legendLimitShift + ( i + 1 ) * yStep },
                 colors[sz - 1 - i].getUInt32() );
         }
     }
@@ -470,8 +484,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( texture_.filter == FilterType::Linear )
     {
         const float scale = 1.f / relativeLimits_.diagonal();
-        const float startPos = actualPose.y - actualSize.y * ( 1.f - relativeLimits_.max ) * scale;
-        auto yStep = actualSize.y / ( sz - 1 ) * scale;
+        const float startPos = pos.y - size.y * ( 1.f - relativeLimits_.max ) * scale;
+        auto yStep = size.y / ( sz - 1 ) * scale;
         if ( onlyTopHalf )
             yStep *= 2;
         for ( int i = 0; i + 1 < sz; i++ )
@@ -479,15 +493,13 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             const auto color1 = colors[sz - 1 - i].getUInt32();
             const auto color2 = colors[sz - 2 - i].getUInt32();
             drawList->AddRectFilledMultiColor(
-                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
+                { pos.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 startPos + i * yStep },
-                { actualPose.x - style.WindowPadding.x + actualSize.x ,
+                { pos.x - style.WindowPadding.x + size.x ,
                 startPos + ( i + 1 ) * yStep },
                 color1, color1, color2, color2 );
         }
     }
-
-    ImGui::End();
 }
 
 Color Palette::getColor( float val ) const

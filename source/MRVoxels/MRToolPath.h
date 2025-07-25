@@ -144,6 +144,7 @@ MRVOXELS_API Expected<ToolPathResult> constantZToolPath( const MeshPart& mp, con
 
 // Slices are built along the axis defined by cutDirection argument (can be Axis::X or Axis::Y)
 MRVOXELS_API Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
+MRVOXELS_API Expected<ToolPathResult> lacingToolPathDM( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point or from the bounaries of selected areas

@@ -63,6 +63,12 @@ public:
     /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
     MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
+    /// Renders vertical legend with labels in existing window or scene
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    MRVIEWER_API void render( ImDrawList* drawList, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf = false ) const;
+
     // structure for label
     struct MRVIEWER_CLASS Label
     {

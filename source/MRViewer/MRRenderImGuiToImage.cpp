@@ -28,7 +28,11 @@ Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundCol
     // backup ImGui context
     auto* backupCtx = ImGui::GetCurrentContext();
     auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
+    ctx->Style = backupCtx->Style;
     ImGui::SetCurrentContext( ctx );
+
+    // configure ImGui context
+    ImGui::GetIO().IniFilename = nullptr;
 
     // render ImGui
     #ifdef __EMSCRIPTEN__

@@ -209,31 +209,21 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     return res;
 }
 
-bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
+bool resolveMeshDegenerations( Mesh & mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
 
-    FixMeshDegeneraciesParams fsettings
+    DecimateSettings dsettings
     {
-        .maxDeviation = settings.maxDeviation,
-        .tinyEdgeLength = settings.tinyEdgeLength,
+        .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
-        .maxAngleChange = settings.maxAngleChange,
+        .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = settings.region,
+        .maxAngleChange = settings.maxAngleChange
     };
-    return fixMeshDegeneracies( mesh, fsettings ).has_value();
-}
-
-bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
-{
-    FixMeshDegeneraciesParams settings
-    {
-        .maxDeviation = maxDeviation,
-        .criticalTriAspectRatio = criticalAspectRatio,
-        .maxAngleChange = maxAngleChange
-    };
-    return fixMeshDegeneracies( mesh, settings ).has_value();
+    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
 }
 
 bool MeshDecimator::initialize_()

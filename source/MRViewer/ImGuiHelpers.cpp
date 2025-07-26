@@ -706,8 +706,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f,  0.0f } );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * params.menuScaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f, 0.0f } );
 
     const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * params.menuScaling - 2 * borderSize;
     const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
@@ -725,7 +724,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
-    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor, style.FrameRounding );
 
     if ( params.collapsed )
     {

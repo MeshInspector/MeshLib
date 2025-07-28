@@ -107,6 +107,7 @@ namespace MR
         {
             public MRFillHoleParams triangulationParams = new MRFillHoleParams();
             public byte triangulateOnly = 0;
+            public IntPtr notFlippable = IntPtr.Zero;
             public float maxEdgeLen = 0;
             public int maxEdgeSplits = 1000;
             public float maxAngleChangeAfterFlip = 30.0f * (float)Math.PI / 180.0f;
@@ -174,6 +175,7 @@ namespace MR
             mrParam.triangulationParams.stopBeforeBadTriangulation = parameters.triangulationParams.StopBeforeBadTriangulation.HasValue ? new IntPtr(&stopBeforeBadTriangulation) : IntPtr.Zero;
 
             mrParam.triangulateOnly = parameters.TriangulateOnly ? (byte)1 : (byte)0;
+            mrParam.notFlippable = IntPtr.Zero;
             mrParam.maxEdgeLen = parameters.MaxEdgeLen;
             mrParam.maxEdgeSplits = parameters.MaxEdgeSplits;
             mrParam.maxAngleChangeAfterFlip = parameters.MaxAngleChangeAfterFlip;

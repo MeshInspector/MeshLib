@@ -4,6 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MeshLibC2 CXX)
 
+IF(NOT MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context")
+ENDIF()
+
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE HEADERS "include/*.h")
 

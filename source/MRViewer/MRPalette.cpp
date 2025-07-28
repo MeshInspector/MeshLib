@@ -635,12 +635,15 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
                 float textW = ImGui::CalcTextSize( text ).x;
                 const ImVec2 textPos = round( ImVec2( labelsRightSideX - textW, coloredRectPos.y + bgPaddingA.y + labels_[i].value * pixRange ) );
 
-                const bool isFirstHistLabel = isHistogramEnabled() && i == 0;
-                // This one is disabled if `onlyTopHalf == true`. In that case nothing should be appended to this label anyway,
-                //   but just in case we're also disabling the bool here. (Sync with what `getAdjustedLabelText()` does.)
-                const bool isLastHistLabel = !isFirstHistLabel && !onlyTopHalf && isHistogramEnabled() && i + 1 == labels_.size();
 
-                { // Append the percentage to the first and last labels.
+                // Append the percentage to the first and last labels.
+                if (isHistogramEnabled())
+                {
+                    const bool isFirstHistLabel = i == 0;
+                    // This one is disabled if `onlyTopHalf == true`. In that case nothing should be appended to this label anyway,
+                    //   but just in case we're also disabling the bool here. (Sync with what `getAdjustedLabelText()` does.)
+                    const bool isLastHistLabel = !isFirstHistLabel && !onlyTopHalf && i + 1 == labels_.size();
+
                     auto appendPercentage = [&]( std::string& out, int n )
                     {
                         out += " : ";
@@ -992,7 +995,6 @@ void Palette::setNumHistogramBuckets( int n )
     histogramHighBucket_ = 0;
 
     numHistogramEntries_ = 0; // Since we're zeroing the buckets, zero this too.
-    numHistogramEntries_ = 0; // ^
     maxHistogramEntry_ = 0; // ^
 }
 

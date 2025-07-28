@@ -2,6 +2,8 @@
 
 #include "MRViewerFwd.h"
 
+#include <optional>
+
 namespace MR
 {
 

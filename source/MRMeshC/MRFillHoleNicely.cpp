@@ -12,6 +12,7 @@ REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( FillHoleMetric )
 REGISTER_AUTO_CAST2( FillHoleParams::MultipleEdgesResolveMode, MRFillHoleMetricMultipleEdgesResolveMode )
 REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 
 MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void )
 {
@@ -47,6 +48,7 @@ MRFaceBitSet* mrFillHoleNicely( MRMesh* mesh_, MREdgeId holeEdge_, const MRFillH
         };
 
         params.triangulateOnly = params_->triangulateOnly;
+        params.notFlippable = auto_cast( params_->notFlippable );
         params.maxEdgeLen = params_->maxEdgeLen;
         params.maxEdgeSplits = params_->maxEdgeSplits;
         params.maxAngleChangeAfterFlip = params_->maxAngleChangeAfterFlip;

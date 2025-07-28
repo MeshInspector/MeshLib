@@ -56,14 +56,17 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     if ( !settings.triangulateOnly )
     {
         VertBitSet newVerts;
-        SubdivideSettings subset;
-        subset.maxEdgeLen = settings.maxEdgeLen;
-        subset.maxEdgeSplits = settings.maxEdgeSplits;
-        subset.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
-        subset.region = &newFaces;
-        subset.newVerts = &newVerts;
-        subset.beforeEdgeSplit = settings.beforeEdgeSplit;
-        subset.onEdgeSplit = settings.onEdgeSplit;
+        SubdivideSettings subset
+        {
+            .maxEdgeLen = settings.maxEdgeLen,
+            .maxEdgeSplits = settings.maxEdgeSplits,
+            .maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip,
+            .region = &newFaces,
+            .notFlippable = settings.notFlippable,
+            .newVerts = &newVerts,
+            .beforeEdgeSplit = settings.beforeEdgeSplit,
+            .onEdgeSplit = settings.onEdgeSplit
+        };
 
         const auto lastVert = mesh.topology.lastValidVert();
         VertUVCoords * uvCoords = settings.uvCoords && lastVert < settings.uvCoords->size() ? settings.uvCoords : nullptr;

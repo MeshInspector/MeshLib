@@ -1,4 +1,4 @@
-#include "MRRenderImGuiToImage.h"
+#include "MRRenderImGui.h"
 
 #include "MRGladGlfw.h"
 #include "MRImGui.h"

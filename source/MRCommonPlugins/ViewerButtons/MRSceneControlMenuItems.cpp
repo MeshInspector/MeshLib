@@ -125,7 +125,7 @@ FitDataMenuItem::FitDataMenuItem() :
 
 bool FitDataMenuItem::action()
 {
-    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::Visible } );
+    Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, FitMode::SelectableObjects } );
     return false;
 }
 
@@ -208,7 +208,7 @@ bool SetViewPresetMenuItem::action()
     else
         viewport.cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
 
-    viewport.preciseFitDataToScreenBorder( { 0.9f } );
+    viewport.preciseFitDataToScreenBorder( { 0.9f, false, FitMode::SelectableObjects } );
     return false;
 }
 

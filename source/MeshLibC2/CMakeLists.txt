@@ -17,6 +17,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   JsonCpp::JsonCpp
 )
 
+# Boost.stacktrace uses something from libdl in its headers.
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
 
 IF(APPLE)
   include_directories(${jsoncpp_INCLUDE_DIRS})

@@ -39,7 +39,6 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 
     // restore ImGui context
-    ImGui_ImplOpenGL3_Shutdown();
     ImGui::SetCurrentContext( backupCtx );
     ImGui::DestroyContext( ctx );
 }

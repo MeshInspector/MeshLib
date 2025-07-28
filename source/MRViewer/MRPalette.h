@@ -64,6 +64,12 @@ public:
     /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
     MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
+    /// Draws vertical legend with labels in existing window or scene
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    MRVIEWER_API void draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf = false ) const;
+
     // structure for label
     struct MRVIEWER_CLASS Label
     {
@@ -239,6 +245,11 @@ private:
     std::vector<Label> customLabels_;
     std::vector<Label> labels_;
     bool showLabels_ = false;
+
+    /// Returns the adjusted label, or null if it should be skipped.
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    /// \param storage will sometimes be used as storage for the return value. Don't read `storage` directly after the call. You can pass any string, it'll be cleared.
+    const char* getAdjustedLabelText_( std::size_t labelIndex, bool onlyTopHalf, std::string& storage ) const;
 
     // stores OpenGL textures. Change useDiscrete_ to switch between them
     MeshTexture texture_;

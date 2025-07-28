@@ -369,33 +369,13 @@ void Palette::setFilterType( FilterType type )
 
 void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
-    // Returns the adjusted label, or null if it should be skipped.
-    // `storage` will sometimes be used as storage for the return value. Don't read `storage` directly after the call. You can pass any string, it'll be cleared.
-    auto getAdjustedLabelText = [&]( std::size_t labelIndex, std::string& storage ) -> const char *
-    {
-        if ( !onlyTopHalf && labels_[labelIndex].isZero )
-            return nullptr; // Skip zero.
-
-        // Prepend the `<`/`>` signs to the first and last label, when the histogram is enabled.
-        if ( isHistogramEnabled() && ( labelIndex == 0 || ( !onlyTopHalf && labelIndex + 1 == labels_.size() ) ) && ( labelIndex == 0 ? histogram_.beforeBucket : histogram_.afterBucket ) > 0 )
-        {
-            storage.clear();
-            storage += labelIndex == 0 ? "> " : "< ";
-            storage += labels_[labelIndex].text;
-
-            return storage.c_str();
-        }
-
-        return labels_[labelIndex].text.c_str();
-    };
-
     // Compute the max label pixel width.
     float maxLabelWidth = 0.0f;
     {
         std::string textStorage;
         for ( std::size_t i = 0; i < labels_.size(); i++ )
         {
-            const char* text = getAdjustedLabelText( i, textStorage );
+            const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
             if ( !text )
                 continue;
             auto textSize = ImGui::CalcTextSize( text ).x;
@@ -460,24 +440,57 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     MR_FINALLY{ ImGui::End(); };
 
-    // draw gradient palette
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-
     // allows to move window
     const ImVec2 windowPos = ImGui::GetWindowPos();
     const ImVec2 windowSize = ImGui::GetWindowSize();
 
-    const float maxColoredRectWidth = windowSize.x - windowPaddingA.x - windowPaddingB.x - maxLabelWidth - labelToColoredRectSpacing;
+    const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * menu->menu_scaling() );
+    const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * menu->menu_scaling() );
+    const float labelHeight = ImGui::GetTextLineHeight() + bgPaddingA.y + bgPaddingB.y;
+    if ( showLabels_ && labels_.size() == 0 )
+    {
+        setMaxLabelCount( int( windowSize.y / labelHeight ) );
+        resetLabels();
+    }
 
+    draw( ImGui::GetWindowDrawList(), menu->menu_scaling(), windowPos, windowSize, onlyTopHalf );
+}
+
+void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf ) const
+{
+    // Compute the max label pixel width.
+    float maxLabelWidth = 0.0f;
+    {
+        std::string textStorage;
+        for ( std::size_t i = 0; i < labels_.size(); i++ )
+        {
+            const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
+            if ( !text )
+                continue;
+            auto textSize = ImGui::CalcTextSize( text ).x;
+            if ( textSize > maxLabelWidth )
+                maxLabelWidth = textSize;
+        }
+    }
+
+    const auto& style = ImGui::GetStyle();
+    // Top-left window padding.
+    const ImVec2 windowPaddingA( style.WindowPadding.x, 0 );
+    // Bottom-right window padding.
+    const ImVec2 windowPaddingB( style.WindowPadding.x, 0 );
+    // Spacing between the labels and the colored rect.
+    const float labelToColoredRectSpacing = style.FramePadding.x;
+    // The min width of the colored rect.
+    const float minColoredRectWidth = 32.0f * scaling;
+    // The max width of the colored rect.
+    const float maxColoredRectWidth = size.x - windowPaddingA.x - windowPaddingB.x - maxLabelWidth - labelToColoredRectSpacing;
     // The screen coordinates of the bottom-right corner of the colored rectangle.
-    const ImVec2 coloredRectEndPos( windowPos.x + windowSize.x - windowPaddingB.x, windowPos.y + windowSize.y - windowPaddingB.y );
+    const ImVec2 coloredRectEndPos( pos.x + size.x - windowPaddingB.x, pos.y + size.y - windowPaddingB.y );
     // The top-left corner.
-    const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? minColoredRectWidth : maxColoredRectWidth ), windowPos.y + windowPaddingA.y );
+    const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? minColoredRectWidth : maxColoredRectWidth ), pos.y + windowPaddingA.y );
     const ImVec2 coloredRectSize = coloredRectEndPos - coloredRectPos;
-
     // The X coordinate of the right edge of the labels.
     const float labelsRightSideX = coloredRectPos.x - labelToColoredRectSpacing;
-
 
     // Draw histogram, below the labels.
     if ( isHistogramEnabled() && histogram_.maxEntry > 0 )
@@ -495,7 +508,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         // How many points in total. The last bucket gets only one instead of `numSegmentsPerBucket`.
         int numPoints = numBuckets * numSegmentsPerBucket - numSegmentsPerBucket + 1;
 
-        const ImVec2 histPos( windowPos.x + windowPaddingA.x, coloredRectPos.y );
+        const ImVec2 histPos( pos.x + windowPaddingA.x, coloredRectPos.y );
         const ImVec2 histEndPos( coloredRectPos.x, coloredRectEndPos.y );
         const ImVec2 histSize = histEndPos - histPos;
 
@@ -550,7 +563,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         }
 
         { // Then draw the line.
-            const float lineWidth = 2 * menu->menu_scaling();
+            const float lineWidth = 2 * scaling;
 
             for ( int i = 0; i < numPoints; i++ )
                 drawList->PathLineTo( getHistPoint( i ) );
@@ -566,11 +579,11 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     {
     case FilterType::Discrete:
         {
-            const ImVec2 percentageBgPaddingA = round( ImVec2( 1, 1 ) * menu->menu_scaling() );
-            const ImVec2 percentageBgPaddingB = round( ImVec2( 1, 0 ) * menu->menu_scaling() );
-            const float percentageBgRounding = 2 * menu->menu_scaling();
+            const ImVec2 percentageBgPaddingA = round( ImVec2( 1, 1 ) * scaling );
+            const ImVec2 percentageBgPaddingB = round( ImVec2( 1, 0 ) * scaling );
+            const float percentageBgRounding = 2 * scaling;
 
-            auto yStep = windowSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
+            auto yStep = size.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
             const int indexBegin = int( sz ) - legendLimitIndexes_.max;
             const int indexEnd = int( sz ) - legendLimitIndexes_.min;
             const float legendLimitShift = indexBegin * yStep;
@@ -608,8 +621,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     case FilterType::Linear:
         {
             const float scale = 1.f / relativeLimits_.diagonal();
-            const float startPos = coloredRectPos.y - windowSize.y * ( 1.f - relativeLimits_.max ) * scale;
-            auto yStep = windowSize.y / ( sz - 1 ) * scale;
+            const float startPos = coloredRectPos.y - size.y * ( 1.f - relativeLimits_.max ) * scale;
+            auto yStep = size.y / ( sz - 1 ) * scale;
             if ( onlyTopHalf )
                 yStep *= 2;
             for ( int i = 0; i + 1 < sz; i++ )
@@ -630,20 +643,14 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     // After the colored rectangle, because sometimes they overlap (for the histogram, the percentages of out-of-bounds values).
     if ( showLabels_ )
     {
-        const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * menu->menu_scaling() );
-        const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * menu->menu_scaling() );
-        const float bgRounding = 2 * menu->menu_scaling();
+        const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * scaling );
+        const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * scaling );
+        const float bgRounding = 2 * scaling;
         const Color bgColor = getBackgroundColor_().scaledAlpha( 0.75f );
 
         const float labelHeight = ImGui::GetTextLineHeight() + bgPaddingA.y + bgPaddingB.y;
 
-        if ( labels_.size() == 0 )
-        {
-            setMaxLabelCount( int( ImGui::GetWindowSize().y / labelHeight ) );
-            resetLabels();
-        }
-
-        auto pixRange = windowSize.y - labelHeight;
+        auto pixRange = size.y - labelHeight;
         if ( onlyTopHalf )
             pixRange *= 2;
 
@@ -653,7 +660,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
             if ( !onlyTopHalf || labels_[i].value <= 0.5f )
             {
-                const char* text = getAdjustedLabelText( i, textStorage );
+                const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
                 if ( !text )
                     continue;
 
@@ -956,6 +963,24 @@ void Palette::updateLegendLimitIndexes_()
         legendLimitIndexes_ = MinMaxi( indexMin, indexMax ).intersection( { 0, colorCount } );
     else
         legendLimitIndexes_ = { 0, colorCount };
+}
+
+const char* Palette::getAdjustedLabelText_( std::size_t labelIndex, bool onlyTopHalf, std::string& storage ) const
+{
+    if ( !onlyTopHalf && labels_[labelIndex].isZero )
+        return nullptr; // Skip zero.
+
+    // Prepend the `<`/`>` signs to the first and last label, when the histogram is enabled.
+    if ( isHistogramEnabled() && ( labelIndex == 0 || ( !onlyTopHalf && labelIndex + 1 == labels_.size() ) ) && ( labelIndex == 0 ? histogram_.beforeBucket : histogram_.afterBucket ) > 0 )
+    {
+        storage.clear();
+        storage += labelIndex == 0 ? "> " : "< ";
+        storage += labels_[labelIndex].text;
+
+        return storage.c_str();
+    }
+
+    return labels_[labelIndex].text.c_str();
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )

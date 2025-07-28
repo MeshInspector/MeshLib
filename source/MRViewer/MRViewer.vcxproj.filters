@@ -481,7 +481,7 @@
     <ClCompile Include="MRDragDropWasmHandler.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
-    <ClCompile Include="MRRenderImGuiToImage.cpp">
+    <ClCompile Include="MRRenderImGui.cpp">
       <Filter>Render</Filter>
     </ClCompile>
   </ItemGroup>
@@ -946,7 +946,7 @@
     <ClInclude Include="MRRibbonMenuUIConfig.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderImGuiToImage.cpp">
+    <ClInclude Include="MRRenderImGui.cpp">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>

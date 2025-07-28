@@ -19,6 +19,7 @@ MRFillHoleNicelyParams mrFillHoleNicelyParamsNew( void )
     MRFillHoleNicelyParams params;
     FillHoleNicelySettings defaultParams;
     params.triangulateParams = mrFillHoleParamsNew();
+    params.notFlippable = auto_cast( defaultParams.notFlippable );
     params.triangulateOnly = defaultParams.triangulateOnly;
     params.maxEdgeLen = defaultParams.maxEdgeLen;
     params.maxEdgeSplits = defaultParams.maxEdgeSplits;

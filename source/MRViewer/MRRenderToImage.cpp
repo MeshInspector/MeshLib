@@ -21,7 +21,7 @@ void fillFramebuffer( const Color& color )
 namespace MR
 {
 
-Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void()>& renderFunc )
+Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void()>& drawFunc )
 {
     auto& viewer = Viewer::instanceRef();
     if ( !viewer.isGLInitialized() )
@@ -34,7 +34,7 @@ Image renderToImage( const Vector2i& resolution, const std::optional<Color>& bac
     if ( backgroundColor )
         fillFramebuffer( *backgroundColor );
 
-    renderFunc();
+    drawFunc();
 
     fd.copyTextureBindDef();
     fd.bindTexture();

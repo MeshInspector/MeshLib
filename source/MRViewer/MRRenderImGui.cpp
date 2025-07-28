@@ -10,7 +10,7 @@ namespace MR
 {
 
 void renderImGui( const Vector2i& resolution, const std::function<void()>& configureFunc,
-    const std::function<void()>& renderFunc )
+    const std::function<void()>& drawFunc )
 {
     auto& viewer = Viewer::instanceRef();
     if ( !viewer.isGLInitialized() )
@@ -34,7 +34,7 @@ void renderImGui( const Vector2i& resolution, const std::function<void()>& confi
     // render ImGui
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    renderFunc();
+    drawFunc();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 

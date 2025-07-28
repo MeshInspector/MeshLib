@@ -484,6 +484,9 @@
     <ClCompile Include="MRRenderImGui.cpp">
       <Filter>Render</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -947,7 +950,10 @@
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderImGui.cpp">
-      <Filter>RibbonMenu</Filter>
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

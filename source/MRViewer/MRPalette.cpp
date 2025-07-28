@@ -400,7 +400,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const float labelToColoredRectSpacing = style.FramePadding.x;
 
     // The min width of the colored rect.
-    const float minColoredRectWidth = 32.0f * menu->menu_scaling();
+    const float minColoredRectWidth = 43.0f * menu->menu_scaling();
 
     ImGui::SetNextWindowSizeConstraints( { windowPaddingA.x + maxLabelWidth + labelToColoredRectSpacing + minColoredRectWidth + windowPaddingB.x, 2 * ImGui::GetFontSize() }, { width( viewportSize ), height( viewportSize ) }, &resizeCallback_, ( void* )this );
 
@@ -604,7 +604,7 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
                 // The percentage of distances in this bucket.
                 if ( isDiscretizationPercentagesEnabled() )
                 {
-                    const std::string text = fmt::format( "{:.0f}%", histogramDiscr_.buckets.at( i ) / float( histogramDiscr_.numEntries ) * 100 );
+                    const std::string text = fmt::format( "{:.1f}%", histogramDiscr_.buckets.at( i ) / float( histogramDiscr_.numEntries ) * 100 );
                     const ImVec2 textSize = ImGui::CalcTextSize( text.c_str() );
                     const ImVec2 textPos = round( posA + ( posB - posA - textSize ) / 2 );
 

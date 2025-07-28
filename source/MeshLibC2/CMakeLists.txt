@@ -8,6 +8,12 @@ IF(NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context")
 ENDIF()
 
+IF(MSVC)
+  # Don't assume that extern C functions don't throw exceptions, because ours can throw, if no error handler is installed.
+  # The default flag is `/EHsc`, while we want only `/EHs`, so we remove the `c` part with this `/EHc-`.
+  add_compile_options( /EHc- )
+ENDIF()
+
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE HEADERS "include/*.h")
 

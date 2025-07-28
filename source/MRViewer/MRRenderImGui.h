@@ -11,8 +11,8 @@ namespace MR
 /// \param drawFunc - callback to execute ImGui draw functions, called immediately after ImGui::NewFrame() and before ImGui::Render()
 MRVIEWER_API void renderImGui(
     const Vector2i& resolution,
-    const std::function<void ( void )>& configureFunc,
-    const std::function<void ( void )>& drawFunc
+    const std::function<void ()>& configureFunc,
+    const std::function<void ()>& drawFunc
 );
 
 } // namespace MR

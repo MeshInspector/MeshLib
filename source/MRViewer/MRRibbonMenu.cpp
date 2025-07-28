@@ -106,6 +106,7 @@ void RibbonMenu::setCustomContextCheckbox(
 
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
+    MR_TIMER;
     ImGuiMenu::init( _viewer );
     // should init instance before load schema (as far as some font are used inside)
     fontManager_.initFontManagerInstance( &fontManager_ );
@@ -1578,6 +1579,7 @@ void RibbonMenu::drawSceneListButtons_()
 
 void RibbonMenu::readMenuItemsStructure_()
 {
+    MR_TIMER;
     RibbonSchemaLoader loader;
     loader.loadSchema();
     toolbar_->resetItemsList();

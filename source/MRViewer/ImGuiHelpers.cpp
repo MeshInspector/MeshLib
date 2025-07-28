@@ -725,7 +725,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
-    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor,style.WindowRounding, ImDrawFlags_RoundCornersTop );
 
     if ( params.collapsed )
     {

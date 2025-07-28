@@ -621,15 +621,25 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             return ret;
         }();
 
-        int option = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
+        int targetOption = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-        if ( UI::combo( "Unit##length", &option, optionNames ) )
+        if ( UI::combo( "UI Unit##length", &targetOption, optionNames ) )
         {
-            if ( option == int( LengthUnit::_count ) )
+            if ( targetOption == int( LengthUnit::_count ) )
                 UnitSettings::setUiLengthUnit( {}, true );
             else
-                UnitSettings::setUiLengthUnit( LengthUnit( option ), true );
+                UnitSettings::setUiLengthUnit( LengthUnit( targetOption ), true );
+            UnitSettings::setModelLengthUnit( {} );
+        }
+
+        int sourceOption = int( UnitSettings::getModelLengthUnit().value_or( LengthUnit::_count ) );
+        if ( UI::combo( "Model Unit##length", &sourceOption, optionNames ) )
+        {
+            if ( sourceOption == int( LengthUnit::_count ) )
+                UnitSettings::setModelLengthUnit( {} );
+            else
+                UnitSettings::setModelLengthUnit( LengthUnit( sourceOption ) );
         }
 
         // --- Precision

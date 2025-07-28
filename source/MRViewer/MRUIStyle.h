@@ -74,8 +74,6 @@ struct ButtonIconCustomizationParams
     // basic customization parameters
     ButtonCustomizationParams baseParams;
 
-    // button without a gradient, always active, configurable by an external style
-    bool flatBackgroundColor = false;
     // if false - text is to the right
     bool textUnderImage = true;
 };
@@ -143,14 +141,7 @@ MRVIEWER_API bool buttonIconEx(
     const std::string& text,
     const ImVec2& buttonSize,
     const ButtonIconCustomizationParams& params = {} );
-// button with a gradient and the ability to make it inactive
-inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
-{
-    ButtonIconCustomizationParams params;
-    params.baseParams.enabled = active;
-    params.flatBackgroundColor = true;
-    return buttonIconEx(name, iconSize, text, buttonSize, params );
-}
+
 // button with a gradient, always active
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
@@ -166,7 +157,7 @@ inline bool buttonIconFlatBG(
     ImGuiKey key = ImGuiKey_None )
 {
     ButtonIconCustomizationParams params;
-    params.flatBackgroundColor = true;
+    params.baseParams.forceImGuiBackground = true;
     params.baseParams.forceImguiTextColor = true;
     params.textUnderImage = textUnderIcon;
     params.baseParams.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );

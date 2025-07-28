@@ -65,7 +65,13 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() || ImGui::GetIO().WantCaptureKeyboard )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
+        return false;
+
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
+    // so use special case for modals
+    bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
+    if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )
         return false;
 
     reserveKeyEvent( passedKey );
@@ -235,8 +241,21 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     }
     else
     {
-        const ImGuiCol colIdx = ( !customParams.enabled ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        ImGuiCol colIdx = ImGuiCol_Button;
+        if ( !customParams.enabled )
+        {
+            if ( !customParams.forceImGuiBackground )
+                colIdx = ImGuiCol_TextDisabled;
+            else
+                ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+        }
+        else if ( hovered )
+        {
+            colIdx = held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered;
+        }
         const ImU32 col = ImGui::GetColorU32( colIdx );
+        if ( !customParams.enabled && customParams.forceImGuiBackground )
+            ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
         ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
     }
 
@@ -245,10 +264,16 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     StyleParamHolder sh;
     if ( !customParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    else if ( !customParams.enabled )
+        ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     if ( customParams.underlineFirstLetter )
         ImGui::RenderTextClipped( bb.Min, bb.Max, "_", NULL, &label_size, style.ButtonTextAlign, &bb);
+
+    if ( !customParams.enabled && customParams.forceImguiTextColor )
+        ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
 
@@ -425,17 +450,7 @@ bool buttonIconEx(
 
     std::string buttonText = "##" + text;
 
-    bool res = false;
-    if ( params.flatBackgroundColor )
-    {
-        res = ImGui::Button( buttonText.c_str(), buttonSize );
-        if( params.baseParams.enableTestEngine )
-            res = UI::TestEngine::createButton( buttonText ) || res;
-    }
-    else
-    {
-        res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
-    }
+    bool res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
     ImGui::SameLine();
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );

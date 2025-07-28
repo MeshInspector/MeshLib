@@ -145,6 +145,8 @@
     <ClCompile Include="SceneReorder.cpp" />
     <ClCompile Include="MRFileDialogInternal.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />
+    <ClCompile Include="MRRenderImGui.cpp" />
+    <ClCompile Include="MRRenderToImage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -305,6 +307,8 @@
     <ClInclude Include="SceneReorder.h" />
     <ClInclude Include="MRFileDialogInternal.h" />
     <ClInclude Include="MRModalDialog.h" />
+    <ClInclude Include="MRRenderImGui.h" />
+    <ClInclude Include="MRRenderToImage.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

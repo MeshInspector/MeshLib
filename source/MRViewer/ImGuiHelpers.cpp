@@ -1432,7 +1432,17 @@ PaletteChanges Palette(
     if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
     {
         presetName = std::string();
+
+        // Preserve some state.
+        int numHistBuckets = palette.getNumHistogramBuckets();
+        bool discrPercentagesWasEnabled = palette.isDiscretizationPercentagesEnabled();
+
         palette = MR::Palette( Palette::DefaultColors );
+
+        // Restore state.
+        palette.setNumHistogramBuckets( numHistBuckets );
+        palette.enableDiscretizationPercentages( discrPercentagesWasEnabled );
+
         changes |= ImGui::PaletteChanges::All;
     }
     UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );

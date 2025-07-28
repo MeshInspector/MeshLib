@@ -103,7 +103,7 @@ public:
     /// get colors for given vert value
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForHistogram );
+    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForStats );
 
     const MeshTexture& getTexture() const { return texture_; };
 
@@ -127,12 +127,12 @@ public:
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    /// \param validsIfHistogram If specified, replaces \p valids for the purposes of creating the histogram.
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {}, const VertPredicate & validsForHistogram = {} );
+    /// \param validsIfHistogram If specified, replaces \p valids for the purposes of creating the histogram and computing the percentages of vertices in different discretization steps.
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {}, const VertPredicate & validsForStats = {} );
 
-    VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids, const VertBitSet * validsForHistogram = nullptr )
+    VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids, const VertBitSet * validsForStats = nullptr )
     {
-        return getUVcoords( values, region, predFromBitSet( valids ), predFromBitSet( validsForHistogram ) );
+        return getUVcoords( values, region, predFromBitSet( valids ), predFromBitSet( validsForStats ) );
     }
 
     // base parameters of palette
@@ -176,9 +176,42 @@ public:
     // Returns the recommended argument for `setNumHistogramBuckets()`.
     [[nodiscard]] MRVIEWER_API int getDefaultNumHistogramBuckets() const;
 
+
+    // Should we maintain the percentages of distances in each discretization step?
+    [[nodiscard]] bool isDiscretizationPercentagesEnabled() const { return enableHistogramDiscr_; }
+    void enableDiscretizationPercentages( bool enable ) { histogramDiscr_.reset(); enableHistogramDiscr_ = enable; }
+
+
     // This is called automatically by `getValidVerts()` and `getUVcoords(), so usually you don't need to call this manually.
     // Call this after `setNumHistogramBuckets()`.
-    MRVIEWER_API void updateHistogram( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
+    MRVIEWER_API void updateStats( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
+
+
+    struct Histogram
+    {
+        // If this is empty, the histogram is disabled.
+        std::vector<int> buckets;
+        // The buckets for out-of-range elements.
+        int beforeBucket = 0;
+        int afterBucket = 0;
+        // The sum of all values in `buckets` and `{low,high}Bucket`.
+        int numEntries = 0;
+        // The max value in `buckets` (but ignoring `{low,high}Bucket`).
+        int maxEntry = 0;
+
+        // `reset()` sets this to true, and `finalize()` sets this to false.
+        bool needsUpdate = true;
+
+        MRVIEWER_API void reset();
+        MRVIEWER_API void addValue( float value );
+        // Call once after all `addValue()` calls.
+        MRVIEWER_API void finalize();
+    };
+
+    // The normal histogram, if enabled (check with `isHistogramEnabled()`).
+    [[nodiscard]] const Histogram &getHistogramValues() { return histogram_; }
+    // This one has the size matching `getParameters().discretization`. Only has meaningful values if enabled, check with `isDiscretizationPercentagesEnabled()`.
+    [[nodiscard]] const Histogram &getDiscrHistogramValues() { return histogramDiscr_; }
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
@@ -226,15 +259,14 @@ private:
     MinMaxi legendLimitIndexes_ = { 0, 7 };
     MinMaxf relativeLimits_ = { 0.f, 1.f };
 
-    // If this is empty, the histogram is disabled.
-    std::vector<int> histogramBuckets_;
-    // The buckets for out-of-range elements.
-    int histogramLowBucket_ = 0;
-    int histogramHighBucket_ = 0;
-    // The sum of all values in `numHistogramEntries_` and `histogram{Low,High}Bucket_`.
-    int numHistogramEntries_ = 0;
-    // The max value in `histogramBuckets_` (but ignoring `histogram{Low,High}Bucket_`).
-    int maxHistogramEntry_ = 0;
+    // This one is of a user-defined size.
+    Histogram histogram_;
+
+    // This one has size matching `parameters_.discretization`.
+    Histogram histogramDiscr_;
+
+    // Whether we should actually update `histogramDiscr_`.
+    bool enableHistogramDiscr_ = false;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

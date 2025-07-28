@@ -351,6 +351,9 @@ void Palette::setDiscretizationNumber( int discretization )
     if ( discretization < 2 )
         return;
 
+    histogramDiscr_.reset();
+    histogramDiscr_.buckets.resize( discretization );
+
     parameters_.discretization = discretization;
     updateDiscretizatedColors_();
     updateLegendLimitIndexes_();
@@ -374,7 +377,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             return nullptr; // Skip zero.
 
         // Prepend the `<`/`>` signs to the first and last label, when the histogram is enabled.
-        if ( isHistogramEnabled() && ( labelIndex == 0 || ( !onlyTopHalf && labelIndex + 1 == labels_.size() ) ) && ( labelIndex == 0 ? histogramHighBucket_ : histogramLowBucket_ ) > 0 )
+        if ( isHistogramEnabled() && ( labelIndex == 0 || ( !onlyTopHalf && labelIndex + 1 == labels_.size() ) ) && ( labelIndex == 0 ? histogram_.beforeBucket : histogram_.afterBucket ) > 0 )
         {
             storage.clear();
             storage += labelIndex == 0 ? "> " : "< ";
@@ -477,7 +480,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
 
     // Draw histogram, below the labels.
-    if ( isHistogramEnabled() && maxHistogramEntry_ > 0 )
+    if ( isHistogramEnabled() && histogram_.maxEntry > 0 )
     {
         // We split each bucket into smaller segments for pretty interpolation.
         // This is the desired segment size (the max size, it can end up smaller).
@@ -499,7 +502,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         // Returns a value in range 0..1.
         auto getBucketValue = [&]( int bucketIndex ) -> float
         {
-            return histogramBuckets_.at( bucketIndex ) / float( maxHistogramEntry_ );
+            return histogram_.buckets.at( bucketIndex ) / float( histogram_.maxEntry );
         };
 
         auto getHistPoint = [&]( int pointIndex ) -> ImVec2
@@ -563,6 +566,10 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     {
     case FilterType::Discrete:
         {
+            const ImVec2 percentageBgPaddingA = round( ImVec2( 1, 1 ) * menu->menu_scaling() );
+            const ImVec2 percentageBgPaddingB = round( ImVec2( 1, 0 ) * menu->menu_scaling() );
+            const float percentageBgRounding = 2 * menu->menu_scaling();
+
             auto yStep = windowSize.y / ( legendLimitIndexes_.max - legendLimitIndexes_.min );
             const int indexBegin = int( sz ) - legendLimitIndexes_.max;
             const int indexEnd = int( sz ) - legendLimitIndexes_.min;
@@ -571,11 +578,29 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
                 yStep *= 2;
             for ( int i = indexBegin; i < indexEnd; i++ )
             {
-                drawList->AddRectFilled(
-                    { coloredRectPos.x, coloredRectPos.y - legendLimitShift + i * yStep },
-                    { coloredRectEndPos.x, coloredRectPos.y - legendLimitShift + ( i + 1 ) * yStep },
-                    colors[sz - 1 - i].getUInt32()
-                );
+                // The positions of the two corners of the colored rect.
+                ImVec2 posA( coloredRectPos.x, coloredRectPos.y - legendLimitShift + i * yStep );
+                // Here clamp the end Y, otherwise it goes beyond the window when the distance mode is set to unsigned.
+                // Normally the user can't see this anyway, because ImGui clamps the rendering to the window, but it matters for the position
+                //   of the percentage text, that we draw below.
+                ImVec2 posB( coloredRectEndPos.x, std::min( coloredRectPos.y - legendLimitShift + ( i + 1 ) * yStep, coloredRectEndPos.y ) );
+
+                // The rect itself.
+                drawList->AddRectFilled( posA, posB, colors[sz - 1 - i].getUInt32() );
+
+                // The percentage of distances in this bucket.
+                if ( isDiscretizationPercentagesEnabled() )
+                {
+                    const std::string text = fmt::format( "{:.0f}%", histogramDiscr_.buckets.at( i ) / float( histogramDiscr_.numEntries ) * 100 );
+                    const ImVec2 textSize = ImGui::CalcTextSize( text.c_str() );
+                    const ImVec2 textPos = round( posA + ( posB - posA - textSize ) / 2 );
+
+                    // The text background.
+                    drawList->AddRectFilled( textPos - percentageBgPaddingA, textPos + textSize + percentageBgPaddingB, Color( 255, 255, 255, 96 ).getUInt32(), percentageBgRounding );
+
+                    // The text itself.
+                    drawList->AddText( textPos, Color( 0, 0, 0, 255 ).getUInt32(), text.c_str() );
+                }
             }
         }
         break;
@@ -637,7 +662,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
 
                 // Append the percentage to the first and last labels.
-                if (isHistogramEnabled())
+                if ( isHistogramEnabled() )
                 {
                     const bool isFirstHistLabel = i == 0;
                     // This one is disabled if `onlyTopHalf == true`. In that case nothing should be appended to this label anyway,
@@ -648,7 +673,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
                     {
                         out += " : ";
 
-                        int p = int( std::round( n / float( numHistogramEntries_ ) * 100 ) );
+                        int p = int( std::round( n / float( histogram_.numEntries ) * 100 ) );
                         if (p == 0)
                         {
                             out += "<1%";
@@ -660,22 +685,22 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
                     if ( isFirstHistLabel )
                     {
-                        if ( histogramHighBucket_ > 0 )
+                        if ( histogram_.beforeBucket > 0 )
                         {
                             if ( text != textStorage.c_str() )
                                 textStorage = text;
-                            appendPercentage( textStorage, histogramHighBucket_ );
+                            appendPercentage( textStorage, histogram_.beforeBucket );
                             text = textStorage.c_str();
                             textW = ImGui::CalcTextSize( text ).x;
                         }
                     }
                     else if ( isLastHistLabel )
                     {
-                        if ( histogramLowBucket_ > 0 )
+                        if ( histogram_.afterBucket > 0 )
                         {
                             if ( text != textStorage.c_str() )
                                 textStorage = text;
-                            appendPercentage( textStorage, histogramLowBucket_ );
+                            appendPercentage( textStorage, histogram_.afterBucket );
                             text = textStorage.c_str();
                             textW = ImGui::CalcTextSize( text ).x;
                         }
@@ -732,7 +757,7 @@ Color Palette::getColor( float val ) const
     return Color();
 }
 
-VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForHistogram )
+VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForStats )
 {
     MR_TIMER;
 
@@ -743,7 +768,7 @@ VertColors Palette::getVertColors( const VertScalars& values, const VertBitSet& 
         result[v] = getColor( std::clamp( getRelativePos( values[v] ), 0.f, 1.f ) );
     } );
 
-    updateHistogram( values, region, predFromBitSet( validsForHistogram ? validsForHistogram : valids ) );
+    updateStats( values, region, predFromBitSet( validsForStats ? validsForStats : valids ) );
     return result;
 }
 
@@ -814,7 +839,7 @@ VertPredicate Palette::predFromBitSet( const VertBitSet* bits )
     return bits ? [bits]( VertId v ) { return bits->test( v ); } : VertPredicate{};
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids, const VertPredicate & validsForHistogram )
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids, const VertPredicate & validsForStats )
 {
     MR_TIMER;
 
@@ -825,7 +850,7 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
         res[v] = getUVcoord( values[v], contains( valids, v ) );
     } );
 
-    updateHistogram( values, region, validsForHistogram ? validsForHistogram : valids );
+    updateStats( values, region, validsForStats ? validsForStats : valids );
     return res;
 }
 
@@ -983,19 +1008,13 @@ void Palette::setLegendLimits( const MinMaxf& limits )
 
 int Palette::getNumHistogramBuckets() const
 {
-    return int( histogramBuckets_.size() );
+    return int( histogram_.buckets.size() );
 }
 
 void Palette::setNumHistogramBuckets( int n )
 {
-    histogramBuckets_.clear(); // Zero the buckets.
-    histogramBuckets_.resize( n );
-
-    histogramLowBucket_ = 0;
-    histogramHighBucket_ = 0;
-
-    numHistogramEntries_ = 0; // Since we're zeroing the buckets, zero this too.
-    maxHistogramEntry_ = 0; // ^
+    histogram_.reset();
+    histogram_.buckets.resize( std::size_t( n ) );
 }
 
 int Palette::getDefaultNumHistogramBuckets() const
@@ -1003,34 +1022,74 @@ int Palette::getDefaultNumHistogramBuckets() const
     return 127; // Odd, to have a bucket for zero in the middle.
 }
 
-void Palette::updateHistogram( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate )
+void Palette::updateStats( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate )
 {
-    if ( !isHistogramEnabled() )
+    histogram_.reset();
+    histogramDiscr_.reset();
+
+    if ( !isHistogramEnabled() && !isDiscretizationPercentagesEnabled() )
         return;
-
-    // This zeroes the histogram.
-    setNumHistogramBuckets( getNumHistogramBuckets() );
-
-    int numBuckets = getNumHistogramBuckets();
 
     for ( VertId v : region )
     {
         if ( vertPredicate && !vertPredicate( v ) )
             continue;
 
-        // Invert the position to have higher distances first, to match how UI is displayed.
-        int bucketIndex = int( ( 1.f - getRelativePos( values[v] ) ) * numBuckets );
+        // Invert the position to have larger distances first, to match how UI is displayed.
+        float value = 1.f - getRelativePos( values[v] );
 
-        if (bucketIndex < 0)
-            histogramHighBucket_++;
-        else if (bucketIndex >= numBuckets)
-            histogramLowBucket_++;
-        else
-            histogramBuckets_[bucketIndex]++;
-
-        numHistogramEntries_++;
+        histogram_.addValue( value );
+        histogramDiscr_.addValue( value );
     }
-    maxHistogramEntry_ = *std::max_element( histogramBuckets_.begin(), histogramBuckets_.end() ); // Safe to dereference because we check `isHistogramEnabled()` above.
+
+    histogram_.finalize();
+    histogramDiscr_.finalize();
+}
+
+
+void Palette::Histogram::reset()
+{
+    needsUpdate = true;
+
+    // Zero the buckets.
+    std::size_t size = buckets.size();
+    buckets.clear();
+    buckets.resize( size );
+
+    beforeBucket = 0;
+    afterBucket = 0;
+
+    numEntries = 0;
+    maxEntry = 0;
+}
+
+void Palette::Histogram::addValue( float value )
+{
+    if ( buckets.empty() )
+        return; // This histogram is disabled.
+
+    int bucketIndex = int( value * buckets.size() );
+
+    if ( bucketIndex < 0 )
+        beforeBucket++;
+    else if (bucketIndex >= buckets.size())
+        afterBucket++;
+    else
+        buckets[bucketIndex]++;
+
+    numEntries++;
+
+    // `maxEntry` is updated by `finialize()`.
+}
+
+void Palette::Histogram::finalize()
+{
+    needsUpdate = false;
+
+    if ( buckets.empty() )
+        maxEntry = 0;
+    else
+        maxEntry = *std::max_element( buckets.begin(), buckets.end() );
 }
 
 Palette::Label::Label( float val, std::string text_ )

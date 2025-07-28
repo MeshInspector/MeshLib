@@ -12,6 +12,40 @@
 namespace MR
 {
 
+void renderImGui( const Vector2i& resolution, const std::function<void()>& configureFunc,
+    const std::function<void()>& renderFunc )
+{
+    auto& viewer = Viewer::instanceRef();
+    if ( !viewer.isGLInitialized() )
+        return;
+
+    // backup ImGui context
+    auto* backupCtx = ImGui::GetCurrentContext();
+    auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
+    ctx->Style = backupCtx->Style;
+    ImGui::SetCurrentContext( ctx );
+
+    // configure ImGui context
+    ImGui_ImplOpenGL3_Init( MR_GLSL_VERSION_LINE );
+    ImGui::GetIO().DisplaySize = { (float)resolution.x, (float)resolution.y };
+    if ( viewer.hasScaledFramebuffer() )
+        ImGui::GetIO().DisplayFramebufferScale = { 1.f, 1.f };
+    ImGui::GetIO().IniFilename = nullptr;
+    if ( configureFunc )
+        configureFunc();
+
+    // render ImGui
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+    renderFunc();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+
+    // restore ImGui context
+    ImGui::SetCurrentContext( backupCtx );
+    ImGui::DestroyContext( ctx );
+}
+
 Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundColor, const std::function<void ( void )>& renderFunc )
 {
     auto& viewer = Viewer::instanceRef();
@@ -25,29 +59,7 @@ Image renderImGuiToImage( const Vector2i& resolution, const Color& backgroundCol
     GL_EXEC( glClearColor( backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a ) );
     GL_EXEC( glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
 
-    // backup ImGui context
-    auto* backupCtx = ImGui::GetCurrentContext();
-    auto* ctx = ImGui::CreateContext( backupCtx->IO.Fonts );
-    ctx->Style = backupCtx->Style;
-    ImGui::SetCurrentContext( ctx );
-
-    // configure ImGui context
-    ImGui::GetIO().IniFilename = nullptr;
-
-    // render ImGui
-    ImGui_ImplOpenGL3_Init( MR_GLSL_VERSION_LINE );
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui::GetIO().DisplaySize = { (float)resolution.x, (float)resolution.y };
-    if ( viewer.hasScaledFramebuffer() )
-        ImGui::GetIO().DisplayFramebufferScale = { 1.f, 1.f };
-    ImGui::NewFrame();
-    renderFunc();
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
-
-    // restore ImGui context
-    ImGui::SetCurrentContext( backupCtx );
-    ImGui::DestroyContext( ctx );
+    renderImGui( resolution, {}, renderFunc );
 
     fd.copyTextureBindDef();
     fd.bindTexture();

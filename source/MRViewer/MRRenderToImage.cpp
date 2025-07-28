@@ -5,8 +5,10 @@
 
 #include "MRMesh/MRImage.h"
 
-namespace MR
+namespace
 {
+
+using namespace MR;
 
 void fillFramebuffer( const Color& color )
 {
@@ -14,7 +16,12 @@ void fillFramebuffer( const Color& color )
     GL_EXEC( glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
 }
 
-Image renderToImage( const Vector2i& resolution, const std::function<void()>& renderFunc )
+} // namespace
+
+namespace MR
+{
+
+Image renderToImage( const Vector2i& resolution, const std::optional<Color>& backgroundColor, const std::function<void()>& renderFunc )
 {
     auto& viewer = Viewer::instanceRef();
     if ( !viewer.isGLInitialized() )
@@ -23,6 +30,9 @@ Image renderToImage( const Vector2i& resolution, const std::function<void()>& re
     FramebufferData fd;
     fd.gen( resolution, getMSAAPow( viewer.getRequestedMSAA() ) );
     fd.bind( false );
+
+    if ( backgroundColor )
+        fillFramebuffer( *backgroundColor );
 
     renderFunc();
 

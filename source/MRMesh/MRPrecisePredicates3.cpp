@@ -106,6 +106,59 @@ Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const
      +  x.z * Int128( y.x * z.y - y.y * z.x );
 }
 
+// the slow processing of general case of segment intersection
+bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & vs )
+{
+    // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
+    //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
+    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt );
+    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt );
+    assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
+
+    const auto volumeTbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
+    const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
+    assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
+
+    const auto nomSimple = Int256( volumeTaOrg ) * Int256( volumeTbDest ) - Int256( volumeTbOrg ) * Int256( volumeTaDest );
+    if ( nomSimple != 0 )
+    {
+        // happy not-degenerated path
+        bool res = nomSimple > 0;
+        assert( volumeTaOrg || volumeTaDest );
+        if ( volumeTaOrg < volumeTaDest )
+            res = !res;
+        assert( volumeTbOrg || volumeTbDest );
+        if ( volumeTbOrg < volumeTbDest )
+            res = !res;
+        return res;
+    }
+
+    const auto ds = getPointDegrees( vs );
+
+    const auto polyTaOrg  = orient3dPoly( ds[2], ds[3], ds[4], ds[0], 3 );
+    const auto polyTaDest = orient3dPoly( ds[2], ds[3], ds[4], ds[1], 3 );
+    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
+    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
+    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
+
+    const auto polyTbOrg  = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
+    const auto polyTbDest = orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
+    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
+    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
+    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
+
+    auto nom = polyTaOrg * polyTbDest;
+    nom -= polyTbOrg * polyTaDest;
+
+    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 128-bit arithmetic
+    nom.setZeroCoeff( 0 );
+
+    bool res = nom.isPositive();
+    if ( posTaOrg != posTbOrg ) // denominator is negative
+        res = !res;
+    return res;
+}
+
 } // anonymous namespace
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
@@ -313,54 +366,101 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
         // triangles ta and tb intersect one another, process it as general case
     }
 
-    // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
-    //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
-    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt );
-    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt );
-    assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
+    return segmentIntersectionOrderGeneral( vs );
+}
 
-    const auto volumeTbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
-    const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
-    assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
+bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs )
+{
+    // s=01, ta=234, pb=567
+    auto as = { vs[2], vs[3], vs[4] };
+    auto bs = { vs[5], vs[6], vs[7] };
 
-    const auto nomSimple = Int256( volumeTaOrg ) * Int256( volumeTbDest ) - Int256( volumeTbOrg ) * Int256( volumeTaDest );
-    if ( nomSimple != 0 )
+    assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
+
+    auto o0 = orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+    if ( o0 == orient3d( { vs[5], vs[6], vs[7], vs[1] } ) )
     {
-        // happy not-degenerated path
-        bool res = nomSimple > 0;
-        assert( volumeTaOrg || volumeTaDest );
-        if ( volumeTaOrg < volumeTaDest )
-            res = !res;
-        assert( volumeTbOrg || volumeTbDest );
-        if ( volumeTbOrg < volumeTbDest )
-            res = !res;
-        return res;
+        // entire segment s from one side of plane pb
+        return o0;
+    }
+    // the segment s intersects plane pb
+
+    // check for shared points in ta and pb
+    PreciseVertCoords firstSharedPoint;
+    for ( auto va : as )
+        for ( auto vb : bs )
+            if ( va.id == vb.id )
+            {
+                assert( va.pt == vb.pt );
+                firstSharedPoint = va;
+                goto exitLoop1;
+            }
+    exitLoop1:
+
+    if ( firstSharedPoint.id )
+    {
+        PreciseVertCoords secondSharedPoint;
+        for ( auto va : as )
+            for ( auto vb : bs )
+                if ( va.id == vb.id && va.id != firstSharedPoint.id )
+                {
+                    assert( va.pt == vb.pt );
+                    secondSharedPoint = va;
+                    goto exitLoop2;
+                }
+        exitLoop2:
+
+        if ( secondSharedPoint.id )
+        {
+            PreciseVertCoords thirdPointA;
+            for ( auto va : as )
+                if ( va.id != firstSharedPoint.id && va.id != secondSharedPoint.id )
+                {
+                    thirdPointA = va;
+                    break;
+                }
+            assert( thirdPointA.id );
+            // triangle ta is fully on one side of plane pb
+            return orient3d( { vs[5], vs[6], vs[7], thirdPointA } )
+                == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+        }
+
+        // only one shared point in ta and pb
+
+        PreciseVertCoords secondPointA, thirdPointA;
+        for ( auto va : as )
+            if ( va.id != firstSharedPoint.id )
+            {
+                if ( !secondPointA.id )
+                    secondPointA = va;
+                else
+                    thirdPointA = va;
+            }
+        assert( secondPointA.id && thirdPointA.id );
+        const bool a2 = orient3d( { vs[5], vs[6], vs[7], secondPointA } );
+        if ( a2 == orient3d( { vs[5], vs[6], vs[7], thirdPointA } ) ) //both not-shared a-points are on one side of pb
+            return a2 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+
+        // even if not shared points from pb are on one side of ta, it does not mean that infinite plane pb intersects the segment on the same side
+
+        // process it as general case
+    }
+    else
+    {
+        // no shared points in ta and pb
+        const bool a1 = orient3d( { vs[5], vs[6], vs[7], vs[2] } );
+        if ( a1 == orient3d( { vs[5], vs[6], vs[7], vs[3] } ) && a1 == orient3d( { vs[5], vs[6], vs[7], vs[4] } ) )
+        {
+            // all a-points are on one side of pb
+            return a1 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+        }
+
+        // even if all 3 points from pb are on one side of ta, it does not mean that infinite plane pb intersects the segment on the same side
+
+        // process it as general case
     }
 
-    const auto ds = getPointDegrees( vs );
-
-    const auto polyTaOrg  = orient3dPoly( ds[2], ds[3], ds[4], ds[0], 3 );
-    const auto polyTaDest = orient3dPoly( ds[2], ds[3], ds[4], ds[1], 3 );
-    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
-    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
-    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
-
-    const auto polyTbOrg  = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
-    const auto polyTbDest = orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
-    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
-    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
-    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
-
-    auto nom = polyTaOrg * polyTbDest;
-    nom -= polyTbOrg * polyTaDest;
-
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 128-bit arithmetic
-    nom.setZeroCoeff( 0 );
-
-    bool res = nom.isPositive();
-    if ( posTaOrg != posTbOrg ) // denominator is negative
-        res = !res;
-    return res;
+    return segmentIntersectionOrderGeneral( vs );
 }
 
 ConvertToIntVector getToIntConverter( const Box3d& box )

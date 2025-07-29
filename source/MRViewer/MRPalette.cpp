@@ -352,7 +352,6 @@ void Palette::setDiscretizationNumber( int discretization )
         return;
 
     histogramDiscr_.reset();
-    histogramDiscr_.buckets.resize( discretization );
 
     parameters_.discretization = discretization;
     updateDiscretizatedColors_();
@@ -1057,6 +1056,14 @@ void Palette::updateStats( const VertScalars& values, const VertBitSet& region, 
 
     if ( !isHistogramEnabled() && !isDiscretizationPercentagesEnabled() )
         return;
+
+    if ( isDiscretizationPercentagesEnabled() )
+    {
+        // Update the size of the histogram tracking per-color percentages.
+        // Can't use `parameters_.discretization` here, because the actual number of colors doesn't match that when the "central zone" mode is enabled.
+        // And I'm told `pixels.size() / 2` is the intended way to calculate that (`/ 2` because half of the texture is gray).
+        histogramDiscr_.buckets.resize( texture_.pixels.size() / 2 );
+    }
 
     for ( VertId v : region )
     {

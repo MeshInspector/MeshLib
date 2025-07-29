@@ -85,6 +85,11 @@ ENDIF()
 target_include_directories(${PROJECT_NAME} PRIVATE include src ../..)
 target_compile_definitions(${PROJECT_NAME} PRIVATE MR_COMPILING_ANY_BINDINGS MR_COMPILING_C_BINDINGS)
 
+# Needed for `Boost.Stacktrace` on Mac.
+IF(APPLE)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
+ENDIF()
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

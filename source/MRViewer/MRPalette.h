@@ -251,6 +251,22 @@ private:
     /// \param storage will sometimes be used as storage for the return value. Don't read `storage` directly after the call. You can pass any string, it'll be cleared.
     const char* getAdjustedLabelText_( std::size_t labelIndex, bool onlyTopHalf, std::string& storage ) const;
 
+    /// Computes the max label pixel width.
+    float getMaxLabelWidth_( bool onlyTopHalf = false ) const;
+
+    struct StyleVariables
+    {
+        // Top-left window padding.
+        ImVec2 windowPaddingA;
+        // Bottom-right window padding.
+        ImVec2 windowPaddingB;
+        // Spacing between the labels and the colored rect.
+        float labelToColoredRectSpacing {};
+        // The min width of the colored rect.
+        float minColoredRectWidth {};
+    };
+    StyleVariables getStyleVariables_( float scaling ) const;
+
     // stores OpenGL textures. Change useDiscrete_ to switch between them
     MeshTexture texture_;
 

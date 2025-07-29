@@ -368,40 +368,23 @@ void Palette::setFilterType( FilterType type )
 
 void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
-    // Compute the max label pixel width.
-    float maxLabelWidth = 0.0f;
-    {
-        std::string textStorage;
-        for ( std::size_t i = 0; i < labels_.size(); i++ )
-        {
-            const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
-            if ( !text )
-                continue;
-            auto textSize = ImGui::CalcTextSize( text ).x;
-            if ( textSize > maxLabelWidth )
-                maxLabelWidth = textSize;
-        }
-    }
-
-    const auto& style = ImGui::GetStyle();
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
-    // Top-left window padding.
-    const ImVec2 windowPaddingA( style.WindowPadding.x, 0 );
-    // Bottom-right window padding.
-    const ImVec2 windowPaddingB( style.WindowPadding.x, 0 );
-
-    // Spacing between the labels and the colored rect.
-    const float labelToColoredRectSpacing = style.FramePadding.x;
-
-    // The min width of the colored rect.
-    const float minColoredRectWidth = 43.0f * menu->menu_scaling();
-
-    ImGui::SetNextWindowSizeConstraints( { windowPaddingA.x + maxLabelWidth + labelToColoredRectSpacing + minColoredRectWidth + windowPaddingB.x, 2 * ImGui::GetFontSize() }, { width( viewportSize ), height( viewportSize ) }, &resizeCallback_, ( void* )this );
+    const auto style = getStyleVariables_( menu->menu_scaling() );
+    const auto maxLabelWidth = getMaxLabelWidth_( onlyTopHalf );
+    const ImVec2 windowSizeMin {
+        style.windowPaddingA.x + maxLabelWidth + style.labelToColoredRectSpacing + style.minColoredRectWidth + style.windowPaddingB.x,
+        2 * ImGui::GetFontSize(),
+    };
+    const ImVec2 windowSizeMax {
+        width( viewportSize ),
+        height( viewportSize ),
+    };
+    ImGui::SetNextWindowSizeConstraints( windowSizeMin, windowSizeMax, &resizeCallback_, ( void* )this );
 
     auto paletteWindow = ImGui::FindWindowByName( windowName.c_str() );
 
@@ -457,38 +440,15 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
 void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf ) const
 {
-    // Compute the max label pixel width.
-    float maxLabelWidth = 0.0f;
-    {
-        std::string textStorage;
-        for ( std::size_t i = 0; i < labels_.size(); i++ )
-        {
-            const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
-            if ( !text )
-                continue;
-            auto textSize = ImGui::CalcTextSize( text ).x;
-            if ( textSize > maxLabelWidth )
-                maxLabelWidth = textSize;
-        }
-    }
-
-    const auto& style = ImGui::GetStyle();
-    // Top-left window padding.
-    const ImVec2 windowPaddingA( style.WindowPadding.x, 0 );
-    // Bottom-right window padding.
-    const ImVec2 windowPaddingB( style.WindowPadding.x, 0 );
-    // Spacing between the labels and the colored rect.
-    const float labelToColoredRectSpacing = style.FramePadding.x;
-    // The min width of the colored rect.
-    const float minColoredRectWidth = 32.0f * scaling;
+    const auto style = getStyleVariables_( scaling );
     // The max width of the colored rect.
-    const float maxColoredRectWidth = size.x - windowPaddingA.x - windowPaddingB.x - maxLabelWidth - labelToColoredRectSpacing;
+    const float maxColoredRectWidth = size.x - style.windowPaddingA.x - style.windowPaddingB.x - getMaxLabelWidth_( onlyTopHalf ) - style.labelToColoredRectSpacing;
     // The screen coordinates of the bottom-right corner of the colored rectangle.
-    const ImVec2 coloredRectEndPos( pos.x + size.x - windowPaddingB.x, pos.y + size.y - windowPaddingB.y );
+    const ImVec2 coloredRectEndPos( pos.x + size.x - style.windowPaddingB.x, pos.y + size.y - style.windowPaddingB.y );
     // The top-left corner.
-    const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? minColoredRectWidth : maxColoredRectWidth ), pos.y + windowPaddingA.y );
+    const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? style.minColoredRectWidth : maxColoredRectWidth ), pos.y + style.windowPaddingA.y );
     // The X coordinate of the right edge of the labels.
-    const float labelsRightSideX = coloredRectPos.x - labelToColoredRectSpacing;
+    const float labelsRightSideX = coloredRectPos.x - style.labelToColoredRectSpacing;
 
     // Draw histogram, below the labels.
     if ( isHistogramEnabled() && histogram_.maxEntry > 0 )
@@ -510,7 +470,7 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
         // How many points in total. The last bucket gets only one instead of `numSegmentsPerBucket`.
         int numPoints = numBuckets * numSegmentsPerBucket - numSegmentsPerBucket + 1;
 
-        const ImVec2 histPos( pos.x + windowPaddingA.x, coloredRectPos.y );
+        const ImVec2 histPos( pos.x + style.windowPaddingA.x, coloredRectPos.y );
         const ImVec2 histEndPos( coloredRectPos.x, coloredRectEndPos.y );
         const ImVec2 histSize = histEndPos - histPos;
 
@@ -983,6 +943,33 @@ const char* Palette::getAdjustedLabelText_( std::size_t labelIndex, bool onlyTop
     }
 
     return labels_[labelIndex].text.c_str();
+}
+
+float Palette::getMaxLabelWidth_( bool onlyTopHalf ) const
+{
+    float maxLabelWidth = 0.0f;
+    std::string textStorage;
+    for ( std::size_t i = 0; i < labels_.size(); i++ )
+    {
+        const char* text = getAdjustedLabelText_( i, onlyTopHalf, textStorage );
+        if ( !text )
+            continue;
+        auto textSize = ImGui::CalcTextSize( text ).x;
+        if ( textSize > maxLabelWidth )
+            maxLabelWidth = textSize;
+    }
+    return maxLabelWidth;
+}
+
+Palette::StyleVariables Palette::getStyleVariables_( float scaling ) const
+{
+    const auto& style = ImGui::GetStyle();
+    return {
+        .windowPaddingA = { style.WindowPadding.x, 0 },
+        .windowPaddingB = { style.WindowPadding.x, 0 },
+        .labelToColoredRectSpacing = style.FramePadding.x,
+        .minColoredRectWidth = 43.0f * scaling,
+    };
 }
 
 void Palette::resizeCallback_( ImGuiSizeCallbackData* data )

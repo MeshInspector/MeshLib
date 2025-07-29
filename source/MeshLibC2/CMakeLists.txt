@@ -114,7 +114,7 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-// Intentionalyl not using PCH, since this project adds some extra defines.
+# Intentionally not using PCH, since this project adds some extra defines.
 # IF(MR_PCH)
 #   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
 # ENDIF()

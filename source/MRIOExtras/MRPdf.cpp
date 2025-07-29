@@ -33,10 +33,27 @@ constexpr HPDF_REAL pageWorkHeight = borderFieldTop - borderFieldBottom;
 constexpr HPDF_REAL spacing = 6 * scaleFactor;
 
 constexpr HPDF_REAL textSpacing = 4 * scaleFactor;
+constexpr HPDF_REAL lineSpacingScale = 1.2f;
 
 constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
 constexpr HPDF_REAL marksHeight = 10 * scaleFactor;
 constexpr HPDF_REAL marksWidth = 30 * scaleFactor;
+
+// count the number of rows with auto-transfer in mind for a given page (page, font and font size)
+int calcTextLinesCount( HPDF_Doc doc, HPDF_Page page, const std::string& text )
+{
+    HPDF_REAL r;
+    HPDF_UINT substrStart = 0;
+    int count = 0;
+    for ( ; substrStart < text.size(); ++count )
+    {
+        HPDF_UINT lineSize = HPDF_Page_MeasureText( page, text.data() + substrStart, pageWorkWidth, HPDF_TRUE, &r );
+        if ( lineSize == 0 && HPDF_GetError( doc ) != HPDF_OK )
+            break;
+        substrStart += lineSize;
+    }
+    return count;
+}
 
 }
 
@@ -44,7 +61,28 @@ struct Pdf::State
 {
     HPDF_Doc document = nullptr;
     HPDF_Page activePage = nullptr;
-    HPDF_Font activeFont = nullptr;
+    HPDF_Font defaultFont = nullptr;
+    HPDF_Font tableFont = nullptr;
+};
+
+struct Pdf::TextParams
+{
+    HPDF_Font font = nullptr;
+    float fontSize = 14.f;
+    HPDF_TextAlignment alignment = HPDF_TALIGN_LEFT;
+    bool drawBorder = false;
+    static TextParams title( const Pdf& pdf )
+    {
+        return TextParams{ pdf.state_->defaultFont, pdf.params_.titleSize, HPDF_TALIGN_CENTER };
+    }
+    static TextParams text( const Pdf& pdf )
+    {
+        return TextParams{ pdf.state_->defaultFont, pdf.params_.textSize, HPDF_TALIGN_LEFT };
+    }
+    static TextParams table( const Pdf& pdf )
+    {
+        return TextParams{ pdf.state_->tableFont, pdf.params_.textSize, HPDF_TALIGN_LEFT };
+    }
 };
 
 Pdf::Pdf( const std::filesystem::path& documentPath, const PdfParameters& params /*= PdfParameters()*/ )
@@ -70,14 +108,20 @@ Pdf::Pdf( const std::filesystem::path& documentPath, const PdfParameters& params
     }
 
     HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT );
-    state_->activeFont = HPDF_GetFont( state_->document, params_.fontName.c_str(), NULL );
-    if ( !state_->activeFont )
+    state_->defaultFont = HPDF_GetFont( state_->document, params_.defaultFontName.c_str(), NULL );
+    if ( !state_->defaultFont )
     {
-        spdlog::debug( "Can't find font: \"{}\". HPDF error code {}", params_.fontName, HPDF_GetError( state_->document ) );
+        spdlog::debug( "Can't find font: \"{}\". HPDF error code {}", params_.defaultFontName, HPDF_GetError( state_->document ) );
+        return;
+    }
+    state_->tableFont = HPDF_GetFont( state_->document, params_.tableFontName.c_str(), NULL );
+    if ( !state_->tableFont )
+    {
+        spdlog::debug( "Can't find font: \"{}\". HPDF error code {}", params_.tableFontName, HPDF_GetError( state_->document ) );
         return;
     }
 
-    HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
+    HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize );
 }
 
 Pdf::Pdf( Pdf&& other ) noexcept
@@ -97,41 +141,38 @@ Pdf::~Pdf()
     close();
 }
 
-void Pdf::addText(const std::string& text, bool isTitle /*= false*/)
+void Pdf::addText(const std::string& text, bool isTitle /*= false*/ )
 {
-    if ( !state_->document )
-    {
-        spdlog::warn( "Can't add text to pdf page: no valid document" );
-        return;
-    }
-
-    int strNum = 1;
-    size_t pos = text.find( '\n', 0 );
-    while ( pos != std::string::npos )
-    {
-        ++strNum;
-        pos = text.find( '\n', pos + 1 );
-    }
-
-
-    const auto textHeight = static_cast<HPDF_REAL>(( isTitle ? params_.titleSize : params_.textSize ) * strNum + textSpacing * 2.);
-
-    if ( cursorY_ - textHeight < borderFieldBottom )
-        newPage();
-
-    HPDF_TextAlignment alignment = isTitle ? HPDF_TALIGN_CENTER : HPDF_TALIGN_LEFT;
-    HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, ( isTitle ? params_.titleSize : params_.textSize ) );
-    HPDF_Page_BeginText( state_->activePage );
-    HPDF_Page_SetTextLeading( state_->activePage, textSpacing );
-    HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - textHeight, text.c_str(), alignment, nullptr );
-    HPDF_Page_EndText( state_->activePage );
-
-    cursorY_ -= textHeight;
-    if ( cursorY_ - spacing < borderFieldBottom )
-        newPage();
-    else
-        cursorY_ -= spacing;
+    addText_( text, isTitle ? TextParams::title( *this ) : TextParams::text( *this ) );
 }
+
+void Pdf::addTable( const std::vector<std::pair<std::string, float>>& table )
+{
+    if ( table.empty() )
+        return;
+
+    const size_t maxFirstSize = std::max_element( table.begin(), table.end(), [] (const std::pair<std::string, float>& lhv, const std::pair<std::string, float>& rhv)
+    {
+        return lhv.first.length() < rhv.first.length();
+    } )->first.length();
+
+    std::vector<std::string> valueStrs( table.size() );
+    for ( int i = 0; i < table.size(); ++i )
+        valueStrs[i] = fmt::format( "{:.5f}", table[i].second );
+    const size_t maxSecondSize = std::max_element( valueStrs.begin(), valueStrs.end(), [] ( const std::string& lhv, const std::string& rhv )
+    {
+        return lhv.length() < rhv.length();
+    } )->length();
+
+    std::string resStr;
+    resStr += fmt::format( "{: <{}} : {: >{}}", table[0].first, maxFirstSize, valueStrs[0], maxSecondSize );
+    for ( int i = 1; i < table.size(); ++i )
+    {
+        resStr += fmt::format( "\n{: <{}} : {: >{}}", table[i].first, maxFirstSize, valueStrs[i], maxSecondSize );
+    }
+    addText_( resStr, TextParams::table( *this ) );
+}
+
 
 void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= {}*/,
         const std::vector<std::pair<double, std::string>>& valuesMarks /*= {}*/ )
@@ -169,7 +210,7 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         for ( auto& mark : valuesMarks )
         {
             HPDF_Page_BeginText( state_->activePage );
-            HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
+            HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize );
             HPDF_Page_MoveTextPos( state_->activePage, posX, cursorY_ - marksHeight / 2 );
             HPDF_Page_ShowText( state_->activePage, mark.second.c_str() );
             HPDF_Page_EndText( state_->activePage );
@@ -181,7 +222,7 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
     {
         cursorY_ -= textSpacing / 2.;
         HPDF_Page_BeginText( state_->activePage );
-        HPDF_Page_SetFontAndSize( state_->activePage, state_->activeFont, params_.textSize );
+        HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize );
         HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - labelHeight, caption.c_str(), HPDF_TALIGN_CENTER, nullptr );
         HPDF_Page_EndText( state_->activePage );
         cursorY_ -= labelHeight;
@@ -233,12 +274,51 @@ void Pdf::close()
         state_->document = nullptr;
     }
     state_->activePage = nullptr;
-    state_->activeFont = nullptr;
+    state_->defaultFont = nullptr;
 }
 
 Pdf::operator bool() const
 {
     return state_->document != 0;
+}
+
+void Pdf::addText_( const std::string& text, const TextParams& textParams )
+{
+    if ( text.empty() )
+        return;
+
+    if ( !state_->document )
+    {
+        spdlog::warn( "Can't add text to pdf page: no valid document" );
+        return;
+    }
+
+    HPDF_Page_SetFontAndSize( state_->activePage, textParams.font, textParams.fontSize );
+
+    int strNum = calcTextLinesCount( state_->document, state_->activePage, text );
+    const auto textHeight = static_cast< HPDF_REAL >( textParams.fontSize * strNum * lineSpacingScale );
+
+    // need add the ability to transfer text between pages
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    HPDF_Page_BeginText( state_->activePage );
+    HPDF_Page_SetTextLeading( state_->activePage, textParams.fontSize * lineSpacingScale );
+
+    HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - textHeight, text.c_str(), textParams.alignment, nullptr );
+    HPDF_Page_EndText( state_->activePage );
+
+    if ( textParams.drawBorder )
+    {
+        HPDF_Page_Rectangle( state_->activePage, cursorX_, cursorY_ - textHeight, pageWorkWidth, textHeight );
+        HPDF_Page_Stroke( state_->activePage );
+    }
+
+    cursorY_ -= textHeight;
+    if ( cursorY_ - spacing < borderFieldBottom )
+        newPage();
+    else
+        cursorY_ -= spacing;
 }
 
 bool Pdf::checkDocument() const

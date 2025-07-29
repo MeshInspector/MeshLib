@@ -10,7 +10,7 @@ def test_fix_undercuts():
     params.voxelSize = 0.2
 
     undercuts = mrmesh.FaceBitSet()
-    mrmesh.FixUndercuts.find(torus, params, undercuts)
+    mrmesh.FixUndercuts.find(torus, params.findParameters, undercuts)
     assert undercuts.count() > 0
 
     mrmesh.FixUndercuts.fix(torus, params)

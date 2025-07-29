@@ -907,11 +907,11 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
             vertNormalsSize_ = topology.lastValidVert() + 1;
             if ( vertNormalsSize_ > vertNormals.size() )
             {
-                assert( false );
+                assert( false && "lastValidVert() + 1 > computed normals amount" );
                 vertNormalsSize_ = (int)vertNormals.size();
             }
             auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ );
-            std::copy( MR::begin( vertNormals ), MR::end( vertNormals ), buffer.data() );
+            std::copy_n( vertNormals.data(), vertNormalsSize_, buffer.data() );
             return buffer;
         }
     }

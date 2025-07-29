@@ -1222,7 +1222,16 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
+    {
         changes |= PaletteChanges::Ranges | PaletteChanges::Texture;
+
+        if ( palette.isDiscretizationPercentagesEnabled() )
+        {
+            // Re-enable discretization percentages to reset those stats, so we know to recompute them later.
+            palette.enableDiscretizationPercentages( false );
+            palette.enableDiscretizationPercentages( true );
+        }
+    }
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1432,7 +1441,17 @@ PaletteChanges Palette(
     if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
     {
         presetName = std::string();
+
+        // Preserve some state.
+        int numHistBuckets = palette.getNumHistogramBuckets();
+        bool discrPercentagesWasEnabled = palette.isDiscretizationPercentagesEnabled();
+
         palette = MR::Palette( Palette::DefaultColors );
+
+        // Restore state.
+        palette.setNumHistogramBuckets( numHistBuckets );
+        palette.enableDiscretizationPercentages( discrPercentagesWasEnabled );
+
         changes |= ImGui::PaletteChanges::All;
     }
     UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );

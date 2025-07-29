@@ -1441,7 +1441,11 @@ float ImGuiMenu::drawSelectionInformation_()
 
         auto* obj = selectedObjs.front().get();
         if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
+        {
             drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+            const auto delta = distance->getWorldDelta();
+            drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
+        }
         else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
         else if ( auto* radius = obj->asType<RadiusMeasurementObject>() )

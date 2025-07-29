@@ -480,7 +480,7 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
     // Spacing between the labels and the colored rect.
     const float labelToColoredRectSpacing = style.FramePadding.x;
     // The min width of the colored rect.
-    const float minColoredRectWidth = 32.0f * scaling;
+    const float minColoredRectWidth = 43.0f * scaling;
     // The max width of the colored rect.
     const float maxColoredRectWidth = size.x - windowPaddingA.x - windowPaddingB.x - maxLabelWidth - labelToColoredRectSpacing;
     // The screen coordinates of the bottom-right corner of the colored rectangle.
@@ -545,6 +545,11 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
 
         { // First draw the background.
             const ImU32 bgColorInt = bgColor.getUInt32();
+
+            // Temporarily disable antialiasing, as it causes artefacts on some machines. Shouldn't be necesasry anyway.
+            const ImDrawListFlags oldFlags = drawList->Flags;
+            drawList->Flags &= ~ImDrawListFlags_AntiAliasedFill;
+            MR_FINALLY{ drawList->Flags = oldFlags; };
 
             ImVec2 prevPoint;
             for ( int i = 0; i < numPoints; i++ )

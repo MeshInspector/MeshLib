@@ -352,7 +352,6 @@ void Palette::setDiscretizationNumber( int discretization )
         return;
 
     histogramDiscr_.reset();
-    histogramDiscr_.buckets.resize( discretization );
 
     parameters_.discretization = discretization;
     updateDiscretizatedColors_();
@@ -488,22 +487,25 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
     const ImVec2 coloredRectEndPos( pos.x + size.x - windowPaddingB.x, pos.y + size.y - windowPaddingB.y );
     // The top-left corner.
     const ImVec2 coloredRectPos( coloredRectEndPos.x - ( isHistogramEnabled() ? minColoredRectWidth : maxColoredRectWidth ), pos.y + windowPaddingA.y );
-    const ImVec2 coloredRectSize = coloredRectEndPos - coloredRectPos;
     // The X coordinate of the right edge of the labels.
     const float labelsRightSideX = coloredRectPos.x - labelToColoredRectSpacing;
 
     // Draw histogram, below the labels.
     if ( isHistogramEnabled() && histogram_.maxEntry > 0 )
     {
+        #if 1
+        const int numSegmentsPerBucket = 1;
+        #else // Further split buckets. Till will be useful if we switch to non-linear interpolation.
         // We split each bucket into smaller segments for pretty interpolation.
         // This is the desired segment size (the max size, it can end up smaller).
         const int maxNumPixelsPerSegment = 4; // Intentionally not multiplying by GUI scale.
+        const int numSegmentsPerBucket = std::max( 1, ( std::max( 1, int( coloredRectEndPos.y - coloredRectPos.y ) / numBuckets ) + maxNumPixelsPerSegment - 1 ) / maxNumPixelsPerSegment );
+        #endif
 
         int numBuckets = getNumHistogramBuckets();
         if ( onlyTopHalf )
             numBuckets = (numBuckets + 1) / 2; // Lame, but we have to do this since `onlyTopHalf` is only known here, and not when filling the buckets.
 
-        int numSegmentsPerBucket = std::max( 1, ( std::max( 1, int( coloredRectSize.y ) / numBuckets ) + maxNumPixelsPerSegment - 1 ) / maxNumPixelsPerSegment );
 
         // How many points in total. The last bucket gets only one instead of `numSegmentsPerBucket`.
         int numPoints = numBuckets * numSegmentsPerBucket - numSegmentsPerBucket + 1;
@@ -549,7 +551,7 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
             {
                 ImVec2 point = round( getHistPoint( i ) );
 
-                if ( i > 0 )
+                if ( i > 0 && point.y != prevPoint.y )
                 {
                     drawList->PathLineTo( point );
                     drawList->PathLineTo( prevPoint );
@@ -1054,6 +1056,14 @@ void Palette::updateStats( const VertScalars& values, const VertBitSet& region, 
 
     if ( !isHistogramEnabled() && !isDiscretizationPercentagesEnabled() )
         return;
+
+    if ( isDiscretizationPercentagesEnabled() )
+    {
+        // Update the size of the histogram tracking per-color percentages.
+        // Can't use `parameters_.discretization` here, because the actual number of colors doesn't match that when the "central zone" mode is enabled.
+        // And I'm told `pixels.size() / 2` is the intended way to calculate that (`/ 2` because half of the texture is gray).
+        histogramDiscr_.buckets.resize( texture_.pixels.size() / 2 );
+    }
 
     for ( VertId v : region )
     {

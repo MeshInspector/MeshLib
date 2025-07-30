@@ -175,8 +175,7 @@ void Pdf::addTable( const std::vector<std::pair<std::string, float>>& table )
 }
 
 
-void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= {}*/,
-        const std::vector<std::pair<double, std::string>>& valuesMarks /*= {}*/ )
+void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params )
 {
     if ( !state_->document )
     {
@@ -191,40 +190,32 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::s
         return;
     }
 
-    const HPDF_REAL additionalHeight = marksHeight * valuesMarks.empty() + marksHeight * !valuesMarks.empty() + labelHeight * !caption.empty();
-    const HPDF_REAL scalingFactor = std::min( ( pageWorkHeight - additionalHeight ) / HPDF_Image_GetHeight( pdfImage ), pageWorkWidth / HPDF_Image_GetWidth( pdfImage ) );
-    const HPDF_REAL scalingWidth = scalingFactor * HPDF_Image_GetWidth( pdfImage );
-    const HPDF_REAL scalingHeight = scalingFactor * HPDF_Image_GetHeight( pdfImage );
+    const HPDF_REAL additionalHeight = labelHeight * !params.caption.empty();
+    HPDF_REAL imageWidth = params.size.x;
+    if ( imageWidth == 0.f )
+        imageWidth = (HPDF_REAL) HPDF_Image_GetWidth( pdfImage );
+    else if ( imageWidth < 0.f )
+        imageWidth = pageWidth - borderFieldRight - cursorX_;
+    HPDF_REAL imageHeight = params.size.y;
+    if ( params.uniformScaleFromWidth )
+        imageHeight = imageWidth * HPDF_Image_GetHeight( pdfImage ) / HPDF_Image_GetWidth( pdfImage );
+    else if ( imageHeight == 0.f )
+        imageHeight = (HPDF_REAL) HPDF_Image_GetHeight( pdfImage );
+    else if ( imageHeight < 0.f )
+        imageHeight = cursorY_ - borderFieldBottom - additionalHeight;
 
-    if ( cursorY_ - scalingHeight - additionalHeight < borderFieldBottom )
+    if ( cursorY_ - imageHeight - additionalHeight < borderFieldBottom )
         newPage();
 
-    cursorY_ -= scalingHeight;
-    HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_, cursorY_, scalingWidth, scalingHeight );
+    cursorY_ -= imageHeight;
+    HPDF_Page_DrawImage( state_->activePage, pdfImage, cursorX_, cursorY_, imageWidth, imageHeight );
 
-    if ( !valuesMarks.empty() )
-    {
-        HPDF_REAL step = pageWorkWidth - marksWidth / 2.;
-        if ( valuesMarks.size() > 1)
-            step /= ( valuesMarks.size() - 1);
-        HPDF_REAL posX = cursorX_;
-        for ( auto& mark : valuesMarks )
-        {
-            HPDF_Page_BeginText( state_->activePage );
-            HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize );
-            HPDF_Page_MoveTextPos( state_->activePage, posX, cursorY_ - marksHeight / 2 );
-            HPDF_Page_ShowText( state_->activePage, mark.second.c_str() );
-            HPDF_Page_EndText( state_->activePage );
-            posX += step;
-        }
-        cursorY_ -= marksHeight;
-    }
-    if ( !caption.empty() )
+    if ( !params.caption.empty() )
     {
         cursorY_ -= textSpacing / 2.;
         HPDF_Page_BeginText( state_->activePage );
         HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize );
-        HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - labelHeight, caption.c_str(), HPDF_TALIGN_CENTER, nullptr );
+        HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + imageWidth, cursorY_ - labelHeight, params.caption.c_str(), HPDF_TALIGN_CENTER, nullptr );
         HPDF_Page_EndText( state_->activePage );
         cursorY_ -= labelHeight;
     }
@@ -278,6 +269,16 @@ void Pdf::close()
     state_->defaultFont = nullptr;
 }
 
+Vector2f Pdf::getPageSize() const
+{
+    return { pageWidth, pageHeight };
+}
+
+Box2f Pdf::getPageWorkArea() const
+{
+    return { { borderFieldLeft, borderFieldBottom }, { borderFieldRight, borderFieldTop } };
+}
+
 Pdf::operator bool() const
 {
     return state_->document != 0;
@@ -320,24 +321,6 @@ void Pdf::addText_( const std::string& text, const TextParams& textParams )
         newPage();
     else
         cursorY_ -= spacing;
-}
-
-void Pdf::addImageFromFileSimple( const std::filesystem::path& imagePath, const Vector2f& pos, const Vector2f& size )
-{
-    if ( !state_->document )
-    {
-        spdlog::warn( "Can't add image to pdf page: no valid document" );
-        return;
-    }
-
-    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() );
-    if ( !pdfImage )
-    {
-        spdlog::warn( "Failed to load image from file. HPDF error code {}", HPDF_GetError( state_->document ) );
-        return;
-    }
-
-    HPDF_Page_DrawImage( state_->activePage, pdfImage, pos.x, pos.y, size.x, size.y );
 }
 
 bool Pdf::checkDocument() const

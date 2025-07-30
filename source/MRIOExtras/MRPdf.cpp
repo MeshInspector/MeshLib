@@ -37,8 +37,6 @@ constexpr HPDF_REAL textSpacing = 4 * scaleFactor;
 constexpr HPDF_REAL lineSpacingScale = 1.2f;
 
 constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
-constexpr HPDF_REAL marksHeight = 10 * scaleFactor;
-constexpr HPDF_REAL marksWidth = 30 * scaleFactor;
 
 // count the number of rows with auto-transfer in mind for a given page (page, font and font size)
 int calcTextLinesCount( HPDF_Doc doc, HPDF_Page page, const std::string& text )

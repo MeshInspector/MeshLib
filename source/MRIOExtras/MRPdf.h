@@ -26,7 +26,11 @@ struct PdfParameters
      * Symbol
      * ZapfDingbats
      */
-    std::string fontName = "Helvetica";
+    std::string defaultFontName = "Helvetica";
+    /**
+    * Font name for table (monospaced)
+    */
+    std::string tableFontName = "Courier";
 };
 
 /**
@@ -51,6 +55,14 @@ public:
      * if isTitle - horAlignment = center, use titleFontSize
      */
     MRIOEXTRAS_API void addText( const std::string& text, bool isTitle = false );
+
+    /**
+     * Add set of pair string - value in current cursor position.
+     * Move cursor.
+     * Box horizontal size is page width without offset.
+     * Box vertical size is automatically for text.
+     */
+    MRIOEXTRAS_API void addTable( const std::vector<std::pair<std::string, float>>& table );
 
     /**
      * @brief Add image from file in current cursor position.
@@ -79,6 +91,10 @@ public:
     MRIOEXTRAS_API operator bool() const;
 
 private:
+    struct TextParams;
+    // common method for adding different types of text
+    void addText_( const std::string& text, const TextParams& params );
+
     struct State;
     std::unique_ptr<State> state_;
 

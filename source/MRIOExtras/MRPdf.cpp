@@ -30,6 +30,7 @@ constexpr HPDF_REAL borderFieldTop = pageHeight - 10 * scaleFactor;
 constexpr HPDF_REAL borderFieldBottom = 10 * scaleFactor;
 constexpr HPDF_REAL pageWorkWidth = borderFieldRight - borderFieldLeft;
 constexpr HPDF_REAL pageWorkHeight = borderFieldTop - borderFieldBottom;
+//constexpr HPDF_REAL pageWorkHeight = borderFieldTop - borderFieldBottom;
 
 constexpr HPDF_REAL spacing = 6 * scaleFactor;
 

@@ -3,6 +3,9 @@
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_PDF
 #include "exports.h"
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRBox.h"
 
 #include <filesystem>
 #include <vector>
@@ -67,17 +70,24 @@ public:
      */
     MRIOEXTRAS_API void addTable( const std::vector<std::pair<std::string, float>>& table );
 
+    /// Parameters to adding image from file
+    struct ImageParams
+    {
+        /// image size in page space
+        /// if == {0, 0} - use image size
+        /// if .x or .y < 0 use the available page size from the current cursor position (caption size is also accounted for)
+        Vector2f size;
+        /// caption if not empty - add caption under marks (if exist) or image.
+        std::string caption;
+        /// set height to keep same scale as width scale
+        bool uniformScaleFromWidth = false;
+    };
     /**
      * @brief Add image from file in current cursor position.
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
-     * @param valuesMarks if not empty - add marks under image.
-     * valuesMarks contains pairs<relative_position, marks_text>.
-     *     relative_position is in range [0., 1.], where 0. - left border of image, 1. - right border
-     * @param caption if not empty - add caption under marks (if exist) or image.
      */
-    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
-        const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
@@ -89,6 +99,9 @@ public:
     void setCursorPosY( float posY ) { cursorY_ = posY; }
     float getCursorPosX() const { return cursorX_; }
     float getCursorPosY() const { return cursorY_; }
+
+    MRIOEXTRAS_API Vector2f getPageSize() const;
+    MRIOEXTRAS_API Box2f getPageWorkArea() const;
 
     /// Checking the ability to work with a document
     MRIOEXTRAS_API operator bool() const;

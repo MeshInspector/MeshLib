@@ -438,7 +438,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     draw( ImGui::GetWindowDrawList(), menu->menu_scaling(), windowPos, windowSize, onlyTopHalf );
 }
 
-void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf ) const
+void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, const Color& labelBgColor, bool onlyTopHalf ) const
 {
     const auto style = getStyleVariables_( scaling );
     // The max width of the colored rect.
@@ -613,7 +613,6 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
         const ImVec2 bgPaddingA = round( ImVec2( 2, 2 ) * scaling );
         const ImVec2 bgPaddingB = round( ImVec2( 2, 1 ) * scaling );
         const float bgRounding = 2 * scaling;
-        const Color bgColor = getBackgroundColor_().scaledAlpha( 0.75f );
 
         const float labelHeight = ImGui::GetTextLineHeight() + bgPaddingA.y + bgPaddingB.y;
 
@@ -689,7 +688,7 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
                     drawList->AddRectFilled(
                         textPos - bgPaddingA,
                         textPos + ImVec2( textW, ImGui::GetTextLineHeight() ) + bgPaddingB,
-                        bgColor.getUInt32(),
+                        labelBgColor.getUInt32(),
                         bgRounding,
                         0
                     );
@@ -704,6 +703,11 @@ void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, cons
             }
         }
     }
+}
+
+void Palette::draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf ) const
+{
+    draw( drawList, scaling, pos, size, getBackgroundColor_().scaledAlpha( 0.75f ), onlyTopHalf );
 }
 
 Color Palette::getColor( float val ) const
@@ -882,9 +886,8 @@ Color Palette::getBaseColor_( float val )
     return  ( 1.f - c ) * parameters_.baseColors[dId] + c * parameters_.baseColors[dId + 1];
 }
 
-Color Palette::getBackgroundColor_() const
+const Color& Palette::getBackgroundColor_() const
 {
-    // We arbitrarily grab the color from the active viewport.
     return getViewerInstance().viewport().getParameters().backgroundColor;
 }
 

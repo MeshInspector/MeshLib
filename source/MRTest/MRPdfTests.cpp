@@ -40,7 +40,7 @@ TEST( MRMesh, Pdf )
     auto colorMapPath = pathFolder / std::filesystem::path( "color_map.png" );
     auto res = ImageSave::toAnySupportedFormat( { pixels, Vector2i( colorMapSizeX, colorMapSizeY ) }, colorMapPath );
 
-    pdfTest.addImageFromFile( colorMapPath, "test image" );
+    pdfTest.addImageFromFile( colorMapPath, { {-1, 0}, "test image", true } );
     pdfTest.close();
 }
 

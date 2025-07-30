@@ -65,7 +65,7 @@ ELSEIF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenVDB
   )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
+ELSEIF(WIN32)
   find_package(OpenVDB REQUIRED)
 
   # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
@@ -73,6 +73,11 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
   set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
 
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    OpenVDB::openvdb
+  )
+ELSEIF(MESHLIB_USE_VCPKG)
+  find_package(OpenVDB REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenVDB::openvdb
   )

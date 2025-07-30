@@ -193,7 +193,7 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
     if ( imageWidth == 0.f )
         imageWidth = (HPDF_REAL) HPDF_Image_GetWidth( pdfImage );
     else if ( imageWidth < 0.f )
-        imageWidth = pageWidth - borderFieldRight - cursorX_;
+        imageWidth = borderFieldRight - cursorX_;
     HPDF_REAL imageHeight = params.size.y;
     if ( params.uniformScaleFromWidth )
         imageHeight = imageWidth * HPDF_Image_GetHeight( pdfImage ) / HPDF_Image_GetWidth( pdfImage );

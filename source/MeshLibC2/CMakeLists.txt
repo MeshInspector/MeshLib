@@ -4,14 +4,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MeshLibC2 CXX)
 
-IF(NOT MSVC)
+IF(MSVC)
+  # Disabling following warnings:
+  #   warning C4244: '+=': conversion from 'T' to 'unsigned short', possible loss of data
+  #   warning C4305: 'argument': truncation from 'int' to 'T'
+  #   warning C4804: '+=': unsafe use of type 'bool' in operation
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4305 /wd4804")
+ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context")
 ENDIF()
 
 IF(MSVC)
   # Don't assume that extern C functions don't throw exceptions, because ours can throw, if no error handler is installed.
-  # The default flag is `/EHsc`, while we want only `/EHs`, so we remove the `c` part with this `/EHc-`.
-  add_compile_options( /EHc- )
+  # The default flag is `/EHsc`, while we want only `/EHs`.
+  string(REPLACE "/EHsc" "/EHs" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 ENDIF()
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
@@ -61,6 +67,12 @@ ELSEIF(APPLE)
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   find_package(OpenVDB REQUIRED)
+
+  # Patch IMath (a dependency of OpenVDB) to not include `/EHsc`. See the beginning of this file for explanation.
+  get_target_property(TMP_PROP Imath::Imath INTERFACE_COMPILE_OPTIONS)
+  string(REPLACE "/EHsc" "" TMP_PROP "${TMP_PROP}")
+  set_target_properties(Imath::Imath PROPERTIES INTERFACE_COMPILE_OPTIONS "${TMP_PROP}")
+
   target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenVDB::openvdb
   )

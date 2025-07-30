@@ -4,6 +4,7 @@
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRVector2.h"
 
 #include <fstream>
 
@@ -319,6 +320,24 @@ void Pdf::addText_( const std::string& text, const TextParams& textParams )
         newPage();
     else
         cursorY_ -= spacing;
+}
+
+void Pdf::addImageFromFileSimple( const std::filesystem::path& imagePath, const Vector2f& pos, const Vector2f& size )
+{
+    if ( !state_->document )
+    {
+        spdlog::warn( "Can't add image to pdf page: no valid document" );
+        return;
+    }
+
+    HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() );
+    if ( !pdfImage )
+    {
+        spdlog::warn( "Failed to load image from file. HPDF error code {}", HPDF_GetError( state_->document ) );
+        return;
+    }
+
+    HPDF_Page_DrawImage( state_->activePage, pdfImage, pos.x, pos.y, size.x, size.y );
 }
 
 bool Pdf::checkDocument() const

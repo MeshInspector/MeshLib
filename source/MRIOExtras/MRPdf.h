@@ -3,6 +3,7 @@
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_PDF
 #include "exports.h"
+#include "MRMesh/MRMeshFwd.h"
 
 #include <filesystem>
 #include <vector>
@@ -78,6 +79,9 @@ public:
      */
     MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
         const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
+
+    // simple method to add images from file
+    MRIOEXTRAS_API void addImageFromFileSimple( const std::filesystem::path& imagePath, const Vector2f& pos, const Vector2f& size );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();

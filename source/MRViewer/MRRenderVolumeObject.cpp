@@ -5,6 +5,7 @@
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
+#include "MRVisualObjectProxy.h"
 #include "MRVoxels/MRFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
@@ -32,7 +33,7 @@ bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
     RenderModelPassMask desiredPass =
         !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || VisualObjectProxy::getFrontColor( *objVoxels_, objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.

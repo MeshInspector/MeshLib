@@ -147,6 +147,8 @@
     <ClCompile Include="MRModalDialog.cpp" />
     <ClCompile Include="MRRenderImGui.cpp" />
     <ClCompile Include="MRRenderToImage.cpp" />
+    <ClCompile Include="MRVisualObjectProxy.cpp" />
+    <ClCompile Include="MRVisualObjectTag.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -309,6 +311,8 @@
     <ClInclude Include="MRModalDialog.h" />
     <ClInclude Include="MRRenderImGui.h" />
     <ClInclude Include="MRRenderToImage.h" />
+    <ClInclude Include="MRVisualObjectProxy.h" />
+    <ClInclude Include="MRVisualObjectTag.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -13,6 +13,7 @@
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRVisualObjectProxy.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 
@@ -34,7 +35,7 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
-    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
+    bool isColorTransparent = VisualObjectProxy::getFrontColor( *objPoints_, objPoints_->isSelected(), renderParams.viewportId ).a < 255;
     if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
     {
         isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
@@ -124,7 +125,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     const auto& backColor = Vector4f( objPoints_->getBackColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
 
-    const auto& mainColor = Vector4f( objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ) );
+    const auto& mainColor = Vector4f( VisualObjectProxy::getFrontColor( *objPoints_, objPoints_->isSelected(), renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelVerts" ), objPoints_->getVisualizeProperty( PointsVisualizePropertyType::SelectedVertices, renderParams.viewportId ) ) );

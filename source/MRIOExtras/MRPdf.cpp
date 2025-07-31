@@ -253,7 +253,7 @@ void Pdf::addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats
 
         mrImage.pixels = std::vector<Color>( mrImage.resolution.x * mrImage.resolution.y, paletteStats[i].color );
         std::ignore = ImageSave::toAnySupportedFormat( mrImage, imageCellPath );
-        HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_->document, utf8string( imageCellPath ).c_str() ); // TODO FIX need reworl without using filesystem
+        HPDF_Image pdfImage = HPDF_LoadPngImageFromFile( state_->document, utf8string( imageCellPath ).c_str() ); // TODO FIX need rework without using filesystem
         if ( pdfImage )
             HPDF_Page_DrawImage( state_->activePage, pdfImage, bordersX[0], cursorY_ - cellHeight, std::floor( bordersX[1] - bordersX[0] ), cellHeight );
         

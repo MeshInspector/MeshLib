@@ -3,7 +3,7 @@
 namespace MR::ImageTransform
 {
 
-Image rotaateClockwise90( const Image& image )
+Image rotateClockwise90( const Image& image )
 {
     Image newImage;
     newImage.resolution = { image.resolution.y, image.resolution.x };

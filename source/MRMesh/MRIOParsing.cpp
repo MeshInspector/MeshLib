@@ -97,7 +97,7 @@ std::vector<size_t> splitByLines( const char* data, size_t size )
     return newlines;
 }
 
-Int64 getStreamSize( std::istream& in )
+std::streamoff getStreamSize( std::istream& in )
 {
     const auto posStart = in.tellg();
     in.seekg( 0, std::ios::end );

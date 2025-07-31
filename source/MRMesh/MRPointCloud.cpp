@@ -22,6 +22,11 @@ Box3f PointCloud::computeBoundingBox( const AffineXf3f * toWorld ) const
     return MR::computeBoundingBox( points, validPoints, toWorld );
 }
 
+Box3f PointCloud::computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld ) const
+{
+    return MR::computeBoundingBox( points, getVertIds( region ), toWorld );
+}
+
 Vector3f PointCloud::findCenterFromPoints() const
 {
     MR_TIMER;

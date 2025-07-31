@@ -1352,6 +1352,9 @@
     <ClInclude Include="MRSolidOfRevolution.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudPart.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
     <ClInclude Include="MRImageTransform.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>

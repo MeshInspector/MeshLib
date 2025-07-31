@@ -68,6 +68,8 @@ public:
     /// Discrete: bar consists of single colored rectangles for each initial color
     /// Linear (default): color is changing from one to another during initial color list
     /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    /// \param labelBgColor label background color
+    MRVIEWER_API void draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, const Color& labelBgColor, bool onlyTopHalf = false ) const;
     MRVIEWER_API void draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf = false ) const;
 
     // structure for label
@@ -226,7 +228,7 @@ private:
     Color getBaseColor_( float val );
 
     // What color we assume the pallete is drawn on top of. Typically should be the viewport background color.
-    Color getBackgroundColor_() const;
+    const Color& getBackgroundColor_() const;
 
 
     // fill labels with equal distance between

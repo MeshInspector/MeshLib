@@ -3,7 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRId.h"
-
+#include "MRPointCloudPart.h"
 #include <cfloat>
 
 namespace MR
@@ -29,7 +29,7 @@ struct PointsProjectionResult
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param skipCb callback to discard VertId projection candidate
  */
-[[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
+[[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloudPart& pcp,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
     float loDistLimitSq = 0,
@@ -40,12 +40,14 @@ struct PointsProjectionResult
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
  * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ * \param region if not nullptr, all points not from the given region will be ignored
  * \param skipCb callback to discard VertId projection candidate
  */
 [[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTreePoints& tree,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
     float loDistLimitSq = 0,
+    const VertBitSet * region = nullptr,
     VertPredicate skipCb = {} );
 
 /**

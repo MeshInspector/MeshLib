@@ -20,6 +20,10 @@ public:
     MeshOrPoints( const MeshPart & mp ) : var_( mp ) { }
     MeshOrPoints( const PointCloudPart & pcp ) : var_( pcp ) { }
 
+    // these constructors are redundant for C++, but important for python bindings
+    MeshOrPoints( const Mesh & mesh ) : var_( MeshPart( mesh ) ) { }
+    MeshOrPoints( const PointCloud & pc ) : var_( PointCloudPart( pc ) ) { }
+
     /// if this object holds a mesh part then returns pointer on it, otherwise returns nullptr
     [[nodiscard]] const MeshPart* asMeshPart() const;
 

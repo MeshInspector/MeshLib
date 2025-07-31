@@ -163,11 +163,11 @@ public:
     /// returns minimum squared value, not smaller than all squared values of palette's range
     [[nodiscard]] float getRangeSq() const { return std::max( sqr( getRangeMin() ), sqr( getRangeMax() ) ); }
 
-    // returns formated string for this value of palette
-    MRVIEWER_API std::string getStringValue( float value );
-    // returns maximal label count
+    /// returns formated string for this value of palette
+    MRVIEWER_API std::string getStringValue( float value ) const;
+    /// returns maximal label count
     MRVIEWER_API int getMaxLabelCount();
-    // sets maximal label count
+    /// sets maximal label count
     MRVIEWER_API void setMaxLabelCount( int val );
 
     /// set legend limits. if min > max - limits are disabled
@@ -194,6 +194,9 @@ public:
     // Call this after `setNumHistogramBuckets()`.
     MRVIEWER_API void updateStats( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
 
+    /// Create uniform labels
+    /// \details creates labels for each color boundary (for a discrete palette)
+    MRVIEWER_API std::vector<Label> createUniformLabels() const;
 
     struct Histogram
     {
@@ -219,7 +222,7 @@ public:
     // The normal histogram, if enabled (check with `isHistogramEnabled()`).
     [[nodiscard]] const Histogram &getHistogramValues() { return histogram_; }
     // This one has the size matching `getParameters().discretization`. Only has meaningful values if enabled, check with `isDiscretizationPercentagesEnabled()`.
-    [[nodiscard]] const Histogram &getDiscrHistogramValues() { return histogramDiscr_; }
+    [[nodiscard]] const Histogram &getDiscrHistogramValues() const { return histogramDiscr_; }
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
@@ -231,15 +234,17 @@ private:
     const Color& getBackgroundColor_() const;
 
 
-    // fill labels with equal distance between
+    // set labels with equal distance between
     void setUniformLabels_();
+    // make labels with equal distance between
+    void makeUniformLabels_( std::vector<Label>& labels ) const;
     // first label is equal to min value, last - to the max val
     // don't use with MinMaxNegPos mode
     void setZeroCentredLabels_();
 
     void updateCustomLabels_();
 
-    void sortLabels_();
+    void sortLabels_( std::vector<Label>& labels ) const;
 
     void updateLegendLimits_( const MinMaxf& limits );
     void updateLegendLimitIndexes_();

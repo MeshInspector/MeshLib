@@ -560,6 +560,7 @@ struct MRMESH_CLASS Mesh;
 struct MRMESH_CLASS EdgeLengthMesh;
 class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
+struct MRMESH_CLASS PointCloudPart;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 class MRMESH_CLASS AABBTreeObjects;

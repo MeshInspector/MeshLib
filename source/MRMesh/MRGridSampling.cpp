@@ -165,13 +165,14 @@ std::optional<VertBitSet> verticesGridSampling( const MeshPart & mp, float voxel
     return res;
 }
 
-std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float voxelSize, const ProgressCallback & cb )
+std::optional<VertBitSet> pointGridSampling( const PointCloudPart& pcp, float voxelSize, const ProgressCallback & cb )
 {
-    if (voxelSize <= 0.f)
-        return cloud.validPoints;
     MR_TIMER;
+    const auto & ps = pcp.cloud.getVertIds( pcp.region );
+    if ( voxelSize <= 0 )
+        return ps;
 
-    const auto bbox = cloud.getBoundingBox();
+    const auto bbox = pcp.cloud.computeBoundingBox( pcp.region );
     const auto bboxSz = bbox.max - bbox.min;
     constexpr float maxVoxelsInOneDim = 1 << 10;
     const Vector3i dims
@@ -186,10 +187,10 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
         return {};
 
     int counter = 0;
-    int size = int( cloud.validPoints.count() );
-    for ( auto v : cloud.validPoints )
+    int size = int( ps.count() );
+    for ( auto v : ps )
     {
-        grid.addVertex( cloud.points[v], v );
+        grid.addVertex( pcp.cloud.points[v], v );
         if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 1024 ) )
             return {};
     }

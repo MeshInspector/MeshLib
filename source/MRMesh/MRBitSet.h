@@ -293,7 +293,6 @@ public:
     [[nodiscard]] reference operator *() const { return index_; }
 
     [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
-    [[nodiscard]] friend bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a != *b; }
 
 private:
     const T * bitset_ = nullptr;

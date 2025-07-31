@@ -13,13 +13,17 @@ MRMESH_API std::vector<size_t> splitByLines( const char* data, size_t size );
 
 // get the size of the remaining data in the input stream
 // The return type would've been `std::streamoff`, but we need our own typedef to make the C bindings happy on Mac.
-MRMESH_API Int64 getStreamSize( std::istream& in );
+// This has `MR_BIND_IGNORE` for now because it doesn't look very useful in C, since our `istream` bindings are minimal (the only istream you
+//   can access is `std::cin`). If we expand them later, this can be added back.
+MRMESH_API MR_BIND_IGNORE Int64 getStreamSize( std::istream& in );
 
 // reads input stream to string
-MRMESH_API Expected<std::string> readString( std::istream& in );
+// This has `MR_BIND_IGNORE` for now because it doesn't look very useful in C, since our `istream` bindings are minimal (the only istream you
+//   can access is `std::cin`). If we expand them later, this can be added back.
+MRMESH_API MR_BIND_IGNORE Expected<std::string> readString( std::istream& in );
 
 // reads input stream to monolith char block
-MR_BIND_IGNORE MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
+MRMESH_API MR_BIND_IGNORE Expected<Buffer<char>> readCharBuffer( std::istream& in );
 
 // read coordinates to `v` separated by space
 template<typename T>

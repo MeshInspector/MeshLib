@@ -171,7 +171,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class MRMESH_CLASS), SetBitIterato
 
 struct Color;
 
-// Must our `Int64` and `Uint64` everywhere in the public API instead of `long`, `long long`, `int64_t`, `uint64_t`, etc.
+// Must use our `Int64` and `Uint64` everywhere in the public API instead of `long`, `long long`, `int64_t`, `uint64_t`, etc.
 // But `size_t` and `ptrdiff_t` are allowed as is.
 // This is required to generate consistent C bindings on all platforms, and this is checked during binding generation.
 //
@@ -188,12 +188,10 @@ struct Color;
 using Int64 = std::ptrdiff_t;
 using Uint64 = std::size_t;
 static_assert(sizeof(Int64) == 8);
-static_assert(sizeof(Int64) == 8);
+static_assert(sizeof(Uint64) == 8);
 #else
 using Int64 = std::int64_t;
 using Uint64 = std::uint64_t;
-static_assert(sizeof(Int64) == 8);
-static_assert(sizeof(Int64) == 8);
 #endif
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRMESH_CLASS Vector2,

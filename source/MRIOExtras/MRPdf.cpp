@@ -5,7 +5,6 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRVector2.h"
-#include "MRViewer/MRPalette.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
 

@@ -11,16 +11,14 @@ struct Color
 
     constexpr Color() noexcept : r{ 0 }, g{ 0 }, b{ 0 }, a{ 255 } {}
     explicit Color( NoInit ) noexcept {}
-    constexpr Color( int r, int g, int b, int a = 255 ) noexcept :
-        r{uint8_t(r)}, 
-        g{uint8_t(g)}, 
-        b{uint8_t(b)}, 
-        a{uint8_t(a)} {}
-    constexpr Color( float r, float g, float b, float a = 1 ) noexcept :
+    constexpr Color( int r, int g, int b, int a ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{uint8_t(a)} {}
+    constexpr Color( int r, int g, int b ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{255} {} // Using a separate overload instead of a default argument to produce better C bindings.
+    constexpr Color( float r, float g, float b, float a ) noexcept :
         r{ r > 1 ? uint8_t( 255 ) : ( r < 0 ? uint8_t( 0 ) : uint8_t( r * 255 ) )},
         g{ g > 1 ? uint8_t( 255 ) : ( g < 0 ? uint8_t( 0 ) : uint8_t( g * 255 ) )},
         b{ b > 1 ? uint8_t( 255 ) : ( b < 0 ? uint8_t( 0 ) : uint8_t( b * 255 ) )},
-        a{ a > 1 ? uint8_t( 255 ) : ( a < 0 ? uint8_t( 0 ) : uint8_t( a * 255 ) )}{}
+        a{ a > 1 ? uint8_t( 255 ) : ( a < 0 ? uint8_t( 0 ) : uint8_t( a * 255 ) )} {}
+    constexpr Color( float r, float g, float b ) noexcept : Color( r, g, b, 1.f ) {} // Using a separate overload instead of a default argument to produce better C bindings.
 
     constexpr unsigned int getUInt32() const noexcept { return ( unsigned( r ) ) + ( unsigned( g ) << 8 ) + ( unsigned( b ) << 16 ) + ( unsigned( a ) << 24 ); }
 
@@ -53,7 +51,7 @@ struct Color
     }
 
     template<typename T>
-    explicit constexpr Color( const Vector3<T>& vec ) noexcept : 
+    explicit constexpr Color( const Vector3<T>& vec ) noexcept :
         r{ valToUint8( vec.x ) },
         g{ valToUint8( vec.y ) },
         b{ valToUint8( vec.z ) },

@@ -21,7 +21,9 @@ def test_plane_sections():
 
     # actually trim the mesh, introducing new vertices and making invalid some old ones
     if is_bindings_v3:
-        mrmesh.trimWithPlane(cube, plane)
+        params = mrmesh.TrimWithPlaneParams()
+        params.plane = plane
+        mrmesh.trimWithPlane(cube, params)
     else:
         mrmesh.cutMeshWithPlane(cube, plane)
 

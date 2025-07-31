@@ -1,0 +1,12 @@
+--clean-output-dirs
+--helper-name-prefix MR_
+--helper-macro-name-prefix MRC_
+--helper-header-dir MRCMisc
+--max-header-name-length 100
+--merge-std-and-tl-expected
+--expose-as-struct '/MR::Vector\d\w.*/'
+--expose-as-struct '/MR::Matrix\d\w.*/'
+--expose-as-struct '/MR::AffineXf\d\w.*/'
+--expose-as-struct '/MR::Box\d\w.*/'
+--expose-as-struct '/MR::(?!NoInit|Dental)[A-Z]\w*Id/'
+--expose-as-struct '/MR::Color/'

@@ -61,15 +61,22 @@ override seq = $(call safe_shell,bash -c $(call quote,echo {0..$(call safe_shell
 ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
 IS_MACOS := 0
+IS_LINUX := 0
 else
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Darwin)
 IS_WINDOWS := 0
 IS_MACOS := 1
+IS_LINUX := 0
+else
+IS_WINDOWS := 0
+IS_MACOS := 0
+IS_LINUX := 1
 endif
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 override IS_MACOS := $(filter-out 0,$(IS_MACOS))
+override IS_LINUX := $(filter-out 0,$(IS_LINUX))
 
 # On Windows, check that we are in the VS prompt, or at least that `VCToolsInstallDir` is defined (which is what Clang needs).
 # Otherwise Clang may or may not choose some weird system libraries.
@@ -78,6 +85,19 @@ ifeq ($(origin VCToolsInstallDir),undefined)
 $(error Must run this in Visual Studio developer command prompt, or at least copy the value of the `VCToolsInstallDir` env variable)
 endif
 endif
+
+
+# What target language?
+TARGET=python
+#TARGET=c
+override known_target_languages := python c
+override TARGET := $(strip $(TARGET))
+$(if $(filter-out 1,$(words $(TARGET)))$(filter-out $(known_target_languages),$(TARGET)),$(error Wrong value of `TARGET`, must be one of: $(known_target_languages)))
+override is_py := $(filter python,$(TARGET))
+override is_c := $(filter c,$(TARGET))
+
+
+ifeq ($(TARGET),python)
 
 # Set to 1 if you're planning to make a wheel from this module.
 FOR_WHEEL := 0
@@ -89,6 +109,8 @@ $(info Those modules are for a Python wheel? $(if $(FOR_WHEEL),YES,NO))
 BUILD_SHIMS := $(FOR_WHEEL)
 override BUILD_SHIMS := $(filter-out 0,$(BUILD_SHIMS))
 $(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
+
+endif # $(TARGET) == python
 
 # Set to 1 if MeshLib was built in debug mode. Ignore this on Windows. By default we're trying to guess this based on the CMake cache.
 # Currently this isn't needed for anything, hence commented out.
@@ -102,10 +124,15 @@ $(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
 
 # ---- Windows-only vars: [
 
+ifeq ($(TARGET),python)
+
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
 override valid_vs_modes := Debug Release
 $(if $(filter-out $(valid_vs_modes),$(VS_MODE)),$(error Invalid `VS_MODE=$(VS_MODE)`, expected one of: $(valid_vs_modes)))
+
+endif
+
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -136,6 +163,40 @@ MACOS_MIN_VER :=
 # ] ----
 
 
+# The C++ compiler.
+# When making C bindings, this is still necessary even though we don't compile anything with it.
+# That's because we need to run `clang++ -print-resource-dir` and feed that resource directory to libclang, so it can find its internal headers.
+ifneq ($(IS_WINDOWS),)
+CXX_FOR_BINDINGS := clang++
+else ifneq ($(IS_MACOS),)
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version.txt))/bin/clang++
+else
+# Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
+CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
+endif
+
+
+# Source directory of MRBind.
+MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
+
+# MRBind executable .
+MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
+MRBIND_GEN_C_EXE = $(MRBIND_EXE)_gen_c
+
+
+# Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
+ifneq ($(IS_WINDOWS),)
+DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
+DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
+else
+DEPS_BASE_DIR := .
+DEPS_LIB_DIR := $(DEPS_BASE_DIR)/lib
+endif
+DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
+
+
+ifeq ($(TARGET),python)
+
 # Where to find MeshLib.
 ifneq ($(IS_WINDOWS),)
 MESHLIB_SHLIB_DIR := source/x64/$(VS_MODE)
@@ -144,22 +205,6 @@ MESHLIB_SHLIB_DIR := build/Release/bin
 endif
 ifeq ($(wildcard $(MESHLIB_SHLIB_DIR)),)
 $(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exist! You either forgot to build MeshLib, or are running this script with the wrong current directory. Call this from your project's root)
-endif
-
-# Source directory of MRBind.
-MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
-
-# MRBind executable .
-MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
-
-# The C++ compiler.
-ifneq ($(IS_WINDOWS),)
-CXX_FOR_BINDINGS := clang++
-else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version.txt))/bin/clang++
-else
-# Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
-CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))
 endif
 
 # Which C++ compiler we should try to match for ABI.
@@ -197,15 +242,6 @@ $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
 
-# Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
-ifneq ($(IS_WINDOWS),)
-DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
-DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
-else
-DEPS_BASE_DIR := .
-DEPS_LIB_DIR := $(DEPS_BASE_DIR)/lib
-endif
-DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
@@ -373,33 +409,38 @@ endif
 # You can change this to something else to rename the module, to have it side-by-side with the legacy one.
 PACKAGE_NAME := meshlib
 
+endif # $(TARGET) == python
 
 
 
 # --- The list of modules:
 MODULES :=
 
-MODULES += mrmeshpy
-mrmeshpy_InputProjects := MRMesh MRIOExtras MRSymbolMesh MRVoxels
-mrmeshpy_ExtraMrbindFlags := --allow MR
-mrmeshpy_EnablePch := 1
-mrmeshpy_ExtraInputDirs := $(makefile_dir)extra_headers
-mrmeshpy_NumFragments := $(NUM_FRAGMENTS)
+MODULES += mrmesh
+mrmesh_PyName := mrmeshpy
+mrmesh_InputProjects := MRMesh MRIOExtras MRSymbolMesh MRVoxels
+mrmesh_ExtraMrbindFlags := --allow MR
+mrmesh_EnablePch := 1
+mrmesh_PyExtraInputDirs := $(makefile_dir)extra_headers
+mrmesh_PyNumFragments := $(NUM_FRAGMENTS)
 # Those files are parsed and baked into the final bindings.
-mrmeshpy_ExtraInputFiles := $(makefile_dir)helpers.cpp
+mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 # Those files are compiled as is and linked into the final bindings.
-mrmeshpy_ExtraSourceFiles := $(makefile_dir)aliases.cpp
+mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Include the `MRCuda` project?
 # Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
-ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+# Also is currently disabled for the C bindings.
+ENABLE_CUDA := $(if $(or $(IS_MACOS),$(is_c)),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 ifneq ($(ENABLE_CUDA),)
-MODULES += mrcudapy
-mrcudapy_InputProjects := MRCuda
-mrcudapy_ExtraMrbindFlags := --allow MR::Cuda
-mrcudapy_DependsOn := $(PACKAGE_NAME).mrmeshpy
+MODULES += mrcuda
+mrcuda_PyName := mrcudapy
+mrcuda_InputProjects := MRCuda
+mrcuda_ExtraMrbindFlags := --allow MR::Cuda
+# Which other Python modules to import at startup.
+mrcuda_PyDependsOn := $(PACKAGE_NAME).mrmeshpy
 endif
 
 
@@ -413,35 +454,76 @@ endif
 
 .DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
 
+ifeq ($(TARGET),python)
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
+endif
+ifeq ($(TARGET),c)
+C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2
+endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
-ifneq ($(IS_WINDOWS),)
-TEMP_OUTPUT_DIR := source/TempOutput/PythonBindings/x64/$(VS_MODE)
+ifeq ($(TARGET),c)
+TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
+else ifneq ($(IS_WINDOWS),)
+TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds
 endif
 INPUT_GLOBS := *.h
+
+ifeq ($(TARGET),python)
+# This is passed to `mrbind --format=...`.
+MRBIND_PARSER_OUTPUT_FORMAT=macros
+MRBIND_PARSER_OUTPUT_EXT=.cpp
+else
+MRBIND_PARSER_OUTPUT_FORMAT=json
+MRBIND_PARSER_OUTPUT_EXT=.json
+endif
+
 # Note that we're ignoring `operator<=>` in `mrbind_flags.txt` because it causes errors on VS2022:
 # `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
 # `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
-MRBIND_FLAGS := $(call load_file,$(makefile_dir)mrbind_flags.txt)
+MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)../../source
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
-# Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
-COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)
+COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
+# Need whitespace to handle `~` correctly.
+COMPILER_FLAGS += -I $(MRBIND_SOURCE)/include
+
+COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_ANY_BINDINGS
+COMPILER += -DMR_COMPILING_ANY_BINDINGS
+ifeq ($(TARGET),python)
+COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_PB11_BINDINGS
+COMPILER += -DMR_COMPILING_PB11_BINDINGS
+else ifeq ($(TARGET),c)
+COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_C_BINDINGS
+# This doesn't actually get used, since this makefile doesn't compile the C bindings, it only generates them
+# We have to set those flags in CMake.
+COMPILER += -DMR_COMPILING_C_BINDINGS
+endif
+
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
-LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
+LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
 
 # Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
 #   because the header override with it being constexpr is in this resource directory.
 # We certainly need this on Windows and MacOS. It's not strictly necessary on Ubuntu, but is needed on Arch, so better make it unconditional.
 COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
+
+
+MRBIND_GEN_C_FLAGS := $(call load_file,$(makefile_dir)mrbind_gen_c_flags.txt)
+
+# Adjusting canonical types to fixed-size typedefs.
+ifeq ($(TARGET),c)
+MRBIND_FLAGS += --canonicalize-to-fixed-size-typedefs --canonicalize-size_t-to-uint64_t --implicit-enum-underlying-type-is-always-int
+MRBIND_GEN_C_FLAGS += --reject-long-and-long-long --use-size_t-typedef-for-uint64_t
+endif
+
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -468,20 +550,27 @@ COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 endif
-else # Linux or MacOS:
-COMPILER += -fvisibility=hidden
-COMPILER_FLAGS += -fPIC
-# Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
-COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
-# MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
-#   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
-rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
-LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
+endif # Windows
+
+# Linux.
+ifneq ($(IS_LINUX),)
+COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
+endif
+
+# MacOS.
 ifneq ($(IS_MACOS),)
 # Our dependencies are here.
 COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
+
+# The min version. We override it to avoid incompatibility warnings against Apple Clang when linking.
+ifneq ($(MACOS_MIN_VER),)
+COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
+LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
+endif # have MACOS_MIN_VER
+
+ifeq ($(TARGET),python)
 LINKER_FLAGS += -L$(HOMEBREW_DIR)/lib
 LINKER_FLAGS += -ltbb
 # This fixes an error during wheel creation:
@@ -493,26 +582,45 @@ LINKER_FLAGS += -Wl,-headerpad_max_install_names
 # Also note that this is one long flag (`-undefined dynamic_lookup`), not two independent fones.
 # Also not that you MUST NOT link the Python libs in addition to doing this, otherwise you'll still get segfaults.
 LINKER_FLAGS += -Xlinker -undefined -Xlinker dynamic_lookup
-# The min version. We override it to avoid incompatibility warnings against Apple Clang when linking.
-ifneq ($(MACOS_MIN_VER),)
-COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
-LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
-endif
-else # Linux:
-COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
-endif
-endif
+endif # $(TARGET) == python
+endif # MacOS
+
+
+# Python-only.
+ifeq ($(TARGET),python)
+
+# Linux or MacOS.
+ifneq ($(IS_LINUX)$(IS_MACOS),)
+
+COMPILER += -fvisibility=hidden
+COMPILER_FLAGS += -fPIC
+
+# Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
+COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
+# MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
+#   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
+rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
+LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
+endif # Linux or MacOS.
+endif # Python-only.
+
 
 # Directories:
 # Temporary output.
 $(TEMP_OUTPUT_DIR):
 	@mkdir -p $(call quote,$@)
+
+ifeq ($(TARGET),python)
 # Module output.
 $(MODULE_OUTPUT_DIR):
 	@mkdir -p $(call quote,$@)
+endif
 
 
 override all_outputs :=
+
+
+ifeq ($(TARGET),python)
 
 # Things for our patched pybind: --- [
 # Also setting `Py_LIMITED_API` is a part of this, but it's spread all over this makefile.
@@ -543,48 +651,71 @@ ifneq ($(BUILD_SHIMS),)
 override all_outputs += $(shim_outputs)
 endif
 
+endif # $(TARGET) == python
+
 # Those are used by `module_snippet` below.
 .PHONY: only-generate
 
 # This code segment is repeated for every module. $1 is the module name.
-override define module_snippet =
+# This part sets some basic variables.
+override define module_snippet_vars =
 # Which directories we search for headers.
-$(call var,_input_dirs := $(addprefix $(makefile_dir)../../source/,$($1_InputProjects)) $($1_ExtraInputDirs))
+$(call var,$1__InputDirs := $(addprefix $(makefile_dir)../../source/,$($1_InputProjects)) $($1_PyExtraInputDirs))
 # Input headers.
-$(call var,_input_files := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$(_input_dirs),$(INPUT_GLOBS)))))
+$(call var,$1__InputFiles := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$($1__InputDirs),$(INPUT_GLOBS)))))
+endef
+$(foreach x,$(MODULES),$(eval $(call module_snippet_vars,$x)))
 
+
+# This part handles Python-specific variables.
+ifeq ($(TARGET),python)
+override define module_snippet_vars_py =
 # Unset the PCH flag on the module if PCHs are disabled globally.
 $(if $(ENABLE_PCH),,$(call var,$1_EnablePch :=))
 
 # Set the default number of fragments, if not specified.
-$(if $($1_NumFragments),,$(call var,$1_NumFragments := 1))
+$(if $($1_PyNumFragments),,$(call var,$1_PyNumFragments := 1))
 
 # Pick whatever Python version for get_python_cflags, it shouldn't matter.
 $(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
 
 # Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
-$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$1 $(if $($1_DependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_DependsOn))))))
+$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$($1_PyName) $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
+endef
+$(foreach x,$(MODULES),$(eval $(call module_snippet_vars_py,$x)))
+endif # $(TARGET) == python
 
+
+# This part runs the parser.
+override define module_snippet_parse =
 # Produce the one combined header including all our input headers.
 # And if PCH is enabled, this also includes the headers to bake.
 $(call var,$1__CombinedHeaderOutput := $(TEMP_OUTPUT_DIR)/$1.combined.hpp)
-$($1__CombinedHeaderOutput): $(_input_files) | $(TEMP_OUTPUT_DIR)
+$($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >$$@,#pragma once$$(lf))
-	$$(foreach f,$(_input_files),$$(file >>$$@,#include "$$f"$$(lf)))
+	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
 	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
-	$$(if $($1_EnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))
-	$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)
-	$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))
-	$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)
+	$(if $(is_py),\
+		$$(if $($1_EnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <pybind11/pybind11.h>$$(lf)#endif))\
+		$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)\
+		$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))\
+		$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)\
+	)
 
 # Run the parser.
 # Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
-$(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated.cpp)
+$(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated$(MRBIND_PARSER_OUTPUT_EXT))
 only-generate: $($1__ParserSourceOutput)
 $($1__ParserSourceOutput): $($1__CombinedHeaderOutput) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[$1] [Generating] $($1__ParserSourceOutput))
+	@echo $(call quote,[$1] [Parsing] $($1__ParserSourceOutput))
 	@$(MRBIND_EXE) $(MRBIND_FLAGS) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
+endef
+$(foreach x,$(MODULES),$(eval $(call module_snippet_parse,$x)))
 
+
+# This part builds the Python modules.
+ifeq ($(TARGET),python)
+override define module_snippet_build_py =
 # Compile the PCH.
 $(call var,$1__BakedPch :=)
 $(call var,$1__PchImportFlag :=)
@@ -606,26 +737,49 @@ $(if $(and $($1_EnablePch),$(filter-out -fpch-instantiate-templates,$(PCH_CODEGE
 # Compile N object files (fragments) from the generated source.
 $(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | $(TEMP_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Compiling] $$< (fragment $$*))
-	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $($1__PchImportFlag) -DMB_NUM_FRAGMENTS=$(strip $($1_NumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
+	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $($1__PchImportFlag) -DMB_NUM_FRAGMENTS=$(strip $($1_PyNumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
 
 # A list of all object files.
 # NOTE: This is amended later, so we must refer to it lazily.
-$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_NumFragments))))
+$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))))
 
 # Link the module.
-# Have to evaluate `$1_ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
-$(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$1$(PYTHON_MODULE_SUFFIX))
+# Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
+$(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$($1_PyName)$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
 $($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Linking] $$@)
 	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
 
 # A pretty target.
-.PHONY: $1
-$1: $($1__LinkerOutput)
-
+.PHONY: $($1_PyName)
+$($1_PyName): $($1__LinkerOutput)
 endef
-$(foreach x,$(MODULES),$(eval $(call module_snippet,$x)))
+$(foreach x,$(MODULES),$(eval $(call module_snippet_build_py,$x)))
+endif # $(TARGET) == python
+
+# This part generates the C code.
+ifeq ($(TARGET),c)
+override define module_snippet_generate_c =
+# Produce the one combined header including all our input headers.
+# And if PCH is enabled, this also includes the headers to bake.
+$(call var,$1__CCodeGenerationMarker := $(TEMP_OUTPUT_DIR)/$1.generation_marker)
+$(call var,all_outputs += $($1__CCodeGenerationMarker))
+# Currently I'm not adding a `/$1` suffix to the output directory because we only have one project enabled for C, and only run the parser once.
+# Even if we support more projects (Cuda?), the parser should only be ran one anyway. So when we need multiple projects, this makefile will need to be reworked.
+$(call var,$1__CCodeOutputDir := $(C_CODE_OUTPUT_DIR))
+$($1__CCodeGenerationMarker): $($1__ParserSourceOutput) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Generating C Code] $($1__CCodeOutputDir))
+	@$(MRBIND_GEN_C_EXE) --input $(call quote,$($1__ParserSourceOutput)) --output-header-dir $(call quote,$($1__CCodeOutputDir)/include) --output-source-dir $(call quote,$($1__CCodeOutputDir)/src) $(foreach x,$($1_InputProjects),--map-path $(call quote,$(makefile_dir)../../source/$x) $(patsubst MR%,MRC%,$x)) --assume-include-dir $(call quote,$(makefile_dir)../../source) $(MRBIND_GEN_C_FLAGS)
+endef
+$(foreach x,$(MODULES),$(eval $(call module_snippet_generate_c,$x)))
+endif # $(TARGET) == c
+
+
+# ---- End loop over modules.
+
+
+ifeq ($(TARGET),python)
 
 # This snippet parses and compiles an extra file.
 # $1 is the module name, $2 is the input file name.
@@ -641,7 +795,7 @@ $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Compiling] $(_generated))
 	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
-$(foreach x,$(MODULES),$(foreach y,$($x_ExtraInputFiles),$(eval $(call extra_file_snippet,$x,$y))))
+$(foreach x,$(MODULES),$(foreach y,$($x_PyExtraInputFiles),$(eval $(call extra_file_snippet,$x,$y))))
 
 # This snippet compiles an extra file as is, without passing it through the parser/generator.
 # $1 is the module name, $2 is the input file name.
@@ -652,7 +806,7 @@ $(_object): $2 | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Compiling] $2)
 	@$(COMPILER) $(call quote,$2) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
 endef
-$(foreach x,$(MODULES),$(foreach y,$($x_ExtraSourceFiles),$(eval $(call extra_pregen_file_snippet,$x,$y))))
+$(foreach x,$(MODULES),$(foreach y,$($x_PyExtraSourceFiles),$(eval $(call extra_pregen_file_snippet,$x,$y))))
 
 
 
@@ -678,12 +832,14 @@ $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 	@cp $< $@
 override modules_copied_to_bin_dir := $(patsubst %,,$(MODULES))
 $(foreach m,$(MODULES),\
-	$(call var,_in := $(MODULE_OUTPUT_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
-	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$m$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_in := $(MODULE_OUTPUT_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
+	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
 	$(call var,all_outputs += $(_out))\
 	$(eval $(_out): $(_in) ; @cp $(_in) $(_out))\
 )
 endif
+
+endif # $(TARGET) == python
 
 
 

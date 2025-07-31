@@ -7,7 +7,6 @@
 #include "MRPlane3.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
-#include "MRHash.h"
 #include "MRMarkedContour.h"
 #include "MRGTest.h"
 #include "MRParallelFor.h"

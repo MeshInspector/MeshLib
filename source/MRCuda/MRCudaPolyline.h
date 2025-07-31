@@ -1,6 +1,6 @@
 #pragma once
 
-#if !( defined( MR_PARSING_FOR_PB11_BINDINGS ) || defined(MR_COMPILING_PB11_BINDINGS) )
+#if !( defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined(MR_COMPILING_ANY_BINDINGS) )
 
 #include "exports.h"
 #include "MRCudaBasic.cuh"

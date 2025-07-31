@@ -23,6 +23,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   macos-build-test:
@@ -88,7 +92,7 @@ jobs:
         run: ./scripts/build_thirdparty.sh
 
       - name: Install MRBind
-        if: ${{ inputs.mrbind }}
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: |
           ./scripts/mrbind/install_deps_macos.sh
           ./scripts/mrbind/install_mrbind_macos.sh
@@ -105,6 +109,14 @@ jobs:
           python3 -m pip install -r ./requirements/python.txt
           python3 -m pip install pytest
 
+      - name: Generate C bindings
+        if: ${{ inputs.mrbind_c }}
+        env:
+          PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
+        run: |
+          make --version
+          make -f scripts/mrbind/generate.mk -B --trace TARGET=c
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -112,9 +124,12 @@ jobs:
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_CMAKE_OPTIONS: -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }} -DMR_CXX_STANDARD=23
+          MR_CMAKE_OPTIONS: >
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMR_CXX_STANDARD=23
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           PATH: ${{ env.BREW_PREFIX }}/opt/make/libexec/gnubin:${{ env.BREW_PREFIX }}/opt/grep/libexec/gnubin:${{env.PATH}}
@@ -132,8 +147,12 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: C Unit Tests
+        if: ${{ inputs.mrbind_c }}
+        run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
         timeout-minutes: 8

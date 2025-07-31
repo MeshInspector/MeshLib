@@ -194,6 +194,7 @@ public:
     // Call this after `setNumHistogramBuckets()`.
     MRVIEWER_API void updateStats( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
 
+    MRVIEWER_API const std::vector<Label>& getStandardLabels() const { return labels_; }
 
     struct Histogram
     {
@@ -219,7 +220,7 @@ public:
     // The normal histogram, if enabled (check with `isHistogramEnabled()`).
     [[nodiscard]] const Histogram &getHistogramValues() { return histogram_; }
     // This one has the size matching `getParameters().discretization`. Only has meaningful values if enabled, check with `isDiscretizationPercentagesEnabled()`.
-    [[nodiscard]] const Histogram &getDiscrHistogramValues() { return histogramDiscr_; }
+    [[nodiscard]] const Histogram &getDiscrHistogramValues() const { return histogramDiscr_; }
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );

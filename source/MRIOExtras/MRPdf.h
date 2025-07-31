@@ -6,6 +6,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRColor.h"
 
 #include <filesystem>
 #include <vector>
@@ -70,6 +71,15 @@ public:
      */
     MRIOEXTRAS_API void addTable( const std::vector<std::pair<std::string, float>>& table );
 
+    struct PaletteRowStats
+    {
+        Color color;
+        std::string rangeMin;
+        std::string rangeMax;
+        std::string percent;
+    };
+    MRIOEXTRAS_API void addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats );
+
     /// Parameters to adding image from file
     struct ImageParams
     {
@@ -122,6 +132,7 @@ private:
     float cursorY_ = 0;
 
     bool checkDocument() const;
+    void moveCursorToNewLine();
 };
 
 }

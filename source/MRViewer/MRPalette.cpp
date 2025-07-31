@@ -1098,7 +1098,7 @@ void Palette::Histogram::addValue( float value )
     if ( buckets.empty() )
         return; // This histogram is disabled.
 
-    int bucketIndex = int( value * buckets.size() );
+    int bucketIndex = int( std::floor( value * buckets.size() ) );
 
     if ( bucketIndex < 0 )
         beforeBucket++;

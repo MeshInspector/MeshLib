@@ -1349,6 +1349,9 @@
     <ClInclude Include="MRSolidOfRevolution.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudPart.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">

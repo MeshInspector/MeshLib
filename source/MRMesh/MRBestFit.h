@@ -5,6 +5,7 @@
 #include "MRLine3.h"
 #include "MRPolyline.h"
 #include "MRAffineXf3.h"
+#include "MRPointCloudPart.h"
 #include <array>
 
 namespace MR
@@ -64,8 +65,8 @@ MRMESH_API void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& 
 /// Adds in existing PointAccumulator all line centers with the weight equal to the length line
 MRMESH_API void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const AffineXf3f* xf = nullptr );
 
-/// Adds in existing PointAccumulator all points from the cloud with weight 1
-MRMESH_API void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf = nullptr );
+/// Adds in existing PointAccumulator all points from the cloud (region) with weight 1
+MRMESH_API void accumulatePoints( PointAccumulator& accum, const PointCloudPart& pcp, const AffineXf3f* xf = nullptr );
 
 /// \}
 

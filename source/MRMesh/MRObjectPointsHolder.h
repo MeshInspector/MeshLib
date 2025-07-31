@@ -3,6 +3,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
+#include "MRPointCloudPart.h"
 
 namespace MR
 {
@@ -35,6 +36,9 @@ public:
 
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
+
+    /// \return the pair ( point cloud, selected points ) if any point is selected or full point cloud otherwise
+    [[nodiscard]] PointCloudPart pointCloudPart() const { return selectedPoints_.any() ? PointCloudPart{ *points_, &selectedPoints_ } : PointCloudPart{ *points_ }; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

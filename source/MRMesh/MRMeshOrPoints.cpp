@@ -127,8 +127,8 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.pseudonormal( mpr.mtp ),
-                        .isBd = mpr.mtp.isBd( mp.mesh.topology ),
+                        .normal = mp.mesh.pseudonormal( mpr.mtp, mp.region ),
+                        .isBd = mpr.mtp.isBd( mp.mesh.topology, mp.region ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                     };

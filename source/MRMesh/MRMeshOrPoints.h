@@ -73,7 +73,7 @@ public:
         /// for meshes it will be pseudonormal with the differentiation depending on closest point location (face/edge/vertex)
         std::optional<Vector3f> normal;
 
-        /// can be true only for meshes, if the closest point is located on the boundary
+        /// can be true only for meshes, if the closest point is located on the boundary of the mesh (or the current region)
         bool isBd = false;
 
         /// squared distance from query point to the closest point

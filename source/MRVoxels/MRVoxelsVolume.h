@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVoxelsFwd.h"
+#include "MRFloatGrid.h"
 
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBox.h"

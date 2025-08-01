@@ -30,6 +30,13 @@ file(GLOB_RECURSE HEADERS "include/*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+IF(MESHLIB_C_BINDINGS_UNITY_BUILD)
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    UNITY_BUILD ON
+    UNITY_BUILD_MODE BATCH
+  )
+ENDIF()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MRIOExtras

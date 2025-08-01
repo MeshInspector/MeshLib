@@ -78,7 +78,7 @@ public:
         resizeWithReserve( newSize, T{} );
     }
 
-    /// doubles reserved memory until resize(newSize) can be done without reallocation
+    /// doubles reserved memory until resize(newSize, value) can be done without reallocation
     void resizeWithReserve( size_t newSize, const T & value ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> )
     {
         auto reserved = vec_.capacity();
@@ -91,20 +91,25 @@ public:
         vec_.resize( newSize, value );
     }
 
-    /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements
-    void autoResizeSet( I pos, size_t len, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> )
+    /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements;
+    /// the elements in between old size and \p pos are also set to \p val (for faster implementation)
+    void autoResizeSet( I pos, size_t len, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::is_copy_assignable_v<T> )
     {
         assert( pos );
         const size_t p = pos;
-        if ( const auto sz = size(); p + len > sz )
+        const auto sz = size();
+
+        // change value of existing elements
+        if ( p < sz )
         {
-            resizeWithReserve( p + len, val );
-            if ( p >= sz )
-                return;
-            len = sz - p;
+            const size_t changeLen = std::min( len, sz - p );
+            for ( size_t i = 0; i < changeLen; ++i )
+                vec_[ p + i ] = val;
         }
-        for ( size_t i = 0; i < len; ++i )
-            vec_[ p + i ] = val;
+
+        // resize to add elements
+        if ( p + len > sz )
+            resizeWithReserve( p + len, val );
     }
 
     /// sets the element #i to the given value, adjusting the size of the vector to include new element

@@ -8,7 +8,6 @@
 // 2. `MRMeshDotNet` can't use `std::expected` too.
 // In theory both can be fixed by defining `MR_DOT_NET_BUILD`.
 #define MR_USE_STD_EXPECTED 0
-#include "MRSuppressWarning.h"
 #endif
 
 #if MR_USE_STD_EXPECTED
@@ -24,6 +23,7 @@
 
 #if MR_NODISCARD_TL_EXPECTED
 // fix unity builds
+#include "MRSuppressWarning.h"
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wattributes", 5240 )
 namespace tl { template <class T, class E> class [[nodiscard]] expected; }

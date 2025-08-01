@@ -100,6 +100,7 @@ private:
                         0xc633,    // SpaceMouse enterprise
                         0xc635,    // SpaceMouse compact
                         0xc638,    // SpaceMouse Pro Wireless Bluetooth Edition (USB cable)
+                        0xc63a,    // SpaceMouse Wireless BT
                         0xc652,    // Universal receiver
                         0xc658     // Wireless (3DConnexion Universal Wireless Receiver in WIN32)
             }}

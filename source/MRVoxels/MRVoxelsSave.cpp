@@ -276,7 +276,7 @@ Expected<void> gridToVdb( const FloatGrid& grid, const std::filesystem::path& fi
 Expected<void> gridToVdb( const FloatGrid& vdbVolume, std::ostream& out, ProgressCallback /*callback*/ /*= {} */ )
 {
     openvdb::io::Stream stream( out );
-    stream.write( openvdb::GridCPtrVec{ vdbVolume } );
+    stream.write( openvdb::GridCPtrVec{ vdbVolume.toVdb() } );
     if ( !out )
         return unexpected( "error writing in stream" );
     return {};

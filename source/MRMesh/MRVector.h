@@ -97,19 +97,18 @@ public:
     {
         assert( pos );
         const size_t p = pos;
-        const auto sz = size();
-
-        // change value of existing elements
-        if ( p < sz )
+        if ( const auto sz = size(); p + len > sz )
         {
-            const size_t changeLen = std::min( len, sz - p );
-            for ( size_t i = 0; i < changeLen; ++i )
-                vec_[ p + i ] = val;
-        }
-
-        // resize to add elements
-        if ( p + len > sz )
+            // add new elements with the given value
             resizeWithReserve( p + len, val );
+            if ( p >= sz )
+                return;
+            // the number of the elements existing before function call to be changed
+            len = sz - p;
+        }
+        // change the value of the elements existing before function call
+        for ( size_t i = 0; i < len; ++i )
+            vec_[ p + i ] = val;
     }
 
     /// sets the element #i to the given value, adjusting the size of the vector to include new element

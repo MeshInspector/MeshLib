@@ -20,6 +20,7 @@ MRFillHoleParams mrFillHoleParamsNew( void )
     static const FillHoleParams def;
     return {
         .metric = auto_cast( &def.metric ),
+        .smoothBd = def.smoothBd,
         .outNewFaces = auto_cast( def.outNewFaces ),
         .multipleEdgesResolveMode = auto_cast( def.multipleEdgesResolveMode ),
         .makeDegenerateBand = def.makeDegenerateBand,
@@ -37,6 +38,7 @@ void mrFillHole( MRMesh* mesh_, MREdgeId a_, const MRFillHoleParams* params_ )
     {
         params = {
             .metric = params_->metric ? *auto_cast( params_->metric ) : FillHoleMetric {},
+            .smoothBd = params_->smoothBd,
             .outNewFaces = auto_cast( params_->outNewFaces ),
             .multipleEdgesResolveMode = auto_cast( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,

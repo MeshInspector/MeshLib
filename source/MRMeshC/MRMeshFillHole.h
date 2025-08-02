@@ -27,6 +27,13 @@ typedef struct MRFillHoleParams
       */
     const MRFillHoleMetric* metric;
 
+    /** If true, hole filling will minimize the sum of metrics including boundary edges,
+    *   where one triangle was present before hole filling, and another is added during hole filling.
+    *   This makes boundary edges same smooth as inner edges of the patch.
+    *   If false, edge metric will not be applied to boundary edges, and the patch tends to make a sharper turn there.
+    */
+    bool smoothBd;
+
     /// If not nullptr accumulate new faces
     MRFaceBitSet* outNewFaces;
 

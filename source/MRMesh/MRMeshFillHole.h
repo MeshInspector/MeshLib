@@ -29,8 +29,17 @@ struct FillHoleParams
       * \sa \ref FillHoleMetric
       */
     FillHoleMetric metric;
+
+    /** If true, hole filling will minimize the sum of metrics including boundary edges,
+    *   where one triangle was present before hole filling, and another is added during hole filling.
+    *   This makes boundary edges same smooth as inner edges of the patch.
+    *   If false, edge metric will not be applied to boundary edges, and the patch tends to make a sharper turn there.
+    */
+    bool smoothBd{ true };
+
     /// If not nullptr accumulate new faces
     FaceBitSet* outNewFaces{ nullptr };
+
     /** If Strong makes additional efforts to avoid creating multiple edges, 
       * in some rare cases it is not possible (cases with extremely bad topology), 
       * if you faced one try to use \ref MR::duplicateMultiHoleVertices before \ref MR::fillHole

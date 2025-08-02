@@ -275,12 +275,12 @@ FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-FillHoleMetric getUniversalMetric( const Mesh& mesh, float circumFactor )
+FillHoleMetric getUniversalMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;
-    metric.triangleMetric = [&points = mesh.points, circumFactor] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&points = mesh.points] ( VertId a, VertId b, VertId c )
     {
-        return circumcircleDiameter( points[a], points[b], points[c] ) * circumFactor;
+        return circumcircleDiameter( points[a], points[b], points[c] );
     };
     metric.edgeMetric = [&points = mesh.points] ( VertId a, VertId b, VertId l, VertId r ) -> double
     {

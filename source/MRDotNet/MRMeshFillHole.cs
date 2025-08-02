@@ -39,6 +39,13 @@ namespace MR
               */
             public FillHoleMetric Metric = new FillHoleMetric();
 
+            /** If true, hole filling will minimize the sum of metrics including boundary edges,
+            *   where one triangle was present before hole filling, and another is added during hole filling.
+            *   This makes boundary edges same smooth as inner edges of the patch.
+            *   If false, edge metric will not be applied to boundary edges, and the patch tends to make a sharper turn there.
+            */
+            public bool IncludeBdEdgeMetric = true;
+
             /// If not null accumulate new faces
             public FaceBitSet? OutNewFaces = null;
 

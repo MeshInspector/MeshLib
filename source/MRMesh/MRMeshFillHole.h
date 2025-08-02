@@ -35,7 +35,7 @@ struct FillHoleParams
     *   This makes boundary edges same smooth as inner edges of the patch.
     *   If false, edge metric will not be applied to boundary edges, and the patch tends to make a sharper turn there.
     */
-    bool includeBdEdgeMetric{ true };
+    bool smoothBd{ true };
 
     /// If not nullptr accumulate new faces
     FaceBitSet* outNewFaces{ nullptr };

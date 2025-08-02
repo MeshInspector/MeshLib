@@ -44,7 +44,7 @@ namespace MR
             *   This makes boundary edges same smooth as inner edges of the patch.
             *   If false, edge metric will not be applied to boundary edges, and the patch tends to make a sharper turn there.
             */
-            public bool IncludeBdEdgeMetric = true;
+            public bool SmoothBd = true;
 
             /// If not null accumulate new faces
             public FaceBitSet? OutNewFaces = null;
@@ -101,6 +101,7 @@ namespace MR
         internal struct MRFillHoleParams
         {
             public IntPtr metric = IntPtr.Zero;
+            public byte smoothBd = 1;
             public IntPtr outNewFaces = IntPtr.Zero;
             public MultipleEdgesResolveMode multipleEdgesResolveMode = MultipleEdgesResolveMode.Simple;
             public byte makeDegenerateBand = 0;
@@ -147,6 +148,7 @@ namespace MR
         {
             MRFillHoleParams mrParam;
             mrParam.metric = parameters.Metric.mrMetric_;
+            mrParam.smoothBd = parameters.SmoothBd ? (byte)1 : (byte)0;
             mrParam.outNewFaces = parameters.OutNewFaces?.bs_ ?? IntPtr.Zero;
             mrParam.multipleEdgesResolveMode = parameters.MultipleEdgesResolveMode;
             mrParam.makeDegenerateBand = parameters.MakeDegenerateBand ? (byte)1 : (byte)0;
@@ -173,6 +175,7 @@ namespace MR
         {
             MRFillHoleNicelyParams mrParam;
             mrParam.triangulationParams.metric = parameters.triangulationParams.Metric.mrMetric_;
+            mrParam.triangulationParams.smoothBd = parameters.triangulationParams.SmoothBd ? (byte)1 : (byte)0;
             mrParam.triangulationParams.outNewFaces = parameters.triangulationParams.OutNewFaces?.bs_ ?? IntPtr.Zero;
             mrParam.triangulationParams.multipleEdgesResolveMode = parameters.triangulationParams.MultipleEdgesResolveMode;
             mrParam.triangulationParams.makeDegenerateBand = parameters.triangulationParams.MakeDegenerateBand ? (byte)1 : (byte)0;
@@ -207,6 +210,7 @@ namespace MR
         {
             MRFillHoleParams mrParam;
             mrParam.metric = parameters.Metric.mrMetric_;
+            mrParam.smoothBd = parameters.SmoothBd ? (byte)1 : (byte)0;
             mrParam.outNewFaces = parameters.OutNewFaces?.bs_ ?? IntPtr.Zero;
             mrParam.multipleEdgesResolveMode = parameters.MultipleEdgesResolveMode;
             mrParam.makeDegenerateBand = parameters.MakeDegenerateBand ? (byte)1 : (byte)0;

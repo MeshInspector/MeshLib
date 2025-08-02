@@ -111,19 +111,22 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
             // exclude boundary vertices from positionVertsSmoothly(), since it tends to move them inside the mesh
             auto vertsForSmoothing = newVerts - mesh.topology.findBdVerts( nullptr, &newVerts );
             positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
-            if ( settings.naturalSmooth )
+            if ( settings.triangulateParams.smoothBd )
             {
-                auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
-                auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
-                expand( mesh.topology, incidentVerts, 5 );
-                shrink( mesh.topology, incidentVerts, 2 );
-                MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
-                if ( incidentVerts.any() )
+                positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                if ( settings.naturalSmooth )
                 {
-                    vertsForSmoothing = incidentVerts - mesh.topology.findBdVerts( nullptr, &incidentVerts );
-                    positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                    auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
+                    auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
+                    expand( mesh.topology, incidentVerts, 5 );
+                    shrink( mesh.topology, incidentVerts, 2 );
+                    MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
+                    if ( incidentVerts.any() )
+                    {
+                        vertsForSmoothing = incidentVerts - mesh.topology.findBdVerts( nullptr, &incidentVerts );
+                        positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
+                        positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                    }
                 }
             }
         }

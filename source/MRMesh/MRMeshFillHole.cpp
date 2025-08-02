@@ -111,7 +111,7 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 
 // finds best candidate among all given steps
 void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,
-    const FillHoleMetric& metrics,
+    const FillHoleMetric& metrics, bool includeBdEdgeMetric,
     const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
     for ( unsigned s = 0; s < optimalStepsCache.size(); ++s )
@@ -139,7 +139,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
             VertId leftVert;
             if ( abConn.hasPrev() )
                 leftVert = topology.org( loop[abConn.prevA] );
-            else if ( topology.right( loop[processedConn.a] ) )
+            else if ( includeBdEdgeMetric && topology.right( loop[processedConn.a] ) )
                 leftVert = topology.dest( topology.prev( loop[processedConn.a] ) );
 
             if ( leftVert )
@@ -151,7 +151,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
             VertId rightVert;
             if ( bcConn.hasPrev() )
                 rightVert = topology.org( loop[bcConn.prevA] );
-            else if ( topology.right( loop[v] ) )
+            else if ( includeBdEdgeMetric && topology.right( loop[v] ) )
                 rightVert = topology.dest( topology.prev( loop[v] ) );
 
             if ( rightVert )
@@ -179,7 +179,7 @@ using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
-bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
+bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop, const FillHoleMetric& metricRef, bool includeBdEdgeMetric,
     WeightedConn start, int maxPolygonSubdivisions, MapPatch& mapPatch )
 {
     MR_TIMER;
@@ -232,7 +232,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
             if ( optimalStepsCache.empty() )
                 return false;
             WeightedConn newPrev{ start.a,start.b,DBL_MAX,0 };
-            getTriangulationWeights( topology, map, loop, metricRef, optimalStepsCache, newPrev ); // find better among steps
+            getTriangulationWeights( topology, map, loop, metricRef, includeBdEdgeMetric, optimalStepsCache, newPrev ); // find better among steps
             if ( !newPrev.hasPrev() || !map[start.a][newPrev.prevA].hasPrev() || !map[start.prevA][newPrev.b].hasPrev() )
                 return false;
             start.prevA = newPrev.prevA;
@@ -659,7 +659,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
                 sameEdgeExists( mesh.topology, aCur, cCur ) )
                 return;
             getOptimalSteps( optimalSteps, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
-            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalSteps, current ); // find better among steps
+            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.includeBdEdgeMetric, optimalSteps, current ); // find better among steps
         };
         if ( parallelProcessing )
         {
@@ -689,13 +689,13 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             VertId leftVert;
             if ( newEdgesMap_[i][cIndex].hasPrev() )
                 leftVert = mesh.topology.org( edgeMap_[newEdgesMap_[i][cIndex].prevA] );
-            else if ( mesh.topology.right( edgeMap_[i] ) )
+            else if ( params.includeBdEdgeMetric && mesh.topology.right( edgeMap_[i] ) )
                 leftVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[i] ) );
 
             VertId rightVert;
             if ( newEdgesMap_[cIndex][i].hasPrev() )
                 rightVert = mesh.topology.org( edgeMap_[newEdgesMap_[cIndex][i].prevA] );
-            else if ( mesh.topology.right( edgeMap_[cIndex] ) )
+            else if ( params.includeBdEdgeMetric && mesh.topology.right( edgeMap_[cIndex] ) )
                 rightVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[cIndex] ) );
 
             if ( leftVert && rightVert )
@@ -706,7 +706,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch_ ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.includeBdEdgeMetric, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch_ ) ) )
         {
             savedMapPatch_ = cachedMapPatch_;
             finConn = newEdgesMap_[cIndex][i];

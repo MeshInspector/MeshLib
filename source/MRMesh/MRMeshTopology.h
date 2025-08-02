@@ -252,7 +252,7 @@ public:
     /// creates new face-id not associated with any edge yet
     [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
 
-    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces ant not in \param keepFaces
+    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes multiple given faces by calling \ref deleteFace for each

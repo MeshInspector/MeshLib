@@ -94,10 +94,14 @@ MRMESH_API FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e
 /// and on its boundary
 MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
 
-/// This metric minimizes the maximal dihedral angle between the faces in the triangulation
-/// and on its boundary, and it avoids creating too degenerate triangles;
-///  for planar holes it is the same as getCircumscribedMetric
-MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
+/// This metric minimizes the sum of
+/// 1) for each triangle: its circumcircle diameter times \p circumFactor,
+///    this avoids the appearance of degenerate triangles;
+/// 2) for each edge: double total area of triangles to its left and right
+///    times the factor depending extensionally on absolute dihedral angle between left and right triangles,
+///    this makes visually triangulated surface as smooth as possible.
+/// For planar holes it is the same as getCircumscribedMetric.
+MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh, float circumFactor = 1 );
 
 /// This metric maximizes the minimal angle among all faces in the triangulation
 MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );

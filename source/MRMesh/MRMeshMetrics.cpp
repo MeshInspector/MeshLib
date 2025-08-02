@@ -275,24 +275,27 @@ FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-FillHoleMetric getUniversalMetric( const Mesh& mesh )
+FillHoleMetric getUniversalMetric( const Mesh& mesh, float circumFactor )
 {
     FillHoleMetric metric;
-    metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&points = mesh.points, circumFactor] ( VertId a, VertId b, VertId c )
     {
-        return circumcircleDiameter( mesh.points[a], mesh.points[b], mesh.points[c] );
+        return circumcircleDiameter( points[a], points[b], points[c] ) * circumFactor;
     };
-    metric.edgeMetric = [&] ( VertId a, VertId b, VertId l, VertId r ) -> double
+    metric.edgeMetric = [&points = mesh.points] ( VertId a, VertId b, VertId l, VertId r ) -> double
     {
-        const auto& aP = mesh.points[a];
-        const auto& bP = mesh.points[b];
-        const auto& lP = mesh.points[l];
-        const auto& rP = mesh.points[r];
-        auto ab = bP - aP;
-        auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
-        auto normR = cross( ab, rP - aP );
-        // exp(10* angle) - was too big and broke even double precision
-        return ab.length() * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
+        const auto& aP = points[a];
+        const auto& bP = points[b];
+        const auto& lP = points[l];
+        const auto& rP = points[r];
+        const auto ab = bP - aP;
+        const auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
+        const auto normR = cross( ab, rP - aP );
+        // double sum of triangles' area
+        const auto dblArea = normL.length() + normR.length();
+
+        return std::sqrt( dblArea ) // the same angle for large triangles is much more visible than for small ones (even if shared edge's length is the same)
+             * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) ); // exp(10*angle) - was too big and broke even double precision
     };
     return metric;
 }

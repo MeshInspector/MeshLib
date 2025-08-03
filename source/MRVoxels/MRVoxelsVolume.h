@@ -7,6 +7,8 @@
 #include "MRMesh/MRHeapBytes.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRVector.h"
+#include "MRMesh/MRBitSet.h"
+
 #include <limits>
 
 namespace MR

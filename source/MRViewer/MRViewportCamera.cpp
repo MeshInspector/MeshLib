@@ -404,28 +404,39 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
 {
     std::vector<std::shared_ptr<VisualObject>> allObj;
     if ( fitParams.mode == FitMode::CustomObjectsList )
+    {
         allObj = fitParams.objsList;
+    }
     else
     {
-        const auto type = fitParams.mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
+        ObjectSelectivityType type = ObjectSelectivityType::Any;
+        if ( fitParams.mode == FitMode::SelectedObjects )
+        {
+            type = ObjectSelectivityType::Selected;
+        }
+        else if ( fitParams.mode == FitMode::SelectableObjects )
+        {
+            type = ObjectSelectivityType::Selectable;
+        }
+
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
     }
 
-    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool gobalBasis )
+    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool globalBasis )
     {
         Space space = Space::CameraOrthographic;
         if ( !params_.orthographic )
         {
             space = zoomFov ? Space::CameraPerspective : Space::World;
         }
-        if ( !gobalBasis )
+        if ( !globalBasis )
             return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
         else
             return calcBox_( { getViewerInstance().globalBasisAxes }, space, fitParams.mode == FitMode::SelectedPrimitives );
     }, fitParams );
 }
 
-void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool gobalBasis )> getBoxFn, const BaseFitParams& fitParams )
+void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& fitParams )
 {
     if ( fitParams.snapView )
         params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );

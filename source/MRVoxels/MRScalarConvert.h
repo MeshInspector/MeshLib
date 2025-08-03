@@ -27,7 +27,7 @@ enum class ScalarType
 /// \param scalarType - binary format type
 /// \param range - (for integer types only) the range of possible values
 /// \param min - (for integer types only) the minimal value
-MRVOXELS_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, uint64_t range, int64_t min );
+MRVOXELS_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, Uint64 range, Int64 min );
 
 
 /// More general template to pass a single value of specified format \p scalarType to a generic function \p f

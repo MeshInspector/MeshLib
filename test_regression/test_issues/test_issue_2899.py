@@ -26,7 +26,7 @@ def test_issue_2899(tmp_path):
 
     # Put input meshes in one as separate connected components
     mesh = slope
-    mesh.addPart(slide)
+    mesh.addMesh(slide)
 
     # Find cut contour as the edges having the same coordinates in both Slide and Slope
     twin_pairs = mr.findTwinEdgePairs(mesh, 0)

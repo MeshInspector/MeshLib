@@ -1,8 +1,10 @@
 #pragma once
 
+#include "MRMeshFwd.h" // To fix `attribute declaration must precede definition` on `Sphere`.
+
 namespace MR
 {
- 
+
 /// \ingroup MathGroup
 template <typename V>
 struct Sphere

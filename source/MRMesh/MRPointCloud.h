@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector.h"
+#include "MRVector3.h"
 #include "MRBitSet.h"
 #include "MRMeshFwd.h"
 #include "MRSharedThreadSafeOwner.h"
@@ -32,7 +33,7 @@ struct PointCloud
     /// if region pointer is not null then converts it in reference, otherwise returns all valid points in the cloud
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const
     {
-        assert( !region || ( *region - validPoints ).none() ); // if region is given, then region must be a subset of them
+        assert( !region || region->is_subset_of( validPoints ) ); // if region is given, then region must be a subset of valid points
         return region ? *region : validPoints;
     }
 
@@ -48,6 +49,10 @@ struct PointCloud
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+
+    /// passes through all given vertices (or all valid vertices if region == null) and finds the minimal bounding box containing all of them
+    /// if toWorld transformation is given then returns minimal bounding box in world space
+    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld = nullptr ) const;
 
     /// computes average position of all valid points
     [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;

@@ -17,8 +17,10 @@ namespace MR
 class MultiwayAligningTransform
 {
 public:
+    MRMESH_API MultiwayAligningTransform();
+
     /// initializes internal data to start registering given number of objects
-    MRMESH_API explicit MultiwayAligningTransform( int numObjs = 0 );
+    MRMESH_API explicit MultiwayAligningTransform( int numObjs );
 
     MRMESH_API MultiwayAligningTransform( MultiwayAligningTransform&& ) noexcept;
     MRMESH_API MultiwayAligningTransform& operator=( MultiwayAligningTransform&& ) noexcept;

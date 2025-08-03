@@ -372,9 +372,6 @@
     <ClInclude Include="MRPointCloudRadius.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
-    <ClInclude Include="MRHash.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
@@ -1352,6 +1349,12 @@
     <ClInclude Include="MRSolidOfRevolution.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudPart.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImageTransform.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2206,6 +2209,9 @@
     </ClCompile>
     <ClCompile Include="MRSolidOfRevolution.cpp">
       <Filter>Source Files\Primitives</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImageTransform.cpp">
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

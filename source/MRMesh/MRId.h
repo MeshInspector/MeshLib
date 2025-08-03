@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace MR
 {
@@ -52,7 +53,12 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// Allocating IDs on the heap in C is insufferable, so instead we bind them as single-member structs (via `--expose-as-struct`).
+// But since our parser only tracks public members, we have to make it public for C.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -66,7 +72,7 @@ public:
 };
 
 template <>
-class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
+class Id<EdgeTag>
 {
 public:
     using ValueType = int; //the type used for internal representation of Id
@@ -111,7 +117,11 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// See the primary template for explanation.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -150,7 +160,11 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// See the primary template for explanation.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -175,3 +189,12 @@ inline constexpr UndirectedEdgeId operator ""_ue( unsigned long long i ) noexcep
 inline constexpr VoxelId operator ""_vox( unsigned long long i ) noexcept { return VoxelId{ size_t( i ) }; }
 
 } //namespace MR
+
+template <typename T>
+struct std::hash<MR::Id<T>>
+{
+    size_t operator() ( MR::Id<T> const& p ) const noexcept
+    {
+        return (int)p;
+    }
+};

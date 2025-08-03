@@ -56,14 +56,17 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     if ( !settings.triangulateOnly )
     {
         VertBitSet newVerts;
-        SubdivideSettings subset;
-        subset.maxEdgeLen = settings.maxEdgeLen;
-        subset.maxEdgeSplits = settings.maxEdgeSplits;
-        subset.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
-        subset.region = &newFaces;
-        subset.newVerts = &newVerts;
-        subset.beforeEdgeSplit = settings.beforeEdgeSplit;
-        subset.onEdgeSplit = settings.onEdgeSplit;
+        SubdivideSettings subset
+        {
+            .maxEdgeLen = settings.maxEdgeLen,
+            .maxEdgeSplits = settings.maxEdgeSplits,
+            .maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip,
+            .region = &newFaces,
+            .notFlippable = settings.notFlippable,
+            .newVerts = &newVerts,
+            .beforeEdgeSplit = settings.beforeEdgeSplit,
+            .onEdgeSplit = settings.onEdgeSplit
+        };
 
         const auto lastVert = mesh.topology.lastValidVert();
         VertUVCoords * uvCoords = settings.uvCoords && lastVert < settings.uvCoords->size() ? settings.uvCoords : nullptr;
@@ -108,19 +111,22 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
             // exclude boundary vertices from positionVertsSmoothly(), since it tends to move them inside the mesh
             auto vertsForSmoothing = newVerts - mesh.topology.findBdVerts( nullptr, &newVerts );
             positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-            positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
-            if ( settings.naturalSmooth )
+            if ( settings.triangulateParams.smoothBd )
             {
-                auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
-                auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
-                expand( mesh.topology, incidentVerts, 5 );
-                shrink( mesh.topology, incidentVerts, 2 );
-                MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
-                if ( incidentVerts.any() )
+                positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                if ( settings.naturalSmooth )
                 {
-                    vertsForSmoothing = incidentVerts - mesh.topology.findBdVerts( nullptr, &incidentVerts );
-                    positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
-                    positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                    auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
+                    auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
+                    expand( mesh.topology, incidentVerts, 5 );
+                    shrink( mesh.topology, incidentVerts, 2 );
+                    MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
+                    if ( incidentVerts.any() )
+                    {
+                        vertsForSmoothing = incidentVerts - mesh.topology.findBdVerts( nullptr, &incidentVerts );
+                        positionVertsSmoothlySharpBd( mesh, vertsForSmoothing );
+                        positionVertsSmoothly( mesh, vertsForSmoothing, settings.edgeWeights, settings.vmass );
+                    }
                 }
             }
         }

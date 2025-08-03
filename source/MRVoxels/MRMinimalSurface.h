@@ -39,4 +39,10 @@ MRVOXELS_API size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency,
 /// Returns number of voxels that would be used to perform \ref buildTPMS or \ref buildTPMSVolume
 MRVOXELS_API size_t getNumberOfVoxelsForTPMS( const Vector3f& size, float frequency, float resolution );
 
+/// Returns approximated ISO value corresponding to the given density
+MRVOXELS_API float estimateTPMSIso( TPMSType type, float targetDensity );
+
+/// Returns approximate density corresponding to the given ISO value
+MRVOXELS_API float estimateTPMSDensity( TPMSType type, float targetIso );
+
 }

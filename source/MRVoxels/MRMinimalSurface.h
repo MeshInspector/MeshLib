@@ -16,6 +16,8 @@ enum class Type : int
     DoubleSchwartzP,
     Gyroid,
     DoubleGyroid,
+
+    Count
 };
 MRVOXELS_API std::vector<std::string> getTypeNames();
 

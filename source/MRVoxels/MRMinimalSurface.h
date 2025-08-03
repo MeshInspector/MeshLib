@@ -40,9 +40,13 @@ MRVOXELS_API size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float 
 MRVOXELS_API size_t getNumberOfVoxels( const Vector3f& size, float frequency, float resolution );
 
 /// Returns approximated ISO value corresponding to the given density
+/// @param targetDensity value in [0; 1]
+/// @return Value in [-1; 1]
 MRVOXELS_API float estimateIso( Type type, float targetDensity );
 
 /// Returns approximate density corresponding to the given ISO value
+/// @param targetIso value in [-1; 1]
+/// @return Value in [0; 1]
 MRVOXELS_API float estimateDensity( Type type, float targetIso );
 
 }

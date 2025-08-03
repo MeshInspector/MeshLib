@@ -117,8 +117,11 @@ Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, f
 
     // translation to mesh csys
     const auto xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
+//  this looks like a boolean bug
+//    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
 
-    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
+    sponge->transform( xf );
+    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, nullptr, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );
 

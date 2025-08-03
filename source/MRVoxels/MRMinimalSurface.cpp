@@ -11,10 +11,10 @@
 #include <string>
 #include <map>
 
-namespace MR
+namespace MR::TPMS
 {
 
-std::vector<std::string> getTPMSTypeNames()
+std::vector<std::string> getTypeNames()
 {
     return {
         "Schwartz-P",
@@ -48,17 +48,17 @@ float DoubleGyroid( const Vector3f& p )
 }
 
 }
-TPMSFunction getTPMSFunction( TPMSType type )
+TPMSFunction getTPMSFunction( Type type )
 {
     switch ( type )
     {
-        case TPMSType::SchwartzP:
+        case Type::SchwartzP:
             return TPMSFunctions::SchwartzP;
-        case TPMSType::DoubleSchwartzP:
+        case Type::DoubleSchwartzP:
             return TPMSFunctions::DoubleSchwartzP;
-        case TPMSType::Gyroid:
+        case Type::Gyroid:
             return TPMSFunctions::Gyroid;
-        case TPMSType::DoubleGyroid:
+        case Type::DoubleGyroid:
             return TPMSFunctions::DoubleGyroid;
         default:
             assert( false );
@@ -209,7 +209,7 @@ float interpolateMap( const std::map<float, float>& map, float key )
 }
 
 
-FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequency, float resolution )
+FunctionVolume buildVolume( Type type, const Vector3f& size, float frequency, float resolution )
 {
     const auto [dims, voxelSize] = getDimsAndSize( size, frequency, resolution );
     return {
@@ -225,16 +225,16 @@ FunctionVolume buildTPMSVolume( TPMSType type, const Vector3f& size, float frequ
 }
 
 
-Expected<Mesh> buildTPMS( TPMSType type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb )
+Expected<Mesh> build( Type type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb )
 {
-    return marchingCubes( buildTPMSVolume( type, size, frequency, resolution ), { .cb = cb, .iso = iso } );
+    return marchingCubes( buildVolume( type, size, frequency, resolution ), { .cb = cb, .iso = iso } );
 }
 
-Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb )
+Expected<Mesh> fill( Type type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb )
 {
     // first construct a surface by the bounding box of the mesh
     const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    auto sponge = buildTPMS( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso, subprogress( cb, 0.f, 0.9f ) );
+    auto sponge = build( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
 
@@ -251,27 +251,27 @@ Expected<Mesh> fillWithTPMS( TPMSType type, const Mesh& mesh, float frequency, f
     return std::move( res.mesh );
 }
 
-size_t getNumberOfVoxelsForTPMS( const Mesh& mesh, float frequency, float resolution )
+size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution )
 {
     const auto extraStep = Vector3f::diagonal( 1.f / frequency );
     const auto dims = getDimsAndSize( mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution ).dims;
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 
-size_t getNumberOfVoxelsForTPMS( const Vector3f& size, float frequency, float resolution )
+size_t getNumberOfVoxels( const Vector3f& size, float frequency, float resolution )
 {
     const auto dims = getDimsAndSize( size, frequency, resolution ).dims;
     return (size_t)dims.x * (size_t)dims.y * (size_t)dims.z;
 }
 
-float estimateTPMSIso( TPMSType type, float targetDensity )
+float estimateIso( Type type, float targetDensity )
 {
     int itype = static_cast<int>( type );
     assert( itype < density2iso.size() );
     return interpolateMap( density2iso[itype], targetDensity );
 }
 
-float estimateTPMSDensity( TPMSType type, float targetIso )
+float estimateDensity( Type type, float targetIso )
 {
     int itype = static_cast<int>( type );
     assert( itype < iso2density.size() );

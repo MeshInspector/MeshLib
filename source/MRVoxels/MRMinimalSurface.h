@@ -5,7 +5,7 @@
 #include <MRVoxels/MRVoxelsFwd.h>
 
 
-namespace MR::TPMS
+namespace MR::TPMS // Triply Periodic Minimal Surface
 {
 
 

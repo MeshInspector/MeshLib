@@ -10,7 +10,6 @@
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
-#include "MRVisualObjectProxy.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRMatrix4.h"
@@ -39,7 +38,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
     RenderModelPassMask desiredPass =
         !objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255 || VisualObjectProxy::getFrontColor( *objMesh_, objMesh_->isSelected(), renderParams.viewportId ).a < 255 || objMesh_->getBackColor( renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255 || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).a < 255 || objMesh_->getBackColor( renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
@@ -119,7 +118,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
-    const auto mainColor = Vector4f( VisualObjectProxy::getFrontColor( *objMesh_, objMesh_->isSelected(), renderParams.viewportId ) );
+    const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objMesh_->getSelectedFacesColor( renderParams.viewportId ) );

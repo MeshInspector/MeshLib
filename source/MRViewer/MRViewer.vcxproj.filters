@@ -487,9 +487,6 @@
     <ClCompile Include="MRRenderToImage.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRVisualObjectProxy.cpp">
-      <Filter>Render</Filter>
-    </ClCompile>
     <ClCompile Include="MRVisualObjectTag.cpp">
       <Filter>Render</Filter>
     </ClCompile>
@@ -959,9 +956,6 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderToImage.cpp">
-      <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVisualObjectProxy.cpp">
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualObjectTag.cpp">

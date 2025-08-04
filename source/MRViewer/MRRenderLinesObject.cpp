@@ -5,7 +5,6 @@
 #include "MRGladGlfw.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRVisualObjectProxy.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRTimer.h"
@@ -36,7 +35,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
     RenderModelPassMask desiredPass =
         !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || VisualObjectProxy::getFrontColor( *objLines_, objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
@@ -139,7 +138,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLines_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
-    const auto& mainColor = Vector4f( VisualObjectProxy::getFrontColor( *objLines_, objLines_->isSelected(), renderParams.viewportId ) );
+    const auto& mainColor = Vector4f( objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     if ( !points )

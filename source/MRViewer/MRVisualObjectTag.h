@@ -23,7 +23,7 @@ struct VisualObjectTag
     MRVIEWER_API std::string canonicalName() const;
 };
 
-/// storage for visual object tags
+/// class for storing and changing visual object properties based on the object tags
 class VisualObjectTagManager
 {
 public:
@@ -34,14 +34,14 @@ public:
     const std::unordered_map<std::string, VisualObjectTag>& storage() const { return storage_; }
     std::unordered_map<std::string, VisualObjectTag>& storage() { return storage_; }
 
-    /// ...
+    /// find all object in given object tree with the visual object tag
     MRVIEWER_API static std::vector<std::shared_ptr<Object>> getAllObjectsWithTag( Object* root, const std::string& visTagId, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable );
 
-    /// ...
+    /// check if given object has the visual object tag
     MRVIEWER_API static bool hasTag( const VisualObject& visObj, const std::string& visTagId );
-    /// ...
+    /// add the tag to the object and apply related visual object properties
     MRVIEWER_API static void applyTag( VisualObject& visObj, const std::string& visTagId, bool force = false );
-    /// ...
+    /// remove the tag from the object and reset the visual object properties
     MRVIEWER_API static void revertTag( VisualObject& visObj, const std::string& visTagId, bool force = false );
 
 private:

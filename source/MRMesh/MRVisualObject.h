@@ -293,9 +293,9 @@ public:
     MRMESH_API void setUseDefaultScenePropertiesOnDeserialization( bool useDefaultScenePropertiesOnDeserialization )
     { useDefaultScenePropertiesOnDeserialization_ = useDefaultScenePropertiesOnDeserialization; }
 
-    /// ...
+    /// reset basic object colors to their default values from the current theme
     MRMESH_API virtual void resetFrontColor();
-    /// ...
+    /// reset all object colors to their default values from the current theme
     MRMESH_API virtual void resetColors();
 
 protected:

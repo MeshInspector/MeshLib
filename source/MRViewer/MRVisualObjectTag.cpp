@@ -59,7 +59,6 @@ void VisualObjectTagManager::applyTag( VisualObject& visObj, const std::string& 
 
     visObj.setFrontColor( tag.selectedColor, true );
     visObj.setFrontColor( tag.unselectedColor, false );
-
     visObj.getMutableTags().emplace( tagId );
 }
 
@@ -70,9 +69,13 @@ void VisualObjectTagManager::revertTag( VisualObject& visObj, const std::string&
         return;
 
     visObj.resetFrontColor();
-    // TODO: re-apply existing tags?
-
     visObj.getMutableTags().erase( tagId );
+
+    // re-apply existing tag
+    const auto& storage = instance().storage_;
+    for ( const auto& [id, _] : storage )
+        if ( hasTag( visObj, id ) )
+            return applyTag( visObj, id );
 }
 
 void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manager )

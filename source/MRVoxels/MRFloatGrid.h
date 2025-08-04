@@ -16,7 +16,7 @@ namespace MR
 
 struct MRVOXELS_CLASS OpenVdbFloatGrid;
 
-/// ...
+/// wrapper class that helps mrbind to avoid excess MRVDBFloatGrid.h includes
 class MRVOXELS_CLASS FloatGrid
 {
 public:

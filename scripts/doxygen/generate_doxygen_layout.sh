@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Absolute path to this script, e.g. /home/user/bin/foo.sh
 SCRIPT=$(readlink -f "$0")
@@ -21,22 +21,22 @@ fi
 
 # edit API block
 MODULE_PARAMETERS_MATRIX=(
-  #TEMPLATE PATH TITLE
+  #TEMPLATE NAME TITLE
   "CPP:Cpp:C++"
   "PY:Py:Python"
   "C:C:C"
 )
 
-for MODULES_ROW in "${MODULES_MATRIX[@]}"; do
-  IFS=':' read -r TEMPLATE PATH TITLE <<< "$MODULES_ROW"
+for MODULES_ROW in "${MODULE_PARAMETERS_MATRIX[@]}"; do
+  IFS=':' read -r TEMPLATE NAME TITLE <<< "$MODULES_ROW"
 
   if [ "$1" = "Main" ]; then
-    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"${PATH}/API${PATH}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
-  elif [ "$1" = "$PATH" ]; then
+    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"${NAME}/API${NAME}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+  elif [ "$1" = "$NAME" ]; then
     sed -e "/      <!-- API_${TEMPLATE}_PAGE -->/r ${DOXYGEN_DIR}/layout_templates/API_part.xml" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
-    sed -e "s|__API_PAGE_URL__|@ref API${PATH}Page|" -e "s|__API_PAGE_NAME__|${TITLE}|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+    sed -e "s|__API_PAGE_URL__|@ref API${NAME}Page|" -e "s|__API_PAGE_NAME__|${TITLE}|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
   else
-    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"../${PATH}/API${PATH}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"../${NAME}/API${NAME}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
   fi
 done
 

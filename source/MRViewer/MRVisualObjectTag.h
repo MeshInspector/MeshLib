@@ -6,6 +6,8 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRViewportProperty.h"
 
+namespace Json { class Value; }
+
 namespace MR
 {
 

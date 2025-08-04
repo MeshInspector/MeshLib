@@ -10,7 +10,7 @@ namespace MR
 Color VisualObjectProxy::getFrontColor( const VisualObject& visObj, bool selected, ViewportId viewportId )
 {
     const auto& storage = VisualObjectTagManager::instance().storage();
-    for ( const auto& data : visObj.getMetadata() )
+    for ( const auto& data : visObj.getTags() )
     {
         constexpr std::string_view cTagPrefix { "tag=" };
         if ( data.starts_with( cTagPrefix ) )

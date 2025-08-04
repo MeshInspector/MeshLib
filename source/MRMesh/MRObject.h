@@ -252,11 +252,11 @@ public:
     /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
     [[nodiscard]] virtual bool hasModel() const { return false; }
 
-    /// provides read-only access to the metadata storage
+    /// provides read-only access to the tag storage
     /// the storage is a set of unique strings
-    const std::unordered_set<std::string>& getMetadata() const { return metadata_; }
-    /// provides read-write access to the metadata storage
-    std::unordered_set<std::string>& getMutableMetadata() { return metadata_; }
+    const std::unordered_set<std::string>& getTags() const { return tags_; }
+    /// provides read-write access to the tag storage
+    std::unordered_set<std::string>& getMutableTags() { return tags_; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
@@ -305,7 +305,7 @@ protected:
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
-    std::unordered_set<std::string> metadata_;
+    std::unordered_set<std::string> tags_;
 
     // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
     // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children

@@ -293,6 +293,11 @@ public:
     MRMESH_API void setUseDefaultScenePropertiesOnDeserialization( bool useDefaultScenePropertiesOnDeserialization )
     { useDefaultScenePropertiesOnDeserialization_ = useDefaultScenePropertiesOnDeserialization; }
 
+    /// ...
+    MRMESH_API virtual void resetFrontColor();
+    /// ...
+    MRMESH_API virtual void resetColors();
+
 protected:
     VisualObject( const VisualObject& obj ) = default;
 

@@ -88,6 +88,8 @@ public:
     /// return cached total length
     [[nodiscard]] MRMESH_API float totalLength() const;
 
+    MRMESH_API void resetFrontColor() override;
+
 protected:
     ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 

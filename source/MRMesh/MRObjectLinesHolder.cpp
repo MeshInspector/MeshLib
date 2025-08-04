@@ -154,6 +154,11 @@ float ObjectLinesHolder::totalLength() const
     return *totalLength_;
 }
 
+void ObjectLinesHolder::resetFrontColor()
+{
+    setDefaultColors_();
+}
+
 bool ObjectLinesHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
     return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<LinesVisualizePropertyType>().has_value();

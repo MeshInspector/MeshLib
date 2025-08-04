@@ -72,6 +72,8 @@ protected:
 
     MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 
+    MRMESH_API void resetFrontColor() override;
+
 private:
     std::shared_ptr<DistanceMap> dmap_;
     AffineXf3f dmap2local_;

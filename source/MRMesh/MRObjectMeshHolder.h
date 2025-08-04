@@ -245,6 +245,9 @@ public:
     /// nullptr means serialize in defaultSerializeMeshFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
 
+    MRMESH_API void resetFrontColor() override;
+    MRMESH_API void resetColors() override;
+
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal faceSelectionChangedSignal;

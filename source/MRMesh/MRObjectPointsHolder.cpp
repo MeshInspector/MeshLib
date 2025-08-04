@@ -247,6 +247,17 @@ void ObjectPointsHolder::setSerializeFormat( const char * newFormat )
     serializeFormat_ = newFormat;
 }
 
+void ObjectPointsHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
+}
+
+void ObjectPointsHolder::resetColors()
+{
+    setDefaultColors_();
+}
+
 void ObjectPointsHolder::swapBase_( Object& other )
 {
     if ( auto otherPointsHolder = other.asType<ObjectPointsHolder>() )

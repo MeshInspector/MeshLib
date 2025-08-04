@@ -567,7 +567,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             if ( params.forceCut )
                 cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
             auto res = cutMesh( meshA, meshAContours, cmParams );
-            convertIntFloatAllVerts( meshA, converters );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
             if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
@@ -603,7 +602,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         if ( params.forceCut )
             cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
         auto res = cutMesh( meshB, meshBContours, cmParams );
-        convertIntFloatAllVerts( meshB, converters );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory
         if ( cut2oldBPtr && !new2orgSubdivideMapB.empty() )
@@ -652,7 +650,10 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return { .errorString = stringOperationCanceled() };
 
     if ( res.has_value() )
+    {
         result.mesh = std::move( res.value() );
+        convertIntFloatAllVerts( result.mesh, converters );
+    }
     else
         result.errorString = res.error();
     return result;

@@ -11,13 +11,14 @@
 int main( void )
 {
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2("mesh.stl", NULL, NULL);
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
 
     // Handle failure to load mesh
     if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        MR_expected_MR_Mesh_std_string_Destroy( meshEx );
         return 1;
     }
 

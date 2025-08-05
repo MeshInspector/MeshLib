@@ -43,13 +43,12 @@ jobs:
         continue-on-error: true
         with:
           name: CBindings
-          path: ./
+          path: ./MeshLib/
       
       - name: Test
         run: |
           ls
-          ls MeshLibC2
-          ls CBindings
+          ls MeshLib
       
       - name: Stop
         run: exit 1

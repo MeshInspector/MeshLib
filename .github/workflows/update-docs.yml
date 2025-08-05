@@ -44,16 +44,6 @@ jobs:
         with:
           name: CBindings
           path: ./MeshLib/Cbindings/
-      
-      - name: Test
-        run: |
-          ls
-          ls MeshLib
-          ls MeshLib/Cbindings
-      
-      - name: Stop
-        run: exit 1
-
 
       - name: Check for Python Stubs
         id: check_py_stubs

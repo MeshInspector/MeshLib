@@ -43,12 +43,13 @@ jobs:
         continue-on-error: true
         with:
           name: CBindings
-          path: ./MeshLib/
+          path: ./MeshLib/Cbindings/
       
       - name: Test
         run: |
           ls
           ls MeshLib
+          ls MeshLib/Cbindings
       
       - name: Stop
         run: exit 1

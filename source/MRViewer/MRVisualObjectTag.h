@@ -48,7 +48,7 @@ public:
     MRVIEWER_API static void update( VisualObject& visObj, const std::string& visTagId );
 
 private:
-    friend void deserializeFromJson( const Json::Value&, VisualObjectTagManager& );
+    friend MRVIEWER_API void deserializeFromJson( const Json::Value&, VisualObjectTagManager& );
 
     std::unordered_map<std::string, VisualObjectTag> storage_;
 };

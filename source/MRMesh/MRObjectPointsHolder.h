@@ -140,6 +140,11 @@ public:
     MRMESH_API void setSerializeFormat( const char * newFormat );
     [[deprecated]] MR_BIND_IGNORE void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
+    /// reset all object colors to their default values from the current theme
+    MRMESH_API void resetColors() override;
+
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;
     SelectionChangedSignal pointsSelectionChangedSignal;

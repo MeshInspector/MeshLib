@@ -18,6 +18,7 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRVoxels/MRObjectVoxels.h"
@@ -69,6 +70,7 @@ const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
+const std::string cVisualObjectTags = "visualObjectTags";
 }
 
 namespace Defaults
@@ -526,6 +528,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
     }
+
+    if ( cfg.hasJsonValue( cVisualObjectTags ) )
+    {
+        auto& manager = VisualObjectTagManager::instance();
+        deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
+    }
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -673,6 +681,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+    }
+
+    {
+        Json::Value visualObjectTagsJson;
+        const auto& manager = VisualObjectTagManager::instance();
+        serializeToJson( manager, visualObjectTagsJson );
+        cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
 }
 

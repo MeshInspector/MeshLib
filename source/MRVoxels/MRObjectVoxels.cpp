@@ -564,6 +564,12 @@ void ObjectVoxels::setSerializeFormat( const char * newFormat )
     serializeFormat_ = newFormat;
 }
 
+void ObjectVoxels::resetFrontColor()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
+}
+
 void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )

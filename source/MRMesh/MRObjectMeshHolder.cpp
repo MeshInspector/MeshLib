@@ -693,6 +693,18 @@ void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
     serializeFormat_ = newFormat;
 }
 
+void ObjectMeshHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void ObjectMeshHolder::resetColors()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
+}
+
 size_t ObjectMeshHolder::numUndirectedEdges() const
 {
     if ( !numUndirectedEdges_ )

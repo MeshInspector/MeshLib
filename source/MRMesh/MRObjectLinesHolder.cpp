@@ -156,6 +156,7 @@ float ObjectLinesHolder::totalLength() const
 
 void ObjectLinesHolder::resetFrontColor()
 {
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
     setDefaultColors_();
 }
 

@@ -180,6 +180,7 @@ Expected<std::future<Expected<void>>> ObjectDistanceMap::serializeModel_( const 
 
 void ObjectDistanceMap::resetFrontColor()
 {
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
     setDefaultColors_();
 }
 

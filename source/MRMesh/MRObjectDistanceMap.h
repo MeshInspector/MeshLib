@@ -72,6 +72,7 @@ protected:
 
     MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 
+    /// reset basic object colors to their default values from the current theme
     MRMESH_API void resetFrontColor() override;
 
 private:

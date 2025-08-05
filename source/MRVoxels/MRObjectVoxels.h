@@ -216,6 +216,7 @@ public:
     /// nullptr means serialize in defaultSerializeVoxelsFormat()
     MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
+    /// reset basic object colors to their default values from the current theme
     MRVOXELS_API void resetFrontColor() override;
 
     /// signal about Iso-surface changes (from updateIsoSurface)

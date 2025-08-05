@@ -255,6 +255,7 @@ void ObjectPointsHolder::resetFrontColor()
 
 void ObjectPointsHolder::resetColors()
 {
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
     setDefaultColors_();
 }
 

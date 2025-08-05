@@ -701,6 +701,7 @@ void ObjectMeshHolder::resetFrontColor()
 
 void ObjectMeshHolder::resetColors()
 {
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
     setDefaultColors_();
 }
 

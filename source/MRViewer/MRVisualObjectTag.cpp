@@ -9,7 +9,7 @@
 namespace
 {
 
-constexpr const char* cVisualObjectTagPrefix = "visual-object-tag=";
+constexpr const char* cVisualObjectTagPrefix = "visual-object-tag:";
 
 } // namespace
 
@@ -27,55 +27,63 @@ VisualObjectTagManager& VisualObjectTagManager::instance()
     return sInstance;
 }
 
+const std::unordered_map<std::string, VisualObjectTag>& VisualObjectTagManager::storage()
+{
+    return instance().storage_;
+}
+
+std::string VisualObjectTagManager::registerTag( VisualObjectTag tag )
+{
+    const auto id = cVisualObjectTagPrefix + tag.canonicalName();
+    instance().storage_.emplace( id, std::move( tag ) );
+    return id;
+}
+
+void VisualObjectTagManager::updateTag( const std::string& visTagId, VisualObjectTag tag )
+{
+    auto it = instance().storage_.find( visTagId );
+    if ( it != instance().storage_.end() )
+        it->second = std::move( tag );
+}
+
+void VisualObjectTagManager::unregisterTag( const std::string& visTagId )
+{
+    instance().storage_.erase( visTagId );
+}
+
 std::vector<std::shared_ptr<Object>> VisualObjectTagManager::getAllObjectsWithTag( Object* root, const std::string& visTagId, const ObjectSelectivityType& type )
 {
     // TODO: more efficient version
-    const auto tagId = cVisualObjectTagPrefix + visTagId;
     auto results = getAllObjectsInTree( root, type );
     std::erase_if( results, [&] ( const std::shared_ptr<Object>& obj )
     {
-        return !obj->getTags().contains( tagId );
+        return !obj->tags().contains( visTagId );
     } );
     return results;
 }
 
-bool VisualObjectTagManager::hasTag( const VisualObject& visObj, const std::string& visTagId )
+void VisualObjectTagManager::update( VisualObject& visObj, const std::string& visTagId )
 {
-    const auto tagId = cVisualObjectTagPrefix + visTagId;
-    return visObj.getTags().contains( tagId );
-}
-
-void VisualObjectTagManager::applyTag( VisualObject& visObj, const std::string& visTagId, bool force )
-{
-    const auto tagId = cVisualObjectTagPrefix + visTagId;
-    if ( visObj.getTags().contains( tagId ) && !force )
-        return;
-
     const auto& storage = instance().storage_;
-    const auto visTagIt = storage.find( visTagId );
-    if ( visTagIt == storage.end() )
-        return;
-    const auto& [_, tag] = *visTagIt;
+    if ( visObj.tags().contains( visTagId ) )
+    {
+        const auto visTagIt = storage.find( visTagId );
+        if ( visTagIt == storage.end() )
+            return;
+        const auto& [_, tag] = *visTagIt;
 
-    visObj.setFrontColor( tag.selectedColor, true );
-    visObj.setFrontColor( tag.unselectedColor, false );
-    visObj.getMutableTags().emplace( tagId );
-}
+        visObj.setFrontColor( tag.selectedColor, true );
+        visObj.setFrontColor( tag.unselectedColor, false );
+    }
+    else
+    {
+        visObj.resetFrontColor();
 
-void VisualObjectTagManager::revertTag( VisualObject& visObj, const std::string& visTagId, bool force )
-{
-    const auto tagId = cVisualObjectTagPrefix + visTagId;
-    if ( !visObj.getTags().contains( tagId ) && !force )
-        return;
-
-    visObj.resetFrontColor();
-    visObj.getMutableTags().erase( tagId );
-
-    // re-apply existing tag
-    const auto& storage = instance().storage_;
-    for ( const auto& [id, _] : storage )
-        if ( hasTag( visObj, id ) )
-            return applyTag( visObj, id );
+        // re-apply existing tag
+        for ( const auto& [id, _] : storage )
+            if ( visObj.tags().contains( id ) )
+                return update( visObj, id );
+    }
 }
 
 void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manager )
@@ -83,7 +91,7 @@ void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manag
     if ( !root.isArray() )
         return;
 
-    auto& storage = manager.storage();
+    auto& storage = manager.storage_;
     for ( const auto& tagObj : root )
     {
         if ( !tagObj["Id"].isString() )

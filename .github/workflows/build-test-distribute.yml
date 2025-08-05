@@ -447,3 +447,9 @@ jobs:
         with:
           name: PythonStubs
           failOnError: false
+      
+      - name: Delete C bindings headers
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: CBindings
+          failOnError: false

@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main()
+int main( void )
 {
     int rc = EXIT_FAILURE;
 

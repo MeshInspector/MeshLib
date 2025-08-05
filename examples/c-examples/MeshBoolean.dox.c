@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main()
+int main( void )
 {
     int rc = EXIT_FAILURE;
 

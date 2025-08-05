@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main()
+int main( void )
 {
     // Load mesh
     MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );

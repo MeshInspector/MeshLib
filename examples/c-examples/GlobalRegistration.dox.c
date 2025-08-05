@@ -65,6 +65,9 @@ int main( int argc, char* argv[] )
     // the global registration can be applied to meshes and point clouds
     // to simplify the sample app, we will work with point clouds only
 
+    // Note that the default ICP method (point-to-plane) relies on the point cloud having the normals information, and will not work otherwise.
+    // If your point cloud doesn't have normals, switch to the point-to-point method by calling `MR_ICPProperties_Set_method( params, MR_ICPMethod_PointToPoint );`.
+
     const int inputNum = argc - 2;
 
     // as ICP and MultiwayICP classes accept both meshes and point clouds,

@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main()
+int main( void )
 {
     const MR_Vector3f size = MR_Vector3f_diagonal( 1.f );
     const MR_Vector3f base = MR_Vector3f_diagonal( -0.5f );

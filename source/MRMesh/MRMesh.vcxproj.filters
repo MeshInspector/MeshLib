@@ -1014,9 +1014,6 @@
     <ClInclude Include="MRConeApproximator.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRAlphaShape.h">
-      <Filter>Source Files\Triangulation</Filter>
-    </ClInclude>
     <ClInclude Include="MRSymMatrix4.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1983,9 +1980,6 @@
     </ClCompile>
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
-    </ClCompile>
-    <ClCompile Include="MRAlphaShape.cpp">
-      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>

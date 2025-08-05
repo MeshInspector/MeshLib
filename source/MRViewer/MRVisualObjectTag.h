@@ -3,8 +3,9 @@
 #include "exports.h"
 
 #include "MRMesh/MRColor.h"
-#include "MRMesh/MRExpected.h"
 #include "MRMesh/MRObjectsAccess.h"
+
+#include <unordered_map>
 
 namespace Json { class Value; }
 
@@ -20,7 +21,7 @@ struct VisualObjectTag
     Color unselectedColor;
 
     /// canonical name for indexing
-    MRVIEWER_API std::string canonicalName() const;
+    [[nodiscard]] MRVIEWER_API std::string canonicalName() const;
 };
 
 /// class for storing and changing visual object properties based on the object tags

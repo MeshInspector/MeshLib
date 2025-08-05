@@ -38,7 +38,7 @@ jobs:
           path: MeshLib/scripts/wheel/meshlib/meshlib
 
 
-      - name: Download C bindings
+      - name: Download C bindings headers
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:

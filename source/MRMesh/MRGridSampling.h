@@ -3,7 +3,8 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRId.h"
-#include "MRMesh/MRVector.h"
+#include "MRPointCloudPart.h"
+#include "MRVector.h"
 #include <optional>
 
 namespace MR
@@ -17,7 +18,7 @@ MRMESH_API std::optional<VertBitSet> verticesGridSampling( const MeshPart& mp, f
 /// performs sampling of cloud points;
 /// subdivides point cloud bounding box on voxels of approximately given size and returns at most one point per voxel;
 /// returns std::nullopt if it was terminated by the callback
-MRMESH_API std::optional<VertBitSet> pointGridSampling( const PointCloud& cloud, float voxelSize, const ProgressCallback & cb = {} );
+MRMESH_API std::optional<VertBitSet> pointGridSampling( const PointCloudPart& pcp, float voxelSize, const ProgressCallback & cb = {} );
 
 
 /// structure to contain pointers to model data

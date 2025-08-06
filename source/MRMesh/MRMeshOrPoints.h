@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshPart.h"
+#include "MRPointCloudPart.h"
 #include "MRAffineXf3.h"
 #include "MRId.h"
 #include <cfloat>
@@ -16,15 +17,18 @@ namespace MR
 class MeshOrPoints
 {
 public:
-    MeshOrPoints( const Mesh & mesh ) : var_( MeshPart( mesh ) ) { }
     MeshOrPoints( const MeshPart & mp ) : var_( mp ) { }
-    MeshOrPoints( const PointCloud & pc ) : var_( &pc ) { }
+    MeshOrPoints( const PointCloudPart & pcp ) : var_( pcp ) { }
+
+    // these constructors are redundant for C++, but important for python bindings
+    MeshOrPoints( const Mesh & mesh ) : var_( MeshPart( mesh ) ) { }
+    MeshOrPoints( const PointCloud & pc ) : var_( PointCloudPart( pc ) ) { }
 
     /// if this object holds a mesh part then returns pointer on it, otherwise returns nullptr
     [[nodiscard]] const MeshPart* asMeshPart() const;
 
-    /// if this object holds a point cloud then returns pointer on it, otherwise returns nullptr
-    [[nodiscard]] const PointCloud* asPointCloud() const;
+    /// if this object holds a point cloud part then returns pointer on it, otherwise returns nullptr
+    [[nodiscard]] const PointCloudPart* asPointCloudPart() const;
 
     /// returns the minimal bounding box containing all valid vertices of the object (and not only part of mesh);
     /// implemented via obj.getAABBTree()
@@ -69,7 +73,7 @@ public:
         /// for meshes it will be pseudonormal with the differentiation depending on closest point location (face/edge/vertex)
         std::optional<Vector3f> normal;
 
-        /// can be true only for meshes, if the closest point is located on the boundary
+        /// can be true only for meshes, if the closest point is located on the boundary of the mesh (or the current region)
         bool isBd = false;
 
         /// squared distance from query point to the closest point
@@ -84,12 +88,12 @@ public:
     [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
     using LimitedProjectorFunc = std::function<void( const Vector3f& p, ProjectionResult& res )>;
-    /// returns a function that updates projection (closest) points on this,
-    /// the update takes place only if res.distSq on input is more than squared distance to the closest point
+    /// returns a function that updates previously known projection (closest) points on this,
+    /// the update takes place only if newly found closest point is closer to p than sqrt(res.distSq) given on input
     [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
 private:
-    std::variant<MeshPart, const PointCloud*> var_;
+    std::variant<MeshPart, PointCloudPart> var_;
 };
 
 /// an object and its transformation to global space with other objects
@@ -117,15 +121,15 @@ inline const MeshPart* MeshOrPoints::asMeshPart() const
 {
     return std::visit( overloaded{
         []( const MeshPart & mp ) { return &mp; },
-        []( const PointCloud * ) { return (const MeshPart*)nullptr; }
+        []( const PointCloudPart & ) { return (const MeshPart*)nullptr; }
     }, var_ );
 }
 
-inline const PointCloud* MeshOrPoints::asPointCloud() const
+inline const PointCloudPart* MeshOrPoints::asPointCloudPart() const
 {
     return std::visit( overloaded{
-        []( const MeshPart & ) { return (const PointCloud *)nullptr; },
-        []( const PointCloud * pc ) { return pc; }
+        []( const MeshPart & ) { return (const PointCloudPart *)nullptr; },
+        []( const PointCloudPart & pcp ) { return &pcp; }
     }, var_ );
 }
 

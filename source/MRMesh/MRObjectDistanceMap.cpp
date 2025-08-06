@@ -178,6 +178,12 @@ Expected<std::future<Expected<void>>> ObjectDistanceMap::serializeModel_( const 
     } );
 }
 
+void ObjectDistanceMap::resetFrontColor()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
+}
+
 void ObjectDistanceMap::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );

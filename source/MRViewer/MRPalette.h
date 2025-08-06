@@ -7,6 +7,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRViewer/MRImGui.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRVector.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -17,10 +18,10 @@ namespace MR
 
 /**
  * @brief Class to hold one dimension texture with value to UV mapping
- * 
+ *
  * Discrete mode will draw rectangle for each color
  * Continuous mode will draw interpolated color
- * 
+ *
  */
 class Palette
 {
@@ -63,11 +64,23 @@ public:
     /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
     MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
+    /// Draws vertical legend with labels in existing window or scene
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    /// \param labelBgColor label background color
+    MRVIEWER_API void draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, const Color& labelBgColor, bool onlyTopHalf = false ) const;
+    MRVIEWER_API void draw( ImDrawList* drawList, float scaling, const ImVec2& pos, const ImVec2& size, bool onlyTopHalf = false ) const;
+
     // structure for label
     struct MRVIEWER_CLASS Label
     {
         float value = 0.f; // label position according normal scale (from Min to Max)
         std::string text; // label text
+
+        // The special zero label.
+        // The flag is there so we can hide it if we want.
+        bool isZero = false;
 
         Label() = default;
         MRVIEWER_API Label( float val, std::string text );
@@ -98,7 +111,7 @@ public:
     /// get colors for given vert value
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids ) const;
+    MRVIEWER_API VertColors getVertColors( const VertScalars& values, const VertBitSet& region, const VertBitSet* valids, const VertBitSet* validsForStats );
 
     const MeshTexture& getTexture() const { return texture_; };
 
@@ -115,11 +128,20 @@ public:
         };
     }
 
+    // If `bits` is non-zero, captures the pointer and returns a predicate that checks against this bitset.
+    // Otherwise returns null.
+    [[nodiscard]] MRVIEWER_API static VertPredicate predFromBitSet( const VertBitSet* bits );
+
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} ) const;
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const;
+    /// \param validsIfHistogram If specified, replaces \p valids for the purposes of creating the histogram and computing the percentages of vertices in different discretization steps.
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {}, const VertPredicate & validsForStats = {} );
+
+    VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids, const VertBitSet * validsForStats = nullptr )
+    {
+        return getUVcoords( values, region, predFromBitSet( valids ), predFromBitSet( validsForStats ) );
+    }
 
     // base parameters of palette
     struct Parameters
@@ -141,15 +163,66 @@ public:
     /// returns minimum squared value, not smaller than all squared values of palette's range
     [[nodiscard]] float getRangeSq() const { return std::max( sqr( getRangeMin() ), sqr( getRangeMax() ) ); }
 
-    // returns formated string for this value of palette
-    MRVIEWER_API std::string getStringValue( float value );
-    // returns maximal label count
+    /// returns formated string for this value of palette
+    MRVIEWER_API std::string getStringValue( float value ) const;
+    /// returns maximal label count
     MRVIEWER_API int getMaxLabelCount();
-    // sets maximal label count
+    /// sets maximal label count
     MRVIEWER_API void setMaxLabelCount( int val );
 
     /// set legend limits. if min > max - limits are disabled
     MRVIEWER_API void setLegendLimits( const MinMaxf& limits );
+
+
+    // Histogram:
+
+    [[nodiscard]] bool isHistogramEnabled() const { return getNumHistogramBuckets() != 0; }
+    [[nodiscard]] MRVIEWER_API int getNumHistogramBuckets() const;
+    // Pass zero to disable the histogram. Pass `getDefaultNumHistogramBuckets()` or any other number to enable it.
+    // This should probably be odd, to have a bucket for zero in the middle.
+    MRVIEWER_API void setNumHistogramBuckets( int n );
+    // Returns the recommended argument for `setNumHistogramBuckets()`.
+    [[nodiscard]] MRVIEWER_API int getDefaultNumHistogramBuckets() const;
+
+
+    // Should we maintain the percentages of distances in each discretization step?
+    [[nodiscard]] bool isDiscretizationPercentagesEnabled() const { return enableHistogramDiscr_; }
+    void enableDiscretizationPercentages( bool enable ) { histogramDiscr_.reset(); enableHistogramDiscr_ = enable; }
+
+
+    // This is called automatically by `getValidVerts()` and `getUVcoords(), so usually you don't need to call this manually.
+    // Call this after `setNumHistogramBuckets()`.
+    MRVIEWER_API void updateStats( const VertScalars& values, const VertBitSet& region, const VertPredicate& vertPredicate );
+
+    /// Create uniform labels
+    /// \details creates labels for each color boundary (for a discrete palette)
+    MRVIEWER_API std::vector<Label> createUniformLabels() const;
+
+    struct Histogram
+    {
+        // If this is empty, the histogram is disabled.
+        std::vector<int> buckets;
+        // The buckets for out-of-range elements.
+        int beforeBucket = 0;
+        int afterBucket = 0;
+        // The sum of all values in `buckets` and `{low,high}Bucket`.
+        int numEntries = 0;
+        // The max value in `buckets` (but ignoring `{low,high}Bucket`).
+        int maxEntry = 0;
+
+        // `reset()` sets this to true, and `finalize()` sets this to false.
+        bool needsUpdate = true;
+
+        MRVIEWER_API void reset();
+        MRVIEWER_API void addValue( float value );
+        // Call once after all `addValue()` calls.
+        MRVIEWER_API void finalize();
+    };
+
+    // The normal histogram, if enabled (check with `isHistogramEnabled()`).
+    [[nodiscard]] const Histogram &getHistogramValues() { return histogram_; }
+    // This one has the size matching `getParameters().discretization`. Only has meaningful values if enabled, check with `isDiscretizationPercentagesEnabled()`.
+    [[nodiscard]] const Histogram &getDiscrHistogramValues() const { return histogramDiscr_; }
 
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
@@ -157,16 +230,21 @@ private:
     void updateDiscretizatedColors_();
     Color getBaseColor_( float val );
 
+    // What color we assume the pallete is drawn on top of. Typically should be the viewport background color.
+    const Color& getBackgroundColor_() const;
 
-    // fill labels with equal distance between
+
+    // set labels with equal distance between
     void setUniformLabels_();
+    // make labels with equal distance between
+    void makeUniformLabels_( std::vector<Label>& labels ) const;
     // first label is equal to min value, last - to the max val
     // don't use with MinMaxNegPos mode
     void setZeroCentredLabels_();
 
     void updateCustomLabels_();
 
-    void sortLabels_();
+    void sortLabels_( std::vector<Label>& labels ) const;
 
     void updateLegendLimits_( const MinMaxf& limits );
     void updateLegendLimitIndexes_();
@@ -174,6 +252,27 @@ private:
     std::vector<Label> customLabels_;
     std::vector<Label> labels_;
     bool showLabels_ = false;
+
+    /// Returns the adjusted label, or null if it should be skipped.
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    /// \param storage will sometimes be used as storage for the return value. Don't read `storage` directly after the call. You can pass any string, it'll be cleared.
+    const char* getAdjustedLabelText_( std::size_t labelIndex, bool onlyTopHalf, std::string& storage ) const;
+
+    /// Computes the max label pixel width.
+    float getMaxLabelWidth_( bool onlyTopHalf = false ) const;
+
+    struct StyleVariables
+    {
+        // Top-left window padding.
+        ImVec2 windowPaddingA;
+        // Bottom-right window padding.
+        ImVec2 windowPaddingB;
+        // Spacing between the labels and the colored rect.
+        float labelToColoredRectSpacing {};
+        // The min width of the colored rect.
+        float minColoredRectWidth {};
+    };
+    StyleVariables getStyleVariables_( float scaling ) const;
 
     // stores OpenGL textures. Change useDiscrete_ to switch between them
     MeshTexture texture_;
@@ -193,6 +292,15 @@ private:
 
     MinMaxi legendLimitIndexes_ = { 0, 7 };
     MinMaxf relativeLimits_ = { 0.f, 1.f };
+
+    // This one is of a user-defined size.
+    Histogram histogram_;
+
+    // This one has size matching `parameters_.discretization`.
+    Histogram histogramDiscr_;
+
+    // Whether we should actually update `histogramDiscr_`.
+    bool enableHistogramDiscr_ = false;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };
@@ -215,7 +323,7 @@ private:
     ~PalettePresets() = default;
 
     std::vector<std::string> names_;
-    
+
     void update_();
 
     static PalettePresets& instance_();

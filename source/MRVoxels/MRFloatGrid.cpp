@@ -13,6 +13,48 @@
 namespace MR
 {
 
+FloatGrid::FloatGrid() = default;
+
+FloatGrid::FloatGrid( std::shared_ptr<OpenVdbFloatGrid> ptr )
+    : ptr_( std::move( ptr ) )
+{
+}
+
+void FloatGrid::reset() noexcept
+{
+    ptr_.reset();
+}
+
+void FloatGrid::swap( FloatGrid& other ) noexcept
+{
+    ptr_.swap( other.ptr_ );
+}
+
+OpenVdbFloatGrid* FloatGrid::get() const noexcept
+{
+    return ptr_.get();
+}
+
+OpenVdbFloatGrid& FloatGrid::operator*() const noexcept
+{
+    return *ptr_;
+}
+
+OpenVdbFloatGrid* FloatGrid::operator->() const noexcept
+{
+    return ptr_.get();
+}
+
+FloatGrid::operator bool() const noexcept
+{
+    return (bool)ptr_;
+}
+
+std::shared_ptr<OpenVdbFloatGrid> FloatGrid::toVdb() const noexcept
+{
+    return ptr_;
+}
+
 size_t heapBytes( const FloatGrid& grid )
 {
     return grid ? grid->memUsage() : 0;

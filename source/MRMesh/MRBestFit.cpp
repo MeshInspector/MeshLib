@@ -171,11 +171,11 @@ void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const 
     }
 }
 
-void accumulatePoints( PointAccumulator& accum, const PointCloud& pc, const AffineXf3f* xf )
+void accumulatePoints( PointAccumulator& accum, const PointCloudPart& pcp, const AffineXf3f* xf )
 {
     MR_TIMER;
-    for ( auto v : pc.validPoints )
-        accum.addPoint( pc.points[v].transformed( xf ) );
+    for ( auto v : pcp.cloud.getVertIds( pcp.region ) )
+        accum.addPoint( pcp.cloud.points[v].transformed( xf ) );
 }
 
 void PlaneAccumulator::addPlane( const Plane3d & pl )

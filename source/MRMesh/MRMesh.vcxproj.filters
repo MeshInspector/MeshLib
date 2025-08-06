@@ -372,9 +372,6 @@
     <ClInclude Include="MRPointCloudRadius.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
-    <ClInclude Include="MRHash.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
@@ -1017,9 +1014,6 @@
     <ClInclude Include="MRConeApproximator.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRAlphaShape.h">
-      <Filter>Source Files\Triangulation</Filter>
-    </ClInclude>
     <ClInclude Include="MRSymMatrix4.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1351,6 +1345,12 @@
     </ClInclude>
     <ClInclude Include="MRSolidOfRevolution.h">
       <Filter>Source Files\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudPart.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImageTransform.h">
+      <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1981,9 +1981,6 @@
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRAlphaShape.cpp">
-      <Filter>Source Files\Triangulation</Filter>
-    </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
@@ -2206,6 +2203,9 @@
     </ClCompile>
     <ClCompile Include="MRSolidOfRevolution.cpp">
       <Filter>Source Files\Primitives</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImageTransform.cpp">
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

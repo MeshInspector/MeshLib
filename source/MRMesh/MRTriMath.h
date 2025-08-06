@@ -1,6 +1,7 @@
 #pragma once
 // triangle-related mathematical functions are here
 
+#include "MRVector2.h"
 #include "MRVector3.h"
 #include <algorithm>
 #include <cassert>
@@ -111,7 +112,7 @@ template<typename T>
 [[nodiscard]] T triangleAspectRatio( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
     const auto bc = ( c - b ).length();
-    const auto ca = ( a - c ).length(); 
+    const auto ca = ( a - c ).length();
     const auto ab = ( b - a ).length();
     auto halfPerimeter = ( bc + ca + ab ) / 2;
     auto den = 8 * ( halfPerimeter - bc ) * ( halfPerimeter - ca ) * ( halfPerimeter - ab );
@@ -181,7 +182,7 @@ template<typename T>
 template<typename T>
 [[nodiscard]] inline T area( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
 {
-    return dblArea( p, q, r ) / 2; 
+    return dblArea( p, q, r ) / 2;
 }
 
 /// computes twice the area of given triangle

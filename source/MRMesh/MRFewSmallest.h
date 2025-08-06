@@ -13,8 +13,10 @@ template<typename T>
 class FewSmallest
 {
 public:
+    FewSmallest() {}
+
     /// configure the object to store at most given number of elements
-    explicit FewSmallest( size_t maxElms = 0 ) { reset( maxElms ); }
+    explicit FewSmallest( size_t maxElms ) { reset( maxElms ); }
 
     /// clears the content and reconfigure the object to store at most given number of elements
     void reset( size_t maxElms );

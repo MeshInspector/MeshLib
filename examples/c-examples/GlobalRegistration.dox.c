@@ -4,6 +4,7 @@
 #include <MRCMesh/MRMeshOrPoints.h>
 #include <MRCMesh/MRMultiwayICP.h>
 #include <MRCMesh/MRPointCloud.h>
+#include <MRCMesh/MRPointCloudPart.h>
 #include <MRCMesh/MRPointsLoad.h>
 #include <MRCMesh/MRPointsSave.h>
 #include <MRCMesh/MRString.h>
@@ -135,7 +136,7 @@ int main( int argc, char* argv[] )
     {
         const MR_MeshOrPointsXf* input = MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index_const( inputs, (MR_ObjId){i} );
         const MR_AffineXf3f* xf = MR_Vector_MR_AffineXf3f_MR_ObjId_index_const( xfs, (MR_ObjId){i} );
-        const MR_PointCloud* cloud = MR_MeshOrPoints_asPointCloud( MR_MeshOrPointsXf_Get_obj( input ) );
+        const MR_PointCloud* cloud = MR_PointCloudPart_Get_cloud( MR_MeshOrPoints_asPointCloudPart( MR_MeshOrPointsXf_Get_obj( input ) ) );
         const MR_VertCoords* points = MR_PointCloud_Get_points( cloud );
         size_t numPoints = MR_VertCoords_size( points );
         printf("Resulting transform for part %d:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n\n", i, xf->A.x.x, xf->A.x.y, xf->A.x.z, xf->b.x, xf->A.y.x, xf->A.y.y, xf->A.y.z, xf->b.y, xf->A.z.x, xf->A.z.y, xf->A.z.z, xf->b.z);
@@ -168,7 +169,7 @@ out_inputs: ;
     size_t numLoadedInputs = MR_Vector_MR_MeshOrPointsXf_MR_ObjId_size( inputs );
     for ( size_t i = 0; i < numLoadedInputs; i++ )
     {
-        MR_PointCloud_Destroy( MR_MeshOrPoints_asPointCloud( MR_MeshOrPointsXf_Get_obj( MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index( inputs, (MR_ObjId){i} ) ) ) );
+        MR_PointCloud_Destroy( MR_PointCloudPart_Get_cloud( MR_MeshOrPoints_asPointCloudPart( MR_MeshOrPointsXf_Get_obj( MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index( inputs, (MR_ObjId){i} ) ) ) ) );
     }
     MR_Vector_MR_MeshOrPointsXf_MR_ObjId_Destroy( inputs );
 out:

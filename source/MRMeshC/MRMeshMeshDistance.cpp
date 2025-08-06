@@ -27,9 +27,9 @@ MeshPart cast( MRMeshPart mp )
 
 static_assert( sizeof( MRMeshMeshDistanceResult ) == sizeof( MeshMeshDistanceResult ) );
 
-MRMeshMeshDistanceResult findDistance( const MRMeshPart* a, const MRMeshPart* b,
+MRMeshMeshDistanceResult mrFindDistance( const MRMeshPart* a, const MRMeshPart* b,
     const MRAffineXf3f* rigidB2A_, float upDistLimitSq )
 {
     ARG_PTR( rigidB2A );
-    RETURN( MR::findDistance( cast( *a ), cast( *b ), rigidB2A, upDistLimitSq ) );
+    RETURN( findDistance( cast( *a ), cast( *b ), rigidB2A, upDistLimitSq ) );
 }

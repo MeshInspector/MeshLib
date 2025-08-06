@@ -1352,6 +1352,9 @@
     <ClInclude Include="MRImageTransform.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRAlignContoursToMesh.h">
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2206,6 +2209,9 @@
     </ClCompile>
     <ClCompile Include="MRImageTransform.cpp">
       <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAlignContoursToMesh.cpp">
+      <Filter>Source Files\Polyline</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

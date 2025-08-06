@@ -289,14 +289,20 @@ void Palette::setZeroCentredLabels_()
         fillLabels( parameters_.ranges[0], parameters_.ranges[1], 1.f - relativePos2LimitedRelativePos( 0.5f ) + 0.02f, 1.f );
     }
 
-    sortLabels_();
+    sortLabels_( labels_ );
     showLabels_ = true;
 }
 
 void Palette::setUniformLabels_()
 {
     useCustomLabels_ = false;
-    labels_.clear();
+    makeUniformLabels_( labels_ );
+    showLabels_ = true;
+}
+
+void Palette::makeUniformLabels_( std::vector<Palette::Label>& labels ) const
+{
+    labels.clear();
 
     const int colorCount = int( texture_.pixels.size() >> 1 ); // only half because remaining colors are all gray;
     if ( legendLimitIndexes_.min < 0 || legendLimitIndexes_.max > colorCount )
@@ -304,21 +310,21 @@ void Palette::setUniformLabels_()
 
     const int limitDelta = legendLimitIndexes_.max - legendLimitIndexes_.min;
     const int labelCount = limitDelta ? limitDelta + 1 : 2;
-    labels_.resize( labelCount );
+    labels.resize( labelCount );
     if ( !limitDelta || ( parameters_.ranges.size() != 2 && parameters_.ranges.size() != 4 ) )
     {
-        labels_.resize( 2 );
-        labels_[0].text = getStringValue( float( legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
-        labels_[0].value = 1.f;
-        labels_[1].text = getStringValue( float( legendLimitIndexes_.max ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
-        labels_[1].value = 0.f;
+        labels.resize( 2 );
+        labels[0].text = getStringValue( float( legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels[0].value = 1.f;
+        labels[1].text = getStringValue( float( legendLimitIndexes_.max ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+        labels[1].value = 0.f;
     }
     else if ( parameters_.ranges.size() == 2 )
     {
         for ( int i = 0; i < labelCount; ++i )
         {
-            labels_[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
-            labels_[i].value = 1 - float( i ) / limitDelta;
+            labels[i].text = getStringValue( float( i + legendLimitIndexes_.min ) / colorCount * ( parameters_.ranges.back() - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels[i].value = 1 - float( i ) / limitDelta;
         }
     }
     else if ( parameters_.ranges.size() == 4 )
@@ -327,22 +333,21 @@ void Palette::setUniformLabels_()
         const int colorCountHalf = colorCount / 2;
         for ( int i = legendLimitIndexes_.min; i < colorCountHalf + 1; ++i, ++labelIndex )
         {
-            labels_[labelIndex].text = getStringValue( float( i ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
-            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
+            labels[labelIndex].text = getStringValue( float( i ) / colorCountHalf * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+            labels[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
         }
         for ( int i = std::max( legendLimitIndexes_.min, colorCountHalf + 1 ); i < legendLimitIndexes_.max + 1; ++i, ++labelIndex )
         {
-            labels_[labelIndex].text = getStringValue( float( i - colorCountHalf - 1 ) / colorCountHalf *
+            labels[labelIndex].text = getStringValue( float( i - colorCountHalf - 1 ) / colorCountHalf *
                 ( parameters_.ranges.back() - parameters_.ranges[2] ) + parameters_.ranges[2] );
-            labels_[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
+            labels[labelIndex].value = 1.f - float( labelIndex ) / limitDelta;
         }
     }
 
     // Force add the zero label.
-    labels_.emplace_back( 0.5, "0" ).isZero = true;
+    labels.emplace_back( 0.5, "0" ).isZero = true;
 
-    sortLabels_();
-    showLabels_ = true;
+    sortLabels_( labels );
 }
 
 void Palette::setDiscretizationNumber( int discretization )
@@ -898,12 +903,12 @@ void Palette::updateCustomLabels_()
     {
         label.value = 1.f - getRelativePos( label.value );
     }
-    sortLabels_();
+    sortLabels_( labels_ );
 }
 
-void Palette::sortLabels_()
+void Palette::sortLabels_( std::vector<Label>& labels ) const
 {
-    std::sort( labels_.begin(), labels_.end(), []( auto itL, auto itR )
+    std::sort( labels.begin(), labels.end(), []( auto itL, auto itR )
     {
         return itL.value < itR.value;
     } );
@@ -993,7 +998,7 @@ void Palette::resizeCallback_( ImGuiSizeCallbackData* data )
 }
 
 
-std::string Palette::getStringValue( float value )
+std::string Palette::getStringValue( float value ) const
 {
     bool needExp = !parameters_.ranges.empty();
     if ( needExp )
@@ -1076,6 +1081,12 @@ void Palette::updateStats( const VertScalars& values, const VertBitSet& region, 
     histogramDiscr_.finalize();
 }
 
+std::vector<Palette::Label> Palette::createUniformLabels() const
+{
+    std::vector<Palette::Label> result;
+    makeUniformLabels_( result );
+    return result;
+}
 
 void Palette::Histogram::reset()
 {
@@ -1098,7 +1109,7 @@ void Palette::Histogram::addValue( float value )
     if ( buckets.empty() )
         return; // This histogram is disabled.
 
-    int bucketIndex = int( value * buckets.size() );
+    int bucketIndex = int( std::floor( value * buckets.size() ) );
 
     if ( bucketIndex < 0 )
         beforeBucket++;

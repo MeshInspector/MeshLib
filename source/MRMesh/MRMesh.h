@@ -426,7 +426,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces ant not in \param keepFaces
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepFaces
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;

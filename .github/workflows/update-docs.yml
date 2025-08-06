@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Doxygen
-        uses: ssciwr/doxygen-install@527824132256e685f03ec80c0851fe79937eb1d6 # v1
+        uses: ssciwr/doxygen-install@501e53b879da7648ab392ee226f5b90e42148449 # v1
         with:
           version: "1.11.0"
 
@@ -36,6 +36,14 @@ jobs:
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
+
+
+      - name: Download C bindings headers
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: CBindings
+          path: ./MeshLib/Cbindings/
 
       - name: Check for Python Stubs
         id: check_py_stubs

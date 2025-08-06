@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Absolute path to this script, e.g. /home/user/bin/foo.sh
 SCRIPT=$(readlink -f "$0")
@@ -19,26 +19,28 @@ else
     sed -e "s|__BEGIN_URL__|../|" -e "s|__END_URL__|${END_URL}|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 fi
 
-# edit C++ API block
-if [ "$1" = "Main" ]; then
-    sed -e "s|      <!-- API_CPP_PAGE -->|      <tab type=\"user\" url=\"Cpp/APICppPage.html\" title=\"C++\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-elif [ "$1" = "Py" ]; then
-    sed -e "s|      <!-- API_CPP_PAGE -->|      <tab type=\"user\" url=\"../Cpp/APICppPage.html\" title=\"C++\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-else
-    sed -e "/      <!-- API_CPP_PAGE -->/r ${DOXYGEN_DIR}/layout_templates/API_part.xml" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-    sed -e "s|__API_PAGE_URL__|@ref APICppPage|" -e "s|__API_PAGE_NAME__|C++|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-fi
+# edit API block
+MODULE_PARAMETERS_MATRIX=(
+  #TEMPLATE NAME TITLE
+  "CPP:Cpp:C++"
+  "PY:Py:Python"
+  "C:C:C"
+)
 
-# edit Python API block
-if [ "$1" = "Main" ]; then
-    sed -e "s|      <!-- API_PY_PAGE -->|      <tab type=\"user\" url=\"Py/APIPyPage.html\" title=\"Python\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-elif [ "$1" = "Cpp" ]; then
-    sed -e "s|      <!-- API_PY_PAGE -->|      <tab type=\"user\" url=\"../Py/APIPyPage.html\" title=\"Python\"/>|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-else
-    sed -e "/      <!-- API_PY_PAGE -->/r ${DOXYGEN_DIR}/layout_templates/API_part.xml" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-    sed -e "s|__API_PAGE_URL__|@ref APIPyPage|" -e "s|__API_PAGE_NAME__|Python|" -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
-fi
+for MODULES_ROW in "${MODULE_PARAMETERS_MATRIX[@]}"; do
+  IFS=':' read -r TEMPLATE NAME TITLE <<< "$MODULES_ROW"
 
+  if [ "$1" = "Main" ]; then
+    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"${NAME}/API${NAME}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+  elif [ "$1" = "$NAME" ]; then
+    sed -e "/      <!-- API_${TEMPLATE}_PAGE -->/r ${DOXYGEN_DIR}/layout_templates/API_part.xml" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+    sed -e "s|__API_PAGE_URL__|@ref API${NAME}Page|" -e "s|__API_PAGE_NAME__|${TITLE}|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+  else
+    sed -e "s|      <!-- API_${TEMPLATE}_PAGE -->|      <tab type=\"user\" url=\"../${NAME}/API${NAME}Page.html\" title=\"${TITLE}\"/>|" -i "${DOXYGEN_DIR}/DoxygenLayout${1}.xml"
+  fi
+done
+
+# edit API titles
 if [ "$1" = "Py" ]; then
     sed \
         -e "s|__NAMESPACES_TITLE__|Modules|" \

@@ -435,6 +435,11 @@ void Object::serializeFields_( Json::Value& root ) const
 
     // Type
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
+
+    // tags
+    auto& tagsJson = root["Tags"] = Json::arrayValue;
+    for ( const auto& tag : tags_ )
+        tagsJson.append( tag );
 }
 
 Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
@@ -463,6 +468,10 @@ void Object::deserializeFields_( const Json::Value& root )
         locked_ = root["Locked"].asBool();
     if ( const auto& json = root["ParentLocked"]; json.isBool() )
         parentLocked_ = json.asBool();
+    if ( const auto& tagsJson = root["Tags"]; tagsJson.isArray() )
+        for ( const auto& tagJson : tagsJson )
+            if ( tagJson.isString() )
+                tags_.emplace( tagJson.asString() );
 }
 
 void Object::sendWorldXfChangedSignal_()

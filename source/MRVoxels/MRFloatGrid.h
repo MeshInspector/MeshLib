@@ -14,6 +14,30 @@ namespace MR
  * \{
  */
 
+struct MRVOXELS_CLASS OpenVdbFloatGrid;
+
+/// wrapper class that helps mrbind to avoid excess MRVDBFloatGrid.h includes
+class MRVOXELS_CLASS FloatGrid
+{
+public:
+    MRVOXELS_API FloatGrid();
+    MRVOXELS_API FloatGrid( std::shared_ptr<OpenVdbFloatGrid> ptr );
+
+    MRVOXELS_API void reset() noexcept;
+    MRVOXELS_API void swap( FloatGrid& other ) noexcept;
+
+    MRVOXELS_API OpenVdbFloatGrid* get() const noexcept;
+    MRVOXELS_API OpenVdbFloatGrid& operator *() const noexcept;
+    MRVOXELS_API OpenVdbFloatGrid* operator ->() const noexcept;
+
+    MRVOXELS_API explicit operator bool() const noexcept;
+
+    MRVOXELS_API std::shared_ptr<OpenVdbFloatGrid> toVdb() const noexcept;
+
+private:
+    std::shared_ptr<OpenVdbFloatGrid> ptr_;
+};
+
 /// returns the amount of heap memory occupied by grid
 [[nodiscard]] MRVOXELS_API size_t heapBytes( const FloatGrid& grid );
 

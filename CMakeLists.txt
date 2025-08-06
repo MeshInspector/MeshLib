@@ -239,6 +239,7 @@ IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
 ENDIF()
 
 IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
+  option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
 ENDIF()

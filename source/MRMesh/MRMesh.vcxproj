@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
@@ -21,7 +22,6 @@
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
-    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
     <ClInclude Include="MRBezier.h" />
     <ClInclude Include="MRChangeMeshDataAction.h" />
@@ -435,6 +435,7 @@
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MREnums.cpp" />
+    <ClCompile Include="MRImageTransform.cpp" />
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
@@ -453,7 +454,6 @@
     <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
-    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitParabola.cpp" />

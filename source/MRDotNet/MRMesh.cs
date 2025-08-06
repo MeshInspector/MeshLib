@@ -76,6 +76,16 @@ namespace MR
             public MRSphereParams() { }
         };
 
+        /// parameters for \ref mrMakeUVSphere
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRUVSphereParams
+        {
+            public float radius = 1.0f;
+            public int horizontalResolution = 16;
+            public int verticalResolution = 16;
+            public MRUVSphereParams() { }
+        };
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRTriangulation
         {
@@ -330,6 +340,10 @@ namespace MR
             /// creates a mesh of sphere with irregular triangulation
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMakeSphere(ref MRSphereParams parameters);
+
+            /// creates a mesh of sphere with regular triangulation (parallels and meridians)
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern IntPtr mrMakeUVSphere(ref MRUVSphereParams parameters);
 
             /// passes through all valid vertices and finds the minimal bounding box containing all of them;
             /// if toWorld transformation is given then returns minimal bounding box in world space
@@ -810,6 +824,17 @@ namespace MR
                 mrSphereParams.numMeshVertices = vertexCount;
                 return new Mesh(mrMakeSphere(ref mrSphereParams));
             }
+
+            /// creates a sphere of given radius and the number of parallels and meridians
+            public static Mesh MakeUVSphere(float radius, int horizontalResolution, int verticalResolution)
+            {
+                MRUVSphereParams mrUVSphereParams = new MRUVSphereParams();
+                mrUVSphereParams.radius = radius;
+                mrUVSphereParams.horizontalResolution = horizontalResolution;
+                mrUVSphereParams.verticalResolution = verticalResolution;
+                return new Mesh(mrMakeUVSphere(ref mrUVSphereParams));
+            }
+
             /// creates a torus with given parameters
             public static Mesh MakeTorus(float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution)
             {

@@ -164,6 +164,7 @@ void selectRecursive( Object& obj )
 
 void ImGuiMenu::init( MR::Viewer* _viewer )
 {
+    MR_TIMER;
     ViewerPlugin::init( _viewer );
     // Setup ImGui binding
     if ( _viewer )
@@ -1112,6 +1113,7 @@ float ImGuiMenu::drawSelectionInformation_()
     double totalVolume = 0.0;
     double totalArea = 0.;
     double totalSelectedArea = 0.;
+    double totalLength = 0;
     float avgEdgeLen = 0.f;
     size_t holes = 0;
     size_t components = 0;
@@ -1190,6 +1192,10 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( auto polyline = lObj->polyline() )
             {
                 totalVerts += polyline->topology.numValidVerts();
+                totalEdges += lObj->numUndirectedEdges();
+                totalLength += polyline->totalLength();
+                avgEdgeLen = lObj->avgEdgeLen();
+                components += lObj->numComponents();
             }
         }
 #ifndef MRVIEWER_NO_VOXELS
@@ -1379,27 +1385,28 @@ float ImGuiMenu::drawSelectionInformation_()
     {
         drawUnitInfo( "Volume", totalVolume, VolumeUnit{} );
 
-        if ( selectedObjs.size() == 1 )
+        ImGui::SetNextItemWidth( itemWidth );
+        if ( totalSelectedArea > 0 )
         {
-            ImGui::SetNextItemWidth( itemWidth );
-            if ( totalSelectedArea > 0 )
-            {
-                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
-                    { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
-                UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
-            }
-            else
-            {
-                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
-                UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
-            }
-
-            drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
-
-            drawPrimitivesInfo( "Holes", holes );
-            drawPrimitivesInfo( "Components", components );
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
+                { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
+            UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+        }
+        else
+        {
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
+            UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
         }
     }
+
+    if ( totalLength > 0 )
+        drawUnitInfo( "Length", totalLength, LengthUnit{} );
+
+    if ( selectedObjs.size() == 1 && avgEdgeLen > 0 )
+        drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
+
+     drawPrimitivesInfo( "Holes", holes );
+     drawPrimitivesInfo( "Components", components );
 
 #ifndef MRVIEWER_NO_VOXELS
     if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )
@@ -1434,7 +1441,11 @@ float ImGuiMenu::drawSelectionInformation_()
 
         auto* obj = selectedObjs.front().get();
         if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
+        {
             drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+            const auto delta = distance->getWorldDelta();
+            drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
+        }
         else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
         else if ( auto* radius = obj->asType<RadiusMeasurementObject>() )

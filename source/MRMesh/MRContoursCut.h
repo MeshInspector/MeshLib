@@ -87,7 +87,13 @@ MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, c
 /// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
 /// \note \p mesh is modified, see \ref cutMesh for info
 /// \return Faces to the left of the polyline
-MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
+
+/// Cuts \p mesh by \p contours by projecting all the points
+/// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \return Faces to the left of the polyline
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, const AffineXf3f& xf = {} );
 
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour

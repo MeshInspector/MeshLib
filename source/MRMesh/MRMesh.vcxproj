@@ -11,6 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRDivRound.h" />
+    <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRImageTransform.h" />
+    <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
@@ -18,7 +22,6 @@
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
-    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
     <ClInclude Include="MRBezier.h" />
     <ClInclude Include="MRChangeMeshDataAction.h" />
@@ -125,7 +128,6 @@
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
-    <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
@@ -161,9 +163,11 @@
     <ClInclude Include="MRParallel.h" />
     <ClInclude Include="MRParallelMinMax.h" />
     <ClInclude Include="MRPartialChangeMeshAction.h" />
+    <ClInclude Include="MRPly.h" />
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRClosestWeightedPoint.h" />
+    <ClInclude Include="MRPointCloudPart.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
@@ -236,6 +240,7 @@
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
     <ClInclude Include="MRSolarRadiation.h" />
+    <ClInclude Include="MRSparsePolynomial.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRStacktrace.h" />
     <ClInclude Include="MRSurfaceLineOffset.h" />
@@ -259,6 +264,7 @@
     <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTriMesh.h" />
+    <ClInclude Include="MRTripleFaceIntersections.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
     <ClInclude Include="MRMeshIntersect.h" />
@@ -421,12 +427,15 @@
     <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MROffsetVerts.h" />
+    <ClInclude Include="MREndMill.h" />
+    <ClInclude Include="MRSolidOfRevolution.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MREnums.cpp" />
+    <ClCompile Include="MRImageTransform.cpp" />
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
@@ -445,7 +454,6 @@
     <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
-    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitParabola.cpp" />
@@ -547,6 +555,7 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPly.cpp" />
     <ClCompile Include="MRPointCloudDistance.cpp" />
     <ClCompile Include="MRClosestWeightedPoint.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
@@ -703,6 +712,10 @@
     <ClCompile Include="MRChunkIterator.cpp" />
     <ClCompile Include="MRTbbThreadMutex.cpp" />
     <ClCompile Include="MROffsetVerts.cpp" />
+    <ClCompile Include="MRTripleFaceIntersections.cpp" />
+    <ClCompile Include="MREndMill.cpp" />
+    <ClCompile Include="MRCylinderApproximator.cpp" />
+    <ClCompile Include="MRSolidOfRevolution.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

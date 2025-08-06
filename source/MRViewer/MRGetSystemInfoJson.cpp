@@ -6,6 +6,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
@@ -20,6 +21,7 @@ namespace MR
 
 Json::Value GetSystemInfoJson()
 {
+    MR_TIMER;
     Json::Value root;
     root["Version"] = GetMRVersionString();
     root["OS Version"] = GetDetailedOSName();

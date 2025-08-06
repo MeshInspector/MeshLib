@@ -2,8 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
-
 #include <array>
+#include <optional>
 
 namespace MR
 {
@@ -43,6 +43,12 @@ struct TriangleSegmentIntersectResult
 [[nodiscard]] MRMESH_API TriangleSegmentIntersectResult doTriangleSegmentIntersect(
     const std::array<PreciseVertCoords, 5> & vs );
 
+/// given line segment s=01 and two triangles ta=234, tb=567 known to intersect it, finds the order of intersection using precise predicates:
+/// true:  s[0], s ^ ta, s ^ tb, s[1]
+/// false: s[0], s ^ tb, s ^ ta, s[1]
+/// segments ta and tb can have at most two shared points, all other points must be unique
+[[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
+
 /// float-to-int coordinate converter
 using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
 /// int-to-float coordinate converter
@@ -58,6 +64,10 @@ struct CoordinateConverters
 MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
 /// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
 MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
+
+/// given two line segments AB and CD located in one plane,
+/// finds whether they intersect and if yes, computes their common point using integer-only arithmetic
+[[nodiscard]] MRMESH_API std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di );
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection

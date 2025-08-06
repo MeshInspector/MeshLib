@@ -3,7 +3,6 @@
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
-#include "MRMeshSave.h"
 #include "MRSerializer.h"
 #include "MRMeshLoad.h"
 #include "MRSceneColors.h"
@@ -55,24 +54,21 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
         return {};
 
     SaveSettings saveSettings;
-    saveSettings.saveValidOnly = false;
-    saveSettings.rearrangeTriangles = false;
+    saveSettings.onlyValidPoints = false;
+    saveSettings.packPrimitives = false;
     if ( !data_.vertColors.empty() )
         saveSettings.colors = &data_.vertColors;
-    auto save = [mesh = data_.mesh, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()
+    auto save = [mesh = data_.mesh, serializeFormat = std::string( actualSerializeFormat() ), path, saveSettings]() -> Expected<void>
     {
-        auto filename = path;
         const auto extension = std::string( "*" ) + serializeFormat;
-        if ( auto meshSaver = MeshSave::getMeshSaver( extension ); meshSaver.fileSave != nullptr )
+        auto meshSaver = MeshSave::getMeshSaver( extension );
+        if ( meshSaver.fileSave )
         {
+            auto filename = path;
             filename += serializeFormat;
             return meshSaver.fileSave( *mesh, filename, saveSettings );
         }
-        else
-        {
-            filename += ".ply";
-            return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
-        }
+        return unexpectedUnsupportedFileExtension();
     };
     return std::async( getAsyncLaunchType(), save );
 }
@@ -104,6 +100,10 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
         root["ColoringType"] = "Solid";
     }
     serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
+
+    const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+    if ( !meshSaver.capabilities.storesVertexColors )
+        serializeToJson( data_.vertColors.vec_, root["VertColors"] );
 
     // texture
     if ( !textures_.empty() )
@@ -179,6 +179,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
             setColoringType( ColoringType::FacesColorMap );
     }
     deserializeFromJson( root["FaceColors"], data_.faceColors.vec_ );
+    deserializeFromJson( root["VertColors"], data_.vertColors.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -677,6 +678,11 @@ size_t ObjectMeshHolder::heapBytes() const
         + ancillaryUVCoordinates_.heapBytes();
 }
 
+const char * ObjectMeshHolder::actualSerializeFormat() const
+{
+    return serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat().c_str();
+}
+
 void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
 {
     if ( newFormat && *newFormat != '.' )
@@ -685,6 +691,18 @@ void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
         return;
     }
     serializeFormat_ = newFormat;
+}
+
+void ObjectMeshHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void ObjectMeshHolder::resetColors()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const

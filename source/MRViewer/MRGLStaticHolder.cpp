@@ -7,6 +7,7 @@
 #include "MRLinesShader.h"
 #include "MRShaderBlocks.h"
 #include "MRPointsShader.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {

@@ -19,6 +19,10 @@ IF(MR_PCH)
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+    # FIXME: comment required
+    target_compile_definitions(${PROJECT_NAME} PUBLIC EIGEN_STACK_ALLOCATION_LIMIT=0)
+
     target_link_libraries(${PROJECT_NAME} PRIVATE
       fmt
       jsoncpp

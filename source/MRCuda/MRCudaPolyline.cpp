@@ -29,6 +29,13 @@ Polyline2Data Polyline2DataHolder::data() const
     };
 }
 
+void Polyline2DataHolder::reset()
+{
+    nodes_.resize( 0 );
+    points_.resize( 0 );
+    orgs_.resize( 0 );
+}
+
 size_t Polyline2DataHolder::heapBytes( const Polyline2& polyline )
 {
     return sizeof( Node2 )  * polyline.getAABBTree().nodes().size()
@@ -56,6 +63,13 @@ Polyline3Data Polyline3DataHolder::data() const
         .points = points_.data(),
         .orgs = orgs_.data(),
     };
+}
+
+void Polyline3DataHolder::reset()
+{
+    nodes_.resize( 0 );
+    points_.resize( 0 );
+    orgs_.resize( 0 );
 }
 
 size_t Polyline3DataHolder::heapBytes( const Polyline3& polyline )

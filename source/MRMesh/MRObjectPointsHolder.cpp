@@ -247,6 +247,18 @@ void ObjectPointsHolder::setSerializeFormat( const char * newFormat )
     serializeFormat_ = newFormat;
 }
 
+void ObjectPointsHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
+}
+
+void ObjectPointsHolder::resetColors()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
+}
+
 void ObjectPointsHolder::swapBase_( Object& other )
 {
     if ( auto otherPointsHolder = other.asType<ObjectPointsHolder>() )
@@ -279,8 +291,8 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
         return std::async( getAsyncLaunchType(), []{ return Expected<void>{}; } );
 
     SaveSettings saveSettings;
-    saveSettings.saveValidOnly = false;
-    saveSettings.rearrangeTriangles = false;
+    saveSettings.onlyValidPoints = false;
+    saveSettings.packPrimitives = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
     auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializePointsFormat(), path, saveSettings]()

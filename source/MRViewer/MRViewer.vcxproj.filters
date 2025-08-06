@@ -481,6 +481,15 @@
     <ClCompile Include="MRDragDropWasmHandler.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderImGui.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVisualObjectTag.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -940,6 +949,18 @@
     <ClInclude Include="MRDragDropWin32Handler.h">
       <Filter>UserInputs</Filter>
     </ClInclude>
+    <ClInclude Include="MRRibbonMenuUIConfig.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderImGui.cpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualObjectTag.cpp">
+      <Filter>Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -1131,6 +1152,24 @@
     </Image>
     <Image Include="resource\textures\controller_cube_sides.png">
       <Filter>resource\textures</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse left.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse right.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\mouse scroll.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse left.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse right.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\mouse scroll.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include <optional>
 
 namespace MR
 {
@@ -8,6 +9,7 @@ namespace MR
 /// setting for mesh loading from external format, and locations of optional output data
 struct MeshLoadSettings
 {
+    std::optional<Edges>* edges = nullptr; ///< optional load artifact: polyline edges
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals

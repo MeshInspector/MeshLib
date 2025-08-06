@@ -145,6 +145,9 @@
     <ClCompile Include="SceneReorder.cpp" />
     <ClCompile Include="MRFileDialogInternal.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />
+    <ClCompile Include="MRRenderImGui.cpp" />
+    <ClCompile Include="MRRenderToImage.cpp" />
+    <ClCompile Include="MRVisualObjectTag.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -301,9 +304,13 @@
     <ClInclude Include="MRUINonOverlappingLabels.h" />
     <ClInclude Include="MRRenderImGuiLabelObject.h" />
     <ClInclude Include="MRSceneOperations.h" />
+    <ClInclude Include="MRRibbonMenuUIConfig.h" />
     <ClInclude Include="SceneReorder.h" />
     <ClInclude Include="MRFileDialogInternal.h" />
     <ClInclude Include="MRModalDialog.h" />
+    <ClInclude Include="MRRenderImGui.h" />
+    <ClInclude Include="MRRenderToImage.h" />
+    <ClInclude Include="MRVisualObjectTag.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -357,10 +364,16 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\independent_icons\X1\mouse left.png" />
+    <Image Include="resource\independent_icons\X1\mouse right.png" />
+    <Image Include="resource\independent_icons\X1\mouse scroll.png" />
     <Image Include="resource\independent_icons\X1\Plane Import.png" />
     <Image Include="resource\independent_icons\X1\Plane XY.png" />
     <Image Include="resource\independent_icons\X1\Plane XZ.png" />
     <Image Include="resource\independent_icons\X1\Plane YZ.png" />
+    <Image Include="resource\independent_icons\X3\mouse left.png" />
+    <Image Include="resource\independent_icons\X3\mouse right.png" />
+    <Image Include="resource\independent_icons\X3\mouse scroll.png" />
     <Image Include="resource\independent_icons\X3\Plane Import.png" />
     <Image Include="resource\independent_icons\X3\Plane XY.png" />
     <Image Include="resource\independent_icons\X3\Plane XZ.png" />

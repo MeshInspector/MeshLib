@@ -243,16 +243,16 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         ctmVertexPrecision( context, options.vertexPrecision );
         break;
     }
-    ctmRearrangeTriangles( context, options.rearrangeTriangles ? 1 : 0 );
+    ctmRearrangeTriangles( context, options.packPrimitives ? 1 : 0 );
     ctmCompressionLevel( context, options.compressionLevel );
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.saveValidOnly );
+    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = mesh.topology.lastValidVert();
 
     std::vector<CTMuint> aIndices;
     const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto numSaveFaces = options.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
     aIndices.reserve( numSaveFaces * 3 );
     for ( FaceId f{0}; f <= fLast; ++f )
     {
@@ -263,7 +263,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
             for ( int i = 0; i < 3; ++i )
                 aIndices.push_back( vertRenumber( v[i] ) );
         }
-        else if ( !options.rearrangeTriangles )
+        else if ( !options.packPrimitives )
         {
             for ( int i = 0; i < 3; ++i )
                 aIndices.push_back( 0 );
@@ -284,7 +284,7 @@ Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOption
         colors4f.reserve( aVertexCount );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )
         {
-            if ( options.saveValidOnly && !mesh.topology.hasVert( i ) )
+            if ( options.onlyValidPoints && !mesh.topology.hasVert( i ) )
                 continue;
             colors4f.push_back( Vector4f( ( *options.colors )[i] ) );
         }
@@ -309,7 +309,7 @@ Expected<void> toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& s
     return toCtm( mesh, out, CtmSaveOptions { settings } );
 }
 
-MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)", "*.ctm" ), toCtm )
+MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)", "*.ctm" ), toCtm, { .storesVertexColors = true } )
 
 } // namespace MeshSave
 
@@ -422,8 +422,8 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
 {
     MR_TIMER;
 
-    if ( (  options.saveValidOnly && !cloud.validPoints.any() ) ||
-         ( !options.saveValidOnly && cloud.points.empty() ) )
+    if ( (  options.onlyValidPoints && !cloud.validPoints.any() ) ||
+         ( !options.onlyValidPoints && cloud.points.empty() ) )
         return unexpected( "Cannot save empty point cloud in CTM format" );
     // the only fake triangle with point #0 in all 3 vertices
     std::vector<CTMuint> aIndices{ 0,0,0 };
@@ -436,14 +436,14 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
     ctmCompressionLevel( context, options.compressionLevel );
 
     const bool saveNormals = cloud.hasNormals();
-    CTMuint aVertexCount = CTMuint( options.saveValidOnly ? cloud.validPoints.count() : cloud.points.size() );
+    CTMuint aVertexCount = CTMuint( options.onlyValidPoints ? cloud.validPoints.count() : cloud.points.size() );
 
     VertCoords points;
     VertNormals normals;
     NormalXfMatrix normXf( options.xf );
-    if ( options.saveValidOnly || options.xf )
+    if ( options.onlyValidPoints || options.xf )
     {
-        if ( options.saveValidOnly )
+        if ( options.onlyValidPoints )
         {
             points.reserve( aVertexCount );
             for ( auto v : cloud.validPoints )
@@ -457,7 +457,7 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
 
         if ( saveNormals )
         {
-            if ( options.saveValidOnly )
+            if ( options.onlyValidPoints )
             {
                 normals.reserve( aVertexCount );
                 for ( auto v : cloud.validPoints )
@@ -487,7 +487,7 @@ Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSaveP
         colors4f.reserve( aVertexCount );
         for ( auto v = 0_v; v < cloud.points.size(); ++v )
         {
-            if ( options.saveValidOnly && !cloud.validPoints.test( v ) )
+            if ( options.onlyValidPoints && !cloud.validPoints.test( v ) )
                 continue;
             colors4f.push_back( Vector4f{ ( *options.colors )[v] } );
         }

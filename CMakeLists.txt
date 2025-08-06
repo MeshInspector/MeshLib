@@ -16,6 +16,9 @@ set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
 include(CompilerOptions)
+IF(EMSCRIPTEN)
+  include(ConfigureEmscripten)
+ENDIF()
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -41,6 +44,7 @@ option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding libr
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
+option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -234,6 +238,12 @@ IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)
 ENDIF()
 
+IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
+  option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+ENDIF()
+
 IF(MESHLIB_BUILD_SYMBOLMESH)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRSymbolMesh ./MRSymbolMesh)
 ENDIF()
@@ -342,6 +352,10 @@ install(
     ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
   DESTINATION ${MR_CONFIG_DIR}
 )
+
+IF(EMSCRIPTEN)
+  install(FILES cmake/Modules/EmscriptenHelpers.cmake DESTINATION ${MR_CONFIG_DIR})
+ENDIF()
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_GENERATOR "DRAGNDROP")

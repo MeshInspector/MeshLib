@@ -29,6 +29,15 @@ public:
         }
     }
 
+    /// use this constructor to remember object's polyline and immediately set new polyline
+    ChangePolylineAction( std::string name, const std::shared_ptr<ObjectLines>& obj, std::shared_ptr<Polyline3> newPolyline ) :
+        objLines_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+            clonePolyline_ = obj->updatePolyline( std::move( newPolyline ) );
+    }
+
     virtual std::string name() const override
     {
         return name_;

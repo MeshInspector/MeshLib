@@ -3,3 +3,4 @@
 -Wno-enum-constexpr-conversion
 -Wno-deprecated-enum-enum-conversion
 -frelaxed-template-template-args
+-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH

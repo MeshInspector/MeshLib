@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
 #include "MRMeshPart.h"
@@ -152,8 +153,8 @@ public:
     /// returns first texture in the vector. If there is no textures, returns empty texture
     MRMESH_API const MeshTexture& getTexture() const;
     // for backward compatibility
-    [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
-    [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void setTexture( MeshTexture texture );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void updateTexture( MeshTexture& updated );
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture );  setDirtyFlags( DIRTY_TEXTURE ); }
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated );  setDirtyFlags( DIRTY_TEXTURE ); }
@@ -236,12 +237,18 @@ public:
 
     /// returns overriden file extension used to serialize mesh inside this object, nullptr means defaultSerializeMeshFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
-    [[deprecated]] const char * saveMeshFormat() const { return serializeFormat(); }
+
+    /// returns overriden file extension used to serialize mesh inside this object if set, or defaultSerializeMeshFormat().c_str() otherwise; never returns nullptr
+    [[nodiscard]] MRMESH_API const char * actualSerializeFormat() const;
 
     /// overrides file extension used to serialize mesh inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializeMeshFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
-    [[deprecated]] void setSaveMeshFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
+
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
+    /// reset all object colors to their default values from the current theme
+    MRMESH_API void resetColors() override;
 
     /// signal about face selection changing, triggered in selectFaces
     using SelectionChangedSignal = Signal<void()>;

@@ -4,7 +4,6 @@
 #include "MRMesh.h"
 #include "MRphmap.h"
 #include "MRTimer.h"
-#include "miniply.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRMeshLoadObj.h"
@@ -14,6 +13,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
+#include "MRPly.h"
 #include "MRParallelFor.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
@@ -561,112 +561,39 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
 {
     MR_TIMER;
 
-    const auto posStart = in.tellg();
-    miniply::PLYReader reader( in );
-    if ( !reader.valid() )
-        return unexpected( std::string( "PLY file open error" ) );
+    std::optional<Triangulation> tris;
+    PlyLoadParams params =
+    {
+        .tris = &tris,
+        .edges = settings.edges,
+        .colors = settings.colors,
+        .uvCoords = settings.uvCoords,
+        .normals = settings.normals,
+        .texture = settings.texture,
+        // suppose that reading is 10% of progress and building mesh is 90% of progress
+        .callback = subprogress( settings.callback, 0.0f, 0.1f )
+    };
+    auto maybePoints = loadPly( in, params );
+    if ( !maybePoints )
+        return unexpected( std::move( maybePoints.error() ) );
 
-    uint32_t indecies[3];
-    bool gotVerts = false, gotFaces = false;
-
-    std::vector<unsigned char> colorsBuffer;
     Mesh res;
-    const auto posEnd = reader.get_end_pos();
-    const float streamSize = float( posEnd - posStart );
+    res.points = std::move( *maybePoints );
 
-    FaceBitSet skippedFaces;
-    for ( int i = 0; reader.has_element() && ( !gotVerts || !gotFaces ); reader.next_element(), ++i )
+    if ( tris )
     {
-        if ( reader.element_is(miniply::kPLYVertexElement) && reader.load_element() )
-        {
-            auto numVerts = reader.num_rows();
-            if ( reader.find_pos( indecies ) )
-            {
-                Timer t( "extractPoints" );
-                res.points.resize( numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
-                gotVerts = true;
-            }
-            if ( settings.normals && reader.find_normal( indecies ) )
-            {
-                Timer t( "extractNormals" );
-                settings.normals->resize( numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, settings.normals->data() );
-            }
-            if ( settings.colors && reader.find_color( indecies ) )
-            {
-                Timer t( "extractColors" );
-                colorsBuffer.resize( 3 * numVerts );
-                reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
-            }
-            const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !reportProgress( settings.callback, progress ) )
-                return unexpectedOperationCanceled();
-            continue;
-        }
-
-        const auto posLast = in.tellg();
-        if ( reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indecies) )
-        {
-            bool polys = reader.requires_triangulation( indecies[0] );
-            if ( polys && !gotVerts )
-                return unexpected( std::string( "PLY file open: need vertex positions to triangulate faces" ) );
-
-            Triangulation tris;
-            if (polys)
-            {
-                Timer t( "extractTriangles" );
-                auto numIndices = reader.num_triangles( indecies[0] );
-                tris.resize( numIndices );
-                reader.extract_triangles( indecies[0], &res.points.front().x, (std::uint32_t)res.points.size(), miniply::PLYPropertyType::Int, &tris.front() );
-            }
-            else
-            {
-                Timer t( "extractTriples" );
-                auto numIndices = reader.num_rows();
-                tris.resize( numIndices );
-                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &tris.front() );
-            }
-            const auto posCurrent = in.tellg();
-            // suppose  that reading is 10% of progress and building mesh is 90% of progress
-            if ( !reportProgress( settings.callback, ( float( posLast ) + ( posCurrent - posLast ) * 0.1f - posStart ) / streamSize ) )
-                return unexpectedOperationCanceled();
-            bool isCanceled = false;
-            ProgressCallback partedProgressCb = settings.callback ? [callback = settings.callback, posLast, posCurrent, posStart, streamSize, &isCanceled] ( float v )
-            {
-                const bool res = callback( ( float( posLast ) + ( posCurrent - posLast ) * ( 0.1f + v * 0.9f ) - posStart ) / streamSize );
-                isCanceled |= !res;
-                return res;
-            } : settings.callback;
-
-            int mySkippedFaceCount = 0;
-            res.topology = MeshBuilder::fromTriangles( tris, { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr }, partedProgressCb );
-            if ( res.topology.lastValidVert() + 1 > res.points.size() )
-                return unexpected( "vertex id is larger than total point coordinates" );
-            if ( settings.skippedFaceCount )
-                *settings.skippedFaceCount += mySkippedFaceCount;
-            if ( settings.callback && ( !settings.callback( float( posCurrent - posStart ) / streamSize ) || isCanceled ) )
-                return unexpectedOperationCanceled();
-            gotFaces = true;
-        }
+        int mySkippedFaceCount = 0;
+        res.topology = MeshBuilder::fromTriangles( *tris,
+            { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr },
+            subprogress( settings.callback, 0.9f, 1.0f ) );
+        if ( res.topology.lastValidVert() + 1 > res.points.size() )
+            return unexpected( "vertex id is larger than total point coordinates" );
+        if ( settings.skippedFaceCount )
+            *settings.skippedFaceCount += mySkippedFaceCount;
     }
 
-    if ( !reader.valid() )
-        return unexpected( std::string( "PLY file read or parse error" ) );
-
-    if ( !gotVerts )
-        return unexpected( std::string( "PLY file does not contain vertices" ) );
-
-    if ( settings.colors && !colorsBuffer.empty() )
-    {
-        settings.colors->resize( res.points.size() );
-        for ( VertId i{ 0 }; i < res.points.size(); ++i )
-        {
-            int ind = 3 * i;
-            ( *settings.colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
-        }
-    }
-
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
     return res;
 }
 

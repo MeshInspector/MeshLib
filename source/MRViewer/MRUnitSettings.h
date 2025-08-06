@@ -20,15 +20,22 @@ MRVIEWER_API void setShowLeadingZero( bool show );
 // Can be '\0' to indicate no separator.
 // `fractional == true` means to the right of the fractional point, if any.
 [[nodiscard]] MRVIEWER_API char getThousandsSeparator();
-void setThousandsSeparator( char ch );
+MRVIEWER_API void setThousandsSeparator( char ch );
 
 // Length:
 
-// In addition to length, this also controls the units for speed, area, volume, etc.
+// Set "targetUnit" for Length based dimensions, which reflects on UI suffix
+// Length based dimensions: length, speed, area, volume, etc
 // This can be null to indicate "no unit".
 // If `setPreferredLeadingZero == true`, will call `setShowLeadingZero()` to match this unit (currently inches = false, everything else = true).
 [[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getUiLengthUnit();
 MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero );
+
+// Set "sourceUnit" for Length based dimensions, which reflects on scaling input data to match "targetUnit"
+// Length based dimensions: length, speed, area, volume, etc
+// This can be null to indicate "no unit".
+[[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getModelLengthUnit();
+MRVIEWER_API void setModelLengthUnit( std::optional<LengthUnit> unit );
 
 // Angle:
 

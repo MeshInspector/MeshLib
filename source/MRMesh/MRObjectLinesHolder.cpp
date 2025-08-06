@@ -5,7 +5,9 @@
 #include "MRHeapBytes.h"
 #include "MRSceneColors.h"
 #include "MRPolylineComponents.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
+#include "MRDirectory.h"
+#include "MRLinesLoad.h"
 #include "MRPch/MRJson.h"
 #include <filesystem>
 
@@ -60,11 +62,13 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     if ( mask & DIRTY_PRIMITIVES )
     {
         numComponents_.reset();
+        numUndirectedEdges_.reset();
     }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {
         totalLength_.reset();
+        avgEdgeLen_.reset();
         worldBox_.reset();
         worldBox_.get().reset();
         if ( invalidateCaches && polyline_ )
@@ -120,6 +124,21 @@ size_t ObjectLinesHolder::heapBytes() const
         + MR::heapBytes( polyline_ );
 }
 
+float ObjectLinesHolder::avgEdgeLen() const
+{
+    if ( !avgEdgeLen_ )
+        avgEdgeLen_ = polyline_ ? polyline_->averageEdgeLength() : 0;
+
+    return *avgEdgeLen_;
+}
+
+size_t ObjectLinesHolder::numUndirectedEdges() const
+{
+    if ( !numUndirectedEdges_ )
+        numUndirectedEdges_ = polyline_ ? polyline_->topology.computeNotLoneUndirectedEdges() : 0;
+    return *numUndirectedEdges_;
+}
+
 size_t ObjectLinesHolder::numComponents() const
 {
     if ( !numComponents_ )
@@ -133,6 +152,12 @@ float ObjectLinesHolder::totalLength() const
     if ( !totalLength_ )
         totalLength_ = polyline_ ? polyline_->totalLength() : 0.f;
     return *totalLength_;
+}
+
+void ObjectLinesHolder::resetFrontColor()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
 }
 
 bool ObjectLinesHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
@@ -174,6 +199,27 @@ const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMas
     }
 }
 
+void ObjectLinesHolder::copyColors( const ObjectLinesHolder& src, const VertMap& thisToSrc )
+{
+    MR_TIMER;
+
+    setColoringType( src.getColoringType() );
+
+    const auto& srcColorMap = src.getVertsColorMap();
+    if ( srcColorMap.empty() )
+        return;
+
+    VertColors colorMap;
+    colorMap.resizeNoInit( thisToSrc.size() );
+    ParallelFor( colorMap, [&] ( VertId id )
+    {
+        auto curId = thisToSrc[id];
+        if( curId.valid() )
+            colorMap[id] = srcColorMap[curId];
+    } );
+    setVertsColorMap( std::move( colorMap ) );
+}
+
 ObjectLinesHolder::ObjectLinesHolder()
 {
     setDefaultSceneProperties_();
@@ -186,8 +232,20 @@ void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
     root["ShowPoints"] = showPoints_.value();
     root["SmoothConnections"] = smoothConnections_.value();
 
-    root["ColoringType"] = ( coloringType_ == ColoringType::LinesColorMap ) ? "PerLine" : "Solid";
+    switch( coloringType_ )
+    {
+    case ColoringType::VertsColorMap:
+        root["ColoringType"] = "PerVertex";
+        break;
+    case ColoringType::LinesColorMap:
+        root["ColoringType"] = "PerLine";
+        break;
+    default:
+        root["ColoringType"] = "Solid";
+    }
+
     serializeToJson( linesColorMap_.vec_, root["LineColors"] );
+    serializeToJson( vertsColorMap_.vec_, root["VertColors"] );
 
     root["LineWidth"] = lineWidth_;
 }
@@ -222,6 +280,26 @@ void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectLinesHolder::TypeName() ); // will be appended in derived calls
 }
 
+Expected<void> ObjectLinesHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+{
+    // currently we do not write polyline in a separate model file;
+    // the code below is for the future, when we start doing it;
+    // for now it simply returns without error but with null polyline_
+    polyline_.reset();
+    vertsColorMap_.clear();
+
+    auto modelPath = findPathWithExtension( path );
+    if ( modelPath.empty() )
+        return {};
+
+    auto res = LinesLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
+    if ( !res.has_value() )
+        return unexpected( res.error() );
+
+    polyline_ = std::make_shared<Polyline3>( std::move( res.value() ) );
+    return {};
+}
+
 void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
@@ -234,10 +312,13 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
     if ( root["ColoringType"].isString() )
     {
         const auto stype = root["ColoringType"].asString();
-        if ( stype == "PerLine" )
+        if ( stype == "PerVertex" )
+            setColoringType( ColoringType::VertsColorMap );
+        else if ( stype == "PerLine" )
             setColoringType( ColoringType::LinesColorMap );
     }
     deserializeFromJson( root["LineColors"], linesColorMap_.vec_ );
+    deserializeFromJson( root["VertColors"], vertsColorMap_.vec_ );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
@@ -249,6 +330,13 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
 {
     deserializeBaseFields_( root );
+
+    if ( polyline_ )
+    {
+        // polyline already loaded in deserializeModel_
+        setDirtyFlags( DIRTY_ALL );
+        return;
+    }
 
     const auto& polylineRoot = root["Polyline"];
     if ( !polylineRoot.isObject() )

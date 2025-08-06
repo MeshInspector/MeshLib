@@ -1,10 +1,11 @@
 #pragma once
 #include "MRMeshFwd.h"
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
 #include "MRDistanceMap.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
+#include "MRLinesLoadSettings.h"
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
 #include "MRSaveSettings.h"
@@ -144,7 +145,7 @@ struct MeshLoader
 
 MR_FORMAT_REGISTRY_DECL( MeshLoader )
 
-/** 
+/**
  * \brief Register filter with loader function
  * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, const MeshLoadSettings& settings );
  * example:
@@ -166,27 +167,39 @@ namespace MeshSave
 using MeshFileSaver = Expected<void>( * )( const Mesh&, const std::filesystem::path&, const SaveSettings& );
 using MeshStreamSaver = Expected<void>( * )( const Mesh&, std::ostream&, const SaveSettings& );
 
+/// describes optional abilities of a MeshSaver
+struct MeshSaverCapabilities
+{
+    /// true if the saver serializes per-vertex mesh colors, false if per-vertex colors are not saved
+    bool storesVertexColors{ false };
+};
+
 struct MeshSaver
 {
+    /// saver in a file given by its path
     MeshFileSaver fileSave{ nullptr };
+
+    /// saver in a std::ostream
     MeshStreamSaver streamSave{ nullptr };
+
+    MeshSaverCapabilities capabilities;
 };
 
 MR_FORMAT_REGISTRY_DECL( MeshSaver )
 
-#define MR_ADD_MESH_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } ); };
+#define MR_ADD_MESH_SAVER( filter, saver, caps ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), caps } ); };
 
-#define MR_ADD_MESH_SAVER_WITH_PRIORITY( filter, saver, priority ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) }, priority ); };
+#define MR_ADD_MESH_SAVER_WITH_PRIORITY( filter, saver, caps, priority ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ), caps }, priority ); };
 
 } // namespace MeshSave
 
 namespace LinesLoad
 {
 
-using LinesFileLoader = Expected<Polyline3>( * )( const std::filesystem::path&, ProgressCallback );
-using LinesStreamLoader = Expected<Polyline3>( * )( std::istream&, ProgressCallback );
+using LinesFileLoader = Expected<Polyline3>( * )( const std::filesystem::path&, const LinesLoadSettings& );
+using LinesStreamLoader = Expected<Polyline3>( * )( std::istream&, const LinesLoadSettings& );
 
 struct LinesLoader
 {

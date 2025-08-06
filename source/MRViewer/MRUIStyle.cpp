@@ -65,7 +65,13 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
+        return false;
+
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
+    // so use special case for modals
+    bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
+    if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )
         return false;
 
     reserveKeyEvent( passedKey );
@@ -181,12 +187,11 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
-    ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
+bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, const ButtonCustomizationParams& customParams )
 {
-    bool simulateClick = custmParams.enableTestEngine && TestEngine::createButton( label );
-    assert( ( simulateClick <= active ) && "Trying to programmatically press a button, but it's inactive!" );
-    if ( !active )
+    bool simulateClick = customParams.enableTestEngine && TestEngine::createButton( customParams.testEngineName.empty() ? label : customParams.testEngineName );
+    assert( ( simulateClick <= customParams.enabled ) && "Trying to programmatically press a button, but it's inactive!" );
+    if ( !customParams.enabled )
         simulateClick = false;
 
     // copy from ImGui::ButtonEx and replaced visualize part
@@ -198,6 +203,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImGuiID id = window->GetID( label );
     const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
+
+    auto flags = customParams.flags;
 
     ImVec2 pos = window->DC.CursorPos;
     if ( ( flags & ImGuiButtonFlags_AlignTextBaseLine ) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset ) // Try to vertically align buttons that are smaller/have no padding so that text baseline matches (bit hacky, since it shouldn't be a flag)
@@ -220,38 +227,65 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
 
     // replaced part
     // potential fail. need check that customTexture is good
-    auto texture = ( custmParams.customTexture || custmParams.forceImGuiBackground ) ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
+    auto texture = ( customParams.customTexture || customParams.forceImGuiBackground ) ? customParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
-        const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
+        const float textureU = 0.125f + ( !customParams.enabled ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
         window->DrawList->AddImageRounded(
             texture->getImTextureId(),
             bb.Min, bb.Max,
             ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
             Color::white().getUInt32(), style.FrameRounding );
-        if ( custmParams.border )
+        if ( customParams.border )
             ImGui::RenderFrameBorder( bb.Min, bb.Max, style.FrameRounding );
     }
     else
     {
-        const ImGuiCol colIdx = ( !active ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        ImGuiCol colIdx = ImGuiCol_Button;
+        if ( !customParams.enabled )
+        {
+            if ( !customParams.forceImGuiBackground )
+                colIdx = ImGuiCol_TextDisabled;
+            else
+                ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+        }
+        else if ( hovered )
+        {
+            colIdx = held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered;
+        }
         const ImU32 col = ImGui::GetColorU32( colIdx );
+        if ( !customParams.enabled && customParams.forceImGuiBackground )
+            ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
         ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
     }
 
     if ( g.LogEnabled )
         ImGui::LogSetNextTextDecoration( "[", "]" );
     StyleParamHolder sh;
-    if ( !custmParams.forceImguiTextColor )
+    if ( !customParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    else if ( !customParams.enabled )
+        ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
-    if ( custmParams.underlineFirstLetter )
+    if ( customParams.underlineFirstLetter )
         ImGui::RenderTextClipped( bb.Min, bb.Max, "_", NULL, &label_size, style.ButtonTextAlign, &bb);
+
+    if ( !customParams.enabled && customParams.forceImguiTextColor )
+        ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
 
-    return ( pressed || simulateClick ) && active;
+    return ( pressed || simulateClick ) && customParams.enabled;
+}
+
+bool buttonEx( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& customParams /*= {} */ )
+{
+    auto paramscpy = customParams;
+    paramscpy.enabled = active;
+    paramscpy.flags = flags;
+    return buttonEx( label, size, paramscpy );
 }
 
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
@@ -263,13 +297,13 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
     bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
-    return buttonEx( label, active, size, 0, { .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
+    return buttonEx( label, size, { .enabled = active, .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
 }
 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
-    return buttonEx( label, true, size, 0, { .underlineFirstLetter = sameKey } ) || checkKey( key );
+    return buttonEx( label, size, { .underlineFirstLetter = sameKey } ) || checkKey( key );
 }
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
@@ -293,7 +327,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     params.forceImguiTextColor = true;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
 
-    auto res = buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    auto res = buttonEx( label, ImVec2( size.x, size.y ), params ) || checkKey( key );
     if ( res )
         value[0] = ownValue;
 
@@ -416,17 +450,7 @@ bool buttonIconEx(
 
     std::string buttonText = "##" + text;
 
-    bool res = false;
-    if ( params.flatBackgroundColor )
-    {
-        res = ImGui::Button( buttonText.c_str(), buttonSize );
-        if( params.enableTestEngine )
-            res = UI::TestEngine::createButton( buttonText ) || res;
-    }
-    else
-    {
-        res = UI::buttonEx( buttonText.c_str(), params.active, Vector2f( buttonSize.x, buttonSize.y ), params.flags, params );
-    }
+    bool res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
     ImGui::SameLine();
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
@@ -445,7 +469,6 @@ bool buttonIconEx(
 
     StringDetail curDetail;
     curDetail.start = text.data();
-    auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
 
     const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x - 2.0f * style.FramePadding.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
@@ -465,9 +488,12 @@ bool buttonIconEx(
             return oldLength + cSpaceWidth + additionalLength;
     };
 
-    if ( text.find( "##" ) != 0 )
+    auto sharpsPos = text.find( "##" );
+    std::string_view textView = std::string_view( text.c_str(), sharpsPos == std::string::npos ? text.size() : sharpsPos );
+    auto endText = textView.end();
+    if ( textView.begin() != endText )
     {
-        split( text, " ", [&] ( std::string_view str )
+        split( textView, " ", [&] ( std::string_view str )
         {
             startWord = str.data();
             endWord = &str.back() + 1;
@@ -511,7 +537,7 @@ bool buttonIconEx(
         if ( vecDetail.empty() )
         {
             iconYPadding = ( buttonSize.y - iconSize.y ) / 2.0f;
-            iconYPadding = std::max( iconYPadding, style.FramePadding.x );
+            iconYPadding = std::max( iconYPadding, style.FramePadding.y );
         }
         else
         {
@@ -538,15 +564,20 @@ bool buttonIconEx(
     const float maxSize = std::max( iconSize.x, iconSize.y );
     auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
 
-    assert( icon );
-
     StyleParamHolder sh;
-    if ( !params.forceImguiTextColor )
+    if ( !params.baseParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
 
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
 
-    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    if ( icon )
+        ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    else
+    {
+        assert( false );
+        ImGui::Dummy( iconSize );
+    }
+
     ImGui::SameLine();
 
     const auto font = ImGui::GetFont();
@@ -557,7 +588,7 @@ bool buttonIconEx(
     {
         ImVec2 screenPos = winPos - scroll;
         screenPos.x += startPosText.x - detail.lenght / 2.0f;
-        screenPos.y += startPosText.y + ( style.FramePadding.y + cFontSize ) * numStr;
+        screenPos.y += startPosText.y + ( cFontSize )*numStr;
         ImGui::GetWindowDrawList()->AddText(
                 font,
                 cFontSize,
@@ -565,7 +596,7 @@ bool buttonIconEx(
                 color,
                 detail.start,
                 detail.end );
-        if ( numStr == 0 && params.underlineFirstLetter )
+        if ( numStr == 0 && params.baseParams.underlineFirstLetter )
             ImGui::GetWindowDrawList()->AddText( font, cFontSize, screenPos, color, "_" );
 
         numStr++;
@@ -577,12 +608,12 @@ bool buttonIconEx(
     return res;
 }
 
-bool buttonUniqueIcon( 
-    const std::string& iconName, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
-    int* value, 
+bool buttonUniqueIcon(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    int* value,
     int ownValue,
     bool textUnderIcon /*= true*/,
     ImGuiKey key /*= ImGuiKey_None*/ )
@@ -1375,7 +1406,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
     bool valueOverridden = false;
-    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, options ) )
+    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, true, options ) )
     {
         if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
         {
@@ -1678,20 +1709,20 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    std::optional<std::string> valueOverride;
-    if ( shouldExposeTextInputToTestEngine( flags ) )
-    {
-        valueOverride = TestEngine::createValue( label, str );
-        if ( valueOverride )
-            str = std::move( *valueOverride );
-    }
+    if ( detail::isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
+        ImGui::ClearActiveID();
 
     bool ret = func();
 
-    if ( valueOverride )
+    if ( shouldExposeTextInputToTestEngine( flags ) )
     {
-        detail::markItemEdited( ImGui::GetID( label ) );
-        ret = true;
+        std::optional<std::string> valueOverride = TestEngine::createValue( label, str );
+        if ( valueOverride )
+        {
+            str = std::move( *valueOverride );
+            detail::markItemEdited( ImGui::GetID( label ) );
+            ret = true;
+        }
     }
 
     return ret;
@@ -1856,6 +1887,40 @@ const std::pair<const char*, ImU32>& notificationChar( NotificationType type )
     return notificationParams[int( type )];
 }
 
+void mouseControlHint( ImGuiMouseButton btn, const std::string& hint, float scaling )
+{
+    std::string btnIconName;
+    switch ( btn )
+    {
+    default:
+    case ImGuiMouseButton_Left:
+        btnIconName = "mouse left";
+        break;
+    case ImGuiMouseButton_Right:
+        btnIconName = "mouse right";
+        break;
+    case ImGuiMouseButton_Middle:
+        btnIconName = "mouse scroll";
+        break;
+    }
+    ImVec2 iconSize = ImVec2( 24, 24 ) * scaling;
+    auto icon = RibbonIcons::findByName( btnIconName, iconSize.x, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+    if ( icon )
+    {
+        ImGui::Image( *icon, iconSize, ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    }
+    else
+    {
+        assert( false );
+        ImGui::Dummy( iconSize );
+    }
+
+    ImGui::SameLine();
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x + 8 * scaling );
+    UI::alignTextToControl( iconSize.y );
+    UI::transparentText( "%s", hint.c_str() );
+}
+
 void transparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
@@ -1896,7 +1961,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
         scaling * StyleConsts::Notification::cTextFrameRounding );
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * scaling );
     transparentTextWrapped( "%s", str.c_str() );
-    
+
     auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( iconsFont )
     {
@@ -2200,6 +2265,7 @@ void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
     else
     {
         boxMin = windowPos + min;
+        boxMin.y -= ImGui::GetScrollY();
     }
 
     ImVec2 boxMax;
@@ -2213,6 +2279,7 @@ void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
     else
     {
         boxMax = windowPos + max;
+        boxMax.y -= ImGui::GetScrollY();
     }
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );

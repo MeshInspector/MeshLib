@@ -8,6 +8,7 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneCache.h"
@@ -263,13 +264,16 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
         if ( aCaptionWeightCorrect != bCaptionWeightCorrect )
             return aCaptionWeightCorrect;
 
-        const bool aAvailable = requirementsFunc( a.first.item->item ).empty();
-        const bool bAvailable = requirementsFunc( b.first.item->item ).empty();
+        if ( requirementsFunc )
+        {
+            const bool aAvailable = requirementsFunc( a.first.item->item ).empty();
+            const bool bAvailable = requirementsFunc( b.first.item->item ).empty();
 
-        // 2 sort priority
-        // available tool takes precedence over unavailable
-        if ( aAvailable != bAvailable )
-            return aAvailable;
+            // 2 sort priority
+            // available tool takes precedence over unavailable
+            if ( aAvailable != bAvailable )
+                return aAvailable;
+        }
 
         // 3 sort priority
         // if both have the correct caption weight, then compare by caption, otherwise compare by tooltip
@@ -349,6 +353,7 @@ int RibbonSchemaHolder::findItemTab( const std::shared_ptr<RibbonMenuItem>& item
 
 void RibbonSchemaLoader::loadSchema() const
 {
+    MR_TIMER;
     auto files = getStructureFiles_( ".items.json" );
     if ( files.empty() )
         spdlog::error( "No Ribbon Items files found" );

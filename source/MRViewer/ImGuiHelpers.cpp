@@ -725,7 +725,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
 
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
-    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor,style.WindowRounding, ImDrawFlags_RoundCornersTop );
 
     if ( params.collapsed )
     {
@@ -758,12 +758,26 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
 
+    const ImVec2 labelStartPos = ImGui::GetCursorScreenPos();
+    const ImVec2 labelTextSize = ImGui::CalcTextSize( label, nullptr, true );
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
     if ( titleFont )
         ImGui::PopFont();
 
     ImGui::SameLine();
+
+    if ( params.customHeaderFn )
+    {
+        const float labelOffsetX = labelTextSize.x + style.ItemInnerSpacing.x * params.menuScaling;
+        const float labelOffsetY = 0.5f * ( titleBarHeight - 2.f * borderSize - labelTextSize.y );
+
+        const ImVec2 customHeaderCursorPos{ labelStartPos.x + labelOffsetX, window->Rect().Min.y + labelOffsetY };
+        ImGui::SetCursorScreenPos( customHeaderCursorPos );
+
+        params.customHeaderFn();
+        ImGui::SameLine();
+    }
 
     if ( params.helpBtnFn )
     {
@@ -1208,7 +1222,16 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
+    {
         changes |= PaletteChanges::Ranges | PaletteChanges::Texture;
+
+        if ( palette.isDiscretizationPercentagesEnabled() )
+        {
+            // Re-enable discretization percentages to reset those stats, so we know to recompute them later.
+            palette.enableDiscretizationPercentages( false );
+            palette.enableDiscretizationPercentages( true );
+        }
+    }
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1418,7 +1441,17 @@ PaletteChanges Palette(
     if ( UI::button( "Reset Palette", Vector2f( widthButton, 0 ) ) )
     {
         presetName = std::string();
+
+        // Preserve some state.
+        int numHistBuckets = palette.getNumHistogramBuckets();
+        bool discrPercentagesWasEnabled = palette.isDiscretizationPercentagesEnabled();
+
         palette = MR::Palette( Palette::DefaultColors );
+
+        // Restore state.
+        palette.setNumHistogramBuckets( numHistBuckets );
+        palette.enableDiscretizationPercentages( discrPercentagesWasEnabled );
+
         changes |= ImGui::PaletteChanges::All;
     }
     UI::setTooltipIfHovered( "Returns the palette to its default values", menuScaling );

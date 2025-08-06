@@ -8,6 +8,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
+#include "MRVoxels/MRFloatGrid.h"
 #include "MRVoxels/MRObjectVoxels.h"
 
 #define INST_IF(cond) MR_CONCAT(INST_IF_, cond)
@@ -88,7 +89,7 @@ FORCE_REGISTER_TYPE( std::vector<MR::PointCloud> );
 FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
 // Those are needed directly for mrmeshpy:
 FORCE_REGISTER_TYPE( std::monostate );
-FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<std::shared_ptr<MR::OpenVdbFloatGrid>>>> );
+FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<FloatGrid>>> );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<Vector<float, MR::VoxelId>>>> );
 FORCE_REGISTER_PARAM_TYPE( double * );
 // ---

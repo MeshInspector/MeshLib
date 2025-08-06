@@ -24,18 +24,28 @@ public:
     using iterator = typename std::vector<T>::iterator;
     using const_iterator = typename std::vector<T>::const_iterator;
 
+    /// creates empty vector
     Vector() = default;
+
+    /// creates a vector with \p size elements with default value
     explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec_( size ) { }
+
+    /// creates a vector with \p size elements with the given value
     explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
+
+    /// moves data from the given std::vector<T>
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
+
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
+
     Vector( std::initializer_list<T> init ) : vec_( init ) { }
 
     [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ == b.vec_; }
     [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ != b.vec_; }
 
     void clear() { vec_.clear(); }
+
     [[nodiscard]] bool empty() const { return vec_.empty(); }
 
     [[nodiscard]] std::size_t size() const { return vec_.size(); }
@@ -47,6 +57,7 @@ public:
     void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec_, targetSize ); }
 
     [[nodiscard]] std::size_t capacity() const { return vec_.capacity(); }
+
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
 
     [[nodiscard]] const_reference operator[]( I i ) const
@@ -67,8 +78,8 @@ public:
         resizeWithReserve( newSize, T{} );
     }
 
-    /// doubles reserved memory until resize(newSize) can be done without reallocation
-    void resizeWithReserve( size_t newSize, const T & value )
+    /// doubles reserved memory until resize(newSize, value) can be done without reallocation
+    void resizeWithReserve( size_t newSize, const T & value ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> )
     {
         auto reserved = vec_.capacity();
         if ( reserved > 0 && newSize > reserved )
@@ -80,22 +91,31 @@ public:
         vec_.resize( newSize, value );
     }
 
-    /// sets elements [pos, pos+len) to given value, adjusting the size of the vector to include new elements
-    void autoResizeSet( I pos, size_t len, T val )
+    /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements;
+    /// the elements in between old size and \p pos are also set to \p val (for faster implementation)
+    void autoResizeSet( I pos, size_t len, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::is_copy_assignable_v<T> )
     {
         assert( pos );
         const size_t p = pos;
         if ( const auto sz = size(); p + len > sz )
         {
+            // add new elements with the given value
             resizeWithReserve( p + len, val );
             if ( p >= sz )
                 return;
+            // the number of the elements existing before function call to be changed
             len = sz - p;
         }
+        // change the value of the elements existing before function call
         for ( size_t i = 0; i < len; ++i )
             vec_[ p + i ] = val;
     }
-    void autoResizeSet( I i, T val ) { autoResizeSet( i, 1, val ); }
+
+    /// sets the element #i to the given value, adjusting the size of the vector to include new element
+    void autoResizeSet( I i, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> )
+    {
+        autoResizeSet( i, 1, val );
+    }
 
     /// this accessor automatically adjusts the size of the vector
     [[nodiscard]] reference autoResizeAt( I i ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
@@ -137,7 +157,7 @@ public:
     /// the user can directly manipulate the vector, anyway she cannot break anything
     std::vector<T> vec_;
 
-#if defined( MR_PARSING_FOR_PB11_BINDINGS ) || defined( MR_COMPILING_PB11_BINDINGS )
+#if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
 #endif
 };

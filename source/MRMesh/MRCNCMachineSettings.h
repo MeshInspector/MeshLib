@@ -2,9 +2,11 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRVector2.h"
-#include <json/forwards.h>
+
 #include <array>
 #include <optional>
+
+namespace Json { class Value; }
 
 namespace MR
 {

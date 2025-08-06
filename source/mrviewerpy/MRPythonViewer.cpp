@@ -80,6 +80,14 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
     } );
 }
 
+static void pythonRunLambdaFromGUIThread( pybind11::function func )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [func]
+    {
+        func();
+    } );
+}
+
 namespace
 {
 
@@ -298,4 +306,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
         pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );
+
+    m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
 } )

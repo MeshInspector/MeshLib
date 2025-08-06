@@ -43,7 +43,8 @@ public:
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
 
     BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    BitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    BitSet & set( IndexType n ) { base::set( n ); return * this; }
     BitSet & set() { base::set(); return * this; }
     BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
     BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
@@ -111,7 +112,7 @@ public:
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 
     // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
-    #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+    #if defined(MR_PARSING_FOR_ANY_BINDINGS) || defined(MR_COMPILING_ANY_BINDINGS)
     std::size_t size() const { return dynamic_bitset::size(); }
     std::size_t count() const { return dynamic_bitset::count(); }
     void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }
@@ -142,7 +143,8 @@ public:
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
     TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    TypedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
@@ -290,18 +292,12 @@ public:
     [[nodiscard]] const T * bitset() const { return bitset_; }
     [[nodiscard]] reference operator *() const { return index_; }
 
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+
 private:
     const T * bitset_ = nullptr;
     IndexType index_ = IndexType( ~size_t( 0 ) );
 };
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a == *b; }
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a != *b; }
 
 
 [[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )

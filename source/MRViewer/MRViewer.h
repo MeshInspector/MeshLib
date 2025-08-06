@@ -612,14 +612,22 @@ private:
 
     // Init window
     int launchInit_( const LaunchParams& params );
+
+    // Called from launchInit_ after window creating to configure it properly
+    bool setupWindow_( const LaunchParams& params );
+
     // Return true if OpenGL loaded successfully
     bool checkOpenGL_(const LaunchParams& params );
+
     // Init base objects
     void init_();
+
     // Init all plugins on start
     void initPlugins_();
+
     // Shut all plugins at the end
     void shutdownPlugins_();
+
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
     static void emsMainInfiniteLoop();

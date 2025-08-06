@@ -3,8 +3,10 @@
 #include "config.h"
 #ifndef MRIOEXTRAS_NO_PDF
 #include "exports.h"
-
-#include <hpdf.h>
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRColor.h"
 
 #include <filesystem>
 #include <vector>
@@ -17,8 +19,8 @@ namespace MR
  */
 struct PdfParameters
 {
-    HPDF_REAL titleSize = 18.f;
-    HPDF_REAL textSize = 14.f;
+    float titleSize = 18.f;
+    float textSize = 14.f;
     /**
      * @brief Font name
      * list of available fonts:
@@ -28,7 +30,11 @@ struct PdfParameters
      * Symbol
      * ZapfDingbats
      */
-    std::string fontName = "Helvetica";
+    std::string defaultFontName = "Helvetica";
+    /**
+    * Font name for table (monospaced)
+    */
+    std::string tableFontName = "Courier";
 };
 
 /**
@@ -44,9 +50,6 @@ public:
     /// Dtor. Automatically do close
     MRIOEXTRAS_API ~Pdf();
 
-    Pdf( const Pdf& rhs ) = delete;
-    Pdf& operator = ( const Pdf& rhs ) = delete;
-
     /**
      * Add text block in current cursor position.
      * Move cursor.
@@ -58,16 +61,40 @@ public:
     MRIOEXTRAS_API void addText( const std::string& text, bool isTitle = false );
 
     /**
+     * Add set of pair string - value in current cursor position.
+     * Move cursor.
+     * Box horizontal size is page width without offset.
+     * Box vertical size is automatically for text.
+     */
+    MRIOEXTRAS_API void addTable( const std::vector<std::pair<std::string, float>>& table );
+
+    struct PaletteRowStats
+    {
+        Color color;
+        std::string rangeMin;
+        std::string rangeMax;
+        std::string percent;
+    };
+    MRIOEXTRAS_API void addPaletteStatsTable( const std::vector<PaletteRowStats>& paletteStats );
+
+    /// Parameters to adding image from file
+    struct ImageParams
+    {
+        /// image size in page space
+        /// if == {0, 0} - use image size
+        /// if .x or .y < 0 use the available page size from the current cursor position (caption size is also accounted for)
+        Vector2f size;
+        /// caption if not empty - add caption under marks (if exist) or image.
+        std::string caption;
+        /// set height to keep same scale as width scale
+        bool uniformScaleFromWidth = false;
+    };
+    /**
      * @brief Add image from file in current cursor position.
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
-     * @param valuesMarks if not empty - add marks under image.
-     * valuesMarks contains pairs<relative_position, marks_text>.
-     *     relative_position is in range [0., 1.], where 0. - left border of image, 1. - right border
-     * @param caption if not empty - add caption under marks (if exist) or image.
      */
-    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
-        const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
@@ -75,31 +102,34 @@ public:
     /// Save and close document. After this impossible add anything in document
     MRIOEXTRAS_API void close();
 
-    void setCursorPosX( HPDF_REAL posX ) { cursorX_ = posX; };
-    void setCursorPosY( HPDF_REAL posY ) { cursorY_ = posY; };
-    float getCursorPosX() const { return cursorX_; };
-    float getCursorPosY() const { return cursorY_; };
+    void setCursorPosX( float posX ) { cursorX_ = posX; }
+    void setCursorPosY( float posY ) { cursorY_ = posY; }
+    float getCursorPosX() const { return cursorX_; }
+    float getCursorPosY() const { return cursorY_; }
+
+    MRIOEXTRAS_API Vector2f getPageSize() const;
+    MRIOEXTRAS_API Box2f getPageWorkArea() const;
 
     /// Checking the ability to work with a document
-    operator bool() const { return state_.document != 0; };
+    MRIOEXTRAS_API operator bool() const;
 
 private:
-    struct State
-    {
-        HPDF_Doc document = nullptr;
-        HPDF_Page activePage = nullptr;
-        HPDF_Font activeFont = nullptr;
-    };
-    State state_;
+    struct TextParams;
+    // common method for adding different types of text
+    void addText_( const std::string& text, const TextParams& params );
+
+    struct State;
+    std::unique_ptr<State> state_;
 
     std::filesystem::path filename_;
 
     PdfParameters params_;
 
-    HPDF_REAL cursorX_ = 0;
-    HPDF_REAL cursorY_ = 0;
+    float cursorX_ = 0;
+    float cursorY_ = 0;
 
-    bool checkDocument() const { return state_.document && state_.activePage; };
+    bool checkDocument() const;
+    void moveCursorToNewLine();
 };
 
 }

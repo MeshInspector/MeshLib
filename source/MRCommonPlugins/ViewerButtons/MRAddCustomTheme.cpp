@@ -269,11 +269,7 @@ std::string AddCustomThemePlugin::save_()
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         std::filesystem::create_directories( saveDir.parent_path(), ec );
 
-        auto json = makeJson_();
-        std::ofstream ofs( saveDir );
-        Json::StreamWriterBuilder builder;
-        std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-        if ( !ofs || writer->write( json, &ofs ) != 0 )
+        if ( !serializeJsonValue( makeJson_(), saveDir ) )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
             return "Cannot save theme with name: \"" + themeName_ + "\"";
@@ -286,47 +282,7 @@ std::string AddCustomThemePlugin::save_()
     {
         auto visualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get() );
         for ( auto obj : visualObjs )
-        {
-            obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
-            obj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
-            obj->setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-            obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-MR_SUPPRESS_WARNING_POP
-#ifndef MESHLIB_NO_VOXELS
-            if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
-            {
-                objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );
-                objVoxels->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
-            }
-            else
-#endif
-            if ( auto objDM = std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
-            {
-                objDM->setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );
-                objDM->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
-            }
-            else if ( auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj ) )
-            {
-                meshObj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
-                meshObj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
-                meshObj->setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
-                meshObj->setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
-                meshObj->setEdgesColor( SceneColors::get( SceneColors::Edges ) );
-                meshObj->setPointsColor( SceneColors::get( SceneColors::Points ) );
-            }
-            else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( obj ) )
-            {
-                objPoints->setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
-                objPoints->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
-            }
-            else if ( auto objLines = std::dynamic_pointer_cast< ObjectLines >( obj ) )
-            {
-                objLines->setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ), true );
-                objLines->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
-            }
-        }
+            obj->resetColors();
     }
     updateThemeNames_();
     return {};

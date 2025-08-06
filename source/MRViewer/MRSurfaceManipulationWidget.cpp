@@ -787,8 +787,9 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 void SurfaceManipulationWidget::updateVizualizeSelection_()
 {
     bool keepOld = settings_.workMode == WorkMode::Patch && mousePressed_;
-    if ( !keepOld )
-        updateUVmap_( false );
+    if ( keepOld )
+        visualizationRegion_ -= generalEditingRegion_;
+    updateUVmap_( false );
     visualizationRegion_.reset();
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();

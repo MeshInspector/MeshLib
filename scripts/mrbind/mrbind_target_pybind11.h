@@ -83,4 +83,14 @@ struct MRBind::pb11::AllowAutomaticPrinting<MR::OpenVdbFloatGrid> : std::false_t
 template <typename T> requires requires{typename std::remove_cvref_t<T>::_prefer_gil_unlock_when_used_as_param;}
 struct MRBind::pb11::ParamGilHandling<T> : std::integral_constant<MRBind::pb11::GilHandling, MRBind::pb11::GilHandling::prefer_unlock> {};
 
+
+// Custom `expected` error printing:
+
+// Anything with `toString()`. This is the convention we use.
+template <typename T> requires requires(const T &t) {toString(t);}
+struct MRBind::pb11::ExpectedErrorToString<T>
+{
+    std::string operator()(const T &t) const {return toString(t);}
+};
+
 #endif

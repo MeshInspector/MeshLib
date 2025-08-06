@@ -26,6 +26,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
       nuget_build:
         default: false
         required: false
@@ -40,30 +44,32 @@ jobs:
       matrix:
         config: [ "Debug", "Release" ]
         build_system: [ MSBuild, CMake ]
-        runner: [ windows-2022, windows-2019 ]
+        os: [ windows-2022, windows-2019 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
-            runner: windows-2022
+            os: windows-2022
             build_system: MSBuild
             config: "Debug"
           - full_config_build: false
-            runner: windows-2019
+            os: windows-2019
             build_system: CMake
           - full_config_build: false
-            runner: windows-2022
+            os: windows-2022
             build_system: CMake
             config: "Release"
         include:
-          - runner: windows-2022
+          - os: windows-2022
+            runner: [windows-2022]
             vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
             CUDA-VERSION: '12.0.1.52833'
             CUDA-MAJOR: '12'
             CUDA-MINOR: '0'
             vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-          - runner: windows-2019
-            vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
+          - os: windows-2019
+            runner: [self-hosted, windows, x64, vs-2019, meshinspector]
+            vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community'
             CUDA-VERSION: '11.4.2.47141'
             CUDA-MAJOR: '11'
             CUDA-MINOR: '4'
@@ -73,7 +79,7 @@ jobs:
       contents: read  # This is required for actions/checkout
 
     env:
-      BUILD_C_SHARP: ${{ matrix.runner == 'windows-2022' && matrix.build_system == 'MSBuild' }}
+      BUILD_C_SHARP: ${{ matrix.os == 'windows-2022' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
 
     steps:
@@ -94,11 +100,12 @@ jobs:
         with:
           target_os: windows
           target_arch: x64
-          cxx_compiler: ${{ matrix.runner }} # runner name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
+          cxx_compiler: ${{ matrix.os }} # os name will be transformed to MSVC name (e.g. windows-2022 -> msvc-2022)
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
 
       - name: Clean Vcpkg Directory
+        if: ${{ matrix.os == 'windows-2022' }}
         working-directory: C:\vcpkg
         run: git clean -ffdx
 
@@ -135,6 +142,7 @@ jobs:
         run: C:\vcpkg\vcpkg.exe integrate install
 
       - name: Restore CUDA Cache
+        if: ${{ matrix.os == 'windows-2022' }}
         uses: actions/cache@v4
         id: cuda-cache
         with:
@@ -142,10 +150,11 @@ jobs:
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
       - name: Install CUDA
-        if: steps.cuda-cache.outputs.cache-hit != 'true'
+        if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-2022' }}
         run: choco install cuda --version=${{matrix.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
+        if: ${{ matrix.os == 'windows-2022' }}
         shell: bash
         run: |
           echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}" >> $GITHUB_ENV
@@ -154,6 +163,7 @@ jobs:
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ matrix.CUDA-MAJOR }}.${{ matrix.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
 
       - name: Install Visual Studio Integration
+        if: ${{ matrix.os == 'windows-2022' }}
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
@@ -161,9 +171,6 @@ jobs:
 
       - name: Setup python
         run: py -3 scripts\setup_win_python_reqs.py
-
-      - name: Check Visual Studio projects for missing file entries
-        run: py -3 scripts\check_vcxproj.py source\
 
       - name: Add msbuild to PATH
         if: ${{ matrix.build_system == 'MSBuild' }}
@@ -185,14 +192,14 @@ jobs:
         # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
         uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
-        if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         with:
           msystem: clang64
           install: make gawk procps-ng mingw-w64-clang-x86_64-cmake
           location: C:\msys64_meshlib_mrbind
 
       - name: Install Clang in MSYS2
-        if: ${{inputs.mrbind}}
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
         shell: msys2 {0}
         run: |
           ./scripts/mrbind/msys2_install_clang_ver.sh $(cat scripts/mrbind/clang_version_msys2.txt)
@@ -200,6 +207,25 @@ jobs:
       - name: Install Ninja for CMake
         if: ${{ matrix.build_system == 'CMake' }}
         uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+
+      - name: Build MRBind
+        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake')}}
+        shell: cmd
+        env:
+          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
+          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
+
+      - name: Generate C bindings
+        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "${{matrix.vc-path}}\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=c
 
       - name: Build
         shell: cmd
@@ -211,7 +237,7 @@ jobs:
             if errorlevel 1 exit 1
             cmake --version
             if errorlevel 1 exit 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}}
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             if errorlevel 1 exit 1
             cmake --build source\TempOutput -j
             if errorlevel 1 exit 1
@@ -232,16 +258,7 @@ jobs:
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
         run: msbuild -m examples\c-sharp-examples\c-sharp-examples.sln -p:Configuration=${{ matrix.config }} -t:restore -t:build
 
-      - name: Build MRBind
-        if: ${{inputs.mrbind}}
-        shell: cmd
-        env:
-          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
-          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
-          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
-        run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
-
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{inputs.mrbind}}
         shell: cmd
         env:
@@ -260,8 +277,12 @@ jobs:
       - name: Unit Tests
         run: source\x64\${{ matrix.config }}\MRTest.exe
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
+
+      - name: C Unit Tests
+        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
@@ -280,7 +301,7 @@ jobs:
           mrbind: ${{ inputs.mrbind }}
           pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
-          test_artifacts_path: windows/${{ matrix.runner }}/${{ matrix.config }}
+          test_artifacts_path: windows/${{ matrix.os }}/${{ matrix.config }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Delete unwanted files
@@ -291,11 +312,11 @@ jobs:
           if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.runner == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
@@ -303,7 +324,7 @@ jobs:
           retention-days: 1
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
@@ -311,7 +332,7 @@ jobs:
           python ./scripts/nuget_patch/patch_library_deps.py "./source/x64/Release/MRMeshC.dll" "./patched_content/"
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetPatchArchiveWindows-x64
@@ -319,7 +340,7 @@ jobs:
           retention-days: 1
 
       - name: Upload NuGet library DLL to Artifacts
-        if: ${{ inputs.nuget_build && matrix.runner == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.os == 'windows-2022' && matrix.config == 'Release' && matrix.build_system == 'MSBuild' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: DotNetDll

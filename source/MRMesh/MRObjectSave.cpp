@@ -210,14 +210,8 @@ Expected<void> serializeObjectTree( const Object& object, const std::filesystem:
 
     assert( !object.name().empty() );
     auto paramsFile = scenePath / ( object.name() + ".json" );
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( paramsFile, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, paramsFile ) )
         return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
-
-    ofs.close();
 
 #ifndef __EMSCRIPTEN__
     if ( !reportProgress( progressCb, 0.1f ) )

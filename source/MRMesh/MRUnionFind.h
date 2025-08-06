@@ -80,7 +80,7 @@ public:
     I parent( I a ) const { return parents_[a]; }
 
     /// finds the root of the set containing given element with optimizing data structure updates
-    I find( I a ) { return updateRoot_( a, findRootNoUpdate_( a ) ); }
+    I find( I a ) { return updateRoot_( a ); }
 
     /// finds the root of the set containing given element with optimizing data structure in the range [begin, end)
     I findUpdateRange( I a, I begin, I end )

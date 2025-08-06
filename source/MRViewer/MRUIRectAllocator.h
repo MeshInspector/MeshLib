@@ -2,7 +2,6 @@
 
 #include "exports.h"
 #include "MRMesh/MRBox.h"
-#include "MRMesh/MRHash.h"
 #include "MRMesh/MRphmap.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRViewportId.h"

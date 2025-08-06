@@ -18,16 +18,15 @@ Box3f MeshOrPoints::getObjBoundingBox() const
 {
     return std::visit( overloaded{
         []( const MeshPart & mp ) { return mp.mesh.getBoundingBox(); },
-        []( const PointCloud * pc ) { return pc->getBoundingBox(); }
+        []( const PointCloudPart & pcp ) { return pcp.cloud.getBoundingBox(); }
     }, var_ );
 }
-
 
 void MeshOrPoints::cacheAABBTree() const
 {
     std::visit( overloaded{
-        []( const MeshPart& mp ) { mp.mesh.getAABBTree(); },
-        [] ( const PointCloud* pc ) { pc->getAABBTree(); }
+        []( const MeshPart & mp ) { mp.mesh.getAABBTree(); },
+        []( const PointCloudPart & pcp ) { pcp.cloud.getAABBTree(); }
     }, var_ );
 }
 
@@ -35,7 +34,7 @@ Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return std::visit( overloaded{
         [toWorld]( const MeshPart & mp ) { return mp.mesh.computeBoundingBox( mp.region, toWorld ); },
-        [toWorld]( const PointCloud * pc ) { return pc->computeBoundingBox( toWorld ); }
+        [toWorld]( const PointCloudPart & pcp ) { return pcp.cloud.computeBoundingBox( pcp.region, toWorld ); }
     }, var_ );
 }
 
@@ -43,7 +42,7 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
 {
     return std::visit( overloaded{
         [&accum, xf]( const MeshPart & mp ) { accumulateFaceCenters( accum, mp, xf ); },
-        [&accum, xf]( const PointCloud * pc ) { accumulatePoints( accum, *pc, xf ); }
+        [&accum, xf]( const PointCloudPart & pcp ) { accumulatePoints( accum, pcp, xf ); }
     }, var_ );
 }
 
@@ -61,7 +60,7 @@ std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, siz
         voxelSize *= std::cbrt( float(nSamples) / float(maxVoxels) );
     return std::visit( overloaded{
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
-        [voxelSize, cb]( const PointCloud * pc ) { return pointGridSampling( *pc, voxelSize, cb ); }
+        [voxelSize, cb]( const PointCloudPart & pcp ) { return pointGridSampling( pcp, voxelSize, cb ); }
     }, var_ );
 }
 
@@ -69,7 +68,7 @@ const VertCoords & MeshOrPoints::points() const
 {
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> const VertCoords & { return mp.mesh.points; },
-        []( const PointCloud * pc ) -> const VertCoords & { return pc->points; }
+        []( const PointCloudPart & pcp ) -> const VertCoords & { return pcp.cloud.points; }
     }, var_ );
 }
 
@@ -77,7 +76,7 @@ const VertBitSet & MeshOrPoints::validPoints() const
 {
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> const VertBitSet& { return mp.mesh.topology.getValidVerts(); },
-        []( const PointCloud * pc ) -> const VertBitSet& { return pc->validPoints; }
+        []( const PointCloudPart & pcp ) -> const VertBitSet& { return pcp.cloud.validPoints; }
     }, var_ );
 }
 
@@ -88,9 +87,9 @@ std::function<Vector3f(VertId)> MeshOrPoints::normals() const
         {
             return [&mesh = mp.mesh]( VertId v ) { return mesh.pseudonormal( v ); };
         },
-        []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
+        []( const PointCloudPart & pcp ) -> std::function<Vector3f(VertId)>
         { 
-            return !pc->hasNormals() ? std::function<Vector3f(VertId)>{} : [pc]( VertId v ) { return pc->normals[v]; };
+            return !pcp.cloud.hasNormals() ? std::function<Vector3f(VertId)>{} : [&normals = pcp.cloud.normals]( VertId v ) { return normals[v]; };
         }
     }, var_ );
 }
@@ -102,7 +101,7 @@ std::function<float(VertId)> MeshOrPoints::weights() const
         {
             return [&mesh = mp.mesh]( VertId v ) { return mesh.dblArea( v ); };
         },
-        []( const PointCloud * ) { return std::function<float(VertId)>{}; }
+        []( const PointCloudPart & ) { return std::function<float(VertId)>{}; }
     }, var_ );
 }
 
@@ -128,23 +127,23 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.pseudonormal( mpr.mtp ),
-                        .isBd = mpr.mtp.isBd( mp.mesh.topology ),
+                        .normal = mp.mesh.pseudonormal( mpr.mtp, mp.region ),
+                        .isBd = mpr.mtp.isBd( mp.mesh.topology, mp.region ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                     };
             };
         },
-        []( const PointCloud * pc ) -> LimitedProjectorFunc
+        []( const PointCloudPart & pcp ) -> LimitedProjectorFunc
         {
-            return [pc]( const Vector3f & p, ProjectionResult & res )
+            return [&pcp]( const Vector3f & p, ProjectionResult & res )
             {
-                PointsProjectionResult ppr = findProjectionOnPoints( p, *pc, res.distSq );
+                PointsProjectionResult ppr = findProjectionOnPoints( p, pcp, res.distSq );
                 if ( ppr.distSq < res.distSq )
                     res = ProjectionResult
                     {
-                        .point = pc->points[ppr.vId],
-                        .normal = ppr.vId < pc->normals.size() ? pc->normals[ppr.vId] : std::optional<Vector3f>{},
+                        .point = pcp.cloud.points[ppr.vId],
+                        .normal = ppr.vId < pcp.cloud.normals.size() ? pcp.cloud.normals[ppr.vId] : std::optional<Vector3f>{},
                         .distSq = ppr.distSq,
                         .closestVert = ppr.vId
                     };
@@ -158,7 +157,7 @@ std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj )
     if ( auto objMesh = dynamic_cast<const ObjectMesh*>( obj ) )
         return MeshOrPoints( objMesh->meshPart() );
     if ( auto objPnts = dynamic_cast<const ObjectPoints*>( obj ) )
-        return MeshOrPoints( *objPnts->pointCloud() );
+        return MeshOrPoints( objPnts->pointCloudPart() );
     return {};
 }
 

@@ -80,15 +80,11 @@ std::optional<LengthUnit> getUiLengthUnit()
     return getDefaultUnitParams<LengthUnit>().targetUnit;
 }
 
-void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero )
+static auto getLengthDependentUnit()
 {
-    // Override the leading zero. Everything except inches enables it.
-    if ( setPreferredLeadingZero )
-        setShowLeadingZero( unit != LengthUnit::inches );
-
-    auto getDependentUnit = overloaded{
+    return overloaded{
         // All length-related unit types must be listed here.
-        []<std::same_as<LengthUnit>>( LengthUnit unit )
+        [] <std::same_as<LengthUnit>>( LengthUnit unit )
         {
             return unit;
         },
@@ -99,7 +95,7 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
                 case LengthUnit::mm:     return AreaUnit::mm2;
                 case LengthUnit::meters: return AreaUnit::meters2;
                 case LengthUnit::inches: return AreaUnit::inches2;
-                case LengthUnit::_count: ; // MSVC warns otherwise.
+                case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
             return AreaUnit::mm2;
@@ -111,7 +107,7 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
                 case LengthUnit::mm:     return VolumeUnit::mm3;
                 case LengthUnit::meters: return VolumeUnit::meters3;
                 case LengthUnit::inches: return VolumeUnit::inches3;
-                case LengthUnit::_count: ; // MSVC warns otherwise.
+                case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
             return VolumeUnit::mm3;
@@ -123,7 +119,7 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
                 case LengthUnit::mm:     return MovementSpeedUnit::mmPerSecond;
                 case LengthUnit::meters: return MovementSpeedUnit::metersPerSecond;
                 case LengthUnit::inches: return MovementSpeedUnit::inchesPerSecond;
-                case LengthUnit::_count: ; // MSVC warns otherwise.
+                case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
             return MovementSpeedUnit::mmPerSecond;
@@ -135,12 +131,21 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
                 case LengthUnit::mm:     return InvLengthUnit::inv_mm;
                 case LengthUnit::meters: return InvLengthUnit::inv_meters;
                 case LengthUnit::inches: return InvLengthUnit::inv_inches;
-                case LengthUnit::_count: ; // MSVC warns otherwise.
+                case LengthUnit::_count:; // MSVC warns otherwise.
             }
             assert( false );
             return InvLengthUnit::inv_mm;
         },
     };
+}
+
+void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero )
+{
+    // Override the leading zero. Everything except inches enables it.
+    if ( setPreferredLeadingZero )
+        setShowLeadingZero( unit != LengthUnit::inches );
+
+    auto getDependentUnit = getLengthDependentUnit();
 
     forAllLengthUnits( [&]<typename E>()
     {
@@ -149,6 +154,24 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
         setDefaultUnitParams( params );
     } );
 }
+
+std::optional<LengthUnit> getModelLengthUnit()
+{
+    return getDefaultUnitParams<LengthUnit>().sourceUnit;
+}
+
+void setModelLengthUnit( std::optional<LengthUnit> unit )
+{
+    auto getDependentUnit = getLengthDependentUnit();
+
+    forAllLengthUnits( [&]<typename E>( )
+    {
+        auto params = getDefaultUnitParams<E>();
+        params.sourceUnit = unit ? std::optional( getDependentUnit.template operator() < E > ( *unit ) ) : std::nullopt;
+        setDefaultUnitParams( params );
+    } );
+}
+
 
 DegreesMode getDegreesMode()
 {

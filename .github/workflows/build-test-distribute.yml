@@ -42,8 +42,9 @@ jobs:
       need_linux_image_rebuild:   ${{ needs.config.outputs.need_linux_image_rebuild == 'true' }}
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
-      vs19_vcpkg_version:        ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:        ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
+      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -138,7 +139,7 @@ jobs:
       - config
       - windows-build-test
     timeout-minutes: 60
-    runs-on: windows-2019
+    runs-on: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
     env:
       vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
     steps:
@@ -331,7 +332,7 @@ jobs:
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
 
   collect-stats:
     timeout-minutes: 5
@@ -445,4 +446,10 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
+          failOnError: false
+      
+      - name: Delete C bindings headers
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: CBindings
           failOnError: false

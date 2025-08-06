@@ -14,14 +14,14 @@ struct SaveSettings
 {
     /// true - save valid points/vertices only (pack them);
     /// false - save all points/vertices preserving their indices
-    bool saveValidOnly = true;
+    bool onlyValidPoints = true;
 
-    /// whether to allow the pack or shuffle of triangles;
-    /// if it is turned on, then ids of invalid triangles are reused by the following valid triangles
-    /// and higher compression (in .ctm format) can be reached but the order of triangles is changed;
-    /// if it is turned off then all triangles maintain their ids, and invalid triangles are saved as (0,0,0) vertex triples;
-    /// currently affects .ctm and .ply formats only
-    bool rearrangeTriangles = true;
+    /// whether to allow packing or shuffling of primitives (triangles in meshes or edges in polylines);
+    /// if packPrimitives=true, then ids of invalid primitives are reused by valid primitives
+    /// and higher compression (in .ctm format) can be reached if the order of triangles is changed;
+    /// if packPrimitives=false then all primitives maintain their ids, and invalid primitives are saved with all vertex ids equal to zero;
+    /// currently this flag affects the saving in .ctm and .ply formats only
+    bool packPrimitives = true;
 
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;

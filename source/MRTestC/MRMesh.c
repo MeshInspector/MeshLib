@@ -14,7 +14,7 @@ void testArea( void )
     const MRVector3f base = mrVector3fDiagonal( -0.5f );
 
     MRMesh* mesh = mrMakeCube( &size, &base );
-    
+
 
     double area = mrMeshArea( mesh, NULL );
     TEST_ASSERT( area > 5.999f && area < 6.001f );
@@ -32,7 +32,7 @@ void testArea( void )
     TEST_ASSERT( area > 2.999f && area < 3.001f );
 
     mrFaceBitSetFree( faces );
-    mrMeshFree( mesh );    
+    mrMeshFree( mesh );
 }
 
 void testShortEdges( void )

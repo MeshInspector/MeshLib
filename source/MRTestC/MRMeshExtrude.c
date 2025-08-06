@@ -24,7 +24,7 @@ void testDegenerateBandNonEmpty(void) {
     // Call the function to create a band of degenerate faces along the region boundary
     mrMakeDegenerateBandAroundRegion(mesh, region);
 
-    // Invalidate caches 
+    // Invalidate caches
     mrMeshInvalidateCaches(mesh, true);
 
     // Get the number of vertices after the function call

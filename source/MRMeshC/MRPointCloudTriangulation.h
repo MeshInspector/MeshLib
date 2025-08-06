@@ -11,7 +11,7 @@ typedef struct MRTriangulationParameters
     /**
      * \brief The number of nearest neighbor points to use for building of local triangulation
      * \note Too small value can make not optimal triangulation and additional holes
-     * Too big value increases difficulty of optimization and decreases performance    
+     * Too big value increases difficulty of optimization and decreases performance
      */
     int numNeighbours;
     /**
@@ -21,7 +21,7 @@ typedef struct MRTriangulationParameters
      */
     float radius;
     /**
-     * \brief Critical angle of triangles in local triangulation (angle between triangles in fan should be less then this value)    
+     * \brief Critical angle of triangles in local triangulation (angle between triangles in fan should be less then this value)
      */
     float critAngle;
 

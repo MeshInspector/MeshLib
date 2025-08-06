@@ -8,7 +8,7 @@ void testBoxf(void)
 	MRVector3f size = mrVector3fDiagonal(1.f);
 
 	MRBox3f box = mrBox3fFromMinAndSize(&min, &size);
-	
+
 	float volume = mrBox3fVolume(&box);
 	TEST_ASSERT(volume > 0.999f && volume < 1.001f);
 
@@ -23,7 +23,7 @@ void testBoxf(void)
 	TEST_ASSERT(boxSize.x > 0.999f && boxSize.x < 1.001f);
 	TEST_ASSERT(boxSize.y > 0.999f && boxSize.y < 1.001f);
 	TEST_ASSERT(boxSize.z > 0.999f && boxSize.z < 1.001f);
-	
+
 	MRVector3f boxCenter = mrBox3fCenter(&box);
 
 	TEST_ASSERT(boxCenter.x < -0.499f && boxCenter.x > -0.501f);

@@ -21,6 +21,7 @@ ENDIF()
 IF(NOT MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMeshC
+    m
   )
 ELSE()
   set(CMAKE_EXECUTABLE_SUFFIX ".html")

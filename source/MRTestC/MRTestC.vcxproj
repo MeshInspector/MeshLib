@@ -25,6 +25,7 @@
     <ClCompile Include="MRMeshDecimate.c" />
     <ClCompile Include="MRMeshExtrude.c" />
     <ClCompile Include="MRMeshFillHole.c" />
+    <ClCompile Include="MRMeshMeshDistance.c" />
     <ClCompile Include="MRMeshNormals.c" />
     <ClCompile Include="MRMeshOffset.c" />
     <ClCompile Include="MRMeshSubdivide.c" />
@@ -60,6 +61,7 @@
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshFillHole.h" />
+    <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOffset.h" />
     <ClInclude Include="MRMeshSubdivide.h" />

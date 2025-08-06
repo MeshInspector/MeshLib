@@ -20,7 +20,7 @@ int main( void )
     int32_t horizontalResolution = 64; // Increase horizontal resolution
     int32_t verticalResolution = 64; // Increase vertical resolution
 
-    MR_Mesh *sphere1 = MR_makeUVSphere( &radius, &horizontalResolution, &verticalResolution );
+    MR_Mesh* sphere1 = MR_makeUVSphere( &radius, &horizontalResolution, &verticalResolution );
 
     // Create a copy of this sphere and offset it.
     MR_Mesh* sphere2 = MR_Mesh_ConstructFromAnother( MR_PassBy_Copy, sphere1 );

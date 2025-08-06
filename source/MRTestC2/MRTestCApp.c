@@ -1,30 +1,32 @@
 #include "TestMacros.h"
+
 #include "MRAddNoise.h"
+#include "MRAffineXf.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
+#include "MRColor.h"
+#include "MRExpandShrink.h"
+#include "MRFixSelfIntersections.h"
+#include "MRMatrix3.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"
+#include "MRMeshBuilder.h"
 #include "MRMeshCollide.h"
 #include "MRMeshCollidePrecise.h"
+#include "MRMeshComponents.h"
 #include "MRMeshDecimate.h"
 #include "MRMeshExtrude.h"
 #include "MRMeshFillHole.h"
+#include "MRMeshMeshDistance.h"
 #include "MRMeshNormals.h"
 #include "MRMeshOffset.h"
-#include "MRMeshComponents.h"
-#include "MRMeshTopology.h"
-#include "MRMeshBuilder.h"
 #include "MRMeshSubdivide.h"
-#include "MRFixSelfIntersections.h"
-#include "MRExpandShrink.h"
+#include "MRMeshTopology.h"
 #include "MRPointCloud.h"
-#include "MRVDBConversions.h"
-#include "MRColor.h"
-#include "MRMatrix3.h"
-#include "MRAffineXf.h"
-#include "SimpleObjects.h"
-#include "MRVector3.h"
 #include "MRPointsToMeshProjector.h"
+#include "MRVDBConversions.h"
+#include "MRVector3.h"
+#include "SimpleObjects.h"
 
 int main( void )
 {
@@ -52,6 +54,7 @@ int main( void )
     RUN_TEST( testMeshDecimate )
     RUN_TEST( testMeshFillHole )
     RUN_TEST( testMeshFillHoleNicely )
+    RUN_TEST( testMeshMeshDistance )
     RUN_TEST( testMeshNormals )
     RUN_TEST( testComponentsMap )
     RUN_TEST( testLargeRegions )

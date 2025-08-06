@@ -1,8 +1,6 @@
 #include "TestMacros.h"
 
 #include "MRCMesh/MRAddNoise.h"
-#include <MRCMesh/MRBitSet.h>
-#include <MRCMesh/MRCube.h>
 #include <MRCMesh/MRMesh.h>
 #include <MRCMesh/MRTorus.h>
 

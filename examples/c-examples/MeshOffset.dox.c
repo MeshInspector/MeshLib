@@ -1,11 +1,15 @@
-#include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRCube.h>
-#include <MRMeshC/MRVector3.h>
-#include <MRMeshC/MRBox.h>
-#include <MRMeshC/MRAffineXf.h>
-#include <MRMeshC/MRMeshSave.h>
-#include <MRMeshC/MROffset.h>
-#include <MRMeshC/MRString.h>
+#include <MRCMesh/MRAffineXf.h>
+#include <MRCMesh/MRBox.h>
+#include <MRCMesh/MRCube.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshPart.h>
+#include <MRCMesh/MRMeshSave.h>
+#include <MRCMesh/MRString.h>
+#include <MRCMesh/MRVector3.h>
+#include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
+#include <MRCMisc/std_string.h>
+#include <MRCVoxels/MROffset.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -13,56 +17,52 @@
 
 #define APPROX_VOXEL_COUNT 10000000.f
 
-int main( int argc, char* argv[] )
+int main( void )
 {
     int rc = EXIT_FAILURE;
 
-    // error messages will be stored here
-    MRString* errorString = NULL;
-
     // Create mesh
-    MRVector3f size = mrVector3fDiagonal( 1.f );
-    MRVector3f base = mrVector3fDiagonal( -0.5f );
-    MRMesh* mesh = mrMakeCube( &size, &base );
+    MR_Vector3f size = MR_Vector3f_diagonal( 1.f );
+    MR_Vector3f base = MR_Vector3f_diagonal( -0.5f );
+    MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     // offset functions can also be applied to separate mesh components rather than to the whole mesh
     // this is not our case, so the region is set to NULL
-    MRMeshPart inputMeshPart = (MRMeshPart){
-        .mesh = mesh,
-        .region = NULL,
-    };
+    MR_MeshPart* inputMeshPart = MR_MeshPart_Construct( mesh, NULL );
 
     // Setup parameters
-    MROffsetParameters params = mrOffsetParametersNew();
+    MR_OffsetParameters* params = MR_OffsetParameters_DefaultConstruct();
     // calculate voxel size depending on desired accuracy and/or memory consumption
-    params.voxelSize = mrSuggestVoxelSize( inputMeshPart, 10000000.f );
-    MRAffineXf3f xf = mrAffineXf3fNew();
-    MRBox3f bbox = mrMeshComputeBoundingBox( mesh, &xf );
-    float offset = mrBox3fDiagonal( &bbox ) * 0.1f;
+    MR_BaseShellParameters_Set_voxelSize( MR_OffsetParameters_MutableUpcastTo_MR_BaseShellParameters( params ), MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
 
     // Make offset mesh
-    MRMesh* outputMesh = mrOffsetMesh( inputMeshPart, offset, &params, &errorString );
-    if ( errorString )
+    MR_expected_MR_Mesh_std_string* outputMeshEx = MR_offsetMesh( inputMeshPart, offset, params );
+    MR_MeshPart_Destroy( inputMeshPart );
+    MR_OffsetParameters_Destroy( params );
+
+    MR_Mesh* outputMesh = MR_expected_MR_Mesh_std_string_GetMutableValue( outputMeshEx );
+
+    if ( !outputMesh )
     {
-        fprintf( stderr, "Failed to perform offset: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out;
+        fprintf( stderr, "Failed to perform offset: %s", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( outputMeshEx ) ) );
+        goto fail_offset;
     }
 
     // Save result
-    MRSaveSettings saveSettings = mrSaveSettingsNew();
-    mrMeshSaveToAnySupportedFormat( outputMesh, "mesh_offset.stl", &saveSettings, &errorString );
-    if ( errorString )
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( outputMesh, "mesh_offset.stl", NULL, NULL);
+    if ( MR_expected_void_std_string_GetError( saveEx ) )
     {
-        fprintf( stderr, "Failed to save inputMesh: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out_outputMesh;
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        goto fail_save;
     }
 
     rc = EXIT_SUCCESS;
-out_outputMesh:
-    mrMeshFree( outputMesh );
-out:
-    mrMeshFree( mesh );
+fail_save:
+    MR_expected_void_std_string_Destroy( saveEx );
+fail_offset:
+    MR_expected_MR_Mesh_std_string_Destroy( outputMeshEx );
+    MR_Mesh_Destroy( mesh );
     return rc;
 }

@@ -128,18 +128,15 @@ install(
 )
 
 install(
-  FILES ${HEADERS}
-  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+  # Here the trailing slash removes the `include` part from the output path.
+  DIRECTORY include/
+  DESTINATION "${MR_INCLUDE_DIR}"
 )
 
 install(
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION ${MR_CONFIG_DIR}
 )
-
-install(FILES ${HEADERS} DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
-install(FILES ${UI_JSON} DESTINATION "${MR_RESOURCES_DIR}")
-install(FILES ${ITEMS_JSON} DESTINATION "${MR_RESOURCES_DIR}")
 
 install(
   EXPORT ${PROJECT_NAME}

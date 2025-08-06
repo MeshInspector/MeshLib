@@ -38,3 +38,7 @@ add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}
 )
+
+IF(NOT WIN32)
+  target_link_libraries( ${PROJECT_NAME} PRIVATE m )
+ENDIF()

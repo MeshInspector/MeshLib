@@ -9,6 +9,7 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshExtrude.h"
 #include "MRMeshFillHole.h"
+#include "MRMeshMeshDistance.h"
 #include "MRMeshNormals.h"
 #include "MRMeshOffset.h"
 #include "MRMeshComponents.h"
@@ -52,6 +53,7 @@ int main( void )
     RUN_TEST( testMeshDecimate )
     RUN_TEST( testMeshFillHole )
     RUN_TEST( testMeshFillHoleNicely )
+    RUN_TEST( testMeshMeshDistance )
     RUN_TEST( testMeshNormals )
     RUN_TEST( testComponentsMap )
     RUN_TEST( testLargeRegions )

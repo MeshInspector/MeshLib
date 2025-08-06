@@ -49,6 +49,7 @@
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
+    <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshMetrics.h" />
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
@@ -126,6 +127,7 @@
     <ClCompile Include="MRMeshFixer.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRMeshLoadObj.cpp" />
+    <ClCompile Include="MRMeshMeshDistance.cpp" />
     <ClCompile Include="MRMeshMetrics.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />

@@ -4,12 +4,10 @@
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRTimer.h"
-#include "MRMakeSphereMesh.h"
 #include "MRMeshCollide.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
-#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -295,24 +293,6 @@ float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f*
 {
     std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
     return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
-}
-
-TEST(MRMesh, MeshDistance) 
-{
-    Mesh sphere1 = makeUVSphere( 1, 8, 8 );
-
-    auto d11 = findDistance( sphere1, sphere1, nullptr, FLT_MAX );
-    EXPECT_EQ( d11.distSq, 0 );
-
-    auto zShift = AffineXf3f::translation( Vector3f( 0, 0, 3 ) );
-    auto d1z = findDistance( sphere1, sphere1, &zShift, FLT_MAX );
-    EXPECT_EQ( d1z.distSq, 1 );
-
-    Mesh sphere2 = makeUVSphere( 2, 8, 8 );
-
-    auto d12 = findDistance( sphere1, sphere2, nullptr, FLT_MAX );
-    float dist12 = std::sqrt( d12.distSq );
-    EXPECT_TRUE( dist12 > 0.9f && dist12 < 1.0f );
 }
 
 } //namespace MR

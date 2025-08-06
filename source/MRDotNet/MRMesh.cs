@@ -140,6 +140,19 @@ namespace MR
             public MRMeshProjectionResult() { }
         };
 
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRMeshMeshDistanceResult
+        {
+            /// two closest points: from meshes A and B respectively
+            public MRPointOnFace a = new MRPointOnFace();
+            public MRPointOnFace b = new MRPointOnFace();
+
+            /// squared distance between a and b
+            public float distSq = 0.0f;
+
+            public MRMeshMeshDistanceResult() { }
+        };
+
         /// optional parameters for \ref mrFindProjection
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRFindProjectionParameters
@@ -348,6 +361,10 @@ namespace MR
             /// computes the closest point on mesh (or its region) to given point
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRMeshProjectionResult mrFindProjection(ref MRVector3f pt, ref MRMeshPart mp, ref MRFindProjectionParameters parameters);
+
+            /// computes minimal distance between two meshes or two mesh regions
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern MRMeshMeshDistanceResult mrFindDistance(ref MRMeshPart a, ref MRMeshPart b, IntPtr rigidB2A, float upDistLimitSq);
 
             /// converts face id and 3d point into barycentric representation
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -843,6 +860,30 @@ namespace MR
             }
             #endregion
 
+            /**
+             * \brief computes minimal distance between two meshes or two mesh regions
+             * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+             * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
+             */
+            static public MeshMeshDistanceResult FindDistance(MeshPart a, MeshPart b, AffineXf3f? rigidB2A = null, float upDistLimitSq = float.MaxValue)
+            {
+                IntPtr xf = rigidB2A is not null ? rigidB2A.XfAddr() : (IntPtr)null;
+                var mrRes = mrFindDistance(ref a.mrMeshPart, ref b.mrMeshPart, xf, upDistLimitSq);
+
+                MeshMeshDistanceResult result = new MeshMeshDistanceResult();
+
+                result.a = new PointOnFace();
+                result.a.point = new Vector3f(mrRes.a.point);
+                result.a.faceId.Id = mrRes.a.face.Id;
+
+                result.b = new PointOnFace();
+                result.b.point = new Vector3f(mrRes.b.point);
+                result.b.faceId.Id = mrRes.b.face.Id;
+
+                result.distanceSquared = mrRes.distSq;
+
+                return result;
+            }
 
             #region Private fields
 
@@ -914,6 +955,12 @@ namespace MR
         {
             public PointOnFace pointOnFace;
             public MeshTriPoint meshTriPoint;
+            public float distanceSquared;
+        };
+
+        public struct MeshMeshDistanceResult
+        {
+            public PointOnFace a, b;
             public float distanceSquared;
         };
 

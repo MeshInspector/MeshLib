@@ -39,6 +39,7 @@ int main( void )
     int* faceData = malloc( sizeof( int ) * 3 * facesNum );
     memcpy( faceData, faces, sizeof( MR_std_array_MR_VertId_3 ) * facesNum );
 
+    MR_Triangulation_Destroy( t );
     MR_Mesh_Destroy( mesh );
     free( vertexData );
     free( faceData );

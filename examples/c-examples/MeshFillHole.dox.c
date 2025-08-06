@@ -54,7 +54,7 @@ int main( int argc, char* argv[] )
     // You can make a custom one, or choose from the predefined metrics defined in `<MRCMesh/MRMeshMetrics.h>`.
     MR_FillHoleMetric* metric = MR_getUniversalMetric( mesh );
     MR_FillHoleParams_Set_metric( params, MR_PassBy_Move, metric );
-    MR_FillHoleMetric_Destroy( metric ); // The metric is copied into the parameters.
+    MR_FillHoleMetric_Destroy( metric ); // `MR_PassBy_Move` is not destructive, the object still needs to be destroyed manually.
     // Optionally, receive the bitset of the created faces.
     MR_FaceBitSet* newFaces = MR_FaceBitSet_DefaultConstruct();
     MR_FillHoleParams_Set_outNewFaces( params, newFaces );

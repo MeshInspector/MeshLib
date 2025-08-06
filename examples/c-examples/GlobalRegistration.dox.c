@@ -138,7 +138,7 @@ int main( int argc, char* argv[] )
         const MR_PointCloud* cloud = MR_MeshOrPoints_asPointCloud( MR_MeshOrPointsXf_Get_obj( input ) );
         const MR_VertCoords* points = MR_PointCloud_Get_points( cloud );
         size_t numPoints = MR_VertCoords_size( points );
-        printf("%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n\n", xf->A.x.x, xf->A.x.y, xf->A.x.z, xf->b.x, xf->A.y.x, xf->A.y.y, xf->A.y.z, xf->b.y, xf->A.z.x, xf->A.z.y, xf->A.z.z, xf->b.z);
+        printf("Resulting transform for part %d:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n\n", i, xf->A.x.x, xf->A.x.y, xf->A.x.z, xf->b.x, xf->A.y.x, xf->A.y.y, xf->A.y.z, xf->b.y, xf->A.z.x, xf->A.z.y, xf->A.z.z, xf->b.z);
         for ( size_t j = 0; j < numPoints; j++ )
         {
             MR_Vector3f point = *MR_VertCoords_index_const( points, (MR_VertId){j} );

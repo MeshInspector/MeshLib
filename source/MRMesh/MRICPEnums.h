@@ -9,6 +9,9 @@ enum class ICPMethod
     ///< it is the safest approach but can converge slowly
     PointToPlane = 2  ///< select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair,
     ///< converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs
+    ///< This mode only works correctly if the points being projected have normals information in them (are not point clouds without normals).
+    ///< By default both objects are projected onto each other, so at least one of them must have normals, unless you change the settings
+    ///< to only project one way (using `MR::ICP::setFltSamples()` or `MR::ICP::setRefSamples()`), in which case the object being projected must have normals.
 };
 
 /// The group of transformations, each with its own degrees of freedom

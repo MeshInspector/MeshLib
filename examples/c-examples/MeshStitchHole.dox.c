@@ -28,16 +28,16 @@ int main( void )
     }
 
     // Second mesh, static.
-    MR_expected_MR_Mesh_std_string* Mesh2Ex = MR_MeshLoad_fromAnySupportedFormat_2( "meshB.stl", NULL, NULL );
-    MR_Mesh* Mesh2 = MR_expected_MR_Mesh_std_string_GetMutableValue( Mesh2Ex );
-    if ( !Mesh2 )
+    MR_expected_MR_Mesh_std_string* mesh2Ex = MR_MeshLoad_fromAnySupportedFormat_2( "meshB.stl", NULL, NULL );
+    MR_Mesh* mesh2 = MR_expected_MR_Mesh_std_string_GetMutableValue( mesh2Ex );
+    if ( !mesh2 )
     {
-        fprintf( stderr, "Failed to load mesh B: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( Mesh2Ex ) ) );
+        fprintf( stderr, "Failed to load mesh B: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( mesh2Ex ) ) );
         goto fail_mesh_loading_b;
     }
 
     // Unite meshes
-    MR_Mesh_addMesh_3( mesh, Mesh2, NULL, NULL );
+    MR_Mesh_addMesh_3( mesh, mesh2, NULL, NULL );
 
     // Find holes (expect that there are exactly 2 holes)
     MR_std_vector_MR_EdgeId* edges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
@@ -73,7 +73,7 @@ fail_save:
 fail_not_two_holes:
     MR_std_vector_MR_EdgeId_Destroy( edges );
 fail_mesh_loading_b:
-    MR_expected_MR_Mesh_std_string_Destroy( Mesh2Ex );
+    MR_expected_MR_Mesh_std_string_Destroy( mesh2Ex );
 fail_mesh_loading_a:
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
     return rc;

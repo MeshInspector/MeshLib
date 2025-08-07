@@ -21,7 +21,7 @@ public:
     GraphCut( const MeshTopology & topology, const EdgeMetric & metric );
     void addContour( const EdgePath & contour );
     void addFaces( FaceBitSet source, FaceBitSet sink );
-    FaceBitSet fill();
+    FaceBitSet fill( const ProgressCallback& progress );
 
 private:
     const MeshTopology & topology_;
@@ -116,9 +116,11 @@ void GraphCut::addFaces( FaceBitSet source, FaceBitSet sink )
     assert( !filled_[Left].intersects( filled_[Right] ) );
 }
 
-FaceBitSet GraphCut::fill()
+FaceBitSet GraphCut::fill( const ProgressCallback& progress )
 {
     MR_TIMER;
+
+    size_t numCycles = 0;
     while ( !active_[Left].empty() && !active_[Right].empty() )
     {
         auto lf = active_[Left].front();
@@ -128,6 +130,12 @@ FaceBitSet GraphCut::fill()
         auto rf = active_[Right].front();
         active_[Right].pop_front();
         processActive_( rf, Right );
+
+        ++numCycles;
+        if ( !reportProgress( progress,
+            [numCycles]() { return std::erf( numCycles * 1e-7f ); }, // report 84% for numCycles == 10'000'000
+            numCycles, 65536 ) )
+            break;
     }
 
     if ( active_[Right].empty() )
@@ -334,29 +342,29 @@ bool GraphCut::checkNotSaturatedPath_( FaceId f, int side ) const
     }
 }
 
-FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour, const EdgeMetric & metric )
+FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour, const EdgeMetric & metric, const ProgressCallback& progress )
 {
     MR_TIMER;
     GraphCut filler( topology, metric );
     filler.addContour( contour );
-    return filler.fill();
+    return filler.fill( progress );
 }
 
-FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours, const EdgeMetric & metric )
+FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours, const EdgeMetric & metric, const ProgressCallback& progress )
 {
     MR_TIMER;
     GraphCut filler( topology, metric );
     for ( auto & contour : contours )
         filler.addContour( contour );
-    return filler.fill();
+    return filler.fill( progress );
 }
 
-FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, const FaceBitSet& sink, const EdgeMetric& metric )
+FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, const FaceBitSet& sink, const EdgeMetric& metric, const ProgressCallback& progress )
 {
     MR_TIMER;
     GraphCut filler( topology, metric );
     filler.addFaces( source, sink );
-    return filler.fill();
+    return filler.fill( progress );
 }
 
 } // namespace MR

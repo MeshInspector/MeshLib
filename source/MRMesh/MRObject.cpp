@@ -1,5 +1,6 @@
 #include "MRObject.h"
 #include "MRObjectFactory.h"
+#include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
@@ -660,6 +661,22 @@ Box3f Object::getWorldTreeBox( ViewportId id ) const
         if ( c && !c->isAncillary() && c->isVisible( id ) )
             res.include( c->getWorldTreeBox( id ) );
     return res;
+}
+
+bool Object::addTag( std::string tag )
+{
+    const auto [it, inserted] = tags_.emplace( std::move( tag ) );
+    if ( inserted )
+        ObjectTagEventDispatcher::instance().tagAddedSignal( this, *it );
+    return inserted;
+}
+
+bool Object::removeTag( const std::string& tag )
+{
+    const auto present = bool( tags_.erase( tag ) );
+    if ( present )
+        ObjectTagEventDispatcher::instance().tagRemovedSignal( this, tag );
+    return present;
 }
 
 size_t Object::heapBytes() const

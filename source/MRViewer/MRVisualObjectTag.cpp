@@ -1,5 +1,6 @@
 #include "MRVisualObjectTag.h"
 
+#include "MRMesh/MRObjectTagEventDispatcher.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
@@ -23,7 +24,7 @@ std::string VisualObjectTag::canonicalName() const
 
 VisualObjectTagManager& VisualObjectTagManager::instance()
 {
-    static VisualObjectTagManager sInstance;
+    static VisualObjectTagManager sInstance{ ProtectedTag{} };
     return sInstance;
 }
 
@@ -84,6 +85,24 @@ void VisualObjectTagManager::update( VisualObject& visObj, const std::string& vi
             if ( visObj.tags().contains( id ) )
                 return update( visObj, id );
     }
+}
+
+VisualObjectTagManager::VisualObjectTagManager( ProtectedTag )
+{
+    auto& objectTagManager = ObjectTagEventDispatcher::instance();
+    const auto slot = [this] ( Object* obj, const std::string& tag )
+    {
+        if ( !storage_.contains( tag ) )
+            return;
+
+        auto* visObj = dynamic_cast<VisualObject*>( obj );
+        if ( !visObj )
+            return;
+
+        update( *visObj, tag );
+    };
+    onTagAdded_ = objectTagManager.tagAddedSignal.connect( slot );
+    onTagRemoved_ = objectTagManager.tagRemovedSignal.connect( slot );
 }
 
 void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manager )

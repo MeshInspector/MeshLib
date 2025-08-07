@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAlignContoursToMesh.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRImageTransform.h" />
@@ -431,6 +432,7 @@
     <ClInclude Include="MRSolidOfRevolution.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAlignContoursToMesh.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />

@@ -17,4 +17,4 @@
 --skip-mentions-of Json::Value
 --skip-mentions-of '/(std|tl)::expected<Json::Value, .*>/'
 --skip-mentions-of '/std::initializer_list<.*>/'
---adjust-comments 's/(^|.* )\\([{}]|(def|in|addto)group).*//g'
+--adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'

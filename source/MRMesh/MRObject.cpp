@@ -1,6 +1,6 @@
 #include "MRObject.h"
 #include "MRObjectFactory.h"
-#include "MRObjectTagManager.h"
+#include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"

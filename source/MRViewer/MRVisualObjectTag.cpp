@@ -1,6 +1,6 @@
 #include "MRVisualObjectTag.h"
 
-#include "MRMesh/MRObjectTagManager.h"
+#include "MRMesh/MRObjectTagEventDispatcher.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"

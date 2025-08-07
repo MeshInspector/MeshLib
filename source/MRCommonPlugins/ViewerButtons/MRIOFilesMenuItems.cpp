@@ -25,6 +25,7 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectDistanceMap.h"
+#include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRImageSave.h"
@@ -35,7 +36,6 @@
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRSaveObjects.h"
-#include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRViewerEventsListener.h"
@@ -795,13 +795,21 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
     } );
 }
 
-bool SaveSceneAsMenuItem::action()
+void SaveSceneAsMenuItem::saveSceneAs_()
 {
+    std::string defFileName;
+    if ( auto obj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+        defFileName = obj->name();
     saveFileDialogAsync( [&] ( const std::filesystem::path& savePath )
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { .filters = SceneSave::getFilters() } );
+    }, { .fileName = defFileName, .filters = SceneSave::getFilters() } );
+}
+
+bool SaveSceneAsMenuItem::action()
+{
+    saveSceneAs_();
     return false;
 }
 
@@ -821,8 +829,8 @@ bool SaveSceneMenuItem::action()
 {
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
-        savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
-    if ( !savePath.empty() )
+        saveSceneAs_();
+    else
         saveScene_( savePath );
     return false;
 }

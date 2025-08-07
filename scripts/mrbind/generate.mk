@@ -708,7 +708,7 @@ $(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated$(MRBIND_PAR
 only-generate: $($1__ParserSourceOutput)
 $($1__ParserSourceOutput): $($1__CombinedHeaderOutput) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Parsing] $($1__ParserSourceOutput))
-	@$(MRBIND_EXE) $(MRBIND_FLAGS) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
+	@$(MRBIND_EXE) $(subst $,$$$$,$(MRBIND_FLAGS)) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
 endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_parse,$x)))
 

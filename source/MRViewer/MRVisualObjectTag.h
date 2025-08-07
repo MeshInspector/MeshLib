@@ -48,6 +48,12 @@ public:
     MRVIEWER_API static void update( VisualObject& visObj, const std::string& visTagId );
 
 private:
+    struct ProtectedTag {};
+    explicit VisualObjectTagManager( ProtectedTag );
+
+    boost::signals2::scoped_connection onTagAdded_;
+    boost::signals2::scoped_connection onTagRemoved_;
+
     friend MRVIEWER_API void deserializeFromJson( const Json::Value&, VisualObjectTagManager& );
 
     std::unordered_map<std::string, VisualObjectTag> storage_;

@@ -255,8 +255,12 @@ public:
     /// provides read-only access to the tag storage
     /// the storage is a set of unique strings
     const std::unordered_set<std::string>& tags() const { return tags_; }
-    /// provides read-write access to the tag storage
-    std::unordered_set<std::string>& varTags() { return tags_; }
+    /// adds tag to the object's tag storage
+    /// additionally calls ObjectTagManager::tagAddedSignal
+    MRMESH_API bool addTag( std::string tag );
+    /// removes tag from the object's tag storage
+    /// additionally calls ObjectTagManager::tagRemovedSignal
+    MRMESH_API bool removeTag( const std::string& tag );
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;

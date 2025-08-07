@@ -358,6 +358,27 @@ namespace MR.Test
         }
 
         [Test]
+        public void TestMeshMeshDistance()
+        {
+            var sphere1 = Mesh.MakeUVSphere(1, 8, 8);
+
+            var wholeSphere1 = new MeshPart(sphere1);
+            var d11 = Mesh.FindDistance(wholeSphere1, wholeSphere1);
+            Assert.That(d11.distanceSquared, Is.EqualTo(0));
+
+            var zShift = new AffineXf3f(new Vector3f(0.0f, 0.0f, 3.0f));
+            var d1z = Mesh.FindDistance(wholeSphere1, wholeSphere1, zShift);
+            Assert.That(d1z.distanceSquared, Is.EqualTo(1));
+
+            Mesh sphere2 = Mesh.MakeUVSphere(2, 8, 8);
+
+            var wholeSphere2 = new MeshPart(sphere2);
+            var d12 = Mesh.FindDistance(wholeSphere1, wholeSphere2);
+            var dist12 = Math.Sqrt(d12.distanceSquared);
+            Assert.That(dist12, Is.InRange(0.9, 1.0));
+        }
+
+        [Test]
         public void TestValidPoints()
         {
             Assert.DoesNotThrow(() =>

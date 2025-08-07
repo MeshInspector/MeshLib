@@ -133,7 +133,7 @@ FaceBitSet GraphCut::fill( const ProgressCallback& progress )
 
         ++numCycles;
         if ( !reportProgress( progress,
-            [numCycles]() { return std::erf( numCycles * 1e-6f ); }, // report 84% for numCycles == 1'000'000
+            [numCycles]() { return std::erf( numCycles * 1e-7f ); }, // report 84% for numCycles == 10'000'000
             numCycles, 65536 ) )
             break;
     }

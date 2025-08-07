@@ -31,16 +31,23 @@ def create_directories():
 	os.makedirs(path_to_includes,exist_ok=True)
 	os.makedirs(path_to_libs,exist_ok=True)
 	os.makedirs(path_to_app,exist_ok=True)
-    
+
 def same_file_extension(filename,ext):
 	return (not filename.startswith('.')) and (os.path.splitext(filename)[1] == ext)
 
-def append_includes_list(path, thirdparty = False, subfolder = '' ):
+# `skipped_dir_regexes` is a list of regular expressions, such as `foo/bar/(/.*)?`. Those are paths relative to `path`, always using forward slashes.
+# Subdirectories with those names are ignored. Typically those should end with `/(/.*)?` to act recursively.
+def append_includes_list(path, thirdparty = False, subfolder = '', skipped_dir_regexes = [], p = False):
 	folder = os.walk(path)
 	for address, dirs, files in folder:
 		for file in files:
 			if (subfolder and subfolder not in address[len(path):]):
 				continue
+			relpath = os.path.relpath(address, path).replace('\\', '/')
+			if any(r.match(relpath) for r in skipped_dir_regexes):
+				continue
+			if p:
+				print("### ", relpath)
 			if (any(map(same_file_extension, [file for ext in include_extensions], include_extensions))):
 				src = os.path.join(address,file)
 				dst = os.path.join(path_to_includes + address[len(path):],file)
@@ -48,11 +55,11 @@ def append_includes_list(path, thirdparty = False, subfolder = '' ):
 					includes_src_dst.append((src,dst))
 				else:
 					includes_src_dst_thirdparty.append((src,dst))
-    
+
 def prepare_includes_list():
 	includes_src_dst.clear()
 	append_includes_list(path_to_sources)
-    
+
 def inject_copyright():
 	copyright_header = open(path_to_copyright_header,'r').read()
 	for src,dst in includes_src_dst:
@@ -67,12 +74,12 @@ def add_version_file(version):
 			mr_version_file.close()
 
 def copy_includes():
-    print('Not implemented')
+	print('Not implemented')
 def copy_app():
-    print('Not implemented')
+	print('Not implemented')
 def copy_lib():
-    print('Not implemented')
-    
+	print('Not implemented')
+
 def main():
 	if (not check_python_version()):
 		print("Script failed!")
@@ -91,4 +98,3 @@ def main():
 	if len(sys.argv) > 1:
 		version = sys.argv[1][1:]
 	add_version_file(version)
-

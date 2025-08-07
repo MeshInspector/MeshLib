@@ -1,0 +1,14 @@
+/**
+\page MeshLibCppSetupGuide MeshLib C Setup Guide
+
+# Setting Up MeshLib for C Development
+
+While MeshLib is a C++ library, we provide automatically generated C bindings for most of our C++ API.
+
+The C bindings are included in the \ref MeshLibCppSetupGuide "binary releases", which is the recommended method of installing them. But they can also be generated locally (see [build instructions](https://github.com/MeshInspector/MeshLib/blob/master/scripts/mrbind/README-generating.md)).
+
+Follow the links above to either install prebuilt MeshLib or compile it yourself. As a result, you should get C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc).
+
+The headers are self-contained and don't depend on the rest of the MeshLib headers. The library links against `MRMesh` and some of our other libraries.
+
+If you're consuming the C bindings from \ref "MeshLibCmakeSetupGuide" CMake, use `target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)`. Otherwise, link against the `MeshLibC2` library manually.

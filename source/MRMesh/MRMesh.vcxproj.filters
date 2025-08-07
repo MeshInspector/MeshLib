@@ -1355,6 +1355,9 @@
     <ClInclude Include="MRAlignContoursToMesh.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectTagEventDispatcher.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2212,6 +2215,9 @@
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp">
       <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectTagEventDispatcher.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

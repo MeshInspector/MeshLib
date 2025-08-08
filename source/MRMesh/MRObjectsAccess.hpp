@@ -51,7 +51,7 @@ std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree( Object* root, const O
 }
 
 template<typename ObjectT>
-std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type/* = ObjectSelectivityType::Selectable*/ )
+std::vector<std::shared_ptr<ObjectT>> getTopmostObjects( Object* root, const ObjectSelectivityType& type/* = ObjectSelectivityType::Selectable*/, bool visibilityCheck/* = false*/)
 {
     std::vector<std::shared_ptr<ObjectT>> res;
     if ( !root )
@@ -66,7 +66,7 @@ std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, co
         const auto & children = root->children();
         for ( const auto& child : children )
         {
-            if ( !child || !child->isVisible() )
+            if ( !child || ( visibilityCheck && !child->isVisible() ) )
                 continue;
             if ( auto visObj = asSelectivityType<ObjectT>( child, type ) )
                 res.push_back( std::move( visObj ) );

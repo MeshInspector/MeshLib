@@ -2020,89 +2020,12 @@ void separator(
     const ImVec4& color,
     const std::string& issue )
 {
-    const auto& style = ImGui::GetStyle();
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
-
-    if ( text.empty() )
-    {
-        ImGui::Separator();
-    }
-    else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
-    {
-        ImGui::TableNextColumn();
-        ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
-        ImGui::Text( "%s", text.c_str());
-        ImGui::SameLine();
-        if ( !issue.empty() )
-        {
-            ImGui::PushStyleColor( ImGuiCol_FrameBg, color );
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
-            const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
-            UI::inputTextCenteredReadOnly( "##Issue", issue, width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
-            ImGui::PopStyleColor();
-        }
-        ImGui::PopFont();
-
-        ImGui::TableNextColumn();
-        auto width = ImGui::GetWindowWidth();
-        ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );
-        ImGui::Separator();
-        ImGui::EndTable();
-    }
-
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
-    }
-    ImGui::Dummy( ImVec2( 0, 0 ) );
+    return separator( scaling, SeparatorParams{ .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
 }
 
 void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
 {
-    const auto& style = ImGui::GetStyle();
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
-
-    const float iconWidth = iconSize.x * scaling;
-    const float iconHeight = iconSize.y * scaling;
-    const float shiftPosY = ( ImGui::GetTextLineHeight() - iconHeight ) / 2.f;
-    const int elementsCount = 2 + ( text.empty() ? 0 : 1 );
-    if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + text ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
-    {
-        // icon
-        ImGui::TableNextColumn();
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
-        ImGui::Image( icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
-
-        // text
-        if ( !text.empty() )
-        {
-            ImGui::TableNextColumn();
-            ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
-            ImGui::Text( "%s", text.c_str() );
-            ImGui::PopFont();
-        }
-
-        // separator
-        ImGui::TableNextColumn();
-        auto width = ImGui::GetWindowWidth();
-        ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
-        ImGui::Separator();
-
-        ImGui::EndTable();
-    }
-    if ( shiftPosY < 0.f )
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
-
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
+    return separator( scaling, SeparatorParams{ .icon = &icon,.iconSize = iconSize,.label = text } );
 }
 
 void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
@@ -2113,6 +2036,74 @@ void separator( float scaling, const std::string& textureName, const std::string
         separator( scaling, *icon, text, iconSize );
     else
         separator( scaling, text );
+}
+
+void separator( float scaling, const SeparatorParams& params )
+{
+    const auto& style = ImGui::GetStyle();
+    if ( !params.forceImGuiSpacing && style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
+    }
+
+    if ( params.label.empty() && !params.icon && params.suffix.empty() )
+    {
+        ImGui::Separator();
+    }
+    else
+    {
+        const float iconWidth = params.iconSize.x * scaling;
+        const float iconHeight = params.iconSize.y * scaling;
+        const float shiftPosY = ( ImGui::GetTextLineHeight() - iconHeight ) / 2.f;
+        const int elementsCount = 1 + ( params.icon ? 1 : 0 ) + ( ( !params.label.empty() || !params.suffix.empty() ) ? 1 : 0 );
+        if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + params.label ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
+        {
+            // icon
+            if ( params.icon )
+            {
+                ImGui::TableNextColumn();
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+                ImGui::Image( *params.icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+            }
+            // text
+            if ( !params.label.empty() || !params.suffix.empty() )
+            {
+                ImGui::TableNextColumn();
+                ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+                if ( !params.label.empty() )
+                    ImGui::Text( "%s", params.label.c_str() );
+                ImGui::SameLine();
+                if ( !params.suffix.empty() )
+                {
+                    if ( params.suffixFrameColor )
+                        ImGui::PushStyleColor( ImGuiCol_FrameBg, params.suffixFrameColor->getUInt32() );
+                    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
+                    const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( params.suffix.c_str() ).x + 2.0f * style.FramePadding.x );
+                    UI::inputTextCenteredReadOnly( "##Issue", params.suffix, width, ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+                    if ( params.suffixFrameColor )
+                        ImGui::PopStyleColor();
+                }
+                ImGui::PopFont();
+            }
+
+            // separator
+            ImGui::TableNextColumn();
+            auto width = ImGui::GetWindowWidth();
+            ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+            ImGui::Separator();
+
+            ImGui::EndTable();
+        }
+        if ( params.icon && shiftPosY < 0.f )
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+    }
+
+    if ( !params.forceImGuiSpacing && style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
+    }
+
+    ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
 void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )

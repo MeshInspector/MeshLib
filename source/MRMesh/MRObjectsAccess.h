@@ -29,10 +29,18 @@ MR_BIND_IGNORE inline std::vector<std::shared_ptr<ObjectT>> getAllObjectsInTree(
 
 /// Returns all topmost visible objects of given type (if an object is returned, its children are not) excluding root
 template<typename ObjectT = Object>
-std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable );
+std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
+    { return getTopmostObjects<ObjectT>( root, type, true ); }
 template<typename ObjectT = Object>
 MR_BIND_IGNORE inline std::vector<std::shared_ptr<ObjectT>> getTopmostVisibleObjects( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable )
-    { return getTopmostVisibleObjects<ObjectT>( &root, type ); }
+    { return getTopmostObjects<ObjectT>( &root, type, true ); }
+
+/// Returns all topmost objects of given type (if an object is returned, its children are not) excluding root
+template<typename ObjectT = Object>
+std::vector<std::shared_ptr<ObjectT>> getTopmostObjects( Object* root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable, bool visibilityCheck = false );
+template<typename ObjectT = Object>
+MR_BIND_IGNORE inline std::vector<std::shared_ptr<ObjectT>> getTopmostObjects( Object& root, const ObjectSelectivityType& type = ObjectSelectivityType::Selectable, bool visibilityCheck = false )
+    { return getTopmostObjects<ObjectT>( &root, type, visibilityCheck ); }
 
 /// return first object of given type in depth-first traverse order excluding root
 template<typename ObjectT = Object>

@@ -403,6 +403,32 @@ MRVIEWER_API void notificationFrame( NotificationType type, const std::string& s
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
 
+/// Parameters for drawing custom separator
+struct SeparatorParams
+{
+    /// optional icon in the left part of separator
+    const ImGuiImage* icon{ nullptr };
+
+    /// size of icon
+    Vector2f iconSize; ///< scaling is applied inside `separator` function
+
+    /// label at the left part of separator (drawn after icon if present)
+    std::string label;
+
+    /// framed text after label (might be used for some indications)
+    std::string suffix;
+
+    /// color of background frame behind suffix (if not present default ImGuiCol_FrameBg is used)
+    std::optional<Color> suffixFrameColor;
+
+    /// if set - use default spacing from ImGui::GetStyle()
+    /// otherwise overrides it with ribbon constants
+    bool forceImGuiSpacing = false;
+};
+
+/// separator line with customizations
+MRVIEWER_API void separator( float scaling, const SeparatorParams& params );
+
 /// add text with separator line
 /// if issueCount is greater than zero, this number will be displayed in red color after the text.
 /// If it equals zero - in green color

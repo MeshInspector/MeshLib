@@ -22,3 +22,4 @@ The first version was written manually, and as such doesn't cover as much of our
 The new bindings install headers to a directory named `MRCMesh` and some other `MRC...` directories. The old bindings install headers to `MRMeshC`.
 
 The new bindings are compiled to a library named `MeshLibC2`, and the old ones are compiled to `MRMeshC`.
+*/

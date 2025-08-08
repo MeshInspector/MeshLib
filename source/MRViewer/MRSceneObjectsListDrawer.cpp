@@ -568,15 +568,11 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     if ( !allowSceneReorder_ )
         return;
 
-    if ( !sceneReorderWithUndo( sceneReorderCommand_ ) )
+    if ( !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to && !sceneReorderWithUndo( sceneReorderCommand_ ) )
     {
-        if ( !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to )
-            showModal( "Cannot perform such reorder", NotificationType::Error );
-        else
-        {
-            sceneReorderCommand_ = {};
-            return;
-        }
+        showModal( "Cannot perform such reorder", NotificationType::Error );
+        sceneReorderCommand_ = {};
+        return;
     }
     sceneReorderCommand_ = {};
     dragTrigger_ = false;

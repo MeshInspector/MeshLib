@@ -5,17 +5,17 @@
 
 \note Two versions of the C API currently coexist:
 
-\note * v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in `MRC*` directories.
+\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the the `MRC*` directories.
 
-\note * v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
+\note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
 
 ## Using binary releases
 
-The recommended way of using the C API is from the binary releases of MeshLib. Download them as explained in the \ref MeshLibCppSetupGuide "installation instructions for C++".
+The recommended way of using the C API is using the binary releases of MeshLib. Download them as explained in the \ref MeshLibCppSetupGuide "installation instructions for C++".
 
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
-If you're consuming the C API from \ref "MeshLibCmakeSetupGuide" CMake, add the following to your `CMakeLists.txt`:
+If you're consuming the C API from \ref MeshLibCmakeSetupGuide "CMake", add the following to your `CMakeLists.txt`:
 ```cmake
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 ```

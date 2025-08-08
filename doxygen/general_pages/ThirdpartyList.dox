@@ -17,6 +17,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |MRVoxels|Volumetric|MRMesh|Yes|
 |MRCuda|GPU acceleration|MRMesh and MRVoxels|Yes|
 |MRViewer|Rendering and user interface|MRMesh, MRVoxels, MRSymbolMesh and MRIOExtras|Yes|
+|MeshLibC2|C wrappers|MRMesh, MRVoxels, MRSymbolMesh and MRIOExtras|Yes|
 
 ### MRMesh
 
@@ -65,7 +66,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 
 ### MRPython
 
-\b MRPython enables Python bindings and embedded Python scripting for MeshLib. It depends on MRMesh and: 
+\b MRPython enables Python bindings and embedded Python scripting for MeshLib. It depends on MRMesh and:
 
 |Name                                                                     |Description                                                                  |License                                    |
 |-------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
@@ -75,7 +76,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 
 ### MRVoxels
 
-\b MRVoxels provides functionality for volumetric operations. It depends on MRMesh plus: 
+\b MRVoxels provides functionality for volumetric operations. It depends on MRMesh plus:
 
 |Name                                                                                      |Description                                                                  |License             |
 |------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
@@ -105,6 +106,14 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://github.com/signal11/hidapi">hidapi</a>                 |is a Simple library for communicating with USB and Bluetooth HID devices on Linux, Mac, and Windows |HIDAPI, BSD-3-Clause, GPL-3.0|
 |<a rel="nofollow" href="https://fontawesome.com">Fontawesome</a>                       |is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators |<a rel="nofollow" href="https://fontawesome.com/license/free">Fontawesome License</a>|
 |<a rel="nofollow" href="https://fonts.google.com/noto/specimen/Noto+Sans">NotoSans</a> |is a global font collection for writing in all modern and ancient languages                         |OPEN FONT|
+
+### MeshLibC2
+
+\b MeshLibC2 provides C API for the rest of the MeshLib. It needs MRMesh, MRVoxels, MRSymbolMesh, MRIOExtras, and:
+
+|Name                                                                                   |Description                                                                                         |License                      |
+|---------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------|
+|<a rel="nofollow" href="https://github.com/MeshInspector/mrbind">mrbind</a>            |A C/Python binding generator.                                                                       |MIT                          |
 
 */
 

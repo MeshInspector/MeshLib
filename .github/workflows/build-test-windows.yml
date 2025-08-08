@@ -311,16 +311,29 @@ jobs:
           if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
           if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+      - name: Archive files
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
+      - name: Archive generated C headers
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        run: tar -a -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
+
       - name: Upload Windows Binaries Archive
-        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'MSBuild' }}
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' }}
         uses: actions/upload-artifact@v4
         with:
           name: WindowsArchive_${{matrix.config}}
           path: MREDist_${{matrix.config}}.zip
+          retention-days: 1
+
+      - name: Upload MeshLibC2 headers archive
+        if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowsArchive_MeshLibC2Headers
+          path: MeshLibC2Headers.zip
           retention-days: 1
 
       - name: Create and fix fake Wheel for NuGet

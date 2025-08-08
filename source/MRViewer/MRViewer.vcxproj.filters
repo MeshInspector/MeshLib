@@ -445,7 +445,7 @@
     <ClCompile Include="MRUISaveChangesPopup.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="SceneReorder.cpp">
+    <ClCompile Include="MRSceneReorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRProjectMeshAttributes.cpp">
@@ -915,7 +915,7 @@
     <ClInclude Include="MRUISaveChangesPopup.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="SceneReorder.h">
+    <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRProjectMeshAttributes.h">
@@ -952,15 +952,9 @@
     <ClInclude Include="MRRibbonMenuUIConfig.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderImGui.cpp">
-      <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRRenderToImage.cpp">
-      <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVisualObjectTag.cpp">
-      <Filter>Render</Filter>
-    </ClInclude>
+    <ClInclude Include="MRRenderImGui.h" />
+    <ClInclude Include="MRRenderToImage.h" />
+    <ClInclude Include="MRVisualObjectTag.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

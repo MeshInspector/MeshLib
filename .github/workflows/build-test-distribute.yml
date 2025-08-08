@@ -176,7 +176,7 @@ jobs:
         run: |
           tar -xvzf MREDist_Release.zip
           tar -xvzf MREDist_Debug.zip
-          tar -xvzf WindowsArchive_MeshLibC2Headers.zip
+          tar -xvzf MeshLibC2Headers.zip
 
       - name: Make Install Folder
         run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}

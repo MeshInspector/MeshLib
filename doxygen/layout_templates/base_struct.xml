@@ -7,7 +7,7 @@
     <tab type="usergroup" url="__BEGIN_URL__InstallationGuide__END_URL__" title="Getting Started">
       <tab type="user" url="__BEGIN_URL__MeshLibPythonSetupGuide__END_URL__" title="Python"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCppSetupGuide__END_URL__" title="C++"/>
-      <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C++"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>

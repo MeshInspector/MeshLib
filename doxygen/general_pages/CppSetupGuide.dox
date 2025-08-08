@@ -5,8 +5,8 @@
 
 \tableofcontents
 
-This guide explains how to set up MeshLib for C++ development on \ref CppSetupWindows "Windows", \ref CppSetupLinux "Linux", and \ref CppSetupMacOS "macOS", 
-and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLib with Emscripten. 
+This guide explains how to set up MeshLib for C++ development on \ref CppSetupWindows "Windows", \ref CppSetupLinux "Linux", and \ref CppSetupMacOS "macOS",
+and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLib with Emscripten.
 It covers all the prerequisites and setup steps for each platform, making it easy to get started.
 
 \subsection CppSetupWindows Windows

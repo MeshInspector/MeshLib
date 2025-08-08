@@ -883,6 +883,13 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
 #endif
         ;
     }, settings )
+    .transform( [&] ( std::shared_ptr<Object> result )
+    {
+        result->addTag( "source-format:step" );
+        for ( auto& obj : getAllObjectsInTree<Object>( result.get() ) )
+            obj->addTag( "source-format:step" );
+        return result;
+    } )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
@@ -913,6 +920,13 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 #endif
         ;
     }, settings )
+    .transform( [&] ( std::shared_ptr<Object> result )
+    {
+        result->addTag( "source-format:step" );
+        for ( auto& obj : getAllObjectsInTree<Object>( result.get() ) )
+            obj->addTag( "source-format:step" );
+        return result;
+    } )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {

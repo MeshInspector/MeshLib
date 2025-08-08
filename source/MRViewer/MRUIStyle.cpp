@@ -2020,12 +2020,12 @@ void separator(
     const ImVec4& color,
     const std::string& issue )
 {
-    return separator( scaling, { .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
+    return separator( scaling, SeparatorParams{ .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
 }
 
 void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
 {
-    return separator( scaling, { .icon = &icon,.iconSize = iconSize,.label = text } );
+    return separator( scaling, SeparatorParams{ .icon = &icon,.iconSize = iconSize,.label = text } );
 }
 
 void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )

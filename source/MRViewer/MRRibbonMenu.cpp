@@ -941,7 +941,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
             // for now do it by one object
             AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::RemoveObject );
             selected[i]->detachFromParent();
-            AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::AddObject );
+            AppendHistory<ChangeSceneAction>( "Add object", selected[i], ChangeSceneAction::Type::AddObject );
             group->addChild( selected[i] );
         }
     }

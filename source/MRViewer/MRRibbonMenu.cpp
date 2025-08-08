@@ -919,7 +919,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         return someChanges;
 
     Object* parentObj = selected[0]->parent();
-    bool canGroup = parentObj != nullptr && selected.size() >= 2;
+    bool canGroup = parentObj && selected.size() >= 2;
     for ( int i = 1; canGroup && i < selected.size(); ++i )
     {
         if ( selected[i]->parent() != parentObj )
@@ -936,15 +936,13 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         SCOPED_HISTORY( "Group" );
         AppendHistory<ChangeSceneAction>( "Add object", group, ChangeSceneAction::Type::AddObject );
         parentObj->addChild( group );
-        group->select( true );
         for ( int i = 0; i < selected.size(); ++i )
         {
             // for now do it by one object
             AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::RemoveObject );
             selected[i]->detachFromParent();
-            AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::AddObject );
+            AppendHistory<ChangeSceneAction>( "Add object", selected[i], ChangeSceneAction::Type::AddObject );
             group->addChild( selected[i] );
-            selected[i]->select( false );
         }
     }
 
@@ -961,7 +959,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
             }
         }
     }
-    canUngroup = std::all_of( selected.begin(), selected.end(),
+    canUngroup = parentObj && std::all_of( selected.begin(), selected.end(),
         []( const std::shared_ptr<Object>& selObj ) { return !selObj->children().empty(); } );
     if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
@@ -969,26 +967,17 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         SCOPED_HISTORY( "Ungroup" );
         for ( const auto& selObj : selected )
         {
-            selObj->select( false );
-            SceneReorder task
-            {
-                .to = parentObj
-            };
-            for ( const auto& child : selObj->children() )
-            {
-                if ( child->isAncillary() )
-                    continue;
-                task.who.push_back( child.get() );
-                child->select( true );
-            }
-            [[maybe_unused]] bool reorderDone = sceneReorderWithUndo( task );
+            bool reorderDone = moveAllChildrenWithUndo( *selObj, *parentObj );
             assert( reorderDone );
-            // remove group folder (now empty)
-            auto ptr = std::dynamic_pointer_cast< VisualObject >( selObj );
-            if ( !ptr && selObj->children().empty() )
+            if ( reorderDone )
             {
-                AppendHistory<ChangeSceneAction>( "Remove object", selObj, ChangeSceneAction::Type::RemoveObject );
-                selObj->detachFromParent();
+                // remove group folder (now empty)
+                auto ptr = std::dynamic_pointer_cast< VisualObject >( selObj );
+                if ( !ptr && selObj->children().empty() )
+                {
+                    AppendHistory<ChangeSceneAction>( "Remove object", selObj, ChangeSceneAction::Type::RemoveObject );
+                    selObj->detachFromParent();
+                }
             }
         }
     }

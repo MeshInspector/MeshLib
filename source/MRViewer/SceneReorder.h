@@ -8,18 +8,26 @@ namespace MR
 
 struct SceneReorder
 {
-    /// object that will be moved
+    /// objects that will be moved
     std::vector<Object*> who;
 
-    /// address object
+    /// target object
     Object* to{ nullptr };
 
-    /// if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
+    /// if false, each "who" will be attached to "to" as last child,
+    /// if true, each "who" will be attached to "to"'s parent as a child before "to"
     bool before{ false };
+
+    /// the name of added undo history scope
+    std::string historyName{ "Reorder Scene" };
 };
 
 /// moves objects in scene as prescribed by (task), preserving world location of each object;
 /// \return false if the move failed
 bool sceneReorderWithUndo( const SceneReorder & task );
+
+/// moves all children from one object to another
+/// \return false if the move failed
+bool moveAllChildrenWithUndo( Object& oldParent, Object& newParent, const std::string& historyName = "Move Children" );
 
 } //namespace MR

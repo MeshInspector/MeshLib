@@ -103,7 +103,7 @@ bool sceneReorderWithUndo( const SceneReorder & task )
     }
     else
     {
-        SCOPED_HISTORY( "Reorder Scene" );
+        SCOPED_HISTORY( task.historyName );
         for ( const auto& moveAction : actionList )
         {
             AppendHistory( moveAction.detachAction );
@@ -113,6 +113,25 @@ bool sceneReorderWithUndo( const SceneReorder & task )
         }
     }
     return true;
+}
+
+bool moveAllChildrenWithUndo( Object& oldParent, Object& newParent, const std::string& historyName )
+{
+    if ( &oldParent == &newParent )
+        return false;
+
+    SceneReorder task
+    {
+        .to = &newParent,
+        .historyName = historyName
+    };
+    for ( const auto& child : oldParent.children() )
+    {
+        if ( child->isAncillary() )
+            continue;
+        task.who.push_back( child.get() );
+    }
+    return sceneReorderWithUndo( task );
 }
 
 } //namespace MR

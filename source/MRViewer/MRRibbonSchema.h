@@ -52,6 +52,7 @@ struct RibbonSchema
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
     MenuItemsList sceneButtonsList;
+    std::string workspacePreset;
 
     /// deletes empty groups (and references on them from tabs)
     MRVIEWER_API void eliminateEmptyGroups();

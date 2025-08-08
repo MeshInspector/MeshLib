@@ -1151,10 +1151,10 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( !needToMerge )
         return false;
 
-    if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
+    if ( !UI::button( "Combine Subtree", Vector2f( -1, 0 ) ) )
         return false;
 
-    SCOPED_HISTORY( "Merge" );
+    SCOPED_HISTORY( "Combine Subtree" );
     for ( auto& subtree : subtrees )
         mergeSubtree( std::move( subtree ) );
 

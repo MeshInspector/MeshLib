@@ -623,6 +623,9 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
         if ( !dropList.empty() && findIt->second.item )
             findIt->second.item->setDropItemsFromItemList( dropList );
     }
+
+    if ( const auto& workspacePresetJson = itemsStruct["WorkspacePreset"]; workspacePresetJson.isString() )
+        RibbonSchemaHolder::schema().workspacePreset = workspacePresetJson.asString();
 }
 
 void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const

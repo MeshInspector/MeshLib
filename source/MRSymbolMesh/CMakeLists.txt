@@ -48,7 +48,7 @@ ELSE()
     fmt::fmt
     spdlog::spdlog
     JsonCpp::JsonCpp
-    TBB::tbb
+    tbb
   )
 ENDIF()
 

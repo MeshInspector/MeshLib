@@ -328,7 +328,7 @@ jobs:
           path: MREDist_${{matrix.config}}.zip
           retention-days: 1
 
-      - name: Upload Windows Binaries Archive
+      - name: Upload MeshLibC2 headers archive
         if: ${{ inputs.upload_artifacts && matrix.os == 'windows-2019' && matrix.build_system == 'CMake' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: actions/upload-artifact@v4
         with:

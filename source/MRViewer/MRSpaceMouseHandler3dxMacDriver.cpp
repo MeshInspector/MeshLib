@@ -170,12 +170,14 @@ void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
 
 void onSpaceMouseDeviceAdded( uint32_t deviceId )
 {
+    deviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     std::unique_lock lock( gStateMutex );
     updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
 }
 
 void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
+    deviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     std::unique_lock lock( gStateMutex );
     gKnownDevices.erase( deviceId );
 }

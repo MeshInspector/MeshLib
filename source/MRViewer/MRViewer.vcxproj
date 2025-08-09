@@ -89,7 +89,6 @@
     <ClCompile Include="MRShadowsGL.cpp" />
     <ClCompile Include="MRShortcutManager.cpp" />
     <ClCompile Include="MRSpaceMouseController.cpp" />
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp" />
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />
     <ClCompile Include="MRDemoPlugin.cpp" />
@@ -239,7 +238,6 @@
     <ClInclude Include="MRShortcutManager.h" />
     <ClInclude Include="MRSpaceMouseController.h" />
     <ClInclude Include="MRSpaceMouseHandler.h" />
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h" />
     <ClInclude Include="MRSplashWindow.h" />
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />

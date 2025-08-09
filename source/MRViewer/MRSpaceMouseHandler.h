@@ -1,7 +1,9 @@
 #pragma once
+
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRVector3.h"
-#include <functional>
+#include "MRMesh/MRSignal.h"
+#include <string>
+
 
 namespace MR
 {
@@ -50,7 +52,7 @@ enum SpaceMouseButtons : int
 };
 
 
-/// class to handle spacemouse
+/// base class for handler of spacemouse devices
 class SpaceMouseHandler
 {
 public:
@@ -62,8 +64,8 @@ public:
     /// handle device state and call Viewer signals
     virtual void handle() = 0;
 
-    /// update after connect / disconnect devices
-    virtual void updateConnected( int /*jid*/, int /*event*/ ) {};
+    /// every device-related event will be sent here: find, connect, disconnect
+    Signal<void(const std::string&)> deviceSignal;
 };
 
-}
+} //namespace MR

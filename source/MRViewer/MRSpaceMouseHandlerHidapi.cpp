@@ -70,28 +70,33 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
         {
             if ( verbose )
             {
-                spdlog::info( "HID API device found: vendorId={:#06x}, deviceId={:#06x}, path={}, usage={}, usage_page={}",
+                spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
+                if ( localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                    deviceSignal( fmt::format( "HID API device {:04x}:{:04x} found", vendorId, localDevicesIt->product_id ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {
-                if ( deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                if ( !device_ && deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
                 {
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )
                     {
                         isDeviceFound = true;
-                        spdlog::info( "SpaceMouse connected: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
+                        spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
+                        deviceSignal( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
                         // setup buttons logger
                         buttonsState_ = 0;
                         setButtonsMap_( vendorId, deviceId );
                         activeMouseScrollZoom_ = false;
-                        break;
+                        if ( !verbose )
+                            break;
                     }
                     else if ( verbose )
                     {
-                        spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
+                        spdlog::error( "HID API device ({:04x}:{:04x}, path={}) open error: {}",
                             vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
+                        deviceSignal( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
                     }
                 }
             }
@@ -210,6 +215,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 buttonsState_ = 0;
                 activeMouseScrollZoom_ =  true;
                 spdlog::error( "HID API: device lost" );
+                deviceSignal( fmt::format( "HID API device lost" ) );
             }
             else if ( packetLength_ > 0 )
             {

@@ -1,5 +1,9 @@
 #pragma once
+
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRSignal.h"
+#include <string>
+
 
 namespace MR
 {
@@ -59,6 +63,9 @@ public:
 
     /// handle device state and call Viewer signals
     virtual void handle() = 0;
+
+    /// every device-related event will be sent here: find, connect, disconnect
+    Signal<void(const std::string&)> deviceSignal;
 };
 
 } //namespace MR

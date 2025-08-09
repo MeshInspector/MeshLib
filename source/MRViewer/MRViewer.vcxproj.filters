@@ -253,9 +253,6 @@
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
@@ -685,9 +682,6 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandler.h">
-      <Filter>SpaceMouse</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">

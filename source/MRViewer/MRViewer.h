@@ -172,8 +172,6 @@ public:
     MRVIEWER_API bool touchpadZoomGestureEnd();
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
-    // callback to update connected / disconnected joystick
-    MRVIEWER_API void joystickUpdateConnected( int jid, int event );
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );

@@ -1,9 +1,8 @@
 #pragma once
 
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRSignal.h"
+#include <functional>
 #include <string>
-
 
 namespace MR
 {
@@ -59,13 +58,11 @@ public:
     virtual ~SpaceMouseHandler() = default;
 
     /// initialize device
-    [[nodiscard]] virtual bool initialize() = 0;
+    /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
+    [[nodiscard]] virtual bool initialize( std::function<void(const std::string&)> deviceSignal = {} ) = 0;
 
     /// handle device state and call Viewer signals
     virtual void handle() = 0;
-
-    /// every device-related event will be sent here: find, connect, disconnect
-    Signal<void(const std::string&)> deviceSignal;
 };
 
 } //namespace MR

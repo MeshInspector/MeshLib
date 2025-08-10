@@ -124,7 +124,7 @@ LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
-SpaceMouseHandler3dxMacDriver * currHandler = nullptr;
+ std::function<void(const std::string&)> gDeviceSignal;
 
 float normalize( int16_t value )
 {
@@ -172,16 +172,16 @@ void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
 void onSpaceMouseDeviceAdded( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
-    if ( currHandler )
-        currHandler->deviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
+    if ( gDeviceSignal )
+        gDeviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
 }
 
 void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
-    if ( currHandler )
-        currHandler->deviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
+    if ( gDeviceSignal )
+        gDeviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     gKnownDevices.erase( deviceId );
 }
 
@@ -257,9 +257,6 @@ namespace MR
 SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
 {
     setClientName( "MeshLib" );
-    std::unique_lock lock( gStateMutex );
-    assert( !currHandler );
-    currHandler = this;
 }
 
 SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
@@ -276,8 +273,7 @@ SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
         dlclose( lib.handle );
         lib.handle = nullptr;
     }
-    assert( currHandler == this );
-    currHandler = nullptr;
+    gDeviceSignal = {};
 }
 
 void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len )
@@ -291,16 +287,18 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
     std::memcpy( clientName_.get() + 1, (const uint8_t *)name, len );
 }
 
-bool SpaceMouseHandler3dxMacDriver::initialize()
+bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::string&)> deviceSignal )
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
+    gDeviceSignal = std::move( deviceSignal );
 
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
     if ( !std::filesystem::exists( c3DconnexionClientPath, ec ) )
     {
         spdlog::info( "3DxWare driver is not installed" );
+        gDeviceSignal = {};
         return false;
     }
 
@@ -308,13 +306,16 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     if ( lib.handle == nullptr )
     {
         spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
+        gDeviceSignal = {};
         return false;
     }
 
     if ( !lib.loadSymbols() )
     {
+        spdlog::error( "Failed to load the 3DxWare client library symbols" );
         dlclose( lib.handle );
         lib.handle = nullptr;
+        gDeviceSignal = {};
         return false;
     }
 
@@ -323,6 +324,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
         dlclose( lib.handle );
         lib.handle = nullptr;
+        gDeviceSignal = {};
         return false;
     }
 
@@ -332,6 +334,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     if ( clientId_ == 0 )
     {
         spdlog::warn( "Failed to connect to the 3DxWare driver" );
+        gDeviceSignal = {};
         return false;
     }
     gKnownClientIds.emplace( clientId_ );

@@ -607,7 +607,7 @@ public:
 
     /// (re)initializes the handler of SpaceMouse events
     /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
-    void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
+    MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
 
 private:
     Viewer();

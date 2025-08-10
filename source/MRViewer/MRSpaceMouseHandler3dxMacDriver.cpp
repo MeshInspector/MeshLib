@@ -181,7 +181,7 @@ void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
     if ( gDeviceSignal )
-        gDeviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
+        gDeviceSignal( fmt::format( "SpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     gKnownDevices.erase( deviceId );
 }
 

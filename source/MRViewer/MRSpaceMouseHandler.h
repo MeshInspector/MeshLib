@@ -1,7 +1,5 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRVector3.h"
-#include <functional>
 
 namespace MR
 {
@@ -50,7 +48,7 @@ enum SpaceMouseButtons : int
 };
 
 
-/// class to handle spacemouse
+/// base class for handler of spacemouse devices
 class SpaceMouseHandler
 {
 public:
@@ -61,9 +59,6 @@ public:
 
     /// handle device state and call Viewer signals
     virtual void handle() = 0;
-
-    /// update after connect / disconnect devices
-    virtual void updateConnected( int /*jid*/, int /*event*/ ) {};
 };
 
-}
+} //namespace MR

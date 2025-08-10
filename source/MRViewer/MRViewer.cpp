@@ -308,15 +308,6 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     viewer->postEmptyEvent();
 }
 
-static void glfw_joystick_callback( int jid, int event )
-{
-    auto viewer = &MR::getViewerInstance();
-    viewer->emplaceEvent( "Joystick", [jid, event, viewer] ()
-    {
-        viewer->joystickUpdateConnected( jid, event );
-    } );
-}
-
 namespace MR
 {
 
@@ -742,7 +733,6 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     glfwSetMouseButtonCallback( window, glfw_mouse_press );
     glfwSetCharCallback( window, glfw_char_mods_callback );
     glfwSetDropCallback( window, glfw_drop_callback );
-    glfwSetJoystickCallback( glfw_joystick_callback );
 
     // Handle retina displays (windows and mac)
     int width, height;
@@ -1606,12 +1596,6 @@ bool Viewer::interruptWindowClose()
         return true;
 
     return false;
-}
-
-void Viewer::joystickUpdateConnected( int jid, int event )
-{
-    if ( spaceMouseHandler_ )
-        spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )

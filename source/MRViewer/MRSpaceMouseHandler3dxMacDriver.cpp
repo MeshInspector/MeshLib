@@ -125,6 +125,7 @@ std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
 std::function<void(const std::string&)> gDeviceSignal;
+bool gAnyStateMsg{ false };
 
 float normalize( int16_t value )
 {
@@ -173,7 +174,7 @@ void onSpaceMouseDeviceAdded( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
     if ( gDeviceSignal )
-        gDeviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
+        gDeviceSignal( fmt::format( "3DxWare SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
 }
 
@@ -181,7 +182,7 @@ void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
     if ( gDeviceSignal )
-        gDeviceSignal( fmt::format( "SpaceMouseDeviceRemoved: {:04x}", deviceId ) );
+        gDeviceSignal( fmt::format( "3DxWare SpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     gKnownDevices.erase( deviceId );
 }
 
@@ -191,6 +192,11 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
     if ( type == kConnexionMsgDeviceState )
     {
         std::unique_lock lock( gStateMutex );
+        if ( gDeviceSignal && !gAnyStateMsg )
+        {
+            gDeviceSignal( "3DxWare first SpaceMouseMessage" );
+            gAnyStateMsg = true;
+        }
 
         assert( arg );
         const auto* state = (ConnexionDeviceState*)arg;
@@ -292,6 +298,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
     gDeviceSignal = std::move( deviceSignal );
+    gAnyStateMsg = false;
 
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
@@ -343,6 +350,8 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
     lib.SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
 
     spdlog::info( "Successfully connected to the 3DxWare driver" );
+    if ( gDeviceSignal )
+        gDeviceSignal( "3DxWare driver connect" );
     return true;
 }
 

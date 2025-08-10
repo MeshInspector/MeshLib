@@ -65,6 +65,7 @@ private:
 private:
     std::function<void(const std::string&)> deviceSignal_;
     hid_device* device_ = nullptr;
+    bool anyAction_ = false;
     const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_ = nullptr;
     std::bitset<SMB_BUTTON_COUNT> buttonsState_;
     std::thread listenerThread_;

@@ -124,7 +124,7 @@ LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
- std::function<void(const std::string&)> gDeviceSignal;
+std::function<void(const std::string&)> gDeviceSignal;
 
 float normalize( int16_t value )
 {

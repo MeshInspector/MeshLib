@@ -2172,7 +2172,7 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setAncillary( true );
 }
 
-void Viewer::initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal )
+void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const std::string&)> deviceSignal )
 {
     spaceMouseHandler_.reset();
 #ifndef __EMSCRIPTEN__

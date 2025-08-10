@@ -124,6 +124,7 @@ LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
+SpaceMouseHandler3dxMacDriver * currHandler = nullptr;
 
 float normalize( int16_t value )
 {
@@ -170,15 +171,17 @@ void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
 
 void onSpaceMouseDeviceAdded( uint32_t deviceId )
 {
-    deviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     std::unique_lock lock( gStateMutex );
+    if ( currHandler )
+        currHandler->deviceSignal( fmt::format( "SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
 }
 
 void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
-    deviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     std::unique_lock lock( gStateMutex );
+    if ( currHandler )
+        currHandler->deviceSignal( fmt::format( "onSpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     gKnownDevices.erase( deviceId );
 }
 
@@ -254,6 +257,9 @@ namespace MR
 SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
 {
     setClientName( "MeshLib" );
+    std::unique_lock lock( gStateMutex );
+    assert( !currHandler );
+    currHandler = this;
 }
 
 SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
@@ -270,6 +276,8 @@ SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
         dlclose( lib.handle );
         lib.handle = nullptr;
     }
+    assert( currHandler == this );
+    currHandler = nullptr;
 }
 
 void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len )

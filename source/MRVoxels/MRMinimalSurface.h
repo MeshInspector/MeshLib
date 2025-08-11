@@ -26,7 +26,7 @@ struct VolumeParams
 {
     Type type = Type::SchwartzP;
     float frequency = 1.f;
-    float resolution = 1.f;
+    float resolution = 5.f;
 };
 
 struct MeshParams : VolumeParams

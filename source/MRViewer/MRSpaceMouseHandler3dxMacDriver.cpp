@@ -297,15 +297,12 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
-    gDeviceSignal = std::move( deviceSignal );
-    gAnyStateMsg = false;
 
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
     if ( !std::filesystem::exists( c3DconnexionClientPath, ec ) )
     {
         spdlog::info( "3DxWare driver is not installed" );
-        gDeviceSignal = {};
         return false;
     }
 
@@ -313,7 +310,6 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
     if ( lib.handle == nullptr )
     {
         spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
-        gDeviceSignal = {};
         return false;
     }
 
@@ -322,7 +318,6 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
         spdlog::error( "Failed to load the 3DxWare client library symbols" );
         dlclose( lib.handle );
         lib.handle = nullptr;
-        gDeviceSignal = {};
         return false;
     }
 
@@ -331,10 +326,11 @@ bool SpaceMouseHandler3dxMacDriver::initialize( std::function<void(const std::st
         spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
         dlclose( lib.handle );
         lib.handle = nullptr;
-        gDeviceSignal = {};
         return false;
     }
 
+    gAnyStateMsg = false;
+    gDeviceSignal = std::move( deviceSignal );
     lib.SetConnexionHandlers( onSpaceMouseMessage, onSpaceMouseDeviceAdded, onSpaceMouseDeviceRemoved, false );
 
     clientId_ = lib.RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );

@@ -63,7 +63,6 @@ struct LaunchParams
     bool isAnimating{ false }; // if true - calls render without system events
     int animationMaxFps{ 30 }; // max fps if animating
     bool unloadPluginsAtEnd{ false }; // unload all extended libraries right before program exit
-    bool initializeSpaceMouseHandler{ true }; // whether to initialize SpaceMouse handler together with Viewer
 
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };

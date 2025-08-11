@@ -57,6 +57,8 @@ bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)
 
 bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
 {
+    const static int HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER = 8; //Multi-axis Controller
+    const static int HID_USAGE_PAGE_GENERIC = 1; //Generic Desktop Controls
     assert( !device_ );
     for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
     {
@@ -68,12 +70,12 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
             {
                 spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
-                if ( deviceSignal_ && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                if ( deviceSignal_ && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
                     deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found", vendorId, localDevicesIt->product_id ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {
-                if ( !device_ && deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                if ( !device_ && deviceId == localDevicesIt->product_id && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
                 {
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )

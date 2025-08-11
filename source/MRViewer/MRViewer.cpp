@@ -776,7 +776,7 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     spaceMouseController_->connect();
     spdlog::info( "SpaceMouseController created" );
 
-    if ( params.initializeSpaceMouseHandler )
+    if ( !spaceMouseHandler_ )
         initSpaceMouseHandler();
 
     if ( !touchpadController_ )

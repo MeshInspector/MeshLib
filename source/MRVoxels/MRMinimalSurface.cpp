@@ -255,7 +255,7 @@ Expected<Mesh> fill( Type type, const Mesh& mesh, float frequency, float resolut
 
     // translation to mesh csys
     const auto xf = AffineXf3f::translation( mesh.getBoundingBox().min - 0.75f*extraStep );
-    auto res = boolean( mesh, *sponge, BooleanOperation::Intersection, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
+    auto res = boolean( mesh, *sponge, BooleanOperation::Union, &xf, nullptr, subprogress( cb, 0.9f, 1.f ) );
     if ( !res )
         return unexpected( res.errorString );
 

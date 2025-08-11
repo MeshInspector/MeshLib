@@ -13,10 +13,6 @@
 #include <MRCMesh/MRPrecisePredicates3.h>
 #include <MRCMesh/MRTorus.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_vector_MR_OneMeshContour.h>
-#include <MRCMisc/std_vector_MR_OneMeshIntersection.h>
-#include <MRCMisc/std_vector_MR_VarEdgeTri.h>
-#include <MRCMisc/std_vector_std_vector_MR_VarEdgeTri.h>
 
 void testMeshCollidePrecise( void )
 {

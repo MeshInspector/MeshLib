@@ -6,9 +6,6 @@
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRString.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/expected_MR_Mesh_std_string.h>
-#include <MRCMisc/expected_void_std_string.h>
-#include <MRCMisc/std_string.h>
 #include <MRCVoxels/MROffset.h>
 
 #include <math.h>

@@ -16,10 +16,6 @@
 #include <MRCMesh/MRTorus.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_array_MR_VertId_3.h>
-#include <MRCMisc/std_vector_MR_Vector3f.h>
-#include <MRCMisc/std_vector_MR_EdgeId.h>
-#include <MRCMisc/std_vector_std_vector_MR_EdgeId.h>
 
 #define PI_F 3.14159265358979f
 #define V( ID ) (MRVertId){ .id = ( ID ) }

@@ -1,4 +1,5 @@
 #include "TestMacros.h"
+
 #include <MRCMesh/MRAffineXf.h>
 #include <MRCMesh/MRBox.h>
 #include <MRCMesh/MRCube.h>
@@ -7,7 +8,6 @@
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRString.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/expected_MR_Mesh_std_string.h>
 #include <MRCVoxels/MROffset.h>
 
 

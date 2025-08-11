@@ -2,8 +2,6 @@
 #include <MRCMesh/MRMesh.h>
 #include <MRCMesh/MRMeshLoad.h>
 #include <MRCMesh/MRMeshSave.h>
-#include <MRCMisc/expected_MR_Mesh_std_string.h>
-#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>

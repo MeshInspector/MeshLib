@@ -6,8 +6,6 @@
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRMeshTopology.h>
 #include <MRCMesh/MRVector.h>
-#include <MRCMisc/expected_MR_Mesh_std_string.h>
-#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>

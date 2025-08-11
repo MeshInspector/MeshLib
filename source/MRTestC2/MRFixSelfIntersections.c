@@ -1,13 +1,11 @@
 #include "TestMacros.h"
 #include "MRFixSelfIntersections.h"
 
-#include "MRCMesh/MRFixSelfIntersections.h"
-#include "MRCMesh/MRMesh.h"
-#include "MRCMesh/MRMeshTopology.h"
-#include "MRCMesh/MRBitSet.h"
-#include "MRCMesh/MRTorus.h"
-#include "MRCMisc/expected_MR_FaceBitSet_std_string.h"
-#include "MRCMisc/expected_void_std_string.h"
+#include <MRCMesh/MRFixSelfIntersections.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRBitSet.h>
+#include <MRCMesh/MRTorus.h>
 
 void testFixSelfIntersections( void )
 {

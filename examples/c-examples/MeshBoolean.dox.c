@@ -4,8 +4,6 @@
 #include <MRCMesh/MRMeshBoolean.h>
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/expected_void_std_string.h>
-#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>

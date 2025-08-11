@@ -10,8 +10,6 @@
 #include <MRCMesh/MRMeshPart.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_pair_MR_Face2RegionMap_int32_t.h>
-#include <MRCMisc/std_pair_MR_FaceBitSet_int32_t.h>
 
 typedef struct CreatedMesh
 {

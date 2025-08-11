@@ -1,18 +1,14 @@
 #include "TestMacros.h"
 
-#include "MRCMesh/MRBitSet.h"
-#include "MRCMesh/MRMesh.h"
-#include "MRCMesh/MRMeshToPointCloud.h"
-#include "MRCMesh/MRMeshTopology.h"
-#include "MRCMesh/MRPointCloud.h"
-#include "MRCMesh/MRPointCloudTriangulation.h"
-#include "MRCMesh/MRTorus.h"
-#include "MRCMesh/MRVector.h"
-#include "MRCMesh/MRVector3.h"
-#include "MRCMisc/std_optional_MR_Mesh.h"
-#include "MRCMisc/std_vector_MR_EdgeId.h"
-#include "MRMesh.h"
-#include "MRPointCloud.h"
+#include <MRCMesh/MRBitSet.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshToPointCloud.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRPointCloud.h>
+#include <MRCMesh/MRPointCloudTriangulation.h>
+#include <MRCMesh/MRTorus.h>
+#include <MRCMesh/MRVector.h>
+#include <MRCMesh/MRVector3.h>
 
 void testTriangulation( void )
 {

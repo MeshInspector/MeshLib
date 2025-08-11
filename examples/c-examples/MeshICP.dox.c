@@ -4,9 +4,6 @@
 #include <MRCMesh/MRMeshOrPoints.h>
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRString.h>
-#include <MRCMisc/expected_MR_Mesh_std_string.h>
-#include <MRCMisc/expected_void_std_string.h>
-#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>

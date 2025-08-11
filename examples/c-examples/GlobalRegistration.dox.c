@@ -9,10 +9,6 @@
 #include <MRCMesh/MRPointsSave.h>
 #include <MRCMesh/MRString.h>
 #include <MRCMesh/MRVector.h>
-#include <MRCMisc/expected_MR_PointCloud_std_string.h>
-#include <MRCMisc/expected_void_std_string.h>
-#include <MRCMisc/std_function_bool_from_float.h>
-#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -10,9 +10,6 @@
 #include <MRCMesh/MRMeshTopology.h>
 #include <MRCMesh/MRRegionBoundary.h>
 #include <MRCMesh/MRVector.h>
-#include <MRCMisc/std_vector_MR_EdgeId.h>
-#include <MRCMisc/std_vector_MR_Vector3f.h>
-#include <MRCMisc/std_vector_std_vector_MR_EdgeId.h>
 
 MR_Mesh* createMeshWithHoles( void )
 {

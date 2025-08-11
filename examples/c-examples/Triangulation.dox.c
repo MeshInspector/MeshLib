@@ -1,16 +1,11 @@
-#include "MRCMesh/MRMeshSave.h"
-#include "MRCMisc/expected_MR_Mesh_std_string.h"
-#include "MRCMisc/expected_void_std_string.h"
-#include "MRCMisc/std_string.h"
 #include <MRCMesh/MRBitSet.h>
 #include <MRCMesh/MRMesh.h>
 #include <MRCMesh/MRMeshPart.h>
+#include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRPointCloud.h>
 #include <MRCMesh/MRPointCloudTriangulation.h>
 #include <MRCMesh/MRUniformSampling.h>
 #include <MRCMesh/MRVector.h>
-#include <MRCMisc/std_optional_MR_Mesh.h>
-#include <MRCMisc/std_optional_MR_VertBitSet.h>
 #include <MRCVoxels/MROffset.h>
 
 #include <math.h>

@@ -8,7 +8,6 @@
 #include "MRCMesh/MRBitSet.h"
 #include "MRCMesh/MRMeshFixer.h"
 #include "MRCMesh/MRRegionBoundary.h"
-#include "MRCMisc/expected_MR_UndirectedEdgeBitSet_std_string.h"
 
 void testArea( void )
 {

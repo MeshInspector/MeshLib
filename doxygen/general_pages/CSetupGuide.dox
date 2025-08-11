@@ -9,8 +9,6 @@
 
 \note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
 
-## Using binary releases
-
 The recommended way of using the C API is using the binary releases of MeshLib. Download them as explained in the \ref MeshLibCppSetupGuide "installation instructions for C++".
 
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
@@ -21,48 +19,8 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 ```
 Otherwise, link against the `MeshLibC2` library manually.
 
-## Compiling the C bindings locally
+### Compiling the C bindings locally
 
-The alternative to using the binary releases is to compile the C bindings locally.
-
-The source code of the C bindings is generated, and as such isn't included in the repository.
-
-The build process for C is almost exactly the same as that for C++, with the additional step of generating the C bindings first.
-
-1. **Install the prerequisites for MeshLib** as explained in the \ref MeshLibCppSetupGuide "installation guide for C++".
-
-2. **Install the prerequisites for the generator** by running `scripts/mrbind/install_deps_<platform>`.
-
-   On Linux and Mac it must be ran as root.
-
-   Note that this script may install some packages into your system, such as a specific version of LLVM on Linux, or MSYS2 on Windows (a separate installation at `C:\msys64_meshlib_mrbind`).
-
-   Note that MSYS2 is used on Windows for the generator, despite the rest of MeshLib being compiled with MSVC. We don't support compiling MeshLib itself in MSYS2.
-
-3. **Build the generator** by running `scripts/mrbind/install_mrbind_<platform>`.
-
-4. **Run the generator.**
-
-   - **On Linux:** `make -f scripts/mrbind/generate.mk -B --trace`
-
-   - **On Windows:** `scripts\mrbind\generate_win.bat -B --trace` from the VS developer command prompt (use the `x64 Native` prompt).
-
-     This is equivalent to running the command we use on Linux in the MSYS2 shell.
-
-   - **On MacOS:**
-
-     The script `install_deps_macos.sh` that you can previously has installed GNU Make in `brew`. Add it to the PATH using `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"` on Arm Macs or `export PATH="/usr/local/opt/make/libexec/gnubin:$PATH"` on x86 Macs. Ensure that `make --version` is `4.x` and not older.
-
-     Then run the same command as on Linux: `make -f scripts/mrbind/generate.mk -B --trace`
-
-   On success, the C headers and sources will be generated at `source/MeshLibC2/include` and `source/MeshLibC2/src` respectively.
-
-5. **Compile MeshLib.**
-
-   To include the C bindings, MeshLib must be compiled using CMake; MSBuild isn't supported for this usecase.
-
-   Follow the steps for C++ outlined [here](/ref MeshLibCmakeSetupGuide), and additionally pass `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake.
-
-   If you run `cmake --install ...` now, the C headers and libraries will be installed alongside the C++ ones.
+Compiling the C bindings from source is currently not supported. Since their source code is generated, it's not present in the MeshLib repository.
 
 */

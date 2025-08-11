@@ -36,8 +36,9 @@ SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
     hid_exit();
 }
 
-bool SpaceMouseHandlerHidapi::initialize()
+bool SpaceMouseHandlerHidapi::initialize( std::function<void(const std::string&)> deviceSignal )
 {
+    deviceSignal_ = std::move( deviceSignal );
     if ( hid_init() != 0 )
     {
         spdlog::error( "HID API: init error" );
@@ -48,11 +49,6 @@ bool SpaceMouseHandlerHidapi::initialize()
     hid_darwin_set_open_exclusive( 0 );
 #endif
 
-#ifndef NDEBUG
-    hid_device_info* devs_ = hid_enumerate( 0x0, 0x0 );
-    printDevices_( devs_ );
-#endif
-
     terminateListenerThread_ = false;
     initListenerThread_();
 
@@ -61,37 +57,46 @@ bool SpaceMouseHandlerHidapi::initialize()
 
 bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
 {
-    bool isDeviceFound = false;
+    const static int HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER = 8; //Multi-axis Controller
+    const static int HID_USAGE_PAGE_GENERIC = 1; //Generic Desktop Controls
+    assert( !device_ );
     for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
     {
         // search through supported vendors
-        hid_device_info* localDevicesIt = hid_enumerate( vendorId, 0x0 );
-        while ( localDevicesIt && !isDeviceFound )
+        hid_device_info* localDevicesIt = hid_enumerate( vendorId, 0x0 ); // hid_enumerate( 0x0, 0x0 ) to enumerate all devices of all vendors
+        while ( localDevicesIt && ( !device_ || verbose ) )
         {
             if ( verbose )
             {
-                spdlog::info( "HID API device found: vendorId={:#06x}, deviceId={:#06x}, path={}, usage={}, usage_page={}",
+                spdlog::info( "HID API device found: {:04x}:{:04x}, path={}, usage={}, usage_page={}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
+                if ( deviceSignal_ && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
+                    deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} found", vendorId, localDevicesIt->product_id ) );
             }
             for ( ProductId deviceId : supportedDevicesId )
             {
-                if ( deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
+                if ( !device_ && deviceId == localDevicesIt->product_id && localDevicesIt->usage == HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER && localDevicesIt->usage_page == HID_USAGE_PAGE_GENERIC )
                 {
                     device_ = hid_open_path( localDevicesIt->path );
                     if ( device_ )
                     {
-                        isDeviceFound = true;
-                        spdlog::info( "SpaceMouse connected: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
+                        anyAction_ = false;
+                        spdlog::info( "SpaceMouse connected: {:04x}:{:04x}, path={}", vendorId, deviceId, localDevicesIt->path );
+                        if ( deviceSignal_ )
+                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} opened", vendorId, localDevicesIt->product_id ) );
                         // setup buttons logger
                         buttonsState_ = 0;
                         setButtonsMap_( vendorId, deviceId );
                         activeMouseScrollZoom_ = false;
-                        break;
+                        if ( !verbose )
+                            break;
                     }
                     else if ( verbose )
                     {
-                        spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
+                        spdlog::error( "HID API device ({:04x}:{:04x}, path={}) open error: {}",
                             vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
+                        if ( deviceSignal_ )
+                            deviceSignal_( fmt::format( "HID API device {:04x}:{:04x} open failed", vendorId, localDevicesIt->product_id ) );
                     }
                 }
             }
@@ -99,7 +104,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
         }
         hid_free_enumeration( localDevicesIt );
     }
-    return isDeviceFound;
+    return (bool)device_;
 }
 
 
@@ -210,6 +215,8 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 buttonsState_ = 0;
                 activeMouseScrollZoom_ =  true;
                 spdlog::error( "HID API: device lost" );
+                if ( deviceSignal_ )
+                    deviceSignal_( fmt::format( "HID API device lost" ) );
             }
             else if ( packetLength_ > 0 )
             {
@@ -287,6 +294,11 @@ void SpaceMouseHandlerHidapi::updateActionWithInput_( const DataPacketRaw& packe
 
 void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
 {
+    if ( deviceSignal_ && !anyAction_ )
+    {
+        deviceSignal_( "HID API first action processing" );
+        anyAction_ = true;
+    }
     auto& viewer = getViewerInstance();
     viewer.spaceMouseMove( action.translate, action.rotate );
     glfwPostEmptyEvent();
@@ -304,20 +316,6 @@ void SpaceMouseHandlerHidapi::processAction_( const SpaceMouseAction& action )
          }
          buttonsState_ = action.buttons;
      }
-}
-
-void SpaceMouseHandlerHidapi::printDevices_( struct hid_device_info* cur_dev )
-{
-    while ( cur_dev )
-    {
-        if ( vendor2device_.find( cur_dev->vendor_id ) != vendor2device_.end() )
-        {
-            spdlog::debug( "Device Found: type: {} {} path: {} ", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path );
-            spdlog::debug( "{} {}", cur_dev->usage, cur_dev->usage_page );
-        }
-        cur_dev = cur_dev->next;
-    }
-    hid_free_enumeration( cur_dev );
 }
 
 }

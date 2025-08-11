@@ -21,19 +21,32 @@ enum class Type : int
 };
 MRVOXELS_API std::vector<std::string> getTypeNames();
 
+
+struct VolumeParams
+{
+    Type type = Type::SchwartzP;
+    float frequency = 1.f;
+    float resolution = 1.f;
+};
+
+struct MeshParams : VolumeParams
+{
+    float iso = 0.f;
+};
+
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)
 /// @param type Type of the surface
 /// @param size Size of the cube with the surface
 /// @param frequency Frequency of oscillations (determines size of the "cells" in the "grid")
 /// @param resolution Ratio `n / T`, between the number of voxels and period of oscillations
 /// @return Distance-volume starting at (0, 0, 0) and having specified @p size
-MRVOXELS_API FunctionVolume buildVolume( Type type, const Vector3f& size, float frequency, float resolution );
+MRVOXELS_API FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size );
 
 /// Constructs TPMS level-set and then convert it to mesh
-MRVOXELS_API Expected<Mesh> build( Type type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb = {} );
 
 /// Constructs TPMS-filling for the given @p mesh
-MRVOXELS_API Expected<Mesh> fill( Type type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> fill( const MeshParams& params, const Mesh& mesh, ProgressCallback cb = {} );
 
 /// Returns number of voxels that would be used to perform \ref fillWithTPMS
 MRVOXELS_API size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution );

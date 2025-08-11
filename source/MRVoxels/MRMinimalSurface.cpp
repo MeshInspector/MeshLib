@@ -224,11 +224,11 @@ float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Typ
 }
 
 
-FunctionVolume buildVolume( Type type, const Vector3f& size, float frequency, float resolution )
+FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size )
 {
-    const auto [dims, voxelSize] = getDimsAndSize( size, frequency, resolution );
+    const auto [dims, voxelSize] = getDimsAndSize( size, params.frequency, params.resolution );
     return {
-        .data = [frequency, voxelSizeCapture = voxelSize, func = getTPMSFunction( type )] ( const Vector3i& pv )
+        .data = [frequency = params.frequency, voxelSizeCapture = voxelSize, func = getTPMSFunction( params.type )] ( const Vector3i& pv )
         {
             const float w = 2.f * PI_F * frequency;
             const Vector3f p = w * mult( voxelSizeCapture, Vector3f( pv ) + Vector3f::diagonal( 0.5f ) );
@@ -240,16 +240,16 @@ FunctionVolume buildVolume( Type type, const Vector3f& size, float frequency, fl
 }
 
 
-Expected<Mesh> build( Type type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb )
+Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb )
 {
-    return marchingCubes( buildVolume( type, size, frequency, resolution ), { .cb = cb, .iso = iso } );
+    return marchingCubes( buildVolume( params, size ), { .cb = cb, .iso = params.iso } );
 }
 
-Expected<Mesh> fill( Type type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb )
+Expected<Mesh> fill( const MeshParams& params, const Mesh& mesh, ProgressCallback cb )
 {
     // first construct a surface by the bounding box of the mesh
-    const auto extraStep = Vector3f::diagonal( 1.f / frequency );
-    auto sponge = build( type, mesh.getBoundingBox().size() + 1.5f*extraStep, frequency, resolution, iso, subprogress( cb, 0.f, 0.9f ) );
+    const auto extraStep = Vector3f::diagonal( 1.f / params.frequency );
+    auto sponge = build( params, mesh.getBoundingBox().size() + 1.5f*extraStep, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
 

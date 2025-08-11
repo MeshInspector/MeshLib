@@ -308,15 +308,6 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     viewer->postEmptyEvent();
 }
 
-static void glfw_joystick_callback( int jid, int event )
-{
-    auto viewer = &MR::getViewerInstance();
-    viewer->emplaceEvent( "Joystick", [jid, event, viewer] ()
-    {
-        viewer->joystickUpdateConnected( jid, event );
-    } );
-}
-
 namespace MR
 {
 
@@ -742,7 +733,6 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     glfwSetMouseButtonCallback( window, glfw_mouse_press );
     glfwSetCharCallback( window, glfw_char_mods_callback );
     glfwSetDropCallback( window, glfw_drop_callback );
-    glfwSetJoystickCallback( glfw_joystick_callback );
 
     // Handle retina displays (windows and mac)
     int width, height;
@@ -784,8 +774,10 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     if ( !spaceMouseController_ )
         spaceMouseController_ = std::make_unique<SpaceMouseController>();
     spaceMouseController_->connect();
-    initSpaceMouseHandler_();
     spdlog::info( "SpaceMouseController created" );
+
+    if ( !spaceMouseHandler_ )
+        initSpaceMouseHandler();
 
     if ( !touchpadController_ )
         touchpadController_ = std::make_unique<TouchpadController>();
@@ -1608,12 +1600,6 @@ bool Viewer::interruptWindowClose()
     return false;
 }
 
-void Viewer::joystickUpdateConnected( int jid, int event )
-{
-    if ( spaceMouseHandler_ )
-        spaceMouseHandler_->updateConnected( jid, event );
-}
-
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
 {
     if ( obj.getRedrawFlag( mask ) )
@@ -2186,16 +2172,18 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setAncillary( true );
 }
 
-void Viewer::initSpaceMouseHandler_()
+void Viewer::initSpaceMouseHandler( [[maybe_unused]] std::function<void(const std::string&)> deviceSignal )
 {
+    spaceMouseHandler_.reset();
 #ifndef __EMSCRIPTEN__
 #ifdef __APPLE__
     // try to use the official driver first
     auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
-    if ( driverHandler->initialize() )
+    if ( driverHandler->initialize( deviceSignal ) )
     {
         spaceMouseHandler_ = std::move( driverHandler );
+        spdlog::info( "SpaceMouseHandler3dxMacDriver initialized" );
         return;
     }
 
@@ -2203,9 +2191,13 @@ void Viewer::initSpaceMouseHandler_()
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
     spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    if ( !spaceMouseHandler_->initialize() )
+    if ( spaceMouseHandler_->initialize( std::move( deviceSignal ) ) )
     {
-        spdlog::warn( "Failed to initialize SpaceMouse handler" );
+        spdlog::info( "SpaceMouseHandlerHidapi initialized" );
+    }
+    else
+    {
+        spdlog::warn( "Failed to initialize SpaceMouseHandlerHidapi" );
     }
 #endif
 }

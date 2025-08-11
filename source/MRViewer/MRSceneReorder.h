@@ -24,10 +24,10 @@ struct SceneReorder
 
 /// moves objects in scene as prescribed by (task), preserving world location of each object;
 /// \return false if the move failed
-bool sceneReorderWithUndo( const SceneReorder & task );
+MRVIEWER_API bool sceneReorderWithUndo( const SceneReorder & task );
 
 /// moves all children from one object to another
 /// \return false if the move failed
-bool moveAllChildrenWithUndo( Object& oldParent, Object& newParent, const std::string& historyName = "Move Children" );
+MRVIEWER_API bool moveAllChildrenWithUndo( Object& oldParent, Object& newParent, const std::string& historyName = "Move Children" );
 
 } //namespace MR

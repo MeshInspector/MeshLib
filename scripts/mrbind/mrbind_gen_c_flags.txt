@@ -4,6 +4,7 @@
 --helper-header-dir MRCMisc
 --max-header-name-length 100
 --merge-std-and-tl-expected
+--add-convenience-includes
 --expose-as-struct '/MR::Vector\d\w.*/'
 --expose-as-struct '/MR::Matrix\d\w.*/'
 --expose-as-struct '/MR::AffineXf\d\w.*/'

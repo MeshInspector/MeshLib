@@ -3,27 +3,24 @@
 
 # Setting Up MeshLib for C Development
 
-While MeshLib is a C++ library, we provide automatically generated C bindings for most of our C++ API.
+\note Two versions of the C API currently coexist:
 
-The C bindings are included in the \ref MeshLibCppSetupGuide "binary releases", which is the recommended method of installing them. But they can also be generated locally (see [build instructions](https://github.com/MeshInspector/MeshLib/blob/master/scripts/mrbind/README-generating.md)).
+\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the the `MRC*` directories.
 
-Follow the links above to either install prebuilt MeshLib or compile it yourself. As a result, you should get C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc).
+\note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
 
-The headers are self-contained and don't depend on the rest of the MeshLib headers. The library links against `MRMesh` and some of our other libraries.
+The recommended way of using the C API is using the binary releases of MeshLib. Download them as explained in the \ref MeshLibCppSetupGuide "installation instructions for C++".
 
-If you're consuming the C bindings from \ref "MeshLibCmakeSetupGuide" CMake, use:
+The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
+
+If you're consuming the C API from \ref MeshLibCmakeSetupGuide "CMake", add the following to your `CMakeLists.txt`:
 ```cmake
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 ```
 Otherwise, link against the `MeshLibC2` library manually.
 
-## Deprecated older C bindings
+### Compiling the C bindings locally
 
-What is documented above (`MeshLibC2`) is the second version of our C bindings. Currently we also provide the first version, which is deprecated.
+Compiling the C bindings from source is currently not supported. Since their source code is generated, it's not present in the MeshLib repository.
 
-The first version was written manually, and as such doesn't cover as much of our API as the second version, which is generated automatically.
-
-The new bindings install headers to a directory named `MRCMesh` and some other `MRC...` directories. The old bindings install headers to `MRMeshC`.
-
-The new bindings are compiled to a library named `MeshLibC2`, and the old ones are compiled to `MRMeshC`.
 */

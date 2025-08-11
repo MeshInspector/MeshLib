@@ -1,6 +1,6 @@
 # Generating the bindings
 
-[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting)
+[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting-python-bindings)
 
 ## Installing prerequisites
 
@@ -8,9 +8,9 @@ Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on
 
 You can re-run those scripts to update the dependencies and/or MRBind itself.
 
-Among other things, the scripts can do following:
+Among other things, the scripts do following:
 
-* On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
+* On Ubuntu, they may add [the LLVM repository](https://apt.llvm.org/) to install the specific version of Clang and libclang that we need.
 
 * On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
 

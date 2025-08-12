@@ -429,26 +429,26 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 # Those files are compiled as is and linked into the final bindings.
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
-# Include the `MRCuda` project? One of: 1 0 placeholder
-# You can set this to 0 if you don't have Cuda installed.
-# Setting this to `placeholder` just emits a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
-# Currently this disabled for the C bindings.
-ENABLE_CUDA := $(if $(is_c),0,$(if $(IS_MACOS),placeholder,1))
+# Cuda support.
+ifeq ($(is_c),) # Currently disabled for C entirely. Enabling it would require more work than just removing this condition.
+# Enable Cuda? You can set this to 0 if you don't have Cuda installed.
+# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
+ENABLE_CUDA := $(if $(IS_MACOS),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
-override using_cuda_placeholder = $(if $(filter placeholder,$(ENABLE_CUDA)),1)
-$(info Enable Cuda: $(if $(using_cuda_placeholder),NO$(comma) but build a placeholder,$(if $(ENABLE_CUDA),YES,NO)))
-ifneq ($(ENABLE_CUDA),)
+$(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
+
 MODULES += mrcuda
 mrcuda_PyName := mrcudapy
-ifneq ($(using_cuda_placeholder),)
-mrcuda_PyExtraInputDirs := $(makefile_dir)cuda_placeholder
-else
+ifneq ($(ENABLE_CUDA),)
 mrcuda_InputProjects := MRCuda
+else
+mrcuda_PyExtraInputDirs := $(makefile_dir)cuda_placeholder
 endif
 mrcuda_ExtraMrbindFlags := --allow MR::Cuda
 # Which other Python modules to import at startup.
 mrcuda_PyDependsOn := $(PACKAGE_NAME).mrmeshpy
-endif
+
+endif # is_c == false
 
 
 

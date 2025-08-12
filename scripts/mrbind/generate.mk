@@ -26,7 +26,8 @@ endef
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
 # Same as `$(shell ...)`, but triggers an error on failure.
-override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`)))
+# Currently this intentionally ignores `$(dry_run)`, since all our usages of it need to work even in dry runs.
+override safe_shell = $(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`))
 
 # Same as `safe_shell`, but discards the output.
 override safe_shell_exec = $(call,$(call safe_shell,$1))
@@ -428,20 +429,26 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 # Those files are compiled as is and linked into the final bindings.
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
-# Include the `MRCuda` project?
-# Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
-# Also is currently disabled for the C bindings.
-ENABLE_CUDA := $(if $(or $(IS_MACOS),$(is_c)),0,1)
+# Cuda support.
+ifeq ($(is_c),) # Currently disabled for C entirely. Enabling it would require more work than just removing this condition.
+# Enable Cuda? You can set this to 0 if you don't have Cuda installed.
+# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
+ENABLE_CUDA := $(if $(IS_MACOS),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
-ifneq ($(ENABLE_CUDA),)
+
 MODULES += mrcuda
 mrcuda_PyName := mrcudapy
+ifneq ($(ENABLE_CUDA),)
 mrcuda_InputProjects := MRCuda
+else
+mrcuda_PyExtraInputDirs := $(makefile_dir)cuda_placeholder
+endif
 mrcuda_ExtraMrbindFlags := --allow MR::Cuda
 # Which other Python modules to import at startup.
 mrcuda_PyDependsOn := $(PACKAGE_NAME).mrmeshpy
-endif
+
+endif # is_c == false
 
 
 

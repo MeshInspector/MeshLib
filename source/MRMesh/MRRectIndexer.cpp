@@ -104,9 +104,9 @@ TEST( MRMesh, ExpandShrinkPixels )
 
     auto storeMask = mask;
     expandPixelMask( mask, indexer );
-    EXPECT_FALSE( ( mask - refMask ).any() );
+    EXPECT_TRUE( mask.is_subset_of( refMask ) );
     shrinkPixelMask( mask, indexer );
-    EXPECT_FALSE( ( mask - storeMask ).any() );
+    EXPECT_TRUE( mask.is_subset_of( storeMask ) );
 }
 
 } //namespace MR

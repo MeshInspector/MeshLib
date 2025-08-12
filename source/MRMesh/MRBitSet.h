@@ -22,7 +22,8 @@ namespace MR
  * \{
  */
 
-/// container of bits
+/// std::vector<bool> like container  (random-access, size_t - index type, bool - value type)
+/// with all bits after size() considered off during testing
 class BitSet : public boost::dynamic_bitset<std::uint64_t>
 {
 public:
@@ -69,6 +70,12 @@ public:
 
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
     [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    [[nodiscard]] MRMESH_API bool is_subset_of( const BitSet& a ) const;
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
+    bool is_proper_subset_of( const BitSet& a ) const = delete; // base implementation does not support bitsets of different sizes
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
@@ -127,7 +134,8 @@ private:
     using base::m_num_bits;
 };
 
-/// container of bits representing specific indices (faces, verts or edges)
+/// Vector<bool, I> like container (random-access, I - index type, bool - value type)
+/// with all bits after size() considered off during testing
 template <typename I>
 class TypedBitSet : public BitSet
 {
@@ -179,13 +187,10 @@ public:
     TypedBitSet & subtract( const TypedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
     /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
-
-    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
-    bool is_proper_subset_of( const TypedBitSet& a ) const { return base::is_proper_subset_of( a ); }
+    [[nodiscard]] bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
 
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
+    [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }

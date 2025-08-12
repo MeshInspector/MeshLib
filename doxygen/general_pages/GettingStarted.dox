@@ -15,12 +15,12 @@ This guide will help you get started with setting up MeshLib for your preferred 
 \n Learn how to install and configure MeshLib for C++ development on Windows, Linux, and macOS.
 This guide covers prerequisites, dependency management, and building the library from source.
 
-3. \ref MeshLibCSetupGuide "\b MeshLib \b C \b Setup \b Guide"
-\n Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
-
-4. \ref MeshLibCSharpSetupGuide "\b MeshLib \b C# \b Setup \b Guide"
+3. \ref MeshLibCSharpSetupGuide "\b MeshLib \b C# \b Setup \b Guide"
 \n This guide provides instructions for integrating MeshLib into C# projects using NuGet or manual distribution.
 It covers installation on Windows, macOS, and Linux, with detailed steps for Visual Studio users.
+
+4. \ref MeshLibCSetupGuide "\b MeshLib \b C \b Setup \b Guide"
+\n Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
 
 5. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
 \n Simple way of integrating MeshLib to your project via CMake.

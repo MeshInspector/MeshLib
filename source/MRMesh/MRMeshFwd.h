@@ -382,12 +382,6 @@ using Contours2f = Contours2<float>;
 using Contours3d = Contours3<double>;
 using Contours3f = Contours3<float>;
 
-template <typename T> using Contour3 = Contour<Vector3<T>>;
-using Contour3d = Contour3<double>;
-using Contours3d = std::vector<Contour3d>;
-using Contour3f = Contour3<float>;
-using Contours3f = std::vector<Contour3f>;
-
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
     ( Plane3f, Plane3<float>  )
     ( Plane3d, Plane3<double> )

@@ -258,6 +258,8 @@ jobs:
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
       - name: Restore CUDA Cache
+        # not needed for self-hosted vs2019 runner
+        if: false
         uses: actions/cache@v4
         id: cuda-cache
         with:
@@ -265,10 +267,13 @@ jobs:
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
       - name: Install CUDA
-        if: steps.cuda-cache.outputs.cache-hit != 'true'
+        # not needed for self-hosted vs2019 runner
+        if: false && steps.cuda-cache.outputs.cache-hit != 'true'
         run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
 
       - name: Setup CUDA
+        # not needed for self-hosted vs2019 runner
+        if: false
         run: |
           "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
           "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $env:GITHUB_ENV
@@ -276,6 +281,8 @@ jobs:
           "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $env:GITHUB_PATH
 
       - name: Install Visual Studio Integration
+        # not needed for self-hosted vs2019 runner
+        if: false
         run: |
           $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
           $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'

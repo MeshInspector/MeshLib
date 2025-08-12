@@ -226,11 +226,18 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Clean Vcpkg Directory
+        working-directory: C:\vcpkg
+        run: git clean -ffdx
+
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
         run: |
           git fetch
+          git pull --rebase
           git checkout ${{env.VCPKG-VERSION}}
+          bootstrap-vcpkg.bat
+          vcpkg.exe integrate install
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4

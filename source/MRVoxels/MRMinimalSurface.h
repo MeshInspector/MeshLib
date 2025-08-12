@@ -14,12 +14,15 @@ enum class Type : int
 {
     SchwartzP,
     DoubleSchwartzP,
+    ThickSchwartzP,
     Gyroid,
     DoubleGyroid,
+    ThickGyroid,
 
     Count
 };
 MRVOXELS_API std::vector<std::string> getTypeNames();
+MRVOXELS_API bool isThick( Type type );
 
 
 struct VolumeParams

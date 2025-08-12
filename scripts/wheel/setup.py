@@ -30,9 +30,8 @@ MODULES = [
     "mrmeshpy",
     "mrmeshnumpy",
     "mrviewerpy",
+    "mrcudapy",
 ]
-if platform.system() != "Darwin":
-    MODULES.append("mrcudapy")
 
 here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the readme file

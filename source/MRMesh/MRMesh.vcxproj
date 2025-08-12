@@ -352,7 +352,6 @@
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertCoordsDiff.h" />
-    <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
@@ -661,7 +660,6 @@
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
-    <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
     <ClCompile Include="MRObjectLines.cpp" />

@@ -7,7 +7,6 @@
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
 #include "MRMesh/MRParallelFor.h"
@@ -481,52 +480,11 @@ pybind11::array_t<double> getNumpyGaussianCurvature( const MR::Mesh& mesh )
         freeWhenDone ); // numpy array references this parent
 }
 
-// returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points
-pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
-{
-    using namespace MR;
-    int numVerts = mesh.topology.lastValidVert() + 1;
-
-    VertScalars curv( numVerts );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
-    {
-        curv[v] = mesh.discreteMeanCurvature( v );
-    } );
-
-    auto gradient = vertexAttributeGradient( mesh, curv );
-
-    // Allocate and initialize some data;
-    const int size = numVerts * 3;
-    double* data = new double[size];
-
-    ParallelFor( 0_v, VertId( numVerts ), [&]( VertId v )
-    {
-        int ind = 3 * v;
-        for ( int vi = 0; vi < 3; ++vi )
-            data[ind + vi] = gradient[v][vi];
-    } );
-
-    // Create a Python object that will free the allocated
-    // memory when destroyed:
-    pybind11::capsule freeWhenDone( data, [] ( void* f )
-    {
-        double* data = reinterpret_cast< double* >( f );
-        delete[] data;
-    } );
-
-    return pybind11::array_t<double>(
-        { numVerts, 3 }, // shape
-        { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
-        data, // the data pointer
-        freeWhenDone ); // numpy array references this parent
-}
-
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
     m.def( "getNumpyCurvature", &getNumpyMeanCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete mean curvature for each vertex of a mesh" ); // to be deprecated
     m.def( "getNumpyMeanCurvature", &getNumpyMeanCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete mean curvature for each vertex of a mesh" );
     m.def( "getNumpyGaussianCurvature", &getNumpyGaussianCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete Gaussian curvature for each vertex of a mesh" );
-    m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh points" );
     m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
     m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)" );
     m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );

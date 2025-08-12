@@ -5,23 +5,25 @@
 
 \tableofcontents
 
+\parblock
 \note Two versions of the C API currently coexist:
 
 \note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the the `MRC*` directories.
 
 \note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
+\endparblock
 
-Currently, the only supported way of using the C API is via the binary releases of MeshLib. The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is also explained below.
+\parblock
+\note Currently, the only supported way of using the C API is via the binary releases of MeshLib.
 
-The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
-
-If you're consuming the C API from \ref MeshLibCmakeSetupGuide "CMake", add the following to your `CMakeLists.txt`:
-```cmake
-target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
-```
-Otherwise, link against the `MeshLibC2` library manually.
+\note Starting with the next release, you will be able to compile the C bindings directly from the source code.
+\endparblock
 
 ## Installing binary releases of MeshLib
+
+The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is also explained below.
+
+The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
 ### Windows
  1. **Download and Extract the Built Version**
@@ -62,12 +64,11 @@ sudo apt install ./meshlib-build-version-example.deb
 \code{.sh}
 sudo rpm -i ./meshlib-build-version-example.rpm
 \endcode
- 3. **Open MeshViewer**
- \n To verify that everything is fine you can run MeshViewer application:
-\code{.sh}
-MeshViewer
-\endcode
- 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ \n Add the following to your `CMakeLists.txt`:
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+`\endcode
 
 ### macOS
  1. **Download the Built Version**
@@ -79,12 +80,16 @@ MeshViewer
 \code{.sh}
 xargs brew install < /opt/meshlib/requirements/macos.txt
 \endcode
- 3. **Integrate Using CMake**
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ \n Add the following to your `CMakeLists.txt`:
+\code{.cmake}
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+`\endcode
 
+## Try MeshLib with C Examples
 
-## Compiling the C bindings locally
+MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
 
-Compiling the C bindings from source is currently not supported. Since their source code is generated, it's not present in the MeshLib repository.
+We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
 
 */

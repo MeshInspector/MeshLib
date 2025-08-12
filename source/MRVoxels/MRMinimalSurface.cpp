@@ -443,4 +443,37 @@ float estimateDensity( Type type, float targetIso )
     return interpolateDensityAndIso( InterpolateDensityAndIsoDirection::iso2density, type, targetIso );
 }
 
+float getMinimalResolution( Type type, float frequency, float iso )
+{
+    // voxel size == 1 / (res * freq)
+    if ( isThick( type ) )
+    {
+        const auto w = 2 * PI_F * frequency;
+
+        // voxel size == 1 / (res * freq) <= delta
+        float delta = 1.f;
+        if ( type == Type::ThickSchwartzP )
+        {
+            delta = 2 * std::asin( iso / 2.f ) / w;
+        }
+        else if ( type == Type::ThickGyroid )
+        {
+            delta = 2 * std::asin( iso / 4.f ) / w;
+        }
+        else
+        {
+            assert( false );
+            return 5.f;
+        }
+
+        // 1 / (res * freq) <= delta => res >= 1 / (delta * freq)
+        return 1.f / ( delta * frequency );
+    }
+    else
+    {
+        return 5.f;
+    }
+}
+
+
 }

@@ -64,4 +64,7 @@ MRVOXELS_API float estimateIso( Type type, float targetDensity );
 /// @return Value in [0; 1]
 MRVOXELS_API float estimateDensity( Type type, float targetIso );
 
+/// Returns minimal reasonable resolution for given parameters
+MRVOXELS_API float getMinimalResolution( Type type, float frequency, float iso );
+
 }

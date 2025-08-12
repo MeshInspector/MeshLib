@@ -217,7 +217,7 @@ public:
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const
     {
         assert( region || updateValids_ ); // region shall be either given on input or maintained in validVerts_
-        assert( !updateValids_ || !region || ( *region - validVerts_ ).none() ); // if region is given and all valid vertices are known, then region must be a subset of them
+        assert( !updateValids_ || !region || region->is_subset_of( validVerts_ ) ); // if region is given and all valid vertices are known, then region must be a subset of them
         return region ? *region : validVerts_;
     }
 
@@ -283,7 +283,7 @@ public:
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const
     {
         assert( region || updateValids_ ); // region shall be either given on input or maintained in validFaces_
-        assert( !updateValids_ || !region || ( *region - validFaces_ ).none() ); // if region is given and all valid faces are known, then region must be a subset of them
+        assert( !updateValids_ || !region || region->is_subset_of( validFaces_ ) ); // if region is given and all valid faces are known, then region must be a subset of them
         return region ? *region : validFaces_;
     }
 

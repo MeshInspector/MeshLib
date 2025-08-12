@@ -6,7 +6,7 @@
 
 ## Welcome to MeshLib’s documentation!
 The MeshLib SDK is an open-source 3D geometry processing library designed to provide developers with a comprehensive toolkit for building robust 3D applications.
-Whether you are working in C++, Python, or C#, MeshLib offers a versatile, cross-platform solution available on Windows, macOS, and Linux, enabling the development of cutting-edge solutions with ease and precision.
+Whether you are working in C++, Python, C#, or C, MeshLib offers a versatile, cross-platform solution available on Windows, macOS, and Linux, enabling the development of cutting-edge solutions with ease and precision.
 
 ## Key Features
 

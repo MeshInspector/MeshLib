@@ -26,7 +26,8 @@ endef
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
 # Same as `$(shell ...)`, but triggers an error on failure.
-override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`)))
+# Currently this intentionally ignores `$(dry_run)`, since all our usages of it need to work even in dry runs.
+override safe_shell = $(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`))
 
 # Same as `safe_shell`, but discards the output.
 override safe_shell_exec = $(call,$(call safe_shell,$1))
@@ -428,16 +429,22 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 # Those files are compiled as is and linked into the final bindings.
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
-# Include the `MRCuda` project?
-# Defaults to 0 on Mac (no Cuda there!), and 1 elsewhere. Can set to 0 if you don't have Cuda installed.
-# Also is currently disabled for the C bindings.
-ENABLE_CUDA := $(if $(or $(IS_MACOS),$(is_c)),0,1)
+# Include the `MRCuda` project? One of: 1 0 placeholder
+# You can set this to 0 if you don't have Cuda installed.
+# Setting this to `placeholder` just emits a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
+# Currently this disabled for the C bindings.
+ENABLE_CUDA := $(if $(is_c),0,$(if $(IS_MACOS),placeholder,1))
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
-$(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
+override using_cuda_placeholder = $(if $(filter placeholder,$(ENABLE_CUDA)),1)
+$(info Enable Cuda: $(if $(using_cuda_placeholder),NO$(comma) but build a placeholder,$(if $(ENABLE_CUDA),YES,NO)))
 ifneq ($(ENABLE_CUDA),)
 MODULES += mrcuda
 mrcuda_PyName := mrcudapy
+ifneq ($(using_cuda_placeholder),)
+mrcuda_PyExtraInputDirs := $(makefile_dir)cuda_placeholder
+else
 mrcuda_InputProjects := MRCuda
+endif
 mrcuda_ExtraMrbindFlags := --allow MR::Cuda
 # Which other Python modules to import at startup.
 mrcuda_PyDependsOn := $(PACKAGE_NAME).mrmeshpy

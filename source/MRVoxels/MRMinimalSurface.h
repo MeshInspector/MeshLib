@@ -24,9 +24,9 @@ MRVOXELS_API std::vector<std::string> getTypeNames();
 
 struct VolumeParams
 {
-    Type type = Type::SchwartzP;
-    float frequency = 1.f;
-    float resolution = 5.f;
+    Type type = Type::SchwartzP; // Type of the surface
+    float frequency = 1.f; // Frequency of oscillations (determines size of the "cells" in the "grid")
+    float resolution = 5.f; // Ratio `n / T`, between the number of voxels and period of oscillations
 };
 
 struct MeshParams : VolumeParams
@@ -35,10 +35,7 @@ struct MeshParams : VolumeParams
 };
 
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)
-/// @param type Type of the surface
 /// @param size Size of the cube with the surface
-/// @param frequency Frequency of oscillations (determines size of the "cells" in the "grid")
-/// @param resolution Ratio `n / T`, between the number of voxels and period of oscillations
 /// @return Distance-volume starting at (0, 0, 0) and having specified @p size
 MRVOXELS_API FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size );
 

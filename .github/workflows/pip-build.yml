@@ -17,12 +17,20 @@ on:
         default: ""
         required: false
         type: string
+      publish:
+        default: false
+        required: false
+        type: boolean
   # This is the `uses:` call from other `.yml` files.
   workflow_call:
     inputs:
       vcpkg_docker_image_tag:
         required: true
         type: string
+      publish:
+        default: false
+        required: false
+        type: boolean
 
 env:
   VCPKG-VERSION: '2024.10.21'
@@ -44,7 +52,7 @@ jobs:
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
       - uses: actions-ecosystem/action-get-latest-tag@v1
-        if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' || inputs.publish }}
         id: get-latest-tag
 
   manylinux-pip-build:
@@ -177,7 +185,7 @@ jobs:
           python3.12 ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag || '0'}}
 
       - name: Upload Python Stubs
-        if: ${{ github.event_name == 'release' && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v4
         with:
           name: PythonStubs
@@ -604,7 +612,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   upload-to-release:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event_name == 'release' || inputs.publish }}
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -634,7 +642,7 @@ jobs:
         run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
   post-release-test:
-    if: ${{ github.event_name == 'release' }}
+    if: ${{ github.event_name == 'release' || inputs.publish }}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
@@ -651,7 +659,7 @@ jobs:
           failOnError: false
 
       - name: Delete Python Stubs
-        if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' || inputs.publish }}
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs

@@ -321,7 +321,7 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1
 
       - name: Run Test

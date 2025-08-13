@@ -4,6 +4,7 @@
 #include <MRMesh/MRBox.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshDecimate.h"
+#include "MRMesh/MRTimer.h"
 #include <MRMesh/MRMeshBoolean.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -300,6 +301,7 @@ FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size )
 
 Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb )
 {
+    MR_TIMER;
     ProgressCallback mcProgress, decProgress;
     if ( params.decimate )
     {
@@ -327,6 +329,7 @@ Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCa
 
 Expected<Mesh> fill( const MeshParams& params, const Mesh& mesh, ProgressCallback cb )
 {
+    MR_TIMER;
     // first construct a surface by the bounding box of the mesh
     const auto extraStep = Vector3f::diagonal( 1.f / params.frequency );
     auto sponge = build( params, mesh.getBoundingBox().size() + 1.5f*extraStep, subprogress( cb, 0.f, 0.9f ) );

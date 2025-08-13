@@ -81,12 +81,19 @@ bool detectFlatShading( const Mesh& mesh )
 // Prepare object after it has been imported from external format (not .mru)
 void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::path &filename )
 {
+    const auto extension = utf8string( filename.extension() );
+
+    // TODO: get format id from the format registry
+    const auto sourceFormatId = !extension.empty() ? toLower( extension.substr( 1 ) ) : "unknown";
+    const auto sourceFormatTag = fmt::format( "source-format:{}", sourceFormatId );
+    o->addTag( sourceFormatTag );
+
     if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )
     {
         // Detect flat shading needed
         bool flat;
         if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::AutoDetect )
-            flat = filename.extension() == ".step" || filename.extension() == ".stp" ||
+            flat = extension == ".step" || extension == ".stp" ||
                    ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
         else
             flat = SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat;

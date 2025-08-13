@@ -19,10 +19,20 @@ namespace MR::TPMS
 std::vector<std::string> getTypeNames()
 {
     return {
-        "Schwartz-P",
-        "Thick Schwartz-P",
+        "Rectangular",
+        "Thick Rectangular",
         "Double Gyroid",
         "Thick Gyroid"
+    };
+}
+
+std::vector<std::string> getTypeTooltips()
+{
+    return {
+        "Schwartz-P surface.",
+        "Schwartz-P with thick walls.",
+        "",
+        ""
     };
 }
 

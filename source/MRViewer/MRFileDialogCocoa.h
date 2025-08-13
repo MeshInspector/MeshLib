@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRFileDialogInternal.h"
+#include "MRFileDialog.h"
 
 namespace MR::detail
 {

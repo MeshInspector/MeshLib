@@ -465,13 +465,11 @@ float estimateDensity( Type type, float targetIso )
 
 float getMinimalResolution( Type type, float frequency, float iso )
 {
-    // voxel size == 1 / (res * freq)
+    // voxel size == 1 / (res * freq) <= delta
+    float delta = 1.f;
+    const auto w = 2 * PI_F * frequency;
     if ( isThick( type ) )
     {
-        const auto w = 2 * PI_F * frequency;
-
-        // voxel size == 1 / (res * freq) <= delta
-        float delta = 1.f;
         if ( type == Type::ThickSchwartzP )
         {
             delta = 2 * std::asin( iso / 2.f ) / w;
@@ -485,14 +483,16 @@ float getMinimalResolution( Type type, float frequency, float iso )
             assert( false );
             return 5.f;
         }
-
-        // 1 / (res * freq) <= delta => res >= 1 / (delta * freq)
-        return 1.f / ( delta * frequency );
     }
     else
     {
-        return 5.f;
+        if ( type == Type::SchwartzP )
+        {
+            delta = std::acos( iso ) / w;
+        }
     }
+    // 1 / (res * freq) <= delta => res >= 1 / (delta * freq)
+    return std::max( 5.f, 1.f / ( delta * frequency ) );
 }
 
 

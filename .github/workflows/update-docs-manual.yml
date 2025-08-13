@@ -91,6 +91,18 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
+      - name: Generate C bindings
+        env:
+          CXX: ${{ env.CXX-COMPILER }}
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
+
+      - name: Upload C bindings headers
+        uses: actions/upload-artifact@v4
+        with:
+          name: CBindings
+          path: ./source/MeshLibC2/include
+          retention-days: 1
+
   update-dev-documentation:
     needs: [ create-stubs ]
     uses: ./.github/workflows/update-docs.yml

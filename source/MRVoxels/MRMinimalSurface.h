@@ -19,7 +19,11 @@ enum class Type : int
 
     Count
 };
+
+/// Return the names of each type of filling
 MRVOXELS_API std::vector<std::string> getTypeNames();
+
+/// Returns true if the \p type is thick
 MRVOXELS_API bool isThick( Type type );
 
 

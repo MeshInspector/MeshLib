@@ -40,6 +40,11 @@ std::string VisualObjectTagManager::registerTag( VisualObjectTag tag )
     return id;
 }
 
+void VisualObjectTagManager::registerTag( std::string id, VisualObjectTag tag )
+{
+    instance().storage_.emplace( std::move( id ), std::move( tag ) );
+}
+
 void VisualObjectTagManager::updateTag( const std::string& visTagId, VisualObjectTag tag )
 {
     auto it = instance().storage_.find( visTagId );

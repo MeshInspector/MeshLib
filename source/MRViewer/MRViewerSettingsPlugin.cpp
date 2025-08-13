@@ -4,7 +4,8 @@
 #include "MRColorTheme.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
-#include "MRMesh/MRObjectsAccess.h"
+#include "MRFileDialog.h"
+#include "MRModalDialog.h"
 #include "MRCommandLoop.h"
 #include "MRViewerSettingsManager.h"
 #include "MRGLMacro.h"
@@ -12,23 +13,23 @@
 #include "MRRibbonConstants.h"
 #include "MRViewer.h"
 #include "MRImGuiVectorOperators.h"
-#include "MRMesh/MRSystem.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRMesh/MRLog.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRUIStyle.h"
+#include "MRUnitSettings.h"
+#include "MRShowModal.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRLog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
-#include "MRFileDialog.h"
-#include "MRModalDialog.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRRibbonSceneObjectsListDrawer.h"
-#include "MRUnitSettings.h"
-#include "MRShowModal.h"
 #include "MRMesh/MRObjectPointsHolder.h"
-#include "MRVoxels/MRObjectVoxels.h"
+#include "MRMesh/MRConfig.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {
@@ -190,6 +191,7 @@ bool ViewerSettingsPlugin::onEnable_()
 
 bool ViewerSettingsPlugin::onDisable_()
 {
+    Config::instance().writeToFile();
     userThemesPresets_.clear();
     return true;
 }

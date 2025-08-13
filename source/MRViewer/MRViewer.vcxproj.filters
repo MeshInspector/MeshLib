@@ -466,9 +466,6 @@
     <ClCompile Include="MRModalDialog.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="MRFileDialogInternal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MRDragDropWin32Handler.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
@@ -936,7 +933,6 @@
     <ClInclude Include="MRModalDialog.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="MRFileDialogInternal.h" />
     <ClInclude Include="MRDragDropHandler.h">
       <Filter>UserInputs</Filter>
     </ClInclude>

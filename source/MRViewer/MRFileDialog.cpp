@@ -1,5 +1,4 @@
 #include "MRFileDialog.h"
-#include "MRFileDialogInternal.h"
 
 #include "MRViewerFwd.h"
 #include "MRColorTheme.h"
@@ -98,7 +97,7 @@ namespace
 {
 
 #if defined( _WIN32 )
-std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Parameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
     //<SnippetRefCounts>
@@ -122,7 +121,7 @@ std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogPa
         {
             auto baseFolder = params.baseFolder;
             if ( baseFolder.empty() )
-                baseFolder = MR::detail::getLastUsedDir();
+                baseFolder = MR::FileDialog::getLastUsedDir();
             if( !baseFolder.empty() )
             {
                 IShellItem* pItem;
@@ -205,7 +204,7 @@ std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogPa
                             }
                             pItems->Release();
                             if ( !res.empty() )
-                                MR::detail::setLastUsedDir( MR::utf8string( res[0].parent_path() ) );
+                                MR::FileDialog::setLastUsedDir( MR::utf8string( res[0].parent_path() ) );
                         }
                     }
                 }
@@ -238,7 +237,7 @@ std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogPa
 }
 #else
 #ifndef MRVIEWER_NO_GTK
-std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const MR::detail::FileDialogParameters& params )
+std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDialog::Parameters& params )
 {
     if ( params.folderDialog )
         return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
@@ -248,7 +247,7 @@ std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const MR::det
         return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
-std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParameters& params = {} )
+std::vector<std::filesystem::path> gtkDialog( const FileDialog::Parameters& params = {} )
 {
     // Gtk has a nasty habit of overriding the locale to "".s
     std::optional<std::string> localeStr;
@@ -304,7 +303,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParame
     }
 
     const auto currentFolder = params.baseFolder.empty() ?
-        MR::detail::getLastUsedDir() : MR::utf8string( params.baseFolder );
+        MR::FileDialog::getLastUsedDir() : MR::utf8string( params.baseFolder );
 
     gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 
@@ -344,7 +343,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParame
                 results.emplace_back( std::move( filepath ) );
             }
 
-            MR::detail::setLastUsedDir( gtk_file_chooser_get_current_folder( chooser ) );
+            MR::FileDialog::setLastUsedDir( gtk_file_chooser_get_current_folder( chooser ) );
         }
         else if ( responseId != GTK_RESPONSE_CANCEL )
         {
@@ -386,7 +385,7 @@ namespace MR
 
 std::filesystem::path openFileDialog( const FileParameters& params )
 {
-    detail::FileDialogParameters parameters{ params };
+    FileDialog::Parameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = false;
@@ -435,7 +434,7 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 
 std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params )
 {
-    detail::FileDialogParameters parameters{ params };
+    FileDialog::Parameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = true;
     parameters.saveDialog = false;
@@ -480,7 +479,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     // Windows dialog does not support forward slashes between folders
     baseFolder.make_preferred();
 
-    detail::FileDialogParameters parameters;
+    FileDialog::Parameters parameters;
     parameters.baseFolder = baseFolder;
     parameters.folderDialog = true;
     parameters.multiselect = false;
@@ -531,7 +530,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     // Windows dialog does not support forward slashes between folders
     baseFolder.make_preferred();
 
-    detail::FileDialogParameters parameters;
+    FileDialog::Parameters parameters;
     parameters.baseFolder = baseFolder;
     parameters.folderDialog = true;
     parameters.multiselect = true;
@@ -552,7 +551,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
 
 std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 {
-    detail::FileDialogParameters parameters{ params };
+    FileDialog::Parameters parameters{ params };
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = true;
@@ -610,4 +609,29 @@ FileDialogSignals& FileDialogSignals::instance()
     return inst;
 }
 
+namespace FileDialog
+{
+
+static const std::string cLastUsedDirKey = "lastUsedDir";
+
+std::string getLastUsedDir()
+{
+    auto& cfg = Config::instance();
+    if ( cfg.hasJsonValue( cLastUsedDirKey ) )
+    {
+        auto lastUsedDir = cfg.getJsonValue( cLastUsedDirKey );
+        if ( lastUsedDir.isString() )
+            return lastUsedDir.asString();
+    }
+    return {};
 }
+
+void setLastUsedDir( const std::string& folder )
+{
+    auto& cfg = Config::instance();
+    cfg.setJsonValue( cLastUsedDirKey, folder );
+}
+
+} // namespace FileDialog
+
+} // namespace MR

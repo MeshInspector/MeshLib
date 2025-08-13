@@ -1,5 +1,4 @@
 #include "MRViewer.h"
-#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -29,6 +28,8 @@
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
 #include "MRShowModal.h"
+#include "MRFileDialog.h"
+#include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -132,7 +133,6 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
-#include "MRFileDialogInternal.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -1376,7 +1376,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
-    MR::detail::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
+    MR::FileDialog::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
     return true;
 }
 

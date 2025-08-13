@@ -2,7 +2,6 @@
 
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
 
 namespace
 {
@@ -23,8 +22,7 @@ std::string getLastUsedDir()
         if ( lastUsedDir.isString() )
             return lastUsedDir.asString();
     }
-
-    return utf8string( GetHomeDirectory() );
+    return {};
 }
 
 void setLastUsedDir( const std::string& folder )

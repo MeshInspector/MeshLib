@@ -12,7 +12,8 @@ struct FileDialogParameters : FileParameters
     bool saveDialog{false};   // true for save dialog, false for open
 };
 
-/// loads from the configuration the path to last used folder (where the files were last saved or open)
+/// loads from the configuration the path to last used folder (where the files were last saved or open);
+/// returns empty path if no last used folder is set
 MRVIEWER_API std::string getLastUsedDir();
 
 /// saves in the configuration the path to last used folder (where the files were last saved or open)

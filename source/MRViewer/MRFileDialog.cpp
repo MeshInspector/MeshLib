@@ -120,10 +120,13 @@ std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogPa
 
         if( SUCCEEDED( hr ) )
         {
-            if( !params.baseFolder.empty() )
+            auto baseFolder = params.baseFolder;
+            if ( baseFolder.empty() )
+                baseFolder = MR::detail::getLastUsedDir();
+            if( !baseFolder.empty() )
             {
                 IShellItem* pItem;
-                hr = SHCreateItemFromParsingName( params.baseFolder.c_str(), NULL, IID_PPV_ARGS( &pItem ) );
+                hr = SHCreateItemFromParsingName( baseFolder.c_str(), NULL, IID_PPV_ARGS( &pItem ) );
                 if( SUCCEEDED( hr ) )
                 {
                     pFileOpen->SetFolder( pItem );
@@ -201,6 +204,8 @@ std::vector<std::filesystem::path> windowsDialog( const MR::detail::FileDialogPa
                                 }
                             }
                             pItems->Release();
+                            if ( !res.empty() )
+                                MR::detail::setLastUsedDir( MR::utf8string( res[0].parent_path() ) );
                         }
                     }
                 }
@@ -299,7 +304,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParame
     }
 
     const auto currentFolder = params.baseFolder.empty() ?
-        MR::detail::getLastUsedDir() : utf8string( params.baseFolder );
+        MR::detail::getLastUsedDir() : MR::utf8string( params.baseFolder );
 
     gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 

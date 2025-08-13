@@ -39,13 +39,13 @@ struct MeshParams : VolumeParams
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)
 /// @param size Size of the cube with the surface
 /// @return Distance-volume starting at (0, 0, 0) and having specified @p size
-MRVOXELS_API FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size );
+MRVOXELS_API FunctionVolume buildVolume( const Vector3f& size, const VolumeParams& params );
 
 /// Constructs TPMS level-set and then convert it to mesh
-MRVOXELS_API Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCallback cb = {} );
 
 /// Constructs TPMS-filling for the given @p mesh
-MRVOXELS_API Expected<Mesh> fill( const MeshParams& params, const Mesh& mesh, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallback cb = {} );
 
 /// Returns number of voxels that would be used to perform \ref fillWithTPMS
 MRVOXELS_API size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution );

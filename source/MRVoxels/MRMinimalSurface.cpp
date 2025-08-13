@@ -283,7 +283,7 @@ float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Typ
 }
 
 
-FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size )
+FunctionVolume buildVolume( const Vector3f& size, const VolumeParams& params )
 {
     const auto [dims, voxelSize] = getDimsAndSize( size, params.frequency, params.resolution );
     return {
@@ -299,7 +299,7 @@ FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size )
 }
 
 
-Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb )
+Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCallback cb )
 {
     MR_TIMER;
     ProgressCallback mcProgress, decProgress;
@@ -313,7 +313,7 @@ Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCa
         mcProgress = cb;
     }
 
-    auto res = marchingCubes( buildVolume( params, size ), { .cb = mcProgress, .iso = params.iso } );
+    auto res = marchingCubes( buildVolume( size, params ), { .cb = mcProgress, .iso = params.iso } );
     if ( !res )
         return res;
     if ( isThick( params.type ) )
@@ -327,12 +327,12 @@ Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCa
     return res;
 }
 
-Expected<Mesh> fill( const MeshParams& params, const Mesh& mesh, ProgressCallback cb )
+Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallback cb )
 {
     MR_TIMER;
     // first construct a surface by the bounding box of the mesh
     const auto extraStep = Vector3f::diagonal( 1.f / params.frequency );
-    auto sponge = build( params, mesh.getBoundingBox().size() + 1.5f*extraStep, subprogress( cb, 0.f, 0.9f ) );
+    auto sponge = build( mesh.getBoundingBox().size() + 1.5f*extraStep, params, subprogress( cb, 0.f, 0.9f ) );
     if ( !sponge )
         return sponge;
 

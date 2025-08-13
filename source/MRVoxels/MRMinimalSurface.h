@@ -35,6 +35,7 @@ struct VolumeParams
 struct MeshParams : VolumeParams
 {
     float iso = 0.f;
+    bool decimate = true;
 };
 
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)

@@ -3,6 +3,7 @@
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBox.h>
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshDecimate.h"
 #include <MRMesh/MRMeshBoolean.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -395,9 +396,28 @@ FunctionVolume buildVolume( const VolumeParams& params, const Vector3f& size )
 
 Expected<Mesh> build( const MeshParams& params, const Vector3f& size, ProgressCallback cb )
 {
-    auto res = marchingCubes( buildVolume( params, size ), { .cb = cb, .iso = params.iso } );
-    if ( isThick( params.type ) && res )
+    ProgressCallback mcProgress, decProgress;
+    if ( params.decimate )
+    {
+        mcProgress = subprogress( cb, 0.f, 0.8f );
+        decProgress = subprogress( cb, 0.8f, 1.f );
+    }
+    else
+    {
+        mcProgress = cb;
+    }
+
+    auto res = marchingCubes( buildVolume( params, size ), { .cb = mcProgress, .iso = params.iso } );
+    if ( !res )
+        return res;
+    if ( isThick( params.type ) )
         res->topology.flipOrientation();
+
+    if ( params.decimate )
+    {
+        const auto voxelSize = getDimsAndSize( size, params.frequency, params.resolution ).size;
+        decimateMesh( *res, DecimateSettings{ .maxError = std::min( voxelSize.x, std::min( voxelSize.y, voxelSize.z ) ), .progressCallback = decProgress } );
+    }
     return res;
 }
 

@@ -36,6 +36,8 @@ public:
 
     /// add visual object tag
     MRVIEWER_API static std::string registerTag( VisualObjectTag tag );
+    /// add visual object tag with custom id
+    MRVIEWER_API static void registerTag( std::string id, VisualObjectTag tag );
     /// update visual object tag; linked objects are NOT updated automatically
     MRVIEWER_API static void updateTag( const std::string& visTagId, VisualObjectTag tag );
     /// remove visual object tag; linked objects are NOT updated automatically

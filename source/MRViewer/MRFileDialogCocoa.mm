@@ -165,7 +165,8 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
         dialog = openDialog;
     }
 
-    const auto currentFolder = getCurrentFolder( params.baseFolder );
+    const auto currentFolder = params.baseFolder.empty() ?
+        MR::detail::getLastUsedDir() : utf8string( params.baseFolder );
     if ( !currentFolder.empty() )
         [dialog setDirectoryURL:toNSURL( currentFolder )];
 
@@ -210,7 +211,7 @@ std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameter
     const auto currentDir = params.folderDialog ? results.front() : results.front().parent_path();
     [[maybe_unused]] std::error_code ec;
     assert( is_directory( currentDir, ec ) );
-    setCurrentFolder( utf8string( currentDir ) );
+    setLastUsedDir( utf8string( currentDir ) );
 
     return results;
 }

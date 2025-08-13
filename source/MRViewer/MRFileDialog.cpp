@@ -298,7 +298,9 @@ std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParame
         gtk_file_chooser_add_filter( chooser, fileFilter ); // the chooser takes ownership of the filter
     }
 
-    const auto currentFolder = MR::detail::getCurrentFolder( params.baseFolder );
+    const auto currentFolder = params.baseFolder.empty() ?
+        MR::detail::getLastUsedDir() : utf8string( params.baseFolder );
+
     gtk_file_chooser_set_current_folder( chooser, currentFolder.c_str() );
 
     if ( !params.fileName.empty() )
@@ -337,7 +339,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::detail::FileDialogParame
                 results.emplace_back( std::move( filepath ) );
             }
 
-            MR::detail::setCurrentFolder( gtk_file_chooser_get_current_folder( chooser ) );
+            MR::detail::setLastUsedDir( gtk_file_chooser_get_current_folder( chooser ) );
         }
         else if ( responseId != GTK_RESPONSE_CANCEL )
         {

@@ -12,8 +12,10 @@ struct FileDialogParameters : FileParameters
     bool saveDialog{false};   // true for save dialog, false for open
 };
 
-MRVIEWER_API std::string getCurrentFolder( const std::filesystem::path& baseFolder = {} );
+/// loads from the configuration the path to last used folder (where the files were last saved or open)
+MRVIEWER_API std::string getLastUsedDir();
 
-MRVIEWER_API void setCurrentFolder( const std::string& folder );
+/// saves in the configuration the path to last used folder (where the files were last saved or open)
+MRVIEWER_API void setLastUsedDir( const std::string& folder );
 
 } // namespace MR::detail

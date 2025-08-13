@@ -14,11 +14,8 @@ const std::string cLastUsedDirKey = "lastUsedDir";
 namespace MR::detail
 {
 
-std::string getCurrentFolder( const std::filesystem::path& baseFolder )
+std::string getLastUsedDir()
 {
-    if ( !baseFolder.empty() )
-        return utf8string( baseFolder );
-
     auto& cfg = Config::instance();
     if ( cfg.hasJsonValue( cLastUsedDirKey ) )
     {
@@ -30,7 +27,7 @@ std::string getCurrentFolder( const std::filesystem::path& baseFolder )
     return utf8string( GetHomeDirectory() );
 }
 
-void setCurrentFolder( const std::string& folder )
+void setLastUsedDir( const std::string& folder )
 {
     auto& cfg = Config::instance();
     cfg.setJsonValue( cLastUsedDirKey, folder );

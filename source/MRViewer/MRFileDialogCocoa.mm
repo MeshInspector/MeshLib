@@ -135,7 +135,7 @@ NSView* createAccessoryView( const IOFilters& filters )
 namespace MR::detail
 {
 
-std::vector<std::filesystem::path> runCocoaFileDialog( const FileDialogParameters& params )
+std::vector<std::filesystem::path> runCocoaFileDialog( const MR::FileDialog::Parameters& params )
 {
     // enable garbage collector
     auto* pool = [[NSAutoreleasePool alloc] init];

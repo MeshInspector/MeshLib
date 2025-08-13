@@ -237,7 +237,7 @@ std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Paramete
 }
 #else
 #ifndef MRVIEWER_NO_GTK
-std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDialog::Parameters& params )
+std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const MR::FileDialog::Parameters& params )
 {
     if ( params.folderDialog )
         return { GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, params.multiselect ? "Open Folders" : "Open Folder" };
@@ -247,7 +247,7 @@ std::tuple<GtkFileChooserAction, std::string> gtkDialogParameters( const FileDia
         return { GTK_FILE_CHOOSER_ACTION_OPEN, params.multiselect ? "Open Files" : "Open File" };
 }
 
-std::vector<std::filesystem::path> gtkDialog( const FileDialog::Parameters& params = {} )
+std::vector<std::filesystem::path> gtkDialog( const MR::FileDialog::Parameters& params = {} )
 {
     // Gtk has a nasty habit of overriding the locale to "".s
     std::optional<std::string> localeStr;

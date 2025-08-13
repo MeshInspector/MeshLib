@@ -214,16 +214,14 @@ jobs:
      - name: Download NuGet Windows Patch Archive
        uses: actions/download-artifact@v4
        with:
-         pattern: DotNetPatchArchiveWindows*
+         pattern: DotNetPatchArchiveWindows-x64
          path: windows_runtime
-         merge-multiple: true
 
      - name: Download NuGet Linux Patch Archive
        uses: actions/download-artifact@v4
        with:
-         pattern: DotNetPatchArchiveLinux*
+         pattern: DotNetPatchArchiveLinux-x64
          path: linux_runtime
-         merge-multiple: true
 
      - name: Download NuGet DLL
        uses: actions/download-artifact@v4

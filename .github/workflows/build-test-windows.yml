@@ -58,7 +58,7 @@ jobs:
           - full_config_build: false
             os: windows-2022
             build_system: MSBuild
-            config: "Release"
+            config: "Debug"
         include:
           - os: windows-2022
             runner: [windows-2022]

@@ -19,9 +19,7 @@ std::vector<std::string> getTypeNames()
 {
     return {
         "Schwartz-P",
-        "Double Schwartz-P",
         "Thick Schwartz-P",
-        "Gyroid",
         "Double Gyroid",
         "Thick Gyroid"
     };
@@ -70,12 +68,8 @@ TPMSFunction getTPMSFunction( Type type )
     {
         case Type::SchwartzP:
             return TPMSFunctions::SchwartzP;
-        case Type::DoubleSchwartzP:
-            return TPMSFunctions::DoubleSchwartzP;
         case Type::ThickSchwartzP:
             return TPMSFunctions::ThickSchwartzP;
-        case Type::Gyroid:
-            return TPMSFunctions::Gyroid;
         case Type::DoubleGyroid:
             return TPMSFunctions::DoubleGyroid;
         case Type::ThickGyroid:
@@ -177,50 +171,6 @@ float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Typ
             {0.226326, 0.95},
             {0.211894, 1},
         },
-        // DoubleSchwartzP
-        {
-            {0.996293, -1},
-            {0.986145, -0.95},
-            {0.968241, -0.9},
-            {0.944712, -0.85},
-            {0.912011, -0.8},
-            {0.862069, -0.75},
-            {0.795723, -0.7},
-            {0.729138, -0.65},
-            {0.677189, -0.6},
-            {0.63457, -0.55},
-            {0.597491, -0.5},
-            {0.563505, -0.45},
-            {0.532369, -0.4},
-            {0.503212, -0.35},
-            {0.475582, -0.3},
-            {0.449316, -0.25},
-            {0.424296, -0.2},
-            {0.400347, -0.15},
-            {0.377379, -0.1},
-            {0.355092, -0.05},
-            {0.333473, 0},
-            {0.312831, 0.05},
-            {0.295964, 0.1},
-            {0.281444, 0.15},
-            {0.268445, 0.2},
-            {0.256369, 0.25},
-            {0.245124, 0.3},
-            {0.234603, 0.35},
-            {0.224754, 0.4},
-            {0.215518, 0.45},
-            {0.206858, 0.5},
-            {0.198664, 0.55},
-            {0.190807, 0.6},
-            {0.183284, 0.65},
-            {0.176137, 0.7},
-            {0.169244, 0.75},
-            {0.162677, 0.8},
-            {0.156387, 0.85},
-            {0.15036, 0.9},
-            {0.144612, 0.95},
-            {0.139072, 1},
-        },
         // ThickSchwartzP
         {
             {0, 0},
@@ -244,50 +194,6 @@ float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Typ
             {0.518295, 0.9},
             {0.547325, 0.95},
             {0.576218, 1},
-        },
-        // Gyroid
-        {
-            {0.865199, -1},
-            {0.848271, -0.95},
-            {0.831146, -0.9},
-            {0.814094, -0.85},
-            {0.796982, -0.8},
-            {0.779751, -0.75},
-            {0.762483, -0.7},
-            {0.745045, -0.65},
-            {0.727601, -0.6},
-            {0.709887, -0.55},
-            {0.692119, -0.5},
-            {0.674086, -0.45},
-            {0.656019, -0.4},
-            {0.637648, -0.35},
-            {0.61907, -0.3},
-            {0.600269, -0.25},
-            {0.581139, -0.2},
-            {0.561688, -0.15},
-            {0.541772, -0.1},
-            {0.521362, -0.05},
-            {0.500012, 0},
-            {0.478639, 0.05},
-            {0.458228, 0.1},
-            {0.438312, 0.15},
-            {0.418861, 0.2},
-            {0.399729, 0.25},
-            {0.38093, 0.3},
-            {0.36236, 0.35},
-            {0.343981, 0.4},
-            {0.325921, 0.45},
-            {0.307882, 0.5},
-            {0.290113, 0.55},
-            {0.272399, 0.6},
-            {0.254955, 0.65},
-            {0.237517, 0.7},
-            {0.220249, 0.75},
-            {0.203029, 0.8},
-            {0.185915, 0.85},
-            {0.168862, 0.9},
-            {0.151771, 0.95},
-            {0.134854, 1},
         },
         // DoubleGyroid
         {
@@ -365,8 +271,6 @@ float interpolateDensityAndIso( InterpolateDensityAndIsoDirection direction, Typ
         reverseMap( density2iso[1] ),
         reverseMap( density2iso[2] ),
         reverseMap( density2iso[3] ),
-        reverseMap( density2iso[4] ),
-        reverseMap( density2iso[5] ),
     };
 
     const auto& map = direction == InterpolateDensityAndIsoDirection::iso2density ? iso2density : density2iso;
@@ -479,7 +383,11 @@ float getMinimalResolution( Type type, float frequency, float iso )
         case Type::SchwartzP:
             delta = std::acos( iso ) / w;
             break;
+        case Type::DoubleGyroid:
+            delta = 1.f; // it seems that 5 is always enough for a double gyroid
+            break;
         default:
+            assert( false );
             delta = 1.f;
     }
 

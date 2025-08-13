@@ -13,9 +13,7 @@ namespace MR::TPMS // Triply Periodic Minimal Surface
 enum class Type : int
 {
     SchwartzP,
-    DoubleSchwartzP,
     ThickSchwartzP,
-    Gyroid,
     DoubleGyroid,
     ThickGyroid,
 

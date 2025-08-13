@@ -1,5 +1,4 @@
 #include "MRViewer.h"
-#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -29,6 +28,8 @@
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
 #include "MRShowModal.h"
+#include "MRFileDialog.h"
+#include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -74,12 +75,12 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRMesh/MRConfig.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
-#include "MRMesh/MRConfig.h"
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -1375,6 +1376,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
+    MR::FileDialog::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
     return true;
 }
 

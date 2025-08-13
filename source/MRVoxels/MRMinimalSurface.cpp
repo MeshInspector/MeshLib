@@ -380,21 +380,22 @@ float estimateDensity( Type type, float targetIso )
     return interpolateDensityAndIso( InterpolateDensityAndIsoDirection::iso2density, type, targetIso );
 }
 
-float getMinimalResolution( Type type, float frequency, float iso )
+float getMinimalResolution( Type type, float iso )
 {
     // voxel size == 1 / (res * freq) <= delta
     float delta = 1.f;
-    const auto w = 2 * PI_F * frequency;
+    const auto k = 2 * PI_F;
+//    const auto w = 2 * PI_F * frequency;
     switch ( type )
     {
         case Type::ThickSchwartzP:
-            delta = 2 * std::asin( iso / 2.f ) / w;
+            delta = 2 * std::asin( iso / 2.f ) / k; //  / w
             break;
         case Type::ThickGyroid:
-            delta = 2 * std::asin( iso / 4.f ) / w;
+            delta = 2 * std::asin( iso / 4.f ) / k; // / w
             break;
         case Type::SchwartzP:
-            delta = std::acos( iso ) / w;
+            delta = std::acos( iso ) / k; // / w
             break;
         case Type::DoubleGyroid:
             delta = 1.f; // it seems that 5 is always enough for a double gyroid
@@ -405,7 +406,7 @@ float getMinimalResolution( Type type, float frequency, float iso )
     }
 
     // 1 / (res * freq) <= delta => res >= 1 / (delta * freq)
-    return std::max( 5.f, 1.f / ( delta * frequency ) );
+    return std::max( 5.f, 1.f / delta );
 }
 
 

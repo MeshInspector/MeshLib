@@ -24,7 +24,7 @@ namespace MR
 
 ViewportGlobalBasis::ViewportGlobalBasis()
 {
-    auto cylinder = std::make_shared<Mesh>( makeCylinder( 1.0f, 1.0f ) ); // 1/1 is ok, because we actually control size by transform
+    auto cylinder = std::make_shared<Mesh>( makeCylinder( 1.0f, 1.1f ) ); // 1/1.1 is ok, because we actually control size by transform (1.1 beacuse we move it 0.1 backwards)
     for ( int i = 0; i < 3; ++i )
     {
         auto child = std::make_shared<ObjectMesh>();
@@ -62,7 +62,7 @@ void ViewportGlobalBasis::setAxesProps( float length, float width, ViewportId id
                 Matrix3f( cPlusAxis[cRotOrders[i].x], cPlusAxis[cRotOrders[i].y], cPlusAxis[cRotOrders[i].z] ) * // rotate to correct axis
                 Matrix3f::scale( Vector3f( width, width, length ) ) // control width and length
             ) *
-            AffineXf3f::translation( Vector3f( 0.0f, 0.0f, -0.1f ) ) // first move 10% backwards
+            AffineXf3f::translation( Vector3f( 0.0f, 0.0f, -0.1f ) ) // first move 0.1 backwards
             , id
         );
         ++i;

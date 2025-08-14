@@ -721,7 +721,7 @@ void Viewport::drawGlobalBasis() const
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
         length = params_.objectScale;
 
-    viewer.globalBasis->setAxesProps( length, getPixelSizeAtPoint( Vector3f() ) * 3.0f );
+    viewer.globalBasis->setAxesProps( length, getPixelSizeAtPoint( Vector3f() ) * 3.0f, id );
     viewer.globalBasis->draw( *this );
 }
 

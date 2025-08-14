@@ -569,7 +569,10 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     if ( results.size() == 1 )
     {
         if ( !results[0].empty() )
+        {
+            FileDialog::setLastUsedDir( MR::utf8string( results[0].parent_path() ) );
             FileDialogSignals::instance().onSaveFile( results[0] );
+        }
         return results[0];
     }
     return {};
@@ -586,7 +589,10 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
         {
             if ( !paths[0].empty() )
+            {
+                FileDialog::setLastUsedDir( MR::utf8string( paths[0].parent_path() ) );
                 FileDialogSignals::instance().onSaveFile( paths[0] );
+            }
             callback( paths[0] );
         }
     };

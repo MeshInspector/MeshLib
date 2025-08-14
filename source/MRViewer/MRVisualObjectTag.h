@@ -25,14 +25,19 @@ struct VisualObjectTag
 /// class for storing and changing visual object properties based on the object tags
 class VisualObjectTagManager
 {
+    struct CaseInsensitiveCompare
+    {
+        MRVIEWER_API bool operator ()( const std::string& a, const std::string& b ) const;
+    };
+
 public:
     /// get access to the global instance
     MRVIEWER_API static VisualObjectTagManager& instance();
 
     /// get read-only access to the visual object tags' storage
     MRVIEWER_API static const HashMap<std::string, VisualObjectTag>& tags();
-    /// get read-only access to the visual object tags' storage sorted by name (case-insensitive)
-    MRVIEWER_API static const std::vector<std::pair<std::string, VisualObjectTag>>& sortedTags();
+    /// get read-only access to the visual object tags' name index (sort is case-insensitive)
+    MRVIEWER_API static const std::map<std::string, std::string, CaseInsensitiveCompare>& tagIndex();
 
     /// add visual object tag
     MRVIEWER_API static std::string registerTag( VisualObjectTag tag );
@@ -58,8 +63,8 @@ private:
 
     friend MRVIEWER_API void deserializeFromJson( const Json::Value&, VisualObjectTagManager& );
 
-    HashMap<std::string, VisualObjectTag> storage_;
-    std::vector<std::pair<std::string, VisualObjectTag>> sorted_;
+    HashMap<std::string, VisualObjectTag> tags_;
+    std::map<std::string, std::string, CaseInsensitiveCompare> tagIndex_;
 };
 
 MRVIEWER_API void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manager );

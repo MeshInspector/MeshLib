@@ -1352,13 +1352,13 @@ float ImGuiMenu::drawSelectionInformation_()
         std::ostringstream oss;
         size_t count = 0;
         const auto& objTags = selectedObjs.front()->tags();
-        for ( const auto& [id, tag] : VisualObjectTagManager::sortedTags() )
+        for ( const auto& [name, id] : VisualObjectTagManager::tagIndex() )
         {
             if ( objTags.contains( id ) )
             {
                 if ( count++ != 0 )
                     oss << ", ";
-                oss << tag.name;
+                oss << name;
             }
         }
         if ( count != 0 )
@@ -2056,8 +2056,10 @@ MR_SUPPRESS_WARNING_POP
                 if ( iconsFont )
                     iconsFont->Scale = cDefaultFontSize / cBigIconSize;
 
-                for ( const auto& [id, tag] : VisualObjectTagManager::sortedTags() )
+                for ( const auto& [_, id] : VisualObjectTagManager::tagIndex() )
                 {
+                    const auto& tag = VisualObjectTagManager::tags().at( id );
+
                     const auto count = std::count_if( selectedVisualObjs.begin(), selectedVisualObjs.end(), [&] ( auto&& visObj )
                     {
                         return visObj->tags().contains( id );

@@ -12,6 +12,11 @@ namespace
 
 constexpr const char* cVisualObjectTagPrefix = "visual-object-tag:";
 
+bool tagItemCompare( const std::pair<std::string, MR::VisualObjectTag>& a, const std::pair<std::string, MR::VisualObjectTag>& b )
+{
+    return MR::toLower( a.second.name ) < MR::toLower( b.second.name );
+}
+
 } // namespace
 
 namespace MR
@@ -28,21 +33,31 @@ VisualObjectTagManager& VisualObjectTagManager::instance()
     return sInstance;
 }
 
-const std::unordered_map<std::string, VisualObjectTag>& VisualObjectTagManager::storage()
+const HashMap<std::string, VisualObjectTag>& VisualObjectTagManager::tags()
 {
     return instance().storage_;
+}
+
+const std::vector<std::pair<std::string, VisualObjectTag>>& VisualObjectTagManager::sortedTags()
+{
+    return instance().sorted_;
 }
 
 std::string VisualObjectTagManager::registerTag( VisualObjectTag tag )
 {
     const auto id = cVisualObjectTagPrefix + tag.canonicalName();
-    instance().storage_.emplace( id, std::move( tag ) );
+    registerTag( id, std::move( tag ) );
     return id;
 }
 
 void VisualObjectTagManager::registerTag( std::string id, VisualObjectTag tag )
 {
-    instance().storage_.emplace( std::move( id ), std::move( tag ) );
+    const auto [it, _] = instance().storage_.emplace( std::move( id ), std::move( tag ) );
+    const auto& item = *it;
+
+    auto& sorted = instance().sorted_;
+    const auto insertPos = std::upper_bound( sorted.begin(), sorted.end(), item, tagItemCompare );
+    sorted.insert( insertPos, item );
 }
 
 void VisualObjectTagManager::updateTag( const std::string& visTagId, VisualObjectTag tag )
@@ -50,11 +65,28 @@ void VisualObjectTagManager::updateTag( const std::string& visTagId, VisualObjec
     auto it = instance().storage_.find( visTagId );
     if ( it != instance().storage_.end() )
         it->second = std::move( tag );
+
+    auto& sorted = instance().sorted_;
+    auto updatePos = std::find_if( sorted.begin(), sorted.end(), [&] ( auto&& item )
+    {
+        return item.first == visTagId;
+    } );
+    assert( updatePos != sorted.end() );
+    updatePos->second = it->second;
+    std::sort( sorted.begin(), sorted.end(), tagItemCompare );
 }
 
 void VisualObjectTagManager::unregisterTag( const std::string& visTagId )
 {
     instance().storage_.erase( visTagId );
+
+    auto& sorted = instance().sorted_;
+    const auto erasePos = std::find_if( sorted.begin(), sorted.end(), [&] ( auto&& item )
+    {
+        return item.first == visTagId;
+    } );
+    assert( erasePos != sorted.end() );
+    sorted.erase( erasePos );
 }
 
 std::vector<std::shared_ptr<Object>> VisualObjectTagManager::getAllObjectsWithTag( Object* root, const std::string& visTagId, const ObjectSelectivityType& type )
@@ -116,6 +148,7 @@ void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manag
         return;
 
     auto& storage = manager.storage_;
+    auto& sorted = manager.sorted_;
     for ( const auto& tagObj : root )
     {
         if ( !tagObj["Id"].isString() )
@@ -130,7 +163,9 @@ void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manag
         deserializeFromJson( tagObj["UnselectedColor"], tag.unselectedColor );
 
         storage.emplace( id, tag );
+        sorted.emplace_back( id, tag );
     }
+    std::sort( sorted.begin(), sorted.end(), tagItemCompare );
 }
 
 void serializeToJson( const VisualObjectTagManager& manager, Json::Value& root )
@@ -138,7 +173,7 @@ void serializeToJson( const VisualObjectTagManager& manager, Json::Value& root )
     root = Json::arrayValue;
 
     auto i = 0;
-    for ( const auto& [id, tag] : manager.storage() )
+    for ( const auto& [id, tag] : manager.tags() )
     {
         auto& tagObj = root[i++] = Json::objectValue;
         tagObj["Id"] = id;

@@ -92,6 +92,7 @@
 #include "MRSceneCache.h"
 #include "MRSceneObjectsListDrawer.h"
 #include "MRUIRectAllocator.h"
+#include "MRVisualObjectTag.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -1347,6 +1348,24 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( selectedObjs.size() == 1 )
     {
         UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
+
+        std::ostringstream oss;
+        size_t count = 0;
+        const auto& objTags = selectedObjs.front()->tags();
+        for ( const auto& [id, tag] : VisualObjectTagManager::sortedTags() )
+        {
+            if ( objTags.contains( id ) )
+            {
+                if ( count++ != 0 )
+                    oss << ", ";
+                oss << tag.name;
+            }
+        }
+        if ( count != 0 )
+        {
+            UI::inputTextCenteredReadOnly( "Tags", oss.str(), itemWidth, textColor, labelColor );
+            UI::setTooltipIfHovered( "Visual tags assigned to the object", menu_scaling() );
+        }
     }
     else if ( selectedObjs.size() > 1 )
     {
@@ -2022,6 +2041,55 @@ MR_SUPPRESS_WARNING_POP
         {
             data->setGlobalAlpha( alpha, selectedViewport_ );
         }, 0, 255 );
+
+        if ( !VisualObjectTagManager::tags().empty() )
+        {
+            auto currWindow = ImGui::GetCurrentContext()->CurrentWindow;
+            if ( currWindow )
+                currWindow->DrawList->PushClipRect( currWindow->OuterRectClipped.Min, currWindow->OuterRectClipped.Max );
+            const auto showTags = RibbonButtonDrawer::CustomCollapsingHeader( "Tags" );
+            if ( currWindow )
+                currWindow->DrawList->PopClipRect();
+            if ( showTags )
+            {
+                auto* iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+                if ( iconsFont )
+                    iconsFont->Scale = cDefaultFontSize / cBigIconSize;
+
+                for ( const auto& [id, tag] : VisualObjectTagManager::sortedTags() )
+                {
+                    const auto count = std::count_if( selectedVisualObjs.begin(), selectedVisualObjs.end(), [&] ( auto&& visObj )
+                    {
+                        return visObj->tags().contains( id );
+                    } );
+                    auto checked = count != 0;
+                    const auto mixed = checked && count != selectedVisualObjs.size();
+                    if ( UI::checkboxMixed( ( "##checkbox_tag_" + id ).c_str(), &checked, mixed ) )
+                    {
+                        if ( checked )
+                        {
+                            for ( auto& visObj : selectedVisualObjs )
+                                visObj->addTag( id );
+                        }
+                        else
+                        {
+                            for ( auto& visObj : selectedVisualObjs )
+                                visObj->removeTag( id );
+                        }
+                    }
+
+                    if ( iconsFont )
+                        ImGui::PushFont( iconsFont );
+                    ImGui::SameLine();
+                    ImGui::TextColored( tag.selectedColor, "" );
+                    if ( iconsFont )
+                        ImGui::PopFont();
+
+                    ImGui::SameLine();
+                    ImGui::Text( "%s", tag.name.c_str() );
+                }
+            }
+        }
     }
 
     return someChanges;

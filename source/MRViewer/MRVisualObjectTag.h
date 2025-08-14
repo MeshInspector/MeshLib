@@ -5,8 +5,6 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRObjectsAccess.h"
 
-#include <unordered_map>
-
 namespace Json { class Value; }
 
 namespace MR
@@ -32,7 +30,9 @@ public:
     MRVIEWER_API static VisualObjectTagManager& instance();
 
     /// get read-only access to the visual object tags' storage
-    MRVIEWER_API static const std::unordered_map<std::string, VisualObjectTag>& storage();
+    MRVIEWER_API static const HashMap<std::string, VisualObjectTag>& tags();
+    /// get read-only access to the visual object tags' storage sorted by name (case-insensitive)
+    MRVIEWER_API static const std::vector<std::pair<std::string, VisualObjectTag>>& sortedTags();
 
     /// add visual object tag
     MRVIEWER_API static std::string registerTag( VisualObjectTag tag );
@@ -58,7 +58,8 @@ private:
 
     friend MRVIEWER_API void deserializeFromJson( const Json::Value&, VisualObjectTagManager& );
 
-    std::unordered_map<std::string, VisualObjectTag> storage_;
+    HashMap<std::string, VisualObjectTag> storage_;
+    std::vector<std::pair<std::string, VisualObjectTag>> sorted_;
 };
 
 MRVIEWER_API void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manager );

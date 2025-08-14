@@ -12,7 +12,6 @@
 #include <filesystem>
 #include <future>
 #include <memory>
-#include <unordered_set>
 #include <vector>
 
 namespace Json
@@ -254,7 +253,7 @@ public:
 
     /// provides read-only access to the tag storage
     /// the storage is a set of unique strings
-    const std::unordered_set<std::string>& tags() const { return tags_; }
+    const HashSet<std::string>& tags() const { return tags_; }
     /// adds tag to the object's tag storage
     /// additionally calls ObjectTagManager::tagAddedSignal
     MRMESH_API bool addTag( std::string tag );
@@ -309,7 +308,7 @@ protected:
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
-    std::unordered_set<std::string> tags_;
+    HashSet<std::string> tags_;
 
     // This calls `onWorldXfChanged_()` for all children recursively, which in turn emits `worldXfChangedSignal`.
     // This isn't virtual because it wouldn't be very useful, because it doesn't call itself on the children

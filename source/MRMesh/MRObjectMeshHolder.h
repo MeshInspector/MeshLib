@@ -153,8 +153,8 @@ public:
     /// returns first texture in the vector. If there is no textures, returns empty texture
     MRMESH_API const MeshTexture& getTexture() const;
     // for backward compatibility
-    [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
-    [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void setTexture( MeshTexture texture );
+    [[deprecated]] MRMESH_API MR_BIND_IGNORE virtual void updateTexture( MeshTexture& updated );
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture );  setDirtyFlags( DIRTY_TEXTURE ); }
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated );  setDirtyFlags( DIRTY_TEXTURE ); }

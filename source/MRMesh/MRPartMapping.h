@@ -32,7 +32,7 @@ class Src2TgtMaps
 {
 public:
     MRMESH_API Src2TgtMaps( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
-    [[deprecated]] Src2TgtMaps( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
+    [[deprecated]] MR_BIND_IGNORE Src2TgtMaps( const MeshTopology &, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
         : Src2TgtMaps( outFmap, outVmap, outEmap ) {}
     MRMESH_API ~Src2TgtMaps(); // maps are moved back to user here
 

@@ -191,6 +191,9 @@ bool ViewerSettingsPlugin::onEnable_()
 
 bool ViewerSettingsPlugin::onDisable_()
 {
+    if ( viewer )
+        if ( const auto& mgr = viewer->getViewerSettingsManager() )
+            mgr->saveSettings( *viewer );
     Config::instance().writeToFile();
     userThemesPresets_.clear();
     return true;

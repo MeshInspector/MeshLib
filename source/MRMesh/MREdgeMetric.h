@@ -41,7 +41,7 @@ namespace MR
 /// input metric must be symmetric: metric(e) == metric(e.sym())
 [[nodiscard]] MRMESH_API EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric );
 
-[[deprecated]] MR_BIND_IGNORE inline EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric )
+[[deprecated]] inline EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric )
     { return edgeTableSymMetric( topology, metric ); }
 
 /// \}

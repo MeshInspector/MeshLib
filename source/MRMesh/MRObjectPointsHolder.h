@@ -133,12 +133,12 @@ public:
 
     /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSerializePointsFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
-    [[deprecated]] MR_BIND_IGNORE const char * savePointsFormat() const { return serializeFormat(); }
+    [[deprecated]] const char * savePointsFormat() const { return serializeFormat(); }
 
     /// overrides file extension used to serialize point cloud inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializePointsFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
-    [[deprecated]] MR_BIND_IGNORE void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
+    [[deprecated]] void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
     /// reset basic object colors to their default values from the current theme
     MRMESH_API void resetFrontColor() override;

@@ -85,6 +85,7 @@
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRUIStyle.h"
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
@@ -668,12 +669,6 @@ void ImGuiMenu::draw_labels_window()
       draw_labels( *data );
   }
 
-  // separate block for basis axes
-  for ( const auto& viewport : viewer->viewport_list )
-  {
-      if ( !viewer->globalBasisAxes->isVisible( viewport.id ) )
-          continue;
-  }
   ImGui::End();
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
@@ -2626,7 +2621,7 @@ void ImGuiMenu::draw_mr_menu()
         UI::drag<AngleUnit>( "Camera FOV", fov, 0.001f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } );
         viewer->viewport().setCameraViewAngle( fov );
 
-        bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
+        bool showGlobalBasis = viewer->globalBasis->isVisible( viewer->viewport().id );
         ImGui::Checkbox( "Show Global Basis", &showGlobalBasis );
         viewer->viewport().showGlobalBasis( showGlobalBasis );
 

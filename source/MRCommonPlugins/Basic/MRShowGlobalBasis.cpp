@@ -2,6 +2,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
 
 namespace MR
 {
@@ -19,7 +20,8 @@ ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
 bool ShowGlobalBasisMenuItem::action()
 {
     auto& viewer = Viewer::instanceRef();
-    viewer.globalBasisAxes->setVisibilityMask( viewer.globalBasisAxes->visibilityMask() ^ viewer.viewport().id );
+    auto vpid = viewer.viewport().id;
+    viewer.globalBasis->setVisible( !viewer.globalBasis->isVisible( vpid ), vpid );
     return false;
 }
 

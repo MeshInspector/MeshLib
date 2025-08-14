@@ -30,6 +30,7 @@
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRViewportGlobalBasis.h"
 
 namespace
 {
@@ -461,7 +462,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     ImGui::SameLine();
 
     ImGui::SetCursorPosX( 155.0f * menuScaling );
-    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewport.id );
+    bool showGlobalBasis = viewer->globalBasis->isVisible( viewport.id );
     UI::checkbox( "Show Global Basis", &showGlobalBasis );
     viewport.showGlobalBasis( showGlobalBasis );
 
@@ -470,13 +471,13 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
     if ( isAutoGlobalBasisSize )
     {
-        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale );
     }
     else
     {
-        auto size = viewer->globalBasisAxes->xf( viewport.id ).A.x.x;
+        auto size = viewer->globalBasis->getAxesLength( viewport.id );
         UI::drag<LengthUnit>( "Global Basis Scale", size, viewportParameters.objectScale * 0.01f, 1e-9f );
-        viewer->globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ), viewport.id );
+        viewer->globalBasis->setAxesProps( size, viewer->globalBasis->getAxesWidth( viewport.id ), viewport.id );
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();

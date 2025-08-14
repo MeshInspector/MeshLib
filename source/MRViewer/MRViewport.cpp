@@ -5,6 +5,7 @@
 #include "MRGLStaticHolder.h"
 #include "MRMouseController.h"
 #include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRMakeSphereMesh.h>
@@ -485,7 +486,7 @@ void Viewport::preDraw()
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
     draw_rotation_center();
-    draw_global_basis();
+    drawGlobalBasis();
 }
 
 void Viewport::postDraw() const
@@ -581,11 +582,11 @@ void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 
 void Viewport::showGlobalBasis( bool on )
 {
-    if ( !Viewer::constInstance()->globalBasisAxes )
+    if ( !Viewer::constInstance()->globalBasis )
         return;
-    Viewer::constInstance()->globalBasisAxes->setVisible( on, id );
-    needRedraw_ |= Viewer::constInstance()->globalBasisAxes->getRedrawFlag( id );
-    Viewer::constInstance()->globalBasisAxes->resetRedrawFlag();
+    Viewer::constInstance()->globalBasis->setVisible( on, id );
+    needRedraw_ |= Viewer::constInstance()->globalBasis->getRedrawFlag( id );
+    Viewer::constInstance()->globalBasis->resetRedrawFlag();
 }
 
 void Viewport::setParameters( const Viewport::Parameters& params )
@@ -710,21 +711,18 @@ void Viewport::draw_clipping_plane() const
     draw( *Viewer::constInstance()->clippingPlaneObject, transform );
 }
 
-void Viewport::draw_global_basis() const
+void Viewport::drawGlobalBasis() const
 {
     auto& viewer = getViewerInstance();
-    if ( !viewer.globalBasisAxes->isVisible( id ) )
+    if ( !viewer.globalBasis || !viewer.globalBasis->isVisible( id ) )
         return;
 
+    auto length = viewer.globalBasis->getAxesLength( id );
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
-        viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) ), id );
-    auto xf = viewer.globalBasisAxes->xf( id );
-    draw( *viewer.globalBasisAxes, xf );
-    for ( const auto& child : viewer.globalBasisAxes->children() )
-    {
-        if ( auto visualChild = child->asType<VisualObject>() )
-            draw( *visualChild, xf );
-    }
+        length = params_.objectScale;
+
+    viewer.globalBasis->setAxesProps( length, getPixelSizeAtPoint( Vector3f() ) * 3.0f );
+    viewer.globalBasis->draw( *this );
 }
 
 }

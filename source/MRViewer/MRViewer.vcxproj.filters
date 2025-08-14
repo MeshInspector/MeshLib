@@ -277,9 +277,6 @@
     <ClCompile Include="MRShaderBlocks.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
@@ -483,6 +480,9 @@
     </ClCompile>
     <ClCompile Include="MRVisualObjectTag.cpp">
       <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportGlobalBasis.cpp">
+      <Filter>Viewer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -704,9 +704,6 @@
     </ClInclude>
     <ClInclude Include="MRShaderBlocks.h">
       <Filter>Render\Shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
-      <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshShader.h">
       <Filter>Render\Shaders</Filter>
@@ -945,6 +942,9 @@
     <ClInclude Include="MRRenderImGui.h" />
     <ClInclude Include="MRRenderToImage.h" />
     <ClInclude Include="MRVisualObjectTag.h" />
+    <ClInclude Include="MRViewportGlobalBasis.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

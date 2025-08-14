@@ -522,7 +522,7 @@ private:
     void draw_border() const;
     void draw_rotation_center() const;
     void draw_clipping_plane() const;
-    void draw_global_basis() const;
+    void drawGlobalBasis() const;
 
     // init basis axis in the corner
     void initBaseAxes();

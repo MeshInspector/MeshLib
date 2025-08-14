@@ -121,6 +121,7 @@
     <ClCompile Include="MRViewportCornerController.cpp" />
     <ClCompile Include="MRViewportDraw.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
+    <ClCompile Include="MRViewportGlobalBasis.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
     <ClCompile Include="MRWebRequest.cpp" />
     <ClCompile Include="MRTouchpadController.cpp" />
@@ -274,6 +275,7 @@
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportCornerController.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRViewportGlobalBasis.h" />
     <ClInclude Include="MRViewportParametersAction.h" />
     <ClInclude Include="MRVolumeShader.h" />
     <ClInclude Include="MRWebRequest.h" />

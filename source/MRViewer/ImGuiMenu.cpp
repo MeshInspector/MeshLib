@@ -1347,6 +1347,23 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( selectedObjs.size() == 1 )
     {
         UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
+
+        std::ostringstream oss;
+        size_t count = 0;
+        for ( const auto& tag : selectedObjs.front()->tags() )
+        {
+            // hide service tags starting with a dot
+            if ( !tag.starts_with( '.' ) )
+            {
+                if ( count++ != 0 )
+                    oss << ", ";
+                oss << tag;
+            }
+        }
+        if ( count != 0 )
+        {
+            UI::inputTextCenteredReadOnly( "Tags", oss.str(), itemWidth, textColor, labelColor );
+        }
     }
     else if ( selectedObjs.size() > 1 )
     {

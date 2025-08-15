@@ -582,12 +582,16 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
 #endif
             continue;
         }
+        auto& [_, menuItem] = *findIt;
+
         auto& itemCaption = item["Caption"];
         if ( itemCaption.isString() )
-            findIt->second.caption = itemCaption.asString();
+            menuItem.caption = itemCaption.asString();
+
         auto& itemHelpLink = item["HelpLink"];
         if ( itemHelpLink.isString() )
-            findIt->second.helpLink = itemHelpLink.asString();
+            menuItem.helpLink = itemHelpLink.asString();
+
         auto itemIcon = item["Icon"];
         if ( !itemIcon.isString() )
         {
@@ -595,7 +599,8 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
             assert( false );
         }
         else
-            findIt->second.icon = itemIcon.asString();
+            menuItem.icon = itemIcon.asString();
+
         auto itemTooltip = item["Tooltip"];
         if ( !itemTooltip.isString() )
         {
@@ -603,25 +608,30 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
             assert( false );
         }
         else
-            findIt->second.tooltip = itemTooltip.asString();
+            menuItem.tooltip = itemTooltip.asString();
+
         auto itemDropList = item["DropList"];
-        if ( !itemDropList.isArray() )
-            continue;
-        MenuItemsList dropList;
-        auto itemDropListSize = int( itemDropList.size() );
-        for ( int j = 0; j < itemDropListSize; ++j )
+        if ( itemDropList.isArray() && menuItem.item )
         {
-            auto dropItemName = itemDropList[j]["Name"];
-            if ( !dropItemName.isString() )
+            MenuItemsList dropList;
+            auto itemDropListSize = int( itemDropList.size() );
+            for ( int j = 0; j < itemDropListSize; ++j )
             {
-                spdlog::warn( "\"Name\" field is not valid or not present in drop list of item: \"{}\"", itemName.asString() );
-                assert( false );
-                continue;
+                auto dropItemName = itemDropList[j]["Name"];
+                if ( !dropItemName.isString() )
+                {
+                    spdlog::warn( "\"Name\" field is not valid or not present in drop list of item: \"{}\"", itemName.asString() );
+                    assert( false );
+                    continue;
+                }
+                dropList.push_back( dropItemName.asString() );
             }
-            dropList.push_back( dropItemName.asString() );
+            if ( !dropList.empty() )
+                menuItem.item->setDropItemsFromItemList( dropList );
         }
-        if ( !dropList.empty() && findIt->second.item )
-            findIt->second.item->setDropItemsFromItemList( dropList );
+
+        if ( auto loadListener = std::dynamic_pointer_cast<RibbonSchemaLoadListener>( menuItem.item ) )
+            loadListener->onRibbonSchemaLoad_();
     }
 }
 

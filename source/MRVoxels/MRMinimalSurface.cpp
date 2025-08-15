@@ -357,7 +357,7 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
 
     if ( params.type != Type::ThickGyroid ) // this surface inherently has disconnected components by the layers
     {
-        auto largestComponents = MeshComponents::getNLargeByAreaComponents( MeshPart{ *res }, { .maxLargeComponents = 2, .minArea = (float)res->area() / 5.f } );
+        auto largestComponents = MeshComponents::getNLargeByAreaComponents( MeshPart{ *res }, { .maxLargeComponents = isThick( params.type ) ? 2 : 1 } );
         FaceBitSet principalSurface;
         for ( const auto& c : largestComponents )
             principalSurface |= c;

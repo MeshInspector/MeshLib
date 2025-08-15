@@ -1232,7 +1232,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
     return res;
 }
 
-DecimateResult decimateMesh( ObjectMeshData & data, const DecimateSettings & set0 )
+DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & set0 )
 {
     MR_TIMER;
     DecimateResult res;

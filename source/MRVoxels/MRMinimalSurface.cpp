@@ -5,6 +5,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRMeshComponents.h"
 #include <MRMesh/MRMeshBoolean.h>
 
 #include <MRVoxels/MRMarchingCubes.h>
@@ -354,6 +355,14 @@ Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallbac
     if ( !res )
         return unexpected( res.errorString );
 
+    if ( params.type != Type::ThickGyroid ) // this surface inherently has disconnected components by the layers
+    {
+        auto largestComponents = MeshComponents::getNLargeByAreaComponents( MeshPart{ *res }, { .maxLargeComponents = 2, .minArea = (float)res->area() / 5.f } );
+        FaceBitSet principalSurface;
+        for ( const auto& c : largestComponents )
+            principalSurface |= c;
+        res->deleteFaces( res->topology.getValidFaces() - principalSurface );
+    }
     return std::move( res.mesh );
 }
 

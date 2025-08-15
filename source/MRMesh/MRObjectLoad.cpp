@@ -85,7 +85,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 
     // TODO: get format id from the format registry
     const auto sourceFormatId = !extension.empty() ? toLower( extension.substr( 1 ) ) : "unknown";
-    const auto sourceFormatTag = fmt::format( "source-format:{}", sourceFormatId );
+    const auto sourceFormatTag = fmt::format( ".source-format:{}", sourceFormatId );
     o->addTag( sourceFormatTag );
 
     if ( std::shared_ptr<ObjectMesh> mesh = std::dynamic_pointer_cast< ObjectMesh >( o ) )

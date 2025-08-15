@@ -872,7 +872,8 @@ void RibbonMenu::drawActiveList_()
                 ImGui::PopFont();
             ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x );
             ImGui::SetCursorPosY( savedPos );
-            if ( UI::button( "Close", btnSize ) )
+            auto btnText = "Close" + childName;
+            if ( UI::button( btnText.c_str(), btnSize ) )
                 close = true;
             ImGui::EndChild();
         };

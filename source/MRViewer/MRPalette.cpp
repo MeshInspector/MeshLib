@@ -5,6 +5,8 @@
 #include "MRViewer/MRViewer.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
+#include "MRUIRectAllocator.h"
+#include "MRMesh/MRConfig.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSystem.h"
@@ -376,7 +378,9 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
-    ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
+    ImGuiWindow* window = ImGui::FindWindowByName( windowName.c_str() );
+    auto [initialWindowPos, haveSavedWindowPos] = ImGui::laodSavedWindowPos( windowName.c_str(), size.y, &pose );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( windowName.c_str(), initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, ImVec2( 0, 0 ) );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
     const auto style = getStyleVariables_( menu->menu_scaling() );
@@ -424,6 +428,14 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     ImGui::Begin( windowName.c_str(), &isWindowOpen_,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
+
+    if ( window )
+    {
+        auto& config = Config::instance();
+        auto dpJson = config.getJsonValue( "DialogPositions" );
+        serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[windowName] );
+        config.setJsonValue( "DialogPositions", dpJson );
+    }
 
     MR_FINALLY{ ImGui::End(); };
 

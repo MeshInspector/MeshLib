@@ -551,32 +551,25 @@ float GetTitleBarHeght( float menuScaling )
     return 2 * MR::cRibbonItemInterval * menuScaling + ImGui::GetTextLineHeight() + 2 * ImGui::GetStyle().WindowBorderSize * menuScaling;
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
+std::pair<ImVec2, bool> laodSavedWindowPos( const char* label, float width, const ImVec2* position /*= nullptr*/ )
 {
-    const auto& style = ImGui::GetStyle();
-
-    const float borderSize = style.WindowBorderSize * params.menuScaling;
-    const float titleBarHeight = GetTitleBarHeght( params.menuScaling );
-    auto height = params.height;
-    if ( params.collapsed && *params.collapsed )
-        height = titleBarHeight;
-
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
+    bool haveSavedWindowPos = false;
+    ImVec2 initialWindowPos;
 
     ImGuiWindow* window = FindWindowByName( label );
+
     auto menu = ImGuiMenu::instance();
-    ImVec2 initialWindowPos;
-    bool haveSavedWindowPos = false;
     bool windowIsInactive = window && !window->WasActive;
+
     if ( !window || windowIsInactive )
     {
-        auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
-        float xPos = GetIO().DisplaySize.x - params.width;
+        auto ribMenu = std::dynamic_pointer_cast< MR::RibbonMenu >( menu );
+        float xPos = GetIO().DisplaySize.x - width;
         float yPos = 0.0f;
-        if ( params.position )
+        if ( position )
         {
-            xPos = params.position->x;
-            yPos = params.position->y;
+            xPos = position->x;
+            yPos = position->y;
         }
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
@@ -600,7 +593,24 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             initialWindowPos = ImVec2( xPos, yPos );
         }
     }
+    return { initialWindowPos, haveSavedWindowPos };
+}
 
+bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
+{
+    const auto& style = ImGui::GetStyle();
+
+    const float borderSize = style.WindowBorderSize * params.menuScaling;
+    const float titleBarHeight = GetTitleBarHeght( params.menuScaling );
+    auto height = params.height;
+    if ( params.collapsed && *params.collapsed )
+        height = titleBarHeight;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
+
+    ImGuiWindow* window = FindWindowByName( label );
+    auto menu = ImGuiMenu::instance();
+    auto [initialWindowPos, haveSavedWindowPos] = laodSavedWindowPos( label, params.width, params.position );
     UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )

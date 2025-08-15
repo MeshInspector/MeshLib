@@ -18,6 +18,10 @@
 #include "MRBuffer.h"
 #include "MRTbbThreadMutex.h"
 #include "MRMeshFixer.h"
+#include "MRObjectMeshData.h"
+#include "MRMeshAttributesToUpdate.h"
+#include "MRMeshDecimateCallbacks.h"
+#include "MRMapEdge.h"
 
 namespace MR
 {
@@ -1225,6 +1229,91 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
     assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
     assert ( mesh.topology.checkValidity() );
+    return res;
+}
+
+DecimateResult decimateMesh( ObjectMeshData & data, const DecimateSettings & set0 )
+{
+    MR_TIMER;
+    DecimateResult res;
+    if ( !data.mesh )
+    {
+        assert( false );
+        return res;
+    }
+
+    DecimateSettings settings = set0;
+
+    const bool finalMeshPack = settings.packMesh;
+    settings.packMesh = false;
+
+    assert( !settings.region );
+    settings.region = data.selectedFaces.any() ? &data.selectedFaces : nullptr;
+
+    if ( settings.subdivideParts > 1 )
+        settings.progressCallback = subprogress( set0.progressCallback, 0.2f, 1.0f );
+
+    const bool updateUV = data.mesh->topology.lastValidVert() < data.uvCoordinates.size();
+    const bool updateColorMap = data.mesh->topology.lastValidVert() < data.vertColors.size();
+
+    if ( updateUV || updateColorMap )
+    {
+        MeshAttributesToUpdate meshParams;
+        if ( updateUV )
+            meshParams.uvCoords = &data.uvCoordinates;
+        if ( updateColorMap )
+            meshParams.colorMap = &data.vertColors;
+        settings.preCollapse = meshPreCollapseVertAttribute( *data.mesh, meshParams );
+    }
+
+    std::shared_ptr<UndirectedEdgeBMap> emap;
+    if ( settings.subdivideParts > 1 )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+        if ( !reportProgress( set0.progressCallback, .2f ) )
+            return res;
+    }
+
+    res = decimateMesh( *data.mesh, settings );
+    if ( res.cancelled )
+        return res;
+
+    if ( finalMeshPack )
+    {
+        auto packMapping = data.mesh->packOptimally( false );
+        if ( updateUV )
+            data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );
+        if ( updateColorMap )
+            data.vertColors = rearrangeVectorByMap( data.vertColors, packMapping.v );
+        if ( settings.region )
+            *settings.region = settings.region->getMapping( packMapping.f );
+        if ( emap )
+            *emap = compose( packMapping.e, *emap );
+        else
+            emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+
+        packMapping = {}; //free memory
+        data.mesh->shrinkToFit();
+    }
+
+    if ( emap && emap->tsize > 0 )
+    {
+        data.selectedEdges = mapEdges( *emap, data.selectedEdges );
+        data.creases = mapEdges( *emap, data.creases );
+    }
+    else
+    {
+        data.mesh->topology.excludeLoneEdges( data.selectedEdges );
+        data.mesh->topology.excludeLoneEdges( data.creases );
+    }
+
     return res;
 }
 

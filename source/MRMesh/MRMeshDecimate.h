@@ -183,7 +183,7 @@ struct DecimateResult
 };
 
 /**
- * \brief Collapse edges in mesh region according to the settings
+ * \brief Performs mesh simplification in mesh region according to the settings
  * \ingroup DecimateGroup
  * \snippet cpp-examples/MeshDecimate.dox.cpp 0
  *
@@ -191,6 +191,10 @@ struct DecimateResult
  * \image html decimate/decimate_after.png "After" width = 350cm
  */
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
+
+/// Performs mesh simplification with per-element attributes according to given settings;
+/// \detail settings.region must be null, and real simplification region will be data face selection (or whole mesh if no face selection)
+MRMESH_API DecimateResult decimateMesh( ObjectMeshData & data, const DecimateSettings & settings = {} );
 
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation

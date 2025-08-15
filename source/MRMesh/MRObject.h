@@ -257,6 +257,7 @@ public:
     const std::set<std::string>& tags() const { return tags_; }
     /// adds tag to the object's tag storage
     /// additionally calls ObjectTagManager::tagAddedSignal
+    /// NOTE: tags starting with a dot are considered as service ones and might be hidden from UI
     MRMESH_API bool addTag( std::string tag );
     /// removes tag from the object's tag storage
     /// additionally calls ObjectTagManager::tagRemovedSignal

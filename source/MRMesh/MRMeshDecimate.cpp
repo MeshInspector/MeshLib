@@ -22,6 +22,7 @@
 #include "MRMeshAttributesToUpdate.h"
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
+#include "MRObjectMesh.h"
 
 namespace MR
 {
@@ -1315,6 +1316,27 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
     }
 
     return res;
+}
+
+MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const ObjectMesh & obj, const DecimateSettings & settings,
+    DecimateResult * outRes )
+{
+    MR_TIMER;
+
+    ObjectMeshData data = obj.data();
+    if ( !data.mesh )
+    {
+        assert( false );
+        return {};
+    }
+    // clone mesh as well
+    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    auto res = decimateObjectMeshData( data, settings );
+    if ( outRes )
+        *outRes = res;
+    if ( res.cancelled )
+        return {};
+    return data;
 }
 
 bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )

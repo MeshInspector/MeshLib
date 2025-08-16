@@ -7,6 +7,7 @@
 #include <cfloat>
 #include <climits>
 #include <functional>
+#include <optional>
 
 namespace MR
 {
@@ -194,7 +195,12 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
 
 /// Performs mesh simplification with per-element attributes according to given settings;
 /// \detail settings.region must be null, and real simplification region will be data face selection (or whole mesh if no face selection)
-MRMESH_API DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & settings = {} );
+MRMESH_API DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & settings );
+
+/// returns the data of decimated mesh given ObjectMesh (which remains unchanged) and decimation parameters
+[[nodiscard]] MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const ObjectMesh & obj, const DecimateSettings & settings,
+    DecimateResult * outRes = nullptr );
+
 
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation

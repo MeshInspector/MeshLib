@@ -6,6 +6,14 @@
 namespace MR
 {
 
+ObjectMeshData ObjectMeshData::clone() const
+{
+    ObjectMeshData res = *this;
+    if ( res.mesh )
+        res.mesh = std::make_shared<Mesh>( *res.mesh );
+    return res;
+}
+
 size_t ObjectMeshData::heapBytes() const
 {
     return MR::heapBytes( mesh )

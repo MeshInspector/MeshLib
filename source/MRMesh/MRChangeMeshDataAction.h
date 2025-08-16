@@ -60,6 +60,10 @@ public:
         return name_.capacity() + data_.heapBytes();
     }
 
+    const std::shared_ptr<ObjectMesh>& obj() const { return objMesh_; }
+
+    const ObjectMeshData& data() const { return data_; }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     ObjectMeshData data_;

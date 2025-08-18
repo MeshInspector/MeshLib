@@ -196,7 +196,8 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline
     {
         res = { .edgePoint = polylinePoint, .distanceAlongLine = float( rayPos ) };
         currRayEnd = rayPos;
-        return closestIntersect ? Processing::Stop : Processing::Continue;
+        // stop searching if any intersection is ok
+        return closestIntersect ? Processing::Continue : Processing::Stop;
     }, rayStart, rayEnd, prec );
     return res;
 }

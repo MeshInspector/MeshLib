@@ -551,12 +551,10 @@ float GetTitleBarHeght( float menuScaling )
     return 2 * MR::cRibbonItemInterval * menuScaling + ImGui::GetTextLineHeight() + 2 * ImGui::GetStyle().WindowBorderSize * menuScaling;
 }
 
-std::pair<ImVec2, bool> loadSavedWindowPos( const char* label, float width, const ImVec2* position /*= nullptr*/ )
+std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* window, float width, const ImVec2* position /*= nullptr*/ )
 {
     bool haveSavedWindowPos = false;
     ImVec2 initialWindowPos;
-
-    ImGuiWindow* window = FindWindowByName( label );
 
     auto menu = ImGuiMenu::instance();
     bool windowIsInactive = window && !window->WasActive;
@@ -596,6 +594,28 @@ std::pair<ImVec2, bool> loadSavedWindowPos( const char* label, float width, cons
     return { initialWindowPos, haveSavedWindowPos };
 }
 
+void SaveWindowPosition( const char* label, ImGuiWindow* window )
+{
+    if ( window )
+    {
+        auto& config = Config::instance();
+        auto dpJson = config.getJsonValue( "DialogPositions" );
+        serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[label] );
+        config.setJsonValue( "DialogPositions", dpJson );
+    }
+}
+
+bool BeginSavedWindowPos( const std::string& name, bool* open, const ImVec2& size, const ImVec2* pos /*= 0*/, ImGuiWindowFlags flags /*= 0*/ )
+{
+    ImGuiWindow* window = ImGui::FindWindowByName( name.c_str() );
+    auto [initialWindowPos, haveSavedWindowPos] = LoadSavedWindowPos( name.c_str(), window, size.y, pos );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( name.c_str(), initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, ImVec2( 0, 0 ) );
+    ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
+    const bool res = Begin( name.c_str(), open, flags );
+    SaveWindowPosition( name.c_str(), window);
+    return res;
+}
+
 bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();
@@ -610,7 +630,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGuiWindow* window = FindWindowByName( label );
     auto menu = ImGuiMenu::instance();
-    auto [initialWindowPos, haveSavedWindowPos] = loadSavedWindowPos( label, params.width, params.position );
+    auto [initialWindowPos, haveSavedWindowPos] = LoadSavedWindowPos( label, params.width, params.position );
     UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )

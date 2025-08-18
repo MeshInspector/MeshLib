@@ -210,10 +210,27 @@ MRVIEWER_API float GetTitleBarHeght( float menuScaling );
 
 /// Load saved window position, if possible
 /// \details if can't load - get \p position (if setted) or default (upper-right viewport corner)
+/// see also \ref SaveWindowPosition
 /// \param label window label
 /// \param width window width
 /// \param position (optional) preliminary window position
-MRVIEWER_API std::pair<ImVec2, bool> loadSavedWindowPos( const char* label, float width, const ImVec2* position = nullptr );
+MRVIEWER_API std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, ImGuiWindow* window, float width, const ImVec2* position = nullptr );
+inline std::pair<ImVec2, bool> LoadSavedWindowPos( const char* label, float width, const ImVec2* position = nullptr )
+{
+    return LoadSavedWindowPos( label, FindWindowByName( label ), width, position );
+}
+/// Save window position
+/// \details saved only if window exist
+/// see also \ref LoadSavedWindowPos
+MRVIEWER_API void SaveWindowPosition( const char* label, ImGuiWindow* window );
+inline void SaveWindowPosition( const char* label )
+{
+    SaveWindowPosition( label, FindWindowByName( label ) );
+}
+
+/// Same as ImGui::Begin, but with loading and saving the window position
+/// \details see also \ref LoadSavedWindowPos and \ref SaveWindowPosition
+MRVIEWER_API bool BeginSavedWindowPos( const std::string& name, bool* open, const ImVec2& size, const ImVec2* pos = 0, ImGuiWindowFlags flags = 0 );
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.

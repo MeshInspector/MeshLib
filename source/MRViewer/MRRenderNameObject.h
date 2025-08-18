@@ -10,7 +10,7 @@
 namespace MR
 {
 
-class RenderNameObject : public virtual IRenderObject
+class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
 {
     struct Task : BasicUiRenderTask
     {

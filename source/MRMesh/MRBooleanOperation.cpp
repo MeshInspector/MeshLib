@@ -360,6 +360,22 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
     return res;
 }
 
+UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const
+{
+    if ( maps[int( obj )].identity )
+        return oldBS;
+    if ( maps[int( obj )].old2newEdges.empty() )
+        return {};
+    UndirectedEdgeBitSet res;
+    for ( auto e : oldBS )
+    {
+        auto en = mapEdge( maps[int( obj )].old2newEdges, e );
+        if ( en.valid() )
+            res.autoResizeSet( en );
+    }
+    return res;
+}
+
 VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) const
 {
     if ( maps[int( obj )].identity )

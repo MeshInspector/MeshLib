@@ -121,6 +121,7 @@
     <ClCompile Include="MRViewportCornerController.cpp" />
     <ClCompile Include="MRViewportDraw.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
+    <ClCompile Include="MRViewportGlobalBasis.cpp" />
     <ClCompile Include="MRVolumeShader.cpp" />
     <ClCompile Include="MRWebRequest.cpp" />
     <ClCompile Include="MRTouchpadController.cpp" />
@@ -142,7 +143,6 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRSceneOperations.cpp" />
     <ClCompile Include="MRSceneReorder.cpp" />
-    <ClCompile Include="MRFileDialogInternal.cpp" />
     <ClCompile Include="MRModalDialog.cpp" />
     <ClCompile Include="MRRenderImGui.cpp" />
     <ClCompile Include="MRRenderToImage.cpp" />
@@ -275,6 +275,7 @@
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportCornerController.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRViewportGlobalBasis.h" />
     <ClInclude Include="MRViewportParametersAction.h" />
     <ClInclude Include="MRVolumeShader.h" />
     <ClInclude Include="MRWebRequest.h" />
@@ -304,7 +305,6 @@
     <ClInclude Include="MRSceneOperations.h" />
     <ClInclude Include="MRRibbonMenuUIConfig.h" />
     <ClInclude Include="MRSceneReorder.h" />
-    <ClInclude Include="MRFileDialogInternal.h" />
     <ClInclude Include="MRModalDialog.h" />
     <ClInclude Include="MRRenderImGui.h" />
     <ClInclude Include="MRRenderToImage.h" />

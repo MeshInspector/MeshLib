@@ -91,6 +91,18 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
+      - name: Generate C bindings
+        env:
+          CXX: ${{ env.CXX-COMPILER }}
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
+
+      - name: Upload C bindings headers
+        uses: actions/upload-artifact@v4
+        with:
+          name: CBindings
+          path: ./source/MeshLibC2/include
+          retention-days: 1
+
   update-dev-documentation:
     needs: [ create-stubs ]
     uses: ./.github/workflows/update-docs.yml
@@ -109,4 +121,9 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
+          failOnError: false
+      - name: Delete C bindings headers
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: CBindings
           failOnError: false

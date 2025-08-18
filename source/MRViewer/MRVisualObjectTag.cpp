@@ -3,24 +3,11 @@
 #include "MRMesh/MRObjectTagEventDispatcher.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRString.h"
-#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRJson.h"
 
-namespace
-{
-
-constexpr const char* cVisualObjectTagPrefix = "visual-object-tag:";
-
-} // namespace
-
 namespace MR
 {
-
-std::string VisualObjectTag::canonicalName() const
-{
-    return toLower( std::string{ trim( name ) } );
-}
 
 VisualObjectTagManager& VisualObjectTagManager::instance()
 {
@@ -28,67 +15,64 @@ VisualObjectTagManager& VisualObjectTagManager::instance()
     return sInstance;
 }
 
-const std::unordered_map<std::string, VisualObjectTag>& VisualObjectTagManager::storage()
+const std::map<std::string, VisualObjectTag>& VisualObjectTagManager::tags()
 {
-    return instance().storage_;
+    return instance().visTags_;
 }
 
-std::string VisualObjectTagManager::registerTag( VisualObjectTag tag )
+void VisualObjectTagManager::registerTag( std::string tag, VisualObjectTag visTag )
 {
-    const auto id = cVisualObjectTagPrefix + tag.canonicalName();
-    instance().storage_.emplace( id, std::move( tag ) );
-    return id;
+    instance().visTags_.emplace( std::move( tag ), std::move( visTag ) );
 }
 
-void VisualObjectTagManager::registerTag( std::string id, VisualObjectTag tag )
+void VisualObjectTagManager::updateTag( const std::string& tag, VisualObjectTag visTag )
 {
-    instance().storage_.emplace( std::move( id ), std::move( tag ) );
+    auto it = instance().visTags_.find( tag );
+    if ( it == instance().visTags_.end() )
+        return;
+    it->second = std::move( visTag );
 }
 
-void VisualObjectTagManager::updateTag( const std::string& visTagId, VisualObjectTag tag )
+void VisualObjectTagManager::unregisterTag( const std::string& tag )
 {
-    auto it = instance().storage_.find( visTagId );
-    if ( it != instance().storage_.end() )
-        it->second = std::move( tag );
+    auto it = instance().visTags_.find( tag );
+    if ( it == instance().visTags_.end() )
+        return;
+    instance().visTags_.erase( it );
 }
 
-void VisualObjectTagManager::unregisterTag( const std::string& visTagId )
-{
-    instance().storage_.erase( visTagId );
-}
-
-std::vector<std::shared_ptr<Object>> VisualObjectTagManager::getAllObjectsWithTag( Object* root, const std::string& visTagId, const ObjectSelectivityType& type )
+std::vector<std::shared_ptr<Object>> VisualObjectTagManager::getAllObjectsWithTag( Object* root, const std::string& tag, const ObjectSelectivityType& type )
 {
     // TODO: more efficient version
     auto results = getAllObjectsInTree( root, type );
     std::erase_if( results, [&] ( const std::shared_ptr<Object>& obj )
     {
-        return !obj->tags().contains( visTagId );
+        return !obj->tags().contains( tag );
     } );
     return results;
 }
 
-void VisualObjectTagManager::update( VisualObject& visObj, const std::string& visTagId )
+void VisualObjectTagManager::update( VisualObject& visObj, const std::string& tag )
 {
-    const auto& storage = instance().storage_;
-    if ( visObj.tags().contains( visTagId ) )
+    const auto& visTags = instance().visTags_;
+    if ( visObj.tags().contains( tag ) )
     {
-        const auto visTagIt = storage.find( visTagId );
-        if ( visTagIt == storage.end() )
+        const auto visTagIt = visTags.find( tag );
+        if ( visTagIt == visTags.end() )
             return;
-        const auto& [_, tag] = *visTagIt;
+        const auto& [_, visTag] = *visTagIt;
 
-        visObj.setFrontColor( tag.selectedColor, true );
-        visObj.setFrontColor( tag.unselectedColor, false );
+        visObj.setFrontColor( visTag.selectedColor, true );
+        visObj.setFrontColor( visTag.unselectedColor, false );
     }
     else
     {
         visObj.resetFrontColor();
 
         // re-apply existing tag
-        for ( const auto& [id, _] : storage )
-            if ( visObj.tags().contains( id ) )
-                return update( visObj, id );
+        for ( const auto& [knownTag, _] : visTags )
+            if ( visObj.tags().contains( knownTag ) )
+                return update( visObj, knownTag );
     }
 }
 
@@ -97,7 +81,7 @@ VisualObjectTagManager::VisualObjectTagManager( ProtectedTag )
     auto& objectTagManager = ObjectTagEventDispatcher::instance();
     const auto slot = [this] ( Object* obj, const std::string& tag )
     {
-        if ( !storage_.contains( tag ) )
+        if ( !visTags_.contains( tag ) )
             return;
 
         auto* visObj = dynamic_cast<VisualObject*>( obj );
@@ -115,21 +99,18 @@ void deserializeFromJson( const Json::Value& root, VisualObjectTagManager& manag
     if ( !root.isArray() )
         return;
 
-    auto& storage = manager.storage_;
+    auto& visTags = manager.visTags_;
     for ( const auto& tagObj : root )
     {
-        if ( !tagObj["Id"].isString() )
+        if ( !tagObj["Tag"].isString() )
             continue;
-        if ( !tagObj["Name"].isString() )
-            continue;
+        const auto tag = tagObj["Tag"].asString();
 
-        const auto id = tagObj["Id"].asString();
-        VisualObjectTag tag;
-        tag.name = tagObj["Name"].asString();
-        deserializeFromJson( tagObj["SelectedColor"], tag.selectedColor );
-        deserializeFromJson( tagObj["UnselectedColor"], tag.unselectedColor );
+        VisualObjectTag visTag;
+        deserializeFromJson( tagObj["SelectedColor"], visTag.selectedColor );
+        deserializeFromJson( tagObj["UnselectedColor"], visTag.unselectedColor );
 
-        storage.emplace( id, tag );
+        visTags.emplace( std::move( tag ), std::move( visTag ) );
     }
 }
 
@@ -138,13 +119,12 @@ void serializeToJson( const VisualObjectTagManager& manager, Json::Value& root )
     root = Json::arrayValue;
 
     auto i = 0;
-    for ( const auto& [id, tag] : manager.storage() )
+    for ( const auto& [tag, visTag] : manager.tags() )
     {
-        auto& tagObj = root[i++] = Json::objectValue;
-        tagObj["Id"] = id;
-        tagObj["Name"] = tag.name;
-        serializeToJson( tag.selectedColor, tagObj["SelectedColor"] );
-        serializeToJson( tag.unselectedColor, tagObj["UnselectedColor"] );
+        auto& visTagObj = root[i++] = Json::objectValue;
+        visTagObj["Tag"] = tag;
+        serializeToJson( visTag.selectedColor, visTagObj["SelectedColor"] );
+        serializeToJson( visTag.unselectedColor, visTagObj["UnselectedColor"] );
     }
 }
 

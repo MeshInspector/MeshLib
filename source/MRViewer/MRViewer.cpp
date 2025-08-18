@@ -1,5 +1,4 @@
 #include "MRViewer.h"
-#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -29,6 +28,8 @@
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
 #include "MRShowModal.h"
+#include "MRFileDialog.h"
+#include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -62,6 +63,7 @@
 #include "MRSceneCache.h"
 #include "MRViewerTitle.h"
 #include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRWebRequest.h"
 #include "MRMesh/MRCube.h"
 
@@ -74,12 +76,12 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRMesh/MRConfig.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
-#include "MRMesh/MRConfig.h"
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -989,7 +991,7 @@ void Viewer::launchShut()
     basisAxes.reset();
     rotationSphere.reset();
     clippingPlaneObject.reset();
-    globalBasisAxes.reset();
+    globalBasis.reset();
     globalHistoryStore_.reset();
     basisViewController.reset();
 
@@ -1375,6 +1377,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
+    MR::FileDialog::setLastUsedDir( utf8string( filesList[0].parent_path() ) );
     return true;
 }
 
@@ -1662,7 +1665,7 @@ bool Viewer::needRedraw_() const
         if ( viewport.getRedrawFlag() )
             return true;
 
-    if ( globalBasisAxes && globalBasisAxes->getRedrawFlag( presentViewportsMask_ ) )
+    if ( globalBasis && globalBasis->getRedrawFlag( presentViewportsMask_ ) )
         return true;
 
     if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
@@ -1681,8 +1684,8 @@ void Viewer::resetRedraw_()
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
 
-    if ( globalBasisAxes )
-        globalBasisAxes->resetRedrawFlag();
+    if ( globalBasis )
+        globalBasis->resetRedrawFlag();
 
     if ( basisAxes )
         basisAxes->resetRedrawFlag();
@@ -2035,61 +2038,7 @@ void Viewer::set_root( SceneRootObject& newRoot )
 
 void Viewer::initGlobalBasisAxesObject_()
 {
-    constexpr Vector3f PlusAxis[3] = {
-        Vector3f( 1.0f, 0.0f, 0.0f ),
-        Vector3f( 0.0f, 1.0f, 0.0f ),
-        Vector3f( 0.0f, 0.0f, 1.0f )};
-
-    Mesh mesh;
-    globalBasisAxes = std::make_shared<ObjectMesh>();
-    globalBasisAxes->setName( "World Global Basis" );
-    std::vector<Color> vertsColors;
-    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
-    for ( int i = 0; i < 3; ++i )
-    {
-        auto basis = makeCylinder( 0.01f, 0.9f );
-        auto cone = makeCone( 0.04f, 0.1f );
-        AffineXf3f rotTramsform;
-        if ( i != 2 )
-        {
-            rotTramsform = AffineXf3f::linear(
-                Matrix3f::rotation( i == 0 ? PlusAxis[1] : -1.0f * PlusAxis[0], PI_F * 0.5f )
-            );
-        }
-        basis.transform( rotTramsform );
-        cone.transform( rotTramsform * translate );
-        mesh.addMesh( basis );
-        mesh.addMesh( cone );
-        std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
-        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
-        vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
-        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
-    }
-    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX(), true );
-    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY(), true );
-    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ(), true );
-
-    globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-    globalBasisAxes->setAncillary( true );
-    globalBasisAxes->setVisible( false );
-    globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
-    globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
-    globalBasisAxes->setFlatShading( true );
-
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
-    {
-        if ( !globalBasisAxes )
-            return;
-
-        const Color& color = SceneColors::get( SceneColors::Type::Labels );
-
-        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
-        for ( const auto& label : labels )
-        {
-            label->setFrontColor( color, true );
-            label->setFrontColor( color, false );
-        }
-    } ) );
+    globalBasis = std::make_unique<ViewportGlobalBasis>();
 }
 
 void Viewer::initBasisAxesObject_()

@@ -13,27 +13,46 @@ namespace MR::TPMS // Triply Periodic Minimal Surface
 enum class Type : int
 {
     SchwartzP,
-    DoubleSchwartzP,
-    Gyroid,
+    ThickSchwartzP,
     DoubleGyroid,
+    ThickGyroid,
 
     Count
 };
+
+/// Returns the names for each type of filling
 MRVOXELS_API std::vector<std::string> getTypeNames();
 
+/// Returns the tooltips for each type of filling
+MRVOXELS_API std::vector<std::string> getTypeTooltips();
+
+/// Returns true if the \p type is thick
+MRVOXELS_API bool isThick( Type type );
+
+
+struct VolumeParams
+{
+    Type type = Type::SchwartzP; // Type of the surface
+    float frequency = 1.f; // Frequency of oscillations (determines size of the "cells" in the "grid")
+    float resolution = 5.f; // Ratio `n / T`, between the number of voxels and period of oscillations
+};
+
+struct MeshParams : VolumeParams
+{
+    float iso = 0.f;
+    bool decimate = false;
+};
+
 /// Construct TPMS using implicit function (https://www.researchgate.net/publication/350658078_Computational_method_and_program_for_generating_a_porous_scaffold_based_on_implicit_surfaces)
-/// @param type Type of the surface
 /// @param size Size of the cube with the surface
-/// @param frequency Frequency of oscillations (determines size of the "cells" in the "grid")
-/// @param resolution Ratio `n / T`, between the number of voxels and period of oscillations
 /// @return Distance-volume starting at (0, 0, 0) and having specified @p size
-MRVOXELS_API FunctionVolume buildVolume( Type type, const Vector3f& size, float frequency, float resolution );
+MRVOXELS_API FunctionVolume buildVolume( const Vector3f& size, const VolumeParams& params );
 
 /// Constructs TPMS level-set and then convert it to mesh
-MRVOXELS_API Expected<Mesh> build( Type type, const Vector3f& size, float frequency, float resolution, float iso, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCallback cb = {} );
 
 /// Constructs TPMS-filling for the given @p mesh
-MRVOXELS_API Expected<Mesh> fill( Type type, const Mesh& mesh, float frequency, float resolution, float iso, ProgressCallback cb = {} );
+MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallback cb = {} );
 
 /// Returns number of voxels that would be used to perform \ref fillWithTPMS
 MRVOXELS_API size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution );
@@ -50,5 +69,8 @@ MRVOXELS_API float estimateIso( Type type, float targetDensity );
 /// @param targetIso value in [-1; 1]
 /// @return Value in [0; 1]
 MRVOXELS_API float estimateDensity( Type type, float targetIso );
+
+/// Returns minimal reasonable resolution for given parameters
+MRVOXELS_API float getMinimalResolution( Type type, float iso );
 
 }

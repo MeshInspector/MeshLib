@@ -17,6 +17,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewportGlobalBasis.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -432,7 +433,7 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         if ( !globalBasis )
             return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
         else
-            return calcBox_( { getViewerInstance().globalBasisAxes }, space, fitParams.mode == FitMode::SelectedPrimitives );
+            return calcBox_( getViewerInstance().globalBasis->visualChildren(), space, fitParams.mode == FitMode::SelectedPrimitives );
     }, fitParams );
 }
 
@@ -446,7 +447,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
 
     Box3f sceneObjsBox = getBoxFn( false, false );
     Box3f unitedBox;
-    if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible( id ) )
+    if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
         unitedBox = getBoxFn( false, true ); // calculate box of global basis separately, not to interfere with actual scene size
     unitedBox.include( sceneObjsBox );
 
@@ -502,7 +503,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
         {
             auto localSceneObjBox = getBoxFn( true, false );
             Box3f localUnitedBox;
-            if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible( id ) )
+            if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
                 localUnitedBox = getBoxFn( true, true );
             localUnitedBox.include( localSceneObjBox );
             return localUnitedBox;

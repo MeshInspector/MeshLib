@@ -5,6 +5,9 @@ namespace MR
 
 bool writeByBlocks( std::ostream& out, const char* data, size_t dataSize, ProgressCallback callback /*= {}*/, size_t blockSize /*= ( size_t( 1 ) << 16 )*/ )
 {
+    if ( !dataSize )
+        return true;
+
     if ( !callback )
     {
         out.write( data, dataSize );
@@ -29,6 +32,9 @@ bool writeByBlocks( std::ostream& out, const char* data, size_t dataSize, Progre
 
 bool readByBlocks( std::istream& in, char* data, size_t dataSize, ProgressCallback callback /*= {}*/, size_t blockSize /*= ( size_t( 1 ) << 16 )*/ )
 {
+    if ( !dataSize )
+        return true;
+
     if ( !callback )
     {
         in.read( data, dataSize );

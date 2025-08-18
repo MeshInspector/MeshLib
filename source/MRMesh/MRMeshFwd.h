@@ -702,6 +702,7 @@ class ChangeMeshEdgeSelectionAction;
 class ChangeMeshCreasesAction;
 class ChangePointPointSelectionAction;
 class ChangeMeshAction;
+class ChangeMeshDataAction;
 class ChangeMeshPointsAction;
 class ChangeMeshTopologyAction;
 class ChangeXfAction;

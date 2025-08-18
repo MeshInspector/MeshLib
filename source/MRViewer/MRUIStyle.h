@@ -40,7 +40,7 @@ MRVIEWER_API void init();
 /// parameters to customize buttonEx
 struct ButtonCustomizationParams
 {
-    /// determines if this button is enabled or disabled
+    /// If false, the button is grayed out and can't be clicked.
     bool enabled = true;
 
     /// imgui flags for this button
@@ -109,7 +109,7 @@ MRVIEWER_API bool checkKey( ImGuiKey passedKey );
 
 /// draw gradient button, which can be disabled (active = false)
 [[deprecated( "Use UI::buttonEx( label, size, params ) instead" )]]
-MRVIEWER_API bool buttonEx( const char* label,bool active, const Vector2f& size = Vector2f( 0, 0 ), 
+MRVIEWER_API bool buttonEx( const char* label,bool active, const Vector2f& size = Vector2f( 0, 0 ),
     ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ButtonCustomizationParams& customParams = {} );
 
 /// draw gradient button, which can be customized
@@ -148,10 +148,10 @@ inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const
     return buttonIconEx( name, iconSize, text, buttonSize );
 }
 // button without a gradient, always active, configurable by an external style
-inline bool buttonIconFlatBG( 
-    const std::string& name, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
+inline bool buttonIconFlatBG(
+    const std::string& name,
+    const Vector2f& iconSize,
+    const std::string& text,
     const ImVec2& buttonSize,
     bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None )
@@ -165,12 +165,12 @@ inline bool buttonIconFlatBG(
 }
 /// draw button with icon same logic as radioButton
 /// the colors of the internal style are used
-MRVIEWER_API bool buttonUniqueIcon( 
-    const std::string& iconName, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
-    int* value, 
+MRVIEWER_API bool buttonUniqueIcon(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    int* value,
     int ownValue,
     bool textUnderIcon = true,
     ImGuiKey key = ImGuiKey_None );

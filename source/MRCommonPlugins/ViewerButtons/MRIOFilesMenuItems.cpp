@@ -499,6 +499,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                     SceneRoot::get().addChild( obj );
                     getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     getViewerInstance().recentFilesStore().storeFile( directory );
+                    getViewerInstance().objectsLoadedSignal( { obj }, {}, warnings );
                     if ( !warnings.empty() )
                         pushNotification( { .text = warnings, .type = NotificationType::Warning } );
                 };

@@ -79,4 +79,23 @@ MRVIEWER_API std::filesystem::path saveFileDialog( const FileParameters& params 
 // callback is called inside this function in desktop build and deferred in emscripten build
 MRVIEWER_API void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> callback, const FileParameters& params = {} );
 
-}
+namespace FileDialog
+{
+
+struct Parameters : MR::FileParameters
+{
+    bool folderDialog{false}; // open dialog only
+    bool multiselect{true};   // open dialog only
+    bool saveDialog{false};   // true for save dialog, false for open
+};
+
+/// loads from the configuration the path (UTF8 encoded) to last used folder (where the files were last saved or open);
+/// returns empty path if no last used folder is set
+MRVIEWER_API std::string getLastUsedDir();
+
+/// saves in the configuration the path (UTF8 encoded) to last used folder (where the files were last saved or open)
+MRVIEWER_API void setLastUsedDir( const std::string& folder );
+
+} // namespace FileDialog
+
+} // namespace MR

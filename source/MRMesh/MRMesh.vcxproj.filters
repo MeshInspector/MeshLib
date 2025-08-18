@@ -684,9 +684,6 @@
     <ClInclude Include="MRBuffer.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRVertexAttributeGradient.h">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
     <ClInclude Include="MRChangePointCloudNormalsAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
@@ -1779,9 +1776,6 @@
     </ClCompile>
     <ClCompile Include="MRProgressReadWrite.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVertexAttributeGradient.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MROffsetVerts.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>

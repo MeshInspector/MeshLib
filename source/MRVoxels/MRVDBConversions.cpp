@@ -310,7 +310,7 @@ void putVolumeInDenseGrid(
 
     for ( int z = 0; z < volume.dims.z; ++z )
     {
-        if ( subprogress( cb, ( size_t )z, ( size_t )volume.dims.z ) )
+        if ( !reportProgress( cb, ( float )z / ( float )volume.dims.z ) )
             return;
         for ( int y = 0; y < volume.dims.y; ++y )
         {

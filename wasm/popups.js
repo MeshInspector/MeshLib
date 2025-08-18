@@ -1,26 +1,3 @@
-var keyboardEventsArePresent = true;
-
-var removeKeyboardEvents = function () {
-    if (keyboardEventsArePresent) {
-        window.removeEventListener("keydown", GLFW.onKeydown, true);
-        window.removeEventListener("keypress", GLFW.onKeyPress, true);
-        window.removeEventListener("keyup", GLFW.onKeyup, true);
-        keyboardEventsArePresent = false;
-    }
-};
-
-var addKeyboardEvents = function () {
-    if (!keyboardEventsArePresent) {
-        window.addEventListener("keydown", GLFW.onKeydown, true);
-        window.addEventListener("keypress", GLFW.onKeyPress, true);
-        window.addEventListener("keyup", GLFW.onKeyup, true);
-        keyboardEventsArePresent = true;
-    }
-    // enforce several frames to toggle animation when popup closed
-    for (var i = 0; i < 500; i += 100)
-        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
-};
-
 var curentCancelCb = function(){};
 
 var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true, oncancel = function(){}) {

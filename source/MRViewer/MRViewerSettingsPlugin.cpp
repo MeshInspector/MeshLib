@@ -4,7 +4,8 @@
 #include "MRColorTheme.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
-#include "MRMesh/MRObjectsAccess.h"
+#include "MRFileDialog.h"
+#include "MRModalDialog.h"
 #include "MRCommandLoop.h"
 #include "MRViewerSettingsManager.h"
 #include "MRGLMacro.h"
@@ -12,23 +13,24 @@
 #include "MRRibbonConstants.h"
 #include "MRViewer.h"
 #include "MRImGuiVectorOperators.h"
-#include "MRMesh/MRSystem.h"
 #include "MRSpaceMouseHandlerHidapi.h"
-#include "MRMesh/MRLog.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRUIStyle.h"
+#include "MRUnitSettings.h"
+#include "MRShowModal.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRLog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
-#include "MRFileDialog.h"
-#include "MRModalDialog.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRRibbonSceneObjectsListDrawer.h"
-#include "MRUnitSettings.h"
-#include "MRShowModal.h"
 #include "MRMesh/MRObjectPointsHolder.h"
-#include "MRVoxels/MRObjectVoxels.h"
+#include "MRMesh/MRConfig.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRViewportGlobalBasis.h"
 
 namespace
 {
@@ -190,6 +192,10 @@ bool ViewerSettingsPlugin::onEnable_()
 
 bool ViewerSettingsPlugin::onDisable_()
 {
+    if ( viewer )
+        if ( const auto& mgr = viewer->getViewerSettingsManager() )
+            mgr->saveSettings( *viewer );
+    Config::instance().writeToFile();
     userThemesPresets_.clear();
     return true;
 }
@@ -456,7 +462,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     ImGui::SameLine();
 
     ImGui::SetCursorPosX( 155.0f * menuScaling );
-    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewport.id );
+    bool showGlobalBasis = viewer->globalBasis->isVisible( viewport.id );
     UI::checkbox( "Show Global Basis", &showGlobalBasis );
     viewport.showGlobalBasis( showGlobalBasis );
 
@@ -465,13 +471,13 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
     if ( isAutoGlobalBasisSize )
     {
-        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale );
     }
     else
     {
-        auto size = viewer->globalBasisAxes->xf( viewport.id ).A.x.x;
+        auto size = viewer->globalBasis->getAxesLength( viewport.id );
         UI::drag<LengthUnit>( "Global Basis Scale", size, viewportParameters.objectScale * 0.01f, 1e-9f );
-        viewer->globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ), viewport.id );
+        viewer->globalBasis->setAxesProps( size, viewer->globalBasis->getAxesWidth( viewport.id ), viewport.id );
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();

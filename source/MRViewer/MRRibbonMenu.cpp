@@ -560,9 +560,16 @@ void RibbonMenu::drawHeaderPannel_()
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
     }
 
-    auto backupPos = ImGui::GetCursorPos();
-    auto availWidth = drawHeaderHelpers_( summaryTabPannelSize, menuScaling );
-    ImGui::SetCursorPos( backupPos );
+    float availWidth = 0.0f;
+    {
+        auto backupPos = ImGui::GetCursorPos();
+        ImGui::PopStyleVar( 2 ); // draw helpers with default style
+        availWidth = drawHeaderHelpers_( summaryTabPannelSize, menuScaling );
+        // push header panel style back
+        ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding * menuScaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
+        ImGui::SetCursorPos( backupPos );
+    }
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -865,7 +872,8 @@ void RibbonMenu::drawActiveList_()
                 ImGui::PopFont();
             ImGui::SameLine( blockSize.x - btnSize.x - winPadding.x );
             ImGui::SetCursorPosY( savedPos );
-            if ( UI::button( "Close", btnSize ) )
+            auto btnText = "Close" + childName;
+            if ( UI::button( btnText.c_str(), btnSize ) )
                 close = true;
             ImGui::EndChild();
         };

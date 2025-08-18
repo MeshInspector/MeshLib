@@ -30,9 +30,8 @@ MODULES = [
     "mrmeshpy",
     "mrmeshnumpy",
     "mrviewerpy",
+    "mrcudapy",
 ]
-if platform.system() != "Darwin":
-    MODULES.append("mrcudapy")
 
 here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the readme file
@@ -61,6 +60,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
         "Operating System :: Microsoft :: Windows",

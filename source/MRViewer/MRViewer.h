@@ -34,6 +34,9 @@ class SpaceMouseHandler;
 class IDragDropHandler;
 
 class CornerControllerObject;
+
+class ViewportGlobalBasis;
+
 // This struct contains rules for viewer launch
 struct LaunchParams
 {
@@ -487,7 +490,7 @@ public:
 
     std::shared_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<CornerControllerObject> basisViewController;
-    std::shared_ptr<ObjectMesh> globalBasisAxes;
+    std::unique_ptr<ViewportGlobalBasis> globalBasis;
     std::shared_ptr<ObjectMesh> rotationSphere;
     // Stores clipping plane mesh
     std::shared_ptr<ObjectMesh> clippingPlaneObject;
@@ -604,6 +607,10 @@ public:
     /// sets whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
     void setSortDroppedFiles( bool value ) { sortDroppedFiles_ = value; }
 
+    /// (re)initializes the handler of SpaceMouse events
+    /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
+    MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
+
 private:
     Viewer();
     ~Viewer();
@@ -683,7 +690,6 @@ private:
     void initBasisViewControllerObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
-    void initSpaceMouseHandler_();
 
     // recalculate pixel ratio
     void updatePixelRatio_();

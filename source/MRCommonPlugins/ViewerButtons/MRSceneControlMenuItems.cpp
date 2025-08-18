@@ -21,6 +21,7 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRUISaveChangesPopup.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
 #include <array>
 
 namespace
@@ -135,7 +136,7 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     for ( const auto& obj : allObjs )
         if ( obj->globalVisibility() )
             return "";
-    if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible() )
+    if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible() )
         return "";
     return "There are no visible objects.";
 }

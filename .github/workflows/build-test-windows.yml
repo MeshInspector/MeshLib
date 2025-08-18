@@ -50,15 +50,15 @@ jobs:
         exclude:
           - full_config_build: false
             os: windows-2022
-            build_system: MSBuild
+            build_system: CMake
             config: "Debug"
           - full_config_build: false
             os: windows-2019
-            build_system: CMake
+            build_system: MSBuild
           - full_config_build: false
             os: windows-2022
-            build_system: CMake
-            config: "Release"
+            build_system: MSBuild
+            config: "Debug"
         include:
           - os: windows-2022
             runner: [windows-2022]

@@ -9,6 +9,7 @@
 #include "MRSpaceMouseParameters.h"
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
+#include "MRViewportGlobalBasis.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -147,8 +148,8 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 {
     viewer.resetSettingsFunction( &viewer );
 
-    if ( viewer.globalBasisAxes )
-        viewer.globalBasisAxes->setVisible( Defaults::globalBasisEnabled );
+    if ( viewer.globalBasis )
+        viewer.globalBasis->setVisible( Defaults::globalBasisEnabled );
 
     for ( ViewportId id : viewer.getPresentViewports() )
     {
@@ -213,13 +214,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
     }
 
-    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
+    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
         if ( val[cGlobalBasisVisibleKey].isBool() )
         {
             auto visible = val[cGlobalBasisVisibleKey].asBool();
-            viewer.globalBasisAxes->setVisible( visible );
+            viewer.globalBasis->setVisible( visible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
         }
@@ -228,7 +229,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         else if ( val[cGlobalBasisScaleKey].isDouble() )
         {
             params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Fixed;
-            viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( val[cGlobalBasisScaleKey].asFloat() ) ) );
+            viewer.globalBasis->setAxesProps( val[cGlobalBasisScaleKey].asFloat(), viewer.globalBasis->getAxesWidth() );
         }
     }
     viewport.setParameters( params );
@@ -545,14 +546,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
 
-    if ( viewer.globalBasisAxes )
+    if ( viewer.globalBasis )
     {
         Json::Value globalBasis;
-        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasisAxes->isVisible( viewport.id );
+        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasis->isVisible( viewport.id );
         if ( params.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto )
             globalBasis[cGlobalBasisScaleKey] = "Auto";
         else
-            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasisAxes->xf( viewport.id ).A.x.x;
+            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasis->getAxesLength( viewport.id );
         cfg.setJsonValue( cGlobalBasisKey, globalBasis );
     }
 

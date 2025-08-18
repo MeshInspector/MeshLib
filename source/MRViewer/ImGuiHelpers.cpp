@@ -551,7 +551,7 @@ float GetTitleBarHeght( float menuScaling )
     return 2 * MR::cRibbonItemInterval * menuScaling + ImGui::GetTextLineHeight() + 2 * ImGui::GetStyle().WindowBorderSize * menuScaling;
 }
 
-std::pair<ImVec2, bool> laodSavedWindowPos( const char* label, float width, const ImVec2* position /*= nullptr*/ )
+std::pair<ImVec2, bool> loadSavedWindowPos( const char* label, float width, const ImVec2* position /*= nullptr*/ )
 {
     bool haveSavedWindowPos = false;
     ImVec2 initialWindowPos;
@@ -610,7 +610,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGuiWindow* window = FindWindowByName( label );
     auto menu = ImGuiMenu::instance();
-    auto [initialWindowPos, haveSavedWindowPos] = laodSavedWindowPos( label, params.width, params.position );
+    auto [initialWindowPos, haveSavedWindowPos] = loadSavedWindowPos( label, params.width, params.position );
     UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )

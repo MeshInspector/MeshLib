@@ -379,7 +379,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const auto& viewportSize = Viewport::get().getViewportRect();
 
     ImGuiWindow* window = ImGui::FindWindowByName( windowName.c_str() );
-    auto [initialWindowPos, haveSavedWindowPos] = ImGui::laodSavedWindowPos( windowName.c_str(), size.y, &pose );
+    auto [initialWindowPos, haveSavedWindowPos] = ImGui::loadSavedWindowPos( windowName.c_str(), size.y, &pose );
     UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( windowName.c_str(), initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, ImVec2( 0, 0 ) );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 

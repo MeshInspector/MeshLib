@@ -1,5 +1,5 @@
 #include "MRParallelProgressReporter.h"
-
+#include <cassert>
 
 namespace MR
 {

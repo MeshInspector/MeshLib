@@ -25,7 +25,7 @@
 
 #ifdef __EMSCRIPTEN__
 
-extern "C" 
+extern "C"
 {
 // 0 - dark
 // 1 - light
@@ -369,7 +369,9 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "GradBtnSecStyleActiveStart",
         "GradBtnSecStyleEnd",
         "GradBtnSecStyleHoverEnd",
-        "GradBtnSecStyleActiveEnd"
+        "GradBtnSecStyleActiveEnd",
+
+        "Grid",
     };
     return colorNames[int( type )];
 }
@@ -462,7 +464,7 @@ void ColorTheme::resetImGuiStyle()
     style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
-    
+
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         auto scaling = menu->menu_scaling();

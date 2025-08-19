@@ -605,13 +605,13 @@ void SaveWindowPosition( const char* label, ImGuiWindow* window )
     }
 }
 
-bool BeginSavedWindowPos( const std::string& name, bool* open, const ImVec2& size, const ImVec2* pos /*= 0*/, ImGuiWindowFlags flags /*= 0*/ )
+bool BeginSavedWindowPos( const std::string& name, bool* open, const SavedWindowPosParams& params )
 {
     ImGuiWindow* window = ImGui::FindWindowByName( name.c_str() );
-    auto [initialWindowPos, haveSavedWindowPos] = LoadSavedWindowPos( name.c_str(), window, size.y, pos );
+    auto [initialWindowPos, haveSavedWindowPos] = LoadSavedWindowPos( name.c_str(), window, params.size.y, params.pos );
     UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( name.c_str(), initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, ImVec2( 0, 0 ) );
-    ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
-    const bool res = Begin( name.c_str(), open, flags );
+    ImGui::SetNextWindowSize( params.size, ImGuiCond_Appearing );
+    const bool res = Begin( name.c_str(), open, params.flags );
     SaveWindowPosition( name.c_str(), window);
     return res;
 }

@@ -420,8 +420,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             prevMaxLabelWidth_ = maxLabelWidth;
         }
     }
-
-    ImGui::BeginSavedWindowPos( windowName, &isWindowOpen_, size, &pose, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
+    ImGui::BeginSavedWindowPos( windowName, &isWindowOpen_, { size, &pose, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground } );
 
     MR_FINALLY{ ImGui::End(); };
 

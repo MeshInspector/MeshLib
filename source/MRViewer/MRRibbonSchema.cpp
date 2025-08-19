@@ -244,7 +244,12 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     // clear duplicated results
     std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
     {
-        return intptr_t( a.first.item ) < intptr_t( b.first.item );
+        // tab order sorting has been added to stabilize results for similar queries (i.e. "c" / "cl" / "clo" / "clone", i6438 )
+        const auto ptrA = intptr_t( a.first.item );
+        const auto ptrB = intptr_t( b.first.item );
+        const auto& tabIndexA = a.first.tabIndex;
+        const auto& tabIndexB = b.first.tabIndex;
+        return ptrA < ptrB || ( ptrA == ptrB && tabIndexA < tabIndexB );
     } );
     rawResult.erase(
         std::unique( rawResult.begin(), rawResult.end(),

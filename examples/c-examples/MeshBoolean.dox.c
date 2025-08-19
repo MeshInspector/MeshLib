@@ -1,61 +1,53 @@
-#include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRMakeSphereMesh.h>
-#include <MRMeshC/MRVector3.h>
-#include <MRMeshC/MRAffineXf.h>
-#include <MRMeshC/MRMeshBoolean.h>
-#include <MRMeshC/MRMeshSave.h>
-#include <MRMeshC/MRString.h>
+#include <MRCMesh/MRAffineXf.h>
+#include <MRCMesh/MRMakeSphereMesh.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshBoolean.h>
+#include <MRCMesh/MRMeshSave.h>
+#include <MRCMesh/MRVector3.h>
+#include <MRCMisc/expected_void_std_string.h>
+#include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int main( int argc, char* argv[] )
+int main( void )
 {
     int rc = EXIT_FAILURE;
 
-    // error messages will be stored here
-    MRString* errorString = NULL;
+    // First, create a unit sphere.
+    float radius = 1.f; // Set radius for the test
+    int32_t horizontalResolution = 64; // Increase horizontal resolution
+    int32_t verticalResolution = 64; // Increase vertical resolution
 
-    // create first sphere with radius of 1 unit
-    MRMakeUVSphereParameters makeParams = mrMakeUvSphereParametersNew();
-    makeParams.radius = 1.f;
-    makeParams.horizontalResolution = 64;
-    makeParams.verticalResolution = 64;
-    MRMesh* sphere1 = mrMakeUVSphere( &makeParams );
+    MR_Mesh* sphere1 = MR_makeUVSphere( &radius, &horizontalResolution, &verticalResolution );
 
-    // create second sphere by cloning the first sphere and moving it in X direction
-    MRMesh* sphere2 = mrMeshCopy( sphere1 );
-    MRVector3f xfTranslation = mrVector3fDiagonal( 0.f );
-    xfTranslation.x = 0.7f;
-    MRAffineXf3f xf = mrAffineXf3fTranslation( &xfTranslation );
-    mrMeshTransform( sphere2, &xf, NULL );
+    // Create a copy of this sphere and offset it.
+    MR_Mesh* sphere2 = MR_Mesh_ConstructFromAnother( MR_PassBy_Copy, sphere1 );
+    MR_Vector3f xfTranslation = {.x = 0.7f};
+    MR_AffineXf3f xf = MR_AffineXf3f_translation( &xfTranslation );
+    MR_Mesh_transform( sphere2, &xf, NULL );
 
-    // perform the boolean operation
-    MRBooleanParameters params = mrBooleanParametersNew();
-    MRBooleanResult result = mrBoolean( sphere1, sphere2, MRBooleanOperationIntersection, &params );
-    if ( result.errorString )
+    // Perform the boolean operation.
+    MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( sphere1, sphere2, MR_BooleanOperation_Intersection, NULL );
+    if ( !MR_BooleanResult_valid( result ) )
     {
-        fprintf( stderr, "Failed to perform boolean: %s", mrStringData( result.errorString ) );
-        mrStringFree( errorString );
-        goto out;
+        fprintf( stderr, "Failed to perform boolean: %s\n", MR_std_string_Data( MR_BooleanResult_Get_errorString( result ) ) );
+        goto fail;
     }
 
-    // save result to STL file
-    MRSaveSettings saveSettings = mrSaveSettingsNew();
-    mrMeshSaveToAnySupportedFormat( result.mesh, "out_boolean.stl", &saveSettings, &errorString );
-    if ( errorString )
+    // Save result to an STL file.
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( MR_BooleanResult_Get_mesh( result ), "out_boolean.stl", NULL, NULL);
+    if ( MR_expected_void_std_string_GetError( saveEx ) )
     {
-        fprintf( stderr, "Failed to save result: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out_result;
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        goto fail;
     }
 
     rc = EXIT_SUCCESS;
-out_result:
-    mrMeshFree( result.mesh );
-out:
-    mrMeshFree( sphere2 );
-    mrMeshFree( sphere1 );
+fail:
+    MR_BooleanResult_Destroy( result );
+    MR_Mesh_Destroy( sphere2 );
+    MR_Mesh_Destroy( sphere1 );
     return rc;
 }

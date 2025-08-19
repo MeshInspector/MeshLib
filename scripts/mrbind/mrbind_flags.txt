@@ -1,5 +1,5 @@
---format=macros
 --combine-types=cv,ref,ptr,smart_ptr
+--buggy-substitute-default-template-args
 --ignore ::
 --ignore MR::detail
 --ignore MR::Signal
@@ -12,3 +12,9 @@
 --skip-base std::integral_constant
 --skip-base boost::dynamic_bitset
 --skip-base /openvdb::v[0-9][0-9_a-zA-Z]*::Grid/
+--skip-mentions-of '/MR::Signal<.*>/'
+--skip-mentions-of '/Eigen::Matrix<.*>/'
+--skip-mentions-of Json::Value
+--skip-mentions-of '/(std|tl)::expected<Json::Value, .*>/'
+--skip-mentions-of '/std::initializer_list<.*>/'
+--adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'

@@ -253,9 +253,6 @@
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
@@ -445,7 +442,7 @@
     <ClCompile Include="MRUISaveChangesPopup.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="SceneReorder.cpp">
+    <ClCompile Include="MRSceneReorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRProjectMeshAttributes.cpp">
@@ -480,6 +477,15 @@
     </ClCompile>
     <ClCompile Include="MRDragDropWasmHandler.cpp">
       <Filter>UserInputs</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderImGui.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderToImage.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVisualObjectTag.cpp">
+      <Filter>Render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -676,9 +682,6 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandler.h">
-      <Filter>SpaceMouse</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
       <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">
@@ -906,7 +909,7 @@
     <ClInclude Include="MRUISaveChangesPopup.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="SceneReorder.h">
+    <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRProjectMeshAttributes.h">
@@ -943,6 +946,9 @@
     <ClInclude Include="MRRibbonMenuUIConfig.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
+    <ClInclude Include="MRRenderImGui.h" />
+    <ClInclude Include="MRRenderToImage.h" />
+    <ClInclude Include="MRVisualObjectTag.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -115,6 +115,15 @@
     <ClCompile Include="MRCylinderApproximation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRSolidOfRevolution.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshMeshDistanceTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBitSetTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

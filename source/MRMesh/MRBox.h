@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVectorTraits.h"
@@ -41,11 +42,17 @@ public:
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
     /// skip initialization of min/max
+    #if MR_HAS_REQUIRES
+    // If the compiler supports `requires`, use that instead of `std::enable_if` here.
+    // Not (only) because it looks cooler, but because of a bug in our binding generator that makes it choke on it: https://github.com/MeshInspector/mrbind/issues/19
+    explicit Box( NoInit ) requires (VectorTraits<V>::supportNoInit) : min{ noInit }, max{ noInit } { }
+    explicit Box( NoInit ) requires (!VectorTraits<V>::supportNoInit) { }
+    #else
     template <typename VV = V, typename std::enable_if_t<VectorTraits<VV>::supportNoInit, int> = 0>
     explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
-
     template <typename VV = V, typename std::enable_if_t<!VectorTraits<VV>::supportNoInit, int> = 0>
     explicit Box( NoInit ) { }
+    #endif
 
     template <typename U>
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
@@ -65,8 +72,8 @@ public:
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
 
     /// returns the corner of this box as specified by given bool-vector:
-    /// 1 element in (c) means take min's coordinate,
-    /// 0 element in (c) means take max's coordinate
+    /// 0 element in (c) means take min's coordinate,
+    /// 1 element in (c) means take max's coordinate
     V corner( const Vb& c ) const
     {
         V res;
@@ -391,7 +398,7 @@ namespace std
 template<size_t I, typename V>
 struct tuple_element<I, MR::Box<V>> { using type = V; };
 
-template <typename V> 
+template <typename V>
 struct tuple_size<MR::Box<V>> : integral_constant<size_t, 2> {};
 
 } //namespace std

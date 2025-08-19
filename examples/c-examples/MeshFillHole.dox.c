@@ -1,96 +1,101 @@
-#include <MRMeshC/MRBitSet.h>
-#include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRMeshFillHole.h>
-#include <MRMeshC/MRMeshLoad.h>
-#include <MRMeshC/MRMeshSave.h>
-#include <MRMeshC/MRMeshTopology.h>
-#include <MRMeshC/MRString.h>
+#include <MRCMesh/MRBitSet.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshFillHole.h>
+#include <MRCMesh/MRMeshLoad.h>
+#include <MRCMesh/MRMeshMetrics.h>
+#include <MRCMesh/MRMeshSave.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRString.h>
+#include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
+#include <MRCMisc/std_string.h>
+#include <MRCMisc/std_vector_MR_EdgeId.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MIN_HOLE_AREA 100.f
-
 int main( int argc, char* argv[] )
 {
-    int rc = EXIT_FAILURE;
     if ( argc != 2 && argc != 3 )
     {
         fprintf( stderr, "Usage: %s INPUT [OUTPUT]", argv[0] );
-        goto out;
+        return EXIT_FAILURE;
     }
 
     const char* input = argv[1];
     const char* output = ( argc == 2 ) ? argv[1] : argv[2];
 
-    // error messages will be stored here
-    MRString* errorString = NULL;
+    int rc = EXIT_FAILURE;
 
-    MRMesh* mesh = mrMeshLoadFromAnySupportedFormat( input, &errorString );
-    if ( errorString )
+
+    // Load mesh.
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( input, NULL, NULL );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_GetMutableValue( meshEx );
+
+    // Handle failure to load mesh.
+    if ( !mesh )
     {
-        fprintf( stderr, "Failed to load mesh: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out;
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_Data( MR_expected_MR_Mesh_std_string_GetError( meshEx ) ) );
+        goto fail_mesh_loading;
     }
 
-    // get list of existing holes; each hole is represented by a single edge lying on the hole's border
-    MREdgePath* holes = mrMeshFindHoleRepresentiveEdges( mesh );
-    if ( holes->size == 0 )
+
+    // Get the list of the existing holes; each hole is represented by a single edge from the hole's border.
+    MR_std_vector_MR_EdgeId* holes = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
+    if ( MR_std_vector_MR_EdgeId_IsEmpty( holes ) )
     {
         printf( "Mesh doesn't have any holes" );
-        goto out_holes;
+        goto fail_no_holes;
     }
 
-    // you can set various parameters for the fill hole process; see the documentation for more info
-    MRFillHoleParams params = mrFillHoleParamsNew();
-    // think of a metric as a method to fill holes in a preferred way
-    // you can define one or choose from one of predefined metrics from MRMeshMetrics.h
-    MRFillHoleMetric* metric = mrGetUniversalMetric( mesh );
-    params.metric = metric;
-    // optionally get the bitset of created faces
-    MRFaceBitSet* newFaces = mrFaceBitSetNew( 0, false );
-    params.outNewFaces = newFaces;
+    // You can set various parameters for the hole filling process; see the documentation for more info.
+    MR_FillHoleParams* params = MR_FillHoleParams_DefaultConstruct();
+    // The metric controls how exactly the hole is filled.
+    // You can make a custom one, or choose from the predefined metrics defined in `<MRCMesh/MRMeshMetrics.h>`.
+    MR_FillHoleMetric* metric = MR_getUniversalMetric( mesh );
+    MR_FillHoleParams_Set_metric( params, MR_PassBy_Move, metric );
+    MR_FillHoleMetric_Destroy( metric ); // `MR_PassBy_Move` is not destructive, the object still needs to be destroyed manually.
+    // Optionally, receive the bitset of the created faces.
+    MR_FaceBitSet* newFaces = MR_FaceBitSet_DefaultConstruct();
+    MR_FillHoleParams_Set_outNewFaces( params, newFaces );
 
-    // you can either fill all holes at once or one by one
-    // in the second case don't forget to check the output fields of params (e.g. outNewFaces) after every iteration
+    // You can either fill all holes at once, or one by one.
+    // In the latter case, don't forget to check the output fields of the parameters (e.g. `outNewFaces`) after every iteration.
     size_t newFaceCount = 0;
 #define FILL_ALL_HOLES 1
 #if FILL_ALL_HOLES
-    mrFillHoles( mesh, holes->data, holes->size, &params );
-    newFaceCount = mrBitSetCount( (const MRBitSet*)newFaces );
+    MR_fillHoles( mesh, holes, params );
+    newFaceCount = MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) );
 #else
-    for ( int i = 0; i < mrEdgePathSize( holes ); i++ )
+    const float minHoleArea = 100.f; // An arbitrary size threshold for holes, just as a demonstration.
+    for ( size_t i = 0; i < MR_std_vector_MR_EdgeId_Size( holes ); i++ )
     {
-        MREdgeId e = mrEdgePathData( holes )[i];
-        MRVector3f holeDirArea = mrMeshHoleDirArea( mesh, e );
-        if ( mrVector3Length( &holeDirArea ) >= MIN_HOLE_AREA )
+        MR_EdgeId e = *MR_std_vector_MR_EdgeId_At( holes, i );
+        MR_Vector3d holeDirArea = MR_Mesh_holeDirArea( mesh, e );
+        if ( MR_Vector3d_lengthSq( &holeDirArea ) >= minHoleArea*minHoleArea )
         {
-            mrFillHole( mesh, e, &params );
-            newFaceCount += mrBitSetCount( newFaces );
+            MR_fillHole( mesh, e, params );
+            newFaceCount += MR_BitSet_count( MR_FaceBitSet_UpcastTo_MR_BitSet( newFaces ) );
         }
     }
 #endif
 
-    printf( "Added new %zu faces", newFaceCount );
-    MRSaveSettings saveSettings = mrSaveSettingsNew();
-    mrMeshSaveToAnySupportedFormat( mesh, output, &saveSettings, &errorString);
-    if ( errorString )
+    printf( "Added %zu new faces\n", newFaceCount );
+
+    // Save result
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, output, NULL, NULL);
+    if ( MR_expected_void_std_string_GetError( saveEx ) )
     {
-        fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out_newFaces;
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_Data( MR_expected_void_std_string_GetError( saveEx ) ) );
+        goto fail_save;
     }
 
     rc = EXIT_SUCCESS;
-out_newFaces:
-    mrFaceBitSetFree( newFaces );
-out_metric:
-    mrFillHoleMetricFree( metric );
-out_holes:
-    mrEdgePathFree( holes );
-out_mesh:
-    mrMeshFree( mesh );
-out:
+fail_save:
+    MR_FaceBitSet_Destroy( newFaces );
+fail_no_holes:
+    MR_std_vector_MR_EdgeId_Destroy( holes );
+fail_mesh_loading:
+    MR_expected_MR_Mesh_std_string_Destroy( meshEx );
     return rc;
 }

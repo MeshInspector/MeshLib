@@ -22,7 +22,8 @@ namespace MR
  * \{
  */
 
-/// container of bits
+/// std::vector<bool> like container  (random-access, size_t - index type, bool - value type)
+/// with all bits after size() considered off during testing
 class BitSet : public boost::dynamic_bitset<std::uint64_t>
 {
 public:
@@ -43,7 +44,8 @@ public:
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
 
     BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    BitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    BitSet & set( IndexType n ) { base::set( n ); return * this; }
     BitSet & set() { base::set(); return * this; }
     BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
     BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
@@ -68,6 +70,12 @@ public:
 
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
     [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    [[nodiscard]] MRMESH_API bool is_subset_of( const BitSet& a ) const;
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
+    bool is_proper_subset_of( const BitSet& a ) const = delete; // base implementation does not support bitsets of different sizes
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
@@ -111,7 +119,7 @@ public:
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 
     // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
-    #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+    #if defined(MR_PARSING_FOR_ANY_BINDINGS) || defined(MR_COMPILING_ANY_BINDINGS)
     std::size_t size() const { return dynamic_bitset::size(); }
     std::size_t count() const { return dynamic_bitset::count(); }
     void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }
@@ -126,7 +134,8 @@ private:
     using base::m_num_bits;
 };
 
-/// container of bits representing specific indices (faces, verts or edges)
+/// Vector<bool, I> like container (random-access, I - index type, bool - value type)
+/// with all bits after size() considered off during testing
 template <typename I>
 class TypedBitSet : public BitSet
 {
@@ -142,7 +151,8 @@ public:
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
     TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    TypedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
@@ -177,13 +187,10 @@ public:
     TypedBitSet & subtract( const TypedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
     /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
-
-    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
-    bool is_proper_subset_of( const TypedBitSet& a ) const { return base::is_proper_subset_of( a ); }
+    [[nodiscard]] bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
 
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
+    [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
@@ -290,18 +297,12 @@ public:
     [[nodiscard]] const T * bitset() const { return bitset_; }
     [[nodiscard]] reference operator *() const { return index_; }
 
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+
 private:
     const T * bitset_ = nullptr;
     IndexType index_ = IndexType( ~size_t( 0 ) );
 };
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a == *b; }
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a != *b; }
 
 
 [[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )

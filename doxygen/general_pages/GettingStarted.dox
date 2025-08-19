@@ -2,8 +2,8 @@
 
 \page InstallationGuide Getting Started with MeshLib SDK
 
-MeshLib is a powerful, open-source 3D geometry library designed for developers across multiple platforms and programming languages. 
-Whether you're working in C++, Python, or C#, MeshLib offers robust tools for creating, manipulating, and analyzing 3D data, e.g. meshes, voxels, point clouds. 
+MeshLib is a powerful, open-source 3D geometry library designed for developers across multiple platforms and programming languages.
+Whether you're working in C++, Python, C#, or C, MeshLib offers robust tools for creating, manipulating, and analyzing 3D data, e.g. meshes, voxels, point clouds.
 This guide will help you get started with setting up MeshLib for your preferred development environment.
 
 ## Choose Your Setup Guide
@@ -12,16 +12,19 @@ This guide will help you get started with setting up MeshLib for your preferred 
 \n Follow this guide to set up MeshLib for Python on Windows, macOS, and Linux. It includes details on supported Python versions, installation via pip, and usage examples.
 
 2. \ref MeshLibCppSetupGuide "\b MeshLib \b C++ \b Setup \b Guide"
-\n Learn how to install and configure MeshLib for C++ development on Windows, Linux, and macOS. 
+\n Learn how to install and configure MeshLib for C++ development on Windows, Linux, and macOS.
 This guide covers prerequisites, dependency management, and building the library from source.
 
 3. \ref MeshLibCSharpSetupGuide "\b MeshLib \b C# \b Setup \b Guide"
-\n This guide provides instructions for integrating MeshLib into C# projects using NuGet or manual distribution. 
+\n This guide provides instructions for integrating MeshLib into C# projects using NuGet or manual distribution.
 It covers installation on Windows, macOS, and Linux, with detailed steps for Visual Studio users.
 
-4. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
-\n Simple way of integrating MeshLib to your project via CMake. 
+4. \ref MeshLibCSetupGuide "\b MeshLib \b C \b Setup \b Guide"
+\n Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
 
-Each of these setup guides is tailored to help you quickly and efficiently integrate MeshLib into your development environment. 
+5. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
+\n Simple way of integrating MeshLib to your project via CMake.
+
+Each of these setup guides is tailored to help you quickly and efficiently integrate MeshLib into your development environment.
 Choose the guide that matches your preferred language and platform, and start building sophisticated 3D applications with MeshLib.
 */

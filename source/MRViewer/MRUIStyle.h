@@ -74,8 +74,6 @@ struct ButtonIconCustomizationParams
     // basic customization parameters
     ButtonCustomizationParams baseParams;
 
-    // button without a gradient, always active, configurable by an external style
-    bool flatBackgroundColor = false;
     // if false - text is to the right
     bool textUnderImage = true;
 };
@@ -143,14 +141,7 @@ MRVIEWER_API bool buttonIconEx(
     const std::string& text,
     const ImVec2& buttonSize,
     const ButtonIconCustomizationParams& params = {} );
-// button with a gradient and the ability to make it inactive
-inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
-{
-    ButtonIconCustomizationParams params;
-    params.baseParams.enabled = active;
-    params.flatBackgroundColor = true;
-    return buttonIconEx(name, iconSize, text, buttonSize, params );
-}
+
 // button with a gradient, always active
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
@@ -166,7 +157,7 @@ inline bool buttonIconFlatBG(
     ImGuiKey key = ImGuiKey_None )
 {
     ButtonIconCustomizationParams params;
-    params.flatBackgroundColor = true;
+    params.baseParams.forceImGuiBackground = true;
     params.baseParams.forceImguiTextColor = true;
     params.textUnderImage = textUnderIcon;
     params.baseParams.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( text.c_str(), 1 );
@@ -411,6 +402,32 @@ MRVIEWER_API void notificationFrame( NotificationType type, const std::string& s
 
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
+
+/// Parameters for drawing custom separator
+struct SeparatorParams
+{
+    /// optional icon in the left part of separator
+    const ImGuiImage* icon{ nullptr };
+
+    /// size of icon
+    Vector2f iconSize; ///< scaling is applied inside `separator` function
+
+    /// label at the left part of separator (drawn after icon if present)
+    std::string label;
+
+    /// framed text after label (might be used for some indications)
+    std::string suffix;
+
+    /// color of background frame behind suffix (if not present default ImGuiCol_FrameBg is used)
+    std::optional<Color> suffixFrameColor;
+
+    /// if set - use default spacing from ImGui::GetStyle()
+    /// otherwise overrides it with ribbon constants
+    bool forceImGuiSpacing = false;
+};
+
+/// separator line with customizations
+MRVIEWER_API void separator( float scaling, const SeparatorParams& params );
 
 /// add text with separator line
 /// if issueCount is greater than zero, this number will be displayed in red color after the text.

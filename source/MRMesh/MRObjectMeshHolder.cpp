@@ -602,7 +602,7 @@ size_t ObjectMeshHolder::numSelectedFaces() const
         numSelectedFaces_ = data_.selectedFaces.count();
 #ifndef NDEBUG
         // check that there are no selected invalid faces
-        assert( !data_.mesh || !( data_.selectedFaces - data_.mesh->topology.getValidFaces() ).any() );
+        assert( !data_.mesh || data_.selectedFaces.is_subset_of( data_.mesh->topology.getValidFaces() ) );
 #endif
     }
 
@@ -616,7 +616,7 @@ size_t ObjectMeshHolder::numSelectedEdges() const
         numSelectedEdges_ = data_.selectedEdges.count();
 #ifndef NDEBUG
         // check that there are no selected invalid edges
-        assert( !data_.mesh || !( data_.selectedEdges - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || data_.selectedEdges.is_subset_of( data_.mesh->topology.findNotLoneUndirectedEdges() ) );
 #endif
     }
 
@@ -630,7 +630,7 @@ size_t ObjectMeshHolder::numCreaseEdges() const
         numCreaseEdges_ = data_.creases.count();
 #ifndef NDEBUG
         // check that there are no invalid edges among creases
-        assert( !data_.mesh || !( data_.creases - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || data_.creases.is_subset_of( data_.mesh->topology.findNotLoneUndirectedEdges() ) );
 #endif
     }
 
@@ -691,6 +691,18 @@ void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
         return;
     }
     serializeFormat_ = newFormat;
+}
+
+void ObjectMeshHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void ObjectMeshHolder::resetColors()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const

@@ -176,6 +176,7 @@ jobs:
         run: |
           tar -xvzf MREDist_Release.zip
           tar -xvzf MREDist_Debug.zip
+          tar -xvzf MeshLibC2Headers.zip
 
       - name: Make Install Folder
         run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
@@ -446,4 +447,10 @@ jobs:
         uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
         with:
           name: PythonStubs
+          failOnError: false
+
+      - name: Delete C bindings headers
+        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        with:
+          name: CBindings
           failOnError: false

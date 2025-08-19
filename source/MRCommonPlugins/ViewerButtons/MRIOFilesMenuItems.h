@@ -81,6 +81,7 @@ public:
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
 
 protected:
+    void saveSceneAs_();
     void saveScene_( const std::filesystem::path& savePath );
 };
 

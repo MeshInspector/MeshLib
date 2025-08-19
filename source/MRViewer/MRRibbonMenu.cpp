@@ -106,6 +106,7 @@ void RibbonMenu::setCustomContextCheckbox(
 
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
+    MR_TIMER;
     ImGuiMenu::init( _viewer );
     // should init instance before load schema (as far as some font are used inside)
     fontManager_.initFontManagerInstance( &fontManager_ );
@@ -559,9 +560,16 @@ void RibbonMenu::drawHeaderPannel_()
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
     }
 
-    auto backupPos = ImGui::GetCursorPos();
-    auto availWidth = drawHeaderHelpers_( summaryTabPannelSize, menuScaling );
-    ImGui::SetCursorPos( backupPos );
+    float availWidth = 0.0f;
+    {
+        auto backupPos = ImGui::GetCursorPos();
+        ImGui::PopStyleVar( 2 ); // draw helpers with default style
+        availWidth = drawHeaderHelpers_( summaryTabPannelSize, menuScaling );
+        // push header panel style back
+        ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding * menuScaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
+        ImGui::SetCursorPos( backupPos );
+    }
 
     float scrollMax = summaryTabPannelSize - availWidth;
     bool needScroll = scrollMax > 0.0f;
@@ -724,7 +732,7 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize, float menuScaling )
     drawSearchButton_();
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 70.0f * menuScaling, cTabYOffset * menuScaling ) );
-    drawHelpButton_( "https://meshinspector.com/help/en/" );
+    drawHelpButton_( "https://meshinspector.com/inapphelp/" );
 
     ImGui::SetCursorPos( ImVec2( float( getViewerInstance().framebufferSize.x ) - 30.0f * menuScaling, cTabYOffset * menuScaling ) );
     drawCollapseButton_();
@@ -918,7 +926,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         return someChanges;
 
     Object* parentObj = selected[0]->parent();
-    bool canGroup = parentObj != nullptr && selected.size() >= 2;
+    bool canGroup = parentObj && selected.size() >= 2;
     for ( int i = 1; canGroup && i < selected.size(); ++i )
     {
         if ( selected[i]->parent() != parentObj )
@@ -935,15 +943,13 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         SCOPED_HISTORY( "Group" );
         AppendHistory<ChangeSceneAction>( "Add object", group, ChangeSceneAction::Type::AddObject );
         parentObj->addChild( group );
-        group->select( true );
         for ( int i = 0; i < selected.size(); ++i )
         {
             // for now do it by one object
             AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::RemoveObject );
             selected[i]->detachFromParent();
-            AppendHistory<ChangeSceneAction>( "Remove object", selected[i], ChangeSceneAction::Type::AddObject );
+            AppendHistory<ChangeSceneAction>( "Add object", selected[i], ChangeSceneAction::Type::AddObject );
             group->addChild( selected[i] );
-            selected[i]->select( false );
         }
     }
 
@@ -960,7 +966,7 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
             }
         }
     }
-    canUngroup = std::all_of( selected.begin(), selected.end(),
+    canUngroup = parentObj && std::all_of( selected.begin(), selected.end(),
         []( const std::shared_ptr<Object>& selObj ) { return !selObj->children().empty(); } );
     if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
@@ -968,26 +974,17 @@ bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Objec
         SCOPED_HISTORY( "Ungroup" );
         for ( const auto& selObj : selected )
         {
-            selObj->select( false );
-            SceneReorder task
-            {
-                .to = parentObj
-            };
-            for ( const auto& child : selObj->children() )
-            {
-                if ( child->isAncillary() )
-                    continue;
-                task.who.push_back( child.get() );
-                child->select( true );
-            }
-            [[maybe_unused]] bool reorderDone = sceneReorderWithUndo( task );
+            bool reorderDone = moveAllChildrenWithUndo( *selObj, *parentObj );
             assert( reorderDone );
-            // remove group folder (now empty)
-            auto ptr = std::dynamic_pointer_cast< VisualObject >( selObj );
-            if ( !ptr && selObj->children().empty() )
+            if ( reorderDone )
             {
-                AppendHistory<ChangeSceneAction>( "Remove object", selObj, ChangeSceneAction::Type::RemoveObject );
-                selObj->detachFromParent();
+                // remove group folder (now empty)
+                auto ptr = std::dynamic_pointer_cast< VisualObject >( selObj );
+                if ( !ptr && selObj->children().empty() )
+                {
+                    AppendHistory<ChangeSceneAction>( "Remove object", selObj, ChangeSceneAction::Type::RemoveObject );
+                    selObj->detachFromParent();
+                }
             }
         }
     }
@@ -1161,10 +1158,10 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( !needToMerge )
         return false;
 
-    if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
+    if ( !UI::button( "Combine Subtree", Vector2f( -1, 0 ) ) )
         return false;
 
-    SCOPED_HISTORY( "Merge" );
+    SCOPED_HISTORY( "Combine Subtree" );
     for ( auto& subtree : subtrees )
         mergeSubtree( std::move( subtree ) );
 
@@ -1578,6 +1575,7 @@ void RibbonMenu::drawSceneListButtons_()
 
 void RibbonMenu::readMenuItemsStructure_()
 {
+    MR_TIMER;
     RibbonSchemaLoader loader;
     loader.loadSchema();
     toolbar_->resetItemsList();

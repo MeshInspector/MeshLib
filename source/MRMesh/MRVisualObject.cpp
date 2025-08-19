@@ -412,6 +412,23 @@ std::vector<std::string> VisualObject::getInfoLines() const
     return res;
 }
 
+void VisualObject::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void VisualObject::resetColors()
+{
+    resetFrontColor();
+
+    setBackColor( SceneColors::get( SceneColors::BackFaces ) );
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+    setLabelsColor( SceneColors::get( SceneColors::Labels ) );
+MR_SUPPRESS_WARNING_POP
+}
+
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const
 {
     auto bbox = getBoundingBox();

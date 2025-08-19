@@ -38,7 +38,7 @@ public:
     SpaceMouseHandlerHidapi();
     ~SpaceMouseHandlerHidapi() override;
 
-    bool initialize() override;
+    bool initialize( std::function<void(const std::string&)> deviceSignal ) override;
     void handle() override;
 
     // set state of zoom by mouse scroll (to fix scroll signal from SpaceMouse driver)
@@ -61,10 +61,11 @@ private:
     void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action );
 
     bool findAndAttachDevice_( bool verbose );
-    void printDevices_( struct hid_device_info* cur_dev );
 
 private:
+    std::function<void(const std::string&)> deviceSignal_;
     hid_device* device_ = nullptr;
+    bool anyAction_ = false;
     const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_ = nullptr;
     std::bitset<SMB_BUTTON_COUNT> buttonsState_;
     std::thread listenerThread_;
@@ -100,6 +101,7 @@ private:
                         0xc633,    // SpaceMouse enterprise
                         0xc635,    // SpaceMouse compact
                         0xc638,    // SpaceMouse Pro Wireless Bluetooth Edition (USB cable)
+                        0xc63a,    // SpaceMouse Wireless BT
                         0xc652,    // Universal receiver
                         0xc658     // Wireless (3DConnexion Universal Wireless Receiver in WIN32)
             }}

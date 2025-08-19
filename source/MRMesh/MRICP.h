@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRICPEnums.h"
 #include "MRMeshOrPoints.h"
 #include "MRMatrix3.h"
@@ -210,7 +211,7 @@ public:
     /// select pairs with origin samples on both objects
     void samplePoints( float samplingVoxelSize ) { sampleFltPoints( samplingVoxelSize ); sampleRefPoints( samplingVoxelSize ); }
 
-    [[deprecated]] void recomputeBitSet( float fltSamplingVoxelSize ) { sampleFltPoints( fltSamplingVoxelSize ); }
+    [[deprecated]] MR_BIND_IGNORE void recomputeBitSet( float fltSamplingVoxelSize ) { sampleFltPoints( fltSamplingVoxelSize ); }
 
     /// sets to-world transformations both for floating and reference objects
     MRMESH_API void setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf );

@@ -11,8 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAlignContoursToMesh.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
@@ -21,7 +23,6 @@
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
-    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBall.h" />
     <ClInclude Include="MRBezier.h" />
     <ClInclude Include="MRChangeMeshDataAction.h" />
@@ -128,7 +129,6 @@
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRGTest.h" />
-    <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
@@ -168,6 +168,7 @@
     <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRClosestWeightedPoint.h" />
+    <ClInclude Include="MRPointCloudPart.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
@@ -351,7 +352,6 @@
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertCoordsDiff.h" />
-    <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
@@ -429,12 +429,15 @@
     <ClInclude Include="MROffsetVerts.h" />
     <ClInclude Include="MREndMill.h" />
     <ClInclude Include="MRSolidOfRevolution.h" />
+    <ClInclude Include="MRObjectTagEventDispatcher.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAlignContoursToMesh.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
     <ClCompile Include="MRDirMaxBruteForce.cpp" />
     <ClCompile Include="MREdgeLengthMesh.cpp" />
     <ClCompile Include="MREnums.cpp" />
+    <ClCompile Include="MRImageTransform.cpp" />
     <ClCompile Include="MRMeshMath.cpp" />
     <ClCompile Include="MRMeshOrPointsObject.cpp" />
     <ClCompile Include="MRMeshDoubleLayer.cpp" />
@@ -453,7 +456,6 @@
     <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
-    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
     <ClCompile Include="MRBestFitParabola.cpp" />
@@ -658,7 +660,6 @@
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRVertCoordsDiff.cpp" />
-    <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
     <ClCompile Include="MRObjectLines.cpp" />
@@ -716,6 +717,7 @@
     <ClCompile Include="MREndMill.cpp" />
     <ClCompile Include="MRCylinderApproximator.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
+    <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

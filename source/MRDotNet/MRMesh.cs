@@ -76,6 +76,16 @@ namespace MR
             public MRSphereParams() { }
         };
 
+        /// parameters for \ref mrMakeUVSphere
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRUVSphereParams
+        {
+            public float radius = 1.0f;
+            public int horizontalResolution = 16;
+            public int verticalResolution = 16;
+            public MRUVSphereParams() { }
+        };
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRTriangulation
         {
@@ -138,6 +148,19 @@ namespace MR
             /// squared distance from pt to proj
             public float distSq = 0.0f;
             public MRMeshProjectionResult() { }
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRMeshMeshDistanceResult
+        {
+            /// two closest points: from meshes A and B respectively
+            public MRPointOnFace a = new MRPointOnFace();
+            public MRPointOnFace b = new MRPointOnFace();
+
+            /// squared distance between a and b
+            public float distSq = 0.0f;
+
+            public MRMeshMeshDistanceResult() { }
         };
 
         /// optional parameters for \ref mrFindProjection
@@ -318,6 +341,10 @@ namespace MR
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern IntPtr mrMakeSphere(ref MRSphereParams parameters);
 
+            /// creates a mesh of sphere with regular triangulation (parallels and meridians)
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern IntPtr mrMakeUVSphere(ref MRUVSphereParams parameters);
+
             /// passes through all valid vertices and finds the minimal bounding box containing all of them;
             /// if toWorld transformation is given then returns minimal bounding box in world space
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -348,6 +375,10 @@ namespace MR
             /// computes the closest point on mesh (or its region) to given point
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
             private static extern MRMeshProjectionResult mrFindProjection(ref MRVector3f pt, ref MRMeshPart mp, ref MRFindProjectionParameters parameters);
+
+            /// computes minimal distance between two meshes or two mesh regions
+            [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
+            private static extern MRMeshMeshDistanceResult mrFindDistance(ref MRMeshPart a, ref MRMeshPart b, IntPtr rigidB2A, float upDistLimitSq);
 
             /// converts face id and 3d point into barycentric representation
             [DllImport("MRMeshC", CharSet = CharSet.Ansi)]
@@ -793,6 +824,17 @@ namespace MR
                 mrSphereParams.numMeshVertices = vertexCount;
                 return new Mesh(mrMakeSphere(ref mrSphereParams));
             }
+
+            /// creates a sphere of given radius and the number of parallels and meridians
+            public static Mesh MakeUVSphere(float radius, int horizontalResolution, int verticalResolution)
+            {
+                MRUVSphereParams mrUVSphereParams = new MRUVSphereParams();
+                mrUVSphereParams.radius = radius;
+                mrUVSphereParams.horizontalResolution = horizontalResolution;
+                mrUVSphereParams.verticalResolution = verticalResolution;
+                return new Mesh(mrMakeUVSphere(ref mrUVSphereParams));
+            }
+
             /// creates a torus with given parameters
             public static Mesh MakeTorus(float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution)
             {
@@ -843,6 +885,30 @@ namespace MR
             }
             #endregion
 
+            /**
+             * \brief computes minimal distance between two meshes or two mesh regions
+             * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+             * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
+             */
+            static public MeshMeshDistanceResult FindDistance(MeshPart a, MeshPart b, AffineXf3f? rigidB2A = null, float upDistLimitSq = float.MaxValue)
+            {
+                IntPtr xf = rigidB2A is not null ? rigidB2A.XfAddr() : (IntPtr)null;
+                var mrRes = mrFindDistance(ref a.mrMeshPart, ref b.mrMeshPart, xf, upDistLimitSq);
+
+                MeshMeshDistanceResult result = new MeshMeshDistanceResult();
+
+                result.a = new PointOnFace();
+                result.a.point = new Vector3f(mrRes.a.point);
+                result.a.faceId.Id = mrRes.a.face.Id;
+
+                result.b = new PointOnFace();
+                result.b.point = new Vector3f(mrRes.b.point);
+                result.b.faceId.Id = mrRes.b.face.Id;
+
+                result.distanceSquared = mrRes.distSq;
+
+                return result;
+            }
 
             #region Private fields
 
@@ -914,6 +980,12 @@ namespace MR
         {
             public PointOnFace pointOnFace;
             public MeshTriPoint meshTriPoint;
+            public float distanceSquared;
+        };
+
+        public struct MeshMeshDistanceResult
+        {
+            public PointOnFace a, b;
             public float distanceSquared;
         };
 

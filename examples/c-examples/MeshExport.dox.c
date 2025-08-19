@@ -1,49 +1,47 @@
-#include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRVector3.h>
-#include <MRMeshC/MRCube.h>
-#include <MRMeshC/MRMeshTopology.h>
-#include <MRMeshC/MRString.h>
+#include <MRCMesh/MRCube.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRString.h>
+#include <MRCMesh/MRVector.h>
+#include <MRCMesh/MRVector3.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int main( int argc, char* argv[] )
+int main( void )
 {
-    // error messages will be stored here
-    MRString* errorString = NULL;
+    const MR_Vector3f size = MR_Vector3f_diagonal( 1.f );
+    const MR_Vector3f base = MR_Vector3f_diagonal( -0.5f );
 
-    // Create mesh
-    MRVector3f size = mrVector3fDiagonal( 1.f );
-    MRVector3f base = mrVector3fDiagonal( -0.5f );
-    MRMesh* mesh = mrMakeCube( &size, &base );
+    MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     // extract vertices
-    const MRVector3f* vertices = mrMeshPoints( mesh );
-    size_t verticesNum = mrMeshPointsNum( mesh );
+    const MR_Vector3f* vertices = MR_VertCoords_data_const( MR_Mesh_Get_points( mesh ) );
+    size_t verticesNum = MR_VertCoords_size( MR_Mesh_Get_points( mesh ) );
     // you can access coordinates via struct fields...
-    printf( "Vertices coordinates:\n" );
+    printf( "Vertex coordinates:\n" );
     for ( size_t i = 0; i < verticesNum; ++i )
-        printf( "Vertex %d coordinates: %f; %f; %f\n", (int)i, vertices[i].x, vertices[i].y, vertices[i].z );
+        printf( "  vertex %d:  % f; % f; % f\n", (int)i, vertices[i].x, vertices[i].y, vertices[i].z );
     // ...or cast them to a row-major float array
     float* vertexData = malloc( sizeof( float ) * 3 * verticesNum );
-    memcpy( vertexData, vertices, sizeof( MRVector3f ) * verticesNum );
+    memcpy( vertexData, vertices, sizeof( MR_Vector3f ) * verticesNum );
 
     // extract faces
-    MRTriangulation* t = mrMeshGetTriangulation( mesh );
-    const MRThreeVertIds* faces = t->data;
-    size_t facesNum = t->size;
+    MR_Triangulation* t = MR_MeshTopology_getTriangulation( MR_Mesh_Get_topology( mesh ) );
+    const MR_std_array_MR_VertId_3 *faces = MR_Triangulation_data_const( t );
+    size_t facesNum = MR_Triangulation_size( t );
     // faces are stored as vertex id triples...
-    printf( "Face's vertex ids:\n" );
+    printf( "Face vertex IDs:\n" );
     for ( size_t i = 0; i < verticesNum; ++i )
-        printf( "Face %d vertex ids: %d, %d, %d\n", (int)i, faces[i][0].id, faces[i][1].id, faces[i][2].id );
+        printf( "  face %d:  %d, %d, %d\n", (int)i, faces[i].elems[0].id_, faces[i].elems[1].id_, faces[i].elems[2].id_ );
     // ...and can also be cast to an integer array
     int* faceData = malloc( sizeof( int ) * 3 * facesNum );
-    memcpy( faceData, faces, sizeof( MRThreeVertIds ) * facesNum );
+    memcpy( faceData, faces, sizeof( MR_std_array_MR_VertId_3 ) * facesNum );
 
-    mrMeshFree( mesh );
+    MR_Triangulation_Destroy( t );
+    MR_Mesh_Destroy( mesh );
     free( vertexData );
-    mrTriangulationFree( t );
     free( faceData );
     return EXIT_SUCCESS;
 }

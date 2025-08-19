@@ -1,6 +1,9 @@
 #pragma once
+
+#include "MRPch/MRBindingMacros.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
+#include "MRPointCloudPart.h"
 
 namespace MR
 {
@@ -33,6 +36,9 @@ public:
 
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
+
+    /// \return the pair ( point cloud, selected points ) if any point is selected or full point cloud otherwise
+    [[nodiscard]] PointCloudPart pointCloudPart() const { return selectedPoints_.any() ? PointCloudPart{ *points_, &selectedPoints_ } : PointCloudPart{ *points_ }; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -127,12 +133,17 @@ public:
 
     /// returns overriden file extension used to serialize point cloud inside this object, nullptr means defaultSerializePointsFormat()
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
-    [[deprecated]] const char * savePointsFormat() const { return serializeFormat(); }
+    [[deprecated]] MR_BIND_IGNORE const char * savePointsFormat() const { return serializeFormat(); }
 
     /// overrides file extension used to serialize point cloud inside this object: must start from '.',
     /// nullptr means serialize in defaultSerializePointsFormat()
     MRMESH_API void setSerializeFormat( const char * newFormat );
-    [[deprecated]] void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
+    [[deprecated]] MR_BIND_IGNORE void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
+
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
+    /// reset all object colors to their default values from the current theme
+    MRMESH_API void resetColors() override;
 
     /// signal about points selection changing, triggered in selectPoints
     using SelectionChangedSignal = Signal<void()>;

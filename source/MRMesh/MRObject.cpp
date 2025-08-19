@@ -1,5 +1,6 @@
 #include "MRObject.h"
 #include "MRObjectFactory.h"
+#include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
@@ -435,6 +436,11 @@ void Object::serializeFields_( Json::Value& root ) const
 
     // Type
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
+
+    // tags
+    auto& tagsJson = root["Tags"] = Json::arrayValue;
+    for ( const auto& tag : tags_ )
+        tagsJson.append( tag );
 }
 
 Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
@@ -463,6 +469,10 @@ void Object::deserializeFields_( const Json::Value& root )
         locked_ = root["Locked"].asBool();
     if ( const auto& json = root["ParentLocked"]; json.isBool() )
         parentLocked_ = json.asBool();
+    if ( const auto& tagsJson = root["Tags"]; tagsJson.isArray() )
+        for ( const auto& tagJson : tagsJson )
+            if ( tagJson.isString() )
+                tags_.emplace( tagJson.asString() );
 }
 
 void Object::sendWorldXfChangedSignal_()
@@ -520,6 +530,9 @@ std::vector<std::string> Object::getInfoLines() const
 
     res.push_back( "type: " + getClassName() );
     res.push_back( "mem: " + bytesString( heapBytes() ) );
+    res.push_back( fmt::format( "tags: {}", tags_.size() ) );
+    for ( const auto& tag : tags_ )
+        res.push_back( fmt::format( "· {}", tag ) );
     return res;
 }
 
@@ -651,6 +664,22 @@ Box3f Object::getWorldTreeBox( ViewportId id ) const
         if ( c && !c->isAncillary() && c->isVisible( id ) )
             res.include( c->getWorldTreeBox( id ) );
     return res;
+}
+
+bool Object::addTag( std::string tag )
+{
+    const auto [it, inserted] = tags_.emplace( std::move( tag ) );
+    if ( inserted )
+        ObjectTagEventDispatcher::instance().tagAddedSignal( this, *it );
+    return inserted;
+}
+
+bool Object::removeTag( const std::string& tag )
+{
+    const auto present = bool( tags_.erase( tag ) );
+    if ( present )
+        ObjectTagEventDispatcher::instance().tagRemovedSignal( this, tag );
+    return present;
 }
 
 size_t Object::heapBytes() const

@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 import sys
+import re
 
 import install_tools as it
 
@@ -39,7 +40,8 @@ def prepare_includes_list():
 	it.includes_src_dst.clear()
 	it.includes_src_dst_thirdparty.clear()
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True)
-	it.append_includes_list(it.path_to_sources)
+	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile('x64(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?')])
+	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
 	it.append_includes_list(path_to_phmap, True,'parallel_hashmap')
 	it.append_includes_list(path_to_pybind11, True)
 	it.append_includes_list(path_to_imgui, True)

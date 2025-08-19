@@ -376,7 +376,9 @@ ConvertToIntVector getToIntConverter( const Box3d& box )
     return [invRange, center] ( const Vector3f& v )
     {
         // perform intermediate operations in double for better precision
-        return Vector3i( ( Vector3d{ v } - center ) * invRange );
+        const auto d = ( Vector3d{ v } - center ) * invRange;
+        // and round to the nearest integer instead of truncating to zero
+        return Vector3i( (int)std::round( d.x ), (int)std::round( d.y ), (int)std::round( d.z ) );
     };
 }
 

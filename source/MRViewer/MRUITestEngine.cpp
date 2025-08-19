@@ -65,7 +65,7 @@ void checkForNewFrame()
 } // namespace
 
 template <typename T>
-std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value )
+std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value, bool consumeValueOverride /*= true*/ )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
 
@@ -92,8 +92,15 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     ValueEntry::Value<T>* val = std::get_if<ValueEntry::Value<T>>( &entry->value );
     if ( val )
     {
-        ret = std::move( val->simulatedValue );
-        val->simulatedValue = {};
+        if ( consumeValueOverride )
+        {
+            ret = std::move( val->simulatedValue );
+            val->simulatedValue = {};
+        }
+        else
+        {
+            ret = val->simulatedValue;
+        }
     }
     else
     {
@@ -122,10 +129,10 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     #endif
 }
 
-template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
-template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
-template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
-template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value );
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value, bool consumeValueOverride );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value, bool consumeValueOverride );
+template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value, bool consumeValueOverride );
+template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value, bool consumeValueOverride );
 
 bool createButton( std::string_view name )
 {
@@ -163,9 +170,9 @@ bool createButton( std::string_view name )
     #endif
 }
 
-std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues )
+std::optional<std::string> createValue( std::string_view name, std::string value, bool consumeValueOverride, std::optional<std::vector<std::string>> allowedValues )
 {
-    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) } );
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) }, consumeValueOverride );
 }
 
 void pushTree( std::string_view name )

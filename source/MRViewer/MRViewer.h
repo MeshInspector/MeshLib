@@ -172,8 +172,6 @@ public:
     MRVIEWER_API bool touchpadZoomGestureEnd();
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
-    // callback to update connected / disconnected joystick
-    MRVIEWER_API void joystickUpdateConnected( int jid, int event );
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
@@ -606,20 +604,32 @@ public:
     /// sets whether to sort the filenames received from Drag&Drop in lexicographical order before adding them in scene
     void setSortDroppedFiles( bool value ) { sortDroppedFiles_ = value; }
 
+    /// (re)initializes the handler of SpaceMouse events
+    /// \param deviceSignal every device-related event will be sent here: find, connect, disconnect
+    MRVIEWER_API void initSpaceMouseHandler( std::function<void(const std::string&)> deviceSignal = {} );
+
 private:
     Viewer();
     ~Viewer();
 
     // Init window
     int launchInit_( const LaunchParams& params );
+
+    // Called from launchInit_ after window creating to configure it properly
+    bool setupWindow_( const LaunchParams& params );
+
     // Return true if OpenGL loaded successfully
     bool checkOpenGL_(const LaunchParams& params );
+
     // Init base objects
     void init_();
+
     // Init all plugins on start
     void initPlugins_();
+
     // Shut all plugins at the end
     void shutdownPlugins_();
+
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
     static void emsMainInfiniteLoop();
@@ -677,7 +687,6 @@ private:
     void initBasisViewControllerObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
-    void initSpaceMouseHandler_();
 
     // recalculate pixel ratio
     void updatePixelRatio_();

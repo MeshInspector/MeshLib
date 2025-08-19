@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRPointOnFace.h"
 #include "MRMeshTriPoint.h"
 #include "MREdgePoint.h"
@@ -37,7 +38,7 @@ struct PointOnObject
 // --- MeshTriPoint for ObjectMeshHolder
 // --- EdgePoint for ObjectLinesHolder (polylines)
 // --- VertId for ObjectPointsHolder
-// --- std::monostate means not valid pick (pick in empty space). 
+// --- std::monostate means not valid pick (pick in empty space).
 using PickedPoint = std::variant<std::monostate, MeshTriPoint, EdgePoint, VertId>;
 
 /// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
@@ -48,10 +49,10 @@ MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, c
 MRMESH_API std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, const PickedPoint& point );
 
 /// Converts pickedPoint into local coordinates of its object
-[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point );
+[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API MR_BIND_IGNORE Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint& point );
 
 /// Checks that the picked point presents in the object's topology
-[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
+[[deprecated( "use getPickedPointPosition() instead" )]] MRMESH_API MR_BIND_IGNORE bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
 
 /// Returns object normal in local coordinates at given point,
 /// returns std::nullopt if object or point is invalid, or if it is ObjectLines or ObjectPoints without normals

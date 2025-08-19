@@ -1,22 +1,20 @@
 # Generating the bindings
 
-[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting)
+[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting-python-bindings)
 
 ## Installing prerequisites
 
-Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root).
+Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root). MRBind is our binding generator.
 
 You can re-run those scripts to update the dependencies and/or MRBind itself.
 
-There's no rocket science in those, and you can do it manually instead of running the scripts (especially building MRBind yourself), see below.
+Among other things, the scripts do following:
 
-Among other things, the scripts can do following:
-
-* On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
+* On Ubuntu, they may add [the LLVM repository](https://apt.llvm.org/) to install the specific version of Clang and libclang that we need.
 
 * On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
 
-**More details and manual instructions:**
+More details on what the scripts do on different platforms:
 
 <details><summary><b>Windows</b></summary>
 
@@ -92,28 +90,33 @@ Among other things, the scripts can do following:
 
 ## Generating bindings
 
-First, build MeshLib as usual.
+**Python**: If you're generating Python bindings, you should build MeshLib first, then run the generator, which will take care of building the bindings.
 
-Then generate the bindings:
-* **On Windows:** `scripts\mrbind\generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
+**C**: If you're generating C bindings, run the generator first, and *then* build MeshLib along with the freshly generated bindings. Building C bindings is only supported with CMake, not MSBuild. Pass `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake to build the bindings (in addition to the rest of MeshLib). The generated bindings are human-readable and are located in `source/MeshLibC2`.
 
-  This will look for MeshLib in `./source/x64/Release` (so the current directory matters). Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
+How to run the generator on different platforms:
+
+* **On Windows:** `scripts\mrbind\generate_win.bat -B --trace` from the VS developer command prompt (use the `x64 Native` one!).
+
+  When generating the Python bindings, the current directory matters, as this will look for MeshLib in `./source/x64/Release`. Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
 
   The `generate_win.bat` file merely calls `generate.mk` (see below) inside of MSYS2 shell. You can use that directly if you want.
 
-* **On Linux:** `make -f scripts/mrbind/generate.mk -B --trace MODE=none`
+* **On Linux:** `make -f scripts/mrbind/generate.mk -B --trace`
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-* **On MacOS:** Same as on Linux, but before running that you must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
+* **On MacOS:** Same as on Linux, but before running the command you must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, it must be 4.x or newer.
 
 ### Some common flags:
 
 * **`--trace` — enable verbose logs.**
 
-* **`MODE=none` — disable optimization** for faster build times. The default is `MODE=release`. To enable debug symbols, use `MODE=debug`. To set completely custom compiler flags, set `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
-
 * **`-B` — force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
+
+The remaining flags are for Python bindings only:
+
+* **`MODE=none` — disable optimization** for faster build times. The default is `MODE=release`. To enable debug symbols, use `MODE=debug`. To set completely custom compiler flags, set `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
 
 * **`NUM_FRAGMENTS=?? -j??` — adjust RAM usage vs build speed tradeoff.** `NUM_FRAGMENTS=??` is how many translation units the bindings are split into. `-j??` is the number of parallel build threads/processes. `NUM_FRAGMENTS=64 -j8` is the default, good for 16 GB of RAM.
 
@@ -123,9 +126,11 @@ Then generate the bindings:
 
 ### Selecting the compiler:
 
-For simplicity, we compile the bindings with the same Clang that we use for parsing the code. (Consult `clang_version.txt` for the current version.) But you can override this using `CXX_FOR_BINDINGS`.
+For simplicity, we compile the Python bindings with the same Clang that we use for parsing the code. (Consult `clang_version.txt` for the current version.) But you can override this using `CXX_FOR_BINDINGS`.
 
-**ABI compatibility:** Since MeshLib is compiled using a different compiler, we must ensure the two use the same ABI. `CXX_FOR_ABI` should be set to the compiler the ABI of which we're trying to match. (Defaults to `CXX` environment variable, or `g++` if not set.) At the moment, if `CXX_FOR_ABI` is GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), we pass `-fclang-abi-compat=17` to our Clang 18 or newer. This flag *disables* mangling `requires` constraints into function names. If we guess incorrectly, you'll get undefined references to functions with `requires` constraints on them.
+`CXX_FOR_BINDINGS` has an additional use that matters for both Python and C. We use it to locate the "Clang resource directory", which the parser needs. The variable must be set to the same version of Clang that provides libclang that was used to build MRBind, otherwise you might get compatibility issues. But normally we should be able to guess the value of this variable, so normally you don't have to think abou tthis.
+
+**ABI compatibility (Python only):** Since MeshLib is compiled using a different compiler, we must ensure the two use the same ABI. `CXX_FOR_ABI` should be set to the compiler the ABI of which we're trying to match. (Defaults to `CXX` environment variable, or `g++` if not set.) At the moment, if `CXX_FOR_ABI` is GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), we pass `-fclang-abi-compat=17` to our Clang 18 or newer. This flag *disables* mangling `requires` constraints into function names. If we guess incorrectly, you'll get undefined references to functions with `requires` constraints on them.
 
 ### Less common flags:
 
@@ -135,7 +140,7 @@ For simplicity, we compile the bindings with the same Clang that we use for pars
 
 You can find some undocumented flags/variables in `generate.mk`.
 
-## Troubleshooting
+## Troubleshooting Python bindings
 
 * **`could not open 'MRMesh.lib': No such file or directory`**
 

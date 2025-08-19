@@ -21,6 +21,7 @@ IF(MR_EMSCRIPTEN)
     freetype
     spdlog
     jsoncpp
+    tbb
   )
 ELSEIF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -29,6 +30,7 @@ ELSEIF(APPLE)
     PkgConfig::jsoncpp
     fmt
     spdlog
+    tbb
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -37,6 +39,7 @@ ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
     fmt::fmt
     spdlog::spdlog
     JsonCpp::JsonCpp
+    TBB::tbb
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -45,6 +48,7 @@ ELSE()
     fmt::fmt
     spdlog::spdlog
     JsonCpp::JsonCpp
+    tbb
   )
 ENDIF()
 

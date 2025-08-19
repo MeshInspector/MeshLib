@@ -29,6 +29,10 @@ on:
         default: true
         required: false
         type: boolean
+      mrbind_c:
+        default: true
+        required: false
+        type: boolean
       nuget_build_patch:
         default: false
         required: false
@@ -78,8 +82,8 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
-      - name: Install mrbind
-        if: ${{ inputs.mrbind }}
+      - name: Install MRBind
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
         run: scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Create virtualenv
@@ -92,6 +96,13 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
+
+      - name: Generate C bindings
+        if: ${{ inputs.mrbind_c }}
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -106,8 +117,9 @@ jobs:
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
 
-      - name: Generate and build MRBind bindings
+      - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
@@ -131,8 +143,12 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
-      - name: C Unit Tests
+      - name: C Unit Tests (old bindings)
         run: ./build/${{ matrix.config }}/bin/MRTestC
+
+      - name: C Unit Tests
+        if: ${{ inputs.mrbind_c }}
+        run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
         timeout-minutes: 8
@@ -142,7 +158,7 @@ jobs:
       - name: Python Regression Tests
         if: ${{ inputs.internal_build }}
         env:
-          RUN_CUDA_ARG: ${{ matrix.build_mrcuda == 'ON' && '--run-cuda=negative' || '' }}
+          RUN_CUDA_ARG: "--run-cuda=negative"
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}

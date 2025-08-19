@@ -88,6 +88,9 @@ public:
     /// return cached total length
     [[nodiscard]] MRMESH_API float totalLength() const;
 
+    /// reset basic object colors to their default values from the current theme
+    MRMESH_API void resetFrontColor() override;
+
 protected:
     ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 
@@ -100,9 +103,12 @@ protected:
     /// serializeFields_: serializeBaseFields_ plus polyline serialization
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
+    MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+
     /// we serialize polyline as text so separate polyline serialization and base fields serialization
     /// deserializeBaseFields_ deserialize Parent fields and base fields of ObjectLinesHolder
     MRMESH_API void deserializeBaseFields_( const Json::Value& root );
+
     /// deserializeFields_: deserializeBaseFields_ plus polyline deserialization
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 

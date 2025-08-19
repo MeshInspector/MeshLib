@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
@@ -234,17 +235,14 @@ struct ResolveMeshDegenSettings
 };
 
 /**
- * \brief Resolves degenerate triangles in given mesh
- * \details This function performs decimation, so it can affect topology
+ * \brief Removes degenerate triangles in a mesh by calling decimateMesh function with appropriate settings
+ * \details consider using \ref fixMeshDegeneracies for more complex cases
  * \ingroup DecimateGroup
  * \return true if the mesh has been changed
  *
  * \sa \ref decimateMesh
  */
-[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
-[[deprecated( " use `MR::fixMeshDegeneracies` instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
+MRMESH_API bool resolveMeshDegenerations( Mesh & mesh, const ResolveMeshDegenSettings & settings = {} );
 
 
 struct RemeshSettings

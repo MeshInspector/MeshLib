@@ -184,6 +184,19 @@ void replaceInplace( std::string& target, std::string_view from, std::string_vie
     target = replace( std::move( target ), from, to );
 }
 
+std::string_view trim( std::string_view str )
+{
+    return trimRight( trimLeft( str ) );
+}
+
+std::string_view trimLeft( std::string_view str )
+{
+    size_t pos = 0;
+    while ( pos < str.size() && std::isspace( str[pos] ) )
+        ++pos;
+    return str.substr( pos );
+}
+
 std::string_view trimRight( std::string_view str )
 {
     auto l = str.size();

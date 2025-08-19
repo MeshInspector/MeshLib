@@ -65,7 +65,13 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::IsAnyItemActive() )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
+        return false;
+
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
+    // so use special case for modals
+    bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
+    if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )
         return false;
 
     reserveKeyEvent( passedKey );
@@ -235,8 +241,21 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     }
     else
     {
-        const ImGuiCol colIdx = ( !customParams.enabled ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        ImGuiCol colIdx = ImGuiCol_Button;
+        if ( !customParams.enabled )
+        {
+            if ( !customParams.forceImGuiBackground )
+                colIdx = ImGuiCol_TextDisabled;
+            else
+                ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+        }
+        else if ( hovered )
+        {
+            colIdx = held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered;
+        }
         const ImU32 col = ImGui::GetColorU32( colIdx );
+        if ( !customParams.enabled && customParams.forceImGuiBackground )
+            ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
         ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
     }
 
@@ -245,10 +264,16 @@ bool buttonEx( const char* label, const Vector2f& size_arg /*= Vector2f( 0, 0 )*
     StyleParamHolder sh;
     if ( !customParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    else if ( !customParams.enabled )
+        ImGui::BeginDisabled(); // correct mimic Dear ImGui behavior
+
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     if ( customParams.underlineFirstLetter )
         ImGui::RenderTextClipped( bb.Min, bb.Max, "_", NULL, &label_size, style.ButtonTextAlign, &bb);
+
+    if ( !customParams.enabled && customParams.forceImguiTextColor )
+        ImGui::EndDisabled(); // correct mimic Dear ImGui behavior
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
 
@@ -425,17 +450,7 @@ bool buttonIconEx(
 
     std::string buttonText = "##" + text;
 
-    bool res = false;
-    if ( params.flatBackgroundColor )
-    {
-        res = ImGui::Button( buttonText.c_str(), buttonSize );
-        if( params.baseParams.enableTestEngine )
-            res = UI::TestEngine::createButton( buttonText ) || res;
-    }
-    else
-    {
-        res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
-    }
+    bool res = UI::buttonEx( buttonText.c_str(), Vector2f( buttonSize.x, buttonSize.y ), params.baseParams );
     ImGui::SameLine();
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
@@ -593,12 +608,12 @@ bool buttonIconEx(
     return res;
 }
 
-bool buttonUniqueIcon( 
-    const std::string& iconName, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
-    int* value, 
+bool buttonUniqueIcon(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    int* value,
     int ownValue,
     bool textUnderIcon /*= true*/,
     ImGuiKey key /*= ImGuiKey_None*/ )
@@ -1391,7 +1406,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
     bool valueOverridden = false;
-    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, options ) )
+    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, true, options ) )
     {
         if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
         {
@@ -1694,20 +1709,20 @@ static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 
 static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    std::optional<std::string> valueOverride;
-    if ( shouldExposeTextInputToTestEngine( flags ) )
-    {
-        valueOverride = TestEngine::createValue( label, str );
-        if ( valueOverride )
-            str = std::move( *valueOverride );
-    }
+    if ( detail::isItemActive( label ) && TestEngine::createValueTentative<std::string>( label, false ) )
+        ImGui::ClearActiveID();
 
     bool ret = func();
 
-    if ( valueOverride )
+    if ( shouldExposeTextInputToTestEngine( flags ) )
     {
-        detail::markItemEdited( ImGui::GetID( label ) );
-        ret = true;
+        std::optional<std::string> valueOverride = TestEngine::createValue( label, str );
+        if ( valueOverride )
+        {
+            str = std::move( *valueOverride );
+            detail::markItemEdited( ImGui::GetID( label ) );
+            ret = true;
+        }
     }
 
     return ret;
@@ -1946,7 +1961,7 @@ void notificationFrame( NotificationType type, const std::string& str, float sca
         scaling * StyleConsts::Notification::cTextFrameRounding );
     ImGui::SetCursorPos( pos + StyleConsts::Notification::cTextFramePadding * scaling );
     transparentTextWrapped( "%s", str.c_str() );
-    
+
     auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( iconsFont )
     {
@@ -2005,89 +2020,12 @@ void separator(
     const ImVec4& color,
     const std::string& issue )
 {
-    const auto& style = ImGui::GetStyle();
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
-
-    if ( text.empty() )
-    {
-        ImGui::Separator();
-    }
-    else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
-    {
-        ImGui::TableNextColumn();
-        ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
-        ImGui::Text( "%s", text.c_str());
-        ImGui::SameLine();
-        if ( !issue.empty() )
-        {
-            ImGui::PushStyleColor( ImGuiCol_FrameBg, color );
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
-            const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
-            UI::inputTextCenteredReadOnly( "##Issue", issue, width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
-            ImGui::PopStyleColor();
-        }
-        ImGui::PopFont();
-
-        ImGui::TableNextColumn();
-        auto width = ImGui::GetWindowWidth();
-        ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );
-        ImGui::Separator();
-        ImGui::EndTable();
-    }
-
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
-    }
-    ImGui::Dummy( ImVec2( 0, 0 ) );
+    return separator( scaling, SeparatorParams{ .label = text,.suffix = issue,.suffixFrameColor = Color( color.x,color.y,color.z,color.w ) } );
 }
 
 void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
 {
-    const auto& style = ImGui::GetStyle();
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
-
-    const float iconWidth = iconSize.x * scaling;
-    const float iconHeight = iconSize.y * scaling;
-    const float shiftPosY = ( ImGui::GetTextLineHeight() - iconHeight ) / 2.f;
-    const int elementsCount = 2 + ( text.empty() ? 0 : 1 );
-    if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + text ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
-    {
-        // icon
-        ImGui::TableNextColumn();
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
-        ImGui::Image( icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
-
-        // text
-        if ( !text.empty() )
-        {
-            ImGui::TableNextColumn();
-            ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
-            ImGui::Text( "%s", text.c_str() );
-            ImGui::PopFont();
-        }
-
-        // separator
-        ImGui::TableNextColumn();
-        auto width = ImGui::GetWindowWidth();
-        ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
-        ImGui::Separator();
-
-        ImGui::EndTable();
-    }
-    if ( shiftPosY < 0.f )
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
-
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
+    return separator( scaling, SeparatorParams{ .icon = &icon,.iconSize = iconSize,.label = text } );
 }
 
 void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
@@ -2098,6 +2036,74 @@ void separator( float scaling, const std::string& textureName, const std::string
         separator( scaling, *icon, text, iconSize );
     else
         separator( scaling, text );
+}
+
+void separator( float scaling, const SeparatorParams& params )
+{
+    const auto& style = ImGui::GetStyle();
+    if ( !params.forceImGuiSpacing && style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
+    }
+
+    if ( params.label.empty() && !params.icon && params.suffix.empty() )
+    {
+        ImGui::Separator();
+    }
+    else
+    {
+        const float iconWidth = params.iconSize.x * scaling;
+        const float iconHeight = params.iconSize.y * scaling;
+        const float shiftPosY = ( ImGui::GetTextLineHeight() - iconHeight ) / 2.f;
+        const int elementsCount = 1 + ( params.icon ? 1 : 0 ) + ( ( !params.label.empty() || !params.suffix.empty() ) ? 1 : 0 );
+        if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + params.label ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
+        {
+            // icon
+            if ( params.icon )
+            {
+                ImGui::TableNextColumn();
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+                ImGui::Image( *params.icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+            }
+            // text
+            if ( !params.label.empty() || !params.suffix.empty() )
+            {
+                ImGui::TableNextColumn();
+                ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+                if ( !params.label.empty() )
+                    ImGui::Text( "%s", params.label.c_str() );
+                ImGui::SameLine();
+                if ( !params.suffix.empty() )
+                {
+                    if ( params.suffixFrameColor )
+                        ImGui::PushStyleColor( ImGuiCol_FrameBg, params.suffixFrameColor->getUInt32() );
+                    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
+                    const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( params.suffix.c_str() ).x + 2.0f * style.FramePadding.x );
+                    UI::inputTextCenteredReadOnly( "##Issue", params.suffix, width, ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+                    if ( params.suffixFrameColor )
+                        ImGui::PopStyleColor();
+                }
+                ImGui::PopFont();
+            }
+
+            // separator
+            ImGui::TableNextColumn();
+            auto width = ImGui::GetWindowWidth();
+            ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+            ImGui::Separator();
+
+            ImGui::EndTable();
+        }
+        if ( params.icon && shiftPosY < 0.f )
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+    }
+
+    if ( !params.forceImGuiSpacing && style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
+    }
+
+    ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
 void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )

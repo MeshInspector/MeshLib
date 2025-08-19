@@ -18,6 +18,7 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRVoxels/MRObjectVoxels.h"
@@ -55,6 +56,7 @@ const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
 const std::string cUnitsLenUnit = "units.unitLength";
+const std::string cUnitsModelLenUnit = "units.unitModelLength";
 const std::string cUnitsDegreesMode = "units.degreesMode";
 const std::string cUnitsPrecisionLen = "units.precisionLength";
 const std::string cUnitsPrecisionAngle = "units.precisionAngle";
@@ -68,6 +70,7 @@ const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
+const std::string cVisualObjectTags = "visualObjectTags";
 }
 
 namespace Defaults
@@ -481,8 +484,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 ret.try_emplace( cUnitsNoUnit, LengthUnit::_count );
                 return ret;
             }();
-            auto it = map.find( loadString( cUnitsLenUnit, "" ) );
-            UnitSettings::setUiLengthUnit( it == map.end() ? LengthUnit::mm : it->second == LengthUnit::_count ? std::nullopt : std::optional( it->second ), true );
+            auto targetIt = map.find( loadString( cUnitsLenUnit, "" ) );
+            UnitSettings::setUiLengthUnit( targetIt == map.end() ? LengthUnit::mm : targetIt->second == LengthUnit::_count ? std::nullopt : std::optional( targetIt->second ), true );
+            auto sourceIt = map.find( loadString( cUnitsModelLenUnit, "" ) );
+            UnitSettings::setModelLengthUnit( ( sourceIt == map.end() || targetIt->second == LengthUnit::_count ) ? std::nullopt : std::optional( targetIt->second ) );
         }
 
         { // Thousands separator.
@@ -522,6 +527,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         setDefaultSerializePointsFormat( format );
         format = loadString( cMruInnerVoxelsFormat, ".vdb" );
         setDefaultSerializeVoxelsFormat( format );
+    }
+
+    if ( cfg.hasJsonValue( cVisualObjectTags ) )
+    {
+        auto& manager = VisualObjectTagManager::instance();
+        deserializeFromJson( cfg.getJsonValue( cVisualObjectTags ), manager );
     }
 }
 
@@ -657,6 +668,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     { // Measurement units.
         saveBool( cUnitsLeadingZero, UnitSettings::getShowLeadingZero() );
         saveString( cUnitsLenUnit, UnitSettings::getUiLengthUnit() ? std::string( getUnitInfo( *UnitSettings::getUiLengthUnit() ).prettyName ) : cUnitsNoUnit );
+        saveString( cUnitsModelLenUnit, UnitSettings::getModelLengthUnit() ? std::string( getUnitInfo( *UnitSettings::getModelLengthUnit() ).prettyName ) : cUnitsModelLenUnit );
         saveString( cUnitsThouSep, std::string( 1, UnitSettings::getThousandsSeparator() ) );
         saveString( cUnitsDegreesMode, std::string( toString( UnitSettings::getDegreesMode() ) ) );
         saveInt( cUnitsPrecisionLen, UnitSettings::getUiLengthPrecision() );
@@ -669,6 +681,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
         saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
         saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
+    }
+
+    {
+        Json::Value visualObjectTagsJson;
+        const auto& manager = VisualObjectTagManager::instance();
+        serializeToJson( manager, visualObjectTagsJson );
+        cfg.setJsonValue( cVisualObjectTags, visualObjectTagsJson );
     }
 }
 

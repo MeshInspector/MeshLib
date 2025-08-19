@@ -8,6 +8,7 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneCache.h"
@@ -352,6 +353,7 @@ int RibbonSchemaHolder::findItemTab( const std::shared_ptr<RibbonMenuItem>& item
 
 void RibbonSchemaLoader::loadSchema() const
 {
+    MR_TIMER;
     auto files = getStructureFiles_( ".items.json" );
     if ( files.empty() )
         spdlog::error( "No Ribbon Items files found" );

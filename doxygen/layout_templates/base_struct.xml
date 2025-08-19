@@ -8,6 +8,7 @@
       <tab type="user" url="__BEGIN_URL__MeshLibPythonSetupGuide__END_URL__" title="Python"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCppSetupGuide__END_URL__" title="C++"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
@@ -66,6 +67,7 @@
     <tab type="usergroup" url="__BEGIN_URL__APIPage__END_URL__" title="API">
       <!-- API_CPP_PAGE -->
       <!-- API_PY_PAGE -->
+      <!-- API_C_PAGE -->
     </tab>
     <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>

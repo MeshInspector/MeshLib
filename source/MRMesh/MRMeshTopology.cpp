@@ -12,6 +12,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
 #include "MRIOParsing.h"
+#include "MRPartMappingAdapters.h"
 #include <atomic>
 #include <initializer_list>
 

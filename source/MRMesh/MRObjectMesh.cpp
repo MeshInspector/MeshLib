@@ -9,10 +9,11 @@
 #include "MRLine3.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
+#include "MRSceneSettings.h"
+#include "MRMapOrHashMap.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
-#include "MRSceneSettings.h"
 
 namespace MR
 {

@@ -1355,6 +1355,9 @@
     <ClInclude Include="MRObjectTagEventDispatcher.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRPartMappingAdapters.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2212,6 +2215,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectTagEventDispatcher.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPartMappingAdapters.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

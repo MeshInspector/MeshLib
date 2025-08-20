@@ -7,6 +7,7 @@
 #include "MRMeshCollide.h"
 #include "MRAffineXf3.h"
 #include "MRMapEdge.h"
+#include "MRPartMappingAdapters.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR

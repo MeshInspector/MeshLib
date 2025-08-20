@@ -4,6 +4,7 @@
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRGTest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
+#include <MRMesh/MRPartMappingAdapters.h>
 
 namespace MR
 {

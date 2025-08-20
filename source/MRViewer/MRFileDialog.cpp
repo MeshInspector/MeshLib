@@ -566,15 +566,14 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 #elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
-    if ( results.size() == 1 )
+    if ( results.size() == 1 && !results[0].empty() )
     {
-        if ( !results[0].empty() )
-        {
-            FileDialog::setLastUsedDir( MR::utf8string( results[0].parent_path() ) );
-            FileDialogSignals::instance().onSaveFile( results[0] );
-        }
+        spdlog::info( "Save dialog returned: {}", MR::utf8string( results[0] ) );
+        FileDialog::setLastUsedDir( MR::utf8string( results[0].parent_path() ) );
+        FileDialogSignals::instance().onSaveFile( results[0] );
         return results[0];
     }
+    spdlog::info( "Save dialog canceled" );
     return {};
 }
 

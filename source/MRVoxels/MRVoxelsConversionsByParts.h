@@ -1,9 +1,10 @@
 #pragma once
-#include "MRVoxelsFwd.h"
 
+#include "MRVoxelsFwd.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRVector3.h"
+#include <optional>
 
 namespace MR
 {

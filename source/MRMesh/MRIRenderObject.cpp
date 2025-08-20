@@ -20,6 +20,11 @@ public:
         auto& inst = instance_();
         inst.map_[type] = lambda;
     }
+    static void removeConstructorLambda( const std::type_index& type )
+    {
+        auto& inst = instance_();
+        inst.map_.erase( type );
+    }
 private:
     static RenderObjectConstructorsHolder& instance_()
     {
@@ -31,8 +36,14 @@ private:
 
 
 RegisterRenderObjectConstructor::RegisterRenderObjectConstructor( const std::type_index& type, IRenderObjectConstructorLambda lambda )
+    : type_( type )
 {
     RenderObjectConstructorsHolder::addConstructorLambda( type, lambda );
+}
+
+RegisterRenderObjectConstructor::~RegisterRenderObjectConstructor()
+{
+    RenderObjectConstructorsHolder::removeConstructorLambda( type_ );
 }
 
 std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type )

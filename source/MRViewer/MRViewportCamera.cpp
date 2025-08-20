@@ -634,6 +634,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             }
             else
             {
+                // TODO: support generic visual objects
                 continue;
             }
             VertBitSet myVerts;

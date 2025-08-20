@@ -632,17 +632,9 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 coords = &pointCloud.points;
                 selectedVerts = &pointCloud.validPoints;
             }
-            else if ( obj->asType<ObjectLabel>() || obj->asType<ObjectImGuiLabel>() )
-            {
-                // do nothing
-            }
-            else if ( obj->asType<FeatureObject>() || obj->asType<MeasurementObject>() )
-            {
-                // Do nothing? Not ideal.
-            }
             else
             {
-                assert( false );
+                // TODO: support generic visual objects
                 continue;
             }
             VertBitSet myVerts;

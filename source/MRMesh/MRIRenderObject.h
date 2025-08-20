@@ -208,6 +208,10 @@ class RegisterRenderObjectConstructor
 {
 public:
     MRMESH_API RegisterRenderObjectConstructor( const std::type_index& type, IRenderObjectConstructorLambda lambda );
+    MRMESH_API ~RegisterRenderObjectConstructor();
+
+private:
+    std::type_index type_;
 };
 
 #define MR_REGISTER_RENDER_OBJECT_IMPL(objectType, .../*rendObjectType*/)\

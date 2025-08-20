@@ -558,123 +558,116 @@ bool Viewport::allModelsInsideViewportRectangle() const
 Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives /*= false*/ ) const
 {
     Box3f box;
-    const AffineXf3f xfV = getViewXf_();
 
-    for( const auto& obj : objs )
+    // object space to camera space
+    const auto makeFunc = [space, xfV = getViewXf_()] ( const AffineXf3f& xfObj ) -> std::function<bool ( Vector3f& )>
     {
-        if( obj->globalVisibility( id ) )
+        switch ( space )
         {
-            // object space to camera space
-            auto xf = obj->worldXf( id );
-            if ( space != Space::World )
-                xf = xfV * xf;
-            VertId lastValidVert;
-            const VertCoords* coords = nullptr;
-            const VertBitSet* selectedVerts = nullptr;
-            auto objMesh = obj->asType<ObjectMeshHolder>();
-#ifndef MRVIEWER_NO_VOXELS
-            VertCoords tempVertCoords;
-            VertBitSet tempSelected;
-            auto objVox = obj->asType<ObjectVoxels>();
-            if ( objVox && objVox->isVolumeRenderingEnabled() )
+        case Space::World:
+            return [xf = xfObj] ( Vector3f& p )
             {
-                if ( !objVox->grid() )
-                    continue;
-                const auto& vdbVolume = objVox->vdbVolume();
-                Box3f voxBox;
-                voxBox.include( Vector3f() );
-                voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+                p = xf( p );
+                return true;
+            };
+        case Space::CameraOrthographic:
+            return [xf = xfV * xfObj] ( Vector3f& p )
+            {
+                p = xf( p );
+                return true;
+            };
+        case Space::CameraPerspective:
+            return [xf = xfV * xfObj] ( Vector3f& p )
+            {
+                auto v = xf( p );
+                if ( v.z == 0 )
+                    return false;
+                p = Vector3f( v.x / v.z, v.y / v.z, v.z );
+                return true;
+            };
+        }
+        MR_UNREACHABLE
+    };
 
-                tempVertCoords.resize( 8 );
-                for ( int i = 0; i < 8; ++i )
-                {
-                    Vector3i maxCoord;
-                    maxCoord.x = int( bool( i & 1 ) );
-                    maxCoord.y = int( bool( i & 2 ) );
-                    maxCoord.z = int( bool( i & 4 ) );
-                    Vector3i minCoord = Vector3i::diagonal( 1 ) - maxCoord;
-                    tempVertCoords[VertId( i )] =
-                        mult( Vector3f( minCoord ), voxBox.min ) +
-                        mult( Vector3f( maxCoord ), voxBox.max );
-                }
-                lastValidVert = 7_v;
-                tempSelected.resize( 8 );
-                tempSelected.flip();
-                coords = &tempVertCoords;
-                selectedVerts = &tempSelected;
-            }
-            else
-#endif
-                if ( objMesh )
+    const auto expandBox = [&box, &makeFunc] ( const VertCoords& coords, const VertBitSet& region, const AffineXf3f& objXf )
+    {
+        LimitCalc calc( coords, region, makeFunc( objXf ) );
+        parallel_reduce( tbb::blocked_range( region.find_first(), region.find_last() + 1 ), calc );
+        box.include( calc.box() );
+    };
+
+    for ( const auto& obj : objs )
+    {
+        if ( !obj->globalVisibility( id ) )
+            continue;
+
+        const auto xf = obj->worldXf( id );
+
+        if ( selectedPrimitives )
+        {
+            if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
             {
                 if ( !objMesh->mesh() )
                     continue;
+
                 const auto& mesh = *objMesh->mesh();
-                lastValidVert = mesh.topology.lastValidVert();
-                coords = &mesh.points;
-                selectedVerts = &mesh.topology.getValidVerts();
+                const auto region =
+                    getIncidentVerts( mesh.topology, objMesh->getSelectedEdges() )
+                    | getIncidentVerts( mesh.topology, objMesh->getSelectedFaces() );
+                if ( region.any() )
+                    expandBox( mesh.points, region, xf );
             }
-            else if ( auto objLines = obj->asType<ObjectLinesHolder>() )
-            {
-                if ( !objLines->polyline() )
-                    continue;
-                const auto& polyline = *objLines->polyline();
-                lastValidVert = polyline.topology.lastValidVert();
-                coords = &polyline.points;
-                selectedVerts = &polyline.topology.getValidVerts();
-            }
-            else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
-            {
-                if ( !objPoints->pointCloud() )
-                    continue;
-                const auto& pointCloud = *objPoints->pointCloud();
-                lastValidVert = VertId( pointCloud.validPoints.size() - 1 );// TODO: last valid
-                coords = &pointCloud.points;
-                selectedVerts = &pointCloud.validPoints;
-            }
-            else
-            {
-                // TODO: support generic visual objects
+
+            continue;
+        }
+
+        if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
+        {
+            if ( !objMesh->mesh() )
                 continue;
-            }
-            VertBitSet myVerts;
-            if ( selectedPrimitives )
-            {
-                selectedVerts = nullptr;
-                if ( objMesh )
-                {
-                    myVerts = getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedEdges() ) |
-                        getIncidentVerts( objMesh->mesh()->topology, objMesh->getSelectedFaces() );
-                    if ( !myVerts.any() )
-                        continue;
-                    selectedVerts = &myVerts;
-                }
-            }
-            if ( !selectedVerts )
+
+            const auto& mesh = *objMesh->mesh();
+            expandBox( mesh.points, mesh.topology.getValidVerts(), xf );
+        }
+        else if ( auto* objLines = obj->asType<ObjectLinesHolder>() )
+        {
+            if ( !objLines->polyline() )
                 continue;
-            std::function<bool( Vector3f& )> func;
-            if( space == Space::CameraOrthographic || space == Space::World )
-            {
-                func = [&]( Vector3f& p )
-                {
-                    p = xf( p );
-                    return true;
-                };
-            }
-            else
-            {
-                func = [&]( Vector3f& p )
-                {
-                    auto v = xf( p );
-                    if ( v.z == 0 )
-                        return false;
-                    p = Vector3f( v.x / v.z, v.y / v.z, v.z );
-                    return true;
-                };
-            }
-            LimitCalc calc( *coords, *selectedVerts, func );
-            parallel_reduce( tbb::blocked_range<VertId>( VertId{ 0 }, lastValidVert + 1 ), calc );
-            box.include( calc.box() );
+
+            const auto& polyline = *objLines->polyline();
+            expandBox( polyline.points, polyline.topology.getValidVerts(), xf );
+        }
+        else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
+        {
+            if ( !objPoints->pointCloud() )
+                continue;
+
+            const auto& pointCloud = *objPoints->pointCloud();
+            expandBox( pointCloud.points, pointCloud.validPoints, xf );
+        }
+#ifndef MRVIEWER_NO_VOXELS
+        else if ( auto* objVox = obj->asType<ObjectVoxels>(); objVox && objVox->isVolumeRenderingEnabled() )
+        {
+            if ( !objVox->grid() )
+                continue;
+
+            const auto& vdbVolume = objVox->vdbVolume();
+            Box3f voxBox;
+            voxBox.include( Vector3f() );
+            voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+
+            const auto corners = getCorners( voxBox );
+            VertCoords coords( corners.begin(), corners.end() );
+            VertBitSet region( 8, true );
+            expandBox( coords, region, xf );
+        }
+#endif
+        else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )
+        {
+            const auto corners = getCorners( objBox );
+            VertCoords coords( corners.begin(), corners.end() );
+            VertBitSet region( 8, true );
+            expandBox( coords, region, xf );
         }
     }
     return box;

@@ -47,7 +47,7 @@ jobs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
@@ -90,7 +90,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -235,7 +235,7 @@ jobs:
       contents: read  # This is required for actions/checkout
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
@@ -383,7 +383,7 @@ jobs:
             brewpath: /opt/homebrew
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
@@ -484,7 +484,7 @@ jobs:
       PYTHON_CMD: python${{ matrix.py-version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -530,7 +530,7 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -594,7 +594,7 @@ jobs:
             py-cmd: "python3.13"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 

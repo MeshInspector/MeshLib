@@ -12,7 +12,7 @@ jobs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
@@ -52,7 +52,7 @@ jobs:
             py-cmd: "python3.11"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -86,7 +86,7 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -115,7 +115,7 @@ jobs:
         py-version: ["3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 

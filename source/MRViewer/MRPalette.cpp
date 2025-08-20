@@ -5,6 +5,8 @@
 #include "MRViewer/MRViewer.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
+#include "MRUIRectAllocator.h"
+#include "MRMesh/MRConfig.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSystem.h"
@@ -376,9 +378,6 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     const auto menu = ImGuiMenu::instance();
     const auto& viewportSize = Viewport::get().getViewportRect();
 
-    ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
-
     const auto style = getStyleVariables_( menu->menu_scaling() );
     const auto maxLabelWidth = getMaxLabelWidth_( onlyTopHalf );
     const ImVec2 windowSizeMin {
@@ -421,9 +420,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             prevMaxLabelWidth_ = maxLabelWidth;
         }
     }
-
-    ImGui::Begin( windowName.c_str(), &isWindowOpen_,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
+    ImGui::BeginSavedWindowPos( windowName, &isWindowOpen_, { size, &pose, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground } );
 
     MR_FINALLY{ ImGui::End(); };
 

@@ -16,7 +16,7 @@
 namespace MR
 {
 
-class RotatorPlugin : public StateListenerPlugin<PreDrawListener>
+class RotatorPlugin : public StateListenerPlugin<PreDrawListener, PostDrawListener>
 {
 public:
     RotatorPlugin();
@@ -28,6 +28,7 @@ private:
     bool onEnable_() override;
     bool onDisable_() override;
     void preDraw_() override;
+    void postDraw_() override;
     /// returns true only if on the top of undo stack there is not our own action (not to make new undo on each frame)
     bool shouldCreateNewHistoryAction_( const std::vector<std::shared_ptr<Object>>& selObjs ) const;
 
@@ -108,6 +109,8 @@ MR::AffineXf3f worldToBasis(
 
 void RotatorPlugin::preDraw_()
 {
+    incrementForceRedrawFrames();
+
     if ( !label_ )
     {
         label_ = std::make_shared<MR::ObjectLabel>();
@@ -141,7 +144,10 @@ void RotatorPlugin::preDraw_()
 
         viewport2.cameraLookAlong( back, up );
         viewport2.setCameraTranslation( cameraTranslation );
+        
+        incrementForceRedrawFrames();
     }
+
 /*
     auto & viewport = Viewport::get();
     Vector3f sceneCenter;
@@ -176,6 +182,50 @@ void RotatorPlugin::preDraw_()
     }
 
     incrementForceRedrawFrames();*/
+}
+
+void RotatorPlugin::postDraw_()
+{
+  /*
+    incrementForceRedrawFrames();
+
+    if ( !label_ )
+    {
+        label_ = std::make_shared<MR::ObjectLabel>();
+        PositionedText txtOcclusal;
+        txtOcclusal.position = MR::Vector3f{ 0, .5f, 0 };
+        txtOcclusal.text = "One";
+        label_->setLabel( txtOcclusal );
+        label_->setVisualizeProperty( false, MR::VisualizeMaskType::DepthTest, MR::ViewportMask::all() );
+        label_->setVisualizeProperty(
+            true, MR::LabelVisualizePropertyType::Contour, MR::ViewportMask::all() );
+        label_->setAncillary( true );
+        label_->setPickable( false );
+        label_->setVisible( true );
+        MR::SceneRoot::get().addChild( label_ );
+    }
+
+    auto& viewport1 = Viewport::get( ViewportId( 1 ) );
+    auto& viewport2 = Viewport::get( ViewportId( 2 ) );
+
+    viewport2.setCameraTrackballAngle( viewport1.getParameters().cameraTrackballAngle );
+
+    if ( label_ )
+    {
+        auto up = viewport1.getUpDirection();
+        auto back = viewport1.getBackwardDirection();
+        auto cameraTranslation = viewport1.getParameters().cameraTranslation;
+
+        auto moveXf = worldToBasis( back, up, {} );
+        moveXf.b -= cameraTranslation;
+        label_->setXf( moveXf );
+
+        viewport2.cameraLookAlong( back, up );
+        viewport2.setCameraTranslation( cameraTranslation );
+        
+        incrementForceRedrawFrames();
+    }
+    */
 }
 
 MR_REGISTER_RIBBON_ITEM( RotatorPlugin )

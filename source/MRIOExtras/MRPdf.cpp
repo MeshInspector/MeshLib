@@ -44,7 +44,7 @@ do { \
 } while (0)
 
 #define MR_HPDF_CHECK_ERROR( ... ) \
-([&]() -> -> decltype(auto) { \
+([&]() -> decltype(auto) { \
     decltype(auto) result = __VA_ARGS__; \
     HPDF_STATUS status = HPDF_GetError( state_->document ); \
     if (status != HPDF_OK) { \

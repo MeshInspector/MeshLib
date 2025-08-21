@@ -10,6 +10,8 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
+#include "MRMesh/MRPositionedText.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 
 namespace MR
 {
@@ -33,6 +35,7 @@ private:
     bool rotateCamera_ = true;
 
     std::weak_ptr<CombinedHistoryAction> myLastHistoryAction_;
+    std::shared_ptr<MR::ObjectLabel> label_;
 };
 
 RotatorPlugin::RotatorPlugin() :
@@ -91,12 +94,54 @@ bool RotatorPlugin::shouldCreateNewHistoryAction_( const std::vector<std::shared
     return false;
 }
 
+MR::AffineXf3f worldToBasis(
+    const MR::Vector3f& directionMapToY, const MR::Vector3f& directionMapToZ, const MR::Vector3f& basisOrigin )
+{
+    const auto directionMapToX = MR::cross( directionMapToY, directionMapToZ );
+    MR::Matrix3f rotation;
+    rotation[0] = directionMapToX;
+    rotation[1] = directionMapToY;
+    rotation[2] = directionMapToZ;
+    rotation = rotation.transposed();
+    return { rotation, basisOrigin };
+}
+
 void RotatorPlugin::preDraw_()
 {
+    if ( !label_ )
+    {
+        label_ = std::make_shared<MR::ObjectLabel>();
+        PositionedText txtOcclusal;
+        txtOcclusal.position = MR::Vector3f{ 0, .5f, 0 };
+        txtOcclusal.text = "One";
+        label_->setLabel( txtOcclusal );
+        label_->setVisualizeProperty( false, MR::VisualizeMaskType::DepthTest, MR::ViewportMask::all() );
+        label_->setVisualizeProperty(
+            true, MR::LabelVisualizePropertyType::Contour, MR::ViewportMask::all() );
+        label_->setAncillary( true );
+        label_->setPickable( false );
+        label_->setVisible( true );
+        MR::SceneRoot::get().addChild( label_ );
+    }
+
     auto& viewport1 = Viewport::get( ViewportId( 1 ) );
     auto& viewport2 = Viewport::get( ViewportId( 2 ) );
 
     viewport2.setCameraTrackballAngle( viewport1.getParameters().cameraTrackballAngle );
+
+    if ( label_ )
+    {
+        auto up = viewport1.getUpDirection();
+        auto back = viewport1.getBackwardDirection();
+        auto cameraTranslation = viewport1.getParameters().cameraTranslation;
+
+        auto moveXf = worldToBasis( back, up, {} );
+        moveXf.b -= cameraTranslation;
+        label_->setXf( moveXf );
+
+        viewport2.cameraLookAlong( back, up );
+        viewport2.setCameraTranslation( cameraTranslation );
+    }
 /*
     auto & viewport = Viewport::get();
     Vector3f sceneCenter;

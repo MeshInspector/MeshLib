@@ -118,8 +118,11 @@ private:
     // common method for adding different types of text
     void addText_( const std::string& text, const TextParams& params );
 
-    // Close pdf document without saving. After this impossible add anything in document.
+    // close pdf document without saving. After this impossible add anything in document.
     void reset_();
+
+    // count the number of rows with auto-transfer in mind for a given page (page, font and font size)
+    int calcTextLinesCount_( const std::string& text );
 
     struct State;
     std::unique_ptr<State> state_;

@@ -189,22 +189,6 @@ constexpr HPDF_REAL labelHeight = 10 * scaleFactor;
 constexpr float tableCellPaddingX = 4 * scaleFactor;
 constexpr float tableCellPaddingY = 1 * scaleFactor;
 
-// count the number of rows with auto-transfer in mind for a given page (page, font and font size)
-int calcTextLinesCount( HPDF_Doc doc, HPDF_Page page, const std::string& text )
-{
-    HPDF_REAL r;
-    HPDF_UINT substrStart = 0;
-    int count = 0;
-    for ( ; substrStart < text.size(); ++count )
-    {
-        HPDF_UINT lineSize = MR_HPDF_CHECK_ERROR( HPDF_Page_MeasureText( page, text.data() + substrStart, pageWorkWidth, HPDF_TRUE, &r ) );
-        if ( lineSize == 0 )
-            break;
-        substrStart += lineSize;
-    }
-    return count;
-}
-
 }
 
 struct Pdf::State
@@ -544,7 +528,7 @@ void Pdf::addText_( const std::string& text, const TextParams& textParams )
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, textParams.font, textParams.fontSize ) );
 
-    int strNum = calcTextLinesCount( state_->document, state_->activePage, text );
+    int strNum = calcTextLinesCount_( text );
     const auto textHeight = static_cast< HPDF_REAL >( textParams.fontSize * strNum * lineSpacingScale );
 
     // need add the ability to transfer text between pages
@@ -575,6 +559,21 @@ void Pdf::reset_()
     state_->activePage = nullptr;
     state_->defaultFont = nullptr;
     state_->tableFont = nullptr;
+}
+
+int Pdf::calcTextLinesCount_( const std::string& text )
+{
+    HPDF_REAL r;
+    HPDF_UINT substrStart = 0;
+    int count = 0;
+    for ( ; substrStart < text.size(); ++count )
+    {
+        HPDF_UINT lineSize = MR_HPDF_CHECK_ERROR( HPDF_Page_MeasureText( state_->activePage, text.data() + substrStart, pageWorkWidth, HPDF_TRUE, &r ) );
+        if ( lineSize == 0 )
+            break;
+        substrStart += lineSize;
+    }
+    return count;
 }
 
 bool Pdf::checkDocument() const

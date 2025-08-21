@@ -93,6 +93,11 @@ bool RotatorPlugin::shouldCreateNewHistoryAction_( const std::vector<std::shared
 
 void RotatorPlugin::preDraw_()
 {
+    auto& viewport1 = Viewport::get( ViewportId( 1 ) );
+    auto& viewport2 = Viewport::get( ViewportId( 2 ) );
+
+    viewport2.setCameraTrackballAngle( viewport1.getParameters().cameraTrackballAngle );
+/*
     auto & viewport = Viewport::get();
     Vector3f sceneCenter;
     if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
@@ -125,7 +130,7 @@ void RotatorPlugin::preDraw_()
         }
     }
 
-    incrementForceRedrawFrames();
+    incrementForceRedrawFrames();*/
 }
 
 MR_REGISTER_RIBBON_ITEM( RotatorPlugin )

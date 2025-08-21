@@ -516,25 +516,27 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     needRedraw_ = true;
 }
 
+using ObjectToCameraFunc = std::function<bool ( Vector3f& )>;
+
 class LimitCalc
 {
 public:
-    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const std::function<bool(Vector3f&)> func )
-        : points_( points ), vregion_( vregion ), func_(func) { }
+    LimitCalc( const VertCoords & points, const VertBitSet & vregion, const ObjectToCameraFunc& obj2cam )
+        : points_( points ), vregion_( vregion ), obj2cam_( obj2cam ) { }
     LimitCalc( LimitCalc& x, tbb::split )
-        : points_( x.points_ ), vregion_( x.vregion_ ), func_(x.func_) { }
-    void join(const LimitCalc& y) { box_.include(y.box_); }
+        : points_( x.points_ ), vregion_( x.vregion_ ), obj2cam_( x.obj2cam_ ) { }
+    void join( const LimitCalc& y ) { box_.include( y.box_ ); }
 
     const Box3f& box() const { return box_; }
 
-    void operator()(const tbb::blocked_range<VertId>& r)
+    void operator ()( const tbb::blocked_range<VertId>& r )
     {
-        for (VertId v = r.begin(); v < r.end(); ++v)
+        for ( auto v = r.begin(); v < r.end(); ++v )
         {
             if ( !vregion_.test( v ) )
                 continue;
-            Vector3f pt = points_[v];
-            if( func_( pt ) )
+            auto pt = points_[v];
+            if ( obj2cam_( pt ) )
                 box_.include( pt );
         }
     }
@@ -542,7 +544,7 @@ public:
 private:
     const VertCoords & points_;
     const VertBitSet & vregion_;
-    const std::function<bool(Vector3f&)> func_;
+    const ObjectToCameraFunc& obj2cam_;
     Box3f box_;
 };
 
@@ -560,7 +562,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
     Box3f box;
 
     // object space to camera space
-    const auto makeFunc = [space, xfV = getViewXf_()] ( const AffineXf3f& xfObj ) -> std::function<bool ( Vector3f& )>
+    const auto makeObj2Cam = [space, xfV = getViewXf_()] ( const AffineXf3f& xfObj ) -> ObjectToCameraFunc
     {
         switch ( space )
         {
@@ -589,9 +591,9 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
         MR_UNREACHABLE
     };
 
-    const auto expandBox = [&box, &makeFunc] ( const VertCoords& coords, const VertBitSet& region, const AffineXf3f& objXf )
+    const auto expandBox = [&box] ( const VertCoords& coords, const VertBitSet& region, const ObjectToCameraFunc& obj2cam )
     {
-        LimitCalc calc( coords, region, makeFunc( objXf ) );
+        LimitCalc calc( coords, region, obj2cam );
         parallel_reduce( tbb::blocked_range( region.find_first(), region.find_last() + 1 ), calc );
         box.include( calc.box() );
     };
@@ -602,6 +604,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             continue;
 
         const auto xf = obj->worldXf( id );
+        const auto obj2cam = makeObj2Cam( xf );
 
         if ( selectedPrimitives )
         {
@@ -615,7 +618,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                     getIncidentVerts( mesh.topology, objMesh->getSelectedEdges() )
                     | getIncidentVerts( mesh.topology, objMesh->getSelectedFaces() );
                 if ( region.any() )
-                    expandBox( mesh.points, region, xf );
+                    expandBox( mesh.points, region, obj2cam );
             }
 
             continue;
@@ -627,7 +630,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 continue;
 
             const auto& mesh = *objMesh->mesh();
-            expandBox( mesh.points, mesh.topology.getValidVerts(), xf );
+            expandBox( mesh.points, mesh.topology.getValidVerts(), obj2cam );
         }
         else if ( auto* objLines = obj->asType<ObjectLinesHolder>() )
         {
@@ -635,7 +638,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 continue;
 
             const auto& polyline = *objLines->polyline();
-            expandBox( polyline.points, polyline.topology.getValidVerts(), xf );
+            expandBox( polyline.points, polyline.topology.getValidVerts(), obj2cam );
         }
         else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
         {
@@ -643,7 +646,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 continue;
 
             const auto& pointCloud = *objPoints->pointCloud();
-            expandBox( pointCloud.points, pointCloud.validPoints, xf );
+            expandBox( pointCloud.points, pointCloud.validPoints, obj2cam );
         }
 #ifndef MRVIEWER_NO_VOXELS
         else if ( auto* objVox = obj->asType<ObjectVoxels>(); objVox && objVox->isVolumeRenderingEnabled() )
@@ -656,18 +659,16 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             voxBox.include( Vector3f() );
             voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
 
-            const auto corners = getCorners( voxBox );
-            VertCoords coords( corners.begin(), corners.end() );
-            VertBitSet region( 8, true );
-            expandBox( coords, region, xf );
+            for ( auto p : getCorners( voxBox ) )
+                if ( obj2cam( p ) )
+                    box.include( p );
         }
 #endif
         else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )
         {
-            const auto corners = getCorners( objBox );
-            VertCoords coords( corners.begin(), corners.end() );
-            VertBitSet region( 8, true );
-            expandBox( coords, region, xf );
+            for ( auto p : getCorners( objBox ) )
+                if ( obj2cam( p ) )
+                    box.include( p );
         }
     }
     return box;

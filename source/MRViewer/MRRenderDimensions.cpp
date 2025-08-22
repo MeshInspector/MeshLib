@@ -397,11 +397,20 @@ void LengthTask::renderPass()
 {
     ImVec2 a = toScreenCoords( *viewport_, params_.points[0] );
     ImVec2 b = toScreenCoords( *viewport_, params_.points[1] );
-    float distanceValue = ( params_.points[1] - params_.points[0] ).length() * ( params_.drawAsNegative ? -1.f : 1.f );
+
+    float distanceValue = 0;
+    if ( params_.onlyOneAxis )
+        distanceValue = std::abs( params_.points[1][*params_.onlyOneAxis] - params_.points[0][*params_.onlyOneAxis] );
+    else
+        distanceValue = ( params_.points[1] - params_.points[0] ).length();
+    distanceValue *= ( params_.drawAsNegative ? -1.f : 1.f );
 
     ImGuiMeasurementIndicators::Params indicatorParams;
     indicatorParams.colorMain = color_;
     std::string str = lengthToString( distanceValue );
+    if ( params_.onlyOneAxis )
+        str = fmt::format( "{}: {}", "XYZ"[*params_.onlyOneAxis], str );
+
     if ( params_.showPerCoordDeltas )
     {
         Vector3f delta = params_.points[1] - params_.points[0];

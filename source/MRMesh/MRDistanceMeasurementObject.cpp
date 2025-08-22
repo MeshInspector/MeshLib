@@ -62,26 +62,26 @@ void DistanceMeasurementObject::setLocalDelta( const MR::Vector3f& delta )
     setXf( curXf );
 }
 
-bool DistanceMeasurementObject::getDrawAsNegative() const
+bool DistanceMeasurementObject::isNegative() const
 {
-    return drawAsNegative_;
+    return isNegative_;
 }
 
-void DistanceMeasurementObject::setDrawAsNegative( bool value )
+void DistanceMeasurementObject::setIsNegative( bool value )
 {
-    if ( drawAsNegative_ != value )
+    if ( isNegative_ != value )
     {
-        drawAsNegative_ = value;
+        isNegative_ = value;
         cachedValue_ = {};
     }
 }
 
-DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoordDeltasMode() const
+DistanceMeasurementObject::DistanceMode DistanceMeasurementObject::getDistanceMode() const
 {
     return perCoordDeltas_;
 }
 
-void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
+void DistanceMeasurementObject::setDistanceMode( DistanceMode mode )
 {
     perCoordDeltas_ = mode;
 }
@@ -89,7 +89,7 @@ void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
 float DistanceMeasurementObject::computeDistance() const
 {
     if ( !cachedValue_ )
-        cachedValue_ = getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+        cachedValue_ = getWorldDelta().length() * ( isNegative() ? -1.f : 1.f );
     return *cachedValue_;
 }
 
@@ -195,7 +195,7 @@ void DistanceMeasurementObject::serializeFields_( Json::Value& root ) const
     MeasurementObject::serializeFields_( root );
     root["Type"].append( TypeName() );
 
-    root["DrawAsNegative"] = drawAsNegative_;
+    root["DrawAsNegative"] = isNegative_;
 
     if ( tolerance_ )
     {
@@ -219,10 +219,10 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
     MeasurementObject::deserializeFields_( root );
 
     if ( const auto& json = root["DrawAsNegative"]; json.isBool() )
-        drawAsNegative_ = json.asBool();
+        isNegative_ = json.asBool();
 
-    if ( const auto& json = root["PerCoordDeltas"]; json.isInt() )
-        perCoordDeltas_ = PerCoordDeltas( json.asInt() );
+    if ( const auto& json = root["DistanceMode"]; json.isInt() )
+        perCoordDeltas_ = DistanceMode( json.asInt() );
 
     { // Tolerance.
         const auto& jsonPos = root["TolerancePositive"];
@@ -236,7 +236,7 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
     }
 
     if ( const auto& json = root["ReferenceValue"]; json.isDouble() )
-        perCoordDeltas_ = PerCoordDeltas( json.asFloat() );
+        perCoordDeltas_ = DistanceMode( json.asFloat() );
 }
 
 void DistanceMeasurementObject::setupRenderObject_() const

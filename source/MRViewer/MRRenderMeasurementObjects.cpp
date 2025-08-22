@@ -31,9 +31,15 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
     Vector3f pointB = pointA + object_->getWorldDelta();
     task_ = RenderDimensions::LengthTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
         .points = { pointA, pointB },
-        .drawAsNegative = object_->getDrawAsNegative(),
-        .showPerCoordDeltas = object_->getPerCoordDeltasMode() != DistanceMeasurementObject::PerCoordDeltas::none,
-        .perCoordDeltasAreAbsolute = object_->getPerCoordDeltasMode() == DistanceMeasurementObject::PerCoordDeltas::absolute,
+        .drawAsNegative = object_->isNegative(),
+        .onlyOneAxis =
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::xAbsolute ? std::optional( 0 ) :
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::yAbsolute ? std::optional( 1 ) :
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::zAbsolute ? std::optional( 2 ) : std::nullopt,
+        .showPerCoordDeltas =
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::eucledianWithSignedDeltasPerAxis ||
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::eucledianWithAbsoluteDeltasPerAxis,
+        .perCoordDeltasAreAbsolute = object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::eucledianWithAbsoluteDeltasPerAxis,
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

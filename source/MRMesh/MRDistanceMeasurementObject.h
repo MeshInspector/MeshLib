@@ -43,20 +43,25 @@ public:
     MRMESH_API virtual void setLocalDelta( const MR::Vector3f& delta );
 
     // Whether the distance should be displayed as a negative one.
-    [[nodiscard]] MRMESH_API bool getDrawAsNegative() const;
-    MRMESH_API virtual void setDrawAsNegative( bool value );
+    [[nodiscard]] MRMESH_API bool isNegative() const;
+    MRMESH_API virtual void setIsNegative( bool value );
 
-    enum class PerCoordDeltas
+    enum class DistanceMode
     {
-        none, // Hide.
-        withSign, // Display as is.
-        absolute, // Display absolute values.
+        eucledian, // Eucledian distance.
+        eucledianWithSignedDeltasPerAxis, // Eucledian distance, but also display per-axis deltas with signs.
+        eucledianWithAbsoluteDeltasPerAxis, // Eucledian distance, but also display per-axis deltas without signs.
+        // Absolute distance in one axis:
+        xAbsolute,
+        yAbsolute,
+        zAbsolute,
     };
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
-    [[nodiscard]] MRMESH_API PerCoordDeltas getPerCoordDeltasMode() const;
-    MRMESH_API virtual void setPerCoordDeltasMode( PerCoordDeltas mode );
+    [[nodiscard]] MRMESH_API DistanceMode getDistanceMode() const;
+    MRMESH_API virtual void setDistanceMode( DistanceMode mode );
 
-    // Computes the distance value: `getWorldDelta().length() * (getDrawAsNegative() ? -1 : 1)`.
+    // Computes the distance value. This is affected by `getDistanceMode()`.
+    // In `eucledian`, this is `getWorldDelta().length() * (isNegative() ? -1 : 1)`.
     [[nodiscard]] MRMESH_API float computeDistance() const;
 
     [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
@@ -91,10 +96,10 @@ private:
     // Don't forget to add all the new fields to serialization.
 
     // Whether the distance should be displayed as a negative one.
-    bool drawAsNegative_ = false;
+    bool isNegative_ = false;
 
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
-    PerCoordDeltas perCoordDeltas_ = PerCoordDeltas::none;
+    DistanceMode perCoordDeltas_ = DistanceMode::eucledian;
 
     // The cached value for `computeDistance()`.
     mutable std::optional<float> cachedValue_;

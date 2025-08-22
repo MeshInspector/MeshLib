@@ -329,6 +329,24 @@ public:
     MRVIEWER_API bool drawRemoveButton( const std::vector<std::shared_ptr<Object>>& selectedObjs );
     MRVIEWER_API bool drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
     MRVIEWER_API bool drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+
+    /// style constants used for the information panel
+    struct SelectionInformationStyle
+    {
+        /// value text color
+        Color textColor;
+        /// property label color
+        Color labelColor;
+        /// selected value text color
+        Color selectedTextColor;
+        /// value item width
+        float itemWidth {};
+        /// value item width for two-segment field
+        float item2Width {};
+        /// value item width for three-segment field
+        float item3Width {};
+    };
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -370,6 +388,8 @@ protected:
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
 
+    /// draw additional selection information (e.g. for custom objects)
+    MRVIEWER_API virtual void drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
 

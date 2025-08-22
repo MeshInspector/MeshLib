@@ -1464,6 +1464,15 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter(), LengthUnit{} );
     }
 
+    drawCustomSelectionInformation_( selectedObjs, {
+        .textColor = textColor,
+        .labelColor = labelColor,
+        .selectedTextColor = selectedTextColor,
+        .itemWidth = itemWidth,
+        .item2Width = getSceneInfoItemWidth_( 2 ),
+        .item3Width = getSceneInfoItemWidth_( 3 ),
+    } );
+
     // This looks a bit better.
     for ( int i = 0; i < 5; i++ )
         ImGui::Spacing();
@@ -2037,6 +2046,10 @@ MR_SUPPRESS_WARNING_POP
     }
 
     return someChanges;
+}
+
+void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>&, const SelectionInformationStyle& )
+{
 }
 
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )

@@ -1,12 +1,13 @@
 #pragma once
 
 #include "MRMesh/MRMeasurementObject.h"
+#include "MRMesh/MRObjectComparableWithReference.h"
 
 namespace MR
 {
 
 // Represents a distance measurement.
-class MRMESH_CLASS DistanceMeasurementObject : public MeasurementObject
+class MRMESH_CLASS DistanceMeasurementObject : public MeasurementObject, public ObjectComparableWithReference
 {
     // The xf encodes the distance: the origin is one point, and (1,0,0) is another.
 public:
@@ -60,6 +61,20 @@ public:
 
     [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
 
+    // Implement `ObjectComparableWithReference`:
+    [[nodiscard]] MRMESH_API std::size_t numComparableProperties() const override;
+    [[nodiscard]] MRMESH_API std::string_view getComparablePropertyName( std::size_t i ) const override;
+    [[nodiscard]] MRMESH_API std::optional<float> compareProperty( const Object& other, std::size_t i ) const override;
+    [[nodiscard]] MRMESH_API bool hasComparisonTolerances() const override;
+    [[nodiscard]] MRMESH_API ComparisonTolerance getComparisonTolerences( std::size_t i ) override;
+    MRMESH_API void setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance ) override;
+    MRMESH_API void resetComparisonTolerances() override;
+    [[nodiscard]] MRMESH_API bool hasComparisonReferenceValues() const override;
+    MRMESH_API void enableComparisonTolerances() override;
+    [[nodiscard]] MRMESH_API float getComparisonReferenceValue( std::size_t i ) const override;
+    MRMESH_API void setComparisonReferenceValue( std::size_t i, float value ) override;
+    MRMESH_API void resetComparisonReferenceValues() override;
+
 protected:
     DistanceMeasurementObject( const DistanceMeasurementObject& other ) = default;
 
@@ -83,6 +98,10 @@ private:
 
     // The cached value for `computeDistance()`.
     mutable std::optional<float> cachedValue_;
+
+    std::optional<ComparisonTolerance> tolerance_;
+
+    std::optional<float> referenceValue_;
 };
 
 } // namespace MR

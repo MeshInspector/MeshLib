@@ -68,7 +68,7 @@ bool checkKey( ImGuiKey passedKey )
     if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
         return false;
 
-    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true, 
+    // if modal is open ImGui::GetIO().WantCaptureKeyboard will be always true,
     // so use special case for modals
     bool isAnyOpen = bool( ImGui::GetTopMostPopupModal() );
     if ( ( isAnyOpen && ImGui::IsAnyItemActive() ) || ( !isAnyOpen && ImGui::GetIO().WantCaptureKeyboard ) )
@@ -1668,20 +1668,13 @@ static void drawDragCursor()
 
 void detail::drawDragTooltip( std::string rangeText )
 {
-    static bool inputMode = false;
-    if ( ImGui::IsItemActivated() )
-        inputMode = ( ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().KeyCtrl ) || ImGui::GetIO().MouseDoubleClicked[0];
-
-    if ( ImGui::IsItemActive() )
+    if ( ImGui::IsItemActive() && !ImGui::TempInputIsActive( ImGui::GetItemID() ) )
     {
-        if ( !inputMode )
-        {
-            ImGui::SetMouseCursor( ImGuiMouseCursor_None );
-            drawDragCursor();
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
-            ImGui::EndTooltip();
-        }
+        ImGui::SetMouseCursor( ImGuiMouseCursor_None );
+        drawDragCursor();
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
+        ImGui::EndTooltip();
 
         if ( !rangeText.empty() )
         {

@@ -426,6 +426,25 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
         } );
 }
 
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
+bool input( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
+{
+    // This is a hack to activate the input with a single click, by pretending that Ctrl is also held.
+    if (
+        ImGui::GetMousePos().x >= ImGui::GetCursorScreenPos().x &&
+        ImGui::GetMousePos().y >= ImGui::GetCursorScreenPos().y &&
+        ImGui::GetMousePos().x < ImGui::GetCursorScreenPos().x + ImGui::CalcItemWidth() &&
+        ImGui::GetMousePos().y < ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() &&
+        ImGui::IsMouseClicked( ImGuiMouseButton_Left ) &&
+        ImGui::GetIO().KeyMods == 0
+    )
+    {
+        ImGui::GetIO().KeyCtrl = true;
+    }
+
+    return (drag<E>)( label, v, 0.f, vMin, vMax, std::move( unitParams ), flags );
+}
+
 template <UnitEnum E, detail::VectorOrScalar T>
 void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor, UnitToStringParams<E> unitParams, std::optional<ImVec4> labelColor )
 {

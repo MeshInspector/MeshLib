@@ -22,6 +22,7 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
         trajC.erase( std::unique( trajC.begin(), trajC.end() ), trajC.end() );
 
     AffineXf3f xf;
+    std::optional<AffineXf3f> xf0Inv;
     Vector3f trans;
     Matrix3f prevHalfRot;
     Matrix3f accumRot;
@@ -173,6 +174,12 @@ Mesh makeMovementBuildBody( const Contours3f& bodyContours, const Contours3f& tr
                 }
             }
             xf = AffineXf3f::translation( trans ) * AffineXf3f::xfAround( scaling * accumRot, center );
+            if ( params.startMeshFromBody )
+            {
+                if ( !xf0Inv )
+                    xf0Inv = xf.inverse();
+                xf = *xf0Inv * xf;
+            }
             if ( params.b2tXf )
                 xf = xf * ( *params.b2tXf );
 

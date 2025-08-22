@@ -12,14 +12,20 @@ struct MovementBuildBodyParams
     /// according to its rotation
     /// otherwise body movement will be done without any rotation
     bool allowRotation{ true };
+
     /// point in body space that follows trajectory
     /// if not set body bounding box center is used
     std::optional<Vector3f> center;
+
     /// facing direction of body, used for initial rotation (if allowRotation)
     /// if not set body accumulative normal is used
     std::optional<Vector3f> bodyNormal;
+
     /// optional transform body space to trajectory space
     const AffineXf3f* b2tXf{ nullptr };
+
+    /// if true, then body-contours will be located exactly on resulting mesh
+    bool startMeshFromBody{ false };
 };
 
 /// makes mesh by moving `body` along `trajectory`

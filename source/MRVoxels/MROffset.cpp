@@ -311,7 +311,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     }
 }
 
-Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params, const PartMapping & map )
 {
     MR_TIMER;
     auto res = offsetOneDirection( mesh, offset, params );
@@ -323,13 +323,13 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     if ( offset >= 0 )
     {
         // add original mesh to the result with flipping
-        resMesh.addMeshPart( mesh, true ); // true = with flipping
+        resMesh.addMeshPart( mesh, true, {}, {}, map ); // true = with flipping
     }
     else
     {
         resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
-        resMesh.addMesh( mesh );
+        resMesh.addMesh( mesh, map );
     }
     return res;
 }

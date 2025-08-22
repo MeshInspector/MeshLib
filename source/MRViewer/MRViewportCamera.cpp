@@ -132,14 +132,14 @@ void Viewport::setRotation( bool state )
         auto [obj, pick] = pick_render_object();
         pickedSuccessfuly_ = obj && pick.face.valid();
         if ( pickedSuccessfuly_ )
-            setRotationPivot_( obj->worldXf()( pick.point ) );
+            setRotationPivot( obj->worldXf()( pick.point ) );
     }
     if ( params_.rotationMode != Parameters::RotationCenterMode::Dynamic && !pickedSuccessfuly_ )
     {
         if ( !boxUpdated )
             updateSceneBox_(); // need update here anyway, but under flag, not to update twice
         auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
-        setRotationPivot_( sceneCenter );
+        setRotationPivot( sceneCenter );
     }
 
     auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
@@ -206,16 +206,6 @@ float Viewport::getPixelSizeAtPoint( const Vector3f& worldPoint ) const
     return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y ) * 2.0f;
 }
 
-
-Vector3f Viewport::getRotationPivot() const
-{
-    return rotationPivot_;
-}
-
-void Viewport::setRotationPivot_( const Vector3f& point )
-{
-    rotationPivot_ = point;
-}
 
 // ================================================================
 // projection part
@@ -454,7 +444,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     if ( !unitedBox.valid() )
     {
         params_.cameraZoom = safeZoom;
-        setRotationPivot_( Vector3f() );
+        setRotationPivot( Vector3f() );
         return;
     }
 
@@ -468,7 +458,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     }
     Vector3f sceneCenter = params_.orthographic ?
         getViewXf_().inverse()( unitedBox.center() ) : unitedBox.center();
-    setRotationPivot_( sceneCenter );
+    setRotationPivot( sceneCenter );
 
     params_.cameraTranslation = -sceneCenter;
     params_.cameraViewAngle = 45.0f;
@@ -722,11 +712,11 @@ void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool sna
     sceneBox_ = newSceneBox;
     if ( !newSceneBox.valid() )
     {
-        setRotationPivot_( Vector3f() );
+        setRotationPivot( Vector3f() );
         return;
     }
     auto sceneCenter = sceneBox_.center();
-    setRotationPivot_( sceneCenter );
+    setRotationPivot( sceneCenter );
     params_.cameraTranslation = -sceneCenter;
 
     auto dif = sceneBox_.max - sceneBox_.min;

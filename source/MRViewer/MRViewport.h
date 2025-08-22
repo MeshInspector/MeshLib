@@ -316,7 +316,7 @@ public:
 
         enum class RotationCenterMode
         {
-            Static, // scene is always rotated around its center
+            Static, // scene is always rotated around its center or another manually set point
             DynamicStatic, // scene is rotated around picked point on object, or around center, if miss pick
             Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
         } rotationMode{ RotationCenterMode::Dynamic };
@@ -492,8 +492,11 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
-    // Get current rotation pivot in world space
-    MRVIEWER_API Vector3f getRotationPivot() const;
+    /// returns current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    Vector3f getRotationPivot() const { return rotationPivot_; }
+
+    /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    void setRotationPivot( const Vector3f& point ) { rotationPivot_ = point; }
 
 private:
     // initializes view matrix based on camera position
@@ -540,8 +543,6 @@ private:
     int pixelYoffset_{ -100 };
     int axisPixSize_{ 70 };
 
-    // Receives point in scene coordinates, that should appear static on a screen, while rotation
-    void setRotationPivot_( const Vector3f& point );
     void updateSceneBox_();
     void rotateView_();
 

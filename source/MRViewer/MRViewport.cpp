@@ -85,7 +85,7 @@ void Viewport::init()
     viewportGL_ = ViewportGL();
     initBaseAxes();
     updateSceneBox_();
-    setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
+    setRotationPivot( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
     setupProjMatrix_();
     setupAxesProjMatrix_();
 }

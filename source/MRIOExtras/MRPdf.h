@@ -44,7 +44,7 @@ class Pdf
 {
 public:
     /// Ctor
-    MRIOEXTRAS_API Pdf( const std::filesystem::path& documentPath, const PdfParameters& params = PdfParameters() );
+    MRIOEXTRAS_API Pdf( const PdfParameters& params = PdfParameters() );
     MRIOEXTRAS_API Pdf( Pdf&& other ) noexcept;
     MRIOEXTRAS_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
     /// Dtor. Automatically do close
@@ -94,13 +94,13 @@ public:
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
      */
-    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params );
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const ImageParams& params ); 
 
     /// Add new pageand move cursor on it
     MRIOEXTRAS_API void newPage();
 
-    /// Save and close document. After this impossible add anything in document
-    MRIOEXTRAS_API void close();
+    /// Save document to file
+    MRIOEXTRAS_API void saveToFile( const std::filesystem::path& documentPath );
 
     void setCursorPosX( float posX ) { cursorX_ = posX; }
     void setCursorPosY( float posY ) { cursorY_ = posY; }
@@ -118,10 +118,14 @@ private:
     // common method for adding different types of text
     void addText_( const std::string& text, const TextParams& params );
 
+    // close pdf document without saving. After this impossible add anything in document.
+    void reset_();
+
+    // count the number of rows with auto-transfer in mind for a given page (page, font and font size)
+    int calcTextLinesCount_( const std::string& text );
+
     struct State;
     std::unique_ptr<State> state_;
-
-    std::filesystem::path filename_;
 
     PdfParameters params_;
 

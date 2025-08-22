@@ -109,8 +109,6 @@ MR::AffineXf3f worldToBasis(
 
 void RotatorPlugin::preDraw_()
 {
-    incrementForceRedrawFrames();
-
     if ( !label_ )
     {
         label_ = std::make_shared<MR::ObjectLabel>();
@@ -127,25 +125,29 @@ void RotatorPlugin::preDraw_()
         MR::SceneRoot::get().addChild( label_ );
     }
 
-    auto& viewport1 = Viewport::get( ViewportId( 1 ) );
-    auto& viewport2 = Viewport::get( ViewportId( 2 ) );
-
-    viewport2.setCameraTrackballAngle( viewport1.getParameters().cameraTrackballAngle );
-
     if ( label_ )
     {
+        // use current camera settings to setup label position in each viewport
+        for ( auto v : { ViewportId( 1 ), ViewportId( 2 ) } )
+        {
+            auto& viewport = Viewport::get( v );
+            auto up = viewport.getUpDirection();
+            auto back = viewport.getBackwardDirection();
+            auto cameraTranslation = viewport.getParameters().cameraTranslation;
+
+            auto moveXf = worldToBasis( back, up, {} );
+            moveXf.b -= cameraTranslation;
+            label_->setXf( moveXf, v );
+        }
+
+        // synchronize viewports for next frame
+        auto& viewport1 = Viewport::get( ViewportId( 1 ) );
+        auto& viewport2 = Viewport::get( ViewportId( 2 ) );
         auto up = viewport1.getUpDirection();
         auto back = viewport1.getBackwardDirection();
-        auto cameraTranslation = viewport1.getParameters().cameraTranslation;
-
-        auto moveXf = worldToBasis( back, up, {} );
-        moveXf.b -= cameraTranslation;
-        label_->setXf( moveXf );
-
         viewport2.cameraLookAlong( back, up );
+        auto cameraTranslation = viewport1.getParameters().cameraTranslation;
         viewport2.setCameraTranslation( cameraTranslation );
-        
-        incrementForceRedrawFrames();
     }
 
 /*

@@ -74,12 +74,13 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
 
 ViewportMask VisualObject::globalClippedByPlaneMask() const
 {
-    auto res = clipByPlane_;
+    // do not access clipByPlane_ directly, to allow subclasses to override the behavior
+    auto res = getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
     auto parent = this->parent();
     while ( parent )
     {
         if ( auto visParent = dynamic_cast<const VisualObject*>( parent ) )
-            res |= visParent->clipByPlane_;
+            res |= visParent->getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
         parent = parent->parent();
     }
     return res;

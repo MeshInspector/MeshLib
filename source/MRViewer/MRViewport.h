@@ -321,6 +321,10 @@ public:
             Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
         } rotationMode{ RotationCenterMode::Dynamic };
 
+        // in Static RotationMode, this world space point is used as rotation pivot
+        // if it is not set, scene box center is used instead
+        std::optional<Vector3f> staticRotationPivot;
+
         // if it is true, while rotation is enabled camera can be moved along forward axis
         // in order to keep constant distance to scene center
         bool compensateRotation{ true };
@@ -495,10 +499,15 @@ public:
     /// returns current rotation pivot in world space, which should appear static on a screen during rotation by the user
     Vector3f getRotationPivot() const { return rotationPivot_; }
 
-    /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
-    void setRotationPivot( const Vector3f& point ) { rotationPivot_ = point; }
-
+    /// sets world point to be used as rotation pivot in static mode
+    /// this should appear static on a screen during rotation by the user
+    /// if nullopt - scene box center is used
+    /// please note that this point should be set *before rotation starts*
+    MRVIEWER_API void resetStaticRotationPivot( const std::optional<Vector3f>& pivot = std::nullopt );
 private:
+    /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
+    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`
+    void setRotationPivot_( const Vector3f& point ) { rotationPivot_ = point; }
     // initializes view matrix based on camera position
     void setupViewMatrix_();
     // returns world space to camera space transformation

@@ -8,7 +8,6 @@
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
-#include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderMeshObject.h"
 #include "MRViewer/MRRenderPointsObject.h"
 #include "MRViewer/MRRenderWrapObject.h"
@@ -99,6 +98,16 @@ public:
             const_cast<WrappedModelSubobject &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * target_->getMainFeatureAlpha() ), 0, 255 ) );
         return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getGlobalAlphaForAllViewports();
     }
+
+    const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override
+    {
+        if ( auto value = type.tryGet<VisualizeMaskType>(); value && *value == VisualizeMaskType::ClippedByPlane )
+            return clipByPlane_ = target_->globalClippedByPlaneMask();
+        return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getVisualizePropertyMask( type );
+    }
+
+private:
+    mutable ViewportMask clipByPlane_;
 };
 
 template <typename BaseObjectType>
@@ -125,6 +134,16 @@ public:
     {
         return dynamic_cast<const FeatureObject&>( *target_ ).getDecorationsColorForAllViewports( selected );
     }
+
+    const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override
+    {
+        if ( auto value = type.tryGet<VisualizeMaskType>(); value && *value == VisualizeMaskType::ClippedByPlane )
+            return clipByPlane_ = target_->globalClippedByPlaneMask();
+        return detail::WrappedModelSubobjectPart<false, BaseObjectType>::getVisualizePropertyMask( type );
+    }
+
+private:
+    mutable ViewportMask clipByPlane_;
 };
 
 // A common base class for sub-renderobjects that are combined into the proper features.

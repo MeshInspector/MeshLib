@@ -72,6 +72,34 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     return res;
 }
 
+ViewportMask VisualObject::globalClippedByPlaneMask() const
+{
+    auto res = clipByPlane_;
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<const VisualObject*>( parent ) )
+            res |= visParent->clipByPlane_;
+        parent = parent->parent();
+    }
+    return res;
+}
+
+void VisualObject::setGlobalClippedByPlane( bool on, ViewportMask viewportMask )
+{
+    setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+    if ( on )
+        return;
+
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<VisualObject*>( parent ) )
+            visParent->setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+        parent = parent->parent();
+    }
+}
+
 const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
 {
     // Calling the getter in case it's overridden.

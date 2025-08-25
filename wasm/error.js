@@ -68,7 +68,7 @@ var registerErrorHandling = function () {
     };
     window.onerror = (e) => {
         let errorStr = JSON.stringify(e);
-        if (errorStr.includes("Uncaught RuntimeError: Aborted()"))
-            quit_("Uncaught RuntimeError: Aborted()", e);
+        if (errorStr.includes("RuntimeError: Aborted()"))
+            quit_("RuntimeError: Aborted()", e);
     };
 };

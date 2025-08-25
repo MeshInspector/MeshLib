@@ -538,6 +538,7 @@ public:
     SpaceMouseKeySignal spaceMouseRepeatSignal; // signal is called when spacemouse key is pressed for some time
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
+    RenderSignal preSetupViewSignal; // signal is called before viewports cleanup and camera setup, so one can customize camera XFs for this frame
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)
     RenderSignal preDrawPostViewportSignal; // signal is called before scene draw but after viewport.preDraw()
     RenderSignal drawSignal; // signal is called on scene draw (after objects tree but before viewport.postDraw())

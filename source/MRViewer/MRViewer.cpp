@@ -1903,6 +1903,7 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
 }

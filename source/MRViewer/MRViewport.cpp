@@ -85,7 +85,8 @@ void Viewport::init()
     viewportGL_ = ViewportGL();
     initBaseAxes();
     updateSceneBox_();
-    setRotationPivot( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
+    auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     setupProjMatrix_();
     setupAxesProjMatrix_();
 }
@@ -595,6 +596,12 @@ void Viewport::setParameters( const Viewport::Parameters& params )
         return;
     params_ = params;
     needRedraw_ = true;
+}
+
+void Viewport::resetStaticRotationPivot( const std::optional<Vector3f>& pivot /*= std::nullopt */ )
+{
+    // no need to set `needRedraw_` here, cause this parameter does not update current frame
+    params_.staticRotationPivot = pivot;
 }
 
 void Viewport::setAxesSize( const int axisPixSize )

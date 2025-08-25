@@ -132,14 +132,14 @@ void Viewport::setRotation( bool state )
         auto [obj, pick] = pick_render_object();
         pickedSuccessfuly_ = obj && pick.face.valid();
         if ( pickedSuccessfuly_ )
-            setRotationPivot( obj->worldXf()( pick.point ) );
+            setRotationPivot_( obj->worldXf()( pick.point ) );
     }
     if ( params_.rotationMode != Parameters::RotationCenterMode::Dynamic && !pickedSuccessfuly_ )
     {
         if ( !boxUpdated )
             updateSceneBox_(); // need update here anyway, but under flag, not to update twice
         auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
-        setRotationPivot( sceneCenter );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     }
 
     auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
@@ -444,7 +444,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     if ( !unitedBox.valid() )
     {
         params_.cameraZoom = safeZoom;
-        setRotationPivot( Vector3f() );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
         return;
     }
 
@@ -458,7 +458,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     }
     Vector3f sceneCenter = params_.orthographic ?
         getViewXf_().inverse()( unitedBox.center() ) : unitedBox.center();
-    setRotationPivot( sceneCenter );
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
 
     params_.cameraTranslation = -sceneCenter;
     params_.cameraViewAngle = 45.0f;
@@ -706,11 +706,11 @@ void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool sna
     sceneBox_ = newSceneBox;
     if ( !newSceneBox.valid() )
     {
-        setRotationPivot( Vector3f() );
+        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
         return;
     }
     auto sceneCenter = sceneBox_.center();
-    setRotationPivot( sceneCenter );
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     params_.cameraTranslation = -sceneCenter;
 
     auto dif = sceneBox_.max - sceneBox_.min;

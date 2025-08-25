@@ -88,10 +88,7 @@ bool TouchpadController::touchpadSwipeGestureBegin_()
 
     if ( currentSwipeMode_ == TouchpadParameters::SwipeMode::SwipeRotatesCamera )
     {
-        const auto initParams = viewer.viewport().getParameters();
-        viewport.rotationCenterMode( Viewport::Parameters::RotationCenterMode::DynamicStatic );
         viewport.setRotation( true );
-        viewport.rotationCenterMode( initParams.rotationMode );
     }
 
     return true;

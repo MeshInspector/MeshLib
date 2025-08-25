@@ -131,7 +131,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objLines_->getColoringType() == ColoringType::VertsColorMap ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perLineColoring" ), objLines_->getColoringType() == ColoringType::LinesColorMap ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
@@ -186,7 +186,7 @@ void RenderLinesObject::renderPicker_( const ModelBaseRenderParams& parameters, 
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "width" ), objLines_->getLineWidth() ) );
     }
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, parameters.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objLines_->globalClippedByPlane( parameters.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         parameters.clipPlane.n.x, parameters.clipPlane.n.y,
         parameters.clipPlane.n.z, parameters.clipPlane.d ) );

@@ -153,7 +153,7 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), ambient ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),
-        objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+        objVoxels_->globalClippedByPlane( renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );

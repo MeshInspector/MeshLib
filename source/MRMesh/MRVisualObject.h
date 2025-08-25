@@ -155,6 +155,15 @@ public:
         setAllVisualizeProperties_( properties, counter );
     }
 
+    /// returns all viewports where this object or any of its parents is clipped by plane
+    [[nodiscard]] MRMESH_API ViewportMask globalClippedByPlaneMask() const;
+
+    /// returns true if this object or any of its parents is clipped by plane in any of given viewports
+    [[nodiscard]] bool globalClippedByPlane( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalClippedByPlaneMask() & viewportMask ).empty(); }
+
+    /// if false deactivates clipped-by-plane for this object and all of its parents, otherwise sets clipped-by-plane for this this object only
+    MRMESH_API void setGlobalClippedByPlane( bool on, ViewportMask viewportMask = ViewportMask::all() );
+
     /// shows/hides labels
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MR_BIND_IGNORE void showLabels( bool on ) { return setVisualizeProperty( on, VisualizeMaskType::Labels, ViewportMask::all() ); }

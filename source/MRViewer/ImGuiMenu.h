@@ -195,8 +195,6 @@ public:
 
   void draw_labels_window();
 
-  void draw_labels( const VisualObject& obj );
-
   MRVIEWER_API void draw_text(
       const Viewport& viewport,
       const Vector3f& pos,

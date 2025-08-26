@@ -4,6 +4,7 @@
 #include "MRSymbolMesh.h"
 
 #include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRPositionedText.h"
 
 namespace MR
 {

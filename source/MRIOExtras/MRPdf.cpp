@@ -623,16 +623,16 @@ int Pdf::calcTextLinesCount_( const std::string& text )
     return count;
 }
 
-bool Pdf::checkDocument_( const std::string& action ) const
+bool Pdf::checkDocument_( const std::string& logAction ) const
 {
     if ( !state_->document )
     {
-        spdlog::warn( "Pdf: Can't {}: no valid document", action );
+        spdlog::warn( "Pdf: Can't {}: no valid document", logAction );
         return false;
     }
     if ( !state_->activePage )
     {
-        spdlog::warn( "Pdf: Can't {}: no valid page", action );
+        spdlog::warn( "Pdf: Can't {}: no valid page", logAction );
         return false;
     }
 

@@ -143,7 +143,7 @@ private:
     float cursorX_ = 0;
     float cursorY_ = 0;
 
-    bool checkDocument_( const std::string& action ) const;
+    bool checkDocument_( const std::string& logAction ) const;
     void moveCursorToNewLine();
 };
 

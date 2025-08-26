@@ -8,7 +8,6 @@
 #include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
-#include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderMeshObject.h"
 #include "MRViewer/MRRenderPointsObject.h"
 #include "MRViewer/MRRenderWrapObject.h"
@@ -69,19 +68,37 @@ namespace detail
             return ObjectMesh::getGlobalAlphaForAllViewports();
         }
     };
+
+    template <bool IsPrimary, typename BaseObjectType>
+    class WrappedModelSubobjectBase : public detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
+    {
+    public:
+        bool isSelected() const override
+        {
+            return target_->isSelected();
+        }
+
+        const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override
+        {
+            if ( auto value = type.tryGet<VisualizeMaskType>(); value && *value == VisualizeMaskType::ClippedByPlane )
+                return const_cast<ViewportMask&>( clipByPlane_ ) = target_->globalClippedByPlaneMask();
+            return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getVisualizePropertyMask( type );
+        }
+
+    protected:
+        using detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::clipByPlane_;
+    };
+
 }
 
 // Wraps a datamodel object to override some of its visual properties.
 // This is used for stub datamodel objects that we store inside of renderobjects to provide them with models (aka visualization data: meshes, etc).
 // The base template handles `IsPrimary == true`. We have a specialization below for `false`.
 template <bool IsPrimary, typename BaseObjectType>
-class WrappedModelSubobject : public detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
+class WrappedModelSubobject : public detail::WrappedModelSubobjectBase<IsPrimary, BaseObjectType>
 {
 public:
-    bool isSelected() const override
-    {
-        return target_->isSelected();
-    }
+    using detail::WrappedModelSubobjectBase<IsPrimary, BaseObjectType>::target_;
 
     const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
     {
@@ -102,13 +119,10 @@ public:
 };
 
 template <typename BaseObjectType>
-class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectPart<false, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
+class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectBase<false, BaseObjectType>
 {
 public:
-    bool isSelected() const override
-    {
-        return target_->isSelected();
-    }
+    using detail::WrappedModelSubobjectBase<false, BaseObjectType>::target_;
 
     ViewportMask visibilityMask() const override
     {

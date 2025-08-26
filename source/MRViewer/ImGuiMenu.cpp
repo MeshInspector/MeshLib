@@ -664,39 +664,10 @@ void ImGuiMenu::draw_labels_window()
       | ImGuiWindowFlags_NoCollapse
       | ImGuiWindowFlags_NoSavedSettings
       | ImGuiWindowFlags_NoInputs);
-  for ( const auto& data : SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Any>() )
-  {
-      draw_labels( *data );
-  }
 
   ImGui::End();
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
-}
-
-void ImGuiMenu::draw_labels( const VisualObject& obj )
-{
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    const auto& labels = obj.getLabels();
-
-    for ( const auto& viewport : viewer->viewport_list )
-    {
-        if ( !obj.globalVisibility( viewport.id ) )
-            continue;
-        AffineXf3f xf = obj.worldXf();
-        bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );
-        if ( obj.getVisualizeProperty( VisualizeMaskType::Labels, viewport.id ) )
-            for ( int i = 0; i < labels.size(); ++i )
-                draw_text(
-                    viewport,
-                    xf( labels[i].position ),
-                    Vector3f( 0.0f, 0.0f, 0.0f ),
-                    labels[i].text,
-                    obj.getLabelsColor(),
-                    clip );
-    }
-MR_SUPPRESS_WARNING_POP
 }
 
 void ImGuiMenu::draw_text(
@@ -1831,7 +1802,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     if ( allIsFeatureObj )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
-    someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->experimentalFeatures )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
 
@@ -1927,19 +1897,6 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
         data->setBackColor( Color( color ), selectedViewport_ );
-    } );
-    make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
-    {
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-        return Vector4f( data->getLabelsColor( selectedViewport_ ) );
-MR_SUPPRESS_WARNING_POP
-    }, [&] ( VisualObject* data, const Vector4f& color )
-    {
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-        data->setLabelsColor( Color( color ), selectedViewport_ );
-MR_SUPPRESS_WARNING_POP
     } );
 
     if ( !selectedMeshObjs.empty() )

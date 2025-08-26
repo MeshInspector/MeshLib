@@ -461,7 +461,6 @@ void ColorTheme::resetImGuiStyle()
     style.ItemSpacing.y = 6.0f;
 
     style.FrameBorderSize = 1.0f;
-    style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
 

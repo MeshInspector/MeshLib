@@ -62,6 +62,7 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
+      config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}

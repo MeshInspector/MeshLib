@@ -81,12 +81,12 @@ namespace detail
         const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override
         {
             if ( auto value = type.tryGet<VisualizeMaskType>(); value && *value == VisualizeMaskType::ClippedByPlane )
-                return clipByPlane_ = target_->globalClippedByPlaneMask();
+                return const_cast<ViewportMask&>( clipByPlane_ ) = target_->globalClippedByPlaneMask();
             return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getVisualizePropertyMask( type );
         }
 
-    private:
-        mutable ViewportMask clipByPlane_;
+    protected:
+        using detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::clipByPlane_;
     };
 
 }

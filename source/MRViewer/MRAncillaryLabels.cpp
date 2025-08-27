@@ -5,7 +5,6 @@
 #include "MRViewer.h"
 #include "MRViewport.h"
 #include "ImGuiMenu.h"
-#include "MRImGuiMeasurementIndicators.h"
 #include "imgui.h"
 
 namespace MR
@@ -97,6 +96,16 @@ void AncillaryImGuiLabel::reset()
     labelData_ = {};
 }
 
+void AncillaryImGuiLabel::overrideParams( const ImGuiMeasurementIndicators::Params& params )
+{
+    overrideParams_ = params;
+}
+
+void AncillaryImGuiLabel::resetOverrideParams()
+{
+    overrideParams_.reset();
+}
+
 void AncillaryImGuiLabel::preDraw_()
 {
     if ( labelData_.text.empty() )
@@ -110,9 +119,12 @@ void AncillaryImGuiLabel::preDraw_()
         return;
 
     ImGuiMeasurementIndicators::Params params;
+    if ( overrideParams_ )
+        params = *overrideParams_;
     if ( !params.list )
         return;
-    params.colorTextOutline.a = 220;
+    if ( !overrideParams_ )
+        params.colorTextOutline.a = 220;
     auto scaling = menu->menu_scaling();
     const ImGuiMeasurementIndicators::StringWithIcon sWithI( labelData_.text );
 

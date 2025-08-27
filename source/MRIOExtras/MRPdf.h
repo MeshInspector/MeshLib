@@ -118,6 +118,17 @@ private:
     // common method for adding different types of text
     void addText_( const std::string& text, const TextParams& params );
 
+    // draw text in specific rect on page
+    // text will be cropped by rect
+    void drawTextRect_( const std::string& text, const Box2f& rect, const TextParams& params );
+
+    // draw rect (filled with border)
+    void drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor );
+
+    struct TextCellParams;
+    void drawTextCell_( const std::string& text, const TextCellParams& params );
+
+
     // close pdf document without saving. After this impossible add anything in document.
     void reset_();
 
@@ -132,7 +143,7 @@ private:
     float cursorX_ = 0;
     float cursorY_ = 0;
 
-    bool checkDocument() const;
+    bool checkDocument_( const std::string& logAction ) const;
     void moveCursorToNewLine();
 };
 

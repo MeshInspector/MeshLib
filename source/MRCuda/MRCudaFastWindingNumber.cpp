@@ -381,12 +381,14 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
 
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
+    spdlog::info( "CudaFastWindingNumber: totalSize={}, bufferSize={}, chunkCount={}", totalSize, bufferSize, iterCount );
     size_t iterIndex = 0;
 
     const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
     return cudaPipeline( std::vector<float>{}, begin, end,
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
+            spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             signedDistance(
                 int3 { dims.x, dims.y, dims.z },
                 cudaGridToMeshXf,
@@ -399,6 +401,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+            spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) computed", chunk.offset, chunk.offset + chunk.size );
 
             return {};
         },

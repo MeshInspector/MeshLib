@@ -96,9 +96,14 @@ void AncillaryImGuiLabel::reset()
     labelData_ = {};
 }
 
-void AncillaryImGuiLabel::overrideParams( const std::optional<ImGuiMeasurementIndicators::Params>& params /*= std::nullopt */ )
+void AncillaryImGuiLabel::overrideParams( const ImGuiMeasurementIndicators::Params& params )
 {
     overrideParams_ = params;
+}
+
+void AncillaryImGuiLabel::resetOverrideParams()
+{
+    overrideParams_.reset();
 }
 
 void AncillaryImGuiLabel::preDraw_()

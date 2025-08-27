@@ -83,8 +83,10 @@ public:
     void setPivot( Vector2f pivot ) { pivot_ = pivot; }
 
     /// Optionally override rendering params for this label
-    /// if not set defaults are used
-    MRVIEWER_API void overrideParams( const std::optional<ImGuiMeasurementIndicators::Params>& params = std::nullopt );
+    MRVIEWER_API void overrideParams( const ImGuiMeasurementIndicators::Params& params );
+
+    /// use default parameters instead of overridden ones
+    MRVIEWER_API void resetOverrideParams();
 private:
     MRVIEWER_API virtual void preDraw_() override;
 

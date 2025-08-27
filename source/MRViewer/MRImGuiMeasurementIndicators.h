@@ -14,7 +14,7 @@ namespace MR::ImGuiMeasurementIndicators
 
 struct Params
 {
-    ImDrawList* list{ nullptr }; // initialized with ImGui::GetBackgroundDrawList in ctor
+    ImDrawList* list = ImGui::GetBackgroundDrawList();
     Color colorMain;
     Color colorOutline;
     Color colorText;

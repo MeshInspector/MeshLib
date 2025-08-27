@@ -84,7 +84,7 @@ public:
 
     /// Optionally override rendering params for this label
     /// if not set defaults are used
-    MRVIEWER_API void resetParams( const std::optional<ImGuiMeasurementIndicators::Params>& params = std::nullopt );
+    MRVIEWER_API void overrideParams( const std::optional<ImGuiMeasurementIndicators::Params>& params = std::nullopt );
 private:
     MRVIEWER_API virtual void preDraw_() override;
 

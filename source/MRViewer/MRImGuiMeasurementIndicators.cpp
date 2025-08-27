@@ -39,7 +39,6 @@ static void forEachElement( Element elem, F&& func )
 
 Params::Params()
 {
-    list = ImGui::GetBackgroundDrawList();
     colorMain = Color( 1.f, 1.f, 1.f, 1.f );
     colorOutline = Color( 0.f, 0.f, 0.f, 0.5f );
 

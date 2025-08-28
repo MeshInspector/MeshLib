@@ -424,7 +424,7 @@ void LengthTask::renderPass()
 
     // "Measured" prefix for value.
     if ( params_.referenceValue )
-        text.addElem( { .var = fmt::format( "Measured{}: ", axisName ), .columnName = "A" } );
+        text.addElem( { .var = fmt::format( "Measured{}: ", axisName ), .columnId = 0 } );
 
     const bool passOrFail = params_.referenceValue && params_.tolerance;
     const bool pass = passOrFail && distanceValue >= *params_.referenceValue + params_.tolerance->negative && distanceValue <= *params_.referenceValue + params_.tolerance->positive;
@@ -436,7 +436,7 @@ void LengthTask::renderPass()
         text.add( ImGuiMeasurementIndicators::TextFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) ) );
     }
     // The value itself.
-    text.addElem( { .var = lengthToString( distanceValue ), .align = ImVec2( 1, 0 ), .columnName = "B" } );
+    text.addElem( { .var = lengthToString( distanceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
     if ( passOrFail )
     {
         text.add( ImGuiMeasurementIndicators::TextColor{} );
@@ -447,9 +447,9 @@ void LengthTask::renderPass()
     if ( params_.referenceValue )
     {
         text.addLine();
-        text.addElem( { .var = fmt::format( "Nominal{}: ", axisName ), .columnName = "A" } );
+        text.addElem( { .var = fmt::format( "Nominal{}: ", axisName ), .columnId = 0 } );
 
-        text.addElem( { .var = lengthToString( *params_.referenceValue ), .align = ImVec2( 1, 0 ), .columnName = "B" } ); // Not stripping zeroes here to align with the measured value.
+        text.addElem( { .var = lengthToString( *params_.referenceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } ); // Not stripping zeroes here to align with the measured value.
 
         if ( params_.tolerance )
         {

@@ -152,7 +152,7 @@ void Text::update( bool force ) const
         line.computedSizeWithPadding.y = std::max( line.computedSize.y, line.size.y );
     }
 
-    phmap::flat_hash_map<std::string_view, float> columnWidths;
+    float columnWidths[32]{};
 
     // Compute `elem.computedSizeWithPadding` (here Y requires knowing line heights, and X could've been computed earlier).
     // Also compute initial `computedSizeWithPadding` for elements, before the column alignment.
@@ -165,13 +165,12 @@ void Text::update( bool force ) const
                 elem.computedSizeWithPadding.y = line.computedSizeWithPadding.y;
 
             // Store column widths.
-            if ( !elem.columnName.empty() )
+            if ( elem.columnId >= 0 )
             {
-                auto [iter, is_new] = columnWidths.try_emplace( elem.columnName );
-                if ( is_new )
-                    iter->second = elem.computedSizeWithPadding.x;
-                else
-                    iter->second = std::max( iter->second, elem.computedSizeWithPadding.x );
+                bool columnIdOk = elem.columnId < std::size( columnWidths );
+                assert( columnIdOk );
+                if ( columnIdOk )
+                    columnWidths[elem.columnId] = std::max( columnWidths[elem.columnId], elem.computedSizeWithPadding.x );
             }
         }
     }
@@ -184,8 +183,8 @@ void Text::update( bool force ) const
 
         for ( const Elem& elem : line.elems )
         {
-            if ( !elem.columnName.empty() )
-                elem.computedSizeWithPadding.x = columnWidths.at( elem.columnName );
+            if ( elem.columnId >= 0 )
+                elem.computedSizeWithPadding.x = columnWidths[elem.columnId];
 
             line.computedSize.x += elem.computedSizeWithPadding.x;
         }

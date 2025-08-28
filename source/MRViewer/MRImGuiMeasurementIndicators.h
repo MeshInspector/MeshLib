@@ -109,9 +109,9 @@ struct Text
         // [0,0] = top-left, [1,1] = bottom-right.
         ImVec2 align;
 
-        // If set, will increase width to the maximum of all elements with this column name.
+        // If set, will increase width to the maximum of all elements with the same column id.
         // This affects how `computedSizeWithPadding` is computed.
-        std::string columnName;
+        int columnId = -1;
 
         // The computed content size. Read-only. Don't set manually, `update()` sets this.
         mutable ImVec2 computedSize;
@@ -121,7 +121,7 @@ struct Text
 
         [[nodiscard]] bool hasDefaultParams() const
         {
-            return size == ImVec2( 0, -1 ) && align == ImVec2() && columnName.empty();
+            return size == ImVec2( 0, -1 ) && align == ImVec2() && columnId == -1;
         }
     };
 

@@ -88,7 +88,7 @@ std::function<Vector3f(VertId)> MeshOrPoints::normals() const
             return [&mesh = mp.mesh]( VertId v ) { return mesh.pseudonormal( v ); };
         },
         []( const PointCloudPart & pcp ) -> std::function<Vector3f(VertId)>
-        { 
+        {
             return !pcp.cloud.hasNormals() ? std::function<Vector3f(VertId)>{} : [&normals = pcp.cloud.normals]( VertId v ) { return normals[v]; };
         }
     }, var_ );
@@ -105,9 +105,9 @@ std::function<float(VertId)> MeshOrPoints::weights() const
     }, var_ );
 }
 
-auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Vector3f & )>
+auto MeshOrPoints::projector( const AffineXf3f* modelToPointXf ) const -> std::function<ProjectionResult( const Vector3f & )>
 {
-    return [lp = limitedProjector()]( const Vector3f & p )
+    return [lp = limitedProjector( modelToPointXf )]( const Vector3f & p )
     {
         ProjectionResult res;
         lp( p, res );
@@ -115,14 +115,14 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
     };
 }
 
-auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
+auto MeshOrPoints::limitedProjector( const AffineXf3f* modelToPointXf ) const -> LimitedProjectorFunc
 {
     return std::visit( overloaded{
-        []( const MeshPart & mp ) -> LimitedProjectorFunc
+        [&]( const MeshPart & mp ) -> LimitedProjectorFunc
         {
-            return [&mp]( const Vector3f & p, ProjectionResult & res )
+            return [&mp, modelToPointXf]( const Vector3f & p, ProjectionResult & res )
             {
-                MeshProjectionResult mpr = findProjection( p, mp, res.distSq );
+                MeshProjectionResult mpr = findProjection( p, mp, res.distSq, modelToPointXf );
                 if ( mpr.distSq < res.distSq )
                     res = ProjectionResult
                     {
@@ -134,11 +134,11 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                     };
             };
         },
-        []( const PointCloudPart & pcp ) -> LimitedProjectorFunc
+        [&]( const PointCloudPart & pcp ) -> LimitedProjectorFunc
         {
-            return [&pcp]( const Vector3f & p, ProjectionResult & res )
+            return [&pcp, modelToPointXf]( const Vector3f & p, ProjectionResult & res )
             {
-                PointsProjectionResult ppr = findProjectionOnPoints( p, pcp, res.distSq );
+                PointsProjectionResult ppr = findProjectionOnPoints( p, pcp, res.distSq, modelToPointXf );
                 if ( ppr.distSq < res.distSq )
                     res = ProjectionResult
                     {
@@ -152,12 +152,31 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
     }, var_ );
 }
 
-std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj )
+std::function<MeshOrPoints::ProjectionResult( const Vector3f & )> MeshOrPointsXf::projector() const
 {
-    if ( auto objMesh = dynamic_cast<const ObjectMesh*>( obj ) )
+    return obj.projector( &xf );
+}
+
+MeshOrPoints::LimitedProjectorFunc MeshOrPointsXf::limitedProjector() const
+{
+    return obj.limitedProjector( &xf );
+}
+
+std::optional<MeshOrPoints> getMeshOrPoints( const Object* obj )
+{
+    if ( auto objMesh = dynamic_cast<const ObjectMeshHolder*>( obj ) )
         return MeshOrPoints( objMesh->meshPart() );
-    if ( auto objPnts = dynamic_cast<const ObjectPoints*>( obj ) )
+    if ( auto objPnts = dynamic_cast<const ObjectPointsHolder*>( obj ) )
         return MeshOrPoints( objPnts->pointCloudPart() );
+    return {};
+}
+
+std::optional<MeshOrPointsXf> getMeshOrPointsXf( const Object * obj )
+{
+    if ( auto objMesh = dynamic_cast<const ObjectMeshHolder*>( obj ) )
+        return MeshOrPointsXf{ objMesh->meshPart(), obj->worldXf() };
+    if ( auto objPnts = dynamic_cast<const ObjectPointsHolder*>( obj ) )
+        return MeshOrPointsXf{ objPnts->pointCloudPart(), obj->worldXf() };
     return {};
 }
 
@@ -212,6 +231,31 @@ void projectOnAll(
         addSubTask( node.r );
         addSubTask( node.l );
     }
+}
+
+MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
+    const Vector3f& p,
+    const Object& root,
+    std::function<bool( const Object& )> projectPred,
+    std::function<bool( const Object& )> recursePred
+)
+{
+    MeshOrPoints::ProjectionResult ret;
+
+    auto lambda = [&]( auto& lambda, const Object& cur ) -> void
+    {
+        if ( !projectPred || projectPred( cur ) )
+            getMeshOrPointsXf( &cur )->limitedProjector()( p, ret );
+
+        if ( !recursePred || recursePred( cur ) )
+        {
+            for ( const auto& child : cur.children() )
+                lambda( lambda, *child );
+        }
+    };
+    lambda( lambda, root );
+
+    return ret;
 }
 
 } // namespace MR

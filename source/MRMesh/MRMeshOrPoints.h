@@ -89,16 +89,13 @@ public:
     };
 
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
-    /// `modelToPointXf` maps from the model space (of the mesh or points) to the space of the input/output points.
-    /// `modelToPointXf` is stored by reference in the functor, make sure it doesn't dangle.
-    [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector( const AffineXf3f* modelToPointXf = nullptr ) const;
+    [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
-    using LimitedProjectorFunc = std::function<void( const Vector3f& p, ProjectionResult& res )>;
+    using LimitedProjectorFunc = std::function<bool( const Vector3f& p, ProjectionResult& res )>;
     /// returns a function that updates previously known projection (closest) points on this,
     /// the update takes place only if newly found closest point is closer to p than sqrt(res.distSq) given on input
-    /// `modelToPointXf` maps from the model space (of the mesh or points) to the space of the input/output points.
-    /// `modelToPointXf` is stored by reference in the functor, make sure it doesn't dangle.
-    [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector( const AffineXf3f* modelToPointXf = nullptr ) const;
+    /// The function returns true if the update has taken place.
+    [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
 private:
     std::variant<MeshPart, PointCloudPart> var_;
@@ -111,7 +108,7 @@ struct MeshOrPointsXf
     AffineXf3f xf;
 
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
-    [[nodiscard]] MRMESH_API std::function<MeshOrPoints::ProjectionResult( const Vector3f & )> projector() const;
+    [[nodiscard]] MRMESH_API std::function<MeshOrPoints::ProjectionResult( const Vector3f& )> projector() const;
 
     /// returns a function that updates previously known projection (closest) points on this,
     /// the update takes place only if newly found closest point is closer to p than sqrt(res.distSq) given on input

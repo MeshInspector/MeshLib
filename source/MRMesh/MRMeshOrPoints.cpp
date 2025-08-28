@@ -105,9 +105,9 @@ std::function<float(VertId)> MeshOrPoints::weights() const
     }, var_ );
 }
 
-auto MeshOrPoints::projector( const AffineXf3f* modelToPointXf ) const -> std::function<ProjectionResult( const Vector3f & )>
+auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Vector3f & )>
 {
-    return [lp = limitedProjector( modelToPointXf )]( const Vector3f & p )
+    return [lp = limitedProjector()]( const Vector3f & p )
     {
         ProjectionResult res;
         lp( p, res );
@@ -115,15 +115,16 @@ auto MeshOrPoints::projector( const AffineXf3f* modelToPointXf ) const -> std::f
     };
 }
 
-auto MeshOrPoints::limitedProjector( const AffineXf3f* modelToPointXf ) const -> LimitedProjectorFunc
+auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
 {
     return std::visit( overloaded{
-        [&]( const MeshPart & mp ) -> LimitedProjectorFunc
+        []( const MeshPart & mp ) -> LimitedProjectorFunc
         {
-            return [&mp, modelToPointXf]( const Vector3f & p, ProjectionResult & res )
+            return [&mp]( const Vector3f & p, ProjectionResult & res )
             {
-                MeshProjectionResult mpr = findProjection( p, mp, res.distSq, modelToPointXf );
+                MeshProjectionResult mpr = findProjection( p, mp, res.distSq );
                 if ( mpr.distSq < res.distSq )
+                {
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
@@ -132,14 +133,18 @@ auto MeshOrPoints::limitedProjector( const AffineXf3f* modelToPointXf ) const ->
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                     };
+                    return true;
+                }
+                return false;
             };
         },
-        [&]( const PointCloudPart & pcp ) -> LimitedProjectorFunc
+        []( const PointCloudPart & pcp ) -> LimitedProjectorFunc
         {
-            return [&pcp, modelToPointXf]( const Vector3f & p, ProjectionResult & res )
+            return [&pcp]( const Vector3f & p, ProjectionResult & res )
             {
-                PointsProjectionResult ppr = findProjectionOnPoints( p, pcp, res.distSq, modelToPointXf );
+                PointsProjectionResult ppr = findProjectionOnPoints( p, pcp, res.distSq );
                 if ( ppr.distSq < res.distSq )
+                {
                     res = ProjectionResult
                     {
                         .point = pcp.cloud.points[ppr.vId],
@@ -147,19 +152,37 @@ auto MeshOrPoints::limitedProjector( const AffineXf3f* modelToPointXf ) const ->
                         .distSq = ppr.distSq,
                         .closestVert = ppr.vId
                     };
+                    return true;
+                }
+                return false;
             };
         }
     }, var_ );
 }
 
-std::function<MeshOrPoints::ProjectionResult( const Vector3f & )> MeshOrPointsXf::projector() const
+std::function<MeshOrPoints::ProjectionResult( const Vector3f& )> MeshOrPointsXf::projector() const
 {
-    return obj.projector( &xf );
+    return [lp = limitedProjector()]( const Vector3f & p )
+    {
+        MeshOrPoints::ProjectionResult res;
+        lp( p, res );
+        return res;
+    };
 }
 
 MeshOrPoints::LimitedProjectorFunc MeshOrPointsXf::limitedProjector() const
 {
-    return obj.limitedProjector( &xf );
+    return [this, f = obj.limitedProjector(), invXf = xf.inverse()]( const Vector3f& p, MeshOrPoints::ProjectionResult& res )
+    {
+        if ( f( invXf( p ), res ) )
+        {
+            res.point = xf( res.point );
+            if ( res.normal )
+                *res.normal = invXf.A.transposed() * *res.normal;
+            return true;
+        }
+        return false;
+    };
 }
 
 std::optional<MeshOrPoints> getMeshOrPoints( const Object* obj )

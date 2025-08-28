@@ -4,7 +4,6 @@
 #include "MRPointCloudPart.h"
 #include "MRAffineXf3.h"
 #include "MRId.h"
-#include "MRSceneRoot.h"
 #include <cfloat>
 #include <functional>
 #include <optional>
@@ -140,11 +139,12 @@ MRMESH_API void projectOnAll(
 }
 
 /// Recursively visits the objects and projects the point on each one. Returns the closest projection.
+/// If `root` is null, the scene root is used. Not passing `SceneRoot::get()` directly to avoid including that header.
 /// If `projectPred` is specified and false, will not project onto this object.
 /// If `recursePred` is specified and false, will not visit the children of this object.
 [[nodiscard]] MRMESH_API MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
     const Vector3f& p,
-    const Object& root = SceneRoot::get(),
+    const Object* root = nullptr,
     std::function<bool( const Object& )> projectPred = nullptr,
     std::function<bool( const Object& )> recursePred = nullptr
 );

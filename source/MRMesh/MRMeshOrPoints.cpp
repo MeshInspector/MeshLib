@@ -10,6 +10,7 @@
 #include "MRBestFit.h"
 #include "MRAABBTreeObjects.h"
 #include "MRInplaceStack.h"
+#include "MRSceneRoot.h"
 
 namespace MR
 {
@@ -258,7 +259,7 @@ void projectOnAll(
 
 MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
     const Vector3f& p,
-    const Object& root,
+    const Object* root,
     std::function<bool( const Object& )> projectPred,
     std::function<bool( const Object& )> recursePred
 )
@@ -276,7 +277,7 @@ MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
                 lambda( lambda, *child );
         }
     };
-    lambda( lambda, root );
+    lambda( lambda, root ? *root : SceneRoot::get() );
 
     return ret;
 }

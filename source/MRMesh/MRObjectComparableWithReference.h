@@ -12,6 +12,12 @@ class MRMESH_CLASS ObjectComparableWithReference
   public:
     virtual ~ObjectComparableWithReference() = default;
 
+    // We have no member variables, so lack of the implicit copy operations wouldn't matter, but MSVC warns on this, so we have to be explicit.
+    ObjectComparableWithReference( const ObjectComparableWithReference& ) = default;
+    ObjectComparableWithReference( ObjectComparableWithReference&& ) = default;
+    ObjectComparableWithReference& operator=( const ObjectComparableWithReference& ) = default;
+    ObjectComparableWithReference& operator=( ObjectComparableWithReference&& ) = default;
+
 
     // Comparing properties:
 

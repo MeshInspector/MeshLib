@@ -546,33 +546,30 @@ void Pdf::newTable( int columnCount )
 {
     if ( columnCount < 1 )
         return;
-    columnCount_ = columnCount;
-    columnWidths_.clear();
-    columnWidths_.resize( columnCount_, pageWorkWidth / columnCount );
-    formats_.clear();
-    formats_.resize( columnCount_, "{}" );
+    columnsInfo_.clear();
+    columnsInfo_.resize( columnCount, { pageWorkWidth / columnCount, "{}" } );
     rowCounter_ = 0;
 }
 
-void Pdf::setTableColumnWidths( const std::vector<float>& widths )
+Expected<void> Pdf::setTableColumnWidths( const std::vector<float>& widths )
 {
-    assert( widths.size() == columnCount_ );
-    if ( widths.size() != columnCount_ )
+    assert( widths.size() == columnsInfo_.size() );
+    if ( widths.size() != columnsInfo_.size() )
     {
-        spdlog::warn( "Pdf: mismatch number of columns and widths" );
-        return;
+        return unexpected( "Pdf: mismatch number of columns and widths" );
     }
 
-    columnWidths_ = widths;
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].width = widths[i];
+    return {};
 }
 
-void Pdf::addTableTitles( const std::vector<std::string>& titles )
+Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
 {
-    assert( titles.size() == columnCount_ );
-    if ( titles.size() != columnCount_ )
+    assert( titles.size() == columnsInfo_.size() );
+    if ( titles.size() != columnsInfo_.size() )
     {
-        spdlog::warn( "Pdf: mismatch number of columns and titles" );
-        return;
+        return unexpected( "Pdf: mismatch number of columns and titles" );
     }
 
     TextCellParams params;
@@ -591,34 +588,29 @@ void Pdf::addTableTitles( const std::vector<std::string>& titles )
     float posX = borderFieldLeft;
     for ( int i = 0; i < titles.size(); ++i )
     {
-        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnWidths_[i], cursorY_ } );
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
         drawTextCell_( titles[i], params );
-        posX += columnWidths_[i];
+        posX += columnsInfo_[i].width;
     }
     cursorY_ -= textHeight;
+    return {};
 }
 
-void Pdf::setColumnValuesFormat( const std::vector<std::string>& formats )
+Expected<void> Pdf::setColumnValuesFormat( const std::vector<std::string>& formats )
 {
-    if ( formats.size() != columnCount_ )
-        return;
-    formats_ = formats;
+    if ( formats.size() != columnsInfo_.size() )
+        return unexpected( "Pdf: Error set up table column value formats: wrong parameters count." );
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].valueFormat = formats[i];
+    return {};
 }
 
-void Pdf::addRow( const std::vector<Cell>& cells )
+Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
 {
-    if ( cells.size() != columnCount_ )
+    if ( cells.size() != columnsInfo_.size() )
     {
-        spdlog::warn( "Pdf: Error adding table row: wrong parameters count." );
-        return;
+        return unexpected( "Pdf: Error adding table row: wrong parameters count." );
     }
-
-    std::vector<std::string> strings;
-    for ( size_t i = 0; i < cells.size(); ++i )
-    {
-        strings.push_back( cells[i].toString( formats_[i] ) );
-    }
-
 
     TextCellParams params;
     params.colorBackground = ( rowCounter_ & 1 ) ? tableParams_.colorCellBg1 : tableParams_.colorCellBg2;
@@ -636,8 +628,8 @@ void Pdf::addRow( const std::vector<Cell>& cells )
     float posX = borderFieldLeft;
     for ( int i = 0; i < cells.size(); ++i )
     {
-        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnWidths_[i], cursorY_ } );
-        std::string text = cells[i].toString( formats_[i] );
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        std::string text = cells[i].toString( columnsInfo_[i].valueFormat );
         if ( tableCustomRule_ )
         {
             TextCellParams customParams = params;
@@ -655,10 +647,11 @@ void Pdf::addRow( const std::vector<Cell>& cells )
         }
         else
             drawTextCell_( text, params );
-        posX += columnWidths_[i];
+        posX += columnsInfo_[i].width;
     }
     ++rowCounter_;
     cursorY_ -= textHeight;
+    return {};
 }
 
 float Pdf::getTableTextWidth( const std::string& text )

@@ -7,6 +7,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRExpected.h"
 
 #include <filesystem>
 #include <vector>
@@ -146,13 +147,13 @@ public:
     // set up new table (clear table customization, reset parameters to default values)
     MRIOEXTRAS_API void newTable( int columnCount );
     // set table column widths
-    MRIOEXTRAS_API void setTableColumnWidths( const std::vector<float>& widths );
+    MRIOEXTRAS_API Expected<void> setTableColumnWidths( const std::vector<float>& widths );
     // add in pdf table row with titles
-    MRIOEXTRAS_API void addTableTitles( const std::vector<std::string>& titles );
+    MRIOEXTRAS_API Expected<void> addTableTitles( const std::vector<std::string>& titles );
     // set format for conversion values to string for each column
-    MRIOEXTRAS_API void setColumnValuesFormat( const std::vector<std::string>& formats );
+    MRIOEXTRAS_API Expected<void> setColumnValuesFormat( const std::vector<std::string>& formats );
     // add in pdf table row with values
-    MRIOEXTRAS_API void addRow( const std::vector<Cell>& cells );
+    MRIOEXTRAS_API Expected<void> addRow( const std::vector<Cell>& cells );
     // return text width (for table font parameters)
     MRIOEXTRAS_API float getTableTextWidth( const std::string& text );
     // parameters to customization table cell
@@ -163,7 +164,7 @@ public:
         std::optional<Color> colorCellBorder;
         std::optional<std::string> text;
     };
-    using TableCustomRule = std::function<CellCustomParams( int row, int column, const std::string& text)>;
+    using TableCustomRule = std::function<CellCustomParams( int row, int column, const std::string& cellValueText)>;
     // add rule to customize table cells
     void setTableCustomRule( TableCustomRule rule ) { tableCustomRule_ = rule; }
 
@@ -201,10 +202,13 @@ private:
     void moveCursorToNewLine();
 
     // table parts
-    int columnCount_ = 1;
     int rowCounter_ = 0;
-    std::vector<float> columnWidths_ = { 100 };
-    std::vector<std::string> formats_ = { "{}" };
+    struct ColumnInfo
+    {
+        float width = 100;
+        std::string valueFormat = "{}";
+    };
+    std::vector<ColumnInfo> columnsInfo_;
     TableCustomRule tableCustomRule_;
     struct TableGeneralParams
     {

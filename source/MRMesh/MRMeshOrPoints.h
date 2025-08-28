@@ -82,14 +82,18 @@ public:
         /// for point clouds it is the closest vertex,
         /// for meshes it is the closest vertex of the triangle with the closest point
         VertId closestVert;
+
+        [[nodiscard]] explicit operator bool() const { return valid(); }
+        [[nodiscard]] bool valid() const { return distSq < FLT_MAX; }
     };
 
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
     [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
-    using LimitedProjectorFunc = std::function<void( const Vector3f& p, ProjectionResult& res )>;
+    using LimitedProjectorFunc = std::function<bool( const Vector3f& p, ProjectionResult& res )>;
     /// returns a function that updates previously known projection (closest) points on this,
     /// the update takes place only if newly found closest point is closer to p than sqrt(res.distSq) given on input
+    /// The function returns true if the update has taken place.
     [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
 private:
@@ -101,10 +105,18 @@ struct MeshOrPointsXf
 {
     MeshOrPoints obj;
     AffineXf3f xf;
+
+    /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
+    [[nodiscard]] MRMESH_API std::function<MeshOrPoints::ProjectionResult( const Vector3f& )> projector() const;
+
+    /// returns a function that updates previously known projection (closest) points on this,
+    /// the update takes place only if newly found closest point is closer to p than sqrt(res.distSq) given on input
+    [[nodiscard]] MRMESH_API MeshOrPoints::LimitedProjectorFunc limitedProjector() const;
 };
 
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt
-[[nodiscard]] MRMESH_API std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj );
+[[nodiscard]] MRMESH_API std::optional<MeshOrPoints> getMeshOrPoints( const Object * obj );
+[[nodiscard]] MRMESH_API std::optional<MeshOrPointsXf> getMeshOrPointsXf( const Object * obj );
 
 /// to receive object id + projection result on it
 using ProjectOnAllCallback = std::function<void( ObjId, MeshOrPoints::ProjectionResult )>;
@@ -116,6 +128,26 @@ MRMESH_API void projectOnAll(
     float upDistLimitSq, ///< upper limit on the distance in question
     const ProjectOnAllCallback & callback, ///< each found closest point within given distance will be returned via this callback
     ObjId skipObjId = {} ); ///< projection on given object will be skipped
+
+/// Projects a point onto an object, in world space. Returns `.valid() == false` if this object type isn't projectable onto.
+[[nodiscard]] inline MeshOrPoints::ProjectionResult projectWorldPointOntoObject( const Vector3f& p, const Object& obj )
+{
+    auto mop = getMeshOrPointsXf( &obj );
+    if ( !mop )
+        return {};
+    return mop->projector()( p );
+}
+
+/// Recursively visits the objects and projects the point on each one. Returns the closest projection.
+/// If `root` is null, the scene root is used. Not passing `SceneRoot::get()` directly to avoid including that header.
+/// If `projectPred` is specified and false, will not project onto this object.
+/// If `recursePred` is specified and false, will not visit the children of this object.
+[[nodiscard]] MRMESH_API MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
+    const Vector3f& p,
+    const Object* root = nullptr,
+    std::function<bool( const Object& )> projectPred = nullptr,
+    std::function<bool( const Object& )> recursePred = nullptr
+);
 
 inline const MeshPart* MeshOrPoints::asMeshPart() const
 {

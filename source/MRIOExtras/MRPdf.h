@@ -132,7 +132,7 @@ public:
 
         // get strang from contained value
         // \param fmtStr format string like fmt::format
-        std::string toString( const std::string& fmtStr = "{}" ) const;
+        MRIOEXTRAS_API std::string toString( const std::string& fmtStr = "{}" ) const;
     };
 
     // set up new table (clear table customization, reset parameters to default values)

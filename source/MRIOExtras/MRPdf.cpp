@@ -191,7 +191,7 @@ constexpr float tableCellPaddingY = 1 * scaleFactor;
 
 }
 
-std::string Pdf::Cell::toString( const std::string& /*fmtStr*/ /*= "{}"*/ ) const
+std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
 {
     return std::visit( [&] ( const auto& val ) -> std::string
     {
@@ -199,8 +199,7 @@ std::string Pdf::Cell::toString( const std::string& /*fmtStr*/ /*= "{}"*/ ) cons
         if constexpr ( std::is_same_v<T, EmptyCell> )
             return "";
         else
-            //return fmt::format( runtimeFmt( fmtStr ), val );
-            return fmt::format( "{}", val);
+            return fmt::format( runtimeFmt( fmtStr ), val );
     }, data );
 }
 

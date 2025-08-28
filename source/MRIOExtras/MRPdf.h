@@ -132,17 +132,7 @@ public:
 
         // get strang from contained value
         // \param fmtStr format string like fmt::format
-        std::string toString( const std::string& fmtStr = "{}" ) const
-        {
-            return std::visit( [&] ( const auto& val ) -> std::string
-            {
-                using T = std::decay_t<decltype( val )>;
-                if constexpr ( std::is_same_v<T, EmptyCell> )
-                    return "";
-                else
-                    return fmt::format( runtimeFmt( fmtStr ), val );
-            }, data );
-        }
+        std::string toString( const std::string& fmtStr = "{}" ) const;
     };
 
     // set up new table (clear table customization, reset parameters to default values)

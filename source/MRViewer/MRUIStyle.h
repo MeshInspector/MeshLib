@@ -482,6 +482,28 @@ MRVIEWER_API void alignTextToButton( float scaling );
 /// Added some indentation if min or max is not set.
 MRVIEWER_API void highlightWindowArea( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
 
+// While this exists, it temporarily disables antialiasing for the lines drawn to this list.
+class LineAntialiasingDisabler
+{
+    ImDrawList& list;
+    ImDrawFlags oldFlags{};
+
+public:
+    LineAntialiasingDisabler( ImDrawList& list )
+        : list( list ), oldFlags( list.Flags )
+    {
+        list.Flags &= ~ImDrawListFlags_AntiAliasedLines;
+    }
+
+    LineAntialiasingDisabler( const LineAntialiasingDisabler& ) = delete;
+    LineAntialiasingDisabler& operator=( const LineAntialiasingDisabler& ) = delete;
+
+    ~LineAntialiasingDisabler()
+    {
+        list.Flags = oldFlags;
+    }
+};
+
 } // namespace UI
 
 }

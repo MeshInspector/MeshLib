@@ -433,7 +433,7 @@ void LengthTask::renderPass()
     if ( passOrFail )
     {
         text.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
-        text.add( ImGuiMeasurementIndicators::TextFont( RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) ) );
+        text.add( ImGuiMeasurementIndicators::TextFont{ RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) } );
     }
     // The value itself.
     text.addElem( { .var = lengthToString( distanceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } );

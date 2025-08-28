@@ -18,6 +18,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MRIOExtras
   MRVoxels
+  fmt
 )
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")

@@ -10,6 +10,9 @@ namespace MR
 class MRMESH_CLASS ObjectComparableWithReference
 {
   public:
+    virtual ~ObjectComparableWithReference() = default;
+
+
     // Comparing properties:
 
     // When comparing this object with a reference, how many different properties can we output?

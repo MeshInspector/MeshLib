@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <vector>
 #include <variant>
+#include <optional>
 
 namespace MR
 {

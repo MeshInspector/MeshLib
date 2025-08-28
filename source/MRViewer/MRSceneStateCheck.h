@@ -16,14 +16,22 @@ template<typename ObjectT>
 std::string getNObjectsLine( unsigned n )
 {
     std::string typeName = ObjectT::TypeName();
-    if ( typeName.starts_with( "Object" ) && !typeName.ends_with( "Object" ) )
-        typeName = typeName.substr( 6 );
+    if ( typeName.starts_with( "Object" ) )
+    {
+        if ( !typeName.ends_with( "Object" ) )
+            typeName = typeName.substr( 6 );
+    }
+    else if ( typeName.ends_with( "Object" ) )
+        typeName = typeName.substr( 0, typeName.size() - 6 );
+
     if ( typeName == "Points" )
         typeName = "Point Cloud";
     else if ( typeName == "Lines" )
         typeName = "Polyline";
     else if ( typeName == "Voxels" )
         typeName = "Volume";
+    else if ( typeName == "Visual" )
+        typeName = "Visual Object";
 
     if ( n != 1 )
     {

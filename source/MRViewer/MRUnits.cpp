@@ -20,7 +20,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = false,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -37,7 +38,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -54,7 +56,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 1,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -71,7 +74,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 2,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -88,7 +92,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -105,7 +110,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 1,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -122,7 +128,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -139,7 +146,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -156,7 +164,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -173,7 +182,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
-            .allowNegativeZero = false,
+            .plusSign = false,
+            .zeroMode = ZeroMode::alwaysPositive,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -339,13 +349,28 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     // Also strips the minus from negative zeroes if `params.allowNegativeZero` is false.
     auto adjustMinusSign = [&]( std::string& str )
     {
-        // If the only digits in `str` are zeroes and we don't allow negative zeroes, remove the minus sign.
-        if ( !params.allowNegativeZero && str.starts_with( '-' ) &&
-            std::all_of( str.begin(), str.end(), []( char ch ){ return bool( std::isdigit( (unsigned char)ch ) ) <=/*implies*/ ( ch == '0' ); } )
-        )
+        auto onlyZeroes = [&]{ return std::all_of( str.begin(), str.end(), []( char ch ){ return bool( std::isdigit( (unsigned char)ch ) ) <=/*implies*/ ( ch == '0' ); } ); };
+
+        switch ( params.zeroMode )
         {
-            str.erase( str.begin() );
+        case ZeroMode::asIs:
+            // Nothing.
+            break;
+        case ZeroMode::alwaysPositive:
+            // If the only digits in `str` are zeroes and we don't allow negative zeroes, remove the minus sign.
+            if (  str.starts_with( '-' ) && onlyZeroes() )
+                str.erase( str.begin() );
+            break;
+        case ZeroMode::alwaysNegative:
+            // If the only digits in `str` are zeroes and we don't allow positive zeroes, force the minus sign.
+            if ( !str.starts_with( '-' ) && onlyZeroes() )
+                str.insert( str.begin(), '-' );
+            break;
         }
+
+        // If there's no minus sign, add the plus sign.
+        if ( params.plusSign && !str.starts_with( '-' ) )
+            str.insert( str.begin(), '+' );
 
         // Replace the plain `-` sign with the fancy Unicode one.
         if ( params.unicodeMinusSign && str.starts_with( '-' ) )

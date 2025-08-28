@@ -4,6 +4,8 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
 
+#include <cassert>
+
 namespace MR
 {
 
@@ -60,26 +62,26 @@ void DistanceMeasurementObject::setLocalDelta( const MR::Vector3f& delta )
     setXf( curXf );
 }
 
-bool DistanceMeasurementObject::getDrawAsNegative() const
+bool DistanceMeasurementObject::isNegative() const
 {
-    return drawAsNegative_;
+    return isNegative_;
 }
 
-void DistanceMeasurementObject::setDrawAsNegative( bool value )
+void DistanceMeasurementObject::setIsNegative( bool value )
 {
-    if ( drawAsNegative_ != value )
+    if ( isNegative_ != value )
     {
-        drawAsNegative_ = value;
+        isNegative_ = value;
         cachedValue_ = {};
     }
 }
 
-DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoordDeltasMode() const
+DistanceMeasurementObject::DistanceMode DistanceMeasurementObject::getDistanceMode() const
 {
     return perCoordDeltas_;
 }
 
-void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
+void DistanceMeasurementObject::setDistanceMode( DistanceMode mode )
 {
     perCoordDeltas_ = mode;
 }
@@ -87,7 +89,7 @@ void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
 float DistanceMeasurementObject::computeDistance() const
 {
     if ( !cachedValue_ )
-        cachedValue_ = getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+        cachedValue_ = getWorldDelta().length() * ( isNegative() ? -1.f : 1.f );
     return *cachedValue_;
 }
 
@@ -96,6 +98,81 @@ std::vector<std::string> DistanceMeasurementObject::getInfoLines() const
     auto ret = MeasurementObject::getInfoLines();
     ret.push_back( fmt::format( "distance value: {:.3f}", computeDistance() ) );
     return ret;
+}
+
+std::size_t DistanceMeasurementObject::numComparableProperties() const
+{
+    return 1;
+}
+
+std::string_view DistanceMeasurementObject::getComparablePropertyName( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return "Distance";
+}
+
+std::optional<float> DistanceMeasurementObject::compareProperty( const Object& other, std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+
+    auto otherDistance = dynamic_cast<const DistanceMeasurementObject*>( &other );
+    assert( otherDistance );
+    if ( !otherDistance )
+        return {};
+
+    return computeDistance() - otherDistance->computeDistance();
+}
+
+bool DistanceMeasurementObject::hasComparisonTolerances() const
+{
+    return bool( tolerance_ );
+}
+
+DistanceMeasurementObject::ComparisonTolerance DistanceMeasurementObject::getComparisonTolerences( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    assert( bool( tolerance_ ) );
+    return tolerance_ ? *tolerance_ : ComparisonTolerance{};
+}
+
+void DistanceMeasurementObject::setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance )
+{
+    (void)i;
+    assert( i == 0 );
+    tolerance_ = newTolerance;
+}
+
+void DistanceMeasurementObject::resetComparisonTolerances()
+{
+    tolerance_.reset();
+}
+
+bool DistanceMeasurementObject::hasComparisonReferenceValues() const
+{
+    return bool( referenceValue_ );
+}
+
+float DistanceMeasurementObject::getComparisonReferenceValue( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    assert( referenceValue_ );
+    return referenceValue_.value_or( 0.f );
+}
+
+void DistanceMeasurementObject::setComparisonReferenceValue( std::size_t i, float value )
+{
+    (void)i;
+    assert( i == 0 );
+    referenceValue_ = value;
+}
+
+void DistanceMeasurementObject::resetComparisonReferenceValues()
+{
+    return referenceValue_.reset();
 }
 
 void DistanceMeasurementObject::swapBase_( Object& other )
@@ -111,7 +188,23 @@ void DistanceMeasurementObject::serializeFields_( Json::Value& root ) const
     MeasurementObject::serializeFields_( root );
     root["Type"].append( TypeName() );
 
-    root["DrawAsNegative"] = drawAsNegative_;
+    root["DrawAsNegative"] = isNegative_;
+
+    if ( tolerance_ )
+    {
+        root["TolerancePositive"] = tolerance_->positive;
+        root["ToleranceNegative"] = tolerance_->negative;
+    }
+    else
+    {
+        root["TolerancePositive"] = Json::nullValue;
+        root["ToleranceNegative"] = Json::nullValue;
+    }
+
+    if ( referenceValue_ )
+        root["ReferenceValue"] = *referenceValue_;
+    else
+        root["ReferenceValue"] = Json::nullValue;
 }
 
 void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
@@ -119,10 +212,24 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
     MeasurementObject::deserializeFields_( root );
 
     if ( const auto& json = root["DrawAsNegative"]; json.isBool() )
-        drawAsNegative_ = json.asBool();
+        isNegative_ = json.asBool();
 
-    if ( const auto& json = root["PerCoordDeltas"]; json.isInt() )
-        perCoordDeltas_ = PerCoordDeltas( json.asInt() );
+    if ( const auto& json = root["DistanceMode"]; json.isInt() )
+        perCoordDeltas_ = DistanceMode( json.asInt() );
+
+    { // Tolerance.
+        const auto& jsonPos = root["TolerancePositive"];
+        const auto& jsonNeg = root["ToleranceNegative"];
+        if ( jsonPos.isDouble() && jsonNeg.isDouble() )
+        {
+            tolerance_.emplace();
+            tolerance_->positive = jsonPos.asFloat();
+            tolerance_->negative = jsonNeg.asFloat();
+        }
+    }
+
+    if ( const auto& json = root["ReferenceValue"]; json.isDouble() )
+        referenceValue_ = json.asFloat();
 }
 
 void DistanceMeasurementObject::setupRenderObject_() const

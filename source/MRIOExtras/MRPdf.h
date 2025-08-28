@@ -8,9 +8,11 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRExpected.h"
+#include "MRPch/MRFmt.h"
 
 #include <filesystem>
 #include <vector>
+#include <variant>
 
 namespace MR
 {

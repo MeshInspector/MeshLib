@@ -18,6 +18,12 @@ public:
     constexpr static const char* TypeName() noexcept { return "ObjectPoints"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    constexpr static const char* ClassName() noexcept { return "Point Cloud"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Point Clouds"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     /// returns variable point cloud, if const point cloud is needed use `pointCloud()` instead
     virtual const std::shared_ptr<PointCloud>& varPointCloud() { return points_; }
 
@@ -33,9 +39,6 @@ public:
     ObjectPoints( ProtectedStruct, const ObjectPoints& obj ) : ObjectPoints( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    std::string getClassName() const override { return "Points"; }
-    std::string getClassNameInPlural() const override { return "Points"; }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 

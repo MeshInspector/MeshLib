@@ -70,6 +70,14 @@ public:
     constexpr static const char* TypeName() noexcept { return "Object"; }
     virtual const char* typeName() const { return TypeName(); }
 
+    /// return human readable name of subclass
+    constexpr static const char* ClassName() noexcept { return "Object"; }
+    virtual std::string className() const { return ClassName(); }
+
+    /// return human readable name of subclass in plural form
+    constexpr static const char* ClassNameInPlural() noexcept { return "Objects"; }
+    virtual std::string classNameInPlural() const { return ClassNameInPlural(); }
+
     template <typename T>
     T * asType() { return dynamic_cast<T*>( this ); }
     template <typename T>
@@ -213,12 +221,6 @@ public:
 
     /// return several info lines that can better describe object in the UI
     MRMESH_API virtual std::vector<std::string> getInfoLines() const;
-
-    /// return human readable name of subclass
-    virtual std::string getClassName() const { return "Object"; }
-
-    /// return human readable name of subclass in plural form
-    virtual std::string getClassNameInPlural() const { return "Objects"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and

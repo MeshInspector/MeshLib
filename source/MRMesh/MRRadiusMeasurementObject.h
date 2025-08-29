@@ -19,11 +19,14 @@ public:
     constexpr static const char* TypeName() noexcept { return "RadiusMeasurementObject"; }
     const char* typeName() const override { return TypeName(); }
 
+    constexpr static const char* ClassName() noexcept { return "Radius"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Radii"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     // For `std::make_shared()` in `clone()`.
     RadiusMeasurementObject( ProtectedStruct, const RadiusMeasurementObject& obj ) : RadiusMeasurementObject( obj ) {}
-
-    std::string getClassName() const override { return "Radius"; }
-    std::string getClassNameInPlural() const override { return "Radii"; }
 
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;

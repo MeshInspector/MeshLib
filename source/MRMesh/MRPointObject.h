@@ -23,12 +23,15 @@ public:
     constexpr static const char* TypeName() noexcept { return "PointObject"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    constexpr static const char* ClassName() noexcept { return "Point"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Points"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     PointObject( ProtectedStruct, const PointObject& obj ) : PointObject( obj )
     {}
-
-    std::string getClassName() const override { return "Point"; }
-    std::string getClassNameInPlural() const override { return "Points"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

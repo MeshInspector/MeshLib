@@ -20,26 +20,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRVoxels
 )
 
-IF(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    fmt
-  )
-ELSEIF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    fmt
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    fmt::fmt
-  )
-ELSE()
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    fmt::fmt
-  )
-ENDIF()
-
-
-
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}

@@ -43,7 +43,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRSymbolMesh
   MRVoxels
   JsonCpp::JsonCpp
-  fmt::fmt
 )
 
 # Boost.stacktrace uses something from libdl in its headers.

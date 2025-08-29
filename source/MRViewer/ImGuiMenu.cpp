@@ -108,6 +108,7 @@
 #include "MRPch/MRWinapi.h"
 
 #include <bitset>
+#include <ranges>
 
 namespace
 {
@@ -1418,20 +1419,20 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( selectedObjs.size() == 1 )
     {
         UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->className(), itemWidth, textColor, labelColor );
-
-        drawTagInformation_( selectedObjs.front(), {
-            .textColor = textColor,
-            .labelColor = labelColor,
-            .selectedTextColor = selectedTextColor,
-            .itemWidth = itemWidth,
-            .item2Width = getSceneInfoItemWidth_( 2 ),
-            .item3Width = getSceneInfoItemWidth_( 3 ),
-        } );
     }
     else if ( selectedObjs.size() > 1 )
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
+
+    drawTagInformation_( selectedObjs, {
+        .textColor = textColor,
+        .labelColor = labelColor,
+        .selectedTextColor = selectedTextColor,
+        .itemWidth = itemWidth,
+        .item2Width = getSceneInfoItemWidth_( 2 ),
+        .item3Width = getSceneInfoItemWidth_( 3 ),
+    } );
 
     // Bounding box.
     if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
@@ -2183,7 +2184,7 @@ void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_p
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}
 
-void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, const SelectionInformationStyle& style )
+void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style )
 {
     const auto initWidth = ImGui::GetContentRegionAvail().x;
     const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
@@ -2194,9 +2195,21 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
     if ( ImGui::InvisibleButton( "##EnterTagsWindow", { style.itemWidth, textLineHeight } ) )
         ImGui::OpenPopup( "TagsPopup" );
 
+    static const auto intersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_intersection( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
+
+    assert( !selected.empty() );
+    auto sharedTags = selected.front()->tags();
+    for ( const auto& selObj : selected | std::views::drop( 1 ) )
+        sharedTags = intersect( sharedTags, selObj->tags() );
+
     std::ostringstream oss;
     size_t tagCount = 0;
-    for ( const auto& tag : object->tags() )
+    for ( const auto& tag : sharedTags )
     {
         // hide service tags starting with a dot
         if ( !tag.starts_with( '.' ) )
@@ -2275,9 +2288,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
         if ( iconsFont )
             ImGui::PopFont();
 
-        const auto tags = object->tags();
-        const auto& visTags = VisualObjectTagManager::tags();
-        for ( const auto& tag : tags )
+        const auto& allVisTags = VisualObjectTagManager::tags();
+        for ( const auto& tag : sharedTags )
         {
             // hide service tags starting with a dot
             if ( tag.starts_with( '.' ) )
@@ -2289,9 +2301,9 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
 
             const auto initCursorPosX = ImGui::GetCursorPosX();
 
-            if ( visTags.contains( tag ) )
+            if ( allVisTags.contains( tag ) )
             {
-                const auto color = visTags.at( tag ).selectedColor;
+                const auto color = allVisTags.at( tag ).selectedColor;
                 ImGui::PushStyleColor( ImGuiCol_Button, color );
             }
 
@@ -2300,7 +2312,7 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             if ( ImGui::Button( tag.c_str(), { tagButtonWidth, 0 } ) )
             {
                 std::optional<VisualObjectTag> visTag;
-                if ( auto it = visTags.find( tag ); it != visTags.end() )
+                if ( auto it = allVisTags.find( tag ); it != allVisTags.end() )
                     visTag = it->second;
 
                 tagEditorState_ = {
@@ -2324,7 +2336,7 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             }
             ImGui::PopStyleVar();
 
-            if ( visTags.contains( tag ) )
+            if ( allVisTags.contains( tag ) )
                 ImGui::PopStyleColor();
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
@@ -2336,7 +2348,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             const auto closeButtonLabel = removeButtonText + fmt::format( "##{}", tag );
             if ( ImGui::Button( closeButtonLabel.c_str() ) )
             {
-                object->removeTag( tag );
+                for ( const auto& selObj : selected )
+                    selObj->removeTag( tag );
             }
             ImGui::PopStyleColor( 3 );
             if ( iconsFont )
@@ -2360,7 +2373,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
         if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue ) )
         {
-            object->addTag( tagNewName_ );
+            for ( const auto& selObj : selected )
+                selObj->addTag( tagNewName_ );
             tagNewName_.clear();
         }
 
@@ -2369,7 +2383,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
         ImGui::SameLine( 0, itemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
-            object->addTag( tagNewName_ );
+            for ( const auto& selObj : selected )
+                selObj->addTag( tagNewName_ );
             tagNewName_.clear();
         }
         if ( iconsFont )

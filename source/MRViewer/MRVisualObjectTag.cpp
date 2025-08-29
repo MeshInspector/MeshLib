@@ -1,6 +1,7 @@
 #include "MRVisualObjectTag.h"
 
 #include "MRMesh/MRObjectTagEventDispatcher.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRVisualObject.h"
@@ -59,9 +60,18 @@ void VisualObjectTagManager::update( VisualObject& visObj, const std::string& ta
     {
         const auto visTagIt = visTags.find( tag );
         if ( visTagIt == visTags.end() )
+        {
+            // the visual tag was supposedly removed, re-apply existing tag
+            for ( const auto& [knownTag, _] : visTags )
+                if ( visObj.tags().contains( knownTag ) )
+                    return update( visObj, knownTag );
+            // no existing visual tag, falling back to scene colors
+            visObj.setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+            visObj.setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
             return;
-        const auto& [_, visTag] = *visTagIt;
+        }
 
+        const auto& [_, visTag] = *visTagIt;
         visObj.setFrontColor( visTag.selectedColor, true );
         visObj.setFrontColor( visTag.unselectedColor, false );
     }
@@ -73,6 +83,9 @@ void VisualObjectTagManager::update( VisualObject& visObj, const std::string& ta
         for ( const auto& [knownTag, _] : visTags )
             if ( visObj.tags().contains( knownTag ) )
                 return update( visObj, knownTag );
+        // no existing visual tag, falling back to scene colors
+        visObj.setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+        visObj.setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     }
 }
 

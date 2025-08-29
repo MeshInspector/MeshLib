@@ -43,7 +43,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   MRSymbolMesh
   MRVoxels
   JsonCpp::JsonCpp
-  fmt::fmt
 )
 
 # Boost.stacktrace uses something from libdl in its headers.
@@ -53,19 +52,23 @@ IF(APPLE)
   include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     jsoncpp
+    fmt
   )
 ELSEIF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     jsoncpp
+    fmt
   )
 ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     JsonCpp::JsonCpp
+    fmt::fmt
   )
 ELSE()
   include_directories(${jsoncpp_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME} PRIVATE
     jsoncpp
+    fmt::fmt
   )
 ENDIF()
 

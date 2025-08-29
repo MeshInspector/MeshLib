@@ -933,7 +933,10 @@ void ImGuiMenu::draw_helpers()
                     .selectedColor = tagEditorState_.selectedColor,
                     .unselectedColor = tagEditorState_.unselectedColor,
                 } );
+            }
 
+            if ( tagEditorState_.hasFrontColor || tagEditorState_.initHasFrontColor )
+            {
                 for ( auto& visObj : getAllObjectsInTree<VisualObject>( &SceneRoot::get() ) )
                     if ( visObj->tags().contains( tagEditorState_.name ) )
                         VisualObjectTagManager::update( *visObj, tagEditorState_.name );

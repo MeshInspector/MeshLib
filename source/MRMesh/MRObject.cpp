@@ -528,7 +528,7 @@ std::vector<std::string> Object::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type: " + getClassName() );
+    res.push_back( "class: " + className() );
     res.push_back( "mem: " + bytesString( heapBytes() ) );
     res.push_back( fmt::format( "tags: {}", tags_.size() ) );
     for ( const auto& tag : tags_ )

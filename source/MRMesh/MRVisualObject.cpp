@@ -2,8 +2,6 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRSceneColors.h"
-#include "MRMesh.h"
-#include "MRObjectMesh.h"
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
 #include "MRStringConvert.h"

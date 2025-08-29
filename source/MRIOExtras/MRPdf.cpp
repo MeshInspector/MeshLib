@@ -4,9 +4,9 @@
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
+
 
 #include <fstream>
 #include <vector>
@@ -191,12 +191,27 @@ constexpr float tableCellPaddingY = 1 * scaleFactor;
 
 }
 
+std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
+{
+    return std::visit( [&] ( const auto& val ) -> std::string
+    {
+        using T = std::decay_t<decltype( val )>;
+        if constexpr ( std::is_same_v<T, EmptyCell> )
+            return "";
+        else
+            return fmt::format( runtimeFmt( fmtStr ), val );
+    }, data );
+}
+
+
 struct Pdf::State
 {
     HPDF_Doc document = nullptr;
     HPDF_Page activePage = nullptr;
     HPDF_Font defaultFont = nullptr;
+    HPDF_Font defaultFontBold = nullptr;
     HPDF_Font tableFont = nullptr;
+    HPDF_Font tableFontBold = nullptr;
 };
 
 struct Pdf::TextParams
@@ -261,10 +276,24 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
         pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
         return;
     }
+    state_->defaultFontBold = HPDF_GetFont( state_->document, params_.defaultFontBoldName.c_str(), NULL );
+    if ( !state_->defaultFontBold )
+    {
+        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.defaultFontBoldName );
+        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+        return;
+    }
     state_->tableFont = HPDF_GetFont( state_->document, params_.tableFontName.c_str(), NULL );
     if ( !state_->tableFont )
     {
         spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.tableFontName );
+        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+        return;
+    }
+    state_->tableFontBold = HPDF_GetFont( state_->document, params_.tableFontBoldName.c_str(), NULL );
+    if ( !state_->tableFontBold )
+    {
+        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.tableFontBoldName );
         pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
         return;
     }
@@ -526,6 +555,124 @@ Pdf::operator bool() const
     return state_->document != 0;
 }
 
+void Pdf::newTable( int columnCount )
+{
+    if ( columnCount < 1 )
+        return;
+    columnsInfo_.clear();
+    columnsInfo_.resize( columnCount, { pageWorkWidth / columnCount, "{}" } );
+    rowCounter_ = 0;
+}
+
+Expected<void> Pdf::setTableColumnWidths( const std::vector<float>& widths )
+{
+    assert( widths.size() == columnsInfo_.size() );
+    if ( widths.size() != columnsInfo_.size() )
+    {
+        return unexpected( "Pdf: mismatch number of columns and widths" );
+    }
+
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].width = widths[i];
+    return {};
+}
+
+Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
+{
+    assert( titles.size() == columnsInfo_.size() );
+    if ( titles.size() != columnsInfo_.size() )
+    {
+        return unexpected( "Pdf: mismatch number of columns and titles" );
+    }
+
+    TextCellParams params;
+    params.colorBackground = tableParams_.colorTitleBg;
+    params.colorBorder = tableParams_.colorLines;
+    params.textParams.font = state_->tableFontBold;
+    params.textParams.fontSize = tableParams_.fontSize;
+    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.colorText = tableParams_.colorTitleText;
+
+    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+    
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    float posX = borderFieldLeft;
+    for ( int i = 0; i < titles.size(); ++i )
+    {
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        drawTextCell_( titles[i], params );
+        posX += columnsInfo_[i].width;
+    }
+    cursorY_ -= textHeight;
+    return {};
+}
+
+Expected<void> Pdf::setColumnValuesFormat( const std::vector<std::string>& formats )
+{
+    if ( formats.size() != columnsInfo_.size() )
+        return unexpected( "Pdf: Error set up table column value formats: wrong parameters count." );
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].valueFormat = formats[i];
+    return {};
+}
+
+Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
+{
+    if ( cells.size() != columnsInfo_.size() )
+    {
+        return unexpected( "Pdf: Error adding table row: wrong parameters count." );
+    }
+
+    TextCellParams params;
+    params.colorBackground = ( rowCounter_ & 1 ) ? tableParams_.colorCellBg1 : tableParams_.colorCellBg2;
+    params.colorBorder = tableParams_.colorLines;
+    params.textParams.font = state_->tableFont;
+    params.textParams.fontSize = tableParams_.fontSize;
+    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.colorText = tableParams_.colorCellText;
+
+    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    float posX = borderFieldLeft;
+    for ( int i = 0; i < cells.size(); ++i )
+    {
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        std::string text = cells[i].toString( columnsInfo_[i].valueFormat );
+        if ( tableCustomRule_ )
+        {
+            TextCellParams customParams = params;
+            CellCustomParams cellParams = tableCustomRule_( rowCounter_, i, text );
+            if ( cellParams.text.has_value() )
+                text = *cellParams.text;
+            if ( cellParams.colorText.has_value() )
+                customParams.textParams.colorText = *cellParams.colorText;
+            if ( cellParams.colorCellBg.has_value() )
+                customParams.colorBackground = *cellParams.colorCellBg;
+            if ( cellParams.colorCellBorder.has_value() )
+                customParams.colorBorder = *cellParams.colorCellBorder;
+
+            drawTextCell_( text, customParams );
+        }
+        else
+            drawTextCell_( text, params );
+        posX += columnsInfo_[i].width;
+    }
+    ++rowCounter_;
+    cursorY_ -= textHeight;
+    return {};
+}
+
+float Pdf::getTableTextWidth( const std::string& text )
+{
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
+    return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
+}
+
 void Pdf::addText_( const std::string& text, const TextParams& textParams )
 {
     if ( !checkDocument_( "add text" ) )
@@ -559,13 +706,16 @@ void Pdf::drawTextRect_( const std::string& text, const Box2f& rect, const TextP
         return;
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, params.font, params.fontSize ) );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize * lineSpacingScale ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize ) );
+
+    const float verticalOffset = ( rect.size().y - params.fontSize ) / 2.f;
 
     Vector4f c = Vector4f( params.colorText );
-    HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z ) );
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y, rect.max.x, rect.min.y, text.c_str(), params.alignment, nullptr ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset,
+        rect.max.x, rect.min.y + verticalOffset, text.c_str(), params.alignment, nullptr ) );
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
 
 
@@ -585,7 +735,7 @@ void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& str
     }
     if ( strokeColor.a )
     {
-        Vector4f c = Vector4f( fillColor );
+        Vector4f c = Vector4f( strokeColor );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBStroke( state_->activePage, c.x, c.y, c.z ) );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, rect.min.x, rect.min.y, rect.size().x, rect.size().y ) );
         MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Stroke( state_->activePage ) );

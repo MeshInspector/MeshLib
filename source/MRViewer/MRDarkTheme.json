@@ -24,6 +24,18 @@
 		"g": 255,
 		"r": 255
 	},
+	"LabelsGood": {
+		"a": 255,
+		"b": 0,
+		"g": 255,
+		"r": 0
+	},
+	"LabelsBad": {
+		"a": 255,
+		"b": 128,
+		"g": 128,
+		"r": 255
+	},
 	"Ribbon Colors": {
 		"Background": {
 			"a": 255,

@@ -126,7 +126,7 @@ void AncillaryImGuiLabel::preDraw_()
     if ( !overrideParams_ )
         params.colorTextOutline.a = 220;
     auto scaling = menu->menu_scaling();
-    const ImGuiMeasurementIndicators::StringWithIcon sWithI( labelData_.text );
+    const ImGuiMeasurementIndicators::Text sWithI( labelData_.text );
 
     for ( const auto& vp : getViewerInstance().viewport_list )
     {

@@ -1,8 +1,10 @@
 #include "MRRenderDimensions.h"
 
+#include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRImGuiMeasurementIndicators.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRUnits.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
@@ -15,6 +17,11 @@ constexpr int cCurveMaxSubdivisionDepth = 10;
 static std::string lengthToString( float value )
 {
     return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
+// `dir == 0` - symmetric, `dir > 0` - positive, `dir < 0` - negative.
+static std::string lengthToleranceToString( float value, int dir )
+{
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .plusSign = dir != 0, .zeroMode = dir >= 0 ? ZeroMode::alwaysPositive : ZeroMode::alwaysNegative, .stripTrailingZeroes = true } );
 }
 static std::string angleToString( float value )
 {
@@ -68,13 +75,13 @@ void RadiusTask::renderPass()
     ImGuiMeasurementIndicators::Params indicatorParams;
     indicatorParams.colorMain = color_;
 
-    #if 0 // Alternative rendering by drawing a diameter line across the circle.
+    #if 0 // Alternative rendering by drawing a diameter line across the circle. This is outdated.
     ImVec2 a = toScreenCoords( radius->getWorldCenter() - worldRadiusVec );
     ImVec2 b = toScreenCoords( radius->getWorldCenter() + worldRadiusVec );
 
     ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling, indicatorParams,
         a, b, {
-            ImGuiMeasurementIndicators::StringIcon::diameter, std::size_t( params_.isSpherical ),
+            ImGuiMeasurementIndicators::TextIcon::diameter, std::size_t( params_.isSpherical ),
             fmt::format( "{}  {:.{}f}", params_.isSpherical ? "S" : "", radiusValue, cDistanceDigits ),
         },
         {
@@ -93,17 +100,18 @@ void RadiusTask::renderPass()
     if ( ImGuiMath::lengthSq( farPoint - point ) < minRadiusLen * minRadiusLen )
         farPoint = point + ImGuiMath::normalize( point - center ) * minRadiusLen;
 
-    ImGuiMeasurementIndicators::StringWithIcon string = fmt::format(
-        "{}{}  {}",
-        params_.isSpherical ? "S" : "",
-        params_.drawAsDiameter ? "" : "R",
-        lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) )
-    );
+    ImGuiMeasurementIndicators::Text string;
+
+    if ( params_.isSpherical )
+        string.addText( "S" );
+
     if ( params_.drawAsDiameter )
-    {
-        string.icon = ImGuiMeasurementIndicators::StringIcon::diameter;
-        string.iconPos = params_.isSpherical ? 1 : 0;
-    }
+        string.add( ImGuiMeasurementIndicators::TextIcon::diameter );
+    else
+        string.addText( "R" );
+
+    string.addText( "  " );
+    string.addText( lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) ) );
 
     ImGuiMeasurementIndicators::line( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
         farPoint, point, {
@@ -397,23 +405,62 @@ void LengthTask::renderPass()
 {
     ImVec2 a = toScreenCoords( *viewport_, params_.points[0] );
     ImVec2 b = toScreenCoords( *viewport_, params_.points[1] );
-    float distanceValue = ( params_.points[1] - params_.points[0] ).length() * ( params_.drawAsNegative ? -1.f : 1.f );
+
+    float distanceValue = 0;
+    if ( params_.onlyOneAxis )
+        distanceValue = std::abs( params_.points[1][*params_.onlyOneAxis] - params_.points[0][*params_.onlyOneAxis] );
+    else
+        distanceValue = ( params_.points[1] - params_.points[0] ).length();
+    distanceValue *= ( params_.drawAsNegative ? -1.f : 1.f );
 
     ImGuiMeasurementIndicators::Params indicatorParams;
     indicatorParams.colorMain = color_;
-    std::string str = lengthToString( distanceValue );
-    if ( params_.showPerCoordDeltas )
+
+    ImGuiMeasurementIndicators::Text text;
+
+    std::string_view axisName;
+    if ( params_.onlyOneAxis )
+        axisName = std::array{" X", " Y", " Z"}[*params_.onlyOneAxis];
+
+    // "Measured" prefix for value.
+    if ( params_.referenceValue )
+        text.addElem( { .var = fmt::format( "Measured{}: ", axisName ), .columnId = 0 } );
+
+    const bool passOrFail = params_.referenceValue && params_.tolerance;
+    const bool pass = passOrFail && distanceValue >= *params_.referenceValue + params_.tolerance->negative && distanceValue <= *params_.referenceValue + params_.tolerance->positive;
+
+    // Style customization for value if we're in pass/fail mode.
+    if ( passOrFail )
     {
-        Vector3f delta = params_.points[1] - params_.points[0];
-        if ( params_.perCoordDeltasAreAbsolute )
-        {
-            delta.x = std::abs( delta.x );
-            delta.y = std::abs( delta.y );
-            delta.z = std::abs( delta.z );
-        }
-        str += fmt::format( "\nX: {}\nY: {}\nZ: {}", lengthToString( delta.x ), lengthToString( delta.y ), lengthToString( delta.z ) );
+        text.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
+        text.add( ImGuiMeasurementIndicators::TextFont{ RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) } );
     }
-    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, str );
+    // The value itself.
+    text.addElem( { .var = lengthToString( distanceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
+    if ( passOrFail )
+    {
+        text.add( ImGuiMeasurementIndicators::TextColor{} );
+        text.add( ImGuiMeasurementIndicators::TextFont{} );
+    }
+
+    // Nominal value.
+    if ( params_.referenceValue )
+    {
+        text.addLine();
+        text.addElem( { .var = fmt::format( "Nominal{}: ", axisName ), .columnId = 0 } );
+
+        text.addElem( { .var = lengthToString( *params_.referenceValue ), .align = ImVec2( 1, 0 ), .columnId = 1 } ); // Not stripping zeroes here to align with the measured value.
+
+        if ( params_.tolerance )
+        {
+            if ( params_.tolerance->positive == -params_.tolerance->negative )
+                text.addText( fmt::format( " \xC2\xB1{}", lengthToleranceToString( params_.tolerance->positive, 0 ) ) ); // U+00B1 PLUS-MINUS SIGN
+            else
+                text.addText( fmt::format( " {}/{}", lengthToleranceToString( params_.tolerance->positive, 1 ), lengthToleranceToString( params_.tolerance->negative, -1 ) ) );
+        }
+    }
+
+    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, text );
 }
 
 }

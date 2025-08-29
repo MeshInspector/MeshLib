@@ -6,6 +6,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
+#include "MRPch/MRFmt.h"
 
 
 #include <fstream>

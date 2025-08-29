@@ -288,7 +288,9 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         auto mousePos = viewerRef.mouseController().getMousePos();
         auto headerHeight = viewerRef.framebufferSize.y - sceneBoxSize.y;
         if ( mousePos.x > sceneBoxSize.x || mousePos.y < headerHeight )
-            options.forceReplaceScene = true;
+            options.replaceMode = FileLoadOptions::ReplaceMode::ForceReplace;
+        else
+            options.replaceMode = FileLoadOptions::ReplaceMode::ForceAdd;
     }
 
     if ( viewerRef.getSortDroppedFiles() )

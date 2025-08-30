@@ -3,6 +3,9 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
+      config_matrix:
+        required: true
+        type: string
       full_config_build:
         default: false
         required: false
@@ -41,39 +44,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        config: [ "Debug", "Release" ]
-        build_system: [ MSBuild, CMake ]
-        os: [ windows-2022, windows-2019 ]
-        full_config_build:
-          - ${{fromJSON(inputs.full_config_build)}}
-        exclude:
-          - full_config_build: false
-            os: windows-2022
-            build_system: CMake
-            config: "Debug"
-          - full_config_build: false
-            os: windows-2019
-            build_system: MSBuild
-          - full_config_build: false
-            os: windows-2022
-            build_system: MSBuild
-            config: "Debug"
-        include:
-          - os: windows-2022
-            runner: [windows-2022]
-            vc-path: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'
-            CUDA-VERSION: '12.0.1.52833'
-            CUDA-MAJOR: '12'
-            CUDA-MINOR: '0'
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
-          - os: windows-2019
-            runner: [self-hosted, windows, x64, vs-2019, meshinspector]
-            vc-path: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community'
-            CUDA-VERSION: '11.4.2.47141'
-            CUDA-MAJOR: '11'
-            CUDA-MINOR: '4'
-            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
+      matrix: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

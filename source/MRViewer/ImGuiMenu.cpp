@@ -2198,31 +2198,49 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
     if ( ImGui::InvisibleButton( "##EnterTagsWindow", { style.itemWidth, textLineHeight } ) )
         ImGui::OpenPopup( "TagsPopup" );
 
-    static const auto intersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
     {
         std::set<T> result;
         std::set_intersection( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
         return result;
     };
+    static const auto setUnion = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_union( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
 
     assert( !selected.empty() );
-    auto sharedTags = selected.front()->tags();
+    auto allTags = selected.front()->tags();
+    auto commonTags = allTags;
     for ( const auto& selObj : selected | std::views::drop( 1 ) )
-        sharedTags = intersect( sharedTags, selObj->tags() );
+    {
+        allTags = setUnion( allTags, selObj->tags() );
+        commonTags = setIntersect( commonTags, selObj->tags() );
+    }
+
+    static const auto hiddenTagPred = [] ( const std::string& tag )
+    {
+        // hide service tags starting with a dot
+        return tag.starts_with( '.' );
+    };
+    std::erase_if( allTags, hiddenTagPred );
+    std::erase_if( commonTags, hiddenTagPred );
 
     std::ostringstream oss;
     size_t tagCount = 0;
-    for ( const auto& tag : sharedTags )
+    for ( const auto& tag : commonTags )
     {
-        // hide service tags starting with a dot
-        if ( !tag.starts_with( '.' ) )
-        {
-            if ( tagCount++ != 0 )
-                oss << ", ";
-            oss << tag;
-        }
+        if ( tagCount++ != 0 )
+            oss << ", ";
+        oss << tag;
     }
-    auto text = tagCount != 0 ? oss.str() : "–";
+    auto text = oss.str();
+    if ( const auto uncommonTagCount = allTags.size() - commonTags.size() )
+        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( "{} uncommon tag{}", uncommonTagCount, uncommonTagCount != 1 ? "s" : "" );
+    if ( text.empty() )
+        text = "–";
 
     auto textSize = ImGui::CalcTextSize( text.c_str() );
     if ( style.itemWidth < textSize.x )
@@ -2292,12 +2310,12 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             ImGui::PopFont();
 
         const auto& allVisTags = VisualObjectTagManager::tags();
-        for ( const auto& tag : sharedTags )
-        {
-            // hide service tags starting with a dot
-            if ( tag.starts_with( '.' ) )
-                continue;
+        auto allKnownTags = allTags;
+        for ( const auto& [tag, _] : allVisTags )
+            allKnownTags.emplace( tag );
 
+        for ( const auto& tag : commonTags )
+        {
             const auto tagButtonWidth = buttonWidth( tag.c_str() ) + removeButtonWidth;
             if ( ImGui::GetContentRegionAvail().x < tagButtonWidth )
                 ImGui::NewLine();

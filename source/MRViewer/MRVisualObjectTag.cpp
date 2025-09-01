@@ -70,9 +70,15 @@ void VisualObjectTagManager::update( VisualObject& visObj, const std::string& ta
     visObj.resetFrontColor();
 
     // re-apply existing tag if any
-    for ( const auto& [knownTag, _] : visTags )
+    for ( const auto& [knownTag, visTag] : visTags )
+    {
         if ( visObj.tags().contains( knownTag ) )
-            return update( visObj, knownTag );
+        {
+            visObj.setFrontColor( visTag.selectedColor, true );
+            visObj.setFrontColor( visTag.unselectedColor, false );
+            return;
+        }
+    }
 }
 
 VisualObjectTagManager::VisualObjectTagManager( ProtectedTag )

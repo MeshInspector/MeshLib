@@ -108,7 +108,6 @@
 #include "MRPch/MRWinapi.h"
 
 #include <bitset>
-#include <ranges>
 
 namespace
 {
@@ -2214,8 +2213,9 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
     assert( !selected.empty() );
     auto allTags = selected.front()->tags();
     auto commonTags = allTags;
-    for ( const auto& selObj : selected | std::views::drop( 1 ) )
+    for ( auto i = 1; i < selected.size(); ++i )
     {
+        const auto& selObj = selected[i];
         allTags = setUnion( allTags, selObj->tags() );
         commonTags = setIntersect( commonTags, selObj->tags() );
     }

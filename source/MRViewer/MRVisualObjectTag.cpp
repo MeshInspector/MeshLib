@@ -58,7 +58,7 @@ void VisualObjectTagManager::update( VisualObject& visObj, const std::string& ta
 
     if ( visObj.tags().contains( tag ) )
     {
-        if ( const auto visTagIt = visTags.find( tag ); visTagIt == visTags.end() )
+        if ( const auto visTagIt = visTags.find( tag ); visTagIt != visTags.end() )
         {
             const auto& [_, visTag] = *visTagIt;
             visObj.setFrontColor( visTag.selectedColor, true );

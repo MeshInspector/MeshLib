@@ -2391,6 +2391,9 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             tagNewName_.clear();
         }
 
+        // completion callback for ImGui
+        // called every time user presses the Tab key
+        // completes the existing tag name if its prefix is typed
         static const auto tagCompletion = [] ( ImGuiInputTextCallbackData* data ) -> int
         {
             if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )

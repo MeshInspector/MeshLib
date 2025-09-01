@@ -233,8 +233,8 @@ jobs:
           jq \
             --arg vs19 "${{ needs.Configuration.outputs.vs19_vcpkg_version }}" \
             --arg vs22 "${{ needs.Configuration.outputs.vs22_vcpkg_version }}" \
-            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__")).["vcpkg-version"]=$vs19
-            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__")).["vcpkg-version"]=$vs22' \
+            '(.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS19__") | .["vcpkg-version"]) = $vs19
+            | (.include[] | select(.["vcpkg-version"]=="__VCPKG_VERSION_VS22__") | .["vcpkg-version"]) = $vs22' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

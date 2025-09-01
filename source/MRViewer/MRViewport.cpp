@@ -726,9 +726,13 @@ void Viewport::drawGlobalBasis() const
 
     auto length = viewer.globalBasis->getAxesLength( id );
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
-        length = params_.objectScale;
+        length = params_.objectScale * 0.5f;
 
-    viewer.globalBasis->setAxesProps( length, getPixelSizeAtPoint( Vector3f() ) * 3.0f, id );
+    float scaling = 1.0f;
+    if ( auto menu = viewer.getMenuPlugin() )
+        scaling = menu->menu_scaling();
+
+    viewer.globalBasis->setAxesProps( length, scaling * getPixelSizeAtPoint( Vector3f() ) * 2.0f, id );
     viewer.globalBasis->draw( *this );
 }
 

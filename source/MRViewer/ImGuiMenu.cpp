@@ -747,7 +747,8 @@ void ImGuiMenu::setUserScaling( float scaling )
     userScaling_ = scaling;
     CommandLoop::appendCommand( [&] ()
     {
-        postRescale_( 1.0f, 1.0f ); // actual values does not matter
+        auto scaling = menu_scaling();
+        getViewerInstance().postRescale( scaling, scaling );
     } );
 }
 

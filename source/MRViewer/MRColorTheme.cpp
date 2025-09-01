@@ -393,7 +393,10 @@ const char* ColorTheme::getViewportColorTypeName( ViewportColorsType type )
     constexpr std::array<const char*, size_t( ViewportColorsType::Count )> colorNames
     {
         "Background",
-        "Borders"
+        "Borders",
+        "AxisX",
+        "AxisY",
+        "AxisZ"
     };
     return colorNames[int( type )];
 }

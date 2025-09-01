@@ -2417,7 +2417,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
                 {
                     data->InsertChars( data->CursorPos, candidate.substr( text.length() ).data() );
                     data->ClearSelection();
-                    data->SelectionStart = text.length();
+                    data->SelectionStart = (int)text.length();
                 }
             }
             return 0;

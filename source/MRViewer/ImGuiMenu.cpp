@@ -747,7 +747,8 @@ void ImGuiMenu::setUserScaling( float scaling )
     userScaling_ = scaling;
     CommandLoop::appendCommand( [&] ()
     {
-        postRescale_( 1.0f, 1.0f ); // actual values does not matter
+        auto scaling = menu_scaling();
+        getViewerInstance().postRescale( scaling, scaling );
     } );
 }
 
@@ -932,7 +933,10 @@ void ImGuiMenu::draw_helpers()
                     .selectedColor = tagEditorState_.selectedColor,
                     .unselectedColor = tagEditorState_.unselectedColor,
                 } );
+            }
 
+            if ( tagEditorState_.hasFrontColor || tagEditorState_.initHasFrontColor )
+            {
                 for ( auto& visObj : getAllObjectsInTree<VisualObject>( &SceneRoot::get() ) )
                     if ( visObj->tags().contains( tagEditorState_.name ) )
                         VisualObjectTagManager::update( *visObj, tagEditorState_.name );
@@ -1369,12 +1373,19 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     // customize input text widget design
+    const ImVec4 originalFrameBgColor = ImGui::GetStyleColorVec4( ImGuiCol_FrameBg );
+    const float originalFrameBorderSize = ImGui::GetStyle().FrameBorderSize;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
     MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
 
     const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
+
+    // Width for half-width widgets.
+    // There are two separate variables to prevent rounding from messing up the alignment.
+    const float itemWidthHalf1 = std::round( ( itemWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
+    const float itemWidthHalf2 = itemWidth - itemWidthHalf1 - ImGui::GetStyle().ItemInnerSpacing.x;
 
     auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     auto labelColor = textColor;
@@ -1410,21 +1421,21 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( selectedObjs.size() == 1 )
     {
-        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
-
-        drawTagInformation_( selectedObjs.front(), {
-            .textColor = textColor,
-            .labelColor = labelColor,
-            .selectedTextColor = selectedTextColor,
-            .itemWidth = itemWidth,
-            .item2Width = getSceneInfoItemWidth_( 2 ),
-            .item3Width = getSceneInfoItemWidth_( 3 ),
-        } );
+        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->className(), itemWidth, textColor, labelColor );
     }
     else if ( selectedObjs.size() > 1 )
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
+
+    drawTagInformation_( selectedObjs, {
+        .textColor = textColor,
+        .labelColor = labelColor,
+        .selectedTextColor = selectedTextColor,
+        .itemWidth = itemWidth,
+        .item2Width = getSceneInfoItemWidth_( 2 ),
+        .item3Width = getSceneInfoItemWidth_( 3 ),
+    } );
 
     // Bounding box.
     if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
@@ -1478,8 +1489,8 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( selectedObjs.size() == 1 && avgEdgeLen > 0 )
         drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 
-     drawPrimitivesInfo( "Holes", holes );
-     drawPrimitivesInfo( "Components", components );
+    drawPrimitivesInfo( "Holes", holes );
+    drawPrimitivesInfo( "Components", components );
 
 #ifndef MRVIEWER_NO_VOXELS
     if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )
@@ -1518,6 +1529,80 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
+
+            bool hasNominal = distance->hasComparisonReferenceValues();
+            bool hasTolerance = distance->hasComparisonTolerances();
+
+            ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+
+            { // Nominal distance.
+                float nominalValue = 0;
+                if ( hasNominal )
+                    nominalValue = distance->getComparisonReferenceValue( 0 );
+
+                ImGui::SetNextItemWidth( itemWidth );
+
+                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
+                MR_FINALLY{ ImGui::PopStyleColor(); };
+                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
+                MR_FINALLY{ ImGui::PopStyleVar(); };
+
+                if ( UI::input<LengthUnit>( "Nominal", nominalValue, -FLT_MAX, FLT_MAX, { .decorationFormatString = hasNominal ? "{}" : "Not specified" } ) )
+                    distance->setComparisonReferenceValue( 0, nominalValue );
+
+                if ( hasNominal )
+                {
+                    ImGui::SameLine();
+
+                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+                    if ( UI::buttonEx( "\xC3\x97###removeNominal", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                    {
+                        distance->resetComparisonReferenceValues();
+                        distance->resetComparisonTolerances(); // This too.
+                        hasNominal = false;
+                        hasTolerance = false;
+                    }
+
+                    UI::setTooltipIfHovered( "Remove nominal value and tolerance", menu_scaling() );
+                }
+            }
+
+            // Tolerance.
+            if ( hasNominal ) // Sic!
+            {
+                ObjectComparableWithReference::ComparisonTolerance tol;
+                if ( hasTolerance )
+                    tol = distance->getComparisonTolerences( 0 );
+
+                ImGui::SetNextItemWidth( itemWidthHalf1 );
+
+                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
+                MR_FINALLY{ ImGui::PopStyleColor(); };
+                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
+                MR_FINALLY{ ImGui::PopStyleVar(); };
+
+                if ( UI::input<LengthUnit>( "###positiveTolerance", tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
+                    distance->setComparisonTolerance( 0, tol );
+
+                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+                ImGui::SetNextItemWidth( itemWidthHalf2 );
+
+                if ( UI::input<LengthUnit>( "Tolerance##negative", tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
+                    distance->setComparisonTolerance( 0, tol );
+
+                if ( hasTolerance )
+                {
+                    ImGui::SameLine();
+
+                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+
+                    if ( UI::buttonEx( "\xC3\x97###removeTolerance", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                        distance->resetComparisonTolerances();
+
+                    UI::setTooltipIfHovered( "Remove tolerance", menu_scaling() );
+                }
+            }
         }
         else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
@@ -2102,7 +2187,7 @@ void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_p
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}
 
-void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, const SelectionInformationStyle& style )
+void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style )
 {
     const auto initWidth = ImGui::GetContentRegionAvail().x;
     const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
@@ -2113,19 +2198,50 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
     if ( ImGui::InvisibleButton( "##EnterTagsWindow", { style.itemWidth, textLineHeight } ) )
         ImGui::OpenPopup( "TagsPopup" );
 
-    std::ostringstream oss;
-    size_t tagCount = 0;
-    for ( const auto& tag : object->tags() )
+    static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_intersection( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
+    static const auto setUnion = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
+    {
+        std::set<T> result;
+        std::set_union( a.begin(), a.end(), b.begin(), b.end(), std::inserter( result, result.begin() ) );
+        return result;
+    };
+
+    assert( !selected.empty() );
+    auto allTags = selected.front()->tags();
+    auto commonTags = allTags;
+    for ( auto i = 1; i < selected.size(); ++i )
+    {
+        const auto& selObj = selected[i];
+        allTags = setUnion( allTags, selObj->tags() );
+        commonTags = setIntersect( commonTags, selObj->tags() );
+    }
+
+    static const auto hiddenTagPred = [] ( const std::string& tag )
     {
         // hide service tags starting with a dot
-        if ( !tag.starts_with( '.' ) )
-        {
-            if ( tagCount++ != 0 )
-                oss << ", ";
-            oss << tag;
-        }
+        return tag.starts_with( '.' );
+    };
+    std::erase_if( allTags, hiddenTagPred );
+    std::erase_if( commonTags, hiddenTagPred );
+
+    std::ostringstream oss;
+    size_t tagCount = 0;
+    for ( const auto& tag : commonTags )
+    {
+        if ( tagCount++ != 0 )
+            oss << ", ";
+        oss << tag;
     }
-    auto text = tagCount != 0 ? oss.str() : "–";
+    auto text = oss.str();
+    if ( const auto uncommonTagCount = allTags.size() - commonTags.size() )
+        text += ( tagCount != 0 ? " + " : "" ) + fmt::format( "{} uncommon tag{}", uncommonTagCount, uncommonTagCount != 1 ? "s" : "" );
+    if ( text.empty() )
+        text = "–";
 
     auto textSize = ImGui::CalcTextSize( text.c_str() );
     if ( style.itemWidth < textSize.x )
@@ -2194,23 +2310,22 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
         if ( iconsFont )
             ImGui::PopFont();
 
-        const auto tags = object->tags();
-        const auto& visTags = VisualObjectTagManager::tags();
-        for ( const auto& tag : tags )
-        {
-            // hide service tags starting with a dot
-            if ( tag.starts_with( '.' ) )
-                continue;
+        const auto& allVisTags = VisualObjectTagManager::tags();
+        auto allKnownTags = allTags;
+        for ( const auto& [tag, _] : allVisTags )
+            allKnownTags.emplace( tag );
 
+        for ( const auto& tag : commonTags )
+        {
             const auto tagButtonWidth = buttonWidth( tag.c_str() ) + removeButtonWidth;
             if ( ImGui::GetContentRegionAvail().x < tagButtonWidth )
                 ImGui::NewLine();
 
             const auto initCursorPosX = ImGui::GetCursorPosX();
 
-            if ( visTags.contains( tag ) )
+            if ( allVisTags.contains( tag ) )
             {
-                const auto color = visTags.at( tag ).selectedColor;
+                const auto color = allVisTags.at( tag ).selectedColor;
                 ImGui::PushStyleColor( ImGuiCol_Button, color );
             }
 
@@ -2219,7 +2334,7 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             if ( ImGui::Button( tag.c_str(), { tagButtonWidth, 0 } ) )
             {
                 std::optional<VisualObjectTag> visTag;
-                if ( auto it = visTags.find( tag ); it != visTags.end() )
+                if ( auto it = allVisTags.find( tag ); it != allVisTags.end() )
                     visTag = it->second;
 
                 tagEditorState_ = {
@@ -2243,7 +2358,7 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             }
             ImGui::PopStyleVar();
 
-            if ( visTags.contains( tag ) )
+            if ( allVisTags.contains( tag ) )
                 ImGui::PopStyleColor();
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
@@ -2255,7 +2370,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             const auto closeButtonLabel = removeButtonText + fmt::format( "##{}", tag );
             if ( ImGui::Button( closeButtonLabel.c_str() ) )
             {
-                object->removeTag( tag );
+                for ( const auto& selObj : selected )
+                    selObj->removeTag( tag );
             }
             ImGui::PopStyleColor( 3 );
             if ( iconsFont )
@@ -2276,10 +2392,45 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
             tagNewName_.clear();
         }
 
-        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
-        if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        // completion callback for ImGui
+        // called every time user presses the Tab key
+        // completes the existing tag name if its prefix is typed
+        static const auto tagCompletion = [] ( ImGuiInputTextCallbackData* data ) -> int
         {
-            object->addTag( tagNewName_ );
+            if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+            {
+                std::string_view text{ data->Buf, (size_t)data->BufTextLen };
+                const auto& allKnownTags = *(std::set<std::string>*)data->UserData;
+                std::string_view candidate;
+                for ( const auto& tag : allKnownTags )
+                {
+                    if ( tag.starts_with( text ) )
+                    {
+                        if ( candidate.empty() )
+                        {
+                            candidate = tag;
+                        }
+                        else
+                        {
+                            candidate = {};
+                            break;
+                        }
+                    }
+                }
+                if ( !candidate.empty() )
+                {
+                    data->InsertChars( data->CursorPos, candidate.substr( text.length() ).data() );
+                    data->ClearSelection();
+                    data->SelectionStart = (int)text.length();
+                }
+            }
+            return 0;
+        };
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
+        if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
+        {
+            for ( const auto& selObj : selected )
+                selObj->addTag( tagNewName_ );
             tagNewName_.clear();
         }
 
@@ -2288,7 +2439,8 @@ void ImGuiMenu::drawTagInformation_( const std::shared_ptr<Object>& object, cons
         ImGui::SameLine( 0, itemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
-            object->addTag( tagNewName_ );
+            for ( const auto& selObj : selected )
+                selObj->addTag( tagNewName_ );
             tagNewName_.clear();
         }
         if ( iconsFont )

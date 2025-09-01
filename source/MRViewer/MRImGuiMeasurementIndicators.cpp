@@ -1,6 +1,10 @@
 #include "MRImGuiMeasurementIndicators.h"
 
+#include "MRMesh/MRFinally.h"
+#include "MRMesh/MRString.h"
 #include "MRViewer/MRColorTheme.h"
+
+#include <parallel_hashmap/phmap.h>
 
 namespace MR::ImGuiMeasurementIndicators
 {
@@ -40,7 +44,7 @@ static void forEachElement( Element elem, F&& func )
 Params::Params()
 {
     colorMain = Color( 1.f, 1.f, 1.f, 1.f );
-    colorOutline = Color( 0.f, 0.f, 0.f, 0.5f );
+    colorOutline = Color( 0.f, 0.f, 0.f, 0.65f );
 
     colorText = colorMain;
     colorTextOutline = colorOutline;
@@ -70,63 +74,205 @@ void point( Element elem, float menuScaling, const Params& params, ImVec2 point 
     } );
 }
 
-float StringWithIcon::getIconWidth() const
+void Text::addText( std::string_view text )
 {
-    switch ( icon )
+    bool first = true;
+    split( text, "\n", [&]( std::string_view part )
     {
-    case StringIcon::none:
-        return 0;
-    case StringIcon::diameter:
-        return std::round( ImGui::GetTextLineHeight() );
-    }
-    assert( false && "Invalid icon enum." );
-    return 0;
-}
+        if ( first )
+            first = false;
+        else
+            addLine();
 
-ImVec2 StringWithIcon::calcTextSize() const
-{
-    return ImGui::CalcTextSize( string.data(), string.data() + string.size() ) + ImVec2( getIconWidth(), 0 );
-}
+        if ( part.empty() )
+            return false;
 
-void StringWithIcon::draw( ImDrawList& list, float menuScaling, ImVec2 pos, ImU32 color )
-{
-    if ( icon == StringIcon{} )
-    {
-        list.AddText( pos, color, string.data(), string.data() + string.size() );
-    }
-    else
-    {
-        assert( iconPos <= string.size() );
-
-        ImVec2 iconPixelPos = pos + ImVec2( ImGui::CalcTextSize( string.data(), string.data() + iconPos ).x, 0 );
-        ImVec2 iconPixelSize( getIconWidth(), ImGui::GetTextLineHeight() );
-
-        list.AddText( pos, color, string.data(), string.data() + iconPos );
-        list.AddText( iconPixelPos + ImVec2( iconPixelSize.x, 0 ), color, string.data() + iconPos, string.data() + string.size() );
-
-        switch ( icon )
+        // If we have an existing text element we can safely merge this with, do that.
+        if ( !lines.empty() && !lines.back().elems.empty() && lines.back().elems.back().hasDefaultParams() )
         {
-        case StringIcon::none:
-            // Nothing, and this should be unreachable.
-            break;
-        case StringIcon::diameter:
-            list.AddCircle( iconPixelPos + iconPixelSize / 2, iconPixelSize.x / 2 - 2 * menuScaling, color, 0, 1.1f * menuScaling );
-            list.AddLine(
-                iconPixelPos + ImVec2( iconPixelSize.x - 1.5f, 0.5f ) - ImVec2( 0.5f, 0.5f ),
-                iconPixelPos + ImVec2( 1.5f, iconPixelSize.y - 0.5f ) - ImVec2( 0.5f, 0.5f ),
-                color, 1.1f * menuScaling
-            );
-            break;
+            if ( auto str = std::get_if<std::string>( &lines.back().elems.back().var ) )
+            {
+                *str += text;
+                return false;
+            }
+        }
+
+        add( std::string( part ) );
+        return false;
+    } );
+}
+
+void Text::update( bool force ) const
+{
+    if ( !force && !dirty )
+        return; // Nothing to do.
+    dirty = false;
+
+    ImFont* curFont = defaultFont;
+
+    // Compute `elem.computedSize` and `line.computedSize[WithPadding].y`.
+    for ( const Line& line : lines )
+    {
+        line.computedSize.y = 0;
+
+        for ( const Elem& elem : line.elems )
+        {
+            std::visit( overloaded{
+                [&]( const std::string& str )
+                {
+                    if ( curFont )
+                        ImGui::PushFont( curFont );
+                    MR_FINALLY{
+                        if ( curFont )
+                            ImGui::PopFont();
+                    };
+
+                    elem.computedSize = round( ImGui::CalcTextSize( str.c_str() ) );
+                },
+                [&]( TextIcon )
+                {
+                    // Just this for now.
+                    elem.computedSize.x = elem.computedSize.y = std::round( ImGui::GetTextLineHeight() );
+                },
+                [&]( const TextColor& )
+                {
+                    elem.computedSize = ImVec2();
+                },
+                [&]( const TextFont& font )
+                {
+                    elem.computedSize = ImVec2();
+                    curFont = font.font;
+                },
+            }, elem.var );
+
+            if ( elem.computedSize.y > line.computedSize.y )
+                line.computedSize.y = elem.computedSize.y;
+        }
+
+        line.computedSizeWithPadding.y = std::max( line.computedSize.y, line.size.y );
+    }
+
+    float columnWidths[32]{};
+
+    // Compute `elem.computedSizeWithPadding` (here Y requires knowing line heights, and X could've been computed earlier).
+    // Also compute initial `computedSizeWithPadding` for elements, before the column alignment.
+    for ( const Line& line : lines )
+    {
+        for ( const Elem& elem : line.elems )
+        {
+            elem.computedSizeWithPadding = max( elem.size, elem.computedSize );
+            if ( elem.size.y < 0 )
+                elem.computedSizeWithPadding.y = line.computedSizeWithPadding.y;
+
+            // Store column widths.
+            if ( elem.columnId >= 0 )
+            {
+                bool columnIdOk = elem.columnId < std::size( columnWidths );
+                assert( columnIdOk );
+                if ( columnIdOk )
+                    columnWidths[elem.columnId] = std::max( columnWidths[elem.columnId], elem.computedSizeWithPadding.x );
+            }
+        }
+    }
+
+    // Apply column widths, compute `elem.computedSizeWithPadding`, `line.computedSize.x`, and `computedSize`.
+    computedSize = ImVec2();
+    for ( const Line& line : lines )
+    {
+        line.computedSize.x = 0;
+
+        for ( const Elem& elem : line.elems )
+        {
+            if ( elem.columnId >= 0 )
+                elem.computedSizeWithPadding.x = columnWidths[elem.columnId];
+
+            line.computedSize.x += elem.computedSizeWithPadding.x;
+        }
+
+        if ( line.computedSize.x > computedSize.x )
+            computedSize.x = line.computedSize.x; // Here we don't care about `line.computedSizeWithPadding.x`, as the maximum will be the same anyway.
+
+        computedSize.y += line.computedSizeWithPadding.y;
+    }
+
+    // Compute `line.computedSizeWithPadding.x`.
+    for ( const Line& line : lines )
+    {
+        if ( line.size.x < 0 )
+            line.computedSizeWithPadding.x = computedSize.x;
+        else
+            line.computedSizeWithPadding.x = std::max( line.size.x, line.computedSize.x );
+    }
+}
+
+void Text::draw( ImDrawList& list, float menuScaling, ImVec2 pos, const TextColor& defaultTextColor ) const
+{
+    update();
+
+    ImU32 defaultColorFixed = defaultTextColor.color ? *defaultTextColor.color : ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    ImU32 curColor = defaultColorFixed;
+
+    // Specifically for the full text size, we don't do `max( size, computedSize )`, as it makes more sense this way.
+    // See the comment on `size` in the class.
+    ImVec2 curPos = pos + ( size - computedSize ) * align;
+
+    ImFont* curFont = defaultFont;
+
+    for ( const Line& line : lines )
+    {
+        ImVec2 linePos = curPos + ( line.computedSizeWithPadding - line.computedSize ) * line.align;
+        curPos.y += line.computedSizeWithPadding.y;
+
+        for ( const Elem& elem : line.elems )
+        {
+            ImVec2 elemPos = linePos + ( elem.computedSizeWithPadding - elem.computedSize ) * elem.align;
+            linePos.x += elem.computedSizeWithPadding.x;
+
+            std::visit( overloaded{
+                [&]( const std::string& str )
+                {
+                    if ( curFont )
+                        ImGui::PushFont( curFont );
+                    MR_FINALLY{
+                        if ( curFont )
+                            ImGui::PopFont();
+                    };
+
+                    list.AddText( elemPos, curColor, str.c_str() );
+                },
+                [&]( TextIcon icon )
+                {
+                    switch ( icon )
+                    {
+                    case TextIcon::diameter:
+                        list.AddCircle( elemPos + elem.computedSize / 2, elem.computedSize.x / 2 - 2 * menuScaling, curColor, 0, 1.1f * menuScaling );
+                        list.AddLine(
+                            elemPos + ImVec2( elem.computedSize.x - 1.5f, 0.5f ) - ImVec2( 0.5f, 0.5f ),
+                            elemPos + ImVec2( 1.5f, elem.computedSize.y - 0.5f ) - ImVec2( 0.5f, 0.5f ),
+                            curColor, 1.1f * menuScaling
+                        );
+                        break;
+                    }
+                },
+                [&]( const TextColor& color )
+                {
+                    curColor = color.color ? *color.color : defaultColorFixed;
+                },
+                [&]( const TextFont& font )
+                {
+                    curFont = font.font;
+                },
+            }, elem.var );
         }
     }
 }
 
-void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, StringWithIcon string, ImVec2 push, ImVec2 pivot )
+void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, const Text& text, ImVec2 push, ImVec2 pivot )
 {
     if ( ( elem & Element::both ) == Element{} )
         return; // Nothing to draw.
 
-    if ( string.isEmpty() )
+    if ( text.isEmpty() )
         return;
 
     float textOutlineWidth = params.textOutlineWidth * menuScaling;
@@ -135,20 +281,20 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, St
     ImVec2 textToLineSpacingA = params.textToLineSpacingA * menuScaling;
     ImVec2 textToLineSpacingB = params.textToLineSpacingB * menuScaling;
 
-    ImVec2 textSize = string.calcTextSize();
-    ImVec2 textPos = pos - ( textSize * pivot );
+    text.update();
+    ImVec2 textPos = pos - ( text.computedSize * pivot );
 
     if ( push != ImVec2{} )
     {
         push = normalize( push );
-        ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + textSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + textSize.y + textToLineSpacingB.y );
+        ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + text.computedSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + text.computedSize.y + textToLineSpacingB.y );
         textPos += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
     }
 
     if ( bool( elem & Element::outline ) )
-        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + textSize + textToLineSpacingB + textOutlineWidth, params.colorTextOutline.getUInt32(), textOutlineRounding );
+        params.list->AddRectFilled( round( textPos ) - textToLineSpacingA - textOutlineWidth, textPos + text.computedSize + textToLineSpacingB + textOutlineWidth, params.colorTextOutline.getUInt32(), textOutlineRounding );
     if ( bool( elem & Element::main ) )
-        string.draw( *params.list, menuScaling, round( textPos ), params.colorText.getUInt32() );
+        text.draw( *params.list, menuScaling, round( textPos ), params.colorText.getUInt32() );
 }
 
 void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir )
@@ -304,7 +450,7 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     } );
 }
 
-void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, StringWithIcon string, const DistanceParams& distanceParams )
+void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVec2 b, const Text& text, const DistanceParams& distanceParams )
 {
     if ( ( elem & Element::both ) == Element{} )
         return; // Nothing to draw.
@@ -327,13 +473,13 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
     ImVec2 gapA, gapB;
 
     // Try to cram the string into the middle of the line.
-    if ( !string.isEmpty() && !useInvertedStyle && !distanceParams.moveTextToLineEndIndex )
+    if ( !text.isEmpty() && !useInvertedStyle && !distanceParams.moveTextToLineEndIndex )
     {
-        ImVec2 textSize = string.calcTextSize();
-        ImVec2 textPos = a + ( ( b - a ) - textSize ) / 2.f;
+        text.update();
+        ImVec2 textPos = a + ( ( b - a ) - text.computedSize ) / 2.f;
 
         ImVec2 boxA = textPos - textToLineSpacingA - center;
-        ImVec2 boxB = textPos + textSize + textToLineSpacingB - center;
+        ImVec2 boxB = textPos + text.computedSize + textToLineSpacingB - center;
         auto isInBox = [&]( ImVec2 pos ) { return CompareAll( pos ) >= boxA && CompareAll( pos ) <= boxB; };
 
         if ( isInBox( a ) || isInBox( b ) )
@@ -385,14 +531,14 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
 
     forEachElement( elem, [&]( Element thisElem )
     {
-        if ( !useInvertedStyle && ( string.isEmpty() || drawTextOutOfLine || distanceParams.moveTextToLineEndIndex ) )
+        if ( !useInvertedStyle && ( text.isEmpty() || drawTextOutOfLine || distanceParams.moveTextToLineEndIndex ) )
         {
             LineParams lineParams{
                 .capA = LineCap{ .decoration = LineCap::Decoration::arrow },
                 .capB = LineCap{ .decoration = LineCap::Decoration::arrow },
             };
             if ( distanceParams.moveTextToLineEndIndex )
-                ( *distanceParams.moveTextToLineEndIndex ? lineParams.capB : lineParams.capA ).text = string;
+                ( *distanceParams.moveTextToLineEndIndex ? lineParams.capB : lineParams.capA ).text = text;
             line( thisElem, menuScaling, params, a, b, lineParams );
         }
         else
@@ -401,7 +547,7 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
             {
                 LineParams lineParams{ .capB = LineCap{ .decoration = LineCap::Decoration::arrow } };
                 if ( useInvertedStyle && distanceParams.moveTextToLineEndIndex && *distanceParams.moveTextToLineEndIndex == front )
-                    lineParams.capA.text = string;
+                    lineParams.capA.text = text;
                 if ( useInvertedStyle )
                     lineParams.flags |= LineFlags::noBackwardArrowTipOffset;
                 line( thisElem, menuScaling, params, front ? gapB : gapA, front ? b : a, lineParams );
@@ -415,7 +561,7 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
         }
 
         if ( !distanceParams.moveTextToLineEndIndex )
-            text( thisElem, menuScaling, params, center, string, drawTextOutOfLine ? n : ImVec2{} );
+            ImGuiMeasurementIndicators::text( thisElem, menuScaling, params, center, text, drawTextOutOfLine ? n : ImVec2{} );
     } );
 }
 

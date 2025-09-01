@@ -471,7 +471,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
     if ( isAutoGlobalBasisSize )
     {
-        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale );
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
     }
     else
     {

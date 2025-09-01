@@ -26,6 +26,8 @@ struct SceneColors
         UnselectedObjectDistanceMap,
         BackFaces,
         Labels,
+        LabelsGood, // Typically green.
+        LabelsBad, // Typically red.
         Edges,
         Points,
         SelectedFaces,

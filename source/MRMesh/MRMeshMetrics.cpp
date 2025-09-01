@@ -165,10 +165,15 @@ FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh )
 FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir )
 {
     FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, up = upDir.normalized()]( VertId a, VertId b, VertId c )
+    // perform computations in doubles to avoid overflow even for very large float coordinates in points
+    metric.triangleMetric = [&mesh, up = Vector3d( upDir ).normalized()]( VertId a, VertId b, VertId c )
     {
-        auto ab = mesh.points[b] - mesh.points[a];
-        auto ac = mesh.points[c] - mesh.points[a];
+        const Vector3d ap( mesh.points[a] );
+        const Vector3d bp( mesh.points[b] );
+        const Vector3d cp( mesh.points[c] );
+        const auto ab = bp - ap;
+        const auto ac = cp - ap;
+        const auto bc = cp - bp;
 
         auto norm = cross( ab, ac ); // dbl area
         auto parallelPenalty = std::abs( dot( up, norm ) );
@@ -179,8 +184,8 @@ FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir 
         // side length sq sq - m^4
         return
             norm.lengthSq() +
-            100.0f * sqr( parallelPenalty ) + // this should be big
-            sqr( ab.lengthSq() + ac.lengthSq() + ( mesh.points[c] - mesh.points[b] ).lengthSq() ) * 0.5f;
+            100 * sqr( parallelPenalty ) + // this should be big
+            sqr( ab.lengthSq() + ac.lengthSq() + bc.lengthSq() ) * 0.5;
     };
     return metric;
 }

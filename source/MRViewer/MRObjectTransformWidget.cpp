@@ -547,21 +547,21 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         {
             translateControls_[i] = std::make_shared<ObjectMesh>();
             translateControls_[i]->setAncillary( true );
-            translateControls_[i]->setFrontColor( params_.translationColors[i], false );
             translateControls_[i]->setFlatShading( true );
             translateControls_[i]->setName( "TranslationC " + std::to_string( i ) );
             if ( parent )
                 parent->addChild( translateControls_[i] );
         }
+        translateControls_[i]->setFrontColor( params_.translationColors[i], false );
         if ( !translateLines_[i] )
         {
             translateLines_[i] = std::make_shared<ObjectLines>();
             translateLines_[i]->setAncillary( true );
-            translateLines_[i]->setFrontColor( params_.helperLineColor, false );
             translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             translateLines_[i]->setName( "TranslationL " + std::to_string( i ) );
             translateControls_[i]->addChild( translateLines_[i] );
         }
+        translateLines_[i]->setFrontColor( params_.helperLineColor, false );
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints =
         {
@@ -581,21 +581,21 @@ void TransformControls::init( std::shared_ptr<Object> parent )
         {
             rotateControls_[i] = std::make_shared<ObjectMesh>();
             rotateControls_[i]->setAncillary( true );
-            rotateControls_[i]->setFrontColor( params_.rotationColors[i], false );
             rotateControls_[i]->setFlatShading( true );
             rotateControls_[i]->setName( "RotationC " + std::to_string( i ) );
             if ( parent )
                 parent->addChild( rotateControls_[i] );
         }
+        rotateControls_[i]->setFrontColor( params_.rotationColors[i], false );
         if ( !rotateLines_[i] )
         {
             rotateLines_[i] = std::make_shared<ObjectLines>();
             rotateLines_[i]->setAncillary( true );
-            rotateLines_[i]->setFrontColor( params_.helperLineColor, false );
             rotateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             rotateLines_[i]->setName( "RotationL " + std::to_string( i ) );
             rotateControls_[i]->addChild( rotateLines_[i] );
         }
+        rotateLines_[i]->setFrontColor( params_.helperLineColor, false );
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
         auto rotMesh = makeTorus( radius, width, 128, 32, &rotatePoints );

@@ -1417,7 +1417,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( selectedObjs.size() == 1 )
     {
-        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
+        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->className(), itemWidth, textColor, labelColor );
 
         drawTagInformation_( selectedObjs.front(), {
             .textColor = textColor,

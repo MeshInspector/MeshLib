@@ -17,6 +17,12 @@ public:
     constexpr static const char* TypeName() noexcept { return "ObjectLines"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    constexpr static const char* ClassName() noexcept { return "Polyline"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Polylines"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
@@ -32,9 +38,6 @@ public:
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    std::string getClassName() const override { return "Lines"; }
-    std::string getClassNameInPlural() const override { return "Lines"; }
 
     /// signal about lines changing, triggered in setDirtyFlag
     using LinesChangedSignal = Signal<void( uint32_t mask )>;

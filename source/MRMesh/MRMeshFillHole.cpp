@@ -392,12 +392,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     EdgeId a = a0;
     do
     {
-        auto ap = mesh.orgPnt( a );
+        Vector3d ap( mesh.orgPnt( a ) );
         EdgeId b = b0;
         do
         {
-            auto bp = mesh.orgPnt( b );
-            double distSq = ( ap - bp ).lengthSq();
+            Vector3d bp( mesh.orgPnt( b ) );
+            double distSq = ( ap - bp ).lengthSq(); // compute lengthSq in double to avoid overflow even for very large floats in ap and bp
             if ( distSq < minDistSq )
             {
                 minDistSq = distSq;
@@ -411,6 +411,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
         a = mesh.topology.prev( a.sym() );
         ++aLoopEdgesCounter;
     } while ( a != a0 );
+
+    if ( !ac || !bc )
+    {
+        assert( false );
+        return;
+    }
 
     // Fill EdgeMaps
     std::vector<EdgeId> aEdgeMap( aLoopEdgesCounter );

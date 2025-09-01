@@ -19,21 +19,18 @@ public:
     PlaneObject( PlaneObject&& ) noexcept = default;
     PlaneObject& operator = ( PlaneObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept
-    {
-        return "PlaneObject";
-    }
-    virtual const char* typeName() const override
-    {
-        return TypeName();
-    }
+    constexpr static const char* TypeName() noexcept { return "PlaneObject"; }
+    virtual const char* typeName() const override { return TypeName(); }
+
+    constexpr static const char* ClassName() noexcept { return "Plane"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Planes"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     PlaneObject( ProtectedStruct, const PlaneObject& obj ) : PlaneObject( obj )
     {}
-
-    std::string getClassName() const override { return "Plane"; }
-    std::string getClassNameInPlural() const override { return "Planes"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

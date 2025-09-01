@@ -77,8 +77,15 @@ struct FileLoadOptions
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-    /// true here will replace existing scene even if more than one file is open
-    bool forceReplaceScene = false;
+    enum class ReplaceMode
+    {
+        ContructionBased, ///< replace current scene if new one was loaded from single scene file
+        ForceReplace,
+        ForceAdd
+    };
+
+    /// Determines how to deal with current scene after loading new one
+    ReplaceMode replaceMode = ReplaceMode::ContructionBased;
 
     /// if this callback is set - it is called once when all objects are added to scene
     /// top level objects only are present here

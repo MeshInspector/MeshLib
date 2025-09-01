@@ -127,8 +127,11 @@ public:
     constexpr static const char* TypeName() noexcept { return "VisualObject"; }
     virtual const char* typeName() const override { return TypeName(); }
 
-    std::string getClassName() const override { return "Visual Object"; }
-    std::string getClassNameInPlural() const override { return "Visual Objects"; }
+    constexpr static const char* ClassName() noexcept { return "Visual Object"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Visual Objects"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;

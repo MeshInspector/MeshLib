@@ -1263,15 +1263,15 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
     if ( objs.empty() )
         return {};
 
-    auto cn = objs[0]->getClassName();
+    auto cn = objs[0]->className();
     if ( objs.size() == 1 )
         return cn;
 
     for ( int i = 1; i < objs.size(); ++i )
-        if ( cn != objs[i]->getClassName() )
+        if ( cn != objs[i]->className() )
             return {};
 
-    return objs[0]->getClassNameInPlural();
+    return objs[0]->classNameInPlural();
 }
 
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
@@ -1290,7 +1290,11 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             if ( auto cn = commonClassName( result.scene->children() ) )
                 undoName += " as " + *cn;
 
-            if ( options.forceReplaceScene || wasEmptyScene )
+            bool singleSceneFile = result.loadedFiles.size() == 1 && !result.isSceneConstructed;
+            bool forceReplace = options.replaceMode == FileLoadOptions::ReplaceMode::ForceReplace;
+            bool forceAdd = options.replaceMode == FileLoadOptions::ReplaceMode::ForceAdd;
+
+            if ( forceReplace || wasEmptyScene || ( !forceAdd && singleSceneFile ) )
             {
                 {
                     // the scene is taken as is from a single file, replace the current scene with it

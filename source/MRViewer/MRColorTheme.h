@@ -153,6 +153,9 @@ public:
     {
         Background,
         Borders,
+        AxisX,
+        AxisY,
+        AxisZ,
         Count
     };
 

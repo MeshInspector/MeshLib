@@ -738,7 +738,7 @@ private:
 
     std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
-    std::vector<boost::signals2::scoped_connection> colorUpdateConnections_;
+    std::vector<boost::signals2::scoped_connection> uiUpdateConnections_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

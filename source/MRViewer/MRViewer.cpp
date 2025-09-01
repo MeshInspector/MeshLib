@@ -2062,9 +2062,9 @@ void Viewer::initBasisAxesObject_()
 
     auto numF = basisAxesMesh->topology.edgePerFace().size();
     // setting color to faces
-    const Color colorX = Color::red();
-    const Color colorY = Color::green();
-    const Color colorZ = Color::blue();
+    const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+    const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+    const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
     FaceColors colorMap( numF );
     const auto arrowSize = numF / 3;
     for (int i = 0; i < arrowSize; i++)
@@ -2083,10 +2083,24 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    uiUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this, numF] ()
     {
         if ( !basisAxes )
             return;
+
+        const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+        const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+        const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
+        FaceColors colorMap;
+        basisAxes->updateFacesColorMap( colorMap ); // swap with empty with real
+        const auto arrowSize = numF / 3;
+        for ( int i = 0; i < arrowSize; i++ ) // update real
+        {
+            colorMap[FaceId( i )] = colorX;
+            colorMap[FaceId( i + arrowSize )] = colorY;
+            colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
+        }
+        basisAxes->updateFacesColorMap( colorMap ); // swap updated real with empty
 
         const Color& color = SceneColors::get( SceneColors::Type::Labels );
 
@@ -2096,6 +2110,14 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
+    } ) );
+    uiUpdateConnections_.push_back( postRescaleSignal.connect( [this] ( float, float )
+    {
+        if ( !menuPlugin_ )
+            return;
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+            label->setFontHeight( 20.0f * menuPlugin_->menu_scaling() );
     } ) );
 }
 

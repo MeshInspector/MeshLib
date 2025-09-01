@@ -143,11 +143,6 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
         const auto xf = AffineXf3f::translation( newWorldPos - oldWorldPos );
         viewport.transformView( xf );
 
-        Vector2d pos;
-        glfwGetCursorPos( viewer.window, &pos.x, &pos.y );
-        pos += Vector2d( deltaX, deltaY ) / (double)viewer.pixelRatio;
-        glfwSetCursorPos( viewer.window, pos.x, pos.y );
-
         return true;
     }
     case TouchpadParameters::SwipeMode::Count:

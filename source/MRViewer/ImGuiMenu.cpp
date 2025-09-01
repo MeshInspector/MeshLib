@@ -2391,8 +2391,39 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             tagNewName_.clear();
         }
 
+        static const auto tagCompletion = [] ( ImGuiInputTextCallbackData* data ) -> int
+        {
+            if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+            {
+                std::string_view text{ data->Buf, (size_t)data->BufTextLen };
+                const auto& allKnownTags = *(std::set<std::string>*)data->UserData;
+                std::string_view candidate;
+                for ( const auto& tag : allKnownTags )
+                {
+                    if ( tag.starts_with( text ) )
+                    {
+                        if ( candidate.empty() )
+                        {
+                            candidate = tag;
+                        }
+                        else
+                        {
+                            candidate = {};
+                            break;
+                        }
+                    }
+                }
+                if ( !candidate.empty() )
+                {
+                    data->InsertChars( data->CursorPos, candidate.substr( text.length() ).data() );
+                    data->ClearSelection();
+                    data->SelectionStart = text.length();
+                }
+            }
+            return 0;
+        };
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
-        if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
         {
             for ( const auto& selObj : selected )
                 selObj->addTag( tagNewName_ );

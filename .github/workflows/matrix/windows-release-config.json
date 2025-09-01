@@ -32,7 +32,7 @@
       "CUDA-VERSION": "11.4.2.47141",
       "CUDA-MAJOR": "11",
       "CUDA-MINOR": "4",
-      "vcpkg-version": "${{ inputs.vs19_vcpkg_version }}"
+      "vcpkg-version": "__VCPKG_VERSION_VS19__"
     }
   ]
 }

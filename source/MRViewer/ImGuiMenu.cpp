@@ -1526,15 +1526,13 @@ float ImGuiMenu::drawSelectionInformation_()
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
 
-            bool hasNominal = distance->hasComparisonReferenceValues();
-            bool hasTolerance = distance->hasComparisonTolerances();
+            bool hasNominal = distance->getComparisonReferenceValue( 0 ).isSet;
+            bool hasTolerance = bool( distance->getComparisonTolerence( 0 ) );
 
             ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
 
             { // Nominal distance.
-                float nominalValue = 0;
-                if ( hasNominal )
-                    nominalValue = distance->getComparisonReferenceValue( 0 );
+                float nominalValue = std::get<float>( distance->getComparisonReferenceValue( 0 ).var );
 
                 ImGui::SetNextItemWidth( itemWidth );
 
@@ -1553,8 +1551,8 @@ float ImGuiMenu::drawSelectionInformation_()
                     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
                     if ( UI::buttonEx( "\xC3\x97###removeNominal", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
                     {
-                        distance->resetComparisonReferenceValues();
-                        distance->resetComparisonTolerances(); // This too.
+                        distance->setComparisonReferenceValue( 0, {} );
+                        distance->setComparisonTolerance( 0, {} ); // This too.
                         hasNominal = false;
                         hasTolerance = false;
                     }
@@ -1567,8 +1565,8 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( hasNominal ) // Sic!
             {
                 ObjectComparableWithReference::ComparisonTolerance tol;
-                if ( hasTolerance )
-                    tol = distance->getComparisonTolerences( 0 );
+                if ( auto opt = distance->getComparisonTolerence( 0 ) )
+                    tol = *opt;
 
                 ImGui::SetNextItemWidth( itemWidthHalf1 );
 
@@ -1594,7 +1592,7 @@ float ImGuiMenu::drawSelectionInformation_()
                     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
 
                     if ( UI::buttonEx( "\xC3\x97###removeTolerance", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
-                        distance->resetComparisonTolerances();
+                        distance->setComparisonTolerance( 0, {} );
 
                     UI::setTooltipIfHovered( "Remove tolerance", menu_scaling() );
                 }

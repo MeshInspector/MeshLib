@@ -69,15 +69,11 @@ public:
     // Implement `ObjectComparableWithReference`:
     [[nodiscard]] MRMESH_API std::size_t numComparableProperties() const override;
     [[nodiscard]] MRMESH_API std::string_view getComparablePropertyName( std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API std::optional<float> compareProperty( const Object& other, std::size_t i ) const override;
-    [[nodiscard]] MRMESH_API bool hasComparisonTolerances() const override;
-    [[nodiscard]] MRMESH_API ComparisonTolerance getComparisonTolerences( std::size_t i ) const override;
-    MRMESH_API void setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance ) override;
-    MRMESH_API void resetComparisonTolerances() override;
-    [[nodiscard]] MRMESH_API bool hasComparisonReferenceValues() const override;
-    [[nodiscard]] MRMESH_API float getComparisonReferenceValue( std::size_t i ) const override;
-    MRMESH_API void setComparisonReferenceValue( std::size_t i, float value ) override;
-    MRMESH_API void resetComparisonReferenceValues() override;
+    [[nodiscard]] MRMESH_API std::optional<ComparableProperty> computeComparableProperty( std::size_t i ) const override;
+    [[nodiscard]] MRMESH_API std::optional<ComparisonTolerance> getComparisonTolerence( std::size_t i ) const override;
+    MRMESH_API void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) override;
+    [[nodiscard]] MRMESH_API ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const override;
+    MRMESH_API void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) override;
 
 protected:
     DistanceMeasurementObject( const DistanceMeasurementObject& other ) = default;

@@ -55,25 +55,24 @@ std::vector<std::shared_ptr<Object>> VisualObjectTagManager::getAllObjectsWithTa
 void VisualObjectTagManager::update( VisualObject& visObj, const std::string& tag )
 {
     const auto& visTags = instance().visTags_;
+
     if ( visObj.tags().contains( tag ) )
     {
-        const auto visTagIt = visTags.find( tag );
-        if ( visTagIt == visTags.end() )
+        if ( const auto visTagIt = visTags.find( tag ); visTagIt == visTags.end() )
+        {
+            const auto& [_, visTag] = *visTagIt;
+            visObj.setFrontColor( visTag.selectedColor, true );
+            visObj.setFrontColor( visTag.unselectedColor, false );
             return;
-        const auto& [_, visTag] = *visTagIt;
-
-        visObj.setFrontColor( visTag.selectedColor, true );
-        visObj.setFrontColor( visTag.unselectedColor, false );
+        }
     }
-    else
-    {
-        visObj.resetFrontColor();
 
-        // re-apply existing tag
-        for ( const auto& [knownTag, _] : visTags )
-            if ( visObj.tags().contains( knownTag ) )
-                return update( visObj, knownTag );
-    }
+    visObj.resetFrontColor();
+
+    // re-apply existing tag if any
+    for ( const auto& [knownTag, _] : visTags )
+        if ( visObj.tags().contains( knownTag ) )
+            return update( visObj, knownTag );
 }
 
 VisualObjectTagManager::VisualObjectTagManager( ProtectedTag )

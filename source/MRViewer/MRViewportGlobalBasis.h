@@ -37,13 +37,13 @@ public:
     /// Draw this object into given viewport
     MRVIEWER_API void draw( const Viewport& vp ) const;
 
-    /// Set visibility for all children objects
+    /// Set visibility for all child objects
     MRVIEWER_API void setVisible( bool on, ViewportMask vpMask = ViewportMask::all() );
 
     /// returns true if object is present and visible
     bool isVisible( ViewportMask vpMask = ViewportMask::any() ) const { return !axes_.empty() && axes_[0] && axes_[0]->isVisible( vpMask ); }
     
-    /// Set visibility for all children objects
+    /// Set visibility for grid objects
     MRVIEWER_API void setGridVisible( bool on, ViewportMask vpMask = ViewportMask::all() );
 
     /// returns true if grid is present and visible

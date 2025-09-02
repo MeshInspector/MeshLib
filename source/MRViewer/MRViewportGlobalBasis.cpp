@@ -229,7 +229,7 @@ void ViewportGlobalBasis::updateGridXfs_( const Viewport& vp ) const
     }
 
     auto halfScreenWorldSize = vp.getPixelSizeAtPoint( Vector3f() ) * vp.getViewportRect().diagonal() * 0.3f;
-    auto gridScaling = std::powf( 10, std::round( std::log10f( halfScreenWorldSize ) ) );
+    auto gridScaling = std::pow( 10.0f, std::round( std::log10( halfScreenWorldSize ) ) );
 
     int mainAxis = 2;
     if ( rot.z.y == 1.0f )

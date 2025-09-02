@@ -51,9 +51,9 @@ public:
 
     enum class DistanceMode
     {
-        eucledian, // Eucledian distance.
-        eucledianWithSignedDeltasPerAxis, // Eucledian distance, but also display per-axis deltas with signs.
-        eucledianWithAbsoluteDeltasPerAxis, // Eucledian distance, but also display per-axis deltas without signs.
+        euclidean, // Euclidean distance.
+        euclideanWithSignedDeltasPerAxis, // Euclidean distance, but also display per-axis deltas with signs.
+        euclideanWithAbsoluteDeltasPerAxis, // Euclidean distance, but also display per-axis deltas without signs.
         // Absolute distance in one axis:
         xAbsolute,
         yAbsolute,
@@ -64,7 +64,7 @@ public:
     MRMESH_API virtual void setDistanceMode( DistanceMode mode );
 
     // Computes the distance value. This is affected by `getDistanceMode()`.
-    // In `eucledian`, this is `getWorldDelta().length() * (isNegative() ? -1 : 1)`.
+    // In `euclidean`, this is `getWorldDelta().length() * (isNegative() ? -1 : 1)`.
     [[nodiscard]] MRMESH_API float computeDistance() const;
 
     [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
@@ -97,7 +97,7 @@ private:
     bool isNegative_ = false;
 
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
-    DistanceMode perCoordDeltas_ = DistanceMode::eucledian;
+    DistanceMode perCoordDeltas_ = DistanceMode::euclidean;
 
     // The cached value for `computeDistance()`.
     mutable std::optional<float> cachedValue_;

@@ -118,6 +118,12 @@ void RenderNameObject::Task::renderPass()
     // The text.
     text.draw( drawList, params->scale, textPos, colorText );
 
+    // The extra text.
+    if ( !textExtra.isEmpty() )
+    {
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, ImVec2( 0, 0 ) );
+    }
+
     // Reset the variables.
     isHovered = false;
     isActive = false;
@@ -158,6 +164,9 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
 
     task_.text = getObjectNameText( *task_.object, params.viewportId );
+
+    task_.textExtra = getObjectNameExtraText( *task_.object, params.viewportId );
+    task_.textToExtraTextSpacing = std::round( 11 * params.scale );
 
     Viewport& viewportRef = Viewport::get( params.viewportId );
 
@@ -214,6 +223,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     task_.textCenter = point3;
 
     task_.text.update();
+    task_.textPos = task_.textCenter - task_.text.computedSize / 2;
 
     if ( lastSegmentOffset != ImVec2{} )
     {
@@ -265,6 +275,13 @@ ImGuiMeasurementIndicators::Text RenderNameObject::getObjectNameText( const Visu
 {
     (void)viewportId;
     return object.name();
+}
+
+ImGuiMeasurementIndicators::Text RenderNameObject::getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const
+{
+    (void)object;
+    (void)viewportId;
+    return {};
 }
 
 }

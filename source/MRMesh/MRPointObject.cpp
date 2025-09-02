@@ -128,7 +128,7 @@ void PointObject::setComparisonTolerance( std::size_t i, std::optional<Compariso
 bool PointObject::comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const
 {
     assert( i == 0 );
-    return !bool( referenceNormal_ ); // If we don't have a reference normal, we calculate the eucledian distance, which can't be negative.
+    return !bool( referenceNormal_ ); // If we don't have a reference normal, we calculate the euclidean distance, which can't be negative.
 }
 
 std::size_t PointObject::numComparableReferenceValues() const

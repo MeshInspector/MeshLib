@@ -54,7 +54,7 @@ public:
     MRMESH_API void setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance ) override;
     [[nodiscard]] MRMESH_API bool comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const override;
     // This returns 2: the point, and the optional normal direction. The normal doesn't need to be normalized, its length doesn't affect calculations.
-    // If the normal isn't specified, the eucledian distance gets used.
+    // If the normal isn't specified, the euclidean distance gets used.
     [[nodiscard]] MRMESH_API std::size_t numComparableReferenceValues() const override;
     [[nodiscard]] MRMESH_API std::string_view getComparableReferenceValueName( std::size_t i ) const override;
     [[nodiscard]] MRMESH_API ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const override;

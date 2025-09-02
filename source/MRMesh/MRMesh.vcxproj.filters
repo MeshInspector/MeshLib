@@ -1361,9 +1361,6 @@
     <ClInclude Include="MRObjectComparableWithReference.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshThicken.h">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2224,9 +2221,6 @@
     </ClCompile>
     <ClCompile Include="MRPartMappingAdapters.cpp">
       <Filter>Source Files\Mesh</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshThicken.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

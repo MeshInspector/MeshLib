@@ -116,7 +116,7 @@ MRMESH_API MR_BIND_IGNORE char * formatNoTrailingZeros( char * fmt, double v, in
     return "Loading canceled: " + utf8string( path );
 }
 
-/// return a copy of the string with all alphabetic characters replaced with upper-case variants
+/// return a copy of the string with all alphabetic ASCII characters replaced with upper-case variants
 [[nodiscard]] MRMESH_API std::string toLower( std::string str );
 
 } //namespace MR

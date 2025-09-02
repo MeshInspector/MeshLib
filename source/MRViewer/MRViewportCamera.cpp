@@ -423,7 +423,7 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         if ( !globalBasis )
             return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
         else
-            return calcBox_( getViewerInstance().globalBasis->visualChildren(), space, fitParams.mode == FitMode::SelectedPrimitives );
+            return calcBox_( getViewerInstance().globalBasis->axesChildren(), space, fitParams.mode == FitMode::SelectedPrimitives );
     }, fitParams );
 }
 

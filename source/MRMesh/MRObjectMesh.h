@@ -18,6 +18,12 @@ public:
     constexpr static const char* TypeName() noexcept { return "ObjectMesh"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    constexpr static const char* ClassName() noexcept { return "Mesh"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Meshes"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     /// returns variable mesh, if const mesh is needed use `mesh()` instead
     virtual const std::shared_ptr< Mesh > & varMesh() { return data_.mesh; }
 
@@ -28,9 +34,6 @@ public:
     MRMESH_API virtual std::shared_ptr< Mesh > updateMesh( std::shared_ptr< Mesh > mesh );
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    std::string getClassName() const override { return "Mesh"; }
-    std::string getClassNameInPlural() const override { return "Meshes"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

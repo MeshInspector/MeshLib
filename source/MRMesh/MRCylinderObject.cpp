@@ -1,18 +1,16 @@
-#include "MRPch/MRSpdlog.h"
 #include "MRCylinderObject.h"
 #include "MRMatrix3.h"
 #include "MRCylinder.h"
 #include "MRCylinder3.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
-#include "MRPch/MRJson.h"
 #include "MRCylinderApproximator.h"
-#include "MRMeshFwd.h"
+#include "MRMeshNormals.h"
 #include "MRLine.h"
 #include "MRGTest.h"
-
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
 #include <iostream>
-#include "MRMeshNormals.h"
 
 namespace MR
 {

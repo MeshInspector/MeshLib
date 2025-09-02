@@ -4,6 +4,7 @@
 #include "MRViewport.h"
 #include "MRMesh/MRMesh.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRColorTheme.h"
@@ -73,6 +74,8 @@ ViewportGlobalBasis::ViewportGlobalBasis()
                 if ( auto* visLabel = label->asType<ObjectLabel>() )
                     visLabel->setFontHeight( 20.0f * menu->menu_scaling() );
     } ) );
+
+    creteGrids_();
 }
 
 float ViewportGlobalBasis::getAxesLength( ViewportId id ) const
@@ -129,12 +132,17 @@ bool ViewportGlobalBasis::getRedrawFlag( ViewportMask vpMask ) const
     for ( const auto& child : axesChildren() )
         if ( child->getRedrawFlag( vpMask ) )
             return true;
+    for ( const auto& child : grids_ )
+        if ( child->getRedrawFlag( vpMask ) )
+            return true;
     return false;
 }
 
 void ViewportGlobalBasis::resetRedrawFlag() const
 {
     for ( const auto& child : axesChildren() )
+        child->resetRedrawFlag();
+    for ( const auto& child : grids_ )
         child->resetRedrawFlag();
 }
 
@@ -148,12 +156,95 @@ void ViewportGlobalBasis::draw( const Viewport& vp ) const
             if ( auto* visLabel = label->asType<VisualObject>() )
                 vp.draw( *visLabel, xf );
     }
+    if ( !isGridVisible( vp.id ) )
+        return;
+    updateGridXfs_( vp );
+    for ( const auto& child : grids_ )
+    {
+        const auto& xf = child->xf( vp.id );
+        vp.draw( *child, xf );
+    }
 }
 
 void ViewportGlobalBasis::setVisible( bool on, ViewportMask vpMask /*= ViewportMask::all() */ )
 {
     for ( const auto& child : axesChildren() )
         child->setVisible( on, vpMask );
+}
+
+void ViewportGlobalBasis::setGridVisible( bool on, ViewportMask vpMask /*= ViewportMask::all() */ )
+{
+    for ( const auto& child : grids_ )
+        child->setVisible( on, vpMask );
+}
+
+void ViewportGlobalBasis::creteGrids_()
+{
+    grids_.clear();
+    grids_.push_back( std::make_shared<ObjectLines>() ); // thin grid
+    grids_.push_back( std::make_shared<ObjectLines>() ); // thick grid
+    auto& thinGrid = grids_[0];
+    auto& thickGrid = grids_[1];
+
+    constexpr int cNumSegments = 50;
+    Contours3f conts( cNumSegments * 4 + 2, Contour3f( 2 ) );
+    int id = 0;
+    for ( int i = -cNumSegments; i <= cNumSegments; ++i )
+    {
+        auto otherId = id + 2 * cNumSegments + 1;
+        conts[id][0].x = conts[id][1].x = conts[otherId][0].y = conts[otherId][1].y = float( i );
+        conts[id][0].y = conts[otherId][0].x = -cNumSegments;
+        conts[id][1].y = conts[otherId][1].x = cNumSegments;
+        id++;
+    }
+    auto pl = std::make_shared<Polyline3>( conts );
+    thinGrid->setPolyline( pl );
+    thickGrid->setPolyline( pl );
+    thinGrid->setLineWidth( 0.5f );
+    thickGrid->setLineWidth( 1.5f );
+    thinGrid->setFrontColor( Color::gray(), true );
+    thinGrid->setFrontColor( Color::gray(), false );
+    thickGrid->setFrontColor( Color::gray(), true );
+    thickGrid->setFrontColor( Color::gray(), false );
+}
+
+void ViewportGlobalBasis::updateGridXfs_( const Viewport& vp ) const
+{
+    if ( grids_.empty() )
+        return;
+    auto forwardVec = -vp.getBackwardDirection().normalized();
+    Matrix3f rot = cachedGridRotation_.get( vp.id );
+    if ( std::abs( dot( forwardVec, rot.col( 2 ) ) ) < 0.2f ) // change grid orientation only on degeneracy
+    {
+        auto dotX = std::abs( dot( forwardVec, Vector3f::plusX() ) );
+        auto dotY = std::abs( dot( forwardVec, Vector3f::plusY() ) );
+        auto dotZ = std::abs( dot( forwardVec, Vector3f::plusZ() ) );
+        if ( dotZ >= dotX && dotZ >= dotY )
+            rot = Matrix3f();
+        else if ( dotY >= dotX && dotY >= dotZ )
+            rot = Matrix3f::fromColumns( Vector3f::plusZ(), Vector3f::plusX(), Vector3f::plusY() );
+        else
+            rot = Matrix3f::fromColumns( Vector3f::plusY(), Vector3f::plusZ(), Vector3f::plusX() );
+        cachedGridRotation_.set( rot, vp.id );
+    }
+
+    auto halfScreenWorldSize = vp.getPixelSizeAtPoint( Vector3f() ) * vp.getViewportRect().diagonal() * 0.3f;
+    auto gridScaling = std::powf( 10, std::round( std::log10f( halfScreenWorldSize ) ) );
+
+    int mainAxis = 2;
+    if ( rot.z.y == 1.0f )
+        mainAxis = 0;
+    else if ( rot.z.x == 1.0f )
+        mainAxis = 1;
+    auto camera = vp.getCameraPoint();
+    auto zeroPlanePoint = camera - forwardVec * ( camera[mainAxis] / forwardVec[mainAxis] );
+
+    auto closestNicePlanePoint = zeroPlanePoint / gridScaling;
+    for ( int i = 0; i < 3; ++i )
+        closestNicePlanePoint[i] = std::round( closestNicePlanePoint[i] ) * gridScaling;
+
+    grids_[0]->setXf( AffineXf3f::translation( closestNicePlanePoint ) * AffineXf3f::linear( rot * Matrix3f::scale( gridScaling * 0.2f ) ), vp.id );
+    grids_[1]->setXf( AffineXf3f::translation( closestNicePlanePoint ) * AffineXf3f::linear( rot * Matrix3f::scale( gridScaling ) ), vp.id );
 }
 
 }

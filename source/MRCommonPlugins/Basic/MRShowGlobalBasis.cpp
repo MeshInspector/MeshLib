@@ -21,7 +21,22 @@ bool ShowGlobalBasisMenuItem::action()
 {
     auto& viewer = Viewer::instanceRef();
     auto vpid = viewer.viewport().id;
-    viewer.globalBasis->setVisible( !viewer.globalBasis->isVisible( vpid ), vpid );
+    bool isVisible = viewer.globalBasis->isVisible( vpid );
+    bool isGridVisible = viewer.globalBasis->isGridVisible( vpid );
+    if ( !isVisible )
+    {
+        viewer.globalBasis->setVisible( true, vpid );
+        viewer.globalBasis->setGridVisible( false, vpid );
+    }
+    else if ( !isGridVisible )
+    {
+        viewer.globalBasis->setGridVisible( true, vpid );
+    }
+    else
+    {
+        viewer.globalBasis->setVisible( false, vpid );
+        viewer.globalBasis->setGridVisible( false, vpid );
+    }
     return false;
 }
 

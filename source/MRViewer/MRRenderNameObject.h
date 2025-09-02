@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRViewer/MRImGuiMeasurementIndicators.h"
 #include "MRViewer/exports.h"
 #include "MRViewer/MRImGui.h"
 
@@ -24,9 +25,8 @@ class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
         ImVec2 point2;
         ImVec2 textCenter;
 
-        std::string text;
+        ImGuiMeasurementIndicators::Text text;
         ImVec2 textPos;
-        ImVec2 textSize;
         ImVec2 paddingA;
         ImVec2 paddingB;
 
@@ -43,7 +43,7 @@ public:
 
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 
-    MRVIEWER_API virtual std::string getObjectNameString( const VisualObject& object, ViewportId viewportId ) const;
+    MRVIEWER_API virtual ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const;
 
     // The name tag is displayed as a text bubble, attached to a specific point on the model with at most 2-segment line.
     // The first segment offset is specified in 3d model coordinates, and the second offset is in screen coordinates.

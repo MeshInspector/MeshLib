@@ -143,7 +143,7 @@ RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -151,11 +151,13 @@ std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& o
         if ( object.parent() )
             point = object.parent()->worldXf()( point );
         constexpr int precision = 2;
-        return fmt::format( "{}{}{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, point.x, precision, point.y, precision, point.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}{:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, point.x, precision, point.y, precision, point.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 
@@ -176,7 +178,7 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     nameUiRotateLocalOffset90Degrees = true;
 }
 
-std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderLineFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -186,11 +188,13 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
         dir = dir.normalized();
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}dir {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}dir {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 
@@ -266,7 +270,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPlaneFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -275,11 +279,13 @@ std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& o
             normal = object.parent()->worldXf().A * normal;
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}N {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}N {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 

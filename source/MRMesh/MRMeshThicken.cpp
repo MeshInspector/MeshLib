@@ -1,10 +1,9 @@
 #include "MRMeshThicken.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
-#include "MRMapOrHashMap.h"
-#include "MRMapEdge.h"
-#include "MRTimer.h"
+#include "MRRegionBoundary.h"
 #include "MRMeshFillHole.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -13,30 +12,28 @@ Mesh makeThickMesh( const Mesh & m, float halfWidth )
 {
     MR_TIMER;
     Mesh res = m;
+    auto holesRepr = m.topology.findHoleRepresentiveEdges();
+    EdgeLoops mHoles( holesRepr.size() );
+    EdgeLoops extHoles( holesRepr.size() );
+    for ( int i = 0; i < holesRepr.size(); ++i )
+    {
+        mHoles[i] = trackRightBoundaryLoop( m.topology, holesRepr[i] );
+        auto e = makeDegenerateBandAroundHole( res, holesRepr[i] );
+        extHoles[i] = trackRightBoundaryLoop( res.topology, e );
+    }
+    res.addMeshPart( m, true, extHoles, mHoles );
 
-    auto src2flippedEdges = WholeEdgeMapOrHashMap::createMap();
-    PartMapping map{ .src2tgtEdges = &src2flippedEdges };
-    res.addMeshPart( m, true, {}, {}, map ); // true = with flipping
+    // prepare all normals before modifying the points
+    VertNormals ns( res.topology.vertSize() );
+    BitSetParallelFor( res.topology.getValidVerts(), [&]( VertId v )
+    {
+        ns[v] = res.pseudonormal( v ); // degenerate faces will be automatically ignored
+    } );
 
     BitSetParallelFor( res.topology.getValidVerts(), [&]( VertId v )
     {
-        const auto n = res.pseudonormal( v );
-        res.points[v] += halfWidth * n;
+        res.points[v] += halfWidth * ns[v];
     } );
-
-    // stitches(build cylinder) corresponding boundaries of two parts
-    StitchHolesParams stitchParams;
-    stitchParams.metric = getMinAreaMetric( res );
-    for ( EdgeId e : m.topology.findHoleRepresentiveEdges() )
-    {
-        auto fe = mapEdge( src2flippedEdges, e );
-        if ( !fe )
-        {
-            assert( false );
-            continue;
-        }
-        buildCylinderBetweenTwoHoles( res, e, fe.sym(), stitchParams );
-    }
 
     return res;
 }

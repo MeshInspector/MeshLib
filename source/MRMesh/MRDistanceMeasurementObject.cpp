@@ -112,67 +112,69 @@ std::string_view DistanceMeasurementObject::getComparablePropertyName( std::size
     return "Distance";
 }
 
-std::optional<float> DistanceMeasurementObject::compareProperty( const Object& other, std::size_t i ) const
+std::optional<DistanceMeasurementObject::ComparableProperty> DistanceMeasurementObject::computeComparableProperty( std::size_t i ) const
 {
     (void)i;
     assert( i == 0 );
-
-    auto otherDistance = dynamic_cast<const DistanceMeasurementObject*>( &other );
-    assert( otherDistance );
-    if ( !otherDistance )
-        return {};
-
-    return computeDistance() - otherDistance->computeDistance();
+    return ComparableProperty{
+        .value = computeDistance(),
+        .referenceValue = referenceValue_,
+    };
 }
 
-bool DistanceMeasurementObject::hasComparisonTolerances() const
-{
-    return bool( tolerance_ );
-}
-
-DistanceMeasurementObject::ComparisonTolerance DistanceMeasurementObject::getComparisonTolerences( std::size_t i ) const
+std::optional<DistanceMeasurementObject::ComparisonTolerance> DistanceMeasurementObject::getComparisonTolerence( std::size_t i ) const
 {
     (void)i;
     assert( i == 0 );
-    assert( bool( tolerance_ ) );
-    return tolerance_ ? *tolerance_ : ComparisonTolerance{};
+    return tolerance_;
 }
 
-void DistanceMeasurementObject::setComparisonTolerance( std::size_t i, const ComparisonTolerance& newTolerance )
+void DistanceMeasurementObject::setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance )
 {
     (void)i;
     assert( i == 0 );
     tolerance_ = newTolerance;
 }
 
-void DistanceMeasurementObject::resetComparisonTolerances()
+bool DistanceMeasurementObject::comparisonToleranceMakesSenseNow( std::size_t i ) const
 {
-    tolerance_.reset();
-}
-
-bool DistanceMeasurementObject::hasComparisonReferenceValues() const
-{
+    (void)i;
+    assert( i == 0 );
     return bool( referenceValue_ );
 }
 
-float DistanceMeasurementObject::getComparisonReferenceValue( std::size_t i ) const
+std::string_view DistanceMeasurementObject::getComparisonReferenceValueName( std::size_t i ) const
 {
     (void)i;
     assert( i == 0 );
-    assert( referenceValue_ );
-    return referenceValue_.value_or( 0.f );
+    return "Nominal";
 }
 
-void DistanceMeasurementObject::setComparisonReferenceValue( std::size_t i, float value )
+DistanceMeasurementObject::ComparisonReferenceValue DistanceMeasurementObject::getComparisonReferenceValue( std::size_t i ) const
 {
     (void)i;
     assert( i == 0 );
-    referenceValue_ = value;
+    return { .isSet = bool( referenceValue_ ), .var = referenceValue_.value_or( 0.f ) };
 }
 
-void DistanceMeasurementObject::resetComparisonReferenceValues()
+void DistanceMeasurementObject::setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value )
 {
-    return referenceValue_.reset();
+    (void)i;
+    assert( i == 0 );
+    if ( value )
+    {
+        auto ptr = std::get_if<float>( &*value );
+        assert( ptr );
+        if ( ptr )
+            referenceValue_ = *ptr;
+    }
+    else
+    {
+        referenceValue_.reset();
+
+        // For convenience, also reset the tolerance.
+        setComparisonTolerance( 0, {} );
+    }
 }
 
 void DistanceMeasurementObject::swapBase_( Object& other )

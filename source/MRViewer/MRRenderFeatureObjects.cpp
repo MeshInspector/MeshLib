@@ -1,4 +1,6 @@
 #include "MRRenderFeatureObjects.h"
+#include "MRViewer/MRRibbonFontManager.h"
+#include "MRViewer/MRUnits.h"
 #include "MRVisualSubfeatures.h"
 
 #include "MRMesh/MRArrow.h"
@@ -27,6 +29,16 @@ static constexpr int sphereDetailLevel = 2048;
 
 // Separator between object name and extra information.
 static constexpr std::string_view nameExtrasSeparator = "   |   ";
+
+static std::string lengthToString( float value )
+{
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
+// `dir == 0` - symmetric, `dir > 0` - positive, `dir < 0` - negative.
+static std::string lengthToleranceToString( float value, int dir )
+{
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .plusSign = dir != 0, .zeroMode = dir >= 0 ? ZeroMode::alwaysPositive : ZeroMode::alwaysNegative, .stripTrailingZeroes = dir != 0 } );
+}
 
 // Extracts subfeatures from `sourceObject` and writes them out `outputPoints` and `outputLines`.
 // `sourceObject` must point to a temporary object of the desired type, with identity xf.
@@ -143,20 +155,87 @@ RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPointFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
         Vector3f point = object.xf().b;
         if ( object.parent() )
             point = object.parent()->worldXf()( point );
-        constexpr int precision = 2;
-        return fmt::format( "{}{}{:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, point.x, precision, point.y, precision, point.z, precision );
+
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}{}; {}; {}", nameExtrasSeparator, lengthToString( point.x ), lengthToString( point.y ), lengthToString( point.z ) ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
+}
+
+ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const
+{
+    (void)viewportId;
+
+    ImGuiMeasurementIndicators::Text ret;
+
+    const auto& comp = dynamic_cast<const ObjectComparableWithReference&>( object );
+    if ( auto prop = comp.computeComparableProperty( 0 ) )
+    {
+        assert( !prop->referenceValue || *prop->referenceValue == 0 );
+
+        auto tol = comp.getComparisonTolerence( 0 );
+
+        const bool passOrFail = bool( tol );
+        const bool pass = passOrFail && prop->value >= tol->negative && prop->value <= tol->positive;
+
+        ret.addElem( { .var = "Deviation: ", .columnId = 0 } );
+
+        // Style customization for value if we're in pass/fail mode.
+        if ( passOrFail )
+        {
+            ret.add( ImGuiMeasurementIndicators::TextColor( SceneColors::get( pass ? SceneColors::LabelsGood : SceneColors::LabelsBad ) ) );
+            ret.add( ImGuiMeasurementIndicators::TextFont{ RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold ) } );
+        }
+        // The value itself.
+        ret.addElem( { .var = lengthToString( prop->value ), .align = ImVec2( 1, 0 ), .columnId = 1 } );
+        if ( passOrFail )
+        {
+            ret.add( ImGuiMeasurementIndicators::TextColor{} );
+            ret.add( ImGuiMeasurementIndicators::TextFont{} );
+        }
+
+        if ( prop->referenceValue && tol )
+        {
+            bool haveNormal = comp.getComparisonReferenceValue( 1 ).isSet;
+
+            ret.addLine();
+
+            if ( haveNormal )
+            {
+                if ( tol->positive == -tol->negative )
+                {
+                    ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
+                    ret.addElem( { .var = "\xC2\xB1" + lengthToleranceToString( tol->positive, 0 ), .columnId = 1 } ); // U+00B1 PLUS-MINUS SIGN
+
+                }
+                else
+                {
+                    ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
+
+                    // No column ID on this one, it won't line up well anyway.
+                    ret.addElem( { .var = fmt::format( "{}/{}", lengthToleranceToString( tol->positive, 1 ), lengthToleranceToString( tol->negative, -1 ) ) } );
+                }
+            }
+            else
+            {
+                ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
+                ret.addElem( { .var = lengthToleranceToString( tol->positive, 0 ), .columnId = 1 } );
+            }
+        }
+    }
+
+    return ret;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( LineObject, RenderLineFeatureObject )
@@ -176,7 +255,7 @@ RenderLineFeatureObject::RenderLineFeatureObject( const VisualObject& object )
     nameUiRotateLocalOffset90Degrees = true;
 }
 
-std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderLineFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -186,11 +265,13 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
         dir = dir.normalized();
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}dir {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}dir {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 
@@ -266,7 +347,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
-std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderPlaneFeatureObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
@@ -275,11 +356,13 @@ std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& o
             normal = object.parent()->worldXf().A * normal;
         constexpr int precision = 2;
 
-        return fmt::format( "{}{}N {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision );
+        auto ret = RenderObjectCombinator::getObjectNameText( object, viewportId );
+        ret.addText( fmt::format( "{}N {:.{}f}, {:.{}f}, {:.{}f}", nameExtrasSeparator, normal.x, precision, normal.y, precision, normal.z, precision ) );
+        return ret;
     }
     else
     {
-        return RenderObjectCombinator::getObjectNameString( object, viewportId );
+        return RenderObjectCombinator::getObjectNameText( object, viewportId );
     }
 }
 

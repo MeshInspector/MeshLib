@@ -2327,6 +2327,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             {
                 const auto color = allVisTags.at( tag ).selectedColor;
                 ImGui::PushStyleColor( ImGuiCol_Button, color );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImGui::getLuminance( color ) > 0.5f ? Color::black() : Color::white() );
             }
 
             ImGui::PushStyleVar( ImGuiStyleVar_ButtonTextAlign, { 0.0f, 0.5f } );
@@ -2359,7 +2360,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             ImGui::PopStyleVar();
 
             if ( allVisTags.contains( tag ) )
-                ImGui::PopStyleColor();
+                ImGui::PopStyleColor( 2 );
 
             ImGui::SameLine( initCursorPosX + buttonWidth( tag.c_str() ), 0 );
             if ( iconsFont )

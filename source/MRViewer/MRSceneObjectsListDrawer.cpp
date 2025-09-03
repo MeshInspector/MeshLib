@@ -393,7 +393,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
 bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int /*depth*/ )
 {
-    const bool hasRealChildren = objectHasSelectableChildren( object );
+    const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
 
     drawObjectVisibilityCheckbox_( object, uniqueStr );
     drawCustomObjectPrefixInScene_( object, false );
@@ -402,7 +402,7 @@ bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uni
 
 bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int )
 {
-    bool hasRealChildren = objectHasSelectableChildren( object );
+    const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
     return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
 }

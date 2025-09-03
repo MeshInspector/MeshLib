@@ -189,7 +189,7 @@
     },
     {
       "Name": "Show_Hide Global Basis",
-      "Caption": "Show/Hide Global Basis",
+      "Caption": "Toggle Global Basis",
       "Tooltip": "Show or hide global 0 and X,Y,Z axes.",
       "Icon": "\uf546"
     },

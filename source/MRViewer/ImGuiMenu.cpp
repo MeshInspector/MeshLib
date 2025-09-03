@@ -95,6 +95,7 @@
 #include "MRUIRectAllocator.h"
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRString.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -892,12 +893,12 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::button( "Save", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
-            if ( tagEditorState_.name != tagEditorState_.initName )
+            if ( const auto name = std::string{ trim( tagEditorState_.name ) }; !name.empty() && name != tagEditorState_.initName )
             {
                 if ( tagEditorState_.hasFrontColor )
                 {
                     VisualObjectTagManager::unregisterTag( tagEditorState_.initName );
-                    VisualObjectTagManager::registerTag( tagEditorState_.name, {
+                    VisualObjectTagManager::registerTag( name, {
                         .selectedColor = tagEditorState_.selectedColor,
                         .unselectedColor = tagEditorState_.unselectedColor,
                     } );
@@ -908,7 +909,7 @@ void ImGuiMenu::draw_helpers()
                     if ( obj->tags().contains( tagEditorState_.initName ) )
                     {
                         obj->removeTag( tagEditorState_.initName );
-                        obj->addTag( tagEditorState_.name );
+                        obj->addTag( name );
                     }
                 }
             }
@@ -2430,8 +2431,9 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
         if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
         {
-            for ( const auto& selObj : selected )
-                selObj->addTag( tagNewName_ );
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
             tagNewName_.clear();
         }
 
@@ -2440,8 +2442,9 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         ImGui::SameLine( 0, itemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
-            for ( const auto& selObj : selected )
-                selObj->addTag( tagNewName_ );
+            if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
+                for ( const auto& selObj : selected )
+                    selObj->addTag( name );
             tagNewName_.clear();
         }
         if ( iconsFont )

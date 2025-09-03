@@ -10,8 +10,15 @@ namespace MR
 
 enum class MRMESH_CLASS ObjectSelectivityType
 {
+    /// object itself and all its ancestors are selectable
     Selectable,
+    /// object itself is selectable
+    LocalSelectable,
+    /// object itself is selected and all its ancestors are selectable
     Selected,
+    /// object itself is selected
+    LocalSelected,
+    /// any object
     Any
 };
 

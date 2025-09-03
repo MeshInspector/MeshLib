@@ -12,10 +12,12 @@ std::shared_ptr<ObjectT> asSelectivityType( std::shared_ptr<Object> obj, const O
     switch ( type )
     {
     case ObjectSelectivityType::Selectable:
+    case ObjectSelectivityType::LocalSelectable:
         if ( visObj->isAncillary() )
             visObj.reset();
         break;
     case ObjectSelectivityType::Selected:
+    case ObjectSelectivityType::LocalSelected:
         if ( !visObj->isSelected() )
             visObj.reset();
         break;
@@ -30,6 +32,18 @@ void appendObjectFromTreeRecursive( std::shared_ptr<Object> obj, std::vector<std
 {
     if ( !obj )
         return;
+
+    switch ( type )
+    {
+    case ObjectSelectivityType::Selectable:
+    case ObjectSelectivityType::Selected:
+        if ( obj->isAncillary() )
+            return;
+    case ObjectSelectivityType::LocalSelectable:
+    case ObjectSelectivityType::LocalSelected:
+    case ObjectSelectivityType::Any:
+        break;
+    }
 
     if ( auto visObj = asSelectivityType<ObjectT>( obj, type ) )
         res.push_back( visObj );

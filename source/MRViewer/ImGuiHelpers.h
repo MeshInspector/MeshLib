@@ -342,4 +342,10 @@ MRVIEWER_API bool ModalExitButton( float scaling );
 inline float getExpSpeed( float val, float frac = 0.01f, float min = 1e-5f )
     { return std::max( val * frac, min ); }
 
+/// A crude conversion to grayscale. Good enough for our purposes.
+inline float getLuminance( const ImVec4& col )
+{
+    return 0.2126f * col.x + 0.7152f * col.y + 0.0722f * col.z;
+}
+
 } // namespace ImGui

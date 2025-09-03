@@ -71,10 +71,7 @@ void RenderNameObject::Task::renderPass()
     colorHoveredFloat.w = 1;
     ImU32 colorHovered = ImGui::ColorConvertFloat4ToU32( colorHoveredFloat );
 
-    // A crude conversion to grayscale. Good enough for our purposes.
-    float colorMainLuminosity = 0.2126f * colorMainFloat.x + 0.7152f * colorMainFloat.y + 0.0722f * colorMainFloat.z;
-
-    ImU32 colorText = ImGui::ColorConvertFloat4ToU32( colorMainLuminosity > 0.5f ? ImVec4( 0, 0, 0, 1 ) : ImVec4( 1, 1, 1, 1 ) );
+    ImU32 colorText = ImGui::ColorConvertFloat4ToU32( ImGui::getLuminance( colorMainFloat ) > 0.5f ? ImVec4( 0, 0, 0, 1 ) : ImVec4( 1, 1, 1, 1 ) );
 
     ImDrawList& drawList = *ImGui::GetBackgroundDrawList();
 

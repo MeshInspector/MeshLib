@@ -16,16 +16,23 @@ MRMESH_API void positionVertsSmoothly( const MeshTopology& topology, VertCoords&
     EdgeWeights edgeWeights = EdgeWeights::Cotan, VertexMass vmass = VertexMass::Unit,
     const VertBitSet * fixedSharpVertices = nullptr );
 
+struct PositionVertsSmoothlyParams
+{
+    /// which vertices on mesh are smoothed, nullptr means all vertices;
+    /// it must not include all vertices of a mesh connected component unless stabilizer > 0
+    const VertBitSet* region = nullptr;
+
+    /// optional additional shifts of each vertex relative to smooth position
+    const Vector<Vector3f, VertId>* vertShifts = nullptr;
+
+    /// the more the value, the bigger attraction of each vertex to its original position
+    float stabilizer = 0;
+};
+
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
-/// \param verts must not include all vertices of a mesh connected component unless vertStabilizers are given
-/// \param vertShifts optional additional shifts of each vertex relative to smooth position
-/// \param vertStabilizers optional per-vertex stabilizers: the more the value, the bigger vertex attraction to its original position
-MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts = nullptr,
-    const VertScalars* vertStabilizers = nullptr );
-MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts = nullptr,
-    const VertScalars* vertStabilizers = nullptr );
+MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams& params );
+MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params );
+MRMESH_API [[deprecated]] void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts );
 
 struct SpacingSettings
 {

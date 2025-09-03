@@ -30,7 +30,10 @@ class MRVIEWER_CLASS RenderNameObject : public virtual IRenderObject
         ImVec2 paddingA;
         ImVec2 paddingB;
 
-        ImGuiMeasurementIndicators::Text textExtra; // Optional.
+        // Optional.
+        // This is displayed below the primary text. This one isn't clickable, and uses the standardized background color, instead of the one copied
+        //   from the target object, which helps with drawing complex colored texts.
+        ImGuiMeasurementIndicators::Text textExtra;
         float textToExtraTextSpacing = 0;
 
         bool prevFrameHovered = false;
@@ -46,7 +49,12 @@ public:
 
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 
+    // The text displayed as the clickable object name.
     MRVIEWER_API virtual ImGuiMeasurementIndicators::Text getObjectNameText( const VisualObject& object, ViewportId viewportId ) const;
+
+    // Optional. This text is displayed below the object name, and isn't clickable.
+    // This uses the standardized background color, as opposed to the primary text that copies the color from the object.
+    // So if you want to draw colored text, it's easier to do it here to avoid clashes with the object color.
     MRVIEWER_API virtual ImGuiMeasurementIndicators::Text getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const;
 
     // The name tag is displayed as a text bubble, attached to a specific point on the model with at most 2-segment line.

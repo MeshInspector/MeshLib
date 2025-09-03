@@ -88,7 +88,7 @@ std::optional<PointObject::ComparableProperty> PointObject::computeComparablePro
             return {}; // Zero normal invalid.
 
         return ComparableProperty{
-            .value = dot( thisPos - *referencePos_, *referenceNormal_ ) / std::sqrt( referenceNormal_->length() ),
+            .value = dot( thisPos - *referencePos_, *referenceNormal_ ) / referenceNormal_->length(),
             .referenceValue = 0.f, // Always zero for points for now.
         };
     }

@@ -407,7 +407,7 @@ protected:
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
 
-    MRVIEWER_API void drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style );
+    MRVIEWER_API void drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API float drawTransform_();
 

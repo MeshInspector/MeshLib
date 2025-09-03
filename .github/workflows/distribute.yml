@@ -1,38 +1,36 @@
-name: Update Windows distribution version
+name: Distribute Windows
 
 on:
   workflow_call:
     inputs:
-      vs19_vcpkg_version:
+      app_version:
         required: true
         type: string
-      app_version:
+      release_tag:
         required: true
         type: string
 
 jobs:
-  update-win-version:
+  distribute-windows:
     timeout-minutes: 60
     runs-on: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
-    env:
-      vs19_vcpkg_version: ${{ inputs.vs19_vcpkg_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           submodules: true
 
-      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
+      - name: Checkout Vcpkg 2024.10.21
         working-directory: C:\vcpkg
         run: |
           git fetch
-          git checkout ${{env.vs19_vcpkg_version}}
+          git checkout 2024.10.21
 
       - name: Restore Vcpkg Cache
         uses: actions/cache@v4
         id: vcpkg-cache
         with:
-          key: vcpkg-cache-${{env.vs19_vcpkg_version}}
+          key: vcpkg-cache-2024.10.21
           path: |
             C:\vcpkg\*
 

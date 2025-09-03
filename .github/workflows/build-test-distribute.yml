@@ -139,6 +139,7 @@ jobs:
     uses: ./.github/workflows/update-win-version.yml
     with:
       vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
+      app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
   create-nuget-package:

@@ -39,7 +39,7 @@ class MRMESH_CLASS ObjectComparableWithReference
         // This can match whatever is set via `get/setComparisonReferenceValue()`, but not necessarily.
         // E.g. for point coordinates, those functions act on the reference coordinates (three optional floats), but this number is always zero,
         //   and the `value` is the distance to those coordinates.
-        std::optional<float> referenceValue = 0;
+        std::optional<float> referenceValue = 0.f;
     };
 
     // Compute a value of a property.

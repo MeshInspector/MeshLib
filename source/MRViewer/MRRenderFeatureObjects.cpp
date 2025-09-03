@@ -216,7 +216,7 @@ ImGuiMeasurementIndicators::Text RenderPointFeatureObject::getObjectNameExtraTex
                 if ( tol->positive == -tol->negative )
                 {
                     ret.addElem( { .var = "Max deviation: ", .columnId = 0 } );
-                    ret.addElem( { .var = "\xC2\xB1" + lengthToleranceToString( prop->value, 0 ), .columnId = 1 } ); // U+00B1 PLUS-MINUS SIGN
+                    ret.addElem( { .var = "\xC2\xB1" + lengthToleranceToString( tol->positive, 0 ), .columnId = 1 } ); // U+00B1 PLUS-MINUS SIGN
 
                 }
                 else

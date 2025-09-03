@@ -136,6 +136,20 @@ void DistanceMeasurementObject::setComparisonTolerance( std::size_t i, std::opti
     tolerance_ = newTolerance;
 }
 
+bool DistanceMeasurementObject::comparisonToleranceMakesSenseNow( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return bool( referenceValue_ );
+}
+
+std::string_view DistanceMeasurementObject::getComparisonReferenceValueName( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return "Nominal";
+}
+
 DistanceMeasurementObject::ComparisonReferenceValue DistanceMeasurementObject::getComparisonReferenceValue( std::size_t i ) const
 {
     (void)i;
@@ -157,6 +171,9 @@ void DistanceMeasurementObject::setComparisonReferenceValue( std::size_t i, std:
     else
     {
         referenceValue_.reset();
+
+        // For convenience, also reset the tolerance.
+        setComparisonTolerance( 0, {} );
     }
 }
 

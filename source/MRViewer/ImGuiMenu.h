@@ -29,6 +29,7 @@ class ShortcutManager;
 class MeshModifier;
 struct UiRenderManager;
 class SceneObjectsListDrawer;
+class ObjectComparableWithReference;
 
 enum class SelectedTypesMask
 {
@@ -401,6 +402,8 @@ protected:
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
+
+    MRVIEWER_API void drawComparablePropertiesEditor_( ObjectComparableWithReference& object );
 
     /// draw additional selection information (e.g. for custom objects)
     MRVIEWER_API virtual void drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style );

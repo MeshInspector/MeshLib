@@ -1382,11 +1382,6 @@ float ImGuiMenu::drawSelectionInformation_()
 
     const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
 
-    // Width for half-width widgets.
-    // There are two separate variables to prevent rounding from messing up the alignment.
-    const float itemWidthHalf1 = std::round( ( itemWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
-    const float itemWidthHalf2 = itemWidth - itemWidthHalf1 - ImGui::GetStyle().ItemInnerSpacing.x;
-
     auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     auto labelColor = textColor;
     textColor.w *= 0.5f;
@@ -1529,78 +1524,6 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
             const auto delta = distance->getWorldDelta();
             drawDimensionsVec3( "X/Y/Z Distance", Vector3f{ std::abs( delta.x ), std::abs( delta.y ), std::abs( delta.z ) }, LengthUnit{} );
-
-            bool hasNominal = distance->getComparisonReferenceValue( 0 ).isSet;
-            bool hasTolerance = bool( distance->getComparisonTolerence( 0 ) );
-
-            ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
-
-            { // Nominal distance.
-                float nominalValue = std::get<float>( distance->getComparisonReferenceValue( 0 ).var );
-
-                ImGui::SetNextItemWidth( itemWidth );
-
-                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
-                MR_FINALLY{ ImGui::PopStyleColor(); };
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
-                MR_FINALLY{ ImGui::PopStyleVar(); };
-
-                if ( UI::input<LengthUnit>( "Nominal", nominalValue, -FLT_MAX, FLT_MAX, { .decorationFormatString = hasNominal ? "{}" : "Not specified" } ) )
-                    distance->setComparisonReferenceValue( 0, nominalValue );
-
-                if ( hasNominal )
-                {
-                    ImGui::SameLine();
-
-                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
-                    if ( UI::buttonEx( "\xC3\x97###removeNominal", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
-                    {
-                        distance->setComparisonReferenceValue( 0, {} );
-                        distance->setComparisonTolerance( 0, {} ); // This too.
-                        hasNominal = false;
-                        hasTolerance = false;
-                    }
-
-                    UI::setTooltipIfHovered( "Remove nominal value and tolerance", menu_scaling() );
-                }
-            }
-
-            // Tolerance.
-            if ( hasNominal ) // Sic!
-            {
-                ObjectComparableWithReference::ComparisonTolerance tol;
-                if ( auto opt = distance->getComparisonTolerence( 0 ) )
-                    tol = *opt;
-
-                ImGui::SetNextItemWidth( itemWidthHalf1 );
-
-                ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
-                MR_FINALLY{ ImGui::PopStyleColor(); };
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
-                MR_FINALLY{ ImGui::PopStyleVar(); };
-
-                if ( UI::input<LengthUnit>( "###positiveTolerance", tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
-                    distance->setComparisonTolerance( 0, tol );
-
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-
-                ImGui::SetNextItemWidth( itemWidthHalf2 );
-
-                if ( UI::input<LengthUnit>( "Tolerance##negative", tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTolerance ? "{}" : "Not specified" } ) )
-                    distance->setComparisonTolerance( 0, tol );
-
-                if ( hasTolerance )
-                {
-                    ImGui::SameLine();
-
-                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
-
-                    if ( UI::buttonEx( "\xC3\x97###removeTolerance", buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
-                        distance->setComparisonTolerance( 0, {} );
-
-                    UI::setTooltipIfHovered( "Remove tolerance", menu_scaling() );
-                }
-            }
         }
         else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
             drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
@@ -1616,6 +1539,23 @@ float ImGuiMenu::drawSelectionInformation_()
         .item2Width = getSceneInfoItemWidth_( 2 ),
         .item3Width = getSceneInfoItemWidth_( 3 ),
     } );
+
+    if ( selectedObjs.size() == 1 )
+    {
+        if ( auto comp = selectedObjs.front()->asType<ObjectComparableWithReference>() )
+        {
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            // Restore the original frame style for this.
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, originalFrameBgColor );
+            MR_FINALLY{ ImGui::PopStyleColor(); };
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, originalFrameBorderSize );
+            MR_FINALLY{ ImGui::PopStyleVar(); };
+
+            drawComparablePropertiesEditor_( *comp );
+        }
+    }
 
     // This looks a bit better.
     for ( int i = 0; i < 5; i++ )
@@ -1691,6 +1631,99 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
     if ( !anyActive )
         editedFeatureObject_.reset();
+}
+
+void ImGuiMenu::drawComparablePropertiesEditor_( ObjectComparableWithReference& object )
+{
+    const float fullWidth = getSceneInfoItemWidth_( 1 );
+    const ImVec2 buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+
+    const std::string_view notSpecifiedStr = "\xE2\x80\x94"; // U+2014 EM DASH
+
+    // Reference values.
+    const std::size_t numRefs = object.numComparisonReferenceValues();
+    for ( std::size_t i = 0; i < numRefs; i++ )
+    {
+        if ( !object.comparisonReferenceValueMakesSenseNow( i ) )
+            continue;
+
+        auto nominalValue = object.getComparisonReferenceValue( i );
+
+        ImGui::SetNextItemWidth( fullWidth );
+
+        if ( std::visit( [&]( auto& elem ){ return UI::input<LengthUnit>( std::string( object.getComparisonReferenceValueName( i ) ).c_str(), elem, -FLT_MAX, FLT_MAX, { .decorationFormatString = nominalValue.isSet ? "{}" : notSpecifiedStr } ); }, nominalValue.var ) )
+            object.setComparisonReferenceValue( i, nominalValue.var );
+
+        if ( nominalValue.isSet )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeNominal:{}", object.getComparisonReferenceValueName( i ) ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonReferenceValue( i, {} );
+        }
+    }
+
+    // Width for half-width widgets.
+    // There are two separate variables to prevent rounding from messing up the alignment.
+    const float halfWidth1 = std::round( ( fullWidth - ImGui::GetStyle().ItemInnerSpacing.x ) / 2 );
+    const float halfWidth2 = fullWidth - halfWidth1 - ImGui::GetStyle().ItemInnerSpacing.x;
+
+    // Tolerances.
+    const std::size_t numTols = object.numComparableProperties();
+    for ( std::size_t i = 0; i < numTols; i++ )
+    {
+        if ( !object.comparisonToleranceMakesSenseNow( i ) )
+            continue;
+
+        bool hasTol = false;
+        ObjectComparableWithReference::ComparisonTolerance tol;
+        if ( auto opt = object.getComparisonTolerence( i ) )
+        {
+            hasTol = true;
+            tol = *opt;
+        }
+
+        ImGui::SetNextItemWidth( fullWidth );
+
+        std::string name;
+        if ( numTols == 1 )
+            name = "Tolerance";
+        else
+            name = fmt::format( "{} tolerance", object.getComparablePropertyName( i ) );
+
+        if ( object.comparisonToleranceIsAlwaysOnlyPositive( i ) )
+        {
+            ImGui::SetNextItemWidth( fullWidth );
+            if ( UI::input<LengthUnit>( name.c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+        }
+        else
+        {
+            ImGui::SetNextItemWidth( halfWidth1 );
+
+            if ( UI::input<LengthUnit>( fmt::format( "###positive:{}", name ).c_str(), tol.positive, 0.f, FLT_MAX, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+
+            ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+            ImGui::SetNextItemWidth( halfWidth2 );
+
+            if ( UI::input<LengthUnit>( fmt::format( "{}###negative", name ).c_str(), tol.negative, -FLT_MAX, 0.f, { .decorationFormatString = hasTol ? "{}" : notSpecifiedStr } ) )
+                object.setComparisonTolerance( i, tol );
+        }
+
+        // The button to remove tolerance.
+        if ( hasTol )
+        {
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize.x );
+
+            if ( UI::buttonEx( fmt::format( "\xC3\x97###removeTolerance:{}", name ).c_str(), buttonSize, { .customTexture = UI::getTexture( UI::TextureType::GradientBtnGray ).get() } ) ) // U+00D7 MULTIPLICATION SIGN
+                object.setComparisonTolerance( i, {} );
+        }
+    }
 }
 
 bool ImGuiMenu::drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs )

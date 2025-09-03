@@ -73,14 +73,19 @@ class MRMESH_CLASS ObjectComparableWithReference
     // `i` goes up to `numComparableProperties()`, exclusive.
     [[nodiscard]] virtual bool comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const { (void)i; return false; }
 
+    // If false, you shouldn't offer the user to set this tolerance now, to indicate that they should set other properties first.
+    // The other setters should be written to automatically reset the tolerances when it becomes false for them.
+    // `i` goes up to `numComparableProperties()`, exclusive.
+    [[nodiscard]] virtual bool comparisonToleranceMakesSenseNow( std::size_t i ) const { (void)i; return true; }
+
 
     // Reference values:
 
     // The number and types of reference values can be entirely different compared to `numComparableProperties()`.
-    [[nodiscard]] virtual std::size_t numComparableReferenceValues() const { return numComparableProperties(); }
+    [[nodiscard]] virtual std::size_t numComparisonReferenceValues() const { return numComparableProperties(); }
 
-    // `i` goes up to `numComparableReferenceValues()`, exclusive.
-    [[nodiscard]] virtual std::string_view getComparableReferenceValueName( std::size_t i ) const { return getComparablePropertyName( i ); }
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
+    [[nodiscard]] virtual std::string_view getComparisonReferenceValueName( std::size_t i ) const = 0;
 
     // This can't be `std::optional<Var>`, because we still need the variant to know the correct type.
     struct ComparisonReferenceValue
@@ -95,13 +100,18 @@ class MRMESH_CLASS ObjectComparableWithReference
 
     // Returns the internal reference value.
     // If the value wasn't set yet (as indicated by `isSet == false`), you can still use the returned variant to get the expected type.
-    // `i` goes up to `numComparableReferenceValues()`, exclusive.
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
     [[nodiscard]] virtual ComparisonReferenceValue getComparisonReferenceValue( std::size_t i ) const = 0;
     // Sets the internal reference value. Makes `hasComparisonReferenceValue()` return true.
     // If you pass nullopt, removes this reference value.
     // Only a certain variant type is legal to pass, depending on the derived class and the index. Use `getComparisonReferenceValue()` to determine that type.
-    // `i` goes up to `numComparableReferenceValues()`, exclusive.
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
     virtual void setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value ) = 0;
+
+    // If false, you shouldn't offer the user to set this reference value now, to indicate that they should set other properties first.
+    // The other setters should be written to automatically reset the reference values when it becomes false for them.
+    // `i` goes up to `numComparisonReferenceValues()`, exclusive.
+    [[nodiscard]] virtual bool comparisonReferenceValueMakesSenseNow( std::size_t i ) const { (void)i; return true; }
 };
 
 }

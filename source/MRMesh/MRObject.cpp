@@ -388,6 +388,16 @@ void Object::setAncillary( bool ancillary )
     ancillary_ = ancillary;
 }
 
+bool Object::isGlobalAncillary() const
+{
+    if ( isAncillary() )
+        return true;
+    for ( auto* parent = Object::parent(); parent != nullptr; parent = parent->parent() )
+        if ( parent->isAncillary() )
+            return true;
+    return false;
+}
+
 void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
 {
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )

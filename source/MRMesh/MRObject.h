@@ -194,6 +194,8 @@ public:
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
     MRMESH_API virtual void setAncillary( bool ancillary );
     bool isAncillary() const { return ancillary_; }
+    /// returns true if the object or any of its ancestors are ancillary
+    MRMESH_API bool isGlobalAncillary() const;
 
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );

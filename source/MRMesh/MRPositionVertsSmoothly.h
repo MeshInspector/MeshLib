@@ -32,7 +32,7 @@ struct PositionVertsSmoothlyParams
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
 MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams& params );
 MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params );
-MRMESH_API [[deprecated]] void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts );
+[[deprecated]] MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts );
 
 struct SpacingSettings
 {

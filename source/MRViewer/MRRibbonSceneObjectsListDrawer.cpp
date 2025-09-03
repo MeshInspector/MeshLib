@@ -152,7 +152,7 @@ std::string RibbonSceneObjectsListDrawer::objectLineStrId_( const Object& object
 
 bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int depth )
 {
-    const bool hasRealChildren = objectHasSelectableChildren( object );
+    const bool hasRealChildren = !object.isAncillary() && objectHasSelectableChildren( object );
 
     auto isOpened = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
     ImGui::SameLine();

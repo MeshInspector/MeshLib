@@ -1085,7 +1085,7 @@ bool RibbonMenu::drawSelectSubtreeButton( const std::vector<std::shared_ptr<Obje
     bool someChanges = false;
     const bool subtreeExists = std::any_of( selected.begin(), selected.end(), [] ( std::shared_ptr<Object> obj )
     {
-        return obj && objectHasSelectableChildren( *obj );
+        return obj && !obj->isAncillary() && objectHasSelectableChildren( *obj );
     } );
 
     if ( selected.empty() || !subtreeExists )

@@ -51,11 +51,13 @@ MR_BIND_IGNORE inline std::shared_ptr<ObjectT> getDepthFirstObject( Object& root
 
 /// \}
 
-inline bool objectHasSelectableChildren( const MR::Object& object )
+/// returns whether the object has selectable children
+/// \param recurse - if true, look up for selectable children at any depth
+inline bool objectHasSelectableChildren( const MR::Object& object, bool recurse = false )
 {
     for ( const auto& child : object.children() )
     {
-        if ( !child->isAncillary() || objectHasSelectableChildren( *child ) )
+        if ( !child->isAncillary() || ( recurse && objectHasSelectableChildren( *child, recurse ) ) )
             return true;
     }
     return false;

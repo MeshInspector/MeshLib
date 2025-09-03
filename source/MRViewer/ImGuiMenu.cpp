@@ -1373,6 +1373,8 @@ float ImGuiMenu::drawSelectionInformation_()
         editedFeatureObject_.reset();
     }
 
+    drawTagInformation_( selectedObjs );
+
     // customize input text widget design
     const ImVec4 originalFrameBgColor = ImGui::GetStyleColorVec4( ImGuiCol_FrameBg );
     const float originalFrameBorderSize = ImGui::GetStyle().FrameBorderSize;
@@ -1428,15 +1430,6 @@ float ImGuiMenu::drawSelectionInformation_()
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
-
-    drawTagInformation_( selectedObjs, {
-        .textColor = textColor,
-        .labelColor = labelColor,
-        .selectedTextColor = selectedTextColor,
-        .itemWidth = itemWidth,
-        .item2Width = getSceneInfoItemWidth_( 2 ),
-        .item3Width = getSceneInfoItemWidth_( 3 ),
-    } );
 
     // Bounding box.
     if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
@@ -2188,16 +2181,11 @@ void ImGuiMenu::drawCustomSelectionInformation_( const std::vector<std::shared_p
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}
 
-void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style )
+void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     const auto initWidth = ImGui::GetContentRegionAvail().x;
     const auto initCursorScreenPos = ImGui::GetCursorScreenPos();
-    const auto initCursorPos = ImGui::GetCursorPos();
-    const auto itemInnerSpacing = ImGui::GetStyle().ItemInnerSpacing;
-    const auto textLineHeight = ImGui::GetTextLineHeight();
-
-    if ( ImGui::InvisibleButton( "##EnterTagsWindow", { style.itemWidth, textLineHeight } ) )
-        ImGui::OpenPopup( "TagsPopup" );
+    const auto itemWidth = getSceneInfoItemWidth_();
 
     static const auto setIntersect = [] <typename T> ( const std::set<T>& a, const std::set<T>& b )
     {
@@ -2245,7 +2233,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         text = "–";
 
     auto textSize = ImGui::CalcTextSize( text.c_str() );
-    if ( style.itemWidth < textSize.x )
+    if ( itemWidth < textSize.x )
     {
         // TODO: cache
         const auto ellipsisSize = ImGui::CalcTextSize( "..." );
@@ -2253,19 +2241,20 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         for ( --textLen; textLen > 0; --textLen )
         {
             textSize = ImGui::CalcTextSize( text.data(), text.data() + textLen );
-            if ( textSize.x + ellipsisSize.x <= style.itemWidth )
+            if ( textSize.x + ellipsisSize.x <= itemWidth )
                 break;
         }
         text = text.substr( 0, textLen ) + "...";
         textSize = ImGui::CalcTextSize( text.c_str() );
     }
 
-    const auto offset = std::floor( ( style.itemWidth - textSize.x ) * 0.5f );
-    ImGui::SetCursorPos( { initCursorPos.x + offset, initCursorPos.y } );
-    ImGui::TextColored( style.textColor, "%s", text.c_str() );
+    const auto initCursorPos = ImGui::GetCursorPos();
+    ImGui::SetNextItemAllowOverlap();
+    UI::inputTextCentered( "Tags", text, itemWidth );
 
-    ImGui::SetCursorPos( { initCursorPos.x + style.itemWidth + itemInnerSpacing.x, initCursorPos.y } );
-    ImGui::TextColored( style.labelColor, "Tags" );
+    ImGui::SetCursorPos( initCursorPos );
+    if ( ImGui::InvisibleButton( "##EnterTagsWindow", { itemWidth, ImGui::GetFrameHeight() } ) )
+        ImGui::OpenPopup( "TagsPopup" );
 
     static const auto BeginPopup2 = [] ( const char* name, ImVec2 size, const ImVec2* pos = nullptr )
     {
@@ -2294,13 +2283,15 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
         if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
+        const auto& style = ImGui::GetStyle();
+
         auto* iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
         if ( iconsFont )
             iconsFont->Scale = cDefaultFontSize / cBigIconSize;
 
         const auto buttonWidth = [&] ( const char* label )
         {
-            return ImGui::GetStyle().FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
+            return style.FramePadding.x * 2.f + ImGui::CalcTextSize( label, NULL, true ).x;
         };
         if ( iconsFont )
             ImGui::PushFont( iconsFont );
@@ -2428,7 +2419,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
             }
             return 0;
         };
-        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - itemInnerSpacing.x - addButtonWidth );
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - style.ItemInnerSpacing.x - addButtonWidth );
         if ( ImGui::InputTextWithHint( "##TagNew", "Type to add new tag...", &tagNewName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion, tagCompletion, &allKnownTags ) )
         {
             if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )
@@ -2439,7 +2430,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
         if ( iconsFont )
             ImGui::PushFont( iconsFont );
-        ImGui::SameLine( 0, itemInnerSpacing.x );
+        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         if ( ImGui::Button( addButtonText ) )
         {
             if ( const auto name = std::string{ trim( tagNewName_ ) }; !name.empty() )

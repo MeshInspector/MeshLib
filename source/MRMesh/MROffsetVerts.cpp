@@ -4,6 +4,8 @@
 #include "MRRegionBoundary.h"
 #include "MRMeshFillHole.h"
 #include "MRTimer.h"
+#include "MRPositionVertsSmoothly.h"
+#include "MRMapOrHashMap.h"
 
 namespace MR
 {
@@ -26,9 +28,30 @@ bool offsetVerts( Mesh& mesh, const VertMetric& offset, const ProgressCallback& 
     }, cb );
 }
 
-Mesh makeThickMesh( const Mesh & m, float halfWidth )
+Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 {
     MR_TIMER;
+
+    assert( params.dirFieldStabilizer > 0 );
+
+    VertNormals dirs;
+    dirs.resizeNoInit( m.topology.vertSize() );
+    BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+    {
+        dirs[v] = m.pseudonormal( v );
+    } );
+
+    const bool smoothDirs = params.dirFieldStabilizer < FLT_MAX;
+    if ( smoothDirs )
+    {
+        /// smooth directions on original mesh to avoid boundary effects near stitches
+        positionVertsSmoothlySharpBd( m.topology, dirs, { .stabilizer = params.dirFieldStabilizer } );
+        BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+        {
+            dirs[v] = dirs[v].normalized();
+        } );
+    }
+
     Mesh res = m;
     auto holesRepr = m.topology.findHoleRepresentiveEdges();
     EdgeLoops mHoles( holesRepr.size() );
@@ -39,10 +62,23 @@ Mesh makeThickMesh( const Mesh & m, float halfWidth )
         auto e = makeDegenerateBandAroundHole( res, holesRepr[i] );
         extHoles[i] = trackRightBoundaryLoop( res.topology, e );
     }
-    res.addMeshPart( m, true, extHoles, mHoles );
+    PartMapping map;
+    auto m2resVerts = VertMapOrHashMap::createMap();
+    map.src2tgtVerts = &m2resVerts;
+    res.addMeshPart( m, true, extHoles, mHoles, map );
 
-    // degenerate faces will be automatically ignored during pseudonormal computation
-    offsetVerts( res, [halfWidth]( VertId ) { return halfWidth; } );
+    // apply shifts
+    BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+    {
+        res.points[v] += params.outsideOffset * dirs[v];
+        auto resV = getAt( m2resVerts, v );
+        if ( !resV )
+        {
+            assert( false );
+            return;
+        }
+        res.points[resV] -= params.insideOffset * dirs[v];
+    } );
 
     return res;
 }

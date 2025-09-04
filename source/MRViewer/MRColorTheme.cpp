@@ -393,7 +393,10 @@ const char* ColorTheme::getViewportColorTypeName( ViewportColorsType type )
     constexpr std::array<const char*, size_t( ViewportColorsType::Count )> colorNames
     {
         "Background",
-        "Borders"
+        "Borders",
+        "AxisX",
+        "AxisY",
+        "AxisZ"
     };
     return colorNames[int( type )];
 }
@@ -461,7 +464,6 @@ void ColorTheme::resetImGuiStyle()
     style.ItemSpacing.y = 6.0f;
 
     style.FrameBorderSize = 1.0f;
-    style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
 

@@ -379,6 +379,10 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
 bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
 
+// Like `drag()`, but clicking it immediately activates text input, so it's not actually draggable.
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+bool input( const char* label, T& v, const U& vMin = std::numeric_limits<U>::lowest(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
+
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
@@ -481,6 +485,28 @@ MRVIEWER_API void alignTextToButton( float scaling );
 /// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
 /// Added some indentation if min or max is not set.
 MRVIEWER_API void highlightWindowArea( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+
+// While this exists, it temporarily disables antialiasing for the lines drawn to this list.
+class LineAntialiasingDisabler
+{
+    ImDrawList& list;
+    ImDrawFlags oldFlags{};
+
+public:
+    LineAntialiasingDisabler( ImDrawList& list )
+        : list( list ), oldFlags( list.Flags )
+    {
+        list.Flags &= ~ImDrawListFlags_AntiAliasedLines;
+    }
+
+    LineAntialiasingDisabler( const LineAntialiasingDisabler& ) = delete;
+    LineAntialiasingDisabler& operator=( const LineAntialiasingDisabler& ) = delete;
+
+    ~LineAntialiasingDisabler()
+    {
+        list.Flags = oldFlags;
+    }
+};
 
 } // namespace UI
 

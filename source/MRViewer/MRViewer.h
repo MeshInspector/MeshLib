@@ -77,8 +77,15 @@ struct FileLoadOptions
     /// first part of undo name
     const char * undoPrefix = "Open ";
 
-    /// true here will replace existing scene even if more than one file is open
-    bool forceReplaceScene = false;
+    enum class ReplaceMode
+    {
+        ContructionBased, ///< replace current scene if new one was loaded from single scene file
+        ForceReplace,
+        ForceAdd
+    };
+
+    /// Determines how to deal with current scene after loading new one
+    ReplaceMode replaceMode = ReplaceMode::ContructionBased;
 
     /// if this callback is set - it is called once when all objects are added to scene
     /// top level objects only are present here
@@ -538,6 +545,7 @@ public:
     SpaceMouseKeySignal spaceMouseRepeatSignal; // signal is called when spacemouse key is pressed for some time
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
+    RenderSignal preSetupViewSignal; // signal is called before viewports cleanup and camera setup, so one can customize camera XFs for this frame
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)
     RenderSignal preDrawPostViewportSignal; // signal is called before scene draw but after viewport.preDraw()
     RenderSignal drawSignal; // signal is called on scene draw (after objects tree but before viewport.postDraw())
@@ -730,7 +738,7 @@ private:
 
     std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
-    std::vector<boost::signals2::scoped_connection> colorUpdateConnections_;
+    std::vector<boost::signals2::scoped_connection> uiUpdateConnections_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

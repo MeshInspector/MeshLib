@@ -466,12 +466,17 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     UI::checkbox( "Show Global Basis", &showGlobalBasis );
     viewport.showGlobalBasis( showGlobalBasis );
 
+    ImGui::SameLine( 310 * menuScaling );
+    bool showGlobalBasisGrid = viewer->globalBasis->isGridVisible( viewport.id );
+    UI::checkboxValid( "Grid", &showGlobalBasisGrid, showGlobalBasis );
+    viewer->globalBasis->setGridVisible( showGlobalBasisGrid, viewport.id );
+
     ImGui::PushItemWidth( 170 * menuScaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
     if ( isAutoGlobalBasisSize )
     {
-        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale );
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
     }
     else
     {
@@ -480,7 +485,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         viewer->globalBasis->setAxesProps( size, viewer->globalBasis->getAxesWidth( viewport.id ), viewport.id );
     }
     ImGui::PopStyleVar();
-    ImGui::SameLine();
+    ImGui::SameLine( 310 * menuScaling );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
     if ( UI::checkbox( "Auto", &isAutoGlobalBasisSize ) )
     {

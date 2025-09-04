@@ -65,6 +65,7 @@ const std::string cUnitsPrecisionRatio = "units.precisionRatio";
 const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 const std::string cGlobalBasisKey = "globalBasis";
 const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
+const std::string cGlobalBasisGridVisibleKey = "globalBasisGridVisible";
 const std::string cGlobalBasisScaleKey = "globalBasusScale";
 const std::string cMruInnerMeshFormat = "mruInner.meshFormat";
 const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
@@ -221,6 +222,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         {
             auto visible = val[cGlobalBasisVisibleKey].asBool();
             viewer.globalBasis->setVisible( visible );
+            bool gridVisible = visible;
+            if ( val[cGlobalBasisGridVisibleKey].isBool() )
+                gridVisible = val[cGlobalBasisGridVisibleKey].asBool();
+            viewer.globalBasis->setGridVisible( gridVisible );
             if ( visible )
                 CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
         }
@@ -550,6 +555,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         Json::Value globalBasis;
         globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasis->isVisible( viewport.id );
+        globalBasis[cGlobalBasisGridVisibleKey] = viewer.globalBasis->isGridVisible( viewport.id );
         if ( params.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto )
             globalBasis[cGlobalBasisScaleKey] = "Auto";
         else

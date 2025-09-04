@@ -92,6 +92,15 @@ template <> struct IsVisualizeMaskEnum<FeatureVisualizePropertyType> : std::true
 class MRMESH_CLASS FeatureObject : public VisualObject
 {
 public:
+    constexpr static const char* TypeName() noexcept { return "FeatureObject"; }
+    virtual const char* typeName() const override { return TypeName(); }
+
+    constexpr static const char* ClassName() noexcept { return "Feature"; }
+    virtual std::string className() const override { return ClassName(); }
+
+    constexpr static const char* ClassNameInPlural() noexcept { return "Features"; }
+    virtual std::string classNameInPlural() const override { return ClassNameInPlural(); }
+
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
     virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const = 0;
 

@@ -85,7 +85,8 @@ void Viewport::init()
     viewportGL_ = ViewportGL();
     initBaseAxes();
     updateSceneBox_();
-    setRotationPivot( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
+    auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     setupProjMatrix_();
     setupAxesProjMatrix_();
 }
@@ -597,6 +598,12 @@ void Viewport::setParameters( const Viewport::Parameters& params )
     needRedraw_ = true;
 }
 
+void Viewport::resetStaticRotationPivot( const std::optional<Vector3f>& pivot /*= std::nullopt */ )
+{
+    // no need to set `needRedraw_` here, cause this parameter does not update current frame
+    params_.staticRotationPivot = pivot;
+}
+
 void Viewport::setAxesSize( const int axisPixSize )
 {
     if ( axisPixSize == axisPixSize_ )
@@ -719,9 +726,13 @@ void Viewport::drawGlobalBasis() const
 
     auto length = viewer.globalBasis->getAxesLength( id );
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
-        length = params_.objectScale;
+        length = params_.objectScale * 0.5f;
 
-    viewer.globalBasis->setAxesProps( length, getPixelSizeAtPoint( Vector3f() ) * 3.0f, id );
+    float scaling = 1.0f;
+    if ( auto menu = viewer.getMenuPlugin() )
+        scaling = menu->menu_scaling();
+
+    viewer.globalBasis->setAxesProps( length, scaling * getPixelSizeAtPoint( Vector3f() ) * 2.0f, id );
     viewer.globalBasis->draw( *this );
 }
 

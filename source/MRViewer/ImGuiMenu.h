@@ -29,6 +29,7 @@ class ShortcutManager;
 class MeshModifier;
 struct UiRenderManager;
 class SceneObjectsListDrawer;
+class ObjectComparableWithReference;
 
 enum class SelectedTypesMask
 {
@@ -154,6 +155,22 @@ protected:
   // When editing feature properties, this is the original xf of the target object, for history purposes.
   AffineXf3f editedFeatureObjectOldXf_;
 
+    // state for the Edit Tag modal dialog
+    struct TagEditorState
+    {
+        std::string initName;
+        std::string name;
+        bool initHasFrontColor = false;
+        bool hasFrontColor = false;
+        ImVec4 selectedColor;
+        ImVec4 unselectedColor;
+    };
+    TagEditorState tagEditorState_;
+    // whether to open the Edit Tag modal dialog
+    bool showEditTag_ = false;
+    // buffer string for the tag name input widget
+    std::string tagNewName_;
+
 public:
   MRVIEWER_API static const std::shared_ptr<ImGuiMenu>& instance();
 
@@ -194,8 +211,6 @@ public:
   std::function<void(void)> callback_draw_custom_window;
 
   void draw_labels_window();
-
-  void draw_labels( const VisualObject& obj );
 
   MRVIEWER_API void draw_text(
       const Viewport& viewport,
@@ -388,10 +403,14 @@ protected:
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
 
+    MRVIEWER_API void drawComparablePropertiesEditor_( ObjectComparableWithReference& object );
+
     /// draw additional selection information (e.g. for custom objects)
     MRVIEWER_API virtual void drawCustomSelectionInformation_( const std::vector<std::shared_ptr<Object>>& selected, const SelectionInformationStyle& style );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
+
+    MRVIEWER_API void drawTagInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API float drawTransform_();
 

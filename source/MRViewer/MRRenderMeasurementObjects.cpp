@@ -29,11 +29,19 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
 {
     Vector3f pointA = object_->getWorldPoint();
     Vector3f pointB = pointA + object_->getWorldDelta();
+    auto ref = object_->getComparisonReferenceValue( 0 );
+    auto tol = object_->getComparisonTolerence( 0 );
     task_ = RenderDimensions::LengthTask( params, {}, getMeasurementColor( *object_, params.viewportId ), {
         .points = { pointA, pointB },
-        .drawAsNegative = object_->getDrawAsNegative(),
-        .showPerCoordDeltas = object_->getPerCoordDeltasMode() != DistanceMeasurementObject::PerCoordDeltas::none,
-        .perCoordDeltasAreAbsolute = object_->getPerCoordDeltasMode() == DistanceMeasurementObject::PerCoordDeltas::absolute,
+        .drawAsNegative = object_->isNegative(),
+        .onlyOneAxis =
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::xAbsolute ? std::optional( 0 ) :
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::yAbsolute ? std::optional( 1 ) :
+            object_->getDistanceMode() == DistanceMeasurementObject::DistanceMode::zAbsolute ? std::optional( 2 ) : std::nullopt,
+        .referenceValue =
+            ref.isSet ? std::optional( std::get<float>( ref.var ) ) : std::nullopt,
+        .tolerance =
+            tol ? std::optional( RenderDimensions::LengthParams::Tolerance{ .positive = tol->positive, .negative = tol->negative } ) : std::nullopt,
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

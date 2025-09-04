@@ -4,9 +4,10 @@
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
+#include "MRPch/MRFmt.h"
+
 
 #include <fstream>
 #include <vector>
@@ -158,6 +159,27 @@ std::string GetHpdfErrorDescription( HPDF_STATUS errorCode )
     }
 }
 
+const std::string& sGetDefaultFontName( MR::PdfParameters::BuildinFont font )
+{
+    static const std::array<std::string, int( MR::PdfParameters::BuildinFont::Count )> cFontNames = {
+        std::string( "Courier" ),
+        std::string( "Courier-Bold" ),
+        std::string( "Courier-Oblique" ),
+        std::string( "Courier-BoldOblique" ),
+        std::string( "Helvetica" ),
+        std::string( "Helvetica-Bold" ),
+        std::string( "Helvetica-Oblique" ),
+        std::string( "Helvetica-BoldOblique" ),
+        std::string( "Times-Roman" ),
+        std::string( "Times-Bold" ),
+        std::string( "Times-Italic" ),
+        std::string( "Times-BoldItalic" ),
+        std::string( "Symbol" ),
+        std::string( "ZapfDingbats" )
+    };
+    return cFontNames[int( font )];
+}
+
 }
 
 namespace MR
@@ -191,12 +213,27 @@ constexpr float tableCellPaddingY = 1 * scaleFactor;
 
 }
 
+std::string Pdf::Cell::toString( const std::string& fmtStr /*= "{}"*/ ) const
+{
+    return std::visit( [&] ( const auto& val ) -> std::string
+    {
+        using T = std::decay_t<decltype( val )>;
+        if constexpr ( std::is_same_v<T, EmptyCell> )
+            return "";
+        else
+            return fmt::format( runtimeFmt( fmtStr ), val );
+    }, data );
+}
+
+
 struct Pdf::State
 {
     HPDF_Doc document = nullptr;
     HPDF_Page activePage = nullptr;
     HPDF_Font defaultFont = nullptr;
+    HPDF_Font defaultFontBold = nullptr;
     HPDF_Font tableFont = nullptr;
+    HPDF_Font tableFontBold = nullptr;
 };
 
 struct Pdf::TextParams
@@ -204,19 +241,30 @@ struct Pdf::TextParams
     HPDF_Font font = nullptr;
     float fontSize = 14.f;
     HPDF_TextAlignment alignment = HPDF_TALIGN_LEFT;
-    bool drawBorder = false;
+    Color colorText = Color::black();
+
     static TextParams title( const Pdf& pdf )
     {
-        return TextParams{ pdf.state_->defaultFont, pdf.params_.titleSize, HPDF_TALIGN_CENTER };
+        return { .font = pdf.state_->defaultFont, .fontSize = pdf.params_.titleSize, .alignment = HPDF_TALIGN_CENTER };
     }
     static TextParams text( const Pdf& pdf )
     {
-        return TextParams{ pdf.state_->defaultFont, pdf.params_.textSize, HPDF_TALIGN_LEFT };
+        return { .font = pdf.state_->defaultFont, .fontSize = pdf.params_.textSize };
     }
     static TextParams table( const Pdf& pdf )
     {
-        return TextParams{ pdf.state_->tableFont, pdf.params_.textSize, HPDF_TALIGN_LEFT };
+        return { .font = pdf.state_->tableFont, .fontSize = pdf.params_.textSize };
     }
+};
+
+struct Pdf::TextCellParams
+{
+    TextParams textParams;
+
+    Box2f rect;
+    Color colorBorder = Color::transparent();
+    Color colorBackground = Color::transparent();
+
 };
 
 Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
@@ -230,6 +278,9 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
         return;
     }
     
+    MR_HPDF_CHECK_RES_STATUS( HPDF_UseUTFEncodings( state_->document ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_SetCurrentEncoder( state_->document, "UTF-8" ) );
+
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCompressionMode( state_->document, HPDF_COMP_ALL ) );
 
     state_->activePage = HPDF_AddPage( state_->document );
@@ -243,20 +294,44 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT ) );
 
-    state_->defaultFont = HPDF_GetFont( state_->document, params_.defaultFontName.c_str(), NULL );
-    if ( !state_->defaultFont )
+    auto getFont = [&] ( const std::variant<PdfParameters::BuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )->bool
     {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.defaultFontName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+        std::string fontName;
+        bool useUTF8 = false;
+        bool ok = true;
+        if ( std::holds_alternative<PdfParameters::BuildinFont>( inFontInfo ) )
+        {
+            fontName = sGetDefaultFontName( std::get<PdfParameters::BuildinFont>( inFontInfo ) );
+        }
+        else
+        {
+            auto pathStr = utf8string( std::get<std::filesystem::path>( inFontInfo ) );
+            const char* fontNameCstr = HPDF_LoadTTFontFromFile( state_->document, pathStr.c_str(), HPDF_TRUE );
+            if ( fontNameCstr )
+                fontName = fontNameCstr;
+            else
+                ok = false;
+            useUTF8 = true;
+        }
+        if ( !fontName.empty() )
+            outFont = HPDF_GetFont( state_->document, fontName.c_str(), useUTF8 ? "UTF-8" : NULL );
+        if ( !outFont )
+        {
+            spdlog::debug( "Pdf: Can't find font: \"{}\".", ok ? fontName : utf8string( std::get<std::filesystem::path>( inFontInfo ) ) );
+            pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+            return false;
+        }
+        return true;
+    };
+
+    if ( !getFont( params_.defaultFont, state_->defaultFont ) )
         return;
-    }
-    state_->tableFont = HPDF_GetFont( state_->document, params_.tableFontName.c_str(), NULL );
-    if ( !state_->tableFont )
-    {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.tableFontName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+    if ( !getFont( params_.defaultFontBold, state_->defaultFontBold ) )
         return;
-    }
+    if ( !getFont( params_.tableFont, state_->tableFont ) )
+        return;
+    if ( !getFont( params_.tableFontBold, state_->tableFontBold ) )
+        return;
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
 
@@ -489,14 +564,36 @@ void Pdf::saveToFile( const std::filesystem::path& documentPath )
     // reset all errors before saving document
     HPDF_ResetError( state_->document );
 
-    auto pathString = utf8string( documentPath );
-    HPDF_SaveToFile( state_->document, pathString.c_str() );
 
-    HPDF_STATUS status = HPDF_GetError( state_->document );
-    if (status != HPDF_OK)
+    /* save the document to a stream */
+    MR_HPDF_CHECK_RES_STATUS( HPDF_SaveToStream( state_->document ) );
+
+    /* rewind the stream. */
+    HPDF_ResetStream( state_->document );
+
+    auto pathString = utf8string( documentPath );
+    std::ofstream outFile( documentPath, std::ios::binary );
+    if ( !outFile )
     {
-        spdlog::error( "Pdf: Error while saving pdf to file \"{}\": {}", pathString, status );
-        HPDF_ResetError( state_->document );
+        spdlog::error( "Pdf: Error while saving pdf to file \"{}\"", pathString );
+        return;
+    }
+
+    /* get the data from the stream and output it to stdout. */
+    for ( ;;)
+    {
+        HPDF_BYTE buf[4096];
+        HPDF_UINT32 siz = 4096;
+        MR_HPDF_CHECK_RES_STATUS( HPDF_ReadFromStream( state_->document, buf, &siz ) );
+
+        if ( siz == 0 )
+            break;
+
+        if ( !outFile.write( ( const char* )buf, siz ) )
+        {
+            spdlog::error( "Pdf: Error while saving pdf to file \"{}\"", pathString );
+            break;
+        }
     }
 }
 
@@ -515,40 +612,197 @@ Pdf::operator bool() const
     return state_->document != 0;
 }
 
-void Pdf::addText_( const std::string& text, const TextParams& textParams )
+void Pdf::newTable( int columnCount )
 {
-    if ( text.empty() )
+    if ( columnCount < 1 )
         return;
+    columnsInfo_.clear();
+    columnsInfo_.resize( columnCount, { pageWorkWidth / columnCount, "{}" } );
+    rowCounter_ = 0;
+}
 
-    if ( !state_->document )
+Expected<void> Pdf::setTableColumnWidths( const std::vector<float>& widths )
+{
+    assert( widths.size() == columnsInfo_.size() );
+    if ( widths.size() != columnsInfo_.size() )
     {
-        spdlog::warn( "Can't add text to pdf page: no valid document" );
-        return;
+        return unexpected( "Pdf: mismatch number of columns and widths" );
     }
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, textParams.font, textParams.fontSize ) );
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].width = widths[i];
+    return {};
+}
+
+Expected<void> Pdf::addTableTitles( const std::vector<std::string>& titles )
+{
+    assert( titles.size() == columnsInfo_.size() );
+    if ( titles.size() != columnsInfo_.size() )
+    {
+        return unexpected( "Pdf: mismatch number of columns and titles" );
+    }
+
+    TextCellParams params;
+    params.colorBackground = tableParams_.colorTitleBg;
+    params.colorBorder = tableParams_.colorLines;
+    params.textParams.font = state_->tableFontBold;
+    params.textParams.fontSize = tableParams_.fontSize;
+    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.colorText = tableParams_.colorTitleText;
+
+    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+    
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    float posX = borderFieldLeft;
+    for ( int i = 0; i < titles.size(); ++i )
+    {
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        drawTextCell_( titles[i], params );
+        posX += columnsInfo_[i].width;
+    }
+    cursorY_ -= textHeight;
+    return {};
+}
+
+Expected<void> Pdf::setColumnValuesFormat( const std::vector<std::string>& formats )
+{
+    if ( formats.size() != columnsInfo_.size() )
+        return unexpected( "Pdf: Error set up table column value formats: wrong parameters count." );
+    for ( int i = 0; i < columnsInfo_.size(); ++i )
+        columnsInfo_[i].valueFormat = formats[i];
+    return {};
+}
+
+Expected<void> Pdf::addRow( const std::vector<Cell>& cells )
+{
+    if ( cells.size() != columnsInfo_.size() )
+    {
+        return unexpected( "Pdf: Error adding table row: wrong parameters count." );
+    }
+
+    TextCellParams params;
+    params.colorBackground = ( rowCounter_ & 1 ) ? tableParams_.colorCellBg1 : tableParams_.colorCellBg2;
+    params.colorBorder = tableParams_.colorLines;
+    params.textParams.font = state_->tableFont;
+    params.textParams.fontSize = tableParams_.fontSize;
+    params.textParams.alignment = HPDF_TALIGN_CENTER;
+    params.textParams.colorText = tableParams_.colorCellText;
+
+    const auto textHeight = static_cast< HPDF_REAL >( params.textParams.fontSize ) * 1.6f;
+
+    if ( cursorY_ - textHeight < borderFieldBottom )
+        newPage();
+
+    float posX = borderFieldLeft;
+    for ( int i = 0; i < cells.size(); ++i )
+    {
+        params.rect = Box2f( { posX, cursorY_ - textHeight }, { posX + columnsInfo_[i].width, cursorY_ } );
+        std::string text = cells[i].toString( columnsInfo_[i].valueFormat );
+        if ( tableCustomRule_ )
+        {
+            TextCellParams customParams = params;
+            CellCustomParams cellParams = tableCustomRule_( rowCounter_, i, text );
+            if ( cellParams.text.has_value() )
+                text = *cellParams.text;
+            if ( cellParams.colorText.has_value() )
+                customParams.textParams.colorText = *cellParams.colorText;
+            if ( cellParams.colorCellBg.has_value() )
+                customParams.colorBackground = *cellParams.colorCellBg;
+            if ( cellParams.colorCellBorder.has_value() )
+                customParams.colorBorder = *cellParams.colorCellBorder;
+
+            drawTextCell_( text, customParams );
+        }
+        else
+            drawTextCell_( text, params );
+        posX += columnsInfo_[i].width;
+    }
+    ++rowCounter_;
+    cursorY_ -= textHeight;
+    return {};
+}
+
+float Pdf::getTableTextWidth( const std::string& text )
+{
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
+    return MR_HPDF_CHECK_ERROR( HPDF_Page_TextWidth( state_->activePage, text.c_str() ) );
+}
+
+void Pdf::addText_( const std::string& text, const TextParams& textParams )
+{
+    if ( !checkDocument_( "add text" ) )
+        return;
+
+    if ( !textParams.colorText.a )
+        return;
 
     int strNum = calcTextLinesCount_( text );
     const auto textHeight = static_cast< HPDF_REAL >( textParams.fontSize * strNum * lineSpacingScale );
 
-    // need add the ability to transfer text between pages
+    // TODO need add the ability to transfer text between pages
     if ( cursorY_ - textHeight < borderFieldBottom )
         newPage();
 
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, textParams.fontSize * lineSpacingScale ) );
-
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, cursorX_, cursorY_, cursorX_ + pageWorkWidth, cursorY_ - textHeight, text.c_str(), textParams.alignment, nullptr ) );
-    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
-
-    if ( textParams.drawBorder )
-    {
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, cursorX_, cursorY_ - textHeight, pageWorkWidth, textHeight ) );
-        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Stroke( state_->activePage ) );
-    }
+    Box2f rect;
+    rect.include( { cursorX_, cursorY_ } );
+    rect.include( { borderFieldRight, cursorY_ - textHeight } );
+    drawTextRect_( text, rect, textParams );
 
     cursorY_ -= textHeight;
     moveCursorToNewLine();
+}
+
+void Pdf::drawTextRect_( const std::string& text, const Box2f& rect, const TextParams& params )
+{
+    if ( !checkDocument_( "draw text (rect)" ) )
+        return;
+
+    if ( text.empty() || !params.colorText.a )
+        return;
+
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, params.font, params.fontSize ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetTextLeading( state_->activePage, params.fontSize ) );
+
+    const float verticalOffset = ( rect.size().y - params.fontSize ) / 2.f;
+
+    Vector4f c = Vector4f( params.colorText );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z ) );
+
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_BeginText( state_->activePage ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_TextRect( state_->activePage, rect.min.x, rect.max.y - verticalOffset,
+        rect.max.x, rect.min.y + verticalOffset, text.c_str(), params.alignment, nullptr ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_Page_EndText( state_->activePage ) );
+
+
+}
+
+void Pdf::drawRect_( const Box2f& rect, const Color& fillColor, const Color& strokeColor )
+{
+    if ( !checkDocument_( "draw rect" ) )
+        return;
+
+    if ( fillColor.a )
+    {
+        Vector4f c = Vector4f( fillColor );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBFill( state_->activePage, c.x, c.y, c.z ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, rect.min.x, rect.min.y, rect.size().x, rect.size().y ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Fill( state_->activePage ) );
+    }
+    if ( strokeColor.a )
+    {
+        Vector4f c = Vector4f( strokeColor );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetRGBStroke( state_->activePage, c.x, c.y, c.z ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Rectangle( state_->activePage, rect.min.x, rect.min.y, rect.size().x, rect.size().y ) );
+        MR_HPDF_CHECK_RES_STATUS( HPDF_Page_Stroke( state_->activePage ) );
+    }
+}
+
+void Pdf::drawTextCell_( const std::string& text, const TextCellParams& params )
+{
+    drawRect_( params.rect, params.colorBackground, params.colorBorder );
+    drawTextRect_( text, params.rect, params.textParams );
 }
 
 void Pdf::reset_()
@@ -576,9 +830,20 @@ int Pdf::calcTextLinesCount_( const std::string& text )
     return count;
 }
 
-bool Pdf::checkDocument() const
+bool Pdf::checkDocument_( const std::string& logAction ) const
 {
-    return state_->document && state_->activePage;
+    if ( !state_->document )
+    {
+        spdlog::warn( "Pdf: Can't {}: no valid document", logAction );
+        return false;
+    }
+    if ( !state_->activePage )
+    {
+        spdlog::warn( "Pdf: Can't {}: no valid page", logAction );
+        return false;
+    }
+
+    return true;
 }
 
 void Pdf::moveCursorToNewLine()

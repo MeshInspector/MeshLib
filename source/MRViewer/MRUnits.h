@@ -263,6 +263,13 @@ enum class DegreesMode
 };
 [[nodiscard]] MRVIEWER_API std::string_view toString( DegreesMode mode );
 
+enum class ZeroMode
+{
+    asIs, // Print as is.
+    alwaysPositive, // Treat negative zero as positive zero.
+    alwaysNegative, // Treat positive zero as negative zero.
+};
+
 // Controls how a value with a unit is converted to a string.
 template <UnitEnum E>
 struct UnitToStringParams
@@ -291,9 +298,11 @@ struct UnitToStringParams
 
     // --- Other:
 
-    // If false, silently remove the minus sign before negative zeroes
-    // (including numbers that get rounded into negative zeroes with the current `precision` setting).
-    bool allowNegativeZero = getDefaultUnitParams<E>().allowNegativeZero;
+    // Show the `+` sign on positive numbers.
+    bool plusSign = getDefaultUnitParams<E>().plusSign;
+
+    // How to deal with zeroes.
+    ZeroMode zeroMode = getDefaultUnitParams<E>().zeroMode;
 
     // Use a pretty Unicode minus sign instead of the ASCII `-`.
     bool unicodeMinusSign = getDefaultUnitParams<E>().unicodeMinusSign;

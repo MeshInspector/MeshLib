@@ -2,8 +2,6 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRSceneColors.h"
-#include "MRMesh.h"
-#include "MRObjectMesh.h"
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
 #include "MRStringConvert.h"
@@ -70,6 +68,35 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     AllVisualizeProperties res;
     getAllVisualizePropertiesForEnum<VisualizeMaskType>( res );
     return res;
+}
+
+ViewportMask VisualObject::globalClippedByPlaneMask() const
+{
+    // do not access clipByPlane_ directly, to allow subclasses to override the behavior
+    auto res = getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<const VisualObject*>( parent ) )
+            res |= visParent->getVisualizePropertyMask( VisualizeMaskType::ClippedByPlane );
+        parent = parent->parent();
+    }
+    return res;
+}
+
+void VisualObject::setGlobalClippedByPlane( bool on, ViewportMask viewportMask )
+{
+    setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+    if ( on )
+        return;
+
+    auto parent = this->parent();
+    while ( parent )
+    {
+        if ( auto visParent = dynamic_cast<VisualObject*>( parent ) )
+            visParent->setVisualizeProperty( on, VisualizeMaskType::ClippedByPlane, viewportMask );
+        parent = parent->parent();
+    }
 }
 
 const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
@@ -147,28 +174,6 @@ const ViewportProperty<uint8_t>& VisualObject::getGlobalAlphaForAllViewports() c
 void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val )
 {
     globalAlpha_ = std::move( val );
-    needRedraw_ = true;
-}
-
-const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
-{
-    return labelsColor_.get( viewportId );
-}
-
-void VisualObject::setLabelsColor( const Color& color, ViewportId viewportId )
-{
-    labelsColor_.set( color, viewportId );
-    needRedraw_ = true;
-}
-
-const ViewportProperty<Color>& VisualObject::getLabelsColorsForAllViewports() const
-{
-    return labelsColor_;
-}
-
-void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
-{
-    labelsColor_ = val;
     needRedraw_ = true;
 }
 
@@ -298,14 +303,10 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum
             return visibilityMask_;
         case VisualizeMaskType::InvertedNormals:
             return invertNormals_;
-        case VisualizeMaskType::Labels:
-            return showLabels_;
         case VisualizeMaskType::ClippedByPlane:
             return clipByPlane_;
         case VisualizeMaskType::Name:
             return showName_;
-        case VisualizeMaskType::CropLabelsByViewportRect:
-            return cropLabels_;
         case VisualizeMaskType::DepthTest:
             return depthTest_;
         case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
@@ -324,10 +325,6 @@ void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
     root["InvertNormals"] = !invertNormals_.empty();
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    root["ShowLabes"] = showLabels();
-MR_SUPPRESS_WARNING_POP
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
@@ -343,9 +340,6 @@ MR_SUPPRESS_WARNING_POP
 
     root["ShowName"] = showName_.value();
 
-    // labels
-    serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
-
     // append base type
     root["Type"].append( VisualObject::TypeName() );
 
@@ -358,11 +352,7 @@ void VisualObject::deserializeFields_( const Json::Value& root )
 
     if ( root["InvertNormals"].isBool() ) // Support old versions
         invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    if ( root["ShowLabes"].isBool() )
-        showLabels( root["ShowLabes"].asBool() );
-MR_SUPPRESS_WARNING_POP
+
     auto readColors = [&root]( const char* fieldName, Color& res )
     {
         const auto& colors = root["Colors"]["Faces"][fieldName];
@@ -381,11 +371,6 @@ MR_SUPPRESS_WARNING_POP
     if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
         showName_ = ViewportMask( showNameJson.asUInt() );
 
-    Vector4f resVec;
-    // labels
-    deserializeFromJson( root["Colors"]["Labels"], resVec );
-    labelsColor_.set( Color( resVec ) );
-
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
 
@@ -400,7 +385,6 @@ Box3f VisualObject::getWorldBox( ViewportId id ) const
 size_t VisualObject::heapBytes() const
 {
     return Object::heapBytes()
-        + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
 }
 
@@ -423,10 +407,6 @@ void VisualObject::resetColors()
     resetFrontColor();
 
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-MR_SUPPRESS_WARNING_POP
 }
 
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const
@@ -473,10 +453,6 @@ void VisualObject::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
-    setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-MR_SUPPRESS_WARNING_POP
 }
 
 void VisualObject::setDefaultSceneProperties_()

@@ -388,6 +388,16 @@ void Object::setAncillary( bool ancillary )
     ancillary_ = ancillary;
 }
 
+bool Object::isGlobalAncillary() const
+{
+    if ( isAncillary() )
+        return true;
+    for ( auto* parent = Object::parent(); parent != nullptr; parent = parent->parent() )
+        if ( parent->isAncillary() )
+            return true;
+    return false;
+}
+
 void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
 {
     if ( ( visibilityMask_ & viewportMask ) == ( on ? viewportMask : ViewportMask{} ) )
@@ -528,7 +538,7 @@ std::vector<std::string> Object::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type: " + getClassName() );
+    res.push_back( "class: " + className() );
     res.push_back( "mem: " + bytesString( heapBytes() ) );
     res.push_back( fmt::format( "tags: {}", tags_.size() ) );
     for ( const auto& tag : tags_ )

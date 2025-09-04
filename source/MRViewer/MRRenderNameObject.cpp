@@ -49,6 +49,9 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
 
 void RenderNameObject::Task::renderPass()
 {
+    // Set `text.computedSize`.
+    text.update();
+
     const float
         // Button rounding.
         rounding = 4 * params->scale,
@@ -68,10 +71,7 @@ void RenderNameObject::Task::renderPass()
     colorHoveredFloat.w = 1;
     ImU32 colorHovered = ImGui::ColorConvertFloat4ToU32( colorHoveredFloat );
 
-    // A crude conversion to grayscale. Good enough for our purposes.
-    float colorMainLuminosity = 0.2126f * colorMainFloat.x + 0.7152f * colorMainFloat.y + 0.0722f * colorMainFloat.z;
-
-    ImU32 colorText = ImGui::ColorConvertFloat4ToU32( colorMainLuminosity > 0.5f ? ImVec4( 0, 0, 0, 1 ) : ImVec4( 1, 1, 1, 1 ) );
+    ImU32 colorText = ImGui::ColorConvertFloat4ToU32( ImGui::getLuminance( colorMainFloat ) > 0.5f ? ImVec4( 0, 0, 0, 1 ) : ImVec4( 1, 1, 1, 1 ) );
 
     ImDrawList& drawList = *ImGui::GetBackgroundDrawList();
 
@@ -103,25 +103,23 @@ void RenderNameObject::Task::renderPass()
     drawList.PathStroke( colorOutline, 0, lineWidth + lineOutlineWidth * 2 );
 
     // Button outline.
-    drawList.AddRectFilled( textPos - paddingA - buttonOutlineWidth, textPos + textSize + paddingB + buttonOutlineWidth, colorOutline, rounding + buttonOutlineWidth );
+    drawList.AddRectFilled( textPos - paddingA - buttonOutlineWidth, textPos + text.computedSize + paddingB + buttonOutlineWidth, colorOutline, rounding + buttonOutlineWidth );
 
     // The line itself.
     makeLinePath( false );
     drawList.PathStroke( colorMain, 0, lineWidth );
 
     // The background rect.
-    drawList.AddRectFilled( textPos - paddingA, textPos + textSize + paddingB, isHovered && !isActive ? colorHovered : colorMain, rounding );
+    drawList.AddRectFilled( textPos - paddingA, textPos + text.computedSize + paddingB, isHovered && !isActive ? colorHovered : colorMain, rounding );
 
     // The text.
-    // Split to segments to center each line individually.
-    float textY = textPos.y;
-    split( text, "\n", [&]( std::string_view segment )
+    text.draw( drawList, params->scale, textPos, colorText );
+
+    // The extra text.
+    if ( !textExtra.isEmpty() )
     {
-        ImVec2 pos( std::round( textPos.x + ( textSize.x - ImGui::CalcTextSize( segment.data(), segment.data() + segment.size() ).x ) / 2 ), textY );
-        drawList.AddText( pos, colorText, segment.data(), segment.data() + segment.size() );
-        textY += ImGui::GetTextLineHeight();
-        return false;
-    } );
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, params->scale, {}, textPos + ImVec2( std::round( -buttonOutlineWidth ), text.computedSize.y + textToExtraTextSpacing ), textExtra, {}, ImVec2( 0, 0 ) );
+    }
 
     // Reset the variables.
     isHovered = false;
@@ -162,8 +160,10 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     Vector3f worldPoint2 = xf( localPoint + nameUiLocalOffset );
     ImVec2 point3Offset = ImVec2( nameUiScreenOffset ) * params.scale;
 
-    task_.text = getObjectNameString( *task_.object, params.viewportId );
-    task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
+    task_.text = getObjectNameText( *task_.object, params.viewportId );
+
+    task_.textExtra = getObjectNameExtraText( *task_.object, params.viewportId );
+    task_.textToExtraTextSpacing = std::round( 11 * params.scale );
 
     Viewport& viewportRef = Viewport::get( params.viewportId );
 
@@ -218,14 +218,16 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
         lastSegmentOffset = d;
 
     task_.textCenter = point3;
-    task_.textPos = task_.textCenter - task_.textSize / 2;
+
+    task_.text.update();
+    task_.textPos = task_.textCenter - task_.text.computedSize / 2;
 
     if ( lastSegmentOffset != ImVec2{} )
     {
         ImVec2 prevPoint = point3 - lastSegmentOffset;
 
         ImVec2 pointA = task_.textPos - task_.paddingA - buttonSpacingToPoint;
-        ImVec2 pointB = task_.textPos + task_.textSize + task_.paddingB + buttonSpacingToPoint;
+        ImVec2 pointB = task_.textPos + task_.text.computedSize + task_.paddingB + buttonSpacingToPoint;
 
         if ( ImGuiMath::CompareAll( prevPoint ) >= pointA && ImGuiMath::CompareAll( prevPoint ) < pointB )
         {
@@ -260,16 +262,23 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     task_.textPos = ImGuiMath::round( task_.textPos );
 
     task_.windowCornerA = ImGuiMath::clamp( task_.textPos - task_.paddingA, viewportCornerA, viewportCornerB );
-    task_.windowCornerB = ImGuiMath::clamp( task_.textPos + task_.textSize + task_.paddingB, viewportCornerA, viewportCornerB );
+    task_.windowCornerB = ImGuiMath::clamp( task_.textPos + task_.text.computedSize + task_.paddingB, viewportCornerA, viewportCornerB );
 
     // A non-owning pointer to our task_.
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } );
 }
 
-std::string RenderNameObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const
+ImGuiMeasurementIndicators::Text RenderNameObject::getObjectNameText( const VisualObject& object, ViewportId viewportId ) const
 {
     (void)viewportId;
     return object.name();
+}
+
+ImGuiMeasurementIndicators::Text RenderNameObject::getObjectNameExtraText( const VisualObject& object, ViewportId viewportId ) const
+{
+    (void)object;
+    (void)viewportId;
+    return {};
 }
 
 }

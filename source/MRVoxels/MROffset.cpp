@@ -187,8 +187,9 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( params.fwn ); fwnByParts && isHoleWindingRule )
     {
-        vol.cb = {};
-        vmParams.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vol.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vmParams.cb = {}; // to avoid jumping progress between calcFromGridWithDistancesByParts and MarchingCubesByParts
+        // TODO: calcFromGridWithDistancesByParts passes subprogress into mesher.addPart
 
         assert( !mp.region ); // only whole mesh is supported for now
 

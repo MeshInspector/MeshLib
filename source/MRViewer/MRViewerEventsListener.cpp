@@ -88,6 +88,13 @@ void KeyRepeatListener::connect( Viewer* viewer, int group, boost::signals2::con
     connection_ = viewer->keyRepeatSignal.connect( group, MAKE_SLOT( &KeyRepeatListener::onKeyRepeat_ ), pos );
 }
 
+void PreSetupViewListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->preSetupViewSignal.connect( group, MAKE_SLOT( &PreSetupViewListener::preSetupView_ ), pos );
+}
+
 void PreDrawListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

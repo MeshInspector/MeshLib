@@ -3,6 +3,8 @@
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
 
+#include <cassert>
+
 namespace MR
 {
 
@@ -51,7 +53,147 @@ std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() 
 
 FeatureObjectProjectPointResult PointObject::projectPoint( const Vector3f& /*point*/, ViewportId id /*= {}*/ ) const
 {
-    return { getPoint( id ) , std::nullopt };
+    return { getPoint( id ), std::nullopt };
+}
+
+std::size_t PointObject::numComparableProperties() const
+{
+    return 1;
+}
+
+std::string_view PointObject::getComparablePropertyName( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return "Deviation";
+}
+
+std::optional<PointObject::ComparableProperty> PointObject::computeComparableProperty( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+
+    if ( !referencePos_ )
+        return {}; // Can't compute the distance without knowing the reference point.
+
+    // World or local position? I assume we want the world one...
+    Vector3f thisPos = worldXf().b;
+
+    // Do we use the normal?
+    if ( referenceNormal_ )
+    {
+        // With normal:
+
+        if ( *referenceNormal_ == Vector3f{} )
+            return {}; // Zero normal invalid.
+
+        return ComparableProperty{
+            .value = dot( thisPos - *referencePos_, *referenceNormal_ ) / referenceNormal_->length(),
+            .referenceValue = 0.f, // Always zero for points for now.
+        };
+    }
+    else
+    {
+        // Without normal:
+
+        return ComparableProperty{
+            .value = ( thisPos - *referencePos_ ).length(),
+            .referenceValue = 0.f, // Always zero for points for now.
+        };
+    }
+}
+
+std::optional<PointObject::ComparisonTolerance> PointObject::getComparisonTolerence( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    if ( comparisonToleranceIsAlwaysOnlyPositive( i ) )
+    {
+        assert( !tolerance_ || tolerance_->negative == 0 );
+        return tolerance_ ? std::optional( ComparisonTolerance{ .positive = tolerance_->positive } ) : std::nullopt;
+    }
+    else
+    {
+        return tolerance_;
+    }
+}
+
+void PointObject::setComparisonTolerance( std::size_t i, std::optional<ComparisonTolerance> newTolerance )
+{
+    (void)i;
+    assert( i == 0 );
+    tolerance_ = newTolerance;
+}
+
+bool PointObject::comparisonToleranceIsAlwaysOnlyPositive( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return !bool( referenceNormal_ ); // If we don't have a reference normal, we calculate the euclidean distance, which can't be negative.
+}
+
+bool PointObject::comparisonToleranceMakesSenseNow( std::size_t i ) const
+{
+    (void)i;
+    assert( i == 0 );
+    return bool( referencePos_ ); // The normal is optional.
+}
+
+std::size_t PointObject::numComparisonReferenceValues() const
+{
+    return 2;
+}
+
+std::string_view PointObject::getComparisonReferenceValueName( std::size_t i ) const
+{
+    assert( i < 2 );
+    return std::array{ "Nominal pos", "Direction" }[i];
+}
+
+PointObject::ComparisonReferenceValue PointObject::getComparisonReferenceValue( std::size_t i ) const
+{
+    assert( i < 2 );
+    const auto& target = i == 1 ? referenceNormal_ : referencePos_;
+    return { .isSet = bool( target ), .var = target ? *target : Vector3f{} };
+}
+
+void PointObject::setComparisonReferenceValue( std::size_t i, std::optional<ComparisonReferenceValue::Var> value )
+{
+    assert( i < 2 );
+    auto& target = ( i == 1 ? referenceNormal_ : referencePos_ );
+    if ( value )
+    {
+        // When adding the normal, make the tolerance symmetric again (before that, the negative part should've been zeroed). See also `comparisonToleranceIsAlwaysOnlyPositive()`.
+        if ( &target == &referenceNormal_ && !target && tolerance_ )
+            tolerance_->negative = -tolerance_->positive;
+
+        auto ptr = std::get_if<Vector3f>( &*value );
+        assert( ptr );
+        target = *ptr;
+    }
+    else
+    {
+        target = {};
+
+        // When removing the normal, also zero the negative tolerance. See also `comparisonToleranceIsAlwaysOnlyPositive()`.
+        if ( &target == &referenceNormal_ && tolerance_ )
+            tolerance_->negative = 0;
+
+        // When removing the position, also remove the normal and the tolerance.
+        if ( &target == &referencePos_ )
+        {
+            setComparisonReferenceValue( 1, {} );
+            setComparisonTolerance( 0, {} );
+        }
+    }
+}
+
+bool PointObject::comparisonReferenceValueMakesSenseNow( std::size_t i ) const
+{
+    assert( i < 2 );
+    if ( i == 1 )
+        return bool( referencePos_ ); // The normal only makes sense if the position is set.
+    return true;
 }
 
 void PointObject::swapBase_( Object& other )

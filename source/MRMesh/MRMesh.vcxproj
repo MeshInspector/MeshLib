@@ -431,6 +431,7 @@
     <ClInclude Include="MREndMill.h" />
     <ClInclude Include="MRSolidOfRevolution.h" />
     <ClInclude Include="MRObjectTagEventDispatcher.h" />
+    <ClInclude Include="MRObjectComparableWithReference.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />

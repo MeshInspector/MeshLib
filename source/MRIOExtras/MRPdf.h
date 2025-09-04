@@ -24,22 +24,40 @@ struct PdfParameters
 {
     float titleSize = 18.f;
     float textSize = 14.f;
+
+    /// <summary>
+    /// Default fonts included in libharu
+    /// please note that using default font does not allow UTF-8 encoding
+    /// </summary>
+    enum class DefaultFont
+    {
+        Courier,
+        CourierBold,
+        CourierOblique,
+        CourierBoldOblique,
+        Helvetica,
+        HelveticaBold,
+        HelveticaOblique,
+        HelveticaBoldOblique,
+        TimesRoman,
+        TimesBold,
+        TimesItalic,
+        TimesBoldItalic,
+        Symbol,
+        ZapfDingbats,
+        Count
+    };
+
     /**
      * @brief Font name
-     * list of available fonts:
-     * Courier (-Bold, -Oblique, -BoldOblique)
-     * Helvetica (-Bold, -Oblique, -BoldOblique)
-     * Times (-Roman, -Bold, -Italic, -BoldItalic)
-     * Symbol
-     * ZapfDingbats
      */
-    std::string defaultFontName = "Helvetica";
-    std::string defaultFontBoldName = "Helvetica-Bold";
+    std::variant<DefaultFont, std::filesystem::path> defaultFont = DefaultFont::Helvetica;
+    std::variant<DefaultFont, std::filesystem::path> defaultFontBold = DefaultFont::HelveticaBold;
     /**
     * Font name for table (monospaced)
     */
-    std::string tableFontName = "Courier";
-    std::string tableFontBoldName = "Courier-Bold";
+    std::variant<DefaultFont, std::filesystem::path> tableFont = DefaultFont::Courier;
+    std::variant<DefaultFont, std::filesystem::path> tableFontBold = DefaultFont::CourierBold;
 };
 
 /**

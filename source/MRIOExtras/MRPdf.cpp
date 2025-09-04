@@ -159,6 +159,27 @@ std::string GetHpdfErrorDescription( HPDF_STATUS errorCode )
     }
 }
 
+const std::string& sGetDefaultFontName( MR::PdfParameters::BuildinFont font )
+{
+    static const std::array<std::string, int( MR::PdfParameters::BuildinFont::Count )> cFontNames = {
+        std::string( "Courier" ),
+        std::string( "Courier-Bold" ),
+        std::string( "Courier-Oblique" ),
+        std::string( "Courier-BoldOblique" ),
+        std::string( "Helvetica" ),
+        std::string( "Helvetica-Bold" ),
+        std::string( "Helvetica-Oblique" ),
+        std::string( "Helvetica-BoldOblique" ),
+        std::string( "Times-Roman" ),
+        std::string( "Times-Bold" ),
+        std::string( "Times-Italic" ),
+        std::string( "Times-BoldItalic" ),
+        std::string( "Symbol" ),
+        std::string( "ZapfDingbats" )
+    };
+    return cFontNames[int( font )];
+}
+
 }
 
 namespace MR
@@ -257,6 +278,9 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
         return;
     }
     
+    MR_HPDF_CHECK_RES_STATUS( HPDF_UseUTFEncodings( state_->document ) );
+    MR_HPDF_CHECK_RES_STATUS( HPDF_SetCurrentEncoder( state_->document, "UTF-8" ) );
+
     MR_HPDF_CHECK_RES_STATUS( HPDF_SetCompressionMode( state_->document, HPDF_COMP_ALL ) );
 
     state_->activePage = HPDF_AddPage( state_->document );
@@ -270,34 +294,44 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT ) );
 
-    state_->defaultFont = HPDF_GetFont( state_->document, params_.defaultFontName.c_str(), NULL );
-    if ( !state_->defaultFont )
+    auto getFont = [&] ( const std::variant<PdfParameters::BuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )->bool
     {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.defaultFontName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+        std::string fontName;
+        bool useUTF8 = false;
+        bool ok = true;
+        if ( std::holds_alternative<PdfParameters::BuildinFont>( inFontInfo ) )
+        {
+            fontName = sGetDefaultFontName( std::get<PdfParameters::BuildinFont>( inFontInfo ) );
+        }
+        else
+        {
+            auto pathStr = utf8string( std::get<std::filesystem::path>( inFontInfo ) );
+            const char* fontNameCstr = HPDF_LoadTTFontFromFile( state_->document, pathStr.c_str(), HPDF_TRUE );
+            if ( fontNameCstr )
+                fontName = fontNameCstr;
+            else
+                ok = false;
+            useUTF8 = true;
+        }
+        if ( !fontName.empty() )
+            outFont = HPDF_GetFont( state_->document, fontName.c_str(), useUTF8 ? "UTF-8" : NULL );
+        if ( !outFont )
+        {
+            spdlog::debug( "Pdf: Can't find font: \"{}\".", ok ? fontName : utf8string( std::get<std::filesystem::path>( inFontInfo ) ) );
+            pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+            return false;
+        }
+        return true;
+    };
+
+    if ( !getFont( params_.defaultFont, state_->defaultFont ) )
         return;
-    }
-    state_->defaultFontBold = HPDF_GetFont( state_->document, params_.defaultFontBoldName.c_str(), NULL );
-    if ( !state_->defaultFontBold )
-    {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.defaultFontBoldName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+    if ( !getFont( params_.defaultFontBold, state_->defaultFontBold ) )
         return;
-    }
-    state_->tableFont = HPDF_GetFont( state_->document, params_.tableFontName.c_str(), NULL );
-    if ( !state_->tableFont )
-    {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.tableFontName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+    if ( !getFont( params_.tableFont, state_->tableFont ) )
         return;
-    }
-    state_->tableFontBold = HPDF_GetFont( state_->document, params_.tableFontBoldName.c_str(), NULL );
-    if ( !state_->tableFontBold )
-    {
-        spdlog::debug( "Pdf: Can't find font: \"{}\".", params_.tableFontBoldName );
-        pdfPrintError( "HPDF_GetFont", state_->document, HPDF_GetError( state_->document ) );
+    if ( !getFont( params_.tableFontBold, state_->tableFontBold ) )
         return;
-    }
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetFontAndSize( state_->activePage, state_->defaultFont, params_.textSize ) );
 
@@ -530,14 +564,36 @@ void Pdf::saveToFile( const std::filesystem::path& documentPath )
     // reset all errors before saving document
     HPDF_ResetError( state_->document );
 
-    auto pathString = utf8string( documentPath );
-    HPDF_SaveToFile( state_->document, pathString.c_str() );
 
-    HPDF_STATUS status = HPDF_GetError( state_->document );
-    if (status != HPDF_OK)
+    /* save the document to a stream */
+    MR_HPDF_CHECK_RES_STATUS( HPDF_SaveToStream( state_->document ) );
+
+    /* rewind the stream. */
+    HPDF_ResetStream( state_->document );
+
+    auto pathString = utf8string( documentPath );
+    std::ofstream outFile( documentPath, std::ios::binary );
+    if ( !outFile )
     {
-        spdlog::error( "Pdf: Error while saving pdf to file \"{}\": {}", pathString, status );
-        HPDF_ResetError( state_->document );
+        spdlog::error( "Pdf: Error while saving pdf to file \"{}\"", pathString );
+        return;
+    }
+
+    /* get the data from the stream and output it to stdout. */
+    for ( ;;)
+    {
+        HPDF_BYTE buf[4096];
+        HPDF_UINT32 siz = 4096;
+        MR_HPDF_CHECK_RES_STATUS( HPDF_ReadFromStream( state_->document, buf, &siz ) );
+
+        if ( siz == 0 )
+            break;
+
+        if ( !outFile.write( ( const char* )buf, siz ) )
+        {
+            spdlog::error( "Pdf: Error while saving pdf to file \"{}\"", pathString );
+            break;
+        }
     }
 }
 

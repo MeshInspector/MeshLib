@@ -65,8 +65,6 @@ jobs:
     with:
       app_version: ${{ needs.config.outputs.app_version }}
       release_tag: ${{ needs.config.outputs.release_tag }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-win-version:
     if: ${{ needs.config.outputs.upload_artifacts == 'true'}}

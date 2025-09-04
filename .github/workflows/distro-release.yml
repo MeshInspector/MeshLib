@@ -57,15 +57,6 @@ jobs:
       nuget_build:           ${{ needs.config.outputs.nuget_build == 'true' }}
     secrets: inherit
 
-  distribute-windows:
-    needs:
-      - config
-      - windows-build-test
-    uses: ./.github/workflows/distribute.yml
-    with:
-      app_version: ${{ needs.config.outputs.app_version }}
-      release_tag: ${{ needs.config.outputs.release_tag }}
-
   update-win-version:
     needs:
       - config
@@ -112,7 +103,7 @@ jobs:
   update-artifacts:
     timeout-minutes: 15
     runs-on: aws-micro
-    needs: distribute-windows
+    needs: update-win-version
     if: always()
     steps:
         # all distribution

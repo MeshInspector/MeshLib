@@ -103,7 +103,7 @@ jobs:
   update-artifacts:
     timeout-minutes: 15
     runs-on: aws-micro
-    needs: update-win-version
+    needs: upload-distributions
     if: always()
     steps:
         # all distribution

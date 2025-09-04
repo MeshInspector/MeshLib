@@ -190,7 +190,7 @@
     {
       "Name": "Show_Hide Global Basis",
       "Caption": "Toggle Global Basis",
-      "Tooltip": "Show or hide global 0 and X,Y,Z axes.",
+      "Tooltip": "Show or hide global 0 and X,Y,Z axes, also allows showing 3d grid.",
       "Icon": "\uf546"
     },
     {

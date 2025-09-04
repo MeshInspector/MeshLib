@@ -28,20 +28,29 @@ bool offsetVerts( Mesh& mesh, const VertMetric& offset, const ProgressCallback& 
     }, cb );
 }
 
-Mesh makeThickMesh( const Mesh & m, float halfWidth )
+Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 {
     MR_TIMER;
 
-    VertNormals ns( m.topology.vertSize() );
+    assert( params.dirFieldStabilizer > 0 );
+
+    VertNormals dirs;
+    dirs.resizeNoInit( m.topology.vertSize() );
     BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
     {
-        ns[v] = m.pseudonormal( v );
+        dirs[v] = m.pseudonormal( v );
     } );
-    positionVertsSmoothlySharpBd( m.topology, ns, { .stabilizer = 0.01f } );
-    BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+
+    const bool smoothDirs = params.dirFieldStabilizer < FLT_MAX;
+    if ( smoothDirs )
     {
-        ns[v] = ns[v].normalized();
-    } );
+        /// smooth directions on original mesh to avoid boundary effects near stitches
+        positionVertsSmoothlySharpBd( m.topology, dirs, { .stabilizer = params.dirFieldStabilizer } );
+        BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
+        {
+            dirs[v] = dirs[v].normalized();
+        } );
+    }
 
     Mesh res = m;
     auto holesRepr = m.topology.findHoleRepresentiveEdges();
@@ -57,25 +66,19 @@ Mesh makeThickMesh( const Mesh & m, float halfWidth )
     auto m2resVerts = VertMapOrHashMap::createMap();
     map.src2tgtVerts = &m2resVerts;
     res.addMeshPart( m, true, extHoles, mHoles, map );
-    ns.resize( res.topology.vertSize() );
+
+    // apply shifts
     BitSetParallelFor( m.topology.getValidVerts(), [&]( VertId v )
     {
+        res.points[v] += params.outsideOffset * dirs[v];
         auto resV = getAt( m2resVerts, v );
         if ( !resV )
         {
             assert( false );
             return;
         }
-        ns[resV] = -ns[v];
+        res.points[resV] -= params.insideOffset * dirs[v];
     } );
-
-    BitSetParallelFor( res.topology.getValidVerts(), [&]( VertId v )
-    {
-        res.points[v] += halfWidth * ns[v];
-    } );
-
-    // degenerate faces will be automatically ignored during pseudonormal computation
-    //offsetVerts( res, [halfWidth]( VertId ) { return halfWidth; } );
 
     return res;
 }

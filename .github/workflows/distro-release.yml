@@ -54,7 +54,7 @@ jobs:
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      nuget_build:           ${{ needs.config.outputs.nuget_build }}
+      nuget_build:           ${{ needs.config.outputs.nuget_build == 'true' }}
     secrets: inherit
 
   distribute-windows:
@@ -67,7 +67,6 @@ jobs:
       release_tag: ${{ needs.config.outputs.release_tag }}
 
   update-win-version:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true'}}
     needs:
       - config
       - windows-build-test

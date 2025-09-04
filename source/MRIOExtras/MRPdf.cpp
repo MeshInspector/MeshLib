@@ -159,9 +159,9 @@ std::string GetHpdfErrorDescription( HPDF_STATUS errorCode )
     }
 }
 
-const std::string& sGetDefaultFontName( MR::PdfParameters::DefaultFont font )
+const std::string& sGetDefaultFontName( MR::PdfParameters::BuildinFont font )
 {
-    static const std::array<std::string, int( MR::PdfParameters::DefaultFont::Count )> cFontNames = {
+    static const std::array<std::string, int( MR::PdfParameters::BuildinFont::Count )> cFontNames = {
         std::string( "Courier" ),
         std::string( "Courier-Bold" ),
         std::string( "Courier-Oblique" ),
@@ -294,14 +294,14 @@ Pdf::Pdf( const PdfParameters& params /*= PdfParameters()*/ )
 
     MR_HPDF_CHECK_RES_STATUS( HPDF_Page_SetSize( state_->activePage, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT ) );
 
-    auto getFont = [&] ( const std::variant<PdfParameters::DefaultFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )->bool
+    auto getFont = [&] ( const std::variant<PdfParameters::BuildinFont, std::filesystem::path>& inFontInfo, HPDF_Font& outFont )->bool
     {
         std::string fontName;
         bool useUTF8 = false;
         bool ok = true;
-        if ( std::holds_alternative<PdfParameters::DefaultFont>( inFontInfo ) )
+        if ( std::holds_alternative<PdfParameters::BuildinFont>( inFontInfo ) )
         {
-            fontName = sGetDefaultFontName( std::get<PdfParameters::DefaultFont>( inFontInfo ) );
+            fontName = sGetDefaultFontName( std::get<PdfParameters::BuildinFont>( inFontInfo ) );
         }
         else
         {

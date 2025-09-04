@@ -26,10 +26,10 @@ struct PdfParameters
     float textSize = 14.f;
 
     /// <summary>
-    /// Default fonts included in libharu
+    /// Fonts included in libharu
     /// please note that using default font does not allow UTF-8 encoding
     /// </summary>
-    enum class DefaultFont
+    enum class BuildinFont
     {
         Courier,
         CourierBold,
@@ -51,13 +51,13 @@ struct PdfParameters
     /**
      * @brief Font name
      */
-    std::variant<DefaultFont, std::filesystem::path> defaultFont = DefaultFont::Helvetica;
-    std::variant<DefaultFont, std::filesystem::path> defaultFontBold = DefaultFont::HelveticaBold;
+    std::variant<BuildinFont, std::filesystem::path> defaultFont = BuildinFont::Helvetica;
+    std::variant<BuildinFont, std::filesystem::path> defaultFontBold = BuildinFont::HelveticaBold;
     /**
     * Font name for table (monospaced)
     */
-    std::variant<DefaultFont, std::filesystem::path> tableFont = DefaultFont::Courier;
-    std::variant<DefaultFont, std::filesystem::path> tableFontBold = DefaultFont::CourierBold;
+    std::variant<BuildinFont, std::filesystem::path> tableFont = BuildinFont::Courier;
+    std::variant<BuildinFont, std::filesystem::path> tableFontBold = BuildinFont::CourierBold;
 };
 
 /**

@@ -9,6 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRPch/MRTBB.h"
+#include "MRTriangleIntersection.h"
 
 namespace MR
 {
@@ -96,6 +97,13 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             if ( distSq < res.distSq )
             {
                 res.distSq = distSq;
+                if ( distSq == 0.0f )
+                {
+                    if ( doTriangleSegmentIntersect( av[0], av[1], av[2], bv[0], bv[1] ) )
+                        aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[0], bv[1] );
+                    else
+                        aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[1], bv[2] );
+                }
                 res.a.point = aPt;
                 res.a.face = aNode.leafId();
                 res.b.point = bPt;

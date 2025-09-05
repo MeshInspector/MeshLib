@@ -99,24 +99,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 res.distSq = distSq;
                 if ( distSq == 0.0f )
                 {
-                    bool found = false;
-                    for ( int i = 0; i < 3 && !found; ++i )
-                    {
-                        if ( doTriangleSegmentIntersect( av[0], av[1], av[2], bv[i], bv[( i + 1 ) % 3] ) )
-                        {
-                            aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[i], bv[( i + 1 ) % 3] );
-                            found = true;
-                        }
-                    }
-                    for ( int i = 0; i < 3 && !found; ++i )
-                    {
-                        if ( doTriangleSegmentIntersect( bv[0], bv[1], bv[2], av[i], av[( i + 1 ) % 3] ) )
-                        {
-                            aPt = bPt = findTriangleSegmentIntersection( bv[0], bv[1], bv[2], av[i], av[( i + 1 ) % 3] );
-                            found = true;
-                        }
-                    }
-                    if ( !found )
+                    auto pt = findTriangleTriangleIntersection( av[0], av[1], av[2], bv[0], bv[1], bv[2] );
+                    if ( pt )
+                        aPt = bPt = *pt;
+                    else
                     {
                         // might fall back here in degenerated scenarios
                         aPt = bPt = 0.5f * ( aPt + bPt );

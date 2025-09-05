@@ -205,6 +205,29 @@ Vector3<T> findTriangleSegmentIntersection(
     return r * e + ( 1 - r ) * d;
 }
 
+/// returns any intersection point of triangle ABC and triangle DEF, if they intersects
+/// returns nullopt if they do not intersect (also might return nullopt in degenerated cases)
+template <typename T>
+std::optional<Vector3<T>> findTriangleTriangleIntersection(
+    const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c,
+    const Vector3<T>& d, const Vector3<T>& e, const Vector3<T>& f )
+{
+    if ( doTriangleSegmentIntersect( a, b, c, d, e ) )
+        return findTriangleSegmentIntersection( a, b, c, d, e );
+    if ( doTriangleSegmentIntersect( a, b, c, e, f ) )
+        return findTriangleSegmentIntersection( a, b, c, e, f );
+    if ( doTriangleSegmentIntersect( a, b, c, f, d ) )
+        return findTriangleSegmentIntersection( a, b, c, f, d );
+
+    if ( doTriangleSegmentIntersect( d, e, f, a, b ) )
+        return findTriangleSegmentIntersection( d, e, f, a, b );
+    if ( doTriangleSegmentIntersect( d, e, f, b, c ) )
+        return findTriangleSegmentIntersection( d, e, f, b, c );
+    if ( doTriangleSegmentIntersect( d, e, f, c, a ) )
+        return findTriangleSegmentIntersection( d, e, f, c, a );
+    return std::nullopt;
+}
+
 template <typename T>
 std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA, const Vector3<T>& oriB, const Vector3<T>& oriC,
     const IntersectionPrecomputes<T>& prec )

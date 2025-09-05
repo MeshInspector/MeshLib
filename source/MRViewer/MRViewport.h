@@ -549,7 +549,7 @@ private:
 
     // basis axis params
     int pixelXoffset_{ -100 };
-    int pixelYoffset_{ -100 };
+    int pixelYoffset_{ -128 };
     int axisPixSize_{ 70 };
 
     void updateSceneBox_();

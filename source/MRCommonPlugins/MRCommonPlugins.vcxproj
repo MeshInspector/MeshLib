@@ -27,6 +27,7 @@
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
+    <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
@@ -44,6 +45,7 @@
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
+    <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h" />
     <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />

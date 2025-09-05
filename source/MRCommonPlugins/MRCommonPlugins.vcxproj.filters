@@ -78,6 +78,9 @@
     <ClCompile Include="Voxels\MRBinaryOperationsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -110,6 +113,9 @@
     </ClInclude>
     <ClInclude Include="Voxels\MRBinaryOperationsPlugin.h">
       <Filter>Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h">
+      <Filter>Basic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

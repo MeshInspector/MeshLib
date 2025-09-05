@@ -3,14 +3,17 @@
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
+#include "MRCommonPlugins/Basic/MRDrawViewportWidgetsItem.h"
 
 namespace MR
 {
-class ShowGlobalBasisMenuItem : public RibbonMenuItem
+class ShowGlobalBasisMenuItem : public RibbonMenuItem, public ProvidesViewportWidget
 {
 public:
     ShowGlobalBasisMenuItem();
-    virtual bool action() override;
+    bool action() override;
+
+    void providedViewportWidgets( ViewportWidgetInterface& in ) override;
 };
 
 ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
@@ -38,6 +41,13 @@ bool ShowGlobalBasisMenuItem::action()
         viewer.globalBasis->setGridVisible( false, vpid );
     }
     return false;
+}
+
+void ShowGlobalBasisMenuItem::providedViewportWidgets( ViewportWidgetInterface& in )
+{
+    in.addButton( 20, "Toggle Basis", false, "Viewport basis",
+        [this]{ action(); }
+    );
 }
 
 MR_REGISTER_RIBBON_ITEM( ShowGlobalBasisMenuItem )

@@ -498,7 +498,7 @@ void RibbonMenu::drawHeaderQuickAccess_( float menuScaling )
     const auto availableWidth = getViewerInstance().framebufferSize.x;
     if ( width * 2 > availableWidth )
         return; // dont show header quick panel if window is too small
-    
+
     auto cursorPos = ImGui::GetCursorPos();
     ImGui::SetCursorPosX( cursorPos.x + itemSpacing.x );
     ImGui::SetCursorPosY( cursorPos.y + itemSpacing.y );
@@ -1757,19 +1757,18 @@ void RibbonMenu::drawRibbonViewportsLabels_()
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
     for ( const auto& vp : viewer->viewport_list )
     {
-        constexpr std::array<const char*, 2> cProjModeString = { "Orthographic" , "Perspective" };
         std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
         std::string text;
         std::string label = vp.getParameters().label;
         if ( viewer->viewport_list.size() > 1 && label.empty() )
-            label = fmt::format( "Viewport Id : {}", vp.id.value() );
+            label = fmt::format( "Viewport {}", getViewerInstance().viewport_index( vp.id ) + 1 );
         if ( !label.empty() )
-            text = fmt::format( "{}, {}", label, cProjModeString[int( !vp.getParameters().orthographic )] );
-        else
-            text = fmt::format( "{}", cProjModeString[int( !vp.getParameters().orthographic )] );
+            text = fmt::format( "{}", label );
+        if ( text.empty() )
+            continue;
         auto textSize = ImGui::CalcTextSize( text.c_str() );
-        auto pos = viewer->viewportToScreen( Vector3f( width( vp.getViewportRect() ) - textSize.x - 25.0f * scaling,
-            height( vp.getViewportRect() ) - textSize.y - 25.0f * scaling, 0.0f ), vp.id );
+        auto pos = viewer->viewportToScreen( Vector3f( width( vp.getViewportRect() ) - textSize.x - 30.0f * scaling,
+            height( vp.getViewportRect() ) - textSize.y - 12.0f * scaling, 0.0f ), vp.id );
         ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
         ImGui::Begin( windowName.c_str(), nullptr,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize |

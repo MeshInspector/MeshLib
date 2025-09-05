@@ -120,7 +120,7 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         // Force the window to stay in background.
         ImGui::BringWindowToDisplayBack( ImGui::GetCurrentWindow() );
 
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1 * menuScaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
         MR_FINALLY{ ImGui::PopStyleVar(); };
         ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 7 * menuScaling );
         MR_FINALLY{ ImGui::PopStyleVar(); };
@@ -132,14 +132,16 @@ void DrawViewportWidgetsItem::handleViewport( Viewport& viewport )
         if ( e.active )
         {
             ImGui::PushStyleColor( ImGuiCol_Text, Color::white() );
-            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) );
+            // Everything else remains defaulted.
         }
         else
         {
             ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
-            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4() );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::BackgroundSecStyle ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::HeaderSeparator ) );
         }
-        MR_FINALLY{ ImGui::PopStyleColor( 2 ); };
+        MR_FINALLY{ ImGui::PopStyleColor( e.active ? 1 : 4 ); };
 
         // The button.
         if ( ImGui::Button( fmt::format( "##cornerButtonWindow.{}.{}", viewport.id.value(), e.name ).c_str(), buttonSize - buttonShrink * 2 ) )

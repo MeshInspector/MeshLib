@@ -15,6 +15,8 @@ public:
     bool action() override { return false; }
 
     void providedViewportWidgets( ViewportWidgetInterface& in ) override;
+
+    ViewportMask showButtonInViewports = ViewportMask::all();
 };
 
 ToggleProjectionModeItem::ToggleProjectionModeItem() :
@@ -24,6 +26,9 @@ ToggleProjectionModeItem::ToggleProjectionModeItem() :
 void ToggleProjectionModeItem::providedViewportWidgets( ViewportWidgetInterface& in )
 {
     auto id = in.viewportId();
+    if ( !showButtonInViewports.contains( id ) )
+        return;
+
     bool isOrtho = getViewerInstance().viewport( id ).getParameters().orthographic;
 
     in.addButton( 30, "Projection mode", false, isOrtho ? "Viewport projection orthographic" : "Viewport projection perspective",

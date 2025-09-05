@@ -16,6 +16,8 @@ public:
     void toggleInViewport( ViewportId id );
 
     void providedViewportWidgets( ViewportWidgetInterface& in ) override;
+
+    ViewportMask showButtonInViewports = ViewportMask::all();
 };
 
 ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
@@ -51,8 +53,12 @@ bool ShowGlobalBasisMenuItem::action()
 
 void ShowGlobalBasisMenuItem::providedViewportWidgets( ViewportWidgetInterface& in )
 {
+    auto id = in.viewportId();
+    if ( !showButtonInViewports.contains( id ) )
+        return;
+
     in.addButton( 20, "Toggle Basis", false, "Viewport basis",
-        [this, id = in.viewportId()]{ toggleInViewport( id ); }
+        [this, id]{ toggleInViewport( id ); }
     );
 }
 

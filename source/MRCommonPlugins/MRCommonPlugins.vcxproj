@@ -28,6 +28,7 @@
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
     <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
+    <ClCompile Include="Basic\MRToggleProjectionMode.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />

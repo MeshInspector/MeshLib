@@ -13,6 +13,8 @@ public:
     ShowGlobalBasisMenuItem();
     bool action() override;
 
+    void toggleInViewport( ViewportId id );
+
     void providedViewportWidgets( ViewportWidgetInterface& in ) override;
 };
 
@@ -20,33 +22,37 @@ ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
     RibbonMenuItem( "Show_Hide Global Basis" )
 {}
 
-bool ShowGlobalBasisMenuItem::action()
+void ShowGlobalBasisMenuItem::toggleInViewport( ViewportId id )
 {
     auto& viewer = Viewer::instanceRef();
-    auto vpid = viewer.viewport().id;
-    bool isVisible = viewer.globalBasis->isVisible( vpid );
-    bool isGridVisible = viewer.globalBasis->isGridVisible( vpid );
+    bool isVisible = viewer.globalBasis->isVisible( id );
+    bool isGridVisible = viewer.globalBasis->isGridVisible( id );
     if ( !isVisible )
     {
-        viewer.globalBasis->setVisible( true, vpid );
-        viewer.globalBasis->setGridVisible( false, vpid );
+        viewer.globalBasis->setVisible( true, id );
+        viewer.globalBasis->setGridVisible( false, id );
     }
     else if ( !isGridVisible )
     {
-        viewer.globalBasis->setGridVisible( true, vpid );
+        viewer.globalBasis->setGridVisible( true, id );
     }
     else
     {
-        viewer.globalBasis->setVisible( false, vpid );
-        viewer.globalBasis->setGridVisible( false, vpid );
+        viewer.globalBasis->setVisible( false, id );
+        viewer.globalBasis->setGridVisible( false, id );
     }
+}
+
+bool ShowGlobalBasisMenuItem::action()
+{
+    toggleInViewport( getViewerInstance().viewport().id );
     return false;
 }
 
 void ShowGlobalBasisMenuItem::providedViewportWidgets( ViewportWidgetInterface& in )
 {
     in.addButton( 20, "Toggle Basis", false, "Viewport basis",
-        [this]{ action(); }
+        [this, id = in.viewportId()]{ toggleInViewport( id ); }
     );
 }
 

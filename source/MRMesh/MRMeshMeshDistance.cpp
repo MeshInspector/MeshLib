@@ -99,10 +99,28 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 res.distSq = distSq;
                 if ( distSq == 0.0f )
                 {
-                    if ( doTriangleSegmentIntersect( av[0], av[1], av[2], bv[0], bv[1] ) )
-                        aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[0], bv[1] );
-                    else
-                        aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[1], bv[2] );
+                    bool found = false;
+                    for ( int i = 0; i < 3 && !found; ++i )
+                    {
+                        if ( doTriangleSegmentIntersect( av[0], av[1], av[2], bv[i], bv[( i + 1 ) % 3] ) )
+                        {
+                            aPt = bPt = findTriangleSegmentIntersection( av[0], av[1], av[2], bv[i], bv[( i + 1 ) % 3] );
+                            found = true;
+                        }
+                    }
+                    for ( int i = 0; i < 3 && !found; ++i )
+                    {
+                        if ( doTriangleSegmentIntersect( bv[0], bv[1], bv[2], av[i], av[( i + 1 ) % 3] ) )
+                        {
+                            aPt = bPt = findTriangleSegmentIntersection( bv[0], bv[1], bv[2], av[i], av[( i + 1 ) % 3] );
+                            found = true;
+                        }
+                    }
+                    if ( !found )
+                    {
+                        // might fall back here in degenerated scenarios
+                        aPt = bPt = 0.5f * ( aPt + bPt );
+                    }
                 }
                 res.a.point = aPt;
                 res.a.face = aNode.leafId();

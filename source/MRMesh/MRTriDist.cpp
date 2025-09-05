@@ -399,7 +399,6 @@ float TriDist( Vector3f & P, Vector3f & Q, const Vector3f S[3], const Vector3f T
     return mindd;
   }
 
-  P = Q = 0.5f * (P + Q);
   return 0;
 }
 

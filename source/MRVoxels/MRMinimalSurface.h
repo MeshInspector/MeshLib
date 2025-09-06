@@ -4,8 +4,10 @@
 #include <MRMesh/MRExpected.h>
 #include <MRVoxels/MRVoxelsFwd.h>
 
+namespace MR::FillingSurface
+{
 
-namespace MR::TPMS // Triply Periodic Minimal Surface
+namespace TPMS // Triply Periodic Minimal Surface
 {
 
 
@@ -73,4 +75,6 @@ MRVOXELS_API float estimateDensity( Type type, float targetIso );
 /// Returns minimal reasonable resolution for given parameters
 MRVOXELS_API float getMinimalResolution( Type type, float iso );
 
-}
+} // namespace TPMS
+
+} // namespace FillingSurface

@@ -14,7 +14,10 @@
 #include <string>
 #include <map>
 
-namespace MR::TPMS
+namespace MR::FillingSurface
+{
+
+namespace TPMS
 {
 
 std::vector<std::string> getTypeNames()
@@ -418,5 +421,6 @@ float getMinimalResolution( Type type, float iso )
     return std::max( 5.f, 1.f / delta );
 }
 
+} // namespace TPMS
 
-}
+} // namespace FillingSurface
